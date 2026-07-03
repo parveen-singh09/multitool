@@ -1,3 +1,7 @@
+## Design
+
+Before writing or editing ANY UI (pages, components, styles), read [DESIGN.md](DESIGN.md) and follow it. It defines the site's visual language: Linear-inspired dark canvas (#010102), lavender-blue accent (#5e6ad2) used sparingly, a four-step surface ladder, Inter as the font substitute, and the spacing/radius/typography/component tokens. Reference components by their token names and keep the accent scarce.
+
 ## Development
 
 When starting the dev server, use background mode:
