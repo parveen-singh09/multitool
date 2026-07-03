@@ -1,0 +1,114 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="markdown-previewer">
+  <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Markdown
+      <textarea id="md-in" class="field min-h-96 resize-y font-mono text-[13px]" spellcheck="false"># Hello ToolCities
+
+Write **Markdown** on the left and see _rendered_ HTML on the right.
+
+- Fast
+- Private
+- [Free tools](https://toolcities.com)
+
+> Everything runs in your browser.
+
+`inline code` and:
+
+```
+code block
+```
+</textarea>
+    </label>
+    <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Preview
+      <div id="md-out" class="md-preview panel panel-lift min-h-96 overflow-y-auto p-5 text-ink"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free Markdown previewer renders your Markdown to HTML live as you
+      type. It supports headings, bold and italic text, links, lists,
+      blockquotes, inline code and code blocks — everything you need for READMEs
+      and notes. The preview is generated in your browser, so your content stays
+      private.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .md-preview h1 { font-size: 1.6rem; font-weight: 600; margin: 0.6em 0 0.3em; letter-spacing: -0.02em; }
+  .md-preview h2 { font-size: 1.3rem; font-weight: 600; margin: 0.6em 0 0.3em; letter-spacing: -0.015em; }
+  .md-preview h3 { font-size: 1.1rem; font-weight: 600; margin: 0.6em 0 0.3em; }
+  .md-preview p { margin: 0.5em 0; line-height: 1.6; }
+  .md-preview ul { margin: 0.5em 0; padding-left: 1.4em; list-style: disc; }
+  .md-preview li { margin: 0.2em 0; }
+  .md-preview a { color: var(--color-primary-hover); text-decoration: underline; }
+  .md-preview blockquote { border-left: 3px solid var(--color-hairline-strong); padding-left: 1em; margin: 0.6em 0; color: var(--color-ink-subtle); }
+  .md-preview code { font-family: var(--font-mono); font-size: 0.85em; background: var(--color-surface-2); padding: 1px 5px; border-radius: 4px; }
+  .md-preview pre { background: var(--color-surface-2); padding: 0.9em; border-radius: 8px; overflow-x: auto; margin: 0.6em 0; }
+  .md-preview pre code { background: none; padding: 0; }
+  .md-preview strong { font-weight: 600; }
+</style>
+
+<script>
+  const input = document.getElementById('md-in') as HTMLTextAreaElement;
+  const out = document.getElementById('md-out')!;
+
+  const esc = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  function inline(s: string): string {
+    return s
+      .replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`)
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
+      .replace(/_([^_]+)_/g, '<em>$1</em>')
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+        '<a href="$2" rel="noopener nofollow" target="_blank">$1</a>');
+  }
+
+  function render(src: string): string {
+    // Escape first, then apply a small block-level grammar.
+    const lines = esc(src).split('\n');
+    let html = '', i = 0;
+    while (i < lines.length) {
+      const line = lines[i];
+      if (/^```/.test(line)) {
+        const buf: string[] = [];
+        i++;
+        while (i < lines.length && !/^```/.test(lines[i])) buf.push(lines[i++]);
+        i++;
+        html += `<pre><code>${buf.join('\n')}</code></pre>`;
+        continue;
+      }
+      const h = line.match(/^(#{1,3})\s+(.*)$/);
+      if (h) { html += `<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`; i++; continue; }
+      if (/^>\s?/.test(line)) {
+        const buf: string[] = [];
+        while (i < lines.length && /^>\s?/.test(lines[i])) buf.push(lines[i++].replace(/^>\s?/, ''));
+        html += `<blockquote>${inline(buf.join(' '))}</blockquote>`;
+        continue;
+      }
+      if (/^[-*+]\s+/.test(line)) {
+        const buf: string[] = [];
+        while (i < lines.length && /^[-*+]\s+/.test(lines[i])) buf.push(lines[i++].replace(/^[-*+]\s+/, ''));
+        html += `<ul>${buf.map((b) => `<li>${inline(b)}</li>`).join('')}</ul>`;
+        continue;
+      }
+      if (line.trim() === '') { i++; continue; }
+      const para: string[] = [];
+      while (i < lines.length && lines[i].trim() !== '' && !/^(#{1,3}\s|>|[-*+]\s|```)/.test(lines[i])) para.push(lines[i++]);
+      html += `<p>${inline(para.join(' '))}</p>`;
+    }
+    return html;
+  }
+
+  function update() { out.innerHTML = render(input.value); }
+  input.addEventListener('input', update);
+  update();
+</script>

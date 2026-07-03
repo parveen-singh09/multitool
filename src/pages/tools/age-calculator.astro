@@ -1,0 +1,89 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="age-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Date of birth
+        <input id="ag-dob" type="date" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Age at date
+        <input id="ag-at" type="date" class="field" />
+      </label>
+    </div>
+
+    <p id="ag-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="panel panel-lift flex flex-col items-center gap-2 p-6 text-center">
+      <div id="ag-main" class="font-display text-3xl font-semibold text-ink">—</div>
+      <div id="ag-sub" class="text-sm text-ink-subtle"></div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-3 text-center">
+      <div class="panel p-4"><div id="ag-months" class="font-mono text-xl text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Total months</div></div>
+      <div class="panel p-4"><div id="ag-weeks" class="font-mono text-xl text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Total weeks</div></div>
+      <div class="panel p-4"><div id="ag-days" class="font-mono text-xl text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Total days</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free age calculator works out an exact age from a date of birth,
+      broken down into years, months and days, plus totals in months, weeks and
+      days. Set the second date to any point in the future or past to find an
+      age at that moment. Everything is calculated privately in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const dob = document.getElementById('ag-dob') as HTMLInputElement;
+  const at = document.getElementById('ag-at') as HTMLInputElement;
+  const err = document.getElementById('ag-error')!;
+  const main = document.getElementById('ag-main')!;
+  const sub = document.getElementById('ag-sub')!;
+  const monthsEl = document.getElementById('ag-months')!;
+  const weeksEl = document.getElementById('ag-weeks')!;
+  const daysEl = document.getElementById('ag-days')!;
+
+  function calc() {
+    err.classList.add('hidden');
+    if (!dob.value || !at.value) return;
+    const start = new Date(dob.value + 'T00:00:00');
+    const end = new Date(at.value + 'T00:00:00');
+    if (end < start) {
+      err.textContent = 'The "age at" date is before the date of birth.';
+      err.classList.remove('hidden');
+      main.textContent = '—'; sub.textContent = '';
+      return;
+    }
+
+    let years = end.getFullYear() - start.getFullYear();
+    let months = end.getMonth() - start.getMonth();
+    let days = end.getDate() - start.getDate();
+    if (days < 0) {
+      months--;
+      days += new Date(end.getFullYear(), end.getMonth(), 0).getDate();
+    }
+    if (months < 0) { years--; months += 12; }
+
+    const totalDays = Math.floor((end.getTime() - start.getTime()) / 86400000);
+    const totalMonths = years * 12 + months;
+
+    main.textContent = `${years} years, ${months} months, ${days} days`;
+    sub.textContent = `That's ${totalDays.toLocaleString()} days of life so far.`;
+    monthsEl.textContent = totalMonths.toLocaleString();
+    weeksEl.textContent = Math.floor(totalDays / 7).toLocaleString();
+    daysEl.textContent = totalDays.toLocaleString();
+  }
+
+  [dob, at].forEach((el) => el.addEventListener('input', calc));
+
+  // Default "age at" to today.
+  const today = new Date();
+  today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+  at.value = today.toISOString().slice(0, 10);
+</script>

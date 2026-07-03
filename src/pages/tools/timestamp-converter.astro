@@ -1,0 +1,89 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="timestamp-converter">
+  <div class="flex flex-col gap-6">
+    <div class="panel panel-lift flex flex-col gap-2 p-5">
+      <span class="text-[13px] text-ink-subtle">Current Unix time</span>
+      <div class="flex flex-wrap items-baseline gap-3">
+        <span id="ts-now" class="font-mono text-2xl text-ink">0</span>
+        <span class="text-[13px] text-ink-tertiary">seconds since 1 Jan 1970 UTC</span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+      <div class="flex flex-col gap-2">
+        <label class="text-sm text-ink-subtle" for="ts-epoch">Timestamp → Date</label>
+        <div class="flex gap-2">
+          <input id="ts-epoch" type="text" class="field font-mono" placeholder="1700000000" autocomplete="off" />
+          <select id="ts-unit" class="field w-24">
+            <option value="s">sec</option>
+            <option value="ms">ms</option>
+          </select>
+        </div>
+        <div id="ts-date-out" class="panel mt-1 flex flex-col gap-1 p-4 text-[13px]"></div>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <label class="text-sm text-ink-subtle" for="ts-date">Date → Timestamp</label>
+        <input id="ts-date" type="datetime-local" class="field" />
+        <div id="ts-epoch-out" class="panel mt-1 flex flex-col gap-1 p-4 text-[13px]"></div>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free Unix timestamp converter turns epoch timestamps into
+      human-readable dates and back again. It handles both seconds and
+      milliseconds and shows the result in your local time and UTC. A live clock
+      shows the current Unix time. Everything is calculated in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const nowEl = document.getElementById('ts-now')!;
+  const epochIn = document.getElementById('ts-epoch') as HTMLInputElement;
+  const unitEl = document.getElementById('ts-unit') as HTMLSelectElement;
+  const dateOut = document.getElementById('ts-date-out')!;
+  const dateIn = document.getElementById('ts-date') as HTMLInputElement;
+  const epochOut = document.getElementById('ts-epoch-out')!;
+
+  setInterval(() => { nowEl.textContent = Math.floor(Date.now() / 1000).toString(); }, 1000);
+  nowEl.textContent = Math.floor(Date.now() / 1000).toString();
+
+  function row(label: string, value: string) {
+    return `<div><span class="text-ink-tertiary">${label}:</span> <span class="text-ink">${value}</span></div>`;
+  }
+
+  function epochToDate() {
+    const raw = epochIn.value.trim();
+    if (!raw || isNaN(Number(raw))) { dateOut.innerHTML = '<span class="text-ink-tertiary">Enter a numeric timestamp.</span>'; return; }
+    let ms = Number(raw);
+    if (unitEl.value === 's') ms *= 1000;
+    const d = new Date(ms);
+    if (isNaN(d.getTime())) { dateOut.innerHTML = '<span style="color:#e5484d">Out of range.</span>'; return; }
+    dateOut.innerHTML = row('Local', d.toLocaleString()) + row('UTC', d.toUTCString()) + row('ISO 8601', d.toISOString());
+  }
+
+  function dateToEpoch() {
+    if (!dateIn.value) { epochOut.innerHTML = '<span class="text-ink-tertiary">Pick a date and time.</span>'; return; }
+    const d = new Date(dateIn.value);
+    const s = Math.floor(d.getTime() / 1000);
+    epochOut.innerHTML = row('Seconds', String(s)) + row('Milliseconds', String(d.getTime())) + row('ISO 8601', d.toISOString());
+  }
+
+  epochIn.addEventListener('input', epochToDate);
+  unitEl.addEventListener('change', epochToDate);
+  dateIn.addEventListener('input', dateToEpoch);
+
+  // Seed the date input with now (local).
+  const n = new Date();
+  n.setMinutes(n.getMinutes() - n.getTimezoneOffset());
+  dateIn.value = n.toISOString().slice(0, 16);
+  epochIn.value = Math.floor(Date.now() / 1000).toString();
+  epochToDate();
+  dateToEpoch();
+</script>

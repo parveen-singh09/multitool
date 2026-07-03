@@ -1,0 +1,133 @@
+---
+// Instant client-side tool search.
+// - On the home page (where #tools grid exists) it filters cards live.
+// - On any other page it navigates to /?q=<term>#tools on submit.
+// Multiple instances (hero + header) stay in sync via [data-tool-search-input].
+interface Props {
+  variant?: 'hero' | 'compact';
+  id?: string;
+  class?: string;
+}
+const { variant = 'hero', id, class: className = '' } = Astro.props;
+const inputId = id ?? `tool-search-${variant}`;
+---
+
+<form
+  class={`tool-search tool-search--${variant} ${className}`}
+  role="search"
+  data-tool-search
+  action="/#tools"
+>
+  <label for={inputId} class="sr-only">Search tools</label>
+  <div class="relative flex items-center">
+    <svg
+      class="pointer-events-none absolute left-3 text-ink-tertiary"
+      width="18" height="18" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" />
+    </svg>
+    <input
+      id={inputId}
+      name="q"
+      type="search"
+      class="field pl-10"
+      placeholder={variant === 'hero' ? 'Search 28 tools…' : 'Search tools…'}
+      autocomplete="off"
+      aria-label="Search tools by name or keyword"
+      data-tool-search-input
+    />
+  </div>
+</form>
+
+<style>
+  .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0);
+    white-space: nowrap; border: 0;
+  }
+  .tool-search--hero { width: 100%; max-width: 30rem; margin-inline: auto; }
+  .tool-search--compact { width: 14rem; }
+  /* Hide native search clear button for a cleaner look */
+  .tool-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+</style>
+
+<script>
+  const inputs = Array.from(
+    document.querySelectorAll<HTMLInputElement>('[data-tool-search-input]'),
+  );
+  if (inputs.length) {
+    const grid = document.getElementById('tools');
+    const norm = (s: string) => s.toLowerCase().trim();
+
+    function applyFilter(raw: string) {
+      if (!grid) return;
+      const q = norm(raw);
+      const cards = grid.querySelectorAll<HTMLElement>('[data-tool-card]');
+      let visible = 0;
+      cards.forEach((card) => {
+        const hay = card.dataset.search || '';
+        const match = !q || hay.includes(q);
+        card.classList.toggle('hidden', !match);
+        if (match) visible++;
+      });
+      // Hide category sections that have no visible cards.
+      grid.querySelectorAll<HTMLElement>('[data-category-section]').forEach((sec) => {
+        const anyVisible = sec.querySelectorAll('[data-tool-card]:not(.hidden)').length > 0;
+        sec.classList.toggle('hidden', !anyVisible);
+      });
+      const empty = document.getElementById('search-empty');
+      const count = document.getElementById('search-count');
+      if (empty) empty.classList.toggle('hidden', visible !== 0);
+      if (count) {
+        count.textContent = q
+          ? `${visible} tool${visible === 1 ? '' : 's'} match “${raw.trim()}”`
+          : '';
+      }
+    }
+
+    function sync(value: string, from: HTMLInputElement) {
+      inputs.forEach((i) => {
+        if (i !== from) i.value = value;
+      });
+    }
+
+    inputs.forEach((input) => {
+      input.addEventListener('input', () => {
+        sync(input.value, input);
+        applyFilter(input.value);
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          input.value = '';
+          sync('', input);
+          applyFilter('');
+        }
+      });
+      // On pages without the grid, submit navigates home with the query.
+      const form = input.closest('form');
+      form?.addEventListener('submit', (e) => {
+        if (!grid) {
+          e.preventDefault();
+          const q = encodeURIComponent(input.value.trim());
+          window.location.href = q ? `/?q=${q}#tools` : '/#tools';
+        } else {
+          e.preventDefault();
+        }
+      });
+    });
+
+    // Prefill + apply from ?q= on load (home page deep-link from header search).
+    if (grid) {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get('q');
+      if (q) {
+        inputs.forEach((i) => (i.value = q));
+        applyFilter(q);
+      }
+    }
+  }
+</script>

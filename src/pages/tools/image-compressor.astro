@@ -1,0 +1,109 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="image-compressor">
+  <div class="flex flex-col gap-4">
+    <label id="ic-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose an image or drop it here</span>
+      <span class="text-[13px] text-ink-tertiary">Compressed in your browser — never uploaded</span>
+      <input id="ic-file" type="file" accept="image/*" class="sr-only" />
+    </label>
+
+    <div id="ic-panel" class="hidden flex-col gap-4">
+      <div class="flex flex-wrap items-end gap-4">
+        <label class="flex flex-1 flex-col gap-1 text-sm text-ink-subtle">
+          Quality: <span id="ic-qval" class="text-ink">80%</span>
+          <input id="ic-q" type="range" min="10" max="100" value="80" class="w-full accent-[#5e6ad2]" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Format
+          <select id="ic-fmt" class="field w-32"><option value="image/jpeg">JPEG</option><option value="image/webp">WebP</option></select>
+        </label>
+        <button id="ic-download" class="btn btn-primary">Download</button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 text-center">
+        <div class="panel p-4"><div id="ic-before" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Original</div></div>
+        <div class="panel p-4"><div id="ic-after" class="font-mono text-lg" style="color:var(--color-success)">—</div><div class="mt-1 text-[13px] text-ink-subtle">Compressed (<span id="ic-saved">0%</span> smaller)</div></div>
+      </div>
+
+      <div class="panel flex justify-center overflow-hidden p-4"><img id="ic-preview" class="max-h-96 w-auto max-w-full rounded-[8px]" alt="Compressed preview" /></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free image compressor reduces the file size of JPG and PNG photos by
+      re-encoding them as JPEG or WebP at a quality level you control. See the
+      before and after sizes and how much you saved, then download the smaller
+      file. Compression runs entirely in your browser — your images stay on your
+      device.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  const fileInput = document.getElementById('ic-file') as HTMLInputElement;
+  const drop = document.getElementById('ic-drop')!;
+  const panel = document.getElementById('ic-panel')!;
+  const q = document.getElementById('ic-q') as HTMLInputElement;
+  const qval = document.getElementById('ic-qval')!;
+  const fmt = document.getElementById('ic-fmt') as HTMLSelectElement;
+  const preview = document.getElementById('ic-preview') as HTMLImageElement;
+  const beforeEl = document.getElementById('ic-before')!;
+  const afterEl = document.getElementById('ic-after')!;
+  const savedEl = document.getElementById('ic-saved')!;
+
+  let img = new Image();
+  let originalSize = 0;
+  let currentBlob: Blob | null = null;
+
+  const fmtSize = (n: number) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`;
+
+  function loadFile(file: File) {
+    originalSize = file.size;
+    beforeEl.textContent = fmtSize(originalSize);
+    const reader = new FileReader();
+    reader.onload = () => {
+      img = new Image();
+      img.onload = () => { panel.classList.remove('hidden'); panel.classList.add('flex'); compress(); };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function compress() {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+    canvas.getContext('2d')!.drawImage(img, 0, 0);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      currentBlob = blob;
+      afterEl.textContent = fmtSize(blob.size);
+      const saved = Math.max(0, Math.round((1 - blob.size / originalSize) * 100));
+      savedEl.textContent = saved + '%';
+      preview.src = URL.createObjectURL(blob);
+    }, fmt.value, Number(q.value) / 100);
+  }
+
+  q.addEventListener('input', () => { qval.textContent = q.value + '%'; compress(); });
+  fmt.addEventListener('change', compress);
+  fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) loadFile(fileInput.files[0]); });
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) loadFile(f); });
+
+  document.getElementById('ic-download')!.addEventListener('click', () => {
+    if (!currentBlob) return;
+    const ext = fmt.value.split('/')[1].replace('jpeg', 'jpg');
+    const link = document.createElement('a');
+    link.download = `compressed.${ext}`;
+    link.href = URL.createObjectURL(currentBlob);
+    link.click();
+  });
+</script>

@@ -1,0 +1,98 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="regex-tester">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-1 flex-col gap-1 text-sm text-ink-subtle">
+        Pattern
+        <span class="flex items-center gap-2">
+          <span class="text-ink-tertiary">/</span>
+          <input id="re-pattern" type="text" class="field font-mono" value="\b\w+@\w+\.\w+\b" spellcheck="false" autocomplete="off" />
+          <span class="text-ink-tertiary">/</span>
+          <input id="re-flags" type="text" class="field w-20 font-mono" value="gi" spellcheck="false" autocomplete="off" aria-label="Flags" />
+        </span>
+      </label>
+    </div>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Test string
+      <textarea id="re-input" class="field min-h-40 resize-y font-mono text-[13px]" spellcheck="false">Contact us at hello@toolcities.com or support@example.org today.</textarea>
+    </label>
+
+    <p id="re-status" class="text-[13px] text-ink-subtle" aria-live="polite"></p>
+
+    <div>
+      <span class="text-[13px] text-ink-subtle">Highlighted matches</span>
+      <div id="re-output" class="panel panel-lift mt-2 min-h-24 whitespace-pre-wrap break-words p-4 font-mono text-[13px] leading-relaxed"></div>
+    </div>
+
+    <div id="re-groups"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free regex tester lets you build and debug JavaScript regular
+      expressions with instant feedback. Type a pattern and flags, paste your
+      test string, and every match is highlighted live along with any capture
+      groups. It is perfect for validating emails, phone numbers, or parsing
+      text. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const patternEl = document.getElementById('re-pattern') as HTMLInputElement;
+  const flagsEl = document.getElementById('re-flags') as HTMLInputElement;
+  const inputEl = document.getElementById('re-input') as HTMLTextAreaElement;
+  const output = document.getElementById('re-output')!;
+  const status = document.getElementById('re-status')!;
+  const groupsBox = document.getElementById('re-groups')!;
+
+  const esc = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  function run() {
+    const text = inputEl.value;
+    groupsBox.innerHTML = '';
+    let flags = flagsEl.value;
+    if (!flags.includes('g')) flags += 'g';
+    let re: RegExp;
+    try {
+      re = new RegExp(patternEl.value, flags);
+      status.textContent = '';
+      status.style.color = '';
+    } catch (e) {
+      status.textContent = 'Invalid regex: ' + (e as Error).message;
+      status.style.color = '#e5484d';
+      output.textContent = text;
+      return;
+    }
+    if (!patternEl.value) { output.textContent = text; status.textContent = ''; return; }
+
+    let last = 0, html = '', count = 0, m: RegExpExecArray | null;
+    const groupRows: string[] = [];
+    re.lastIndex = 0;
+    while ((m = re.exec(text)) !== null) {
+      count++;
+      html += esc(text.slice(last, m.index));
+      html += `<mark style="background:color-mix(in srgb,#5e6ad2 45%,transparent);color:var(--color-ink);border-radius:3px;padding:0 1px">${esc(m[0]) || '&nbsp;'}</mark>`;
+      last = m.index + m[0].length;
+      if (m.length > 1) {
+        const g = m.slice(1).map((x, i) => `<span class="text-ink-tertiary">$${i + 1}</span>=<span class="text-ink">${esc(x ?? '')}</span>`).join('  ');
+        groupRows.push(`<div class="border-b border-hairline py-1.5 font-mono text-[13px]">#${count}: ${g}</div>`);
+      }
+      if (m[0] === '') re.lastIndex++; // avoid infinite loop on empty matches
+    }
+    html += esc(text.slice(last));
+    output.innerHTML = html || '<span class="text-ink-tertiary">No text.</span>';
+    status.textContent = `${count} match${count === 1 ? '' : 'es'}`;
+    if (groupRows.length) {
+      groupsBox.innerHTML = `<span class="text-[13px] text-ink-subtle">Capture groups</span><div class="panel mt-2 px-4 py-1">${groupRows.join('')}</div>`;
+    }
+  }
+
+  [patternEl, flagsEl, inputEl].forEach((el) => el.addEventListener('input', run));
+  run();
+</script>

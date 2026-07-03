@@ -3,6 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import ToolCard from '../components/ToolCard.astro';
+import ToolSearch from '../components/ToolSearch.astro';
 import { tools, categories, toolsByCategory } from '../data/tools';
 import { SITE } from '../data/site';
 
@@ -55,8 +56,8 @@ const jsonLd = [
 
           <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-ink-muted">
             ToolCities is a fast, privacy-first collection of free online
-            utilities. Count words, format JSON, generate passwords, encode
-            Base64 and more — nothing is uploaded, everything runs locally.
+            utilities. Count words, format JSON, resize images, generate
+            passwords and more — nothing is uploaded, everything runs locally.
           </p>
 
           <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -88,13 +89,17 @@ const jsonLd = [
         <span class="eyebrow text-primary-hover">The districts</span>
         <h2 class="display-md text-ink">Explore every tool</h2>
         <p class="max-w-2xl text-ink-subtle">
-          Ten focused utilities across five categories — each one loads instantly
-          and works without an account.
+          {tools.length} focused utilities across {categories.length} categories —
+          each one loads instantly and works without an account.
         </p>
+        <div class="mt-4">
+          <ToolSearch variant="hero" class="mx-0 max-w-none!" />
+        </div>
+        <p id="search-count" class="text-sm text-primary-hover" role="status" aria-live="polite"></p>
       </div>
 
       {categories.map((category) => (
-        <div id={category.toLowerCase()} class="mb-14 scroll-mt-20">
+        <div id={category.toLowerCase()} data-category-section class="mb-14 scroll-mt-20">
           <div class="mb-5 flex items-center gap-3">
             <h3 class="font-display text-xl font-semibold tracking-[-0.01em] text-ink">{category}</h3>
             <span class="h-px flex-1 bg-hairline"></span>
@@ -107,6 +112,12 @@ const jsonLd = [
           </div>
         </div>
       ))}
+
+      <!-- Empty state when a search matches nothing -->
+      <div id="search-empty" class="hidden py-16 text-center">
+        <p class="text-lg text-ink">No tools match your search.</p>
+        <p class="mt-2 text-sm text-ink-subtle">Try a different keyword like “json”, “image” or “password”.</p>
+      </div>
     </section>
 
     <!-- ============ 600-WORD SEO CONTENT ============ -->
@@ -144,22 +155,30 @@ const jsonLd = [
             you do.
           </p>
 
-          <h3 class="mt-4 font-display text-xl font-semibold text-ink">Tools for writers, developers and designers</h3>
+          <h3 class="mt-4 font-display text-xl font-semibold text-ink">Tools for writers, developers, designers and everyone else</h3>
           <p>
             The collection is organised into clear categories so you can find the
             right utility fast. <strong class="text-ink">Text tools</strong> help
-            writers and students count words, characters and reading time or
-            convert text between cases. <strong class="text-ink">Developer tools</strong>
-            cover the daily essentials: formatting and validating JSON, encoding
-            and decoding <a href="/tools/base64-encoder" class="text-primary-hover hover:underline">Base64</a>
+            writers and students count words, convert cases,
+            <a href="/tools/text-diff" class="text-primary-hover hover:underline">compare two texts</a>
+            and sort or dedupe lines. <strong class="text-ink">Developer tools</strong>
+            cover the daily essentials: formatting JSON, encoding
+            <a href="/tools/base64-encoder" class="text-primary-hover hover:underline">Base64</a>
             and <a href="/tools/url-encoder" class="text-primary-hover hover:underline">URLs</a>,
-            and generating cryptographic hashes. <strong class="text-ink">Generators</strong>
-            produce placeholder <a href="/tools/lorem-ipsum" class="text-primary-hover hover:underline">Lorem Ipsum</a>
-            text and scannable QR codes, while <strong class="text-ink">converters</strong>
-            like the <a href="/tools/color-converter" class="text-primary-hover hover:underline">color converter</a>
-            translate values between HEX, RGB and HSL for designers. Each tool does
-            one job well, with a clean interface and no distractions, so you spend
-            your time on the work rather than fighting the tool.
+            testing a <a href="/tools/regex-tester" class="text-primary-hover hover:underline">regular expression</a>,
+            decoding a <a href="/tools/jwt-decoder" class="text-primary-hover hover:underline">JWT</a>,
+            and converting <a href="/tools/timestamp-converter" class="text-primary-hover hover:underline">Unix timestamps</a>.
+            <strong class="text-ink">Image tools</strong> let you
+            <a href="/tools/image-resizer" class="text-primary-hover hover:underline">resize</a>,
+            <a href="/tools/image-compressor" class="text-primary-hover hover:underline">compress</a>
+            and pick colors from photos without ever uploading them, while
+            <strong class="text-ink">converters</strong> and
+            <strong class="text-ink">calculators</strong> handle
+            <a href="/tools/unit-converter" class="text-primary-hover hover:underline">units</a>,
+            <a href="/tools/color-converter" class="text-primary-hover hover:underline">colors</a>,
+            <a href="/tools/percentage-calculator" class="text-primary-hover hover:underline">percentages</a>
+            and <a href="/tools/age-calculator" class="text-primary-hover hover:underline">ages</a>.
+            Each tool does one job well, with a clean interface and no distractions.
           </p>
 
           <h3 class="mt-4 font-display text-xl font-semibold text-ink">Why choose ToolCities</h3>

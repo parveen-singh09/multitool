@@ -1,0 +1,102 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="unit-converter">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap gap-2" role="tablist" aria-label="Unit category">
+      <button data-cat="length" class="uc-tab btn btn-secondary" aria-selected="true">Length</button>
+      <button data-cat="weight" class="uc-tab btn btn-secondary" aria-selected="false">Weight</button>
+      <button data-cat="temp" class="uc-tab btn btn-secondary" aria-selected="false">Temperature</button>
+    </div>
+
+    <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="uc-from-val">From</label>
+        <input id="uc-from-val" type="number" class="field" value="1" />
+        <select id="uc-from-unit" class="field mt-1"></select>
+      </div>
+      <div class="flex items-center justify-center pb-2 text-ink-tertiary">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="uc-to-val">To</label>
+        <input id="uc-to-val" type="number" class="field" readonly />
+        <select id="uc-to-unit" class="field mt-1"></select>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free unit converter handles the everyday conversions you need across
+      length, weight and temperature — metres to feet, kilograms to pounds,
+      Celsius to Fahrenheit and many more. Pick a category, choose your units,
+      and the result updates instantly. All calculations happen in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  // Factors are relative to a base unit per category (temp handled specially).
+  const DATA: Record<string, { units: Record<string, number>; }> = {
+    length: { units: { Millimetre: 0.001, Centimetre: 0.01, Metre: 1, Kilometre: 1000, Inch: 0.0254, Foot: 0.3048, Yard: 0.9144, Mile: 1609.344 } },
+    weight: { units: { Milligram: 0.001, Gram: 1, Kilogram: 1000, Tonne: 1e6, Ounce: 28.349523125, Pound: 453.59237, Stone: 6350.29318 } },
+    temp: { units: { Celsius: 1, Fahrenheit: 1, Kelvin: 1 } },
+  };
+
+  const fromVal = document.getElementById('uc-from-val') as HTMLInputElement;
+  const toVal = document.getElementById('uc-to-val') as HTMLInputElement;
+  const fromUnit = document.getElementById('uc-from-unit') as HTMLSelectElement;
+  const toUnit = document.getElementById('uc-to-unit') as HTMLSelectElement;
+  let cat = 'length';
+
+  function fillUnits() {
+    const units = Object.keys(DATA[cat].units);
+    for (const sel of [fromUnit, toUnit]) {
+      sel.innerHTML = units.map((u) => `<option>${u}</option>`).join('');
+    }
+    fromUnit.selectedIndex = 0;
+    toUnit.selectedIndex = Math.min(1, units.length - 1);
+  }
+
+  function toCelsius(v: number, u: string) {
+    return u === 'Fahrenheit' ? (v - 32) * 5 / 9 : u === 'Kelvin' ? v - 273.15 : v;
+  }
+  function fromCelsius(c: number, u: string) {
+    return u === 'Fahrenheit' ? c * 9 / 5 + 32 : u === 'Kelvin' ? c + 273.15 : c;
+  }
+
+  function convert() {
+    const v = Number(fromVal.value);
+    if (isNaN(v)) { toVal.value = ''; return; }
+    let result: number;
+    if (cat === 'temp') {
+      result = fromCelsius(toCelsius(v, fromUnit.value), toUnit.value);
+    } else {
+      const base = v * DATA[cat].units[fromUnit.value];
+      result = base / DATA[cat].units[toUnit.value];
+    }
+    toVal.value = String(Math.round(result * 1e6) / 1e6);
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.uc-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      cat = tab.dataset.cat!;
+      document.querySelectorAll('.uc-tab').forEach((t) => {
+        const active = t === tab;
+        t.setAttribute('aria-selected', String(active));
+        t.classList.toggle('btn-primary', active);
+        t.classList.toggle('btn-secondary', !active);
+      });
+      fillUnits();
+      convert();
+    });
+  });
+
+  [fromVal, fromUnit, toUnit].forEach((el) => el.addEventListener('input', convert));
+  // init
+  document.querySelector<HTMLButtonElement>('.uc-tab')!.classList.add('btn-primary');
+  fillUnits();
+  convert();
+</script>

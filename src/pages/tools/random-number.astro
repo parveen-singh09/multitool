@@ -1,0 +1,100 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="random-number">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Min
+        <input id="rn-min" type="number" value="1" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Max
+        <input id="rn-max" type="number" value="100" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        How many
+        <input id="rn-count" type="number" min="1" max="10000" value="1" class="field" />
+      </label>
+      <label class="flex flex-col justify-end gap-2 text-sm text-ink-subtle">
+        <span class="flex items-center gap-2">
+          <input type="checkbox" id="rn-unique" class="accent-[#5e6ad2]" /> Unique
+        </span>
+        <span class="flex items-center gap-2">
+          <input type="checkbox" id="rn-sort" class="accent-[#5e6ad2]" /> Sorted
+        </span>
+      </label>
+    </div>
+
+    <div class="flex gap-2">
+      <button id="rn-gen" class="btn btn-primary">Generate</button>
+      <button id="rn-copy" class="btn btn-secondary">Copy</button>
+    </div>
+
+    <p id="rn-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <div id="rn-out" class="panel panel-lift min-h-24 p-5 font-mono text-lg text-ink" aria-live="polite"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free random number generator produces random integers between any
+      minimum and maximum you choose. Generate a single number for a quick draw,
+      or a whole batch with the option to keep every value unique (great for
+      raffles and lotteries) and sorted. Numbers are generated in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const minEl = document.getElementById('rn-min') as HTMLInputElement;
+  const maxEl = document.getElementById('rn-max') as HTMLInputElement;
+  const countEl = document.getElementById('rn-count') as HTMLInputElement;
+  const uniqueEl = document.getElementById('rn-unique') as HTMLInputElement;
+  const sortEl = document.getElementById('rn-sort') as HTMLInputElement;
+  const out = document.getElementById('rn-out')!;
+  const err = document.getElementById('rn-error')!;
+
+  const randInt = (min: number, max: number) => {
+    const range = max - min + 1;
+    const buf = new Uint32Array(1);
+    crypto.getRandomValues(buf);
+    return min + (buf[0] % range);
+  };
+
+  function generate() {
+    err.classList.add('hidden');
+    let min = Math.ceil(Number(minEl.value));
+    let max = Math.floor(Number(maxEl.value));
+    const count = Math.max(1, Math.min(10000, Number(countEl.value) || 1));
+    if (min > max) [min, max] = [max, min];
+    const span = max - min + 1;
+
+    if (uniqueEl.checked && count > span) {
+      err.textContent = `Can't produce ${count} unique numbers in a range of only ${span}.`;
+      err.classList.remove('hidden');
+      out.textContent = '';
+      return;
+    }
+
+    let nums: number[] = [];
+    if (uniqueEl.checked) {
+      const pool = new Set<number>();
+      while (pool.size < count) pool.add(randInt(min, max));
+      nums = [...pool];
+    } else {
+      for (let i = 0; i < count; i++) nums.push(randInt(min, max));
+    }
+    if (sortEl.checked) nums.sort((a, b) => a - b);
+    out.textContent = nums.join(', ');
+  }
+
+  document.getElementById('rn-gen')!.addEventListener('click', generate);
+  document.getElementById('rn-copy')!.addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.textContent || '');
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+  generate();
+</script>

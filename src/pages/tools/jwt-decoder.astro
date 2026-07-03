@@ -1,0 +1,85 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="jwt-decoder">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      JSON Web Token
+      <textarea id="jwt-in" class="field min-h-32 resize-y break-all font-mono text-[13px]" placeholder="Paste a JWT (eyJ…)" spellcheck="false"></textarea>
+    </label>
+
+    <p id="jwt-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div>
+        <span class="text-[13px] text-ink-subtle">Header</span>
+        <pre id="jwt-header" class="panel panel-lift mt-2 min-h-24 overflow-x-auto p-4 font-mono text-[13px] text-ink"></pre>
+      </div>
+      <div>
+        <span class="text-[13px] text-ink-subtle">Payload</span>
+        <pre id="jwt-payload" class="panel panel-lift mt-2 min-h-24 overflow-x-auto p-4 font-mono text-[13px] text-ink"></pre>
+      </div>
+    </div>
+
+    <div id="jwt-exp" class="text-[13px] text-ink-subtle"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free JWT decoder splits a JSON Web Token into its header and payload
+      and decodes the Base64URL sections so you can read the claims. It also
+      shows token expiry when an <code class="font-mono text-ink">exp</code> claim is present.
+      Decoding happens entirely in your browser — your token is never sent or
+      stored. Note: this tool decodes only and does not verify the signature.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('jwt-in') as HTMLTextAreaElement;
+  const headerEl = document.getElementById('jwt-header')!;
+  const payloadEl = document.getElementById('jwt-payload')!;
+  const err = document.getElementById('jwt-error')!;
+  const expEl = document.getElementById('jwt-exp')!;
+
+  function b64urlDecode(str: string): string {
+    let s = str.replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    const bytes = Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  }
+
+  const pretty = (json: string) => JSON.stringify(JSON.parse(json), null, 2);
+
+  function decode() {
+    err.classList.add('hidden');
+    expEl.textContent = '';
+    const t = input.value.trim();
+    if (!t) { headerEl.textContent = ''; payloadEl.textContent = ''; return; }
+    const parts = t.split('.');
+    if (parts.length < 2) {
+      err.textContent = 'A JWT has at least two dot-separated parts.';
+      err.classList.remove('hidden');
+      headerEl.textContent = ''; payloadEl.textContent = '';
+      return;
+    }
+    try {
+      headerEl.textContent = pretty(b64urlDecode(parts[0]));
+      const payloadJson = b64urlDecode(parts[1]);
+      payloadEl.textContent = pretty(payloadJson);
+      const claims = JSON.parse(payloadJson);
+      if (claims.exp) {
+        const d = new Date(claims.exp * 1000);
+        const expired = d.getTime() < Date.now();
+        expEl.innerHTML = `Expires: <span class="text-ink">${d.toLocaleString()}</span> ` +
+          (expired ? '<span style="color:#e5484d">(expired)</span>' : '<span style="color:var(--color-success)">(valid)</span>');
+      }
+    } catch (e) {
+      err.textContent = 'Could not decode token: ' + (e as Error).message;
+      err.classList.remove('hidden');
+    }
+  }
+
+  input.addEventListener('input', decode);
+</script>

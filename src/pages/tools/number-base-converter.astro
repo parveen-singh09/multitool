@@ -1,0 +1,76 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="number-base-converter">
+  <div class="flex flex-col gap-4">
+    <p class="text-[13px] text-ink-subtle">Type in any field — the others update instantly.</p>
+
+    {[
+      { id: 'bin', label: 'Binary (base 2)', ph: '1010' },
+      { id: 'oct', label: 'Octal (base 8)', ph: '12' },
+      { id: 'dec', label: 'Decimal (base 10)', ph: '10' },
+      { id: 'hex', label: 'Hexadecimal (base 16)', ph: 'a' },
+    ].map((f) => (
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        {f.label}
+        <input id={`nb-${f.id}`} type="text" class="field font-mono" placeholder={f.ph} spellcheck="false" autocomplete="off" />
+      </label>
+    ))}
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Custom base (2–36)
+      <div class="flex gap-2">
+        <input id="nb-custom-base" type="number" min="2" max="36" value="36" class="field w-24" />
+        <input id="nb-custom" type="text" class="field font-mono" placeholder="value" spellcheck="false" autocomplete="off" />
+      </div>
+    </label>
+
+    <p id="nb-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free number base converter translates numbers between binary, octal,
+      decimal and hexadecimal — plus any custom base from 2 to 36. Type into any
+      field and the rest update live. It is a handy companion for programming,
+      networking and low-level debugging. All conversion runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const bases: Record<string, number> = { bin: 2, oct: 8, dec: 10, hex: 16 };
+  const els: Record<string, HTMLInputElement> = {};
+  for (const id of Object.keys(bases)) els[id] = document.getElementById(`nb-${id}`) as HTMLInputElement;
+  const customBase = document.getElementById('nb-custom-base') as HTMLInputElement;
+  const customEl = document.getElementById('nb-custom') as HTMLInputElement;
+  const err = document.getElementById('nb-error')!;
+
+  function updateFrom(sourceId: string, base: number, raw: string) {
+    err.classList.add('hidden');
+    const v = raw.trim();
+    if (!v) { for (const k of Object.keys(els)) if (k !== sourceId) els[k].value = ''; if (sourceId !== 'custom') customEl.value = ''; return; }
+    const valid = new RegExp(`^[0-9a-z]+$`, 'i').test(v);
+    const n = parseInt(v, base);
+    if (!valid || isNaN(n) || n.toString(base) !== v.toLowerCase().replace(/^0+(?=.)/, '')) {
+      err.textContent = `“${v}” is not a valid base-${base} number.`;
+      err.classList.remove('hidden');
+      return;
+    }
+    for (const [k, b] of Object.entries(bases)) if (k !== sourceId) els[k].value = n.toString(b);
+    const cb = Math.min(36, Math.max(2, Number(customBase.value) || 36));
+    if (sourceId !== 'custom') customEl.value = n.toString(cb);
+    if (sourceId !== 'dec') els.dec.value = n.toString(10);
+  }
+
+  for (const [id, base] of Object.entries(bases)) {
+    els[id].addEventListener('input', () => updateFrom(id, base, els[id].value));
+  }
+  customEl.addEventListener('input', () =>
+    updateFrom('custom', Math.min(36, Math.max(2, Number(customBase.value) || 36)), customEl.value),
+  );
+  customBase.addEventListener('input', () => {
+    if (els.dec.value) updateFrom('dec', 10, els.dec.value);
+  });
+</script>

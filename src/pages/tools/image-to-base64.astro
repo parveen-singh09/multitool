@@ -1,0 +1,85 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="image-to-base64">
+  <div class="flex flex-col gap-4">
+    <label id="ib-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose an image or drop it here</span>
+      <span class="text-[13px] text-ink-tertiary">Converted in your browser — never uploaded</span>
+      <input id="ib-file" type="file" accept="image/*" class="sr-only" />
+    </label>
+
+    <div id="ib-panel" class="hidden flex-col gap-4">
+      <div class="panel flex justify-center overflow-hidden p-4"><img id="ib-preview" class="max-h-64 w-auto max-w-full rounded-[8px]" alt="Selected image preview" /></div>
+
+      <div class="flex flex-wrap gap-2">
+        <button data-tab="datauri" class="ib-tab btn btn-primary">Data URI</button>
+        <button data-tab="raw" class="ib-tab btn btn-secondary">Raw Base64</button>
+        <button data-tab="css" class="ib-tab btn btn-secondary">CSS background</button>
+        <button id="ib-copy" class="btn btn-secondary ml-auto">Copy</button>
+      </div>
+
+      <textarea id="ib-out" class="field min-h-48 resize-y break-all font-mono text-[12px]" readonly aria-label="Base64 output"></textarea>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free image to Base64 converter encodes JPG, PNG, GIF, WebP and SVG
+      images into Base64 strings you can embed directly in HTML or CSS as a data
+      URI. Copy the raw Base64, a ready-to-use data URI, or a CSS background
+      snippet. Conversion happens in your browser, so images are never uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  const fileInput = document.getElementById('ib-file') as HTMLInputElement;
+  const drop = document.getElementById('ib-drop')!;
+  const panel = document.getElementById('ib-panel')!;
+  const preview = document.getElementById('ib-preview') as HTMLImageElement;
+  const out = document.getElementById('ib-out') as HTMLTextAreaElement;
+  let dataUri = '';
+
+  function loadFile(file: File) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      dataUri = reader.result as string;
+      preview.src = dataUri;
+      panel.classList.remove('hidden');
+      panel.classList.add('flex');
+      setTab('datauri');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function setTab(tab: string) {
+    document.querySelectorAll<HTMLButtonElement>('.ib-tab').forEach((b) => {
+      const active = b.dataset.tab === tab;
+      b.classList.toggle('btn-primary', active);
+      b.classList.toggle('btn-secondary', !active);
+    });
+    if (tab === 'raw') out.value = dataUri.split(',')[1] ?? '';
+    else if (tab === 'css') out.value = `background-image: url("${dataUri}");`;
+    else out.value = dataUri;
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.ib-tab').forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab!)));
+  fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) loadFile(fileInput.files[0]); });
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) loadFile(f); });
+
+  document.getElementById('ib-copy')!.addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+</script>

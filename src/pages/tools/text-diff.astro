@@ -1,0 +1,89 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="text-diff">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Original
+        <textarea id="td-a" class="field min-h-48 resize-y font-mono text-[13px]" placeholder="Paste the original text…" spellcheck="false"></textarea>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Changed
+        <textarea id="td-b" class="field min-h-48 resize-y font-mono text-[13px]" placeholder="Paste the changed text…" spellcheck="false"></textarea>
+      </label>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-4 text-[13px] text-ink-subtle">
+      <span>Added: <span id="td-add" class="text-[color:var(--color-success)]">0</span></span>
+      <span>Removed: <span id="td-del" style="color:#e5484d">0</span></span>
+      <label class="ml-auto flex items-center gap-2">
+        <input type="checkbox" id="td-ci" class="accent-[#5e6ad2]" /> Ignore case
+      </label>
+    </div>
+
+    <div id="td-out" class="panel panel-lift min-h-32 overflow-x-auto p-4 font-mono text-[13px] leading-relaxed" aria-live="polite"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free text diff checker compares two blocks of text line by line and
+      highlights exactly what changed — added lines in green, removed lines in
+      red. It is handy for comparing drafts, config files, or code snippets.
+      The comparison runs entirely in your browser, so nothing you paste is ever
+      uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const a = document.getElementById('td-a') as HTMLTextAreaElement;
+  const b = document.getElementById('td-b') as HTMLTextAreaElement;
+  const out = document.getElementById('td-out')!;
+  const ci = document.getElementById('td-ci') as HTMLInputElement;
+  const addEl = document.getElementById('td-add')!;
+  const delEl = document.getElementById('td-del')!;
+
+  const esc = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  // Longest common subsequence over lines -> minimal add/remove diff.
+  function diffLines(A: string[], B: string[]) {
+    const key = (s: string) => (ci.checked ? s.toLowerCase() : s);
+    const n = A.length, m = B.length;
+    const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+    for (let i = n - 1; i >= 0; i--)
+      for (let j = m - 1; j >= 0; j--)
+        dp[i][j] = key(A[i]) === key(B[j])
+          ? dp[i + 1][j + 1] + 1
+          : Math.max(dp[i + 1][j], dp[i][j + 1]);
+
+    const rows: { type: 'same' | 'add' | 'del'; text: string }[] = [];
+    let i = 0, j = 0;
+    while (i < n && j < m) {
+      if (key(A[i]) === key(B[j])) { rows.push({ type: 'same', text: A[i] }); i++; j++; }
+      else if (dp[i + 1][j] >= dp[i][j + 1]) { rows.push({ type: 'del', text: A[i] }); i++; }
+      else { rows.push({ type: 'add', text: B[j] }); j++; }
+    }
+    while (i < n) rows.push({ type: 'del', text: A[i++] });
+    while (j < m) rows.push({ type: 'add', text: B[j++] });
+    return rows;
+  }
+
+  function render() {
+    if (!a.value && !b.value) { out.innerHTML = '<span class="text-ink-tertiary">Paste text into both boxes to see the difference.</span>'; addEl.textContent = '0'; delEl.textContent = '0'; return; }
+    const rows = diffLines(a.value.split('\n'), b.value.split('\n'));
+    let added = 0, removed = 0;
+    out.innerHTML = rows.map((r) => {
+      if (r.type === 'add') { added++; return `<div style="background:color-mix(in srgb,#27a644 16%,transparent)"><span class="text-[color:var(--color-success)]">+ </span>${esc(r.text) || '&nbsp;'}</div>`; }
+      if (r.type === 'del') { removed++; return `<div style="background:color-mix(in srgb,#e5484d 16%,transparent)"><span style="color:#e5484d">- </span>${esc(r.text) || '&nbsp;'}</div>`; }
+      return `<div class="text-ink-subtle"><span class="text-ink-tertiary">&nbsp;&nbsp;</span>${esc(r.text) || '&nbsp;'}</div>`;
+    }).join('');
+    addEl.textContent = String(added);
+    delEl.textContent = String(removed);
+  }
+
+  [a, b, ci].forEach((el) => el.addEventListener('input', render));
+  render();
+</script>

@@ -40,6 +40,23 @@ const keywordList = keywords.join(', ');
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <!-- No-flash theme init: runs before CSS/paint. Dark is the default;
+         honours a stored choice, else the OS preference. -->
+    <script is:inline>
+      (() => {
+        try {
+          const stored = localStorage.getItem('theme');
+          const theme =
+            stored ||
+            (window.matchMedia('(prefers-color-scheme: light)').matches
+              ? 'light'
+              : 'dark');
+          document.documentElement.dataset.theme = theme;
+        } catch (_) {
+          document.documentElement.dataset.theme = 'dark';
+        }
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
 

@@ -1,0 +1,69 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="html-entity">
+  <div class="flex flex-col gap-4">
+    <div class="flex gap-2">
+      <button id="he-encode" class="btn btn-primary">Encode →</button>
+      <button id="he-decode" class="btn btn-secondary">← Decode</button>
+      <button id="he-copy" class="btn btn-secondary ml-auto">Copy output</button>
+    </div>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Input
+      <textarea id="he-in" class="field min-h-40 resize-y font-mono text-[13px]" placeholder="Type or paste text / HTML…" spellcheck="false">Fish & chips for "less than" 5 dollars</textarea>
+    </label>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Output
+      <textarea id="he-out" class="field min-h-40 resize-y font-mono text-[13px]" readonly></textarea>
+    </label>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free HTML entity encoder and decoder converts special characters like
+      <code class="font-mono text-ink">&lt;</code>, <code class="font-mono text-ink">&gt;</code> and
+      <code class="font-mono text-ink">&amp;</code> into their HTML entity equivalents and back again.
+      Encoding is essential for safely displaying user content and preventing
+      markup from breaking your pages. It all runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('he-in') as HTMLTextAreaElement;
+  const output = document.getElementById('he-out') as HTMLTextAreaElement;
+
+  function encode(s: string): string {
+    return s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function decode(s: string): string {
+    const txt = document.createElement('textarea');
+    txt.innerHTML = s;
+    return txt.value;
+  }
+
+  document.getElementById('he-encode')!.addEventListener('click', () => {
+    output.value = encode(input.value);
+  });
+  document.getElementById('he-decode')!.addEventListener('click', () => {
+    output.value = decode(input.value);
+  });
+  document.getElementById('he-copy')!.addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(output.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy output'), 1500);
+  });
+
+  // Encode by default on load.
+  output.value = encode(input.value);
+</script>
