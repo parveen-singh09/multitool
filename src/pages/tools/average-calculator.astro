@@ -1,0 +1,72 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="average-calculator">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Numbers (separated by commas, spaces or new lines)
+      <textarea id="av-in" class="field min-h-32 resize-y font-mono text-[13px]" placeholder="e.g. 12, 7, 23, 5, 18" spellcheck="false">12, 7, 23, 5, 18</textarea>
+    </label>
+
+    <p id="av-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-3">
+      <div class="panel panel-lift p-4"><div id="av-mean" class="font-display text-xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Mean</div></div>
+      <div class="panel p-4"><div id="av-median" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Median</div></div>
+      <div class="panel p-4"><div id="av-mode" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Mode</div></div>
+      <div class="panel p-4"><div id="av-range" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Range</div></div>
+      <div class="panel p-4"><div id="av-sum" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Sum</div></div>
+      <div class="panel p-4"><div id="av-count" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Count</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free average calculator takes a list of numbers and returns the mean,
+      median, mode and range, plus the sum and count. Separate values with
+      commas, spaces or new lines. It is ideal for quick statistics on grades,
+      measurements or survey data. All calculations run in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('av-in') as HTMLTextAreaElement;
+  const err = document.getElementById('av-error')!;
+  const round = (n: number) => Math.round(n * 1e6) / 1e6;
+
+  function parse(): number[] {
+    return input.value.split(/[\s,]+/).filter((s) => s !== '').map(Number);
+  }
+
+  function calc() {
+    err.classList.add('hidden');
+    const nums = parse();
+    const ids = ['av-mean', 'av-median', 'av-mode', 'av-range', 'av-sum', 'av-count'];
+    if (!nums.length) { ids.forEach((id) => (document.getElementById(id)!.textContent = '—')); return; }
+    if (nums.some(isNaN)) { err.textContent = 'Some values are not valid numbers.'; err.classList.remove('hidden'); return; }
+
+    const sum = nums.reduce((a, b) => a + b, 0);
+    const mean = sum / nums.length;
+    const sorted = [...nums].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+
+    const freq = new Map<number, number>();
+    nums.forEach((n) => freq.set(n, (freq.get(n) || 0) + 1));
+    const maxFreq = Math.max(...freq.values());
+    const modes = [...freq.entries()].filter(([, f]) => f === maxFreq).map(([n]) => n);
+    const mode = maxFreq === 1 ? 'none' : modes.join(', ');
+
+    document.getElementById('av-mean')!.textContent = String(round(mean));
+    document.getElementById('av-median')!.textContent = String(round(median));
+    document.getElementById('av-mode')!.textContent = mode;
+    document.getElementById('av-range')!.textContent = String(round(sorted[sorted.length - 1] - sorted[0]));
+    document.getElementById('av-sum')!.textContent = String(round(sum));
+    document.getElementById('av-count')!.textContent = String(nums.length);
+  }
+
+  input.addEventListener('input', calc);
+  calc();
+</script>

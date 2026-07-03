@@ -1,0 +1,49 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="simple-interest-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Principal
+        <input id="si-p" type="number" min="0" class="field" value="10000" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Annual rate (%)
+        <input id="si-rate" type="number" min="0" step="0.01" class="field" value="5" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Time (years)
+        <input id="si-time" type="number" min="0" step="0.1" class="field" value="3" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="panel panel-lift p-5 text-center"><div id="si-interest" class="font-display text-2xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Interest</div></div>
+      <div class="panel p-5 text-center"><div id="si-total" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total amount</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free simple interest calculator uses the classic formula
+      <code class="font-mono text-ink">I = P × R × T</code> to find the interest on a principal amount
+      at a fixed annual rate over a period of time, plus the total repayable. It
+      is ideal for short-term loans and quick estimates. All maths runs in your
+      browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const p = document.getElementById('si-p') as HTMLInputElement;
+  const rate = document.getElementById('si-rate') as HTMLInputElement;
+  const time = document.getElementById('si-time') as HTMLInputElement;
+  const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+
+  function calc() {
+    const interest = Number(p.value) * (Number(rate.value) / 100) * Number(time.value);
+    document.getElementById('si-interest')!.textContent = money(interest);
+    document.getElementById('si-total')!.textContent = money(Number(p.value) + interest);
+  }
+  [p, rate, time].forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

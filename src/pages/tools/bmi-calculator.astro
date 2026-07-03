@@ -1,0 +1,99 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="bmi-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap gap-2" role="tablist" aria-label="Units">
+      <button data-unit="metric" class="bmi-tab btn btn-primary" aria-selected="true">Metric</button>
+      <button data-unit="imperial" class="bmi-tab btn btn-secondary" aria-selected="false">Imperial</button>
+    </div>
+
+    <div id="bmi-metric" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Height (cm)
+        <input id="bmi-cm" type="number" min="0" class="field" value="175" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Weight (kg)
+        <input id="bmi-kg" type="number" min="0" class="field" value="70" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div id="bmi-imperial" class="hidden grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Height (ft)
+        <input id="bmi-ft" type="number" min="0" class="field" value="5" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Height (in)
+        <input id="bmi-in" type="number" min="0" class="field" value="9" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Weight (lb)
+        <input id="bmi-lb" type="number" min="0" class="field" value="154" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div id="bmi-value" class="font-display text-4xl font-semibold text-primary-hover">—</div>
+      <div id="bmi-cat" class="mt-2 text-sm text-ink-muted"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free BMI calculator finds your Body Mass Index from your height and
+      weight in metric or imperial units, then shows which category it falls into
+      — underweight, normal, overweight or obese, using standard WHO ranges. BMI
+      is a quick screening figure, not a diagnosis. All calculations run in your
+      browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  let unit: 'metric' | 'imperial' = 'metric';
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const valueEl = document.getElementById('bmi-value')!;
+  const catEl = document.getElementById('bmi-cat')!;
+
+  function category(bmi: number): [string, string] {
+    if (bmi < 18.5) return ['Underweight', '#5e9fd2'];
+    if (bmi < 25) return ['Normal weight', '#27a644'];
+    if (bmi < 30) return ['Overweight', '#d2a05e'];
+    return ['Obese', '#e5484d'];
+  }
+
+  function calc() {
+    let m = 0, kg = 0;
+    if (unit === 'metric') {
+      m = Number($('bmi-cm').value) / 100;
+      kg = Number($('bmi-kg').value);
+    } else {
+      const totalIn = Number($('bmi-ft').value) * 12 + Number($('bmi-in').value);
+      m = totalIn * 0.0254;
+      kg = Number($('bmi-lb').value) * 0.45359237;
+    }
+    if (!(m > 0) || !(kg > 0)) { valueEl.textContent = '—'; catEl.textContent = ''; return; }
+    const bmi = kg / (m * m);
+    valueEl.textContent = bmi.toFixed(1);
+    const [label, color] = category(bmi);
+    catEl.textContent = label;
+    catEl.style.color = color;
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.bmi-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      unit = tab.dataset.unit as 'metric' | 'imperial';
+      document.querySelectorAll('.bmi-tab').forEach((t) => {
+        const active = t === tab;
+        t.setAttribute('aria-selected', String(active));
+        t.classList.toggle('btn-primary', active);
+        t.classList.toggle('btn-secondary', !active);
+      });
+      document.getElementById('bmi-metric')!.classList.toggle('hidden', unit !== 'metric');
+      document.getElementById('bmi-metric')!.classList.toggle('grid', unit === 'metric');
+      document.getElementById('bmi-imperial')!.classList.toggle('hidden', unit !== 'imperial');
+      document.getElementById('bmi-imperial')!.classList.toggle('grid', unit === 'imperial');
+      calc();
+    });
+  });
+  document.querySelectorAll('#bmi-metric input, #bmi-imperial input').forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

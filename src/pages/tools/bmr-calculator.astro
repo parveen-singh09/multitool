@@ -1,0 +1,55 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="bmr-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Sex
+        <select id="bmr-sex" class="field">
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Age (years)
+        <input id="bmr-age" type="number" min="1" class="field" value="30" inputmode="numeric" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Height (cm)
+        <input id="bmr-cm" type="number" min="0" class="field" value="175" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Weight (kg)
+        <input id="bmr-kg" type="number" min="0" class="field" value="70" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div id="bmr-value" class="font-display text-4xl font-semibold text-primary-hover">—</div>
+      <div class="mt-2 text-sm text-ink-subtle">calories/day at complete rest (BMR)</div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free BMR calculator estimates your basal metabolic rate — the number
+      of calories your body burns at rest to keep basic functions running —
+      using the widely trusted Mifflin-St Jeor equation. Your BMR is the starting
+      point for working out daily calorie needs. All calculations run in your
+      browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  function calc() {
+    const sex = (document.getElementById('bmr-sex') as HTMLSelectElement).value;
+    const age = Number($('bmr-age').value);
+    const cm = Number($('bmr-cm').value);
+    const kg = Number($('bmr-kg').value);
+    if (!(age > 0) || !(cm > 0) || !(kg > 0)) { document.getElementById('bmr-value')!.textContent = '—'; return; }
+    const bmr = 10 * kg + 6.25 * cm - 5 * age + (sex === 'male' ? 5 : -161);
+    document.getElementById('bmr-value')!.textContent = Math.round(bmr).toLocaleString();
+  }
+  document.querySelectorAll('#bmr-sex, #bmr-age, #bmr-cm, #bmr-kg').forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

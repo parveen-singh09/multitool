@@ -1,0 +1,71 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="sales-tax-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap gap-2" role="tablist" aria-label="Mode">
+      <button data-mode="add" class="st-tab btn btn-primary" aria-selected="true">Add tax</button>
+      <button data-mode="remove" class="st-tab btn btn-secondary" aria-selected="false">Remove tax</button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle"><span id="st-label">Amount (before tax)</span>
+        <input id="st-amount" type="number" min="0" class="field" value="100" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Tax rate (%)
+        <input id="st-rate" type="number" min="0" step="0.01" class="field" value="8.5" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div class="panel p-5 text-center"><div id="st-net" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Net (pre-tax)</div></div>
+      <div class="panel p-5 text-center"><div id="st-tax" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Tax</div></div>
+      <div class="panel panel-lift p-5 text-center"><div id="st-gross" class="font-display text-2xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Gross (with tax)</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free sales tax calculator adds sales tax, VAT or GST to a price, or
+      works in reverse to find the pre-tax amount and the tax portion of a
+      tax-inclusive total. Switch between "add tax" and "remove tax" modes to
+      suit either job. All calculations run in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const amount = document.getElementById('st-amount') as HTMLInputElement;
+  const rate = document.getElementById('st-rate') as HTMLInputElement;
+  const label = document.getElementById('st-label')!;
+  let mode: 'add' | 'remove' = 'add';
+  const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+
+  function calc() {
+    const a = Number(amount.value) || 0;
+    const r = (Number(rate.value) || 0) / 100;
+    let net: number, tax: number, gross: number;
+    if (mode === 'add') { net = a; tax = a * r; gross = a + tax; }
+    else { gross = a; net = a / (1 + r); tax = gross - net; }
+    document.getElementById('st-net')!.textContent = money(net);
+    document.getElementById('st-tax')!.textContent = money(tax);
+    document.getElementById('st-gross')!.textContent = money(gross);
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.st-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      mode = tab.dataset.mode as 'add' | 'remove';
+      document.querySelectorAll('.st-tab').forEach((t) => {
+        const active = t === tab;
+        t.setAttribute('aria-selected', String(active));
+        t.classList.toggle('btn-primary', active);
+        t.classList.toggle('btn-secondary', !active);
+      });
+      label.textContent = mode === 'add' ? 'Amount (before tax)' : 'Amount (with tax)';
+      calc();
+    });
+  });
+  [amount, rate].forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

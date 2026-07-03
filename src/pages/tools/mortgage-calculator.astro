@@ -1,0 +1,71 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="mortgage-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Home price
+        <input id="mg-price" type="number" min="0" class="field" value="300000" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Down payment
+        <input id="mg-down" type="number" min="0" class="field" value="60000" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Interest rate (%)
+        <input id="mg-rate" type="number" min="0" step="0.01" class="field" value="6.5" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Term (years)
+        <input id="mg-years" type="number" min="1" class="field" value="30" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Annual property tax
+        <input id="mg-tax" type="number" min="0" class="field" value="3000" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Annual home insurance
+        <input id="mg-ins" type="number" min="0" class="field" value="1200" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div id="mg-total" class="font-display text-3xl font-semibold text-primary-hover">—</div>
+      <div class="mt-1 text-[13px] text-ink-subtle">Estimated monthly payment</div>
+    </div>
+    <div class="grid grid-cols-3 gap-3 text-center">
+      <div class="panel p-4"><div id="mg-pi" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Principal & interest</div></div>
+      <div class="panel p-4"><div id="mg-mtax" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Tax / month</div></div>
+      <div class="panel p-4"><div id="mg-mins" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Insurance / month</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free mortgage calculator estimates your monthly home loan payment,
+      including principal and interest plus optional property tax and home
+      insurance. Adjust the home price, down payment, interest rate and term to
+      see how the monthly cost changes. Everything is calculated in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const ids = ['mg-price', 'mg-down', 'mg-rate', 'mg-years', 'mg-tax', 'mg-ins'];
+  const el: Record<string, HTMLInputElement> = {};
+  ids.forEach((id) => (el[id] = document.getElementById(id) as HTMLInputElement));
+  const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+
+  function calc() {
+    const principal = Number(el['mg-price'].value) - Number(el['mg-down'].value);
+    const n = Number(el['mg-years'].value) * 12;
+    const r = Number(el['mg-rate'].value) / 12 / 100;
+    let pi = 0;
+    if (principal > 0 && n > 0) pi = r === 0 ? principal / n : (principal * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+    const mtax = Number(el['mg-tax'].value) / 12;
+    const mins = Number(el['mg-ins'].value) / 12;
+    document.getElementById('mg-pi')!.textContent = money(pi);
+    document.getElementById('mg-mtax')!.textContent = money(mtax);
+    document.getElementById('mg-mins')!.textContent = money(mins);
+    document.getElementById('mg-total')!.textContent = money(pi + mtax + mins);
+  }
+
+  ids.forEach((id) => el[id].addEventListener('input', calc));
+  calc();
+</script>

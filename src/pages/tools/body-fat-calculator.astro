@@ -1,0 +1,97 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="body-fat-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Sex
+        <select id="bf-sex" class="field">
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Height (cm)
+        <input id="bf-height" type="number" min="0" class="field" value="175" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Neck (cm)
+        <input id="bf-neck" type="number" min="0" class="field" value="38" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Waist (cm)
+        <input id="bf-waist" type="number" min="0" class="field" value="85" inputmode="decimal" />
+      </label>
+      <label id="bf-hip-wrap" class="hidden flex-col gap-1 text-sm text-ink-subtle">Hip (cm)
+        <input id="bf-hip" type="number" min="0" class="field" value="95" inputmode="decimal" />
+      </label>
+    </div>
+
+    <p id="bf-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <div class="panel panel-lift p-6 text-center">
+      <div id="bf-value" class="font-display text-4xl font-semibold text-primary-hover">—</div>
+      <div id="bf-cat" class="mt-2 text-sm text-ink-muted"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free body fat calculator estimates your body fat percentage using the
+      US Navy circumference method, which needs only a tape measure. Enter your
+      height, neck and waist (plus hip for women) to get an estimate and category.
+      Circumference methods are approximate. All calculations run in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const sexEl = document.getElementById('bf-sex') as HTMLSelectElement;
+  const hipWrap = document.getElementById('bf-hip-wrap')!;
+  const err = document.getElementById('bf-error')!;
+
+  function category(bf: number, male: boolean): [string, string] {
+    // Rough ACE ranges.
+    if (male) {
+      if (bf < 6) return ['Essential fat', '#5e9fd2'];
+      if (bf < 14) return ['Athletes', '#27a644'];
+      if (bf < 18) return ['Fitness', '#27a644'];
+      if (bf < 25) return ['Average', '#d2a05e'];
+      return ['Above average', '#e5484d'];
+    }
+    if (bf < 14) return ['Essential fat', '#5e9fd2'];
+    if (bf < 21) return ['Athletes', '#27a644'];
+    if (bf < 25) return ['Fitness', '#27a644'];
+    if (bf < 32) return ['Average', '#d2a05e'];
+    return ['Above average', '#e5484d'];
+  }
+
+  function calc() {
+    const male = sexEl.value === 'male';
+    hipWrap.classList.toggle('hidden', male);
+    hipWrap.classList.toggle('flex', !male);
+    err.classList.add('hidden');
+
+    const h = Number($('bf-height').value);
+    const neck = Number($('bf-neck').value);
+    const waist = Number($('bf-waist').value);
+    const hip = Number($('bf-hip').value);
+
+    let bf: number;
+    // US Navy formula (metric, using log base 10).
+    if (male) {
+      if (waist - neck <= 0 || h <= 0) { err.textContent = 'Waist must be greater than neck.'; err.classList.remove('hidden'); document.getElementById('bf-value')!.textContent = '—'; document.getElementById('bf-cat')!.textContent = ''; return; }
+      bf = 495 / (1.0324 - 0.19077 * Math.log10(waist - neck) + 0.15456 * Math.log10(h)) - 450;
+    } else {
+      if (waist + hip - neck <= 0 || h <= 0) { err.textContent = 'Check your measurements.'; err.classList.remove('hidden'); document.getElementById('bf-value')!.textContent = '—'; document.getElementById('bf-cat')!.textContent = ''; return; }
+      bf = 495 / (1.29579 - 0.35004 * Math.log10(waist + hip - neck) + 0.22100 * Math.log10(h)) - 450;
+    }
+    if (!isFinite(bf) || bf <= 0) { document.getElementById('bf-value')!.textContent = '—'; document.getElementById('bf-cat')!.textContent = ''; return; }
+    document.getElementById('bf-value')!.textContent = bf.toFixed(1) + '%';
+    const [label, color] = category(bf, male);
+    const catEl = document.getElementById('bf-cat')!;
+    catEl.textContent = label;
+    catEl.style.color = color;
+  }
+
+  document.querySelectorAll('#bf-sex, #bf-height, #bf-neck, #bf-waist, #bf-hip').forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

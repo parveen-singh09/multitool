@@ -1,0 +1,67 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="savings-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Savings goal
+        <input id="sv-goal" type="number" min="0" class="field" value="20000" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Amount saved so far
+        <input id="sv-have" type="number" min="0" class="field" value="2000" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Months to reach goal
+        <input id="sv-months" type="number" min="1" class="field" value="24" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Annual interest rate (%)
+        <input id="sv-rate" type="number" min="0" step="0.01" class="field" value="3" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="panel panel-lift p-6 text-center"><div id="sv-monthly" class="font-display text-2xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Save per month</div></div>
+      <div class="panel p-6 text-center"><div id="sv-interest" class="font-mono text-xl" style="color:var(--color-success)">—</div><div class="mt-1 text-[13px] text-ink-subtle">Interest earned</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free savings goal calculator tells you how much to set aside each
+      month to reach a target amount by a chosen date, taking any starting
+      balance and interest rate into account. It is a simple way to plan for a
+      holiday, deposit or emergency fund. Everything is calculated in your
+      browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const ids = ['sv-goal', 'sv-have', 'sv-months', 'sv-rate'];
+  const el: Record<string, HTMLInputElement> = {};
+  ids.forEach((id) => (el[id] = document.getElementById(id) as HTMLInputElement));
+  const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+
+  function calc() {
+    const goal = Number(el['sv-goal'].value);
+    const have = Number(el['sv-have'].value);
+    const n = Number(el['sv-months'].value);
+    const r = Number(el['sv-rate'].value) / 100 / 12;
+    if (!(n > 0)) { document.getElementById('sv-monthly')!.textContent = '—'; return; }
+
+    // Future value of current savings.
+    const fvHave = r === 0 ? have : have * Math.pow(1 + r, n);
+    const remaining = Math.max(0, goal - fvHave);
+    // Monthly payment needed for the remaining, as future value of an annuity.
+    let monthly: number;
+    if (remaining === 0) monthly = 0;
+    else if (r === 0) monthly = remaining / n;
+    else monthly = remaining * r / (Math.pow(1 + r, n) - 1);
+
+    const contributed = have + monthly * n;
+    document.getElementById('sv-monthly')!.textContent = money(monthly);
+    document.getElementById('sv-interest')!.textContent = money(Math.max(0, goal - contributed));
+  }
+  ids.forEach((id) => el[id].addEventListener('input', calc));
+  calc();
+</script>

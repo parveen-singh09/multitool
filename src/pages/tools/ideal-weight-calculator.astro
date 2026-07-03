@@ -1,0 +1,61 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="ideal-weight-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Sex
+        <select id="iw-sex" class="field">
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Height (cm)
+        <input id="iw-cm" type="number" min="0" class="field" value="175" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div class="panel p-5 text-center"><div id="iw-devine" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Devine</div></div>
+      <div class="panel p-5 text-center"><div id="iw-robinson" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Robinson</div></div>
+      <div class="panel p-5 text-center"><div id="iw-hamwi" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Hamwi</div></div>
+    </div>
+    <div class="panel panel-lift p-5 text-center">
+      <div id="iw-range" class="font-display text-2xl font-semibold text-primary-hover">—</div>
+      <div class="mt-1 text-[13px] text-ink-subtle">Healthy weight range (BMI 18.5–25)</div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free ideal weight calculator estimates a healthy target weight for
+      your height and sex using three well-known formulas — Devine, Robinson and
+      Hamwi — alongside the healthy weight range derived from a normal BMI. These
+      are guides, not strict targets. All calculations run in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const sexEl = document.getElementById('iw-sex') as HTMLSelectElement;
+  const cmEl = document.getElementById('iw-cm') as HTMLInputElement;
+  const kg = (n: number) => n.toFixed(1) + ' kg';
+
+  function calc() {
+    const male = sexEl.value === 'male';
+    const cm = Number(cmEl.value);
+    if (!(cm > 0)) { ['iw-devine','iw-robinson','iw-hamwi','iw-range'].forEach((id)=>document.getElementById(id)!.textContent='—'); return; }
+    const inchesOver5ft = Math.max(0, cm / 2.54 - 60);
+    const devine = (male ? 50 : 45.5) + 2.3 * inchesOver5ft;
+    const robinson = (male ? 52 : 49) + (male ? 1.9 : 1.7) * inchesOver5ft;
+    const hamwi = (male ? 48 : 45.5) + (male ? 2.7 : 2.2) * inchesOver5ft;
+    document.getElementById('iw-devine')!.textContent = kg(devine);
+    document.getElementById('iw-robinson')!.textContent = kg(robinson);
+    document.getElementById('iw-hamwi')!.textContent = kg(hamwi);
+    const m = cm / 100;
+    document.getElementById('iw-range')!.textContent = `${(18.5 * m * m).toFixed(1)}–${(25 * m * m).toFixed(1)} kg`;
+  }
+  [sexEl, cmEl].forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

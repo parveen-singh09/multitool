@@ -1,0 +1,52 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="discount-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Original price
+        <input id="dc-price" type="number" min="0" class="field" value="80" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">First discount (%)
+        <input id="dc-d1" type="number" min="0" max="100" step="1" class="field" value="25" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Extra discount (%)
+        <input id="dc-d2" type="number" min="0" max="100" step="1" class="field" value="0" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="panel panel-lift p-6 text-center"><div id="dc-final" class="font-display text-3xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Final price</div></div>
+      <div class="panel p-6 text-center"><div id="dc-saved" class="font-mono text-2xl" style="color:var(--color-success)">—</div><div class="mt-1 text-[13px] text-ink-subtle">You save (<span id="dc-savedpct">0%</span>)</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free discount calculator shows the final sale price after a percentage
+      off, plus how much you save. It even handles a stacked second discount (a
+      percent off the already-reduced price), so you can check "extra 10% off"
+      deals. Everything is calculated instantly in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const price = document.getElementById('dc-price') as HTMLInputElement;
+  const d1 = document.getElementById('dc-d1') as HTMLInputElement;
+  const d2 = document.getElementById('dc-d2') as HTMLInputElement;
+  const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+
+  function calc() {
+    const p = Number(price.value) || 0;
+    const afterFirst = p * (1 - (Number(d1.value) || 0) / 100);
+    const final = afterFirst * (1 - (Number(d2.value) || 0) / 100);
+    const saved = p - final;
+    document.getElementById('dc-final')!.textContent = money(final);
+    document.getElementById('dc-saved')!.textContent = money(saved);
+    document.getElementById('dc-savedpct')!.textContent = (p > 0 ? Math.round((saved / p) * 100) : 0) + '%';
+  }
+  [price, d1, d2].forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

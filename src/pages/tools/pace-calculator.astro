@@ -1,0 +1,98 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pace-calculator">
+  <div class="flex flex-col gap-4">
+    <p class="text-[13px] text-ink-subtle">Fill in any two fields and leave the one you want to solve for blank, then press Calculate.</p>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Distance
+        <span class="flex gap-2">
+          <input id="pc-dist" type="number" min="0" step="0.01" class="field" placeholder="10" inputmode="decimal" />
+          <select id="pc-unit" class="field w-24"><option value="km">km</option><option value="mi">mi</option></select>
+        </span>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Time (hh:mm:ss)
+        <input id="pc-time" type="text" class="field font-mono" placeholder="00:50:00" spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Pace (mm:ss per unit)
+        <input id="pc-pace" type="text" class="field font-mono" placeholder="05:00" spellcheck="false" />
+      </label>
+    </div>
+
+    <div class="flex gap-2">
+      <button id="pc-calc" class="btn btn-primary">Calculate</button>
+      <button id="pc-clear" class="btn btn-secondary">Clear</button>
+    </div>
+
+    <p id="pc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <div id="pc-out" class="panel panel-lift p-6 text-center text-ink-subtle" aria-live="polite">Enter two values and calculate.</div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free pace calculator solves for running pace, finish time or distance —
+      enter any two and it finds the third. Give a distance and time to get your
+      pace per kilometre or mile, or a target pace and distance to predict your
+      finish time. All calculations run in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const dist = document.getElementById('pc-dist') as HTMLInputElement;
+  const unit = document.getElementById('pc-unit') as HTMLSelectElement;
+  const timeEl = document.getElementById('pc-time') as HTMLInputElement;
+  const paceEl = document.getElementById('pc-pace') as HTMLInputElement;
+  const out = document.getElementById('pc-out')!;
+  const err = document.getElementById('pc-error')!;
+
+  // Parse hh:mm:ss or mm:ss into seconds. Returns NaN if empty/invalid.
+  function toSeconds(v: string): number {
+    const s = v.trim();
+    if (!s) return NaN;
+    const parts = s.split(':').map(Number);
+    if (parts.some(isNaN)) return NaN;
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    return parts[0];
+  }
+  const fmt = (sec: number, withHours = true) => {
+    sec = Math.round(sec);
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return withHours ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+  };
+
+  function calc() {
+    err.classList.add('hidden');
+    const d = parseFloat(dist.value);
+    const t = toSeconds(timeEl.value);
+    const p = toSeconds(paceEl.value);
+    const hasD = !isNaN(d) && d > 0;
+    const hasT = !isNaN(t) && t > 0;
+    const hasP = !isNaN(p) && p > 0;
+    const u = unit.value;
+
+    if (hasD && hasT && !hasP) {
+      out.innerHTML = `<div class="font-display text-3xl font-semibold text-primary-hover">${fmt(t / d, false)}</div><div class="mt-1 text-[13px] text-ink-subtle">per ${u}</div>`;
+    } else if (hasD && hasP && !hasT) {
+      out.innerHTML = `<div class="font-display text-3xl font-semibold text-primary-hover">${fmt(p * d)}</div><div class="mt-1 text-[13px] text-ink-subtle">total time</div>`;
+    } else if (hasT && hasP && !hasD) {
+      out.innerHTML = `<div class="font-display text-3xl font-semibold text-primary-hover">${(t / p).toFixed(2)} ${u}</div><div class="mt-1 text-[13px] text-ink-subtle">distance</div>`;
+    } else {
+      err.textContent = 'Enter exactly two of the three fields.';
+      err.classList.remove('hidden');
+    }
+  }
+
+  document.getElementById('pc-calc')!.addEventListener('click', calc);
+  document.getElementById('pc-clear')!.addEventListener('click', () => {
+    dist.value = ''; timeEl.value = ''; paceEl.value = '';
+    out.textContent = 'Enter two values and calculate.';
+    err.classList.add('hidden');
+  });
+</script>

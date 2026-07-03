@@ -1,0 +1,77 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="compound-interest-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Initial principal
+        <input id="ci-p" type="number" min="0" class="field" value="10000" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Monthly contribution
+        <input id="ci-pmt" type="number" min="0" class="field" value="200" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Annual interest rate (%)
+        <input id="ci-rate" type="number" min="0" step="0.01" class="field" value="7" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Years
+        <input id="ci-years" type="number" min="0" step="0.5" class="field" value="10" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Compounding
+        <select id="ci-freq" class="field">
+          <option value="12">Monthly</option>
+          <option value="4">Quarterly</option>
+          <option value="1">Annually</option>
+          <option value="365">Daily</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div class="panel panel-lift p-5 text-center"><div id="ci-final" class="font-display text-2xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Future value</div></div>
+      <div class="panel p-5 text-center"><div id="ci-contrib" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total contributed</div></div>
+      <div class="panel p-5 text-center"><div id="ci-earned" class="font-mono text-xl" style="color:var(--color-success)">—</div><div class="mt-1 text-[13px] text-ink-subtle">Interest earned</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free compound interest calculator shows how savings grow over time as
+      interest earns interest. Enter a starting amount, optional monthly
+      contributions, an interest rate and how often it compounds to see your
+      projected future value, total contributions and interest earned. It runs
+      entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const ids = ['ci-p', 'ci-pmt', 'ci-rate', 'ci-years', 'ci-freq'];
+  const el: Record<string, HTMLInputElement | HTMLSelectElement> = {};
+  ids.forEach((id) => (el[id] = document.getElementById(id) as HTMLInputElement));
+  const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+
+  function calc() {
+    const P = Number(el['ci-p'].value);
+    const pmt = Number(el['ci-pmt'].value);
+    const annual = Number(el['ci-rate'].value) / 100;
+    const t = Number(el['ci-years'].value);
+    const nPerYear = Number((el['ci-freq'] as HTMLSelectElement).value);
+    const periods = Math.round(nPerYear * t);
+    const rate = annual / nPerYear;
+    // Contributions are monthly; convert to per-compounding-period amount.
+    const contribPerPeriod = pmt * (12 / nPerYear);
+
+    let balance = P;
+    for (let i = 0; i < periods; i++) {
+      balance = balance * (1 + rate) + contribPerPeriod;
+    }
+    const contributed = P + pmt * 12 * t;
+    document.getElementById('ci-final')!.textContent = money(balance);
+    document.getElementById('ci-contrib')!.textContent = money(contributed);
+    document.getElementById('ci-earned')!.textContent = money(balance - contributed);
+  }
+
+  ids.forEach((id) => el[id].addEventListener('input', calc));
+  calc();
+</script>

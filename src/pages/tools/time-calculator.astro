@@ -1,0 +1,58 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="time-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="panel panel-lift flex flex-col gap-3 p-5">
+      <div class="grid grid-cols-3 gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Hours<input id="t1-h" type="number" min="0" class="field font-mono" value="2" inputmode="numeric" /></label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Minutes<input id="t1-m" type="number" min="0" class="field font-mono" value="45" inputmode="numeric" /></label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Seconds<input id="t1-s" type="number" min="0" class="field font-mono" value="30" inputmode="numeric" /></label>
+      </div>
+      <div class="flex justify-center">
+        <select id="t-op" class="field w-28 text-center"><option value="+">+</option><option value="-">−</option></select>
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Hours<input id="t2-h" type="number" min="0" class="field font-mono" value="1" inputmode="numeric" /></label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Minutes<input id="t2-m" type="number" min="0" class="field font-mono" value="30" inputmode="numeric" /></label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Seconds<input id="t2-s" type="number" min="0" class="field font-mono" value="45" inputmode="numeric" /></label>
+      </div>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div id="t-out" class="font-display text-3xl font-semibold text-primary-hover">—</div>
+      <div id="t-total" class="mt-2 text-[13px] text-ink-subtle"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free time calculator adds or subtracts two durations expressed in
+      hours, minutes and seconds, and shows the result normalised into
+      hours:minutes:seconds plus the total in seconds. It is handy for adding up
+      task times or media lengths. All calculations run in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const secsOf = (h: string, m: string, s: string) =>
+    (Number($(h).value) || 0) * 3600 + (Number($(m).value) || 0) * 60 + (Number($(s).value) || 0);
+
+  function calc() {
+    const op = (document.getElementById('t-op') as HTMLSelectElement).value;
+    let total = secsOf('t1-h', 't1-m', 't1-s') + (op === '+' ? 1 : -1) * secsOf('t2-h', 't2-m', 't2-s');
+    const neg = total < 0;
+    total = Math.abs(total);
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    document.getElementById('t-out')!.textContent = `${neg ? '−' : ''}${h}h ${m}m ${s}s`;
+    document.getElementById('t-total')!.textContent = `= ${(neg ? '−' : '') + total.toLocaleString()} seconds (${(neg ? '−' : '') + (total / 60).toFixed(2)} minutes)`;
+  }
+
+  document.querySelectorAll('#t1-h, #t1-m, #t1-s, #t2-h, #t2-m, #t2-s, #t-op').forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

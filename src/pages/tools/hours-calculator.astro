@@ -1,0 +1,57 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="hours-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Start time
+        <input id="hc-start" type="time" class="field font-mono" value="09:00" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">End time
+        <input id="hc-end" type="time" class="field font-mono" value="17:30" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Break (minutes)
+        <input id="hc-break" type="number" min="0" class="field" value="30" inputmode="numeric" />
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="panel panel-lift p-6 text-center"><div id="hc-hm" class="font-display text-3xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Hours & minutes worked</div></div>
+      <div class="panel p-6 text-center"><div id="hc-decimal" class="font-mono text-2xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Decimal hours</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free hours calculator works out the time between a start and end time,
+      minus any break, so you can total up a work shift or time card. If the end
+      time is earlier than the start, it assumes an overnight shift. It shows the
+      result in hours and minutes and as decimal hours for payroll. All
+      calculations run in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const start = document.getElementById('hc-start') as HTMLInputElement;
+  const end = document.getElementById('hc-end') as HTMLInputElement;
+  const brk = document.getElementById('hc-break') as HTMLInputElement;
+
+  const toMin = (v: string) => { const [h, m] = v.split(':').map(Number); return h * 60 + m; };
+
+  function calc() {
+    if (!start.value || !end.value) return;
+    let mins = toMin(end.value) - toMin(start.value);
+    if (mins < 0) mins += 24 * 60; // overnight shift
+    mins -= Number(brk.value) || 0;
+    if (mins < 0) mins = 0;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    document.getElementById('hc-hm')!.textContent = `${h}h ${m}m`;
+    document.getElementById('hc-decimal')!.textContent = (mins / 60).toFixed(2) + ' h';
+  }
+
+  [start, end, brk].forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

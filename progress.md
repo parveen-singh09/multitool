@@ -34,14 +34,21 @@
 - [x] Color Converter (Converters)
 - [x] Password Generator · Hash Generator (Security)
 
-## Expansion — 28 tools total (vs Toolzin benchmark)
+## Expansion — 55 tools total (vs Toolzin benchmark)
 - [x] **Text** (+3): Text Diff, Line Tools, Slug Generator
 - [x] **Developer** (+6): Regex Tester, JWT Decoder, Timestamp Converter, Number Base Converter, Markdown Previewer, HTML Entity Encoder
 - [x] **Image** (+4, canvas + FileReader, no upload): Image Resizer, Image Compressor, Image to Base64, Image Color Picker
 - [x] **Converters** (+1): Unit Converter
-- [x] **Calculators** (+2): Percentage Calculator, Age Calculator
 - [x] **Generators** (+2): UUID Generator, Random Number Generator
 - [x] Deliberately excluded server-dependent tools (IP/SSL lookup, YouTube analytics, speed test) to keep the 100% client-side / no-upload promise
+
+## Calculators suite (29 total in the Calculators category)
+- [x] Existing (2): Percentage, Age
+- [x] **Financial (9):** Loan/EMI, Mortgage, Compound Interest, Simple Interest, Investment, Savings Goal, Tip, Discount, Sales Tax
+- [x] **Health & Fitness (8):** BMI, BMR, Calorie/TDEE, Body Fat (US Navy), Ideal Weight, Pace, Water Intake, Due Date
+- [x] **Math (6):** Scientific (safe shunting-yard parser, no eval), Fraction, Average (mean/median/mode), Standard Deviation, Ratio, GCD & LCM
+- [x] **Everyday (4):** Date Difference, Time, Hours (timesheet), GPA
+- [x] Kept in one `Calculators` category per user choice; reference is calculator.net's grouping
 
 ## Instant search (Toolzin has none)
 - [x] [ToolSearch.astro](src/components/ToolSearch.astro) — client-side filter by name + keywords
@@ -57,7 +64,7 @@
 - [x] Per-page keyword targeting (see [tools.ts](src/data/tools.ts) `keywords`)
 
 ## Verification
-- [x] `npm run build` — 31 pages built clean, no errors
+- [x] `npm run build` — 58 pages built clean, no errors
 - [x] SEO tags confirmed present in built `dist/index.html`
 - [x] Each new tool page carries a unique title/description/keywords via the registry
 
@@ -77,3 +84,5 @@
 - 2026-07-03 — Full site built: 10 tools, home hub + 600-word SEO copy, about/privacy, full SEO meta + OG image + favicon. Production build green.
 - 2026-07-03 — Light/dark theme toggle added (no-flash init, localStorage, theme-color sync).
 - 2026-07-03 — Expanded to **28 tools** (+18 across Text/Developer/Image/Converters/Calculators/Generators) and added **instant client-side search** (home + header) to beat the toolzin.com benchmark. Build green at 31 pages.
+- 2026-07-03 — Removed header + hero search (moved full-width below "Explore every tool"); trimmed hero trust-badges.
+- 2026-07-03 — Added a **comprehensive calculators suite (+27)**: Financial (9), Health & Fitness (8), Math (6, incl. a safe scientific expression parser), Everyday (4). Site now **55 tools**; build green at 58 pages.

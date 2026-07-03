@@ -1,0 +1,63 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="loan-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Loan amount
+        <input id="ln-amt" type="number" min="0" class="field" value="100000" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Annual interest rate (%)
+        <input id="ln-rate" type="number" min="0" step="0.01" class="field" value="10" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Term (years)
+        <input id="ln-years" type="number" min="0" step="0.5" class="field" value="5" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div class="panel panel-lift p-5 text-center"><div id="ln-emi" class="font-display text-2xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Monthly payment</div></div>
+      <div class="panel p-5 text-center"><div id="ln-interest" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total interest</div></div>
+      <div class="panel p-5 text-center"><div id="ln-total" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total repayment</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free loan calculator works out your fixed monthly payment (EMI), the
+      total interest you will pay, and the total amount repaid over the life of a
+      loan. Enter the amount borrowed, the annual interest rate and the term in
+      years to see the breakdown instantly. All calculations run in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const amt = document.getElementById('ln-amt') as HTMLInputElement;
+  const rate = document.getElementById('ln-rate') as HTMLInputElement;
+  const years = document.getElementById('ln-years') as HTMLInputElement;
+  const emiEl = document.getElementById('ln-emi')!;
+  const intEl = document.getElementById('ln-interest')!;
+  const totEl = document.getElementById('ln-total')!;
+
+  const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+
+  function calc() {
+    const P = Number(amt.value);
+    const annual = Number(rate.value);
+    const n = Number(years.value) * 12;
+    if (!(P > 0) || !(n > 0)) { emiEl.textContent = intEl.textContent = totEl.textContent = '—'; return; }
+    const r = annual / 12 / 100;
+    let emi: number;
+    if (r === 0) emi = P / n;
+    else emi = (P * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+    const total = emi * n;
+    emiEl.textContent = money(emi);
+    intEl.textContent = money(total - P);
+    totEl.textContent = money(total);
+  }
+
+  [amt, rate, years].forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

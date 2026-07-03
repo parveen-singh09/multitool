@@ -485,6 +485,284 @@ export const tools: Tool[] = [
     ],
     icon: 'M8 3v4M16 3v4M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM12 12v4M10 14h4',
   },
+
+  // ---- Calculators: Financial ----
+  {
+    slug: 'loan-calculator',
+    name: 'Loan Calculator',
+    tagline: 'Monthly EMI, total interest & payment.',
+    description:
+      'Free online loan calculator. Calculate your monthly EMI, total interest and total repayment for any loan amount, interest rate and term. Instant and private.',
+    category: 'Calculators',
+    keywords: ['loan calculator', 'emi calculator', 'monthly payment calculator', 'loan repayment calculator', 'interest calculator'],
+    icon: 'M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
+  },
+  {
+    slug: 'mortgage-calculator',
+    name: 'Mortgage Calculator',
+    tagline: 'Estimate monthly home loan payments.',
+    description:
+      'Free online mortgage calculator. Estimate monthly principal and interest payments, with optional property tax and insurance, for any home loan. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['mortgage calculator', 'home loan calculator', 'monthly mortgage payment', 'house payment calculator', 'mortgage estimator'],
+    icon: 'M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5M9 21v-6h6v6',
+  },
+  {
+    slug: 'compound-interest-calculator',
+    name: 'Compound Interest Calculator',
+    tagline: 'Grow savings with compound interest.',
+    description:
+      'Free online compound interest calculator. See how your money grows over time with adjustable rate, compounding frequency and regular contributions. Private and instant.',
+    category: 'Calculators',
+    keywords: ['compound interest calculator', 'interest calculator', 'savings growth calculator', 'investment growth', 'compounding calculator'],
+    icon: 'M3 3v18h18M7 15l4-4 3 3 5-6',
+  },
+  {
+    slug: 'simple-interest-calculator',
+    name: 'Simple Interest Calculator',
+    tagline: 'Interest on principal, rate & time.',
+    description:
+      'Free online simple interest calculator. Calculate simple interest and total amount from principal, annual rate and time period instantly in your browser.',
+    category: 'Calculators',
+    keywords: ['simple interest calculator', 'interest calculator', 'principal interest calculator', 'si calculator', 'calculate interest'],
+    icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM9.5 9.5h.01M14.5 14.5h.01M15 9l-6 6',
+  },
+  {
+    slug: 'investment-calculator',
+    name: 'Investment Calculator',
+    tagline: 'Project future value of investments.',
+    description:
+      'Free online investment calculator. Project the future value of a lump sum plus regular contributions at a given return rate over time. Runs entirely in your browser.',
+    category: 'Calculators',
+    keywords: ['investment calculator', 'future value calculator', 'roi calculator', 'investment growth calculator', 'return on investment'],
+    icon: 'M3 3v18h18M7 14l3-3 3 3 4-5M17 9h3v3',
+  },
+  {
+    slug: 'savings-calculator',
+    name: 'Savings Goal Calculator',
+    tagline: 'Find the monthly saving to hit a goal.',
+    description:
+      'Free online savings goal calculator. Work out how much to save each month to reach a target amount by a set date, including interest. Instant and private.',
+    category: 'Calculators',
+    keywords: ['savings calculator', 'savings goal calculator', 'monthly savings calculator', 'save money calculator', 'goal calculator'],
+    icon: 'M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM4 10a4 4 0 0 1 4-4h6M17 14h.01',
+  },
+  {
+    slug: 'tip-calculator',
+    name: 'Tip Calculator',
+    tagline: 'Tip amount & split the bill by people.',
+    description:
+      'Free online tip calculator. Calculate the tip and total for any bill, split it between any number of people, and see the per-person amount. Fast and private.',
+    category: 'Calculators',
+    keywords: ['tip calculator', 'gratuity calculator', 'bill split calculator', 'restaurant tip calculator', 'split the bill'],
+    icon: 'M12 1v22M6 5h9a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h9',
+  },
+  {
+    slug: 'discount-calculator',
+    name: 'Discount Calculator',
+    tagline: 'Sale price after a percentage off.',
+    description:
+      'Free online discount calculator. Enter a price and percentage off to get the amount saved and the final sale price. Add a second discount too. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['discount calculator', 'percent off calculator', 'sale price calculator', 'markdown calculator', 'discount percentage'],
+    icon: 'M9 9h.01M15 15h.01M16 8 8 16M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4Z',
+  },
+  {
+    slug: 'sales-tax-calculator',
+    name: 'Sales Tax Calculator',
+    tagline: 'Add or remove sales tax / VAT / GST.',
+    description:
+      'Free online sales tax calculator. Add sales tax, VAT or GST to a price, or work backwards to find the pre-tax amount and tax portion. Instant, client-side.',
+    category: 'Calculators',
+    keywords: ['sales tax calculator', 'vat calculator', 'gst calculator', 'tax calculator', 'add tax to price'],
+    icon: 'M9 14l6-6M9.5 9h.01M14.5 14h.01M5 3h14a1 1 0 0 1 1 1v17l-3-2-3 2-3-2-3 2V4a1 1 0 0 1 1-1Z',
+  },
+
+  // ---- Calculators: Health & Fitness ----
+  {
+    slug: 'bmi-calculator',
+    name: 'BMI Calculator',
+    tagline: 'Body Mass Index & weight category.',
+    description:
+      'Free online BMI calculator. Calculate your Body Mass Index from height and weight in metric or imperial units, and see your weight category. Private and instant.',
+    category: 'Calculators',
+    keywords: ['bmi calculator', 'body mass index calculator', 'calculate bmi', 'bmi chart', 'weight category calculator'],
+    icon: 'M12 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM6 22l2-9h8l2 9M9 13l-2 4M15 13l2 4',
+  },
+  {
+    slug: 'bmr-calculator',
+    name: 'BMR Calculator',
+    tagline: 'Basal metabolic rate (Mifflin-St Jeor).',
+    description:
+      'Free online BMR calculator. Estimate your basal metabolic rate — the calories your body burns at rest — using the Mifflin-St Jeor equation. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['bmr calculator', 'basal metabolic rate calculator', 'metabolism calculator', 'calories at rest', 'mifflin st jeor'],
+    icon: 'M12 2a7 7 0 0 0-7 7c0 3 2 5 2 8a5 5 0 0 0 10 0c0-3 2-5 2-8a7 7 0 0 0-7-7ZM12 22v-6',
+  },
+  {
+    slug: 'calorie-calculator',
+    name: 'Calorie Calculator',
+    tagline: 'Daily calorie needs (TDEE) by activity.',
+    description:
+      'Free online calorie calculator. Estimate your daily calorie needs (TDEE) from BMR and activity level for maintenance, weight loss or gain. Instant and private.',
+    category: 'Calculators',
+    keywords: ['calorie calculator', 'tdee calculator', 'daily calorie calculator', 'maintenance calories', 'calorie needs calculator'],
+    icon: 'M12 2c3 3 5 6 5 10a5 5 0 0 1-10 0c0-1 .5-2 1-3 .5 2 2 2 2 2 0-3-1-6 2-9Z',
+  },
+  {
+    slug: 'body-fat-calculator',
+    name: 'Body Fat Calculator',
+    tagline: 'Body fat percentage (US Navy method).',
+    description:
+      'Free online body fat calculator. Estimate your body fat percentage using the US Navy tape method from a few body measurements. Runs entirely in your browser.',
+    category: 'Calculators',
+    keywords: ['body fat calculator', 'body fat percentage calculator', 'us navy body fat', 'bf% calculator', 'measure body fat'],
+    icon: 'M12 2a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM7 22c0-4 2-8 5-8s5 4 5 8',
+  },
+  {
+    slug: 'ideal-weight-calculator',
+    name: 'Ideal Weight Calculator',
+    tagline: 'Healthy weight range for your height.',
+    description:
+      'Free online ideal weight calculator. Estimate your ideal body weight from height and sex using the Devine, Robinson and Hamwi formulas. Private and instant.',
+    category: 'Calculators',
+    keywords: ['ideal weight calculator', 'ideal body weight', 'healthy weight calculator', 'target weight calculator', 'devine formula'],
+    icon: 'M12 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM8 21l1-7-2 1M16 21l-1-7 2 1M9 14h6',
+  },
+  {
+    slug: 'pace-calculator',
+    name: 'Pace Calculator',
+    tagline: 'Running pace, time or distance.',
+    description:
+      'Free online pace calculator. Calculate running pace, finish time or distance for runs — enter any two values to find the third. Great for race training. Private.',
+    category: 'Calculators',
+    keywords: ['pace calculator', 'running pace calculator', 'race time calculator', 'min per km calculator', 'marathon pace'],
+    icon: 'M13 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM7 22l3-6 3 2 1-4 3 3M10 10l2 2',
+  },
+  {
+    slug: 'water-intake-calculator',
+    name: 'Water Intake Calculator',
+    tagline: 'Daily water needs by weight & activity.',
+    description:
+      'Free online water intake calculator. Estimate how much water you should drink each day based on your body weight and activity level. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['water intake calculator', 'daily water calculator', 'hydration calculator', 'how much water to drink', 'water needs calculator'],
+    icon: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11Z',
+  },
+  {
+    slug: 'due-date-calculator',
+    name: 'Pregnancy Due Date Calculator',
+    tagline: 'Estimate due date from last period.',
+    description:
+      'Free online pregnancy due date calculator. Estimate your baby’s due date and current week from your last menstrual period using Naegele’s rule. Private and instant.',
+    category: 'Calculators',
+    keywords: ['due date calculator', 'pregnancy calculator', 'baby due date', 'gestational age calculator', 'estimated due date'],
+    icon: 'M12 2a7 7 0 0 0-4 12.7V21a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-6.3A7 7 0 0 0 12 2ZM12 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z',
+  },
+
+  // ---- Calculators: Math ----
+  {
+    slug: 'scientific-calculator',
+    name: 'Scientific Calculator',
+    tagline: 'Evaluate expressions with functions.',
+    description:
+      'Free online scientific calculator. Evaluate math expressions with parentheses, powers, roots and trig, log and ln functions. Works entirely in your browser.',
+    category: 'Calculators',
+    keywords: ['scientific calculator', 'online calculator', 'math calculator', 'expression calculator', 'trigonometry calculator'],
+    icon: 'M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1ZM7 7h10M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01',
+  },
+  {
+    slug: 'fraction-calculator',
+    name: 'Fraction Calculator',
+    tagline: 'Add, subtract, multiply & divide fractions.',
+    description:
+      'Free online fraction calculator. Add, subtract, multiply and divide fractions and get the result simplified to lowest terms. Instant, client-side and private.',
+    category: 'Calculators',
+    keywords: ['fraction calculator', 'add fractions', 'multiply fractions', 'simplify fractions', 'fraction math calculator'],
+    icon: 'M17 5 7 19M8 6.5a1.5 1.5 0 1 0 0 .01M16 17.5a1.5 1.5 0 1 0 0 .01',
+  },
+  {
+    slug: 'average-calculator',
+    name: 'Average Calculator',
+    tagline: 'Mean, median, mode & range.',
+    description:
+      'Free online average calculator. Enter a list of numbers to instantly get the mean, median, mode, range, sum and count. Runs entirely in your browser.',
+    category: 'Calculators',
+    keywords: ['average calculator', 'mean calculator', 'median calculator', 'mode calculator', 'mean median mode'],
+    icon: 'M4 19h16M6 19V9M11 19V5M16 19v-6',
+  },
+  {
+    slug: 'standard-deviation-calculator',
+    name: 'Standard Deviation Calculator',
+    tagline: 'Population & sample standard deviation.',
+    description:
+      'Free online standard deviation calculator. Get population and sample standard deviation, variance, mean and count from a list of numbers. Private and instant.',
+    category: 'Calculators',
+    keywords: ['standard deviation calculator', 'variance calculator', 'std dev calculator', 'sample standard deviation', 'population standard deviation'],
+    icon: 'M3 12c3 0 3-7 6-7s3 14 6 14 3-7 6-7M3 20h18',
+  },
+  {
+    slug: 'ratio-calculator',
+    name: 'Ratio Calculator',
+    tagline: 'Simplify ratios & solve for X.',
+    description:
+      'Free online ratio calculator. Simplify a ratio to its lowest terms or solve equivalent ratios for a missing value (A:B = C:X). Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['ratio calculator', 'simplify ratio', 'ratio solver', 'proportion calculator', 'equivalent ratio calculator'],
+    icon: 'M7 7a2 2 0 1 0 0 .01M17 17a2 2 0 1 0 0 .01M5 19 19 5',
+  },
+  {
+    slug: 'gcd-lcm-calculator',
+    name: 'GCD & LCM Calculator',
+    tagline: 'Greatest common divisor & lowest multiple.',
+    description:
+      'Free online GCD and LCM calculator. Find the greatest common divisor (HCF) and least common multiple of two or more numbers instantly in your browser.',
+    category: 'Calculators',
+    keywords: ['gcd calculator', 'lcm calculator', 'hcf calculator', 'greatest common divisor', 'least common multiple'],
+    icon: 'M6 6h12v12H6zM3 9h3M3 15h3M18 9h3M18 15h3M9 3v3M15 3v3M9 18v3M15 18v3',
+  },
+
+  // ---- Calculators: Everyday / Date & Time ----
+  {
+    slug: 'date-difference-calculator',
+    name: 'Date Difference Calculator',
+    tagline: 'Days, weeks & months between dates.',
+    description:
+      'Free online date difference calculator. Count the exact days, weeks, months and years between two dates, or add and subtract days from a date. Private and instant.',
+    category: 'Calculators',
+    keywords: ['date difference calculator', 'days between dates', 'date calculator', 'add days to date', 'time between dates'],
+    icon: 'M8 3v4M16 3v4M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM9 15l2 2 4-4',
+  },
+  {
+    slug: 'time-calculator',
+    name: 'Time Calculator',
+    tagline: 'Add & subtract hours, minutes, seconds.',
+    description:
+      'Free online time calculator. Add or subtract times and durations in hours, minutes and seconds and see the total. Runs entirely in your browser.',
+    category: 'Calculators',
+    keywords: ['time calculator', 'add time calculator', 'time duration calculator', 'hours minutes calculator', 'subtract time'],
+    icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM12 7v5l3 2',
+  },
+  {
+    slug: 'hours-calculator',
+    name: 'Hours Calculator',
+    tagline: 'Work hours between two clock times.',
+    description:
+      'Free online hours calculator. Calculate hours and minutes worked between a start and end time, minus breaks — a quick timesheet tool. Private and client-side.',
+    category: 'Calculators',
+    keywords: ['hours calculator', 'time card calculator', 'work hours calculator', 'timesheet calculator', 'hours worked calculator'],
+    icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM12 7v5l4 2M8 22h8',
+  },
+  {
+    slug: 'gpa-calculator',
+    name: 'GPA Calculator',
+    tagline: 'Weighted GPA from grades & credits.',
+    description:
+      'Free online GPA calculator. Add your courses with grades and credit hours to calculate a weighted grade point average on a 4.0 scale. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['gpa calculator', 'grade point average calculator', 'college gpa calculator', 'weighted gpa calculator', 'calculate gpa'],
+    icon: 'M22 10 12 5 2 10l10 5 10-5ZM6 12v5c0 1 3 3 6 3s6-2 6-3v-5M22 10v6',
+  },
 ];
 
 export const categories: ToolCategory[] = [

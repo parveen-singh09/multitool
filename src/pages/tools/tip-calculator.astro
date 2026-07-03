@@ -1,0 +1,62 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="tip-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Bill amount
+        <input id="tp-bill" type="number" min="0" class="field" value="60" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Tip percentage (%)
+        <input id="tp-pct" type="number" min="0" step="1" class="field" value="15" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Split between (people)
+        <input id="tp-people" type="number" min="1" step="1" class="field" value="2" inputmode="numeric" />
+      </label>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      {[10, 15, 18, 20, 25].map((p) => (
+        <button data-pct={p} class="tp-quick btn btn-secondary">{p}%</button>
+      ))}
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div class="panel p-5 text-center"><div id="tp-tip" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Tip</div></div>
+      <div class="panel p-5 text-center"><div id="tp-total" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total</div></div>
+      <div class="panel panel-lift p-5 text-center"><div id="tp-each" class="font-display text-2xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Per person</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free tip calculator works out the gratuity and total for any bill and
+      splits it evenly between your group. Tap a quick percentage or enter your
+      own, set the number of people, and see the per-person amount instantly.
+      Everything is calculated in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const bill = document.getElementById('tp-bill') as HTMLInputElement;
+  const pct = document.getElementById('tp-pct') as HTMLInputElement;
+  const people = document.getElementById('tp-people') as HTMLInputElement;
+  const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+
+  function calc() {
+    const b = Number(bill.value) || 0;
+    const tip = b * (Number(pct.value) || 0) / 100;
+    const total = b + tip;
+    const n = Math.max(1, Math.floor(Number(people.value) || 1));
+    document.getElementById('tp-tip')!.textContent = money(tip);
+    document.getElementById('tp-total')!.textContent = money(total);
+    document.getElementById('tp-each')!.textContent = money(total / n);
+  }
+  [bill, pct, people].forEach((el) => el.addEventListener('input', calc));
+  document.querySelectorAll<HTMLButtonElement>('.tp-quick').forEach((btn) => {
+    btn.addEventListener('click', () => { pct.value = btn.dataset.pct!; calc(); });
+  });
+  calc();
+</script>

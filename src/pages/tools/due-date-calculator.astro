@@ -1,0 +1,60 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="due-date-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">First day of last period
+        <input id="dd-lmp" type="date" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Average cycle length (days)
+        <input id="dd-cycle" type="number" min="20" max="45" class="field" value="28" inputmode="numeric" />
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div id="dd-date" class="font-display text-3xl font-semibold text-primary-hover">—</div>
+      <div class="mt-1 text-[13px] text-ink-subtle">estimated due date</div>
+    </div>
+    <div class="grid grid-cols-2 gap-3 text-center">
+      <div class="panel p-4"><div id="dd-week" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Current week</div></div>
+      <div class="panel p-4"><div id="dd-tri" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Trimester</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free pregnancy due date calculator estimates your baby’s due date from
+      the first day of your last menstrual period, adjusting for cycle length. It
+      also shows the current pregnancy week and trimester. This is an estimate —
+      only a small share of babies arrive exactly on the due date. All
+      calculations run in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const lmp = document.getElementById('dd-lmp') as HTMLInputElement;
+  const cycle = document.getElementById('dd-cycle') as HTMLInputElement;
+
+  function calc() {
+    if (!lmp.value) return;
+    const start = new Date(lmp.value + 'T00:00:00');
+    const adjust = (Number(cycle.value) || 28) - 28;
+    // Naegele's rule: LMP + 280 days, adjusted for cycle length.
+    const due = new Date(start);
+    due.setDate(due.getDate() + 280 + adjust);
+    document.getElementById('dd-date')!.textContent = due.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+
+    const today = new Date();
+    const daysPreg = Math.floor((today.getTime() - start.getTime()) / 86400000);
+    const weeks = Math.floor(daysPreg / 7);
+    const weekEl = document.getElementById('dd-week')!;
+    const triEl = document.getElementById('dd-tri')!;
+    if (daysPreg < 0 || weeks > 45) { weekEl.textContent = '—'; triEl.textContent = '—'; return; }
+    weekEl.textContent = `${weeks}w ${daysPreg % 7}d`;
+    triEl.textContent = weeks < 13 ? '1st' : weeks < 27 ? '2nd' : '3rd';
+  }
+  [lmp, cycle].forEach((el) => el.addEventListener('input', calc));
+</script>

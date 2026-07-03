@@ -1,0 +1,77 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="calorie-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Sex
+        <select id="cal-sex" class="field">
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Age (years)
+        <input id="cal-age" type="number" min="1" class="field" value="30" inputmode="numeric" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Height (cm)
+        <input id="cal-cm" type="number" min="0" class="field" value="175" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Weight (kg)
+        <input id="cal-kg" type="number" min="0" class="field" value="70" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle sm:col-span-2">Activity level
+        <select id="cal-act" class="field">
+          <option value="1.2">Sedentary (little or no exercise)</option>
+          <option value="1.375">Light (1–3 days/week)</option>
+          <option value="1.55" selected>Moderate (3–5 days/week)</option>
+          <option value="1.725">Active (6–7 days/week)</option>
+          <option value="1.9">Very active (hard training / physical job)</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div id="cal-tdee" class="font-display text-4xl font-semibold text-primary-hover">—</div>
+      <div class="mt-2 text-sm text-ink-subtle">calories/day to maintain weight (TDEE)</div>
+    </div>
+    <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
+      <div class="panel p-4"><div id="cal-loss1" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Mild loss</div></div>
+      <div class="panel p-4"><div id="cal-loss2" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Weight loss</div></div>
+      <div class="panel p-4"><div id="cal-gain1" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Mild gain</div></div>
+      <div class="panel p-4"><div id="cal-gain2" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Weight gain</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free calorie calculator estimates your total daily energy expenditure
+      (TDEE) — the calories you burn per day — from your BMR and activity level.
+      It also suggests targets for gradual or faster weight loss and gain. Use it
+      as a starting point for planning your diet. All calculations run in your
+      browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  function calc() {
+    const sex = (document.getElementById('cal-sex') as HTMLSelectElement).value;
+    const age = Number($('cal-age').value);
+    const cm = Number($('cal-cm').value);
+    const kg = Number($('cal-kg').value);
+    const act = Number((document.getElementById('cal-act') as HTMLSelectElement).value);
+    if (!(age > 0) || !(cm > 0) || !(kg > 0)) { document.getElementById('cal-tdee')!.textContent = '—'; return; }
+    const bmr = 10 * kg + 6.25 * cm - 5 * age + (sex === 'male' ? 5 : -161);
+    const tdee = bmr * act;
+    const r = (n: number) => Math.round(n).toLocaleString();
+    document.getElementById('cal-tdee')!.textContent = r(tdee);
+    document.getElementById('cal-loss1')!.textContent = r(tdee - 250);
+    document.getElementById('cal-loss2')!.textContent = r(tdee - 500);
+    document.getElementById('cal-gain1')!.textContent = r(tdee + 250);
+    document.getElementById('cal-gain2')!.textContent = r(tdee + 500);
+  }
+  document.querySelectorAll('#cal-sex, #cal-age, #cal-cm, #cal-kg, #cal-act').forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

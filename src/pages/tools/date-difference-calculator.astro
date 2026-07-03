@@ -1,0 +1,97 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="date-difference-calculator">
+  <div class="flex flex-col gap-6">
+    <!-- Difference between two dates -->
+    <div class="panel panel-lift flex flex-col gap-3 p-5">
+      <p class="text-sm text-ink">Difference between two dates</p>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Start date
+          <input id="dd-start" type="date" class="field" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">End date
+          <input id="dd-end" type="date" class="field" />
+        </label>
+      </div>
+      <p id="dd-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+      <div id="dd-main" class="font-display text-2xl font-semibold text-primary-hover" aria-live="polite">—</div>
+      <div class="grid grid-cols-3 gap-3 text-center text-[13px]">
+        <div class="panel p-3"><div id="dd-days" class="font-mono text-ink">—</div><div class="mt-1 text-ink-subtle">Days</div></div>
+        <div class="panel p-3"><div id="dd-weeks" class="font-mono text-ink">—</div><div class="mt-1 text-ink-subtle">Weeks</div></div>
+        <div class="panel p-3"><div id="dd-months" class="font-mono text-ink">—</div><div class="mt-1 text-ink-subtle">Months</div></div>
+      </div>
+    </div>
+
+    <!-- Add / subtract days -->
+    <div class="panel panel-lift flex flex-col gap-3 p-5">
+      <p class="text-sm text-ink">Add or subtract days from a date</p>
+      <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
+        <input id="da-date" type="date" class="field" />
+        <select id="da-op" class="field w-24"><option value="1">add</option><option value="-1">subtract</option></select>
+        <input id="da-days" type="number" class="field w-24" value="30" inputmode="numeric" />
+        <span>days =</span>
+        <span id="da-out" class="font-mono text-ink">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free date difference calculator counts the exact number of days,
+      weeks and months between two dates, and can add or subtract a number of
+      days from any date. It is useful for deadlines, anniversaries and project
+      planning. All calculations run in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const err = document.getElementById('dd-error')!;
+
+  function diff() {
+    err.classList.add('hidden');
+    if (!$('dd-start').value || !$('dd-end').value) return;
+    let a = new Date($('dd-start').value + 'T00:00:00');
+    let b = new Date($('dd-end').value + 'T00:00:00');
+    if (b < a) [a, b] = [b, a];
+    const days = Math.round((b.getTime() - a.getTime()) / 86400000);
+
+    // Calendar Y/M/D breakdown.
+    let y = b.getFullYear() - a.getFullYear();
+    let m = b.getMonth() - a.getMonth();
+    let d = b.getDate() - a.getDate();
+    if (d < 0) { m--; d += new Date(b.getFullYear(), b.getMonth(), 0).getDate(); }
+    if (m < 0) { y--; m += 12; }
+
+    document.getElementById('dd-main')!.textContent =
+      `${y ? y + ' years, ' : ''}${m} months, ${d} days`;
+    document.getElementById('dd-days')!.textContent = days.toLocaleString();
+    document.getElementById('dd-weeks')!.textContent = Math.floor(days / 7).toLocaleString();
+    document.getElementById('dd-months')!.textContent = (y * 12 + m).toLocaleString();
+  }
+
+  function addSub() {
+    if (!$('da-date').value) return;
+    const base = new Date($('da-date').value + 'T00:00:00');
+    const delta = Number($('da-op').value) * Number($('da-days').value);
+    base.setDate(base.getDate() + delta);
+    document.getElementById('da-out')!.textContent = base.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+
+  document.querySelectorAll('#dd-start, #dd-end').forEach((el) => el.addEventListener('input', diff));
+  document.querySelectorAll('#da-date, #da-op, #da-days').forEach((el) => el.addEventListener('input', addSub));
+
+  // Seed with today + a month out.
+  const today = new Date();
+  today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+  const iso = today.toISOString().slice(0, 10);
+  $('dd-start').value = iso;
+  $('da-date').value = iso;
+  const later = new Date(today); later.setMonth(later.getMonth() + 1);
+  $('dd-end').value = later.toISOString().slice(0, 10);
+  diff();
+  addSub();
+</script>
