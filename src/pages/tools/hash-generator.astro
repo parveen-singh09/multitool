@@ -1,0 +1,73 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+
+const algos = ['SHA-1', 'SHA-256', 'SHA-384', 'SHA-512'];
+---
+
+<ToolLayout slug="hash-generator">
+  <div class="flex flex-col gap-4">
+    <textarea
+      id="hash-input"
+      class="field min-h-40 resize-y font-mono text-[13px]"
+      placeholder="Type or paste text to hash…"
+      aria-label="Text to hash"
+    ></textarea>
+
+    <div class="flex flex-col gap-3">
+      {algos.map((algo) => (
+        <div class="panel flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:gap-4">
+          <span class="w-20 shrink-0 font-mono text-sm text-primary-hover">{algo}</span>
+          <output
+            data-algo={algo}
+            class="hash-out flex-1 select-all break-all font-mono text-[13px] text-ink-muted"
+          >—</output>
+          <button class="btn btn-secondary hash-copy shrink-0" data-algo={algo}>Copy</button>
+        </div>
+      ))}
+    </div>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('hash-input') as HTMLTextAreaElement;
+  const outputs = document.querySelectorAll<HTMLOutputElement>('.hash-out');
+
+  function toHex(buffer: ArrayBuffer): string {
+    return Array.from(new Uint8Array(buffer))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+
+  async function updateAll() {
+    const text = input.value;
+    const data = new TextEncoder().encode(text);
+    for (const out of outputs) {
+      const algo = out.dataset.algo!;
+      if (!text) {
+        out.textContent = '—';
+        continue;
+      }
+      const digest = await crypto.subtle.digest(algo, data);
+      out.textContent = toHex(digest);
+    }
+  }
+
+  let timer: number;
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = window.setTimeout(updateAll, 120);
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('.hash-copy').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const out = document.querySelector<HTMLOutputElement>(
+        `.hash-out[data-algo="${btn.dataset.algo}"]`
+      )!;
+      if (out.textContent && out.textContent !== '—') {
+        await navigator.clipboard.writeText(out.textContent);
+        btn.textContent = 'Copied!';
+        setTimeout(() => (btn.textContent = 'Copy'), 1500);
+      }
+    });
+  });
+</script>

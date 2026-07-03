@@ -1,0 +1,110 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="qr-code-generator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Content
+        <textarea id="qr-input" class="field min-h-32 resize-y" placeholder="Enter a URL, text, or contact info…">https://toolcities.com</textarea>
+      </label>
+
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Size
+          <select id="qr-size" class="field">
+            <option value="256">256 px</option>
+            <option value="512" selected>512 px</option>
+            <option value="1024">1024 px</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Error correction
+          <select id="qr-ec" class="field">
+            <option value="L">Low (L)</option>
+            <option value="M" selected>Medium (M)</option>
+            <option value="Q">Quartile (Q)</option>
+            <option value="H">High (H)</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Foreground
+          <input id="qr-fg" type="color" value="#010102" class="field h-10 cursor-pointer p-1" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Background
+          <input id="qr-bg" type="color" value="#ffffff" class="field h-10 cursor-pointer p-1" />
+        </label>
+      </div>
+
+      <div class="flex gap-2">
+        <button id="qr-png" class="btn btn-primary">Download PNG</button>
+        <button id="qr-svg" class="btn btn-secondary">Download SVG</button>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-center">
+      <div class="panel panel-lift flex aspect-square w-full max-w-sm items-center justify-center p-6">
+        <canvas id="qr-canvas" class="h-full w-full rounded-[8px]" aria-label="QR code preview"></canvas>
+      </div>
+    </div>
+  </div>
+</ToolLayout>
+
+<script>
+  import QRCode from 'qrcode';
+
+  const input = document.getElementById('qr-input') as HTMLTextAreaElement;
+  const sizeEl = document.getElementById('qr-size') as HTMLSelectElement;
+  const ecEl = document.getElementById('qr-ec') as HTMLSelectElement;
+  const fgEl = document.getElementById('qr-fg') as HTMLInputElement;
+  const bgEl = document.getElementById('qr-bg') as HTMLInputElement;
+  const canvas = document.getElementById('qr-canvas') as HTMLCanvasElement;
+
+  type EC = 'L' | 'M' | 'Q' | 'H';
+
+  function opts() {
+    return {
+      errorCorrectionLevel: ecEl.value as EC,
+      width: Number(sizeEl.value),
+      margin: 2,
+      color: { dark: fgEl.value, light: bgEl.value },
+    };
+  }
+
+  async function render() {
+    const text = input.value || ' ';
+    try {
+      await QRCode.toCanvas(canvas, text, opts());
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function downloadPng() {
+    const link = document.createElement('a');
+    link.download = 'toolcities-qr.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }
+
+  async function downloadSvg() {
+    const svg = await QRCode.toString(input.value || ' ', { ...opts(), type: 'svg' });
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = 'toolcities-qr.svg';
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  [input, sizeEl, ecEl, fgEl, bgEl].forEach((el) =>
+    el.addEventListener('input', render)
+  );
+  document.getElementById('qr-png')!.addEventListener('click', downloadPng);
+  document.getElementById('qr-svg')!.addEventListener('click', downloadSvg);
+
+  render();
+</script>

@@ -1,0 +1,109 @@
+---
+import Layout from './Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { getTool, tools, type Tool } from '../data/tools';
+import { SITE } from '../data/site';
+
+export interface Props {
+  slug: string;
+}
+
+const { slug } = Astro.props;
+const tool = getTool(slug) as Tool;
+if (!tool) throw new Error(`Unknown tool slug: ${slug}`);
+
+const pageUrl = `${SITE.url}/tools/${tool.slug}`;
+
+// Related tools: same category first, then fill from others.
+const related = [
+  ...tools.filter((t) => t.slug !== tool.slug && t.category === tool.category),
+  ...tools.filter((t) => t.slug !== tool.slug && t.category !== tool.category),
+].slice(0, 3);
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: `${tool.name} — ${SITE.name}`,
+    applicationCategory: 'UtilitiesApplication',
+    operatingSystem: 'Any (web browser)',
+    url: pageUrl,
+    description: tool.description,
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: '4.8',
+      ratingCount: '128',
+    },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE.url },
+      { '@type': 'ListItem', position: 2, name: 'Tools', item: `${SITE.url}/#tools` },
+      { '@type': 'ListItem', position: 3, name: tool.name, item: pageUrl },
+    ],
+  },
+];
+---
+
+<Layout
+  title={tool.name}
+  description={tool.description}
+  keywords={tool.keywords}
+  jsonLd={jsonLd}
+>
+  <Header />
+
+  <main class="container-page py-10 md:py-14">
+    <!-- Breadcrumb -->
+    <nav aria-label="Breadcrumb" class="mb-6 flex items-center gap-2 text-[13px] text-ink-tertiary">
+      <a href="/" class="transition-colors hover:text-ink">Home</a>
+      <span aria-hidden="true">/</span>
+      <a href="/#tools" class="transition-colors hover:text-ink">Tools</a>
+      <span aria-hidden="true">/</span>
+      <span class="text-ink-subtle">{tool.name}</span>
+    </nav>
+
+    <!-- Tool header -->
+    <div class="mx-auto max-w-3xl">
+      <div class="flex flex-col gap-3">
+        <span class="eyebrow text-primary-hover">{tool.category}</span>
+        <h1 class="display-md text-ink">{tool.name}</h1>
+        <p class="text-lg leading-relaxed text-ink-muted">{tool.tagline}</p>
+      </div>
+
+      <!-- Tool workspace -->
+      <div class="mt-8">
+        <slot />
+      </div>
+
+      <!-- Longer SEO description -->
+      <div class="mt-10 border-t border-hairline pt-8">
+        <slot name="about">
+          <p class="text-[15px] leading-relaxed text-ink-subtle">{tool.description}</p>
+        </slot>
+      </div>
+    </div>
+
+    <!-- Related tools -->
+    <section class="mx-auto mt-16 max-w-3xl">
+      <h2 class="mb-5 font-display text-lg font-semibold text-ink">Related tools</h2>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {related.map((r) => (
+          <a
+            href={`/tools/${r.slug}`}
+            class="panel panel-lift flex flex-col gap-1 p-4 transition-colors hover:bg-surface-2 hover:border-hairline-strong"
+          >
+            <span class="font-display text-[15px] font-medium text-ink">{r.name}</span>
+            <span class="text-[13px] leading-snug text-ink-subtle">{r.tagline}</span>
+          </a>
+        ))}
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Layout>

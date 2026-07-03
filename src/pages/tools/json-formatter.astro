@@ -1,0 +1,76 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="json-formatter">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="jf-beautify" class="btn btn-primary">Beautify</button>
+      <button id="jf-minify" class="btn btn-secondary">Minify</button>
+      <button id="jf-copy" class="btn btn-secondary">Copy</button>
+      <button id="jf-clear" class="btn btn-tertiary">Clear</button>
+      <label class="ml-auto flex items-center gap-2 text-sm text-ink-subtle">
+        Indent
+        <select id="jf-indent" class="field w-auto py-1">
+          <option value="2">2 spaces</option>
+          <option value="4">4 spaces</option>
+          <option value="tab">Tab</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="jf-status" class="hidden rounded-[8px] border px-3 py-2 text-sm" role="status"></div>
+
+    <textarea
+      id="jf-input"
+      class="field min-h-72 resize-y font-mono text-[13px]"
+      placeholder='Paste JSON here, e.g. {"hello":"world"}'
+      spellcheck="false"
+      aria-label="JSON input"
+    ></textarea>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('jf-input') as HTMLTextAreaElement;
+  const status = document.getElementById('jf-status')!;
+  const indentSel = document.getElementById('jf-indent') as HTMLSelectElement;
+
+  function getIndent(): string | number {
+    const v = indentSel.value;
+    return v === 'tab' ? '\t' : Number(v);
+  }
+
+  function showStatus(msg: string, ok: boolean) {
+    status.textContent = msg;
+    status.classList.remove('hidden');
+    status.style.borderColor = ok ? '#27a644' : '#d14d4d';
+    status.style.color = ok ? '#27a644' : '#e08585';
+  }
+
+  function process(minify: boolean) {
+    if (!input.value.trim()) return;
+    try {
+      const parsed = JSON.parse(input.value);
+      input.value = minify
+        ? JSON.stringify(parsed)
+        : JSON.stringify(parsed, null, getIndent());
+      showStatus('Valid JSON ✓', true);
+    } catch (e) {
+      showStatus(`Invalid JSON: ${(e as Error).message}`, false);
+    }
+  }
+
+  document.getElementById('jf-beautify')!.addEventListener('click', () => process(false));
+  document.getElementById('jf-minify')!.addEventListener('click', () => process(true));
+  document.getElementById('jf-clear')!.addEventListener('click', () => {
+    input.value = '';
+    status.classList.add('hidden');
+  });
+  document.getElementById('jf-copy')!.addEventListener('click', async () => {
+    const btn = document.getElementById('jf-copy')!;
+    await navigator.clipboard.writeText(input.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+</script>

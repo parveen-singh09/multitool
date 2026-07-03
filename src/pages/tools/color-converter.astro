@@ -1,0 +1,133 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="color-converter">
+  <div class="flex flex-col gap-5">
+    <div class="flex flex-col items-center gap-4 sm:flex-row">
+      <input id="cc-picker" type="color" value="#5e6ad2" class="h-24 w-24 shrink-0 cursor-pointer rounded-[12px] border border-hairline bg-surface-1" aria-label="Color picker" />
+      <div id="cc-preview" class="panel h-24 flex-1 rounded-[12px]" style="background:#5e6ad2"></div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1">
+        <span class="text-[13px] text-ink-subtle">HEX</span>
+        <div class="flex gap-2">
+          <input id="cc-hex" class="field font-mono" value="#5e6ad2" spellcheck="false" />
+          <button class="btn btn-secondary cc-copy" data-target="cc-hex">Copy</button>
+        </div>
+      </label>
+      <label class="flex flex-col gap-1">
+        <span class="text-[13px] text-ink-subtle">RGB</span>
+        <div class="flex gap-2">
+          <input id="cc-rgb" class="field font-mono" value="rgb(94, 106, 210)" spellcheck="false" />
+          <button class="btn btn-secondary cc-copy" data-target="cc-rgb">Copy</button>
+        </div>
+      </label>
+      <label class="flex flex-col gap-1">
+        <span class="text-[13px] text-ink-subtle">HSL</span>
+        <div class="flex gap-2">
+          <input id="cc-hsl" class="field font-mono" value="hsl(232, 57%, 60%)" spellcheck="false" />
+          <button class="btn btn-secondary cc-copy" data-target="cc-hsl">Copy</button>
+        </div>
+      </label>
+    </div>
+
+    <div>
+      <span class="text-[13px] text-ink-subtle">Shades</span>
+      <div id="cc-shades" class="mt-2 grid grid-cols-5 gap-2 sm:grid-cols-10"></div>
+    </div>
+  </div>
+</ToolLayout>
+
+<script>
+  const picker = document.getElementById('cc-picker') as HTMLInputElement;
+  const preview = document.getElementById('cc-preview')!;
+  const hexIn = document.getElementById('cc-hex') as HTMLInputElement;
+  const rgbIn = document.getElementById('cc-rgb') as HTMLInputElement;
+  const hslIn = document.getElementById('cc-hsl') as HTMLInputElement;
+  const shades = document.getElementById('cc-shades')!;
+
+  type RGB = { r: number; g: number; b: number };
+
+  const clamp = (n: number, min = 0, max = 255) => Math.min(max, Math.max(min, n));
+
+  function hexToRgb(hex: string): RGB | null {
+    let h = hex.trim().replace(/^#/, '');
+    if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) return null;
+    return {
+      r: parseInt(h.slice(0, 2), 16),
+      g: parseInt(h.slice(2, 4), 16),
+      b: parseInt(h.slice(4, 6), 16),
+    };
+  }
+
+  const rgbToHex = ({ r, g, b }: RGB) =>
+    '#' + [r, g, b].map((n) => clamp(Math.round(n)).toString(16).padStart(2, '0')).join('');
+
+  function rgbToHsl({ r, g, b }: RGB) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h = 0, s = 0;
+    const l = (max + min) / 2;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        default: h = (r - g) / d + 4;
+      }
+      h /= 6;
+    }
+    return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+  }
+
+  function parseRgb(str: string): RGB | null {
+    const m = str.match(/(\d+)[,\s]+(\d+)[,\s]+(\d+)/);
+    if (!m) return null;
+    return { r: clamp(+m[1]), g: clamp(+m[2]), b: clamp(+m[3]) };
+  }
+
+  function render(rgb: RGB) {
+    const hex = rgbToHex(rgb);
+    const { h, s, l } = rgbToHsl(rgb);
+    hexIn.value = hex;
+    rgbIn.value = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+    hslIn.value = `hsl(${h}, ${s}%, ${l}%)`;
+    preview.style.background = hex;
+    picker.value = hex;
+    // Shades: vary lightness 10%..95%
+    shades.innerHTML = '';
+    for (let i = 0; i < 10; i++) {
+      const li = 10 + i * 9;
+      const div = document.createElement('div');
+      div.className = 'h-10 rounded-[6px] border border-hairline cursor-pointer';
+      div.style.background = `hsl(${h}, ${s}%, ${li}%)`;
+      div.title = `hsl(${h}, ${s}%, ${li}%)`;
+      shades.appendChild(div);
+    }
+  }
+
+  picker.addEventListener('input', () => render(hexToRgb(picker.value)!));
+  hexIn.addEventListener('change', () => {
+    const rgb = hexToRgb(hexIn.value);
+    if (rgb) render(rgb);
+  });
+  rgbIn.addEventListener('change', () => {
+    const rgb = parseRgb(rgbIn.value);
+    if (rgb) render(rgb);
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('.cc-copy').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const target = document.getElementById(btn.dataset.target!) as HTMLInputElement;
+      await navigator.clipboard.writeText(target.value);
+      btn.textContent = 'Copied!';
+      setTimeout(() => (btn.textContent = 'Copy'), 1500);
+    });
+  });
+
+  render(hexToRgb('#5e6ad2')!);
+</script>

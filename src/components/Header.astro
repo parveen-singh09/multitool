@@ -1,0 +1,59 @@
+---
+import Logo from './Logo.astro';
+import { categories } from '../data/tools';
+---
+
+<header class="sticky top-0 z-50 border-b border-hairline bg-canvas/85 backdrop-blur-md">
+  <nav class="container-page flex h-14 items-center justify-between gap-4">
+    <Logo />
+
+    <!-- Desktop nav -->
+    <div class="hidden items-center gap-1 md:flex">
+      <a href="/" class="btn btn-tertiary">Home</a>
+      <a href="/#tools" class="btn btn-tertiary">All Tools</a>
+      <a href="/about" class="btn btn-tertiary">About</a>
+    </div>
+
+    <div class="hidden items-center gap-2 md:flex">
+      <a href="/#tools" class="btn btn-primary">Browse tools</a>
+    </div>
+
+    <!-- Mobile toggle -->
+    <button
+      id="nav-toggle"
+      class="btn btn-secondary md:hidden"
+      aria-label="Toggle navigation menu"
+      aria-expanded="false"
+      aria-controls="mobile-nav"
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="4" y1="7" x2="20" y2="7" />
+        <line x1="4" y1="12" x2="20" y2="12" />
+        <line x1="4" y1="17" x2="20" y2="17" />
+      </svg>
+    </button>
+  </nav>
+
+  <!-- Mobile drawer -->
+  <div id="mobile-nav" class="hidden border-t border-hairline bg-canvas md:hidden">
+    <div class="container-page flex flex-col gap-1 py-3">
+      <a href="/" class="btn btn-tertiary justify-start">Home</a>
+      <a href="/#tools" class="btn btn-tertiary justify-start">All Tools</a>
+      <a href="/about" class="btn btn-tertiary justify-start">About</a>
+      <span class="eyebrow px-3 pt-3 text-ink-tertiary">Categories</span>
+      {categories.map((c) => (
+        <a href={`/#${c.toLowerCase()}`} class="btn btn-tertiary justify-start">{c}</a>
+      ))}
+      <a href="/#tools" class="btn btn-primary mt-2 justify-start">Browse tools</a>
+    </div>
+  </div>
+</header>
+
+<script>
+  const toggle = document.getElementById('nav-toggle');
+  const menu = document.getElementById('mobile-nav');
+  toggle?.addEventListener('click', () => {
+    const open = menu?.classList.toggle('hidden') === false;
+    toggle.setAttribute('aria-expanded', String(open));
+  });
+</script>

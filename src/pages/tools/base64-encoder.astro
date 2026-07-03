@@ -1,0 +1,76 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="base64-encoder">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="b64-encode" class="btn btn-primary">Encode →</button>
+      <button id="b64-decode" class="btn btn-secondary">← Decode</button>
+      <button id="b64-swap" class="btn btn-tertiary">Swap</button>
+    </div>
+
+    <div id="b64-status" class="hidden rounded-[8px] border px-3 py-2 text-sm" role="status"></div>
+
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div class="flex flex-col gap-2">
+        <label for="b64-input" class="text-sm text-ink-subtle">Input</label>
+        <textarea id="b64-input" class="field min-h-52 resize-y font-mono text-[13px]" placeholder="Text or Base64…" spellcheck="false"></textarea>
+      </div>
+      <div class="flex flex-col gap-2">
+        <label for="b64-output" class="text-sm text-ink-subtle">Output</label>
+        <textarea id="b64-output" class="field min-h-52 resize-y font-mono text-[13px]" placeholder="Result…" spellcheck="false" readonly></textarea>
+      </div>
+    </div>
+    <button id="b64-copy" class="btn btn-secondary self-start">Copy output</button>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('b64-input') as HTMLTextAreaElement;
+  const output = document.getElementById('b64-output') as HTMLTextAreaElement;
+  const status = document.getElementById('b64-status')!;
+
+  // UTF-8 safe Base64 via TextEncoder/TextDecoder.
+  function encode(str: string): string {
+    const bytes = new TextEncoder().encode(str);
+    let bin = '';
+    bytes.forEach((b) => (bin += String.fromCharCode(b)));
+    return btoa(bin);
+  }
+  function decode(b64: string): string {
+    const bin = atob(b64.trim());
+    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  }
+
+  function showError(msg: string) {
+    status.textContent = msg;
+    status.classList.remove('hidden');
+    status.style.borderColor = '#d14d4d';
+    status.style.color = '#e08585';
+  }
+
+  document.getElementById('b64-encode')!.addEventListener('click', () => {
+    status.classList.add('hidden');
+    output.value = encode(input.value);
+  });
+  document.getElementById('b64-decode')!.addEventListener('click', () => {
+    status.classList.add('hidden');
+    try {
+      output.value = decode(input.value);
+    } catch {
+      showError('Invalid Base64 input — cannot decode.');
+    }
+  });
+  document.getElementById('b64-swap')!.addEventListener('click', () => {
+    input.value = output.value;
+    output.value = '';
+  });
+  document.getElementById('b64-copy')!.addEventListener('click', async () => {
+    const btn = document.getElementById('b64-copy')!;
+    await navigator.clipboard.writeText(output.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy output'), 1500);
+  });
+</script>

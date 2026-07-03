@@ -1,0 +1,79 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+
+const modes = [
+  { id: 'upper', label: 'UPPERCASE' },
+  { id: 'lower', label: 'lowercase' },
+  { id: 'title', label: 'Title Case' },
+  { id: 'sentence', label: 'Sentence case' },
+  { id: 'camel', label: 'camelCase' },
+  { id: 'snake', label: 'snake_case' },
+  { id: 'kebab', label: 'kebab-case' },
+];
+---
+
+<ToolLayout slug="case-converter">
+  <div class="flex flex-col gap-4">
+    <textarea
+      id="cc-input"
+      class="field min-h-40 resize-y"
+      placeholder="Type or paste text to convert…"
+      aria-label="Text to convert"
+    ></textarea>
+
+    <div class="flex flex-wrap gap-2">
+      {modes.map((m) => (
+        <button class="btn btn-secondary" data-mode={m.id}>{m.label}</button>
+      ))}
+    </div>
+
+    <div class="relative">
+      <textarea
+        id="cc-output"
+        class="field min-h-40 resize-y"
+        placeholder="Result appears here…"
+        aria-label="Converted text"
+        readonly
+      ></textarea>
+      <button id="cc-copy" class="btn btn-primary absolute right-3 top-3">Copy</button>
+    </div>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('cc-input') as HTMLTextAreaElement;
+  const output = document.getElementById('cc-output') as HTMLTextAreaElement;
+  const copyBtn = document.getElementById('cc-copy') as HTMLButtonElement;
+
+  const words = (s: string) => s.match(/[A-Za-z0-9]+/g) || [];
+
+  const converters: Record<string, (s: string) => string> = {
+    upper: (s) => s.toUpperCase(),
+    lower: (s) => s.toLowerCase(),
+    title: (s) => s.replace(/\w\S*/g, (w) => w[0].toUpperCase() + w.slice(1).toLowerCase()),
+    sentence: (s) =>
+      s.toLowerCase().replace(/(^\s*\w|[.!?]\s*\w)/g, (c) => c.toUpperCase()),
+    camel: (s) =>
+      words(s)
+        .map((w, i) =>
+          i === 0 ? w.toLowerCase() : w[0].toUpperCase() + w.slice(1).toLowerCase()
+        )
+        .join(''),
+    snake: (s) => words(s).map((w) => w.toLowerCase()).join('_'),
+    kebab: (s) => words(s).map((w) => w.toLowerCase()).join('-'),
+  };
+
+  document.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.mode!;
+      output.value = converters[mode](input.value);
+    });
+  });
+
+  copyBtn.addEventListener('click', async () => {
+    if (!output.value) return;
+    await navigator.clipboard.writeText(output.value);
+    copyBtn.textContent = 'Copied!';
+    setTimeout(() => (copyBtn.textContent = 'Copy'), 1500);
+  });
+</script>

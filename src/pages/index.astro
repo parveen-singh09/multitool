@@ -1,11 +1,213 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import ToolCard from '../components/ToolCard.astro';
+import { tools, categories, toolsByCategory } from '../data/tools';
+import { SITE } from '../data/site';
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+// JSON-LD: WebSite (with SearchAction) + an ItemList of every tool.
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: SITE.name,
+    url: SITE.url,
+    description: SITE.description,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: `${SITE.url}/#tools?q={search_term_string}`,
+      'query-input': 'required name=search_term_string',
+    },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'ToolCities free online tools',
+    itemListElement: tools.map((tool, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: tool.name,
+      description: tool.tagline,
+      url: `${SITE.url}/tools/${tool.slug}`,
+    })),
+  },
+];
 ---
 
-<Layout>
-	<Welcome />
+<Layout jsonLd={jsonLd}>
+  <Header />
+
+  <main>
+    <!-- ============ HERO ============ -->
+    <section class="relative overflow-hidden">
+      <div class="container-page py-24 md:py-32">
+        <div class="mx-auto max-w-3xl text-center">
+          <span class="status-badge mx-auto">
+            <span class="h-1.5 w-1.5 rounded-full" style="background:#27a644"></span>
+            {tools.length} free tools · no sign-up
+          </span>
+
+          <h1 class="display-xl mt-6 text-ink">
+            A whole city of tools,<br class="hidden sm:block" />
+            <span class="text-ink-subtle">right in your browser.</span>
+          </h1>
+
+          <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-ink-muted">
+            ToolCities is a fast, privacy-first collection of free online
+            utilities. Count words, format JSON, generate passwords, encode
+            Base64 and more — nothing is uploaded, everything runs locally.
+          </p>
+
+          <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <a href="#tools" class="btn btn-primary">Browse all tools</a>
+            <a href="/about" class="btn btn-secondary">How it works</a>
+          </div>
+
+          <ul class="mx-auto mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-ink-tertiary">
+            <li class="flex items-center gap-2">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#27a644" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              100% client-side
+            </li>
+            <li class="flex items-center gap-2">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#27a644" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              No tracking
+            </li>
+            <li class="flex items-center gap-2">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#27a644" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              Works offline
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TOOLS GRID ============ -->
+    <section id="tools" class="container-page scroll-mt-20 py-8">
+      <div class="mb-10 flex flex-col gap-2">
+        <span class="eyebrow text-primary-hover">The districts</span>
+        <h2 class="display-md text-ink">Explore every tool</h2>
+        <p class="max-w-2xl text-ink-subtle">
+          Ten focused utilities across five categories — each one loads instantly
+          and works without an account.
+        </p>
+      </div>
+
+      {categories.map((category) => (
+        <div id={category.toLowerCase()} class="mb-14 scroll-mt-20">
+          <div class="mb-5 flex items-center gap-3">
+            <h3 class="font-display text-xl font-semibold tracking-[-0.01em] text-ink">{category}</h3>
+            <span class="h-px flex-1 bg-hairline"></span>
+            <span class="status-badge">{toolsByCategory(category).length}</span>
+          </div>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {toolsByCategory(category).map((tool) => (
+              <ToolCard tool={tool} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </section>
+
+    <!-- ============ 600-WORD SEO CONTENT ============ -->
+    <section class="container-page py-16">
+      <article class="panel panel-lift mx-auto max-w-3xl p-8 md:p-12">
+        <h2 class="display-md mb-6 text-ink">Free online tools that respect your privacy</h2>
+
+        <div class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-muted">
+          <p>
+            <strong class="text-ink">ToolCities</strong> is a growing collection of
+            free online tools built for one simple idea: everyday utilities should
+            be fast, private, and available to everyone without friction. Whether
+            you need a quick <a href="/tools/word-counter" class="text-primary-hover hover:underline">word counter</a>
+            for an essay, a <a href="/tools/password-generator" class="text-primary-hover hover:underline">strong password generator</a>
+            for a new account, or a <a href="/tools/json-formatter" class="text-primary-hover hover:underline">JSON formatter</a>
+            to debug an API response, every tool on this site loads instantly and
+            works the moment the page opens. There is nothing to install, no
+            account to create, and no paywall waiting a few clicks in. It is a
+            practical toolbox you can open on any device and use straight away.
+          </p>
+
+          <h3 class="mt-4 font-display text-xl font-semibold text-ink">Everything runs in your browser</h3>
+          <p>
+            Most "free" online tools quietly send your text, files, or data to a
+            remote server for processing. ToolCities takes the opposite approach.
+            Our tools are built to run entirely client-side using modern web
+            standards like the Web Crypto API and the browser's native JavaScript
+            engine. When you paste text into the <a href="/tools/case-converter" class="text-primary-hover hover:underline">case converter</a>,
+            hash a string with the <a href="/tools/hash-generator" class="text-primary-hover hover:underline">hash generator</a>,
+            or create a <a href="/tools/qr-code-generator" class="text-primary-hover hover:underline">QR code</a>,
+            the work happens on your own device. Your data never leaves your
+            computer, which means these tools are safe to use even with sensitive
+            content — and many of them keep working even when you go offline. No
+            uploads, no logging, and no hidden third-party trackers watching what
+            you do.
+          </p>
+
+          <h3 class="mt-4 font-display text-xl font-semibold text-ink">Tools for writers, developers and designers</h3>
+          <p>
+            The collection is organised into clear categories so you can find the
+            right utility fast. <strong class="text-ink">Text tools</strong> help
+            writers and students count words, characters and reading time or
+            convert text between cases. <strong class="text-ink">Developer tools</strong>
+            cover the daily essentials: formatting and validating JSON, encoding
+            and decoding <a href="/tools/base64-encoder" class="text-primary-hover hover:underline">Base64</a>
+            and <a href="/tools/url-encoder" class="text-primary-hover hover:underline">URLs</a>,
+            and generating cryptographic hashes. <strong class="text-ink">Generators</strong>
+            produce placeholder <a href="/tools/lorem-ipsum" class="text-primary-hover hover:underline">Lorem Ipsum</a>
+            text and scannable QR codes, while <strong class="text-ink">converters</strong>
+            like the <a href="/tools/color-converter" class="text-primary-hover hover:underline">color converter</a>
+            translate values between HEX, RGB and HSL for designers. Each tool does
+            one job well, with a clean interface and no distractions, so you spend
+            your time on the work rather than fighting the tool.
+          </p>
+
+          <h3 class="mt-4 font-display text-xl font-semibold text-ink">Why choose ToolCities</h3>
+          <p>
+            There are plenty of online tool websites, but many are cluttered with
+            ads, hide features behind sign-up forms, or send your content to a
+            server you cannot see. ToolCities is different by design. Because every
+            utility is client-side, it is genuinely private: a password you
+            generate or a document you count words in is never transmitted or
+            stored anywhere. The interface follows a single calm, dark theme that
+            is easy on the eyes during long sessions, and it is fully responsive,
+            so the same tools work just as well on your phone as on a desktop. Best
+            of all, there are no limits — use any tool as many times as you like.
+          </p>
+
+          <h3 class="mt-4 font-display text-xl font-semibold text-ink">Fast, free, and always improving</h3>
+          <p>
+            Speed matters. ToolCities is built as a lightweight static site, so
+            pages arrive quickly on any connection and tools respond the instant
+            you type. There are no pop-ups, no forced sign-ups, and no limits on
+            how many times you can use a tool. Everything is free to use as often
+            as you like, on desktop or mobile, and each tool is designed to be
+            accessible with proper labels and full keyboard support.
+          </p>
+          <p>
+            We are constantly adding new utilities and refining the ones already
+            here based on how people actually use them. If a tool saves you a few
+            minutes today, bookmark ToolCities and come back the next time you need
+            to convert, generate, format, or calculate something. From counting
+            words and formatting code to generating secure passwords and QR codes,
+            the whole city of tools is open, private, and completely free — no
+            catch, no cost, and no account required.
+          </p>
+        </div>
+      </article>
+    </section>
+
+    <!-- ============ CTA BANNER ============ -->
+    <section class="container-page pb-8">
+      <div class="panel panel-lift mx-auto flex max-w-3xl flex-col items-center gap-4 p-12 text-center">
+        <h2 class="headline text-ink">Pick a tool and get started</h2>
+        <p class="max-w-md text-ink-subtle">
+          No account, no cost, no catch. Just fast utilities that work.
+        </p>
+        <a href="#tools" class="btn btn-primary">Browse all {tools.length} tools</a>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
 </Layout>
