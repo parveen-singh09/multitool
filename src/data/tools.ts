@@ -27,6 +27,8 @@ export interface Tool {
   keywords: string[];
   /** Simple line-icon path drawn on a 24x24 viewbox. */
   icon: string;
+  /** Hide the tagline in the tool page header (still used for cards & SEO). */
+  hideTagline?: boolean;
 }
 
 export const tools: Tool[] = [
@@ -1559,6 +1561,7 @@ export const tools: Tool[] = [
     slug: 'crypto-converter',
     name: 'Cryptocurrency Converter',
     tagline: 'Live crypto prices in any currency.',
+    hideTagline: true,
     description:
       'Free online cryptocurrency converter with live market prices. Convert Bitcoin, Ethereum, Solana and more to and from world currencies, with a live price table. Prices fetched in your browser.',
     category: 'Converters',

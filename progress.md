@@ -5,6 +5,14 @@
 - Domain: `toolcities.com` (set as `site` in [astro.config.mjs](astro.config.mjs))
 - Design: near-black canvas `#010102`, lavender accent `#5e6ad2` (used scarcely), Inter + JetBrains Mono, four-step surface ladder.
 
+## Current state (2026-07-04)
+- **169 tool pages · 172 pages built · build green · no duplicate slugs.**
+- **9 categories:** Text, Developer, Image, PDF, Audio & Video, Converters, Calculators, Generators, Security.
+- **Privacy model:** every tool runs 100% in the browser with no uploads. The only network calls are (a) the currency & crypto converters fetching live public rates from the user's browser, and (b) first-use downloads of self-hosted engine assets (ffmpeg core, Tesseract OCR) from our own origin — see the live-data carve-out in [privacy.astro](src/pages/privacy.astro).
+- **Reusable engines/components:** [units.ts](src/lib/units.ts)+[UnitConverter.astro](src/components/UnitConverter.astro), [colors.ts](src/lib/colors.ts)+[ColorFormats.astro](src/components/ColorFormats.astro), [ImageConverter.astro](src/components/ImageConverter.astro), [media.ts](src/lib/media.ts)+[MediaConverter.astro](src/components/MediaConverter.astro)+[ffmpeg.ts](src/lib/ffmpeg.ts).
+- **Build-time asset setup:** `prebuild` npm hook runs [setup-ffmpeg.mjs](scripts/setup-ffmpeg.mjs) + [setup-tesseract.mjs](scripts/setup-tesseract.mjs); vendored ~86 MB output is git-ignored (regenerated on clean clone).
+- **Verified:** production build **and browser runtime**. All ffmpeg audio/video tools and the Tesseract OCR flow were driven end-to-end in headless Chromium against both the dev server and the `astro preview` production build — every tool produced real output (see 2026-07-04 runtime-verification log entry).
+
 ## Status legend
 - [ ] Not started · [~] In progress · [x] Done
 
@@ -64,21 +72,26 @@
 - [x] Per-page keyword targeting (see [tools.ts](src/data/tools.ts) `keywords`)
 
 ## Verification
-- [x] `npm run build` — 58 pages built clean, no errors
+- [x] `npm run build` — **172 pages** built clean, no errors (was 58 at first launch)
+- [x] No duplicate slugs across [tools.ts](src/data/tools.ts), [units.ts](src/lib/units.ts), [media.ts](src/lib/media.ts)
+- [x] Clean-rebuild test: deleted all vendored `public/ffmpeg`, `public/tesseract`, `public/tessdata` → `npm run build` regenerated them via `prebuild` and stayed green (proves fresh-clone/CI deploy works)
 - [x] SEO tags confirmed present in built `dist/index.html`
 - [x] Each new tool page carries a unique title/description/keywords via the registry
+- [x] **Runtime verified in a headless browser (Playwright/Chromium)** against both the dev server and the `astro preview` production build. Drove real files through 11 tools end-to-end: wav→mp3, mp4(webm)→mp3, ogg, aac, mp3→wav, mov→mp4, audio-speed-changer (`atempo`/`asetrate` chain), video-to-gif (two-pass palette), pdf-to-text (text layer + forced Tesseract OCR), pdf-to-jpg — all produced real output. **Caught & fixed a shipping bug** (see log) where every ffmpeg tool failed at load.
 
 ## Target keywords
 - **Site:** free online tools, online utilities, web tools, browser tools, no sign up tools, privacy-first tools
 - **Per tool:** word counter, character counter, case converter, json formatter/validator, base64 encode/decode, url encoder/decoder, hash/sha256 generator, password generator, lorem ipsum generator, color converter (hex/rgb/hsl), qr code generator
 
 ## Possible next steps
+- [ ] **Runtime-test the heavy tools in a browser** (highest priority before deploy): exercise each ffmpeg audio/video conversion, GIF palette, compressors, speed/pitch, and the PDF OCR flow — build-verified only so far
 - [ ] Favorites (star tools → localStorage shelf) + recently-used shelf
 - [ ] Add FAQ (FAQPage schema) blocks to top tool pages for rich results
 - [ ] Dedicated `/tools` browse-all page
 - [ ] Rasterize a proper multi-size `favicon.ico` (currently the small starter .ico)
 - [ ] Remove unused starter files ([Welcome.astro](src/components/Welcome.astro), `src/assets/*.svg`)
-- [ ] Deploy (static `dist/` — Netlify / Vercel / Cloudflare Pages)
+- [ ] Deploy (static `dist/` — Netlify / Vercel / Cloudflare Pages). Note: build box needs internet on first build (Tesseract model download) and ~90 MB free in `public/` for vendored assets
+- [ ] Later batches still deferred: PDF↔Office & DOCX↔ODT, RAW photo decode (CR2/NEF/ARW), YouTube→MP3/MP4 (needs server + ToS), Color→Pantone (licensed)
 
 ## Log
 - 2026-07-03 — Full site built: 10 tools, home hub + 600-word SEO copy, about/privacy, full SEO meta + OG image + favicon. Production build green.
@@ -103,3 +116,12 @@
   - **Group 3 — audio/video, ffmpeg.wasm (13):** shared loader [src/lib/ffmpeg.ts](src/lib/ffmpeg.ts) + data table [src/lib/media.ts](src/lib/media.ts) + reusable [MediaConverter.astro](src/components/MediaConverter.astro) drive 11 straight conversions (mp4→mp3, wav↔mp3, flac/m4a→mp3, ogg, aac, mov/mkv/avi/wmv→mp4); plus custom-UI [video-to-gif](src/pages/tools/video-to-gif.astro), [gif-to-mp4](src/pages/tools/gif-to-mp4.astro), [video-compressor](src/pages/tools/video-compressor.astro), [audio-compressor](src/pages/tools/audio-compressor.astro), [audio-speed-changer](src/pages/tools/audio-speed-changer.astro).
   - **Privacy-preserving asset hosting:** ffmpeg core (single-thread → no COOP/COEP headers needed, works on any static host) and Tesseract worker/core/English model are **self-hosted**, never CDN. Regenerated at build time by [setup-ffmpeg.mjs](scripts/setup-ffmpeg.mjs) + [setup-tesseract.mjs](scripts/setup-tesseract.mjs) via a `prebuild` npm hook; the ~86 MB output is git-ignored (build artifact, not source). Verified with a clean rebuild after deleting all vendored assets.
   - **Still deferred:** PDF↔Office & DOCX↔ODT (lossy in-browser), RAW photo decode (CR2/NEF/ARW), YouTube→MP3/MP4 (needs server + ToS), Color→Pantone (licensed).
+- 2026-07-04 — **Runtime verification + critical ffmpeg fix.** Drove the heavy tools end-to-end in headless Chromium (Playwright) with real media fixtures, against both the dev server and the `astro preview` production build.
+  - **Bug found:** every ffmpeg tool (all 8 audio/video pages) failed at `ff.load()` with `"failed to import ffmpeg-core.js"` — 0/9 heavy tools worked at runtime despite the build being green. **Root cause:** [setup-ffmpeg.mjs](scripts/setup-ffmpeg.mjs) vendored the **UMD** core (`@ffmpeg/core/dist/umd`), but `@ffmpeg/ffmpeg` v0.12.15 spawns its worker as a **module worker** (`type:"module"`), where `importScripts()` is unavailable — so the worker falls back to `(await import(coreURL)).default`. The UMD core has no default export → `undefined` → `ERROR_IMPORT_FAILURE`. **Fix:** vendor the **ESM** core (`dist/esm`, which ends in `export default createFFmpegCore`). One-line `src` change + clarifying comment.
+  - **After fix:** 11/11 tools pass on both dev and prod builds, each producing real output (MP3/OGG/M4A/WAV/MP4/GIF, extracted PDF text, Tesseract OCR text, rendered PDF→JPG). Re-ran the clean-rebuild test (delete `public/ffmpeg` → `npm run build`) and confirmed the `prebuild` hook now regenerates the correct ESM core and stays green — so fresh CI/Netlify/Vercel clones deploy working tools.
+  - This is why build-green ≠ runtime-working: the core is loaded dynamically inside a web worker, a path no bundler or type-check exercises.
+- 2026-07-04 — **Live-data converter fix + full converter sweep.** Verified every tool that hits an external API, again in headless Chromium against dev + `astro preview` prod build.
+  - **Bug found:** [currency-converter](src/pages/tools/currency-converter.astro) was dead — it fetched `https://api.frankfurter.app/latest?from=EUR`, which now returns **301** (no CORS headers) redirecting to `api.frankfurter.dev`. Browsers fail a CORS fetch on a header-less redirect (curl silently follows it, which is why a build/manual curl check missed it). **Fix:** point directly at `https://api.frankfurter.dev/v1/latest?base=EUR` — same JSON shape (`date` + `rates`), proper `Access-Control-Allow-Origin: *`. Confirmed result on dev + prod.
+  - **Swept all external-API tools:** grepped `fetch('http…')` across `src` → currency (Frankfurter), crypto (CoinGecko), and the gold/silver/platinum calculators (`api.gold-api.com` + `open.er-api.com`). Functionally drove each: crypto returns live BTC price; all three metal calculators fetch and **update the spot field from their static default to the live price** ($4,176 gold, $62.52 silver, $1,648 platinum/ozt) — confirmed genuinely live, not stale defaults.
+  - **Load-error sweep:** loaded all **169** tool pages in Chromium and watched for console/page errors → 0 errors. Spot-checked the shared engines with real I/O: unit (length 1000 m → 3280.84 ft), color (hex→rgb), number-base (255→ff/binary), canvas image (jpg-to-png re-encode). All produce correct output.
+  - **Takeaway for live-data tools:** a third-party endpoint can rot (domain move, CORS change, rate-limit) without any code change on our side. These 6 tools depend on services staying CORS-open; worth an occasional re-check.

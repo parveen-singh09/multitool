@@ -9,7 +9,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <textarea id="tts-text" class="field" rows="5" placeholder="Type or paste text to hear it read aloud…" spellcheck="false"></textarea>
     </label>
 
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Language
+        <select id="tts-lang" class="field"></select>
+      </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Voice
         <select id="tts-voice" class="field"></select>
@@ -38,7 +42,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
       This free text to speech tool reads any text aloud using the voices built
-      into your device, with adjustable speed and pitch. It's handy for
+      into your device, with adjustable speed and pitch. Pick from every
+      language your device can speak — the language menu lists each one your
+      installed voices support and filters the voices to match. It's handy for
       proofreading, accessibility, learning pronunciation or just resting your
       eyes. Because it uses your browser's built-in speech synthesis, the text
       never leaves your device — no account and no uploads.
@@ -49,6 +55,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 <script>
   const synth = window.speechSynthesis;
   const textEl = document.getElementById('tts-text') as HTMLTextAreaElement;
+  const langSel = document.getElementById('tts-lang') as HTMLSelectElement;
   const voiceSel = document.getElementById('tts-voice') as HTMLSelectElement;
   const rate = document.getElementById('tts-rate') as HTMLInputElement;
   const pitch = document.getElementById('tts-pitch') as HTMLInputElement;
@@ -60,12 +67,61 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     unsupported.classList.remove('hidden');
   } else {
     let voices: SpeechSynthesisVoice[] = [];
+    let langNames: Intl.DisplayNames | null = null;
+    try {
+      langNames = new Intl.DisplayNames(['en'], { type: 'language' });
+    } catch {
+      langNames = null;
+    }
+
+    function displayLang(code: string) {
+      // Intl expects a BCP-47 tag; voices sometimes use "en_US" instead of "en-US"
+      const tag = code.replace('_', '-');
+      let label = tag;
+      if (langNames) {
+        try {
+          label = langNames.of(tag) || tag;
+        } catch {
+          label = tag;
+        }
+      }
+      return label === tag ? tag : `${label} (${tag})`;
+    }
+
     function loadVoices() {
       voices = synth.getVoices();
-      voiceSel.innerHTML = voices.map((v, i) => `<option value="${i}">${v.name} (${v.lang})${v.default ? ' — default' : ''}</option>`).join('');
+
+      // Every distinct language offered by the installed voices, sorted by display name.
+      const prevLang = langSel.value;
+      const langs = [...new Set(voices.map((v) => v.lang))].sort((a, b) =>
+        displayLang(a).localeCompare(displayLang(b))
+      );
+      langSel.innerHTML =
+        '<option value="">All languages</option>' +
+        langs.map((l) => `<option value="${l}">${displayLang(l)}</option>`).join('');
+      if (prevLang && langs.includes(prevLang)) langSel.value = prevLang;
+
+      loadVoiceOptions();
     }
+
+    function loadVoiceOptions() {
+      const lang = langSel.value;
+      const prev = voiceSel.value;
+      const matches = voices
+        .map((v, i) => ({ v, i }))
+        .filter(({ v }) => !lang || v.lang === lang);
+      voiceSel.innerHTML = matches
+        .map(
+          ({ v, i }) =>
+            `<option value="${i}">${v.name} (${v.lang})${v.default ? ' — default' : ''}</option>`
+        )
+        .join('');
+      if (prev && matches.some(({ i }) => String(i) === prev)) voiceSel.value = prev;
+    }
+
     loadVoices();
     synth.onvoiceschanged = loadVoices;
+    langSel.addEventListener('change', loadVoiceOptions);
 
     rate.addEventListener('input', () => (rateVal.textContent = Number(rate.value).toFixed(1)));
     pitch.addEventListener('input', () => (pitchVal.textContent = Number(pitch.value).toFixed(1)));

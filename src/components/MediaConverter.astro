@@ -109,7 +109,9 @@ if (!conv) throw new Error(`Unknown media conversion: ${slug}`);
       // cleanup vfs
       try { await ff.deleteFile(inName); await ff.deleteFile(outName); } catch {}
 
-      previewWrap.innerHTML = conv.kind === 'video'
+      // Preview element follows the OUTPUT type, not the input. mp4-to-mp3
+      // has kind 'video' (the input) but produces audio — render <audio> then.
+      previewWrap.innerHTML = conv.mime.startsWith('video/')
         ? `<video src="${outUrl}" controls class="max-h-96 w-auto max-w-full rounded-[8px]"></video>`
         : `<audio src="${outUrl}" controls class="w-full"></audio>`;
       outInfo.textContent = `Done — ${fmtSize(blob.size)} ${conv.ext.toUpperCase()}`;
