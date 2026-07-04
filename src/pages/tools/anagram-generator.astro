@@ -1,0 +1,124 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="anagram-generator">
+  <div class="flex flex-col gap-5">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Letters or a word
+      <input id="an-in" class="field" value="listen" spellcheck="false" maxlength="15" autocomplete="off" />
+    </label>
+    <div class="flex flex-wrap items-center gap-4">
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="an-full" type="checkbox" class="accent-[#5e6ad2]" /> Full anagrams only (use every letter)
+      </label>
+      <button id="an-scramble" class="btn btn-secondary ml-auto">Scramble letters</button>
+    </div>
+
+    <div class="flex items-baseline justify-between border-t border-hairline pt-4">
+      <p id="an-summary" class="text-sm text-ink-subtle"></p>
+      <button id="an-copy" class="btn btn-secondary">Copy all</button>
+    </div>
+    <div id="an-out" class="flex flex-col gap-4"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free anagram generator takes any set of letters and finds every word that
+      can be spelled from them, grouped by length — a fast way to unscramble letters
+      for Scrabble, Words with Friends, crosswords and word puzzles. Tick "Full anagrams
+      only" to see just the words that use every letter. Use "Scramble letters" to jumble
+      a word for your own puzzle. It searches a built-in word list right in your browser,
+      so nothing is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { WORDS } from '../../lib/wordlist';
+  import { shuffle } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const inEl = $('an-in') as HTMLInputElement;
+  const fullEl = $('an-full') as HTMLInputElement;
+  const out = $('an-out')!;
+  const summary = $('an-summary')!;
+
+  // Precompute a letter-count signature for each dictionary word once.
+  type Counts = Record<string, number>;
+  function counts(s: string): Counts {
+    const c: Counts = {};
+    for (const ch of s) c[ch] = (c[ch] || 0) + 1;
+    return c;
+  }
+  const DICT = WORDS.map((w) => ({ w, c: counts(w) }));
+
+  // Can `word` be built from the available letter pool?
+  function fits(word: Counts, pool: Counts): boolean {
+    for (const ch in word) if (!pool[ch] || word[ch] > pool[ch]) return false;
+    return true;
+  }
+
+  let lastList: string[] = [];
+
+  function solve() {
+    const raw = inEl.value.toLowerCase().replace(/[^a-z]/g, '');
+    const pool = counts(raw);
+    const total = raw.length;
+    const fullOnly = fullEl.checked;
+
+    const matches = DICT.filter(({ w, c }) => {
+      if (w === raw) return false; // skip the input itself
+      if (fullOnly && w.length !== total) return false;
+      return fits(c, pool);
+    }).map((m) => m.w);
+
+    lastList = matches;
+
+    if (!raw) {
+      summary.textContent = 'Type some letters to begin.';
+      out.innerHTML = '';
+      return;
+    }
+    if (!matches.length) {
+      summary.textContent = `No words found in ${total} letters.`;
+      out.innerHTML = '';
+      return;
+    }
+
+    // Group by length, longest first.
+    const groups = new Map<number, string[]>();
+    for (const w of matches) {
+      if (!groups.has(w.length)) groups.set(w.length, []);
+      groups.get(w.length)!.push(w);
+    }
+    const lengths = [...groups.keys()].sort((a, b) => b - a);
+
+    summary.textContent = `${matches.length} word${matches.length === 1 ? '' : 's'} from "${raw}".`;
+    out.innerHTML = lengths
+      .map((len) => {
+        const words = groups.get(len)!.sort();
+        const chips = words
+          .map((w) => `<span class="rounded-md border border-hairline bg-surface-1 px-2.5 py-1 text-[15px] text-ink">${w}</span>`)
+          .join('');
+        return `<div class="flex flex-col gap-2">
+          <span class="text-[13px] font-medium uppercase tracking-wide text-ink-tertiary">${len} letters · ${words.length}</span>
+          <div class="flex flex-wrap gap-2">${chips}</div>
+        </div>`;
+      })
+      .join('');
+  }
+
+  [inEl, fullEl].forEach((el) => el.addEventListener('input', solve));
+  $('an-scramble').addEventListener('click', () => {
+    const raw = inEl.value.toLowerCase().replace(/[^a-z]/g, '');
+    if (raw.length > 1) inEl.value = shuffle([...raw]).join('');
+    solve();
+  });
+  $('an-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(lastList.join(', '));
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  });
+  solve();
+</script>

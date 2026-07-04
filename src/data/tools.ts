@@ -2817,6 +2817,126 @@ export const tools: Tool[] = [
     keywords: ['spectrogram generator', 'audio spectrogram', 'frequency spectrogram', 'spectrogram maker', 'audio frequency analyzer'],
     icon: 'M4 4v16h16M7 16v2M11 12v6M15 8v10M19 14v4M7 12a1 1 0 1 0 0 .01M11 8a1 1 0 1 0 0 .01',
   },
+  {
+    slug: 'gif-maker',
+    name: 'GIF Maker',
+    tagline: 'Turn images or a video into an animated GIF.',
+    description:
+      'Free online GIF maker. Combine images or split a short video into frames and export an animated GIF with custom frame delay, size and looping. Encoded entirely in your browser — nothing is uploaded.',
+    category: 'Image',
+    keywords: ['gif maker', 'animated gif creator', 'images to gif', 'video to gif', 'make a gif online'],
+    icon: 'M3 5h18v14H3zM7 9v6M7 9h2M7 12h1.5M12 9v6M16 9h1.5M16 9v6M16 12h1',
+  },
+  {
+    slug: 'logo-generator',
+    name: 'Logo Generator',
+    tagline: 'Design a clean text-and-icon logo in seconds.',
+    description:
+      'Free online logo generator. Pair your brand name with a symbol, font, layout and color scheme, then download a crisp SVG or PNG. Designed live in your browser — nothing is uploaded.',
+    category: 'Generators',
+    keywords: ['logo generator', 'logo maker', 'free logo creator', 'text logo design', 'brand logo maker'],
+    icon: 'M12 3l7 4v10l-7 4-7-4V7zM12 3v18M5 7l7 4 7-4',
+  },
+  {
+    slug: 'mockup-generator',
+    name: 'Mockup Generator',
+    tagline: 'Drop a screenshot into a device or browser frame.',
+    description:
+      'Free online mockup generator. Place a screenshot inside a browser window, phone or laptop frame over a clean gradient backdrop and export a shareable PNG. Rendered in your browser — nothing is uploaded.',
+    category: 'Image',
+    keywords: ['mockup generator', 'screenshot mockup', 'device mockup maker', 'browser frame mockup', 'product mockup'],
+    icon: 'M4 5h16v11H4zM2 20h20M9 20l.5-4M15 20l-.5-4',
+  },
+  {
+    slug: 'ambigram-generator',
+    name: 'Ambigram Generator',
+    tagline: 'Words that read the same upside down.',
+    description:
+      'Free online ambigram generator. Type one or two words and preview a rotational ambigram that reads the same when flipped 180°, then download it. Rendered in your browser — nothing is uploaded.',
+    category: 'Generators',
+    keywords: ['ambigram generator', 'ambigram maker', 'upside down text art', 'rotational ambigram', 'tattoo ambigram'],
+    icon: 'M12 3v18M7 8a5 5 0 0 1 10 0M17 16a5 5 0 0 1-10 0',
+  },
+  {
+    slug: 'pictionary-word-generator',
+    name: 'Pictionary Word Generator',
+    tagline: 'Random words to draw, by difficulty.',
+    description:
+      'Free Pictionary word generator. Draw random words for Pictionary, charades and drawing games across easy, medium and hard difficulty, with a hide-and-reveal mode for the drawer. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['pictionary word generator', 'random pictionary words', 'drawing game words', 'charades generator', 'pictionary ideas'],
+    icon: 'M3 21l3-1 11-11-2-2L4 18zM15 5l2-2 2 2-2 2M14 6l4 4',
+  },
+  {
+    slug: 'anagram-generator',
+    name: 'Anagram Generator',
+    tagline: 'Rearrange letters to find hidden words.',
+    description:
+      'Free online anagram generator. Enter letters or a word and find every dictionary word that can be built from them, sorted by length — great for word games and Scrabble. Solved in your browser.',
+    category: 'Generators',
+    keywords: ['anagram generator', 'anagram solver', 'word unscrambler', 'scrabble word finder', 'letters to words'],
+    icon: 'M4 7V5h16v2M9 5v14M7 19h4M14 12h6M17 9v6',
+  },
+  {
+    slug: 'random-animal-generator',
+    name: 'Random Animal Generator',
+    tagline: 'Discover a random animal and a fun fact.',
+    description:
+      'Free random animal generator. Draw a random animal with an emoji, its group and a surprising fact — filter by mammals, birds, reptiles and more, or pull a whole list. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['random animal generator', 'random animal picker', 'animal name generator', 'random animal facts', 'wheel of animals'],
+    icon: 'M5 11a2 2 0 1 0 0-.01M9 7a2 2 0 1 0 0-.01M15 7a2 2 0 1 0 0-.01M19 11a2 2 0 1 0 0-.01M7 16c0-3 2-5 5-5s5 2 5 5a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3z',
+  },
+  {
+    slug: 'tarot-card-generator',
+    name: 'Tarot Card Generator',
+    tagline: 'Draw random tarot cards and readings.',
+    description:
+      'Free online tarot card generator. Draw a single card or a three-card past-present-future spread with upright and reversed meanings from the full 78-card deck. Shuffled in your browser.',
+    category: 'Generators',
+    keywords: ['tarot card generator', 'random tarot card', 'tarot reading online', 'three card tarot spread', 'daily tarot draw'],
+    icon: 'M7 3h7l4 4v14H7zM14 3v4h4M10 12l1.5 3 1.5-3M11.5 15v3',
+  },
+  {
+    slug: 'pokemon-generator',
+    name: 'Pokémon Generator',
+    tagline: 'Draw a random Pokémon or invent a new one.',
+    description:
+      'Free Pokémon generator. Spin a random Kanto Pokémon with its number and types, or invent a brand-new fantasy creature name and type combo. Generated in your browser — nothing is uploaded.',
+    category: 'Generators',
+    keywords: ['pokemon generator', 'random pokemon generator', 'who am i pokemon', 'fakemon name generator', 'random kanto pokemon'],
+    icon: 'M3 12h6a3 3 0 0 0 6 0h6M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 9a3 3 0 0 1 0 6',
+  },
+  {
+    slug: 'pet-name-generator',
+    name: 'Pet Name Generator',
+    tagline: 'Find the perfect name for your dog, cat or critter.',
+    description:
+      'Free pet name generator. Generate dog, cat and small-pet name ideas by style — cute, tough, foodie, mythic or unisex — with an optional personality trait. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['pet name generator', 'dog name generator', 'cat name generator', 'puppy name ideas', 'unique pet names'],
+    icon: 'M9 5a2 2 0 1 0 0-.01M15 5a2 2 0 1 0 0-.01M5 9a2 2 0 1 0 0-.01M19 9a2 2 0 1 0 0-.01M12 11c-2.5 0-4 2-4 4a3 3 0 0 0 3 3h2a3 3 0 0 0 3-3c0-2-1.5-4-4-4z',
+  },
+  {
+    slug: 'gamertag-generator',
+    name: 'Gamertag Generator',
+    tagline: 'Cool, available-looking usernames for gaming.',
+    description:
+      'Free gamertag generator. Create cool gaming usernames and handles for Xbox, PSN, Steam and Discord — mix adjectives, nouns, leetspeak and suffixes, with an optional keyword. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['gamertag generator', 'gaming username generator', 'cool gamertags', 'xbox gamertag ideas', 'random username generator'],
+    icon: 'M7 8h10a4 4 0 0 1 4 4v1a4 4 0 0 1-7 2.5L12 15l-2 .5A4 4 0 0 1 3 13v-1a4 4 0 0 1 4-4zM8 11v2M7 12h2M15 11.5h.01M17 13h.01',
+  },
+  {
+    slug: 'square-face-generator',
+    name: 'Square Face Generator',
+    tagline: 'Warp a photo into the classic square-face meme.',
+    description:
+      'Free square face generator. Upload a photo and squish the face into the classic square-head meme with adjustable strength, then download the PNG. Warped entirely in your browser — nothing is uploaded.',
+    category: 'Image',
+    keywords: ['square face generator', 'square head meme', 'square face meme maker', 'squish face photo', 'square face filter'],
+    icon: 'M5 5h14v14H5zM9 10h.01M15 10h.01M9 15h6',
+  },
 ];
 
 export const categories: ToolCategory[] = [

@@ -1,0 +1,95 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pictionary-word-generator">
+  <div class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-end gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Difficulty
+        <select id="pw-diff" class="field w-40">
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+          <option value="mixed">Mixed</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Words
+        <input id="pw-count" type="number" min="1" max="12" value="1" class="field w-24" />
+      </label>
+      <label class="flex items-center gap-2 self-end pb-2.5 text-sm text-ink-subtle">
+        <input id="pw-hide" type="checkbox" class="accent-[#5e6ad2]" /> Hide until revealed
+      </label>
+      <button id="pw-gen" class="btn btn-primary ml-auto">New word</button>
+    </div>
+
+    <div id="pw-out" class="flex flex-col gap-3"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free Pictionary word generator draws random words to draw for Pictionary,
+      charades and other party drawing games. Pick a difficulty — easy nouns, trickier
+      objects, or hard abstract concepts — or mix them all. Turn on "Hide until revealed"
+      so the drawer can flip each card in secret while the room waits. Generate a whole
+      round of words at once. Everything runs in your browser, so it works offline once
+      the page has loaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { PICTIONARY } from '../../lib/gendata';
+  import { shuffle } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const diffEl = $('pw-diff') as HTMLSelectElement;
+  const countEl = $('pw-count') as HTMLInputElement;
+  const hideEl = $('pw-hide') as HTMLInputElement;
+  const out = $('pw-out')!;
+
+  const POINTS: Record<string, string> = { easy: '1 point', medium: '2 points', hard: '3 points' };
+
+  function pool(diff: string): { word: string; tier: string }[] {
+    if (diff === 'mixed') {
+      return [
+        ...PICTIONARY.easy.map((word) => ({ word, tier: 'easy' })),
+        ...PICTIONARY.medium.map((word) => ({ word, tier: 'medium' })),
+        ...PICTIONARY.hard.map((word) => ({ word, tier: 'hard' })),
+      ];
+    }
+    return (PICTIONARY as any)[diff].map((word: string) => ({ word, tier: diff }));
+  }
+
+  function generate() {
+    const n = Math.max(1, Math.min(12, Number(countEl.value) || 1));
+    const picks = shuffle(pool(diffEl.value)).slice(0, n);
+    const hide = hideEl.checked;
+    out.innerHTML = picks
+      .map(({ word, tier }) => {
+        const label = `${tier.charAt(0).toUpperCase() + tier.slice(1)} · ${POINTS[tier]}`;
+        if (hide) {
+          return `<button class="panel panel-lift flex items-center justify-between px-5 py-5 text-left transition-colors hover:bg-surface-2" data-word="${word}">
+            <span class="reveal text-2xl font-semibold text-ink-subtle">Tap to reveal</span>
+            <span class="text-[13px] text-ink-tertiary">${label}</span>
+          </button>`;
+        }
+        return `<div class="panel flex items-center justify-between px-5 py-5">
+          <span class="text-2xl font-semibold capitalize text-ink">${word}</span>
+          <span class="text-[13px] text-ink-tertiary">${label}</span>
+        </div>`;
+      })
+      .join('');
+
+    out.querySelectorAll<HTMLButtonElement>('button[data-word]').forEach((b) => {
+      b.addEventListener('click', () => {
+        const span = b.querySelector('.reveal')!;
+        span.textContent = b.dataset.word!;
+        span.className = 'reveal text-2xl font-semibold capitalize text-ink';
+      });
+    });
+  }
+
+  [diffEl, countEl, hideEl].forEach((el) => el.addEventListener('input', generate));
+  $('pw-gen').addEventListener('click', generate);
+  generate();
+</script>

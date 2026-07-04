@@ -1,0 +1,98 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="tarot-card-generator">
+  <div class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-end gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Spread
+        <select id="tc-spread" class="field w-52">
+          <option value="1">Single card</option>
+          <option value="3">Past · Present · Future</option>
+          <option value="5">Five-card cross</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Deck
+        <select id="tc-deck" class="field w-44">
+          <option value="all">Full 78-card deck</option>
+          <option value="major">Major Arcana only</option>
+        </select>
+      </label>
+      <label class="flex items-center gap-2 self-end pb-2.5 text-sm text-ink-subtle">
+        <input id="tc-rev" type="checkbox" class="accent-[#5e6ad2]" checked /> Allow reversals
+      </label>
+      <button id="tc-draw" class="btn btn-primary ml-auto">Shuffle &amp; draw</button>
+    </div>
+
+    <div id="tc-out" class="grid grid-cols-1 gap-4 sm:grid-cols-3"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free tarot card generator shuffles the full 78-card Rider–Waite deck and
+      draws random cards for you. Pull a single card for a quick daily reading, a
+      three-card past-present-future spread, or a five-card cross. Each card shows its
+      arcana and a concise upright or reversed meaning to spark reflection. Reversals
+      are on by default and can be switched off. The shuffle uses your browser's secure
+      randomness, and nothing is uploaded — it's for entertainment and journaling.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { TAROT_DECK } from '../../lib/gendata';
+  import { sample, randFloat } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const spreadEl = $('tc-spread') as HTMLSelectElement;
+  const deckEl = $('tc-deck') as HTMLSelectElement;
+  const revEl = $('tc-rev') as HTMLInputElement;
+  const out = $('tc-out')!;
+
+  const POSITIONS: Record<string, string[]> = {
+    '1': ['Your card'],
+    '3': ['Past', 'Present', 'Future'],
+    '5': ['Situation', 'Challenge', 'Past', 'Future', 'Outcome'],
+  };
+
+  function draw() {
+    const n = Number(spreadEl.value);
+    const deck = deckEl.value === 'major' ? TAROT_DECK.filter((c) => c.arcana === 'Major') : TAROT_DECK;
+    const cards = sample(deck, n);
+    const labels = POSITIONS[String(n)];
+    const allowRev = revEl.checked;
+
+    out.className =
+      n === 1
+        ? 'grid grid-cols-1 gap-4'
+        : n === 3
+          ? 'grid grid-cols-1 gap-4 sm:grid-cols-3'
+          : 'grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-5';
+
+    out.innerHTML = cards
+      .map((c, i) => {
+        const reversed = allowRev && randFloat() < 0.5;
+        const meaning = reversed ? c.reversed : c.upright;
+        return `<div class="panel flex flex-col gap-3 p-5">
+          <span class="text-[12px] font-medium uppercase tracking-wide text-primary-hover">${labels[i]}</span>
+          <div class="flex flex-col items-center gap-2 py-2">
+            <div class="flex h-28 w-20 items-center justify-center rounded-lg border border-hairline-strong bg-surface-2 ${reversed ? 'rotate-180' : ''}">
+              <span class="text-3xl">${c.arcana === 'Major' ? '✦' : suitGlyph(c.suit)}</span>
+            </div>
+            <span class="text-center text-[15px] font-semibold text-ink">${c.name}</span>
+            <span class="text-[12px] text-ink-tertiary">${c.arcana} Arcana · ${reversed ? 'Reversed' : 'Upright'}</span>
+          </div>
+          <p class="text-[14px] leading-relaxed text-ink-subtle">${meaning}</p>
+        </div>`;
+      })
+      .join('');
+  }
+
+  function suitGlyph(suit?: string): string {
+    return suit === 'Wands' ? '🜂' : suit === 'Cups' ? '🜄' : suit === 'Swords' ? '🜁' : suit === 'Pentacles' ? '🜃' : '✦';
+  }
+
+  [spreadEl, deckEl, revEl].forEach((el) => el.addEventListener('input', draw));
+  $('tc-draw').addEventListener('click', draw);
+  draw();
+</script>

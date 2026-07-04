@@ -1,0 +1,67 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="random-animal-generator">
+  <div class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-end gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Group
+        <select id="ra-group" class="field w-44"></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="ra-count" type="number" min="1" max="12" value="1" class="field w-24" />
+      </label>
+      <button id="ra-gen" class="btn btn-primary ml-auto">Random animal</button>
+    </div>
+
+    <div id="ra-out" class="grid grid-cols-1 gap-4 sm:grid-cols-2"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free random animal generator picks a creature at random and shows its name,
+      an emoji, the group it belongs to and a genuinely surprising fact. Filter to
+      mammals, birds, reptiles, amphibians, fish, insects or sea creatures, or pull a
+      whole list at once — handy for classroom prompts, writing exercises, party games
+      and "animal of the day" ideas. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { ANIMALS } from '../../lib/gendata';
+  import { sample } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const groupEl = $('ra-group') as HTMLSelectElement;
+  const countEl = $('ra-count') as HTMLInputElement;
+  const out = $('ra-out')!;
+
+  const groups = ['All', ...Array.from(new Set(ANIMALS.map((a) => a.group))).sort()];
+  groupEl.innerHTML = groups.map((g) => `<option value="${g}">${g}</option>`).join('');
+
+  function generate() {
+    const g = groupEl.value;
+    const pool = g === 'All' ? ANIMALS : ANIMALS.filter((a) => a.group === g);
+    const n = Math.max(1, Math.min(12, Number(countEl.value) || 1));
+    const picks = sample(pool, n);
+    out.innerHTML = picks
+      .map(
+        (a) => `<div class="panel flex flex-col gap-2 p-5">
+          <div class="flex items-center gap-3">
+            <span class="text-4xl leading-none">${a.emoji}</span>
+            <div class="flex flex-col">
+              <span class="text-lg font-semibold text-ink">${a.name}</span>
+              <span class="text-[13px] text-ink-tertiary">${a.group}</span>
+            </div>
+          </div>
+          <p class="text-[15px] leading-relaxed text-ink-subtle">${a.fact}</p>
+        </div>`
+      )
+      .join('');
+  }
+
+  [groupEl, countEl].forEach((el) => el.addEventListener('input', generate));
+  $('ra-gen').addEventListener('click', generate);
+  generate();
+</script>

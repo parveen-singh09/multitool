@@ -1,0 +1,248 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="gif-maker">
+  <div class="flex flex-col gap-6">
+    <div class="flex flex-wrap gap-2">
+      <button id="gf-tab-img" class="btn btn-primary">From images</button>
+      <button id="gf-tab-vid" class="btn btn-secondary">From video</button>
+    </div>
+
+    <!-- Image source -->
+    <div id="gf-pane-img" class="flex flex-col gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Images (select several — order = frame order)
+        <input id="gf-imgs" type="file" accept="image/*" multiple class="field file:mr-3 file:rounded-md file:border-0 file:bg-surface-2 file:px-3 file:py-1 file:text-ink" />
+      </label>
+      <div id="gf-thumbs" class="flex flex-wrap gap-2"></div>
+    </div>
+
+    <!-- Video source -->
+    <div id="gf-pane-vid" class="hidden flex-col gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Video clip (a few seconds works best)
+        <input id="gf-vid" type="file" accept="video/*" class="field file:mr-3 file:rounded-md file:border-0 file:bg-surface-2 file:px-3 file:py-1 file:text-ink" />
+      </label>
+      <div class="flex flex-wrap items-end gap-4">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Start (s)
+          <input id="gf-start" type="number" min="0" step="0.1" value="0" class="field w-24" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Duration (s)
+          <input id="gf-dur" type="number" min="0.2" max="15" step="0.1" value="3" class="field w-24" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Frames / sec
+          <input id="gf-fps" type="number" min="2" max="24" value="10" class="field w-24" />
+        </label>
+      </div>
+    </div>
+
+    <!-- Shared output settings -->
+    <div class="flex flex-wrap items-end gap-4 border-t border-hairline pt-5">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Max width (px)
+        <input id="gf-width" type="number" min="48" max="800" value="480" class="field w-28" />
+      </label>
+      <label id="gf-delay-row" class="flex flex-col gap-1 text-sm text-ink-subtle">Frame delay (ms)
+        <input id="gf-delay" type="number" min="20" max="2000" value="120" class="field w-28" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Colors
+        <select id="gf-colors" class="field w-28">
+          <option value="256">256 (best)</option>
+          <option value="128">128</option>
+          <option value="64">64 (smaller)</option>
+          <option value="32">32</option>
+        </select>
+      </label>
+      <label class="flex items-center gap-2 self-end pb-2.5 text-sm text-ink-subtle"><input id="gf-loop" type="checkbox" class="accent-[#5e6ad2]" checked /> Loop forever</label>
+      <button id="gf-make" class="btn btn-primary ml-auto">Make GIF</button>
+    </div>
+
+    <p id="gf-status" class="text-sm text-ink-subtle" role="status" aria-live="polite"></p>
+
+    <div id="gf-result" class="hidden flex-col items-center gap-4 rounded-xl border border-hairline bg-surface-1 p-5">
+      <img id="gf-out" alt="Generated GIF preview" class="max-h-80 rounded-lg" />
+      <div class="flex items-center gap-3">
+        <span id="gf-size" class="text-[13px] text-ink-tertiary"></span>
+        <a id="gf-dl" class="btn btn-primary" download="animation.gif">Download GIF</a>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free GIF maker turns a set of images or a short video clip into an animated
+      GIF. Drop in several photos to flip through them as frames, or pick a video and
+      choose the start point, duration and frame rate to capture. Tune the width, frame
+      delay, color count and looping, then export the finished GIF. The animation is
+      quantized and encoded entirely in your browser with a built-in GIF encoder —
+      nothing is uploaded to a server.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { encodeGif, type GifFrameInput } from '../../lib/gifenc';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const status = $('gf-status')!;
+  let source: 'img' | 'vid' = 'img';
+  let imageFiles: File[] = [];
+
+  function setTab(tab: 'img' | 'vid') {
+    source = tab;
+    $('gf-pane-img').className = tab === 'img' ? 'flex flex-col gap-3' : 'hidden flex-col gap-3';
+    $('gf-pane-vid').className = tab === 'vid' ? 'flex flex-col gap-3' : 'hidden flex-col gap-3';
+    ($('gf-tab-img') as HTMLButtonElement).className = tab === 'img' ? 'btn btn-primary' : 'btn btn-secondary';
+    ($('gf-tab-vid') as HTMLButtonElement).className = tab === 'vid' ? 'btn btn-primary' : 'btn btn-secondary';
+    // Per-frame delay applies to images; video uses fps instead.
+    ($('gf-delay-row') as HTMLElement).style.display = tab === 'img' ? '' : 'none';
+  }
+  $('gf-tab-img').addEventListener('click', () => setTab('img'));
+  $('gf-tab-vid').addEventListener('click', () => setTab('vid'));
+
+  $('gf-imgs').addEventListener('change', (e) => {
+    imageFiles = Array.from((e.target as HTMLInputElement).files || []);
+    const thumbs = $('gf-thumbs')!;
+    thumbs.innerHTML = '';
+    imageFiles.forEach((f) => {
+      const url = URL.createObjectURL(f);
+      const im = document.createElement('img');
+      im.src = url;
+      im.className = 'h-16 w-16 rounded-md border border-hairline object-cover';
+      im.onload = () => URL.revokeObjectURL(url);
+      thumbs.appendChild(im);
+    });
+  });
+
+  const num = (id: string) => Number(($(id) as HTMLInputElement).value);
+
+  function loadImage(file: File): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const im = new Image();
+      im.onload = () => { URL.revokeObjectURL(url); resolve(im); };
+      im.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image load failed')); };
+      im.src = url;
+    });
+  }
+
+  // Draw a source onto a working canvas at target size, return RGBA.
+  function frameFrom(
+    ctx: CanvasRenderingContext2D,
+    w: number,
+    h: number,
+    src: CanvasImageSource,
+    sw: number,
+    sh: number
+  ): Uint8ClampedArray {
+    // Contain within w x h, letterboxed on black.
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, w, h);
+    const scale = Math.min(w / sw, h / sh);
+    const dw = sw * scale, dh = sh * scale;
+    ctx.drawImage(src, (w - dw) / 2, (h - dh) / 2, dw, dh);
+    return ctx.getImageData(0, 0, w, h).data;
+  }
+
+  async function buildFromImages(): Promise<{ frames: GifFrameInput[]; w: number; h: number }> {
+    if (!imageFiles.length) throw new Error('Add at least one image.');
+    const maxW = Math.max(48, Math.min(800, num('gf-width')));
+    const delay = Math.max(20, Math.min(2000, num('gf-delay')));
+    const first = await loadImage(imageFiles[0]);
+    const scale = Math.min(1, maxW / first.naturalWidth);
+    const w = Math.round(first.naturalWidth * scale);
+    const h = Math.round(first.naturalHeight * scale);
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+
+    const frames: GifFrameInput[] = [];
+    for (let i = 0; i < imageFiles.length; i++) {
+      status.textContent = `Rendering frame ${i + 1} of ${imageFiles.length}…`;
+      const im = i === 0 ? first : await loadImage(imageFiles[i]);
+      const rgba = frameFrom(ctx, w, h, im, im.naturalWidth, im.naturalHeight);
+      frames.push({ rgba, delayMs: delay });
+      await new Promise((r) => setTimeout(r)); // let the status paint
+    }
+    return { frames, w, h };
+  }
+
+  function loadVideo(file: File): Promise<HTMLVideoElement> {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const v = document.createElement('video');
+      v.muted = true; v.preload = 'auto'; v.src = url;
+      v.onloadedmetadata = () => resolve(v);
+      v.onerror = () => { URL.revokeObjectURL(url); reject(new Error('video load failed')); };
+    });
+  }
+
+  function seek(v: HTMLVideoElement, t: number): Promise<void> {
+    return new Promise((resolve) => {
+      const done = () => { v.removeEventListener('seeked', done); resolve(); };
+      v.addEventListener('seeked', done);
+      v.currentTime = Math.min(t, v.duration - 0.01);
+    });
+  }
+
+  async function buildFromVideo(): Promise<{ frames: GifFrameInput[]; w: number; h: number }> {
+    const file = ($('gf-vid') as HTMLInputElement).files?.[0];
+    if (!file) throw new Error('Choose a video first.');
+    const v = await loadVideo(file);
+    const maxW = Math.max(48, Math.min(800, num('gf-width')));
+    const fps = Math.max(2, Math.min(24, num('gf-fps')));
+    const start = Math.max(0, num('gf-start'));
+    const dur = Math.max(0.2, Math.min(15, num('gf-dur')));
+    const scale = Math.min(1, maxW / v.videoWidth);
+    const w = Math.round(v.videoWidth * scale);
+    const h = Math.round(v.videoHeight * scale);
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+
+    const count = Math.max(1, Math.min(150, Math.round(dur * fps)));
+    const delay = Math.round(1000 / fps);
+    const frames: GifFrameInput[] = [];
+    for (let i = 0; i < count; i++) {
+      const t = start + i / fps;
+      if (t >= v.duration) break;
+      await seek(v, t);
+      status.textContent = `Capturing frame ${i + 1} of ${count}…`;
+      const rgba = frameFrom(ctx, w, h, v, v.videoWidth, v.videoHeight);
+      frames.push({ rgba, delayMs: delay });
+    }
+    URL.revokeObjectURL(v.src);
+    if (!frames.length) throw new Error('No frames captured — check the start time.');
+    return { frames, w, h };
+  }
+
+  $('gf-make').addEventListener('click', async () => {
+    const btn = $('gf-make') as HTMLButtonElement;
+    btn.disabled = true;
+    $('gf-result').className = 'hidden flex-col items-center gap-4 rounded-xl border border-hairline bg-surface-1 p-5';
+    try {
+      status.textContent = 'Reading frames…';
+      const { frames, w, h } = source === 'img' ? await buildFromImages() : await buildFromVideo();
+      status.textContent = `Encoding ${frames.length} frames…`;
+      await new Promise((r) => setTimeout(r));
+      const bytes = encodeGif(frames, {
+        width: w,
+        height: h,
+        loop: ($('gf-loop') as HTMLInputElement).checked ? 0 : 1,
+        maxColors: Number(($('gf-colors') as HTMLSelectElement).value),
+      });
+      const blob = new Blob([bytes as unknown as BlobPart], { type: 'image/gif' });
+      const url = URL.createObjectURL(blob);
+      ($('gf-out') as HTMLImageElement).src = url;
+      ($('gf-dl') as HTMLAnchorElement).href = url;
+      const kb = (blob.size / 1024).toFixed(0);
+      $('gf-size').textContent = `${w}×${h} · ${frames.length} frames · ${kb} KB`;
+      $('gf-result').className = 'flex flex-col items-center gap-4 rounded-xl border border-hairline bg-surface-1 p-5';
+      status.textContent = 'Done.';
+    } catch (err) {
+      status.textContent = (err as Error).message || 'Something went wrong.';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  setTab('img');
+</script>

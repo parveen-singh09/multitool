@@ -1,0 +1,87 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="gamertag-generator">
+  <div class="flex flex-col gap-5">
+    <div class="flex flex-wrap items-end gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Keyword (optional)
+        <input id="gt-word" class="field w-48" placeholder="e.g. your name" spellcheck="false" autocomplete="off" maxlength="14" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="gt-count" type="number" min="6" max="48" value="18" class="field w-24" />
+      </label>
+      <button id="gt-gen" class="btn btn-primary ml-auto">Generate</button>
+    </div>
+    <div class="flex flex-wrap items-center gap-4">
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="gt-leet" type="checkbox" class="accent-[#5e6ad2]" /> Leetspeak (3, 0, 1)</label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="gt-num" type="checkbox" class="accent-[#5e6ad2]" checked /> Add numbers</label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="gt-suf" type="checkbox" class="accent-[#5e6ad2]" /> Add suffix (X, YT, GG…)</label>
+    </div>
+
+    <div id="gt-out" class="grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free gamertag generator builds cool gaming usernames for Xbox, PlayStation
+      Network, Steam, Discord and Twitch. It mixes bold adjectives and nouns, optional
+      leetspeak, trailing numbers and streamer-style suffixes like YT and TTV. Add your
+      own keyword to weave your name into the handle. Generate a batch, then tap any tag
+      to copy it and check availability on your platform. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { GAMERTAG_ADJ, GAMERTAG_NOUN, GAMERTAG_SUFFIX } from '../../lib/gendata';
+  import { pick, randInt } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const wordEl = $('gt-word') as HTMLInputElement;
+  const countEl = $('gt-count') as HTMLInputElement;
+  const leetEl = $('gt-leet') as HTMLInputElement;
+  const numEl = $('gt-num') as HTMLInputElement;
+  const sufEl = $('gt-suf') as HTMLInputElement;
+  const out = $('gt-out')!;
+
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+  const leet = (s: string) => s.replace(/[eosati]/gi, (c) => ({ e: '3', o: '0', s: '5', a: '4', t: '7', i: '1' } as any)[c.toLowerCase()]);
+
+  function one(): string {
+    const kw = wordEl.value.trim().replace(/[^A-Za-z0-9]/g, '');
+    const core = kw ? cap(kw) : cap(pick(GAMERTAG_ADJ));
+    const other = kw ? pick(GAMERTAG_NOUN) : pick(GAMERTAG_NOUN);
+    // Assemble as Adj+Noun or Keyword+Noun, occasionally reversed.
+    let tag = randInt(0, 1) === 0 ? core + other : (kw ? cap(pick(GAMERTAG_ADJ)) + core : other + core);
+    if (leetEl.checked) tag = leet(tag);
+    if (sufEl.checked) tag += (randInt(0, 1) ? '_' : '') + pick(GAMERTAG_SUFFIX);
+    if (numEl.checked) tag += String(randInt(2, 999));
+    return tag;
+  }
+
+  function generate() {
+    const n = Math.max(6, Math.min(48, Number(countEl.value) || 18));
+    const tags = new Set<string>();
+    let guard = 0;
+    while (tags.size < n && guard++ < n * 20) tags.add(one());
+    out.innerHTML = [...tags]
+      .map(
+        (t) =>
+          `<button class="panel truncate px-3 py-2.5 text-center font-mono text-[14px] text-ink transition-colors hover:border-hairline-strong hover:bg-surface-2" data-n="${t}">${t}</button>`
+      )
+      .join('');
+    out.querySelectorAll<HTMLButtonElement>('button').forEach((b) =>
+      b.addEventListener('click', async () => {
+        await navigator.clipboard.writeText(b.dataset.n!);
+        const orig = b.textContent;
+        b.textContent = 'Copied!';
+        setTimeout(() => (b.textContent = orig), 1000);
+      })
+    );
+  }
+
+  [wordEl, countEl, leetEl, numEl, sufEl].forEach((el) => el.addEventListener('input', generate));
+  $('gt-gen').addEventListener('click', generate);
+  generate();
+</script>

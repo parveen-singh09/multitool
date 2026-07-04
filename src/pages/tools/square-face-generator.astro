@@ -1,0 +1,239 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="square-face-generator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-[1fr_1.2fr]">
+    <div class="flex flex-col gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Photo
+        <input id="sf-file" type="file" accept="image/*" class="field file:mr-3 file:rounded-md file:border-0 file:bg-surface-2 file:px-3 file:py-1 file:text-ink" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Squareness
+        <input id="sf-strength" type="range" min="0" max="100" value="70" class="mt-2 w-full accent-[#5e6ad2]" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Effect size
+        <input id="sf-radius" type="range" min="20" max="95" value="60" class="mt-2 w-full accent-[#5e6ad2]" />
+      </label>
+      <p class="text-[13px] leading-relaxed text-ink-tertiary">
+        Drag the box on the preview over the face, then push <span class="text-ink-subtle">Squareness</span> up.
+        The region inside the box gets pulled toward a square.
+      </p>
+      <div class="flex flex-wrap items-center gap-4">
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="sf-corners" type="checkbox" class="accent-[#5e6ad2]" checked /> Sharpen corners</label>
+        <button id="sf-reset" class="btn btn-secondary ml-auto">Reset box</button>
+      </div>
+    </div>
+
+    <div class="flex flex-col items-center gap-4">
+      <div id="sf-wrap" class="relative w-full touch-none select-none">
+        <canvas id="sf-canvas" class="w-full rounded-xl border border-hairline" style="max-height:440px;object-fit:contain"></canvas>
+        <div id="sf-box" class="pointer-events-none absolute rounded-sm border-2 border-[#5e6ad2]" style="display:none">
+          <span class="absolute -right-1 -bottom-1 h-3 w-3 rounded-sm bg-[#5e6ad2]"></span>
+        </div>
+      </div>
+      <button id="sf-dl" class="btn btn-primary">Download PNG</button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free square face generator recreates the viral "square head" meme: upload a
+      photo and it warps the face toward a blocky, squared-off shape. Position the box
+      over the face, then dial in how square you want it and how large the effect reaches.
+      Unlike a one-tap filter, you control the strength, size and corner sharpness, so you
+      can go from a subtle chin-square to full cartoon cube. Download the result as a PNG.
+      Your photo is warped entirely in your browser and never uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const canvas = $('sf-canvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+  const boxEl = $('sf-box') as HTMLElement;
+  const wrap = $('sf-wrap') as HTMLElement;
+
+  let img: HTMLImageElement | null = null;
+  let srcCanvas: HTMLCanvasElement | null = null; // holds the undistorted image at canvas resolution
+  // Face box in canvas (image) pixel coordinates.
+  let box = { x: 0, y: 0, w: 0, h: 0 };
+
+  const val = (id: string) => Number(($(id) as HTMLInputElement).value);
+  const checked = (id: string) => ($(id) as HTMLInputElement).checked;
+
+  function fitCanvasToImage() {
+    if (!img) return;
+    const maxW = 1000;
+    const scale = Math.min(1, maxW / img.naturalWidth);
+    canvas.width = Math.round(img.naturalWidth * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    // Cache the source at this resolution.
+    srcCanvas = document.createElement('canvas');
+    srcCanvas.width = canvas.width;
+    srcCanvas.height = canvas.height;
+    srcCanvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+    // Default box: centered square ~55% of the shorter side.
+    const s = Math.min(canvas.width, canvas.height) * 0.55;
+    box = { x: (canvas.width - s) / 2, y: (canvas.height - s) / 2, w: s, h: s };
+  }
+
+  // Backward map for the squarify warp. For a destination point (nx,ny) in the
+  // effect square (chebyshev metric), return the SOURCE point to sample so the
+  // source's circular content is stretched to fill the square. The square corner
+  // (√2 out) pulls from the circle edge (r=1) → contraction, factor ≤ 1.
+  function squarify(nx: number, ny: number, strength: number): [number, number] {
+    const r = Math.hypot(nx, ny);
+    const cheb = Math.max(Math.abs(nx), Math.abs(ny)); // distance to square edge along this ray
+    if (r < 1e-4 || cheb < 1e-4) return [nx, ny];
+    const squareScale = cheb / r; // ≤ 1: pulls the sample inward toward the circle
+    const scale = 1 + strength * (squareScale - 1);
+    return [nx * scale, ny * scale];
+  }
+
+  function render() {
+    if (!srcCanvas) { drawPlaceholder(); return; }
+    const strength = val('sf-strength') / 100;
+    const radiusF = val('sf-radius') / 100;
+    const sharpen = checked('sf-corners');
+
+    // Start from the clean source.
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(srcCanvas, 0, 0);
+
+    if (strength <= 0.001) { drawBox(); return; }
+
+    const src = srcCanvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height);
+    const dst = ctx.createImageData(canvas.width, canvas.height);
+    const sd = src.data, dd = dst.data;
+    const W = canvas.width, H = canvas.height;
+
+    // Effect ellipse centered on the box, extending by radius factor.
+    const cx = box.x + box.w / 2;
+    const cy = box.y + box.h / 2;
+    const rx = (box.w / 2) * (0.6 + radiusF);
+    const ry = (box.h / 2) * (0.6 + radiusF);
+
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const di = (y * W + x) * 4;
+        // Normalized position relative to the effect box (square, chebyshev metric).
+        const nx = (x - cx) / rx;
+        const ny = (y - cy) / ry;
+        const cheb = Math.max(Math.abs(nx), Math.abs(ny));
+        if (cheb >= 1) {
+          // Outside the effect square — copy straight through.
+          dd[di] = sd[di]; dd[di + 1] = sd[di + 1]; dd[di + 2] = sd[di + 2]; dd[di + 3] = sd[di + 3];
+          continue;
+        }
+        // Falloff so the warp eases to zero at the square's edge.
+        const fall = sharpen ? 1 - Math.pow(cheb, 3) : 1 - cheb * cheb;
+        const localStrength = strength * fall;
+        const [wx, wy] = squarify(nx, ny, localStrength);
+        // Backward map: sample the source at the contracted position.
+        const srcX = Math.round(cx + wx * rx);
+        const srcY = Math.round(cy + wy * ry);
+        const cxp = srcX < 0 ? 0 : srcX >= W ? W - 1 : srcX;
+        const cyp = srcY < 0 ? 0 : srcY >= H ? H - 1 : srcY;
+        const si = (cyp * W + cxp) * 4;
+        dd[di] = sd[si]; dd[di + 1] = sd[si + 1]; dd[di + 2] = sd[si + 2]; dd[di + 3] = sd[si + 3];
+      }
+    }
+    ctx.putImageData(dst, 0, 0);
+    drawBox();
+  }
+
+  function drawPlaceholder() {
+    canvas.width = 960; canvas.height = 600;
+    const g = ctx.createLinearGradient(0, 0, 960, 600);
+    g.addColorStop(0, '#26272b'); g.addColorStop(1, '#141516');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 960, 600);
+    ctx.fillStyle = '#8a8f98';
+    ctx.font = '600 26px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('Upload a photo to squarify a face', 480, 300);
+    ctx.textAlign = 'start';
+    boxEl.style.display = 'none';
+  }
+
+  // Position the on-screen box overlay to match canvas pixel coords.
+  function drawBox() {
+    if (!srcCanvas) { boxEl.style.display = 'none'; return; }
+    const rect = canvas.getBoundingClientRect();
+    const sx = rect.width / canvas.width;
+    const sy = rect.height / canvas.height;
+    boxEl.style.display = 'block';
+    boxEl.style.left = `${box.x * sx}px`;
+    boxEl.style.top = `${box.y * sy}px`;
+    boxEl.style.width = `${box.w * sx}px`;
+    boxEl.style.height = `${box.h * sy}px`;
+  }
+
+  // --- Box dragging / resizing ---
+  let mode: 'none' | 'move' | 'resize' = 'none';
+  let start = { mx: 0, my: 0, bx: 0, by: 0, bw: 0, bh: 0 };
+
+  function toCanvasPt(e: PointerEvent) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: ((e.clientX - rect.left) / rect.width) * canvas.width,
+      y: ((e.clientY - rect.top) / rect.height) * canvas.height,
+    };
+  }
+
+  wrap.addEventListener('pointerdown', (e) => {
+    if (!srcCanvas) return;
+    const p = toCanvasPt(e);
+    const nearHandle = Math.abs(p.x - (box.x + box.w)) < box.w * 0.2 && Math.abs(p.y - (box.y + box.h)) < box.h * 0.2;
+    const inside = p.x >= box.x && p.x <= box.x + box.w && p.y >= box.y && p.y <= box.y + box.h;
+    mode = nearHandle ? 'resize' : inside ? 'move' : 'none';
+    if (mode === 'none') return;
+    start = { mx: p.x, my: p.y, bx: box.x, by: box.y, bw: box.w, bh: box.h };
+    wrap.setPointerCapture(e.pointerId);
+  });
+
+  wrap.addEventListener('pointermove', (e) => {
+    if (mode === 'none' || !srcCanvas) return;
+    const p = toCanvasPt(e);
+    const dx = p.x - start.mx, dy = p.y - start.my;
+    if (mode === 'move') {
+      box.x = Math.max(0, Math.min(canvas.width - box.w, start.bx + dx));
+      box.y = Math.max(0, Math.min(canvas.height - box.h, start.by + dy));
+    } else {
+      const s = Math.max(40, Math.min(start.bw + dx, start.bh + dy));
+      box.w = Math.min(s, canvas.width - box.x);
+      box.h = Math.min(s, canvas.height - box.y);
+    }
+    drawBox();
+  });
+
+  const endDrag = () => { if (mode !== 'none') { mode = 'none'; render(); } };
+  wrap.addEventListener('pointerup', endDrag);
+  wrap.addEventListener('pointercancel', endDrag);
+
+  $('sf-file').addEventListener('change', (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const im = new Image();
+    im.onload = () => { img = im; URL.revokeObjectURL(url); fitCanvasToImage(); render(); };
+    im.src = url;
+  });
+
+  ['sf-strength', 'sf-radius', 'sf-corners'].forEach((id) => $(id).addEventListener('input', render));
+  $('sf-reset').addEventListener('click', () => { if (srcCanvas) { fitCanvasToImage(); render(); } });
+  window.addEventListener('resize', () => drawBox());
+
+  $('sf-dl').addEventListener('click', () => {
+    // Re-render without the overlay box (overlay is DOM, not on canvas — safe).
+    canvas.toBlob((b) => {
+      if (!b) return;
+      const url = URL.createObjectURL(b);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'square-face.png'; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }, 'image/png');
+  });
+
+  drawPlaceholder();
+</script>

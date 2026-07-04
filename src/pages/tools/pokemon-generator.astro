@@ -1,0 +1,83 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pokemon-generator">
+  <div class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-end gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Mode
+        <select id="pk-mode" class="field w-52">
+          <option value="real">Random Kanto Pokémon</option>
+          <option value="fake">Invent a Fakémon</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="pk-count" type="number" min="1" max="9" value="1" class="field w-24" />
+      </label>
+      <button id="pk-gen" class="btn btn-primary ml-auto">Generate</button>
+    </div>
+
+    <div id="pk-out" class="grid grid-cols-1 gap-4 sm:grid-cols-3"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free Pokémon generator has two modes. Spin a random Pokémon from the
+      original 151 Kanto Pokédex — complete with its number and type badges, tinted in
+      the official type colors — perfect for "guess the Pokémon", nuzlocke picks and
+      random team challenges. Or switch to Fakémon mode to invent an original,
+      non-trademarked creature name and type combo for your own fan region. Everything
+      is generated in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { POKEMON_GEN1, POKEMON_TYPE_COLORS, FAKEMON_PREFIX, FAKEMON_SUFFIX } from '../../lib/gendata';
+  import { sample, pick, randInt } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const modeEl = $('pk-mode') as HTMLSelectElement;
+  const countEl = $('pk-count') as HTMLInputElement;
+  const out = $('pk-out')!;
+
+  const ALL_TYPES = Object.keys(POKEMON_TYPE_COLORS);
+
+  function badge(t: string): string {
+    const c = POKEMON_TYPE_COLORS[t] || '#666';
+    return `<span class="rounded-full px-2.5 py-0.5 text-[12px] font-medium text-white" style="background:${c}">${t}</span>`;
+  }
+
+  function card(title: string, sub: string, types: string[], glyph: string): string {
+    return `<div class="panel flex flex-col items-center gap-3 p-5 text-center">
+      <div class="flex h-24 w-24 items-center justify-center rounded-full border border-hairline-strong bg-surface-2 text-4xl">${glyph}</div>
+      <div class="flex flex-col gap-0.5">
+        <span class="text-[12px] text-ink-tertiary">${sub}</span>
+        <span class="text-lg font-semibold text-ink">${title}</span>
+      </div>
+      <div class="flex flex-wrap justify-center gap-1.5">${types.map(badge).join('')}</div>
+    </div>`;
+  }
+
+  function generate() {
+    const n = Math.max(1, Math.min(9, Number(countEl.value) || 1));
+    if (modeEl.value === 'real') {
+      out.innerHTML = sample(POKEMON_GEN1, n)
+        .map((p) => card(p.name, `#${String(p.id).padStart(3, '0')}`, p.types, '❓'))
+        .join('');
+    } else {
+      const cards: string[] = [];
+      for (let i = 0; i < n; i++) {
+        const name = pick(FAKEMON_PREFIX) + pick(FAKEMON_SUFFIX);
+        const t1 = pick(ALL_TYPES);
+        const types = randInt(0, 2) === 0 ? [t1] : [t1, pick(ALL_TYPES.filter((t) => t !== t1))];
+        cards.push(card(name, 'Fakémon', types, '✨'));
+      }
+      out.innerHTML = cards.join('');
+    }
+  }
+
+  [modeEl, countEl].forEach((el) => el.addEventListener('input', generate));
+  $('pk-gen').addEventListener('click', generate);
+  generate();
+</script>

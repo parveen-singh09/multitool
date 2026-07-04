@@ -1,0 +1,77 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pet-name-generator">
+  <div class="flex flex-col gap-5">
+    <div class="flex flex-wrap items-end gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Style
+        <select id="pn-style" class="field w-44">
+          <option value="unisex">Classic / unisex</option>
+          <option value="cutesy">Cute &amp; sweet</option>
+          <option value="tough">Tough &amp; bold</option>
+          <option value="foodie">Foodie</option>
+          <option value="mythic">Mythic &amp; cosmic</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="pn-count" type="number" min="4" max="40" value="16" class="field w-24" />
+      </label>
+      <label class="flex items-center gap-2 self-end pb-2.5 text-sm text-ink-subtle">
+        <input id="pn-trait" type="checkbox" class="accent-[#5e6ad2]" /> Add a personality trait
+      </label>
+      <button id="pn-gen" class="btn btn-primary ml-auto">Generate</button>
+    </div>
+
+    <div id="pn-out" class="grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free pet name generator serves up name ideas for dogs, cats, rabbits and
+      any small companion. Choose a vibe — classic and unisex, cute and sweet, tough
+      and bold, foodie, or mythic and cosmic — and generate a batch to shortlist. Turn
+      on "Add a personality trait" for playful combos like "Sleepy Biscuit". Tap any
+      name to copy it. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { PET_NAMES, PET_TRAITS } from '../../lib/gendata';
+  import { sample, pick } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const styleEl = $('pn-style') as HTMLSelectElement;
+  const countEl = $('pn-count') as HTMLInputElement;
+  const traitEl = $('pn-trait') as HTMLInputElement;
+  const out = $('pn-out')!;
+
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  function generate() {
+    const pool = (PET_NAMES as any)[styleEl.value] as string[];
+    const n = Math.max(4, Math.min(40, Number(countEl.value) || 16));
+    const names = sample(pool, Math.min(n, pool.length)).map((name) =>
+      traitEl.checked ? `${cap(pick(PET_TRAITS))} ${name}` : name
+    );
+    out.innerHTML = names
+      .map(
+        (name) =>
+          `<button class="panel px-3 py-2.5 text-center text-[15px] font-medium text-ink transition-colors hover:border-hairline-strong hover:bg-surface-2" data-n="${name}">${name}</button>`
+      )
+      .join('');
+    out.querySelectorAll<HTMLButtonElement>('button').forEach((b) =>
+      b.addEventListener('click', async () => {
+        await navigator.clipboard.writeText(b.dataset.n!);
+        const orig = b.textContent;
+        b.textContent = 'Copied!';
+        setTimeout(() => (b.textContent = orig), 1000);
+      })
+    );
+  }
+
+  [styleEl, countEl, traitEl].forEach((el) => el.addEventListener('input', generate));
+  $('pn-gen').addEventListener('click', generate);
+  generate();
+</script>

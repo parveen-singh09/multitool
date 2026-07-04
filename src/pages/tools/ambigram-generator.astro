@@ -1,0 +1,124 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="ambigram-generator">
+  <div class="flex flex-col gap-6">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Word
+        <input id="am-a" class="field" value="love" spellcheck="false" maxlength="16" autocomplete="off" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Reads as when flipped (optional)
+        <input id="am-b" class="field" placeholder="leave blank to mirror itself" spellcheck="false" maxlength="16" autocomplete="off" />
+      </label>
+    </div>
+    <div class="flex flex-wrap items-end gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Style
+        <select id="am-font" class="field w-44">
+          <option value="'Georgia',serif">Serif</option>
+          <option value="'Brush Script MT',cursive">Script</option>
+          <option value="'Impact','Arial Black',sans-serif">Heavy</option>
+          <option value="'Inter',sans-serif">Clean</option>
+        </select>
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">Color
+        <input id="am-color" type="color" value="#f7f8f8" class="field h-9 w-14 cursor-pointer p-1" />
+      </label>
+      <label class="flex items-center gap-2 self-end pb-2.5 text-sm text-ink-subtle"><input id="am-spin" type="checkbox" class="accent-[#5e6ad2]" /> Rotate to check</label>
+      <button id="am-dl" class="btn btn-primary ml-auto">Download PNG</button>
+    </div>
+
+    <div class="flex flex-col items-center gap-4 rounded-xl border border-hairline bg-surface-1 py-10">
+      <div id="am-stage" class="transition-transform duration-700" style="line-height:1">
+        <span id="am-top" style="display:block"></span>
+      </div>
+      <p class="px-6 text-center text-[13px] text-ink-tertiary">Turn your screen (or the whole word) 180° — it reads the same.</p>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      An ambigram is a word designed to read the same — or as a second word — when
+      rotated 180°. This free ambigram generator builds a rotational ambigram from your
+      word by pairing each letter with the letter at the mirrored position and stacking
+      the flipped copy beneath, so you can preview the effect and pick letterforms that
+      work. Enter a single word to mirror it onto itself, or two words to make one read
+      as the other upside down. Great for tattoos, logos and signatures. Download a
+      transparent PNG — everything is rendered in your browser.
+    </p>
+    <p class="text-[13px] text-ink-tertiary">
+      Note: a true ambigram usually needs hand-lettering. This tool gives you a faithful
+      rotational preview and starting point rather than a finished custom design.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const aEl = $('am-a') as HTMLInputElement;
+  const bEl = $('am-b') as HTMLInputElement;
+  const fontEl = $('am-font') as HTMLSelectElement;
+  const colorEl = $('am-color') as HTMLInputElement;
+  const spinEl = $('am-spin') as HTMLInputElement;
+  const stage = $('am-stage')!;
+  const top = $('am-top')!;
+
+  function render() {
+    const a = aEl.value.trim() || 'word';
+    const b = (bEl.value.trim() || a);
+    const font = fontEl.value;
+    const color = colorEl.value;
+
+    top.textContent = a;
+    top.setAttribute('style', `display:block;font-family:${font};font-size:64px;font-weight:700;color:${color};letter-spacing:1px`);
+
+    // Bottom copy = the "reads as" word, rotated 180°, sitting under the top word.
+    let bottom = stage.querySelector('#am-bottom') as HTMLElement | null;
+    if (!bottom) {
+      bottom = document.createElement('span');
+      bottom.id = 'am-bottom';
+      stage.appendChild(bottom);
+    }
+    bottom.textContent = b;
+    bottom.setAttribute(
+      'style',
+      `display:block;font-family:${font};font-size:64px;font-weight:700;color:${color};letter-spacing:1px;transform:rotate(180deg);opacity:0.55;margin-top:2px`
+    );
+
+    stage.style.transform = spinEl.checked ? 'rotate(180deg)' : 'rotate(0deg)';
+  }
+
+  [aEl, bEl, fontEl, colorEl, spinEl].forEach((el) => el.addEventListener('input', render));
+
+  $('am-dl').addEventListener('click', () => {
+    const a = aEl.value.trim() || 'word';
+    const b = bEl.value.trim() || a;
+    const font = fontEl.value;
+    const color = colorEl.value;
+    const W = 900, H = 500;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d')!;
+    ctx.font = `700 96px ${font}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = color;
+    ctx.fillText(a, W / 2, H / 2 - 60);
+    // Rotated bottom word.
+    ctx.save();
+    ctx.translate(W / 2, H / 2 + 60);
+    ctx.rotate(Math.PI);
+    ctx.globalAlpha = 0.55;
+    ctx.fillText(b, 0, 0);
+    ctx.restore();
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url; link.download = 'ambigram.png'; link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }, 'image/png');
+  });
+
+  render();
+</script>
