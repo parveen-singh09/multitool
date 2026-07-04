@@ -1,0 +1,67 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="story-generator">
+  <div class="flex flex-col gap-4">
+    <button id="st-gen" class="btn btn-primary w-fit">Generate story idea</button>
+    <div id="st-card" class="panel panel-lift flex flex-col gap-3 p-5"></div>
+    <button id="st-copy" class="btn btn-secondary w-fit">Copy prompt</button>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free story idea generator sparks your next piece of fiction with a
+      random prompt that combines a character, a setting, a goal and an obstacle,
+      plus a genre and a ready-made opening line. It's built for writers facing a
+      blank page, students doing creative exercises, and game masters improvising
+      a scene. Generate as many as you like. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { pick } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const card = $('st-card')!;
+  let current: Record<string, string> = {};
+
+  const CHARACTERS = ['a retired detective', 'a curious child', 'an exiled queen', 'a lonely lighthouse keeper', 'a rogue android', 'a traveling musician', 'a disillusioned scientist', 'a small-town baker', 'a reluctant hero', 'a time-worn ghost'];
+  const SETTINGS = ['a rain-soaked city at night', 'a colony on a distant moon', 'a village that forgot its own name', 'the last library on Earth', 'a train that never stops', 'a floating market above the clouds', 'an abandoned amusement park', 'a kingdom under permanent winter'];
+  const GOALS = ['must find a lost letter', 'wants to undo a single mistake', 'is hunting for a stolen melody', 'needs to deliver a warning before dawn', 'seeks a door that only appears at midnight', 'must reunite two estranged friends', 'is searching for the truth about their past'];
+  const OBSTACLES = ['but no one believes them', 'while being followed by a shadow', 'though time is running backwards', 'yet every clue contradicts the last', 'while slowly losing their memories', 'but the only witness has vanished', 'though the price is everything they love'];
+  const GENRES = ['Mystery', 'Science fiction', 'Fantasy', 'Literary drama', 'Thriller', 'Magical realism', 'Adventure'];
+  const OPENERS = ['The morning it happened, the sky was the wrong color.', 'Nobody expected the door to be unlocked.', 'It began, as these things often do, with a knock.', 'She had exactly one hour, and she knew it.', 'The map was wrong, but the destination was real.'];
+
+  function generate() {
+    current = {
+      Character: pick(CHARACTERS),
+      Setting: pick(SETTINGS),
+      Goal: pick(GOALS),
+      Obstacle: pick(OBSTACLES),
+      Genre: pick(GENRES),
+      'Opening line': pick(OPENERS),
+    };
+    const premise = `${cap(current.Character)} in ${current.Setting} ${current.Goal}, ${current.Obstacle}.`;
+    current.Premise = premise;
+    card.innerHTML = `
+      <p class="text-lg leading-relaxed text-ink">${premise}</p>
+      <div class="grid grid-cols-1 gap-2 border-t border-hairline pt-3 sm:grid-cols-2">
+        ${['Character', 'Setting', 'Goal', 'Obstacle', 'Genre', 'Opening line'].map((k) =>
+          `<div class="flex flex-col"><span class="text-[12px] uppercase tracking-wide text-ink-tertiary">${k}</span><span class="text-[14px] text-ink-subtle">${current[k]}</span></div>`).join('')}
+      </div>`;
+  }
+
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  $('st-gen').addEventListener('click', generate);
+  $('st-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    const text = `Premise: ${current.Premise}\nGenre: ${current.Genre}\nOpening line: ${current['Opening line']}`;
+    await navigator.clipboard.writeText(text);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy prompt'), 1500);
+  });
+  generate();
+</script>

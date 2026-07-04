@@ -1,0 +1,76 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="random-string-generator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Length
+        <input id="rs-len" type="number" min="1" max="256" value="16" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="rs-count" type="number" min="1" max="500" value="10" class="field" />
+      </label>
+      <label class="flex items-center gap-2 pt-6 text-sm text-ink-subtle"><input id="rs-lower" type="checkbox" class="accent-[#5e6ad2]" checked /> a-z</label>
+      <label class="flex items-center gap-2 pt-6 text-sm text-ink-subtle"><input id="rs-upper" type="checkbox" class="accent-[#5e6ad2]" checked /> A-Z</label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="rs-num" type="checkbox" class="accent-[#5e6ad2]" checked /> 0-9</label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="rs-sym" type="checkbox" class="accent-[#5e6ad2]" /> Symbols</label>
+      <label class="col-span-2 flex flex-col gap-1 text-sm text-ink-subtle">Custom set (overrides)
+        <input id="rs-custom" class="field font-mono text-[13px]" placeholder="e.g. ABCDEF0123" spellcheck="false" />
+      </label>
+    </div>
+    <div class="flex gap-2">
+      <button id="rs-gen" class="btn btn-primary">Generate</button>
+      <button id="rs-copy" class="btn btn-secondary">Copy all</button>
+    </div>
+    <textarea id="rs-out" class="field min-h-56 resize-y font-mono text-[13px]" readonly aria-label="Generated strings"></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free random string generator creates random strings of any length from
+      the character types you choose — lowercase, uppercase, digits and symbols —
+      or your own custom character set. Generate one or a whole batch. It uses your
+      browser's cryptographically secure random source, so the output is genuinely
+      unpredictable and never sent to a server.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { randString, ALPHA_LOWER, ALPHA_UPPER, DIGITS, SYMBOLS } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const out = $('rs-out') as HTMLTextAreaElement;
+
+  function alphabet(): string {
+    const custom = ($('rs-custom') as HTMLInputElement).value;
+    if (custom) return custom;
+    let a = '';
+    if (($('rs-lower') as HTMLInputElement).checked) a += ALPHA_LOWER;
+    if (($('rs-upper') as HTMLInputElement).checked) a += ALPHA_UPPER;
+    if (($('rs-num') as HTMLInputElement).checked) a += DIGITS;
+    if (($('rs-sym') as HTMLInputElement).checked) a += SYMBOLS;
+    return a;
+  }
+
+  function generate() {
+    const len = Math.max(1, Math.min(256, Number(($('rs-len') as HTMLInputElement).value) || 16));
+    const n = Math.max(1, Math.min(500, Number(($('rs-count') as HTMLInputElement).value) || 10));
+    const ab = alphabet();
+    if (!ab) { out.value = 'Select at least one character type.'; return; }
+    const list: string[] = [];
+    for (let i = 0; i < n; i++) list.push(randString(len, ab));
+    out.value = list.join('\n');
+  }
+
+  ['rs-len', 'rs-count', 'rs-lower', 'rs-upper', 'rs-num', 'rs-sym', 'rs-custom'].forEach((id) => $(id).addEventListener('input', generate));
+  $('rs-gen').addEventListener('click', generate);
+  $('rs-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  });
+  generate();
+</script>

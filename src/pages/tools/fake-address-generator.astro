@@ -1,0 +1,60 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="fake-address-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="fa-count" type="number" min="1" max="500" value="5" class="field w-28" />
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="fa-multiline" type="checkbox" class="accent-[#5e6ad2]" checked /> Multi-line
+      </label>
+      <button id="fa-gen" class="btn btn-primary ml-auto">Generate</button>
+      <button id="fa-copy" class="btn btn-secondary">Copy all</button>
+    </div>
+    <textarea id="fa-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated addresses"></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free fake address generator creates random, realistic-looking US street
+      addresses — street, city, state and ZIP code — for testing address forms,
+      shipping flows and sample databases. Every address is fictional and does not
+      correspond to a real location. Generated locally in your browser, so nothing
+      is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { address } from '../../lib/fakegen';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const countEl = $('fa-count') as HTMLInputElement;
+  const multiEl = $('fa-multiline') as HTMLInputElement;
+  const out = $('fa-out') as HTMLTextAreaElement;
+
+  function generate() {
+    const n = Math.max(1, Math.min(500, Number(countEl.value) || 1));
+    const list: string[] = [];
+    for (let i = 0; i < n; i++) {
+      const a = address();
+      list.push(multiEl.checked
+        ? `${a.street}\n${a.city}, ${a.stateAbbr} ${a.zip}\n${a.country}`
+        : `${a.street}, ${a.city}, ${a.stateAbbr} ${a.zip}`);
+    }
+    out.value = list.join(multiEl.checked ? '\n\n' : '\n');
+  }
+
+  [countEl, multiEl].forEach((el) => el.addEventListener('input', generate));
+  $('fa-gen').addEventListener('click', generate);
+  $('fa-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  });
+  generate();
+</script>

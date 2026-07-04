@@ -1,0 +1,83 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="media-query-generator">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Device preset
+      <select id="mq-preset" class="field">
+        <option value="">Custom</option>
+        <option value="320,480">Mobile (320–480px)</option>
+        <option value="481,768">Tablet (481–768px)</option>
+        <option value="769,1024">Small laptop (769–1024px)</option>
+        <option value="1025,1200">Desktop (1025–1200px)</option>
+        <option value="1201,">Large desktop (1201px+)</option>
+      </select>
+    </label>
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Min width (px)
+        <input id="mq-min" type="number" min="0" value="768" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Max width (px)
+        <input id="mq-max" type="number" min="0" placeholder="(none)" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Orientation
+        <select id="mq-orient" class="field"><option value="">Any</option><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Scheme
+        <select id="mq-scheme" class="field"><option value="">Any</option><option value="dark">Dark</option><option value="light">Light</option></select>
+      </label>
+    </div>
+    <div class="flex items-start gap-2">
+      <code id="mq-css" class="field whitespace-pre-wrap font-mono text-[13px]"></code>
+      <button id="mq-copy" class="btn btn-secondary whitespace-nowrap">Copy</button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free media query generator builds responsive CSS
+      <code class="font-mono text-ink">@media</code> rules from device presets or
+      your own min/max widths, with optional orientation and dark/light color
+      scheme conditions. Copy the query and drop your styles inside it. It's the
+      quick way to target phones, tablets and desktops without memorizing the
+      syntax. Runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const presetEl = $('mq-preset') as HTMLSelectElement;
+  const minEl = $('mq-min') as HTMLInputElement;
+  const maxEl = $('mq-max') as HTMLInputElement;
+  const orientEl = $('mq-orient') as HTMLSelectElement;
+  const schemeEl = $('mq-scheme') as HTMLSelectElement;
+  const cssEl = $('mq-css')!;
+
+  presetEl.addEventListener('change', () => {
+    if (!presetEl.value) return;
+    const [min, max] = presetEl.value.split(',');
+    minEl.value = min; maxEl.value = max;
+    update();
+  });
+
+  function update() {
+    const conds: string[] = [];
+    if (minEl.value) conds.push(`(min-width: ${minEl.value}px)`);
+    if (maxEl.value) conds.push(`(max-width: ${maxEl.value}px)`);
+    if (orientEl.value) conds.push(`(orientation: ${orientEl.value})`);
+    if (schemeEl.value) conds.push(`(prefers-color-scheme: ${schemeEl.value})`);
+    const query = conds.length ? conds.join(' and ') : 'all';
+    cssEl.textContent = `@media ${query} {\n  /* your styles */\n}`;
+  }
+
+  [minEl, maxEl, orientEl, schemeEl].forEach((el) => el.addEventListener('input', update));
+  $('mq-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(cssEl.textContent || '');
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+  update();
+</script>

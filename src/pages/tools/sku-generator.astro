@@ -1,0 +1,80 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="sku-generator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Brand / line
+        <input id="sk-brand" class="field font-mono" placeholder="NIKE" value="ACME" spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Category
+        <input id="sk-cat" class="field font-mono" placeholder="SHOE" value="SHIRT" spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Color
+        <input id="sk-color" class="field font-mono" placeholder="BLK" value="RED" spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Size
+        <input id="sk-size" class="field font-mono" placeholder="M" value="M" spellcheck="false" />
+      </label>
+    </div>
+    <div class="flex flex-wrap items-center gap-4">
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">Separator
+        <select id="sk-sep" class="field w-24"><option value="-">-</option><option value="_">_</option><option value="">(none)</option><option value=".">.</option></select>
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="sk-seq" type="checkbox" class="accent-[#5e6ad2]" checked /> Append number
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">How many
+        <input id="sk-count" type="number" min="1" max="500" value="8" class="field w-24" />
+      </label>
+      <button id="sk-gen" class="btn btn-primary ml-auto">Generate</button>
+      <button id="sk-copy" class="btn btn-secondary">Copy all</button>
+    </div>
+    <textarea id="sk-out" class="field min-h-56 resize-y font-mono text-[13px]" readonly aria-label="Generated SKUs"></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free SKU generator builds structured stock-keeping unit codes from the
+      attributes that matter to your catalog — brand, category, color and size —
+      joined by the separator you choose. Turn on the number suffix to keep every
+      SKU unique across a batch. Consistent, readable SKUs make inventory,
+      picking and reporting far easier. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const parts = ['sk-brand', 'sk-cat', 'sk-color', 'sk-size'];
+  const sepEl = $('sk-sep') as HTMLSelectElement;
+  const seqEl = $('sk-seq') as HTMLInputElement;
+  const countEl = $('sk-count') as HTMLInputElement;
+  const out = $('sk-out') as HTMLTextAreaElement;
+
+  const clean = (s: string) => s.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+  function generate() {
+    const base = parts.map((id) => clean(($(id) as HTMLInputElement).value)).filter(Boolean);
+    const sep = sepEl.value;
+    const n = Math.max(1, Math.min(500, Number(countEl.value) || 1));
+    const list: string[] = [];
+    for (let i = 0; i < n; i++) {
+      const segs = base.slice();
+      if (seqEl.checked) segs.push(String(i + 1).padStart(3, '0'));
+      list.push(segs.join(sep));
+    }
+    out.value = list.join('\n');
+  }
+
+  [...parts, 'sk-sep', 'sk-seq', 'sk-count'].forEach((id) => $(id).addEventListener('input', generate));
+  $('sk-gen').addEventListener('click', generate);
+  $('sk-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  });
+  generate();
+</script>

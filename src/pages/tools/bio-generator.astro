@@ -1,0 +1,98 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="bio-generator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Role / what you do
+        <input id="bo-role" class="field" value="designer" spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Interests (comma separated)
+        <input id="bo-interests" class="field" value="coffee, travel, typography" spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Vibe
+        <select id="bo-vibe" class="field"><option value="professional">Professional</option><option value="casual">Casual</option><option value="witty">Witty</option></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="bo-count" type="number" min="3" max="20" value="6" class="field" />
+      </label>
+    </div>
+    <div class="flex gap-2">
+      <button id="bo-gen" class="btn btn-primary">Generate</button>
+      <button id="bo-copy" class="btn btn-secondary">Copy all</button>
+    </div>
+    <ul id="bo-out" class="flex flex-col gap-2"></ul>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free bio generator writes short, punchy profile bios for Instagram, X,
+      LinkedIn and personal sites from your role and interests, in the vibe you
+      pick — professional, casual or witty. Generate a handful, grab the one that
+      sounds most like you, and tweak the emoji or wording. Everything runs in your
+      browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { shuffle, pick } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const roleEl = $('bo-role') as HTMLInputElement;
+  const interestsEl = $('bo-interests') as HTMLInputElement;
+  const vibeEl = $('bo-vibe') as HTMLSelectElement;
+  const countEl = $('bo-count') as HTMLInputElement;
+  const out = $('bo-out')!;
+
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  function templates(role: string, ints: string[], vibe: string): string[] {
+    const i1 = ints[0] || 'life', i2 = ints[1] || 'ideas', i3 = ints[2] || 'good coffee';
+    if (vibe === 'professional') return [
+      `${cap(role)} focused on craft and impact. Passionate about ${i1} and ${i2}.`,
+      `${cap(role)} • building thoughtful work • driven by ${i1}`,
+      `Experienced ${role} helping teams do their best work. Interested in ${i1} and ${i2}.`,
+      `${cap(role)}. I turn ${i1} into results. Always learning.`,
+      `On a mission to make ${i2} better, one project at a time. ${cap(role)}.`,
+      `${cap(role)} | ${cap(i1)} enthusiast | Lifelong learner`,
+    ];
+    if (vibe === 'casual') return [
+      `Just a ${role} who loves ${i1} and ${i3} ☕`,
+      `${cap(role)} by day. ${cap(i1)} and ${i2} the rest of the time.`,
+      `Hi! I'm a ${role} into ${i1}, ${i2}, and ${i3}.`,
+      `${cap(role)} · ${i1} lover · probably thinking about ${i3}`,
+      `Making things and chasing ${i1}. ${cap(role)}.`,
+      `${cap(role)}, part-time ${i1} adventurer 🌍`,
+    ];
+    return [
+      `Professional ${role}, amateur ${i1} enthusiast. Fueled by ${i3}.`,
+      `${cap(role)} who peaked at ${i1}. Ask me about ${i2}.`,
+      `I ${role} so I can afford ${i3}. Priorities.`,
+      `Certified ${role}. Unlicensed ${i1} expert.`,
+      `${cap(role)} • ${i1} > sleep • ${i3} is a personality trait`,
+      `Turning ${i3} into ${role} work since forever.`,
+    ];
+  }
+
+  function generate() {
+    const role = roleEl.value.trim() || 'creator';
+    const ints = interestsEl.value.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+    const n = Math.max(3, Math.min(20, Number(countEl.value) || 6));
+    const pool = templates(role, ints, vibeEl.value);
+    const picked = shuffle(pool).slice(0, Math.min(n, pool.length));
+    while (picked.length < n) picked.push(pick(pool));
+    out.innerHTML = picked.map((b) => `<li class="panel px-4 py-2.5 text-[15px] text-ink">${b}</li>`).join('');
+  }
+
+  [roleEl, interestsEl, vibeEl, countEl].forEach((el) => el.addEventListener('input', generate));
+  $('bo-gen').addEventListener('click', generate);
+  $('bo-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText([...out.querySelectorAll('li')].map((li) => li.textContent).join('\n'));
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  });
+  generate();
+</script>

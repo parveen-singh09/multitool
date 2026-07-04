@@ -1,0 +1,91 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="robots-txt-generator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Default policy
+        <select id="rb-policy" class="field">
+          <option value="allow">Allow all robots</option>
+          <option value="disallow">Block all robots</option>
+          <option value="custom">Custom rules</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">User-agent
+        <input id="rb-agent" class="field font-mono" value="*" spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Disallow paths (one per line)
+        <textarea id="rb-disallow" class="field min-h-24 resize-y font-mono text-[13px]" placeholder="/admin/&#10;/private/"></textarea>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Allow paths (one per line)
+        <textarea id="rb-allow" class="field min-h-16 resize-y font-mono text-[13px]" placeholder="/public/"></textarea>
+      </label>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Crawl-delay (s)
+          <input id="rb-delay" type="number" min="0" class="field" placeholder="(none)" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Sitemap URL
+          <input id="rb-sitemap" class="field text-[13px]" placeholder="https://site.com/sitemap.xml" spellcheck="false" />
+        </label>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <label class="text-sm text-ink-subtle">robots.txt</label>
+      <textarea id="rb-out" class="field min-h-72 resize-y font-mono text-[13px]" readonly></textarea>
+      <div class="flex gap-2">
+        <button id="rb-copy" class="btn btn-secondary">Copy</button>
+        <button id="rb-dl" class="btn btn-secondary">Download</button>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free robots.txt generator builds a valid robots.txt file that tells
+      search-engine crawlers which parts of your site they may or may not access.
+      Choose a default allow or block policy, add per-path disallow and allow
+      rules, an optional crawl delay and a sitemap reference. Place the result at
+      the root of your domain. Generated in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const out = $('rb-out') as HTMLTextAreaElement;
+  const lines = (id: string) => ($(id) as HTMLTextAreaElement).value.split('\n').map((l) => l.trim()).filter(Boolean);
+
+  function build() {
+    const policy = ($('rb-policy') as HTMLSelectElement).value;
+    const agent = ($('rb-agent') as HTMLInputElement).value.trim() || '*';
+    const delay = ($('rb-delay') as HTMLInputElement).value;
+    const sitemap = ($('rb-sitemap') as HTMLInputElement).value.trim();
+    const result: string[] = [`User-agent: ${agent}`];
+    if (policy === 'disallow') result.push('Disallow: /');
+    else if (policy === 'allow') result.push('Disallow:');
+    else {
+      lines('rb-disallow').forEach((p) => result.push(`Disallow: ${p}`));
+      lines('rb-allow').forEach((p) => result.push(`Allow: ${p}`));
+      if (result.length === 1) result.push('Disallow:');
+    }
+    if (delay) result.push(`Crawl-delay: ${delay}`);
+    if (sitemap) { result.push(''); result.push(`Sitemap: ${sitemap}`); }
+    out.value = result.join('\n');
+  }
+
+  ['rb-policy', 'rb-agent', 'rb-disallow', 'rb-allow', 'rb-delay', 'rb-sitemap'].forEach((id) => $(id).addEventListener('input', build));
+  $('rb-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+  $('rb-dl').addEventListener('click', () => {
+    const url = URL.createObjectURL(new Blob([out.value], { type: 'text/plain' }));
+    const a = document.createElement('a'); a.href = url; a.download = 'robots.txt'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  build();
+</script>

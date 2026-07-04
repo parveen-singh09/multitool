@@ -1,0 +1,74 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="htaccess-generator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-3">
+      <fieldset class="flex flex-col gap-2">
+        <legend class="text-[12px] uppercase tracking-wide text-ink-tertiary">Rules to include</legend>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input class="ha-r accent-[#5e6ad2]" type="checkbox" value="https" checked /> Force HTTPS</label>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input class="ha-r accent-[#5e6ad2]" type="checkbox" value="www" /> Force www</label>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input class="ha-r accent-[#5e6ad2]" type="checkbox" value="nonwww" /> Force non-www</label>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input class="ha-r accent-[#5e6ad2]" type="checkbox" value="compress" checked /> Gzip compression</label>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input class="ha-r accent-[#5e6ad2]" type="checkbox" value="cache" /> Browser caching</label>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input class="ha-r accent-[#5e6ad2]" type="checkbox" value="error404" /> Custom 404 page</label>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input class="ha-r accent-[#5e6ad2]" type="checkbox" value="nolisting" /> Disable directory listing</label>
+      </fieldset>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <label class="text-sm text-ink-subtle">.htaccess</label>
+      <textarea id="ha-out" class="field min-h-72 resize-y font-mono text-[12px]" readonly></textarea>
+      <div class="flex gap-2">
+        <button id="ha-copy" class="btn btn-secondary">Copy</button>
+        <button id="ha-dl" class="btn btn-secondary">Download</button>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free .htaccess generator assembles common Apache directives — force
+      HTTPS, force www or non-www, Gzip compression, browser caching, a custom 404
+      page and disabling directory listings — into a ready-to-use
+      <code class="font-mono text-ink">.htaccess</code> file. Tick the rules you
+      need and copy or download the result to your site root. Generated in your
+      browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const out = $('ha-out') as HTMLTextAreaElement;
+
+  const BLOCKS: Record<string, string> = {
+    https: `# Force HTTPS\n<IfModule mod_rewrite.c>\n  RewriteEngine On\n  RewriteCond %{HTTPS} off\n  RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]\n</IfModule>`,
+    www: `# Force www\n<IfModule mod_rewrite.c>\n  RewriteEngine On\n  RewriteCond %{HTTP_HOST} !^www\\. [NC]\n  RewriteRule ^(.*)$ https://www.%{HTTP_HOST}%{REQUEST_URI} [L,R=301]\n</IfModule>`,
+    nonwww: `# Force non-www\n<IfModule mod_rewrite.c>\n  RewriteEngine On\n  RewriteCond %{HTTP_HOST} ^www\\.(.*)$ [NC]\n  RewriteRule ^(.*)$ https://%1%{REQUEST_URI} [L,R=301]\n</IfModule>`,
+    compress: `# Gzip compression\n<IfModule mod_deflate.c>\n  AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml\n</IfModule>`,
+    cache: `# Browser caching\n<IfModule mod_expires.c>\n  ExpiresActive On\n  ExpiresByType image/jpg "access plus 1 year"\n  ExpiresByType image/png "access plus 1 year"\n  ExpiresByType text/css "access plus 1 month"\n  ExpiresByType application/javascript "access plus 1 month"\n</IfModule>`,
+    error404: `# Custom 404 page\nErrorDocument 404 /404.html`,
+    nolisting: `# Disable directory listing\nOptions -Indexes`,
+  };
+
+  function build() {
+    const checked = [...document.querySelectorAll<HTMLInputElement>('.ha-r:checked')].map((el) => el.value);
+    out.value = checked.map((k) => BLOCKS[k]).join('\n\n');
+  }
+
+  document.querySelectorAll('.ha-r').forEach((el) => el.addEventListener('change', build));
+  $('ha-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+  $('ha-dl').addEventListener('click', () => {
+    const url = URL.createObjectURL(new Blob([out.value], { type: 'text/plain' }));
+    const a = document.createElement('a'); a.href = url; a.download = '.htaccess'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  build();
+</script>

@@ -1,0 +1,89 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="upc-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        First 11 digits
+        <input id="up-digits" class="field w-56 font-mono" maxlength="11" inputmode="numeric" placeholder="03600029145" spellcheck="false" autocomplete="off" />
+      </label>
+      <button id="up-rand" type="button" class="btn btn-secondary">Randomize</button>
+    </div>
+    <p class="text-[13px] text-ink-tertiary">The 12th digit (the check digit) is calculated automatically. Full code: <span id="up-full" class="font-mono text-ink"></span></p>
+
+    <div class="flex justify-center rounded-[8px] border border-hairline bg-white p-6">
+      <canvas id="up-canvas" class="max-w-full"></canvas>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <button id="up-png" type="button" class="btn btn-primary">Download PNG</button>
+      <button id="up-svg" type="button" class="btn btn-secondary">Download SVG</button>
+    </div>
+    <p id="up-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free UPC code generator creates valid UPC-A barcodes — the 12-digit
+      retail barcodes scanned at checkout in North America. Enter the first 11
+      digits (or hit Randomize) and the tool computes the correct mod-10 check
+      digit and renders a scannable barcode you can download as PNG or SVG. All
+      generation happens in your browser, so nothing is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { toCanvas, toSVG } from '../../lib/barcode';
+  import { gtinCheckDigit, randInt } from '../../lib/random';
+
+  const digitsEl = document.getElementById('up-digits') as HTMLInputElement;
+  const fullEl = document.getElementById('up-full')!;
+  const canvas = document.getElementById('up-canvas') as HTMLCanvasElement;
+  const err = document.getElementById('up-error')!;
+
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  function code(): string | null {
+    const p = digitsEl.value.replace(/\D/g, '').slice(0, 11);
+    if (p.length !== 11) return null;
+    return p + gtinCheckDigit(p);
+  }
+
+  async function draw() {
+    const c = code();
+    if (!c) { setErr('Enter exactly 11 digits.'); fullEl.textContent = ''; return; }
+    fullEl.textContent = c;
+    try {
+      await toCanvas(canvas, { bcid: 'upca', text: c, includetext: true, scale: 3, height: 20 });
+      setErr('');
+    } catch { setErr('Could not render barcode.'); }
+  }
+
+  function randomize() {
+    let s = '';
+    for (let i = 0; i < 11; i++) s += randInt(0, 9);
+    digitsEl.value = s;
+    draw();
+  }
+
+  function download(href: string, name: string) {
+    const a = document.createElement('a'); a.href = href; a.download = name; a.click();
+  }
+
+  digitsEl.addEventListener('input', draw);
+  document.getElementById('up-rand')!.addEventListener('click', randomize);
+  document.getElementById('up-png')!.addEventListener('click', () => download(canvas.toDataURL('image/png'), 'upc.png'));
+  document.getElementById('up-svg')!.addEventListener('click', async () => {
+    const c = code(); if (!c) return;
+    const svg = await toSVG({ bcid: 'upca', text: c, includetext: true, scale: 3, height: 20 });
+    const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+    download(url, 'upc.svg');
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+
+  digitsEl.value = '03600029145';
+  draw();
+</script>

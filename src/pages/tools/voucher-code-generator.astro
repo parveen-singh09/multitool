@@ -1,0 +1,75 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="voucher-code-generator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Blocks
+        <input id="vc-blocks" type="number" min="1" max="8" value="3" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Block length
+        <input id="vc-blen" type="number" min="2" max="8" value="4" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="vc-count" type="number" min="1" max="1000" value="20" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Separator
+        <select id="vc-sep" class="field"><option value="-">-</option><option value=" ">space</option><option value=".">.</option></select>
+      </label>
+    </div>
+    <div class="flex flex-wrap items-center gap-4">
+      <button id="vc-gen" class="btn btn-primary ml-auto">Generate</button>
+      <button id="vc-copy" class="btn btn-secondary">Copy all</button>
+    </div>
+    <textarea id="vc-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated voucher codes"></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free voucher code generator creates readable gift-card and voucher
+      codes in evenly-sized blocks — like <code class="font-mono text-ink">XXXX-XXXX-XXXX</code> —
+      that are easy to print, read aloud and type. It uses an unambiguous
+      character set (no O/0 or I/1 mix-ups) and de-duplicates each batch. Great
+      for gift cards, event passes and redemption campaigns. Generated securely in
+      your browser, never uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { randString, UNAMBIGUOUS } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const blocksEl = $('vc-blocks') as HTMLInputElement;
+  const blenEl = $('vc-blen') as HTMLInputElement;
+  const countEl = $('vc-count') as HTMLInputElement;
+  const sepEl = $('vc-sep') as HTMLSelectElement;
+  const out = $('vc-out') as HTMLTextAreaElement;
+
+  function generate() {
+    const blocks = Math.max(1, Math.min(8, Number(blocksEl.value) || 3));
+    const blen = Math.max(2, Math.min(8, Number(blenEl.value) || 4));
+    const n = Math.max(1, Math.min(1000, Number(countEl.value) || 1));
+    const sep = sepEl.value;
+    const seen = new Set<string>();
+    let guard = 0;
+    while (seen.size < n && guard < n * 20) {
+      guard++;
+      const parts: string[] = [];
+      for (let b = 0; b < blocks; b++) parts.push(randString(blen, UNAMBIGUOUS));
+      seen.add(parts.join(sep));
+    }
+    out.value = [...seen].join('\n');
+  }
+
+  ['vc-blocks', 'vc-blen', 'vc-count', 'vc-sep'].forEach((id) => $(id).addEventListener('input', generate));
+  $('vc-gen').addEventListener('click', generate);
+  $('vc-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  });
+  generate();
+</script>

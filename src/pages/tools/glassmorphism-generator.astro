@@ -1,0 +1,88 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="glassmorphism-generator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Blur: <span id="gm-bv" class="text-ink">10px</span>
+        <input id="gm-blur" type="range" min="0" max="40" value="10" class="w-full accent-[#5e6ad2]" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Transparency: <span id="gm-tv" class="text-ink">0.15</span>
+        <input id="gm-alpha" type="range" min="0" max="100" value="15" class="w-full accent-[#5e6ad2]" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Saturation: <span id="gm-sv" class="text-ink">180%</span>
+        <input id="gm-sat" type="range" min="100" max="300" value="180" class="w-full accent-[#5e6ad2]" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Radius: <span id="gm-rv" class="text-ink">16px</span>
+        <input id="gm-radius" type="range" min="0" max="48" value="16" class="w-full accent-[#5e6ad2]" />
+      </label>
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Tint
+          <input id="gm-color" type="color" value="#ffffff" class="field h-10 w-16 cursor-pointer p-1" />
+        </label>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="gm-border" type="checkbox" class="accent-[#5e6ad2]" checked /> Light border</label>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-4">
+      <div class="flex min-h-56 items-center justify-center rounded-[12px] p-8" style="background:linear-gradient(135deg,#5e6ad2,#e05299 60%,#f5a623)">
+        <div id="gm-box" class="flex h-32 w-48 items-center justify-center text-sm font-medium text-white">Glass card</div>
+      </div>
+      <div class="flex items-start gap-2">
+        <code id="gm-css" class="field whitespace-pre-wrap font-mono text-[12px]"></code>
+        <button id="gm-copy" class="btn btn-secondary whitespace-nowrap">Copy</button>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free glassmorphism generator designs the frosted-glass effect popular
+      in modern UI — a translucent surface with a background blur behind it. Tune
+      the blur, transparency, saturation, corner radius and tint, preview the card
+      over a colorful gradient, and copy the CSS including the
+      <code class="font-mono text-ink">backdrop-filter</code>. Remember to add the
+      <code class="font-mono text-ink">-webkit-</code> prefix for Safari — it's
+      included in the output. Runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const box = $('gm-box') as HTMLElement;
+  const cssEl = $('gm-css')!;
+  const ids = ['gm-blur', 'gm-alpha', 'gm-sat', 'gm-radius', 'gm-color', 'gm-border'];
+
+  function update() {
+    const blur = Number(($('gm-blur') as HTMLInputElement).value);
+    const alpha = Number(($('gm-alpha') as HTMLInputElement).value) / 100;
+    const sat = Number(($('gm-sat') as HTMLInputElement).value);
+    const radius = Number(($('gm-radius') as HTMLInputElement).value);
+    const color = ($('gm-color') as HTMLInputElement).value;
+    const border = ($('gm-border') as HTMLInputElement).checked;
+    $('gm-bv').textContent = `${blur}px`; $('gm-tv').textContent = alpha.toFixed(2);
+    $('gm-sv').textContent = `${sat}%`; $('gm-rv').textContent = `${radius}px`;
+    const n = parseInt(color.slice(1), 16);
+    const rgb = `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`;
+    const styles: Record<string, string> = {
+      background: `rgba(${rgb}, ${alpha})`,
+      'border-radius': `${radius}px`,
+      'backdrop-filter': `blur(${blur}px) saturate(${sat}%)`,
+      '-webkit-backdrop-filter': `blur(${blur}px) saturate(${sat}%)`,
+    };
+    if (border) styles.border = `1px solid rgba(255, 255, 255, 0.3)`;
+    Object.assign(box.style, styles as any);
+    cssEl.textContent = Object.entries(styles).map(([k, v]) => `${k}: ${v};`).join('\n');
+  }
+
+  ids.forEach((id) => $(id).addEventListener('input', update));
+  $('gm-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(cssEl.textContent || '');
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+  update();
+</script>

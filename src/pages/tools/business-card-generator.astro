@@ -1,0 +1,94 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="business-card-generator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-3">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Name
+          <input id="bc-name" class="field" value="Jane Doe" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Title
+          <input id="bc-title" class="field" value="Product Designer" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Company
+          <input id="bc-company" class="field" value="ToolCities" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Phone
+          <input id="bc-phone" class="field" value="(555) 010-1234" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Email
+          <input id="bc-email" class="field" value="jane@toolcities.com" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Website
+          <input id="bc-web" class="field" value="toolcities.com" />
+        </label>
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Background
+          <input id="bc-bg" type="color" value="#0f1011" class="field h-10 cursor-pointer p-1" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Text
+          <input id="bc-fg" type="color" value="#f7f8f8" class="field h-10 cursor-pointer p-1" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Accent
+          <input id="bc-accent" type="color" value="#5e6ad2" class="field h-10 cursor-pointer p-1" />
+        </label>
+      </div>
+    </div>
+
+    <div class="flex flex-col items-center gap-4">
+      <canvas id="bc-canvas" width="1050" height="600" class="w-full rounded-[12px] border border-hairline"></canvas>
+      <button id="bc-dl" class="btn btn-primary">Download PNG (300 DPI)</button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free business card generator designs a standard 3.5 × 2 inch business
+      card from your name, title, company and contact details. Pick a background,
+      text and accent color, preview it live, and download a print-ready
+      300-DPI PNG. It's a quick way to produce a clean, professional card without
+      design software. Everything is rendered in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const canvas = $('bc-canvas') as HTMLCanvasElement;
+  const val = (id: string) => ($(id) as HTMLInputElement).value;
+
+  function draw() {
+    const W = canvas.width, H = canvas.height;
+    const ctx = canvas.getContext('2d')!;
+    const bg = val('bc-bg'), fg = val('bc-fg'), accent = val('bc-accent');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    // Accent bar down the left.
+    ctx.fillStyle = accent; ctx.fillRect(0, 0, 24, H);
+    const x = 90;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = fg;
+    ctx.font = '700 68px Inter, system-ui, sans-serif';
+    ctx.fillText(val('bc-name'), x, 170);
+    ctx.fillStyle = accent;
+    ctx.font = '500 34px Inter, system-ui, sans-serif';
+    ctx.fillText(val('bc-title'), x, 220);
+    ctx.fillStyle = fg;
+    ctx.font = '600 40px Inter, system-ui, sans-serif';
+    ctx.fillText(val('bc-company'), x, 300);
+    // Contact block bottom.
+    ctx.font = '400 30px Inter, system-ui, sans-serif';
+    ctx.globalAlpha = 0.85;
+    const lines = [val('bc-phone'), val('bc-email'), val('bc-web')].filter(Boolean);
+    lines.forEach((l, i) => ctx.fillText(l, x, 430 + i * 48));
+    ctx.globalAlpha = 1;
+  }
+
+  ['bc-name', 'bc-title', 'bc-company', 'bc-phone', 'bc-email', 'bc-web', 'bc-bg', 'bc-fg', 'bc-accent'].forEach((id) => $(id).addEventListener('input', draw));
+  $('bc-dl').addEventListener('click', () => {
+    const a = document.createElement('a'); a.href = canvas.toDataURL('image/png'); a.download = 'business-card.png'; a.click();
+  });
+  draw();
+</script>

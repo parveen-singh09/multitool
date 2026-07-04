@@ -1,0 +1,77 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="isbn-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <button id="ib-rand" type="button" class="btn btn-primary">Generate ISBN-13</button>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        Prefix
+        <select id="ib-prefix" class="field w-28"><option value="978">978</option><option value="979">979</option></select>
+      </label>
+    </div>
+    <p class="text-[13px] text-ink-tertiary">ISBN-13: <span id="ib-full" class="font-mono text-ink"></span></p>
+
+    <div class="flex justify-center rounded-[8px] border border-hairline bg-white p-6">
+      <canvas id="ib-canvas" class="max-w-full"></canvas>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <button id="ib-png" type="button" class="btn btn-primary">Download PNG</button>
+      <button id="ib-svg" type="button" class="btn btn-secondary">Download SVG</button>
+    </div>
+    <p id="ib-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free ISBN generator creates valid ISBN-13 book numbers with a correct
+      final check digit, plus a matching EAN-13 barcode you can download as PNG
+      or SVG. It's ideal for mock-ups, cover designs and testing catalog systems.
+      Note these are randomly generated for testing — a real ISBN must be
+      registered with an official agency. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { toCanvas, toSVG } from '../../lib/barcode';
+  import { gtinCheckDigit, randInt } from '../../lib/random';
+
+  const prefixEl = document.getElementById('ib-prefix') as HTMLSelectElement;
+  const fullEl = document.getElementById('ib-full')!;
+  const canvas = document.getElementById('ib-canvas') as HTMLCanvasElement;
+  const err = document.getElementById('ib-error')!;
+  let current = '';
+
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  async function generate() {
+    let p = prefixEl.value;
+    for (let i = 0; i < 9; i++) p += randInt(0, 9);
+    current = p + gtinCheckDigit(p);
+    // Hyphenated display (approximate grouping).
+    fullEl.textContent = `${current.slice(0, 3)}-${current.slice(3, 4)}-${current.slice(4, 8)}-${current.slice(8, 12)}-${current.slice(12)}`;
+    try {
+      await toCanvas(canvas, { bcid: 'ean13', text: current, includetext: true, scale: 3, height: 20 });
+      setErr('');
+    } catch { setErr('Could not render barcode.'); }
+  }
+
+  function download(href: string, name: string) {
+    const a = document.createElement('a'); a.href = href; a.download = name; a.click();
+  }
+
+  document.getElementById('ib-rand')!.addEventListener('click', generate);
+  document.getElementById('ib-png')!.addEventListener('click', () => download(canvas.toDataURL('image/png'), 'isbn.png'));
+  document.getElementById('ib-svg')!.addEventListener('click', async () => {
+    if (!current) return;
+    const svg = await toSVG({ bcid: 'ean13', text: current, includetext: true, scale: 3, height: 20 });
+    const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+    download(url, 'isbn.svg');
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+
+  generate();
+</script>

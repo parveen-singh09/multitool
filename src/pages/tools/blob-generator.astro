@@ -1,0 +1,106 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="blob-generator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Points: <span id="bl-pv" class="text-ink">6</span>
+        <input id="bl-points" type="range" min="3" max="12" value="6" class="w-full accent-[#5e6ad2]" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Contrast: <span id="bl-cv" class="text-ink">0.4</span>
+        <input id="bl-contrast" type="range" min="5" max="60" value="40" class="w-full accent-[#5e6ad2]" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Color
+        <input id="bl-color" type="color" value="#5e6ad2" class="field h-10 cursor-pointer p-1" />
+      </label>
+      <div class="flex items-end">
+        <button id="bl-rand" class="btn btn-secondary w-full">Randomize</button>
+      </div>
+    </div>
+
+    <div id="bl-preview" class="flex min-h-72 items-center justify-center rounded-[12px] border border-hairline bg-surface-2 p-6"></div>
+
+    <div class="flex flex-wrap gap-2">
+      <button id="bl-dl" class="btn btn-primary">Download SVG</button>
+      <button id="bl-copy" class="btn btn-secondary">Copy SVG code</button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free blob shape generator creates smooth, random organic blob shapes as
+      SVG — the soft, rounded forms used as backgrounds, image masks and decorative
+      accents in modern design. Increase the point count for more complexity and
+      the contrast for a more irregular edge, pick a color, and randomize until you
+      like it. Download the SVG or copy the code. Generated in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { randFloat } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const preview = $('bl-preview')!;
+  const SIZE = 400, C = 200;
+  let radii: number[] = [];
+
+  function reseed() {
+    const n = Number(($('bl-points') as HTMLInputElement).value);
+    radii = Array.from({ length: n }, () => randFloat());
+  }
+
+  // Build a closed smooth path through points on a circle with varied radii,
+  // using Catmull-Rom converted to cubic beziers.
+  function blobPath(): string {
+    const n = Number(($('bl-points') as HTMLInputElement).value);
+    const contrast = Number(($('bl-contrast') as HTMLInputElement).value) / 100;
+    const base = 150;
+    const pts: [number, number][] = [];
+    for (let i = 0; i < n; i++) {
+      const angle = (i / n) * Math.PI * 2;
+      const r = base * (1 - contrast + radii[i] * contrast * 2);
+      pts.push([C + Math.cos(angle) * r, C + Math.sin(angle) * r]);
+    }
+    let d = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+    for (let i = 0; i < n; i++) {
+      const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
+      const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
+      const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
+      d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+    }
+    return d + ' Z';
+  }
+
+  function svg(): string {
+    const color = ($('bl-color') as HTMLInputElement).value;
+    $('bl-pv').textContent = ($('bl-points') as HTMLInputElement).value;
+    $('bl-cv').textContent = (Number(($('bl-contrast') as HTMLInputElement).value) / 100).toFixed(2);
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SIZE} ${SIZE}" width="${SIZE}" height="${SIZE}"><path fill="${color}" d="${blobPath()}"/></svg>`;
+  }
+
+  function render() {
+    const s = svg();
+    preview.innerHTML = s.replace('width="400" height="400"', 'width="260" height="260"');
+  }
+
+  ['bl-points', 'bl-contrast', 'bl-color'].forEach((id) => $(id).addEventListener('input', () => {
+    if (id === 'bl-points') reseed();
+    render();
+  }));
+  $('bl-rand').addEventListener('click', () => { reseed(); render(); });
+  $('bl-dl').addEventListener('click', () => {
+    const url = URL.createObjectURL(new Blob([svg()], { type: 'image/svg+xml' }));
+    const a = document.createElement('a'); a.href = url; a.download = 'blob.svg'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  $('bl-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(svg());
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy SVG code'), 1500);
+  });
+
+  reseed(); render();
+</script>

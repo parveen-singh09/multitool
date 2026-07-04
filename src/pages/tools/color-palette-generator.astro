@@ -1,0 +1,98 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="color-palette-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Mode
+        <select id="cp-mode" class="field w-48">
+          <option value="random" selected>Random</option>
+          <option value="analogous">Analogous</option>
+          <option value="complementary">Complementary</option>
+          <option value="triadic">Triadic</option>
+          <option value="monochrome">Monochrome</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Base color
+        <input id="cp-base" type="color" value="#5e6ad2" class="field h-10 w-16 cursor-pointer p-1" />
+      </label>
+      <button id="cp-gen" class="btn btn-primary ml-auto">Generate (Space)</button>
+      <button id="cp-copy" class="btn btn-secondary">Copy HEX</button>
+    </div>
+    <div id="cp-swatches" class="grid grid-cols-2 gap-3 sm:grid-cols-5"></div>
+    <p class="text-[13px] text-ink-tertiary">Click a swatch to lock it; locked colors stay when you regenerate. Press Space to generate.</p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free color palette generator creates five-color palettes either at
+      random or built as a harmony — analogous, complementary, triadic or
+      monochrome — around a base color. Lock the colors you like by clicking them
+      and keep generating until the rest fall into place, then copy the HEX
+      values. It's a fast way to start a brand or UI palette. Runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { hexToRgb, rgbToHex, rgbToHsl, hslToRgb } from '../../lib/colors';
+  import { randInt } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const modeEl = $('cp-mode') as HTMLSelectElement;
+  const baseEl = $('cp-base') as HTMLInputElement;
+  const wrap = $('cp-swatches')!;
+  const N = 5;
+  let colors: string[] = [];
+  let locked: boolean[] = new Array(N).fill(false);
+
+  const hslHex = (h: number, s: number, l: number) => rgbToHex(hslToRgb({ h: (h + 360) % 360, s: Math.max(0, Math.min(100, s)), l: Math.max(0, Math.min(100, l)) }));
+
+  function build(): string[] {
+    const base = hexToRgb(baseEl.value) || { r: 94, g: 106, b: 210 };
+    const { h, s, l } = rgbToHsl(base);
+    const mode = modeEl.value;
+    const out: string[] = [];
+    for (let i = 0; i < N; i++) {
+      if (mode === 'random') out.push(hslHex(randInt(0, 359), randInt(45, 85), randInt(35, 70)));
+      else if (mode === 'analogous') out.push(hslHex(h + (i - 2) * 30, s, l));
+      else if (mode === 'complementary') out.push(hslHex(i % 2 === 0 ? h : h + 180, s, l - 10 + i * 5));
+      else if (mode === 'triadic') out.push(hslHex(h + (i % 3) * 120, s, l - 10 + i * 5));
+      else out.push(hslHex(h, s, 25 + i * 15)); // monochrome
+    }
+    return out;
+  }
+
+  function generate() {
+    const fresh = build();
+    colors = colors.length ? colors.map((c, i) => (locked[i] ? c : fresh[i])) : fresh;
+    render();
+  }
+
+  function render() {
+    wrap.innerHTML = colors.map((c, i) => `
+      <button data-i="${i}" class="group relative flex h-32 flex-col justify-end overflow-hidden rounded-[10px] border border-hairline p-2 text-left" style="background:${c}">
+        <span class="rounded-[5px] bg-black/40 px-2 py-1 font-mono text-[12px] text-white">${c}${locked[i] ? ' 🔒' : ''}</span>
+      </button>`).join('');
+    wrap.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
+      const i = Number((b as HTMLElement).dataset.i);
+      locked[i] = !locked[i];
+      render();
+    }));
+  }
+
+  [modeEl, baseEl].forEach((el) => el.addEventListener('input', () => { colors = []; generate(); }));
+  $('cp-gen').addEventListener('click', generate);
+  $('cp-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(colors.join(', '));
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy HEX'), 1500);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && (e.target as HTMLElement).tagName !== 'INPUT') { e.preventDefault(); generate(); }
+  });
+
+  generate();
+</script>

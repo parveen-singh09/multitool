@@ -1,0 +1,97 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="ssh-key-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Key size
+        <select id="ss-bits" class="field w-36">
+          <option value="2048">RSA 2048</option>
+          <option value="3072">RSA 3072</option>
+          <option value="4096" selected>RSA 4096</option>
+        </select>
+      </label>
+      <label class="flex flex-1 flex-col gap-1 text-sm text-ink-subtle">Comment
+        <input id="ss-comment" class="field" value="user@toolcities" spellcheck="false" />
+      </label>
+      <button id="ss-gen" type="button" class="btn btn-primary">Generate key pair</button>
+    </div>
+    <p id="ss-status" class="text-[13px] text-ink-subtle"></p>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Public key (OpenSSH)
+      <textarea id="ss-pub" class="field min-h-24 resize-y font-mono text-[12px] break-all" readonly></textarea>
+    </label>
+    <button id="ss-pubcopy" type="button" class="btn btn-secondary w-fit">Copy public key</button>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Private key (PEM)
+      <textarea id="ss-priv" class="field min-h-48 resize-y font-mono text-[12px]" readonly></textarea>
+    </label>
+    <div class="flex flex-wrap gap-2">
+      <button id="ss-privcopy" type="button" class="btn btn-secondary">Copy private key</button>
+      <button id="ss-privdl" type="button" class="btn btn-secondary">Download id_rsa</button>
+    </div>
+    <p class="text-[13px] text-ink-tertiary">Keep the private key secret. Anyone with it can authenticate as you.</p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free SSH key generator creates an RSA key pair right in your browser
+      and gives you the OpenSSH-format public key (ready to paste into
+      <code class="font-mono text-ink">authorized_keys</code> or a Git host) and
+      the matching PEM private key. Larger key sizes are stronger but take longer
+      to generate. Because the keys are created locally with an in-page crypto
+      engine, your private key is never transmitted anywhere — but always store it
+      securely.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const bitsEl = $('ss-bits') as HTMLSelectElement;
+  const commentEl = $('ss-comment') as HTMLInputElement;
+  const statusEl = $('ss-status')!;
+  const pubEl = $('ss-pub') as HTMLTextAreaElement;
+  const privEl = $('ss-priv') as HTMLTextAreaElement;
+
+  $('ss-gen').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    const bits = Number(bitsEl.value);
+    btn.disabled = true;
+    statusEl.textContent = `Generating ${bits}-bit RSA key pair… this can take a few seconds.`;
+    pubEl.value = ''; privEl.value = '';
+    // Let the status paint before the CPU-bound keygen blocks the thread.
+    await new Promise((r) => setTimeout(r, 30));
+    try {
+      const forge = (await import('node-forge')).default;
+      const keypair = await new Promise<any>((resolve, reject) => {
+        forge.pki.rsa.generateKeyPair({ bits, workers: -1 }, (err: any, kp: any) => (err ? reject(err) : resolve(kp)));
+      });
+      privEl.value = forge.pki.privateKeyToPem(keypair.privateKey);
+      pubEl.value = (forge.ssh.publicKeyToOpenSSH(keypair.publicKey, commentEl.value) as string).trim();
+      statusEl.textContent = 'Done — key pair generated locally.';
+    } catch (err) {
+      statusEl.textContent = 'Key generation failed. Please try again.';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  const copyBtn = (id: string, src: HTMLTextAreaElement, label: string) =>
+    $(id).addEventListener('click', async (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      await navigator.clipboard.writeText(src.value);
+      btn.textContent = 'Copied!';
+      setTimeout(() => (btn.textContent = label), 1500);
+    });
+  copyBtn('ss-pubcopy', pubEl, 'Copy public key');
+  copyBtn('ss-privcopy', privEl, 'Copy private key');
+
+  $('ss-privdl').addEventListener('click', () => {
+    if (!privEl.value) return;
+    const url = URL.createObjectURL(new Blob([privEl.value], { type: 'application/x-pem-file' }));
+    const a = document.createElement('a'); a.href = url; a.download = 'id_rsa'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+</script>

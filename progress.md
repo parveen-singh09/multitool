@@ -6,10 +6,10 @@
 - Design: near-black canvas `#010102`, lavender accent `#5e6ad2` (used scarcely), Inter + JetBrains Mono, four-step surface ladder.
 
 ## Current state (2026-07-04)
-- **169 tool pages · 172 pages built · build green · no duplicate slugs.**
+- **277 tool pages · 280 pages built · build green · no duplicate slugs.**
 - **9 categories:** Text, Developer, Image, PDF, Audio & Video, Converters, Calculators, Generators, Security.
 - **Privacy model:** every tool runs 100% in the browser with no uploads. The only network calls are (a) the currency & crypto converters fetching live public rates from the user's browser, and (b) first-use downloads of self-hosted engine assets (ffmpeg core, Tesseract OCR) from our own origin — see the live-data carve-out in [privacy.astro](src/pages/privacy.astro).
-- **Reusable engines/components:** [units.ts](src/lib/units.ts)+[UnitConverter.astro](src/components/UnitConverter.astro), [colors.ts](src/lib/colors.ts)+[ColorFormats.astro](src/components/ColorFormats.astro), [ImageConverter.astro](src/components/ImageConverter.astro), [media.ts](src/lib/media.ts)+[MediaConverter.astro](src/components/MediaConverter.astro)+[ffmpeg.ts](src/lib/ffmpeg.ts).
+- **Reusable engines/components:** [units.ts](src/lib/units.ts)+[UnitConverter.astro](src/components/UnitConverter.astro), [colors.ts](src/lib/colors.ts)+[ColorFormats.astro](src/components/ColorFormats.astro), [ImageConverter.astro](src/components/ImageConverter.astro), [media.ts](src/lib/media.ts)+[MediaConverter.astro](src/components/MediaConverter.astro)+[ffmpeg.ts](src/lib/ffmpeg.ts). **Generators suite** adds shared libs: [random.ts](src/lib/random.ts) (secure RNG, Luhn/GTIN check digits), [encoding.ts](src/lib/encoding.ts) (hex/base32/base62/base64url), [fakedata.ts](src/lib/fakedata.ts)+[fakegen.ts](src/lib/fakegen.ts) (fake-record builders), [wordlist.ts](src/lib/wordlist.ts) (passphrase words), [barcode.ts](src/lib/barcode.ts) (bwip-js wrapper), [pdfdoc.ts](src/lib/pdfdoc.ts) (invoice/receipt/PO PDF builder).
 - **Build-time asset setup:** `prebuild` npm hook runs [setup-ffmpeg.mjs](scripts/setup-ffmpeg.mjs) + [setup-tesseract.mjs](scripts/setup-tesseract.mjs); vendored ~86 MB output is git-ignored (regenerated on clean clone).
 - **Verified:** production build **and browser runtime**. All ffmpeg audio/video tools and the Tesseract OCR flow were driven end-to-end in headless Chromium against both the dev server and the `astro preview` production build — every tool produced real output (see 2026-07-04 runtime-verification log entry).
 

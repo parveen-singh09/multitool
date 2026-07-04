@@ -1715,6 +1715,1108 @@ export const tools: Tool[] = [
     keywords: ['audio speed changer', 'change audio pitch', 'slow down audio', 'pitch shifter', 'speed up audio'],
     icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM12 7v5l4 2',
   },
+
+  // ================= Generators mega-expansion =================
+
+  // ---- Batch 1: IDs & codes ----
+  {
+    slug: 'upc-generator',
+    name: 'UPC Code Generator',
+    tagline: 'Generate valid UPC-A barcodes with check digit.',
+    description:
+      'Free online UPC code generator. Create valid UPC-A retail barcodes with a correct mod-10 check digit and download them as PNG or SVG. Generated in your browser — nothing is uploaded.',
+    category: 'Generators',
+    keywords: ['upc generator', 'upc code generator', 'upc-a barcode generator', 'create upc barcode', 'upc barcode maker'],
+    icon: 'M4 6v12M7 6v12M10 6v12M13 6v12M17 6v12M20 6v12',
+  },
+  {
+    slug: 'isbn-generator',
+    name: 'ISBN Generator',
+    tagline: 'Generate ISBN-13 numbers & barcodes.',
+    description:
+      'Free online ISBN generator. Create valid ISBN-13 book numbers with a correct check digit and matching EAN-13 barcode you can download as PNG or SVG. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['isbn generator', 'isbn-13 generator', 'isbn barcode generator', 'book barcode generator', 'generate isbn'],
+    icon: 'M4 5h13a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM4 5v12M8 8h7M8 12h5',
+  },
+  {
+    slug: 'gtin-generator',
+    name: 'GTIN Generator',
+    tagline: 'Generate GTIN-8/12/13/14 with check digit.',
+    description:
+      'Free online GTIN generator. Create valid GTIN-8, GTIN-12, GTIN-13 and GTIN-14 global trade item numbers with a correct check digit and barcode. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['gtin generator', 'gtin-14 generator', 'gtin check digit', 'global trade item number', 'generate gtin'],
+    icon: 'M4 6v12M7 6v12M11 6v12M14 6v12M18 6v12M20 6v12',
+  },
+  {
+    slug: 'imei-generator',
+    name: 'IMEI Number Generator',
+    tagline: 'Generate Luhn-valid IMEI numbers for testing.',
+    description:
+      'Free online IMEI number generator. Create 15-digit IMEI numbers that pass the Luhn checksum, for app testing and QA. For testing only — these are not real devices. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['imei generator', 'imei number generator', 'fake imei generator', 'valid imei generator', 'test imei'],
+    icon: 'M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2ZM10 19h4',
+  },
+  {
+    slug: 'data-matrix-generator',
+    name: 'Data Matrix Code Generator',
+    tagline: 'Encode text into a Data Matrix 2D code.',
+    description:
+      'Free online Data Matrix generator. Encode any text or numbers into a compact Data Matrix 2D barcode and download it as PNG or SVG. Generated in your browser — never uploaded.',
+    category: 'Generators',
+    keywords: ['data matrix generator', 'data matrix code generator', 'datamatrix barcode', '2d barcode generator', 'create data matrix'],
+    icon: 'M4 4h4v4H4zM10 4h2v2h-2zM16 4h4v4h-4zM4 10h2v2H4zM8 10h4v4H8zM14 10h2v2h-2zM18 12h2v2h-2zM4 16h4v4H4zM10 16h2v2h-2zM16 16h4v4h-4z',
+  },
+  {
+    slug: 'pdf417-generator',
+    name: 'PDF417 Barcode Generator',
+    tagline: 'Encode data into a PDF417 stacked barcode.',
+    description:
+      'Free online PDF417 barcode generator. Encode text and data into a high-capacity PDF417 stacked 2D barcode — used on IDs and boarding passes — and download it. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['pdf417 generator', 'pdf417 barcode generator', 'create pdf417', 'pdf417 code', '2d barcode generator'],
+    icon: 'M3 6v12M5 6v12M8 6v12M10 6v12M13 6v12M15 6v12M18 6v12M21 6v12',
+  },
+  {
+    slug: 'aztec-generator',
+    name: 'Aztec Code Generator',
+    tagline: 'Encode text into an Aztec 2D code.',
+    description:
+      'Free online Aztec code generator. Encode any text into an Aztec 2D barcode — common on transit and event tickets — and download it as PNG or SVG. Generated in your browser.',
+    category: 'Generators',
+    keywords: ['aztec code generator', 'aztec barcode generator', 'create aztec code', '2d barcode generator', 'aztec 2d code'],
+    icon: 'M4 4h16v16H4zM8 8h8v8H8zM11 11h2v2h-2z',
+  },
+  {
+    slug: 'vin-generator',
+    name: 'VIN Generator',
+    tagline: 'Generate check-digit-valid VINs for testing.',
+    description:
+      'Free online VIN generator. Create 17-character vehicle identification numbers with a valid position-9 check digit, for testing and sample data. Not real vehicles. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['vin generator', 'vehicle identification number generator', 'fake vin generator', 'test vin', 'random vin'],
+    icon: 'M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11M5 11h14v5H5zM7 16v2M17 16v2',
+  },
+  {
+    slug: 'serial-number-generator',
+    name: 'Serial Number Generator',
+    tagline: 'Bulk serial numbers with custom format.',
+    description:
+      'Free online serial number generator. Create sequential or random serial numbers in bulk with a custom prefix, suffix, length and padding. Generated in your browser — nothing uploaded.',
+    category: 'Generators',
+    keywords: ['serial number generator', 'random serial number', 'bulk serial generator', 'product serial generator', 'sequential number generator'],
+    icon: 'M4 7h16v10H4zM8 7v10M12 7v10M16 7v10',
+  },
+  {
+    slug: 'sku-generator',
+    name: 'SKU Generator',
+    tagline: 'Structured product SKUs from attributes.',
+    description:
+      'Free online SKU generator. Build structured stock-keeping unit codes from a brand, category, color and size, or generate them in bulk. Runs entirely in your browser.',
+    category: 'Generators',
+    keywords: ['sku generator', 'product sku generator', 'stock keeping unit generator', 'create sku', 'inventory sku maker'],
+    icon: 'M3 7l9-4 9 4-9 4zM3 7v10l9 4M21 7v10l-9 4M3 12l9 4 9-4',
+  },
+  {
+    slug: 'coupon-code-generator',
+    name: 'Coupon Code Generator',
+    tagline: 'Bulk unique coupon codes for promotions.',
+    description:
+      'Free online coupon code generator. Create batches of unique, hard-to-guess coupon codes with a custom prefix, length and character set for promotions. Generated in your browser.',
+    category: 'Generators',
+    keywords: ['coupon code generator', 'promo code generator', 'discount code generator', 'bulk coupon generator', 'create coupon codes'],
+    icon: 'M4 8a2 2 0 0 0 0 8v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2a2 2 0 0 1 0-8V6a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1zM12 6v12',
+  },
+  {
+    slug: 'voucher-code-generator',
+    name: 'Voucher Code Generator',
+    tagline: 'Readable voucher / gift codes in bulk.',
+    description:
+      'Free online voucher code generator. Create readable gift and voucher codes in grouped blocks (e.g. XXXX-XXXX-XXXX) with no ambiguous characters, in bulk. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['voucher code generator', 'gift code generator', 'gift card code generator', 'redeem code generator', 'bulk voucher codes'],
+    icon: 'M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1ZM7 12h4M15 12h2',
+  },
+
+  // ---- Batch 2: Secrets & security ----
+  {
+    slug: 'passphrase-generator',
+    name: 'Passphrase Generator',
+    tagline: 'Memorable multi-word passphrases (Diceware-style).',
+    description:
+      'Free online passphrase generator. Create strong, memorable passphrases from random common words in the Diceware style, with adjustable word count, separators and casing. Generated locally — never uploaded.',
+    category: 'Security',
+    keywords: ['passphrase generator', 'diceware generator', 'memorable password generator', 'word password generator', 'random passphrase'],
+    icon: 'M4 12a4 4 0 0 1 8 0 4 4 0 0 0 8 0M4 12a4 4 0 0 0 8 0 4 4 0 0 1 8 0',
+  },
+  {
+    slug: 'pin-generator',
+    name: 'PIN Generator',
+    tagline: 'Random numeric PIN codes in bulk.',
+    description:
+      'Free online PIN generator. Create random numeric PINs of any length (4, 6 or custom) one at a time or in bulk, using your browser secure random source. Nothing is sent to a server.',
+    category: 'Security',
+    keywords: ['pin generator', 'random pin generator', '4 digit pin generator', '6 digit pin generator', 'numeric pin code'],
+    icon: 'M5 8h.01M12 8h.01M19 8h.01M5 14h.01M12 14h.01M19 14h.01',
+  },
+  {
+    slug: 'api-key-generator',
+    name: 'API Key Generator',
+    tagline: 'Prefixed API keys with strong entropy.',
+    description:
+      'Free online API key generator. Create high-entropy API keys with an optional prefix (like sk_live_) in hex, base62 or base64url, one or many at a time. Generated in your browser — never uploaded.',
+    category: 'Security',
+    keywords: ['api key generator', 'generate api key', 'random api key', 'secret api key generator', 'api token generator'],
+    icon: 'M14 7a5 5 0 1 0-4.9 6H12v3h3v3h4v-3l-1.1-1.1A5 5 0 0 0 14 7ZM7 12a1 1 0 1 0 0 .01',
+  },
+  {
+    slug: 'secret-key-generator',
+    name: 'Secret Key Generator',
+    tagline: 'Cryptographic secret keys (128–512 bit).',
+    description:
+      'Free online secret key generator. Generate cryptographically strong secret keys of 128 to 512 bits in hex, base64 or base64url — ideal for JWT, session and app secrets. Generated locally in your browser.',
+    category: 'Security',
+    keywords: ['secret key generator', 'random secret generator', 'jwt secret generator', 'encryption key generator', 'app secret generator'],
+    icon: 'M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 0 1 6 0v3Z',
+  },
+  {
+    slug: 'random-token-generator',
+    name: 'Random Token Generator',
+    tagline: 'Secure random tokens, any length or encoding.',
+    description:
+      'Free online random token generator. Generate secure random tokens in hex, base64url, base62 or a custom alphabet, at any length and in bulk, using the Web Crypto API. Runs entirely in your browser.',
+    category: 'Security',
+    keywords: ['random token generator', 'secure token generator', 'csrf token generator', 'access token generator', 'random string token'],
+    icon: 'M7 8l-4 4 4 4M17 8l4 4-4 4M14 4l-4 16',
+  },
+  {
+    slug: 'jwt-generator',
+    name: 'JWT Generator',
+    tagline: 'Sign HS256 JSON Web Tokens in-browser.',
+    description:
+      'Free online JWT generator. Build and sign HMAC (HS256/384/512) JSON Web Tokens from a custom header, payload and secret, entirely in your browser with the Web Crypto API. Your secret never leaves your device.',
+    category: 'Security',
+    keywords: ['jwt generator', 'generate jwt', 'sign jwt online', 'json web token generator', 'hs256 jwt generator'],
+    icon: 'M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm0 11v4',
+  },
+  {
+    slug: 'totp-generator',
+    name: 'TOTP / 2FA Code Generator',
+    tagline: 'TOTP secrets, live codes & otpauth QR.',
+    description:
+      'Free online TOTP and 2FA code generator. Create a Base32 TOTP secret, see the live 6-digit code refresh every 30 seconds, and get the otpauth URL and QR for authenticator apps. Runs in your browser.',
+    category: 'Security',
+    keywords: ['totp generator', '2fa code generator', 'authenticator code generator', 'totp secret generator', 'otpauth qr generator'],
+    icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM12 7v5l3 2M12 2v3M12 19v3',
+  },
+  {
+    slug: 'bcrypt-generator',
+    name: 'Bcrypt Hash Generator',
+    tagline: 'Hash & verify passwords with bcrypt.',
+    description:
+      'Free online bcrypt generator. Hash passwords with bcrypt at an adjustable cost factor, and verify a password against an existing bcrypt hash — all locally in your browser. Your password is never uploaded.',
+    category: 'Security',
+    keywords: ['bcrypt generator', 'bcrypt hash generator', 'bcrypt password hash', 'bcrypt online', 'hash password bcrypt'],
+    icon: 'M4 9h16M4 15h16M10 3L8 21M16 3l-2 18',
+  },
+  {
+    slug: 'htpasswd-generator',
+    name: '.htpasswd Generator',
+    tagline: 'Apache/Nginx htpasswd credential lines.',
+    description:
+      'Free online .htpasswd generator. Create Apache and Nginx basic-auth credential lines with bcrypt or SHA hashing from a username and password, ready to paste into your .htpasswd file. Runs in your browser.',
+    category: 'Security',
+    keywords: ['htpasswd generator', 'apache htpasswd generator', 'nginx basic auth generator', 'htpasswd bcrypt', 'basic auth password generator'],
+    icon: 'M4 6h16v12H4zM4 10h16M8 14h4',
+  },
+  {
+    slug: 'ssh-key-generator',
+    name: 'SSH Key Generator',
+    tagline: 'RSA key pairs in OpenSSH & PEM format.',
+    description:
+      'Free online SSH key generator. Generate an RSA key pair in your browser and download the OpenSSH public key and PEM private key. Keys are created locally with a JS crypto engine and never leave your device.',
+    category: 'Security',
+    keywords: ['ssh key generator', 'generate ssh key', 'rsa key generator', 'ssh keygen online', 'ssh key pair generator'],
+    icon: 'M14 7a5 5 0 1 0-4.9 6H12v3h3v3h4v-3l-1.1-1.1A5 5 0 0 0 14 7ZM7 12a1 1 0 1 0 0 .01',
+  },
+  {
+    slug: 'ssl-csr-generator',
+    name: 'SSL CSR Generator',
+    tagline: 'Certificate signing requests & private key.',
+    description:
+      'Free online SSL CSR generator. Create a certificate signing request (CSR) and matching RSA private key from your domain and organization details, entirely in your browser. Your private key never leaves your device.',
+    category: 'Security',
+    keywords: ['csr generator', 'ssl csr generator', 'certificate signing request generator', 'generate csr online', 'csr and private key generator'],
+    icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM9 12l2 2 4-4',
+  },
+
+  // ---- Batch 3: Fake / test data ----
+  {
+    slug: 'fake-name-generator',
+    name: 'Fake Name Generator',
+    tagline: 'Random full names for testing & demos.',
+    description:
+      'Free online fake name generator. Generate random realistic full names — first and last, by gender — one at a time or in bulk for testing, mockups and sample data. Runs in your browser, nothing uploaded.',
+    category: 'Generators',
+    keywords: ['fake name generator', 'random name generator', 'random full name', 'test name generator', 'dummy name generator'],
+    icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21a8 8 0 0 1 16 0',
+  },
+  {
+    slug: 'fake-address-generator',
+    name: 'Fake Address Generator',
+    tagline: 'Random street addresses for testing.',
+    description:
+      'Free online fake address generator. Generate random realistic-looking street addresses with city, state and ZIP for form testing and sample data. Fictional only. Runs entirely in your browser.',
+    category: 'Generators',
+    keywords: ['fake address generator', 'random address generator', 'test address generator', 'dummy address', 'random street address'],
+    icon: 'M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5M9 21v-6h6v6',
+  },
+  {
+    slug: 'fake-email-generator',
+    name: 'Fake Email Generator',
+    tagline: 'Random email addresses for test data.',
+    description:
+      'Free online fake email generator. Generate random email addresses from names for testing signup forms, databases and mailing lists. Uses example/test domains. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['fake email generator', 'random email generator', 'test email generator', 'dummy email address', 'sample email generator'],
+    icon: 'M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1ZM4 7l8 6 8-6',
+  },
+  {
+    slug: 'fake-phone-generator',
+    name: 'Fake Phone Number Generator',
+    tagline: 'Random phone numbers by country format.',
+    description:
+      'Free online fake phone number generator. Generate random phone numbers in US, UK and international formats for testing forms and sample data. Uses reserved test ranges. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['fake phone number generator', 'random phone number generator', 'test phone number', 'dummy phone number', 'sample phone numbers'],
+    icon: 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L20 13l2 5v0a2 2 0 0 1-2 2 16 16 0 0 1-15-15 2 2 0 0 1 2-2Z',
+  },
+  {
+    slug: 'credit-card-generator',
+    name: 'Credit Card Number Generator',
+    tagline: 'Luhn-valid test card numbers (not real).',
+    description:
+      'Free online credit card number generator. Generate Luhn-valid test card numbers for Visa, Mastercard, Amex and Discover with expiry and CVV, for payment-form QA. Test data only — not real cards. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['credit card generator', 'test credit card number generator', 'fake credit card generator', 'luhn valid card number', 'dummy card number'],
+    icon: 'M3 7h18v10H3zM3 10h18M6 14h4',
+  },
+  {
+    slug: 'iban-generator',
+    name: 'IBAN Generator',
+    tagline: 'Format-valid IBANs for testing.',
+    description:
+      'Free online IBAN generator. Generate international bank account numbers with a valid mod-97 check for several countries, for testing payment and banking forms. Not real accounts. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['iban generator', 'test iban generator', 'fake iban generator', 'valid iban generator', 'random iban'],
+    icon: 'M3 21h18M4 10h16M5 10 12 4l7 6M6 10v11M18 10v11M10 10v11M14 10v11',
+  },
+  {
+    slug: 'ssn-generator',
+    name: 'SSN Generator',
+    tagline: 'Format-valid test SSNs (non-issuable).',
+    description:
+      'Free online SSN generator. Generate US Social Security number-formatted test values using non-issuable ranges so they can never match a real person. For form testing only. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['ssn generator', 'fake ssn generator', 'test ssn generator', 'random social security number', 'dummy ssn'],
+    icon: 'M3 6h18v12H3zM7 10a2 2 0 1 1 0 .01M11 10h6M11 14h4',
+  },
+  {
+    slug: 'random-user-profile-generator',
+    name: 'Random User Profile Generator',
+    tagline: 'Full fake profiles: name, email, address & more.',
+    description:
+      'Free online random user profile generator. Generate complete fake user profiles — name, username, email, phone, address, birthday and avatar initials — as JSON for testing. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['random user generator', 'fake user profile generator', 'random profile generator', 'test user data generator', 'fake persona generator'],
+    icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21a8 8 0 0 1 16 0M18 4h4M20 2v4',
+  },
+  {
+    slug: 'company-name-generator',
+    name: 'Company Name Generator',
+    tagline: 'Business names from word combinations.',
+    description:
+      'Free online company name generator. Generate business and startup name ideas by combining descriptive words and industry terms, with an optional legal suffix. Runs entirely in your browser.',
+    category: 'Generators',
+    keywords: ['company name generator', 'business name generator', 'startup name generator', 'brand name ideas', 'random company name'],
+    icon: 'M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M15 9h.01M9 13h.01M15 13h.01M10 21v-4h4v4',
+  },
+  {
+    slug: 'username-generator',
+    name: 'Username Generator',
+    tagline: 'Unique usernames & handles in bulk.',
+    description:
+      'Free online username generator. Generate unique, available-looking usernames and handles from adjectives, nouns and numbers for games, social media and sign-ups. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['username generator', 'random username generator', 'handle generator', 'gamertag generator', 'cool username ideas'],
+    icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21a8 8 0 0 1 16 0M8 8h.01',
+  },
+  {
+    slug: 'fake-id-generator',
+    name: 'Fake ID Data Generator',
+    tagline: 'Fictional identity fields for test data.',
+    description:
+      'Free online fake ID data generator. Generate a complete set of fictional identity fields — name, DOB, address, phone, email and a fake ID number — for QA and demos. Not a real ID. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['fake id generator', 'fake identity generator', 'random identity generator', 'test id data generator', 'fictional identity generator'],
+    icon: 'M3 5h18v14H3zM7 9a2 2 0 1 1 0 .01M6 15c0-1.5 1.5-3 3-3M14 9h4M14 13h4M14 16h2',
+  },
+  {
+    slug: 'mock-json-generator',
+    name: 'Mock JSON Data Generator',
+    tagline: 'Arrays of fake records as JSON.',
+    description:
+      'Free online mock JSON data generator. Generate arrays of realistic fake records — id, name, email, address, dates and more — as JSON for API mocking and testing. Runs entirely in your browser.',
+    category: 'Developer',
+    keywords: ['mock json generator', 'fake json data generator', 'json test data generator', 'sample json generator', 'random json generator'],
+    icon: 'M8 3H6a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2 2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h2M16 3h2a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2 2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-2',
+  },
+  {
+    slug: 'csv-test-data-generator',
+    name: 'CSV Test Data Generator',
+    tagline: 'Download fake records as a CSV file.',
+    description:
+      'Free online CSV test data generator. Generate rows of realistic fake records with the columns you choose and download them as a CSV file for spreadsheets, imports and testing. Runs in your browser.',
+    category: 'Developer',
+    keywords: ['csv test data generator', 'fake csv generator', 'sample csv generator', 'random csv data', 'dummy csv generator'],
+    icon: 'M4 4h16v16H4zM4 9h16M4 14h16M9 4v16M15 4v16',
+  },
+
+  // ---- Batch 4: CSS & design ----
+  {
+    slug: 'box-shadow-generator',
+    name: 'Box Shadow Generator',
+    tagline: 'Visually build CSS box-shadow & copy it.',
+    description:
+      'Free online CSS box-shadow generator. Adjust offset, blur, spread, color and inset with a live preview and copy the exact box-shadow CSS. Layer multiple shadows. Runs entirely in your browser.',
+    category: 'Developer',
+    keywords: ['box shadow generator', 'css box shadow generator', 'box shadow css', 'drop shadow generator', 'css shadow maker'],
+    icon: 'M6 6h10v10H6zM10 10h10v10H10z',
+  },
+  {
+    slug: 'border-radius-generator',
+    name: 'Border Radius Generator',
+    tagline: 'Craft CSS border-radius with live preview.',
+    description:
+      'Free online CSS border-radius generator. Set each corner independently, create organic blob shapes with 8-point radii, and copy the border-radius CSS. Live preview. Runs in your browser.',
+    category: 'Developer',
+    keywords: ['border radius generator', 'css border radius generator', 'border radius css', 'rounded corners css', 'blob border radius'],
+    icon: 'M4 12V8a4 4 0 0 1 4-4h4M20 12v4a4 4 0 0 1-4 4h-4',
+  },
+  {
+    slug: 'glassmorphism-generator',
+    name: 'Glassmorphism Generator',
+    tagline: 'Frosted-glass CSS with blur & transparency.',
+    description:
+      'Free online glassmorphism generator. Design frosted-glass cards with adjustable blur, transparency, color and border, preview them over a gradient, and copy the CSS including backdrop-filter. Runs in your browser.',
+    category: 'Developer',
+    keywords: ['glassmorphism generator', 'glassmorphism css generator', 'frosted glass css', 'backdrop filter generator', 'glass effect css'],
+    icon: 'M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1ZM8 8l8 8M8 12l4 4',
+  },
+  {
+    slug: 'css-animation-generator',
+    name: 'CSS Animation Generator',
+    tagline: 'Keyframe animations with live preview.',
+    description:
+      'Free online CSS animation generator. Pick an effect like fade, slide, bounce, pulse or spin, tune duration, delay, timing and iterations, preview it live, and copy the @keyframes CSS. Runs in your browser.',
+    category: 'Developer',
+    keywords: ['css animation generator', 'keyframes generator', 'css keyframe animation', 'animation css generator', 'css transition generator'],
+    icon: 'M12 2a10 10 0 1 0 0 20M12 2v4M12 2a10 10 0 0 1 7 3M17 17l3 3M20 14v6h-6',
+  },
+  {
+    slug: 'media-query-generator',
+    name: 'Media Query Generator',
+    tagline: 'Responsive CSS breakpoints, copy-ready.',
+    description:
+      'Free online media query generator. Build responsive CSS media queries for common device breakpoints or custom min/max widths, orientation and dark mode, and copy the rule. Runs entirely in your browser.',
+    category: 'Developer',
+    keywords: ['media query generator', 'css media query generator', 'responsive breakpoints css', 'media query css', 'breakpoint generator'],
+    icon: 'M3 5h13a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H3zM19 9h2v10a1 1 0 0 1-1 1h-6v-2M7 20h6',
+  },
+  {
+    slug: 'flexbox-generator',
+    name: 'Flexbox & Grid Generator',
+    tagline: 'Build flex/grid layouts and copy the CSS.',
+    description:
+      'Free online Flexbox and CSS Grid generator. Toggle direction, justify, align, wrap and gap (or grid columns and rows), see the layout update live, and copy the container CSS. Runs in your browser.',
+    category: 'Developer',
+    keywords: ['flexbox generator', 'css grid generator', 'flexbox css generator', 'grid layout generator', 'flex css maker'],
+    icon: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
+  },
+  {
+    slug: 'svg-wave-generator',
+    name: 'SVG Wave Generator',
+    tagline: 'Layered SVG wave dividers for sections.',
+    description:
+      'Free online SVG wave generator. Create smooth wave section dividers with adjustable height, amplitude, randomness and color, and download the SVG or copy the code. Great for hero and footer edges. Runs in your browser.',
+    category: 'Image',
+    keywords: ['svg wave generator', 'wave generator', 'svg wave divider', 'section wave svg', 'wavy background generator'],
+    icon: 'M2 12c3 0 3-5 6-5s3 5 6 5 3-5 6-5 3 5 6 5M2 17c3 0 3-5 6-5s3 5 6 5',
+  },
+  {
+    slug: 'blob-generator',
+    name: 'Blob Shape Generator',
+    tagline: 'Random organic SVG blob shapes.',
+    description:
+      'Free online blob shape generator. Create smooth, random organic blob shapes as SVG with adjustable complexity, contrast and color, and download or copy the code — great for backgrounds and avatars. Runs in your browser.',
+    category: 'Image',
+    keywords: ['blob generator', 'svg blob generator', 'blob shape generator', 'organic shape generator', 'blob maker'],
+    icon: 'M12 3c4 0 7 2 7 6s-1 5-3 7-3 4-6 4-7-3-7-8 5-9 9-9Z',
+  },
+  {
+    slug: 'color-palette-generator',
+    name: 'Color Palette Generator',
+    tagline: 'Random & harmony-based color palettes.',
+    description:
+      'Free online color palette generator. Generate random palettes or build harmonies — complementary, analogous, triadic and more — from a base color, lock favorites and copy HEX values. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['color palette generator', 'color scheme generator', 'random color palette', 'palette generator', 'color combination generator'],
+    icon: 'M12 3a9 9 0 1 0 0 18 3 3 0 0 0 0-6h-1a2 2 0 0 1 0-4h2a4 4 0 0 0 0-8ZM7.5 12a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm3-4a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z',
+  },
+  {
+    slug: 'color-scheme-generator',
+    name: 'Color Scheme Generator',
+    tagline: 'Harmonious schemes from one base color.',
+    description:
+      'Free online color scheme generator. Enter a base color and get complementary, analogous, triadic, tetradic, split-complementary and monochromatic schemes with tints and shades. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['color scheme generator', 'color harmony generator', 'complementary color generator', 'analogous colors', 'triadic color scheme'],
+    icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM12 3v9l6 6',
+  },
+  {
+    slug: 'pattern-generator',
+    name: 'Pattern Background Generator',
+    tagline: 'Repeating SVG/CSS background patterns.',
+    description:
+      'Free online pattern background generator. Create seamless repeating background patterns — dots, grid, stripes, checkers and more — with custom colors and scale, then download the SVG or copy the CSS. Runs in your browser.',
+    category: 'Image',
+    keywords: ['pattern generator', 'background pattern generator', 'svg pattern generator', 'css pattern generator', 'seamless pattern maker'],
+    icon: 'M4 4h4v4H4zM12 4h4v4h-4zM8 8h4v4H8zM16 8h4v4h-4zM4 12h4v4H4zM12 12h4v4h-4z',
+  },
+
+  // ---- Batch 5: Image generators (canvas) ----
+  {
+    slug: 'favicon-generator',
+    name: 'Favicon Generator',
+    tagline: 'Make favicons from text, emoji or a shape.',
+    description:
+      'Free online favicon generator. Create a favicon from a letter, emoji or shape with custom colors, and download PNG sizes (16–512) plus a multi-size ICO. Generated in your browser — nothing uploaded.',
+    category: 'Image',
+    keywords: ['favicon generator', 'favicon maker', 'create favicon', 'favicon.ico generator', 'text favicon generator'],
+    icon: 'M4 4h16v16H4zM8 8h8v8H8z',
+  },
+  {
+    slug: 'placeholder-image-generator',
+    name: 'Placeholder Image Generator',
+    tagline: 'Custom placeholder images with size label.',
+    description:
+      'Free online placeholder image generator. Create placeholder images at any size with custom colors and a size label, and download as PNG or copy a data URI for mockups. Generated in your browser.',
+    category: 'Image',
+    keywords: ['placeholder image generator', 'dummy image generator', 'placeholder png generator', 'image placeholder maker', 'mockup image generator'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'avatar-generator',
+    name: 'Avatar Generator',
+    tagline: 'Initials & geometric identicon avatars.',
+    description:
+      'Free online avatar generator. Create clean initials avatars or unique geometric identicons from a name or seed, with color themes, and download as PNG. Generated entirely in your browser.',
+    category: 'Image',
+    keywords: ['avatar generator', 'initials avatar generator', 'identicon generator', 'profile picture generator', 'default avatar maker'],
+    icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21a8 8 0 0 1 16 0',
+  },
+  {
+    slug: 'meme-generator',
+    name: 'Meme Generator',
+    tagline: 'Top/bottom text captions on your image.',
+    description:
+      'Free online meme generator. Upload an image, add classic top and bottom captions with the bold outlined meme font, adjust size, and download the result. Your image stays in your browser — never uploaded.',
+    category: 'Image',
+    keywords: ['meme generator', 'meme maker', 'caption image', 'top bottom text meme', 'make a meme online'],
+    icon: 'M4 5h16v14H4zM8 10a1 1 0 1 0 0 .01M16 10a1 1 0 1 0 0 .01M8 15c1 1.5 2.5 2 4 2s3-.5 4-2',
+  },
+  {
+    slug: 'banner-generator',
+    name: 'Banner Generator',
+    tagline: 'Social & web banners at preset sizes.',
+    description:
+      'Free online banner generator. Create social media and web banners at preset sizes (Twitter, Facebook, LinkedIn, YouTube) with a gradient or solid background, heading and subtext, and download as PNG. Runs in your browser.',
+    category: 'Image',
+    keywords: ['banner generator', 'social media banner maker', 'header image generator', 'cover photo maker', 'web banner generator'],
+    icon: 'M3 6h18v12H3zM3 11h18M7 15h6',
+  },
+  {
+    slug: 'watermark-generator',
+    name: 'Watermark Generator',
+    tagline: 'Tile text watermark over your image.',
+    description:
+      'Free online watermark generator. Add a tiled or single text watermark to your photo with adjustable opacity, size, angle and color, then download. Your image is processed in your browser — never uploaded.',
+    category: 'Image',
+    keywords: ['watermark generator', 'add watermark to image', 'photo watermark maker', 'text watermark online', 'watermark photos free'],
+    icon: 'M4 5h16v14H4zM7 16l3-3 2 2 3-4 2 3M8 9a1 1 0 1 0 0 .01',
+  },
+  {
+    slug: 'thumbnail-generator',
+    name: 'Thumbnail Generator',
+    tagline: 'Crop & resize images to thumbnail sizes.',
+    description:
+      'Free online thumbnail generator. Crop and resize any image to common thumbnail sizes or a custom square, with cover or contain fit, and download as PNG or JPG. Processed in your browser — never uploaded.',
+    category: 'Image',
+    keywords: ['thumbnail generator', 'thumbnail maker', 'create thumbnail', 'resize to thumbnail', 'image thumbnail generator'],
+    icon: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+  },
+  {
+    slug: 'signature-generator',
+    name: 'Signature Generator',
+    tagline: 'Draw or type a signature, download PNG.',
+    description:
+      'Free online signature generator. Draw your signature with a mouse or finger, or type it in a handwriting-style font, then download a transparent PNG for documents and emails. Created in your browser — never uploaded.',
+    category: 'Image',
+    keywords: ['signature generator', 'online signature maker', 'draw signature', 'e-signature generator', 'signature png maker'],
+    icon: 'M3 17c3 0 5-10 8-10s2 6 4 6 2-3 6-3M3 20h18',
+  },
+  {
+    slug: 'business-card-generator',
+    name: 'Business Card Generator',
+    tagline: 'Design a business card & download it.',
+    description:
+      'Free online business card generator. Enter your name, title, company and contact details, pick a color theme, preview a standard 3.5×2 inch card, and download it as a high-resolution PNG. Runs in your browser.',
+    category: 'Image',
+    keywords: ['business card generator', 'business card maker', 'create business card', 'digital business card', 'business card design online'],
+    icon: 'M3 6h18v12H3zM7 10a2 2 0 1 1 0 .01M12 10h5M12 14h5M6 14h3',
+  },
+
+  // ---- Batch 6: SEO & config ----
+  {
+    slug: 'meta-tag-generator',
+    name: 'Meta Tag Generator',
+    tagline: 'SEO meta tags for title, description & more.',
+    description:
+      'Free online meta tag generator. Create SEO meta tags — title, description, keywords, author, robots, viewport and charset — plus Open Graph and Twitter cards, ready to paste into your HTML head. Runs in your browser.',
+    category: 'Developer',
+    keywords: ['meta tag generator', 'seo meta tags generator', 'html meta tags', 'meta description generator', 'meta tags for seo'],
+    icon: 'M4 7h16M4 12h16M4 17h10M18 15l3 3-3 3',
+  },
+  {
+    slug: 'open-graph-generator',
+    name: 'Open Graph Generator',
+    tagline: 'og: tags for rich social link previews.',
+    description:
+      'Free online Open Graph generator. Build og: and Twitter card meta tags for title, description, image, URL and type so your links show rich previews on Facebook, LinkedIn and X. Runs in your browser.',
+    category: 'Developer',
+    keywords: ['open graph generator', 'og tags generator', 'open graph meta tags', 'twitter card generator', 'social meta tags'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 4 4M14 13l2-2 4 4M9 9a1 1 0 1 0 0 .01',
+  },
+  {
+    slug: 'robots-txt-generator',
+    name: 'robots.txt Generator',
+    tagline: 'Build a robots.txt with allow/disallow rules.',
+    description:
+      'Free online robots.txt generator. Build a valid robots.txt with per-user-agent allow and disallow rules, crawl delay and a sitemap reference, then copy or download it. Runs entirely in your browser.',
+    category: 'Developer',
+    keywords: ['robots.txt generator', 'robots txt generator', 'create robots.txt', 'robots file generator', 'seo robots.txt'],
+    icon: 'M9 3h6l1 3h3v4h-2v9H7v-9H5V6h3zM10 12v4M14 12v4',
+  },
+  {
+    slug: 'sitemap-generator',
+    name: 'sitemap.xml Generator',
+    tagline: 'Turn a list of URLs into a sitemap.xml.',
+    description:
+      'Free online sitemap.xml generator. Paste your page URLs and set change frequency and priority to generate a valid XML sitemap for search engines, then copy or download it. Runs in your browser.',
+    category: 'Developer',
+    keywords: ['sitemap generator', 'sitemap.xml generator', 'xml sitemap generator', 'create sitemap', 'seo sitemap generator'],
+    icon: 'M12 3v4M6 21v-4M18 21v-4M4 17h4v4H4zM10 3h4v4h-4zM16 17h4v4h-4zM12 7v6M6 17v-2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2',
+  },
+  {
+    slug: 'htaccess-generator',
+    name: '.htaccess Generator',
+    tagline: 'Common Apache .htaccess rules, ready to use.',
+    description:
+      'Free online .htaccess generator. Assemble common Apache rules — force HTTPS, force www or non-www, redirects, custom error pages, caching and compression — into a ready-to-use .htaccess file. Runs in your browser.',
+    category: 'Developer',
+    keywords: ['htaccess generator', 'apache htaccess generator', 'htaccess redirect generator', 'force https htaccess', 'htaccess rewrite generator'],
+    icon: 'M4 6h16v12H4zM4 10h16M7 14h6',
+  },
+  {
+    slug: 'gitignore-generator',
+    name: '.gitignore Generator',
+    tagline: 'Build .gitignore from language & tool presets.',
+    description:
+      'Free online .gitignore generator. Select the languages, frameworks and tools you use — Node, Python, macOS, VS Code and more — to build a combined .gitignore, then copy or download it. Runs in your browser.',
+    category: 'Developer',
+    keywords: ['gitignore generator', '.gitignore generator', 'create gitignore', 'gitignore template', 'gitignore file generator'],
+    icon: 'M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-2c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.3 1.1 2.9.8M12 2a10 10 0 0 1 3.2 19.5',
+  },
+  {
+    slug: 'cron-generator',
+    name: 'Cron Expression Generator',
+    tagline: 'Build & explain cron schedules in plain English.',
+    description:
+      'Free online cron expression generator. Build a cron schedule from simple dropdowns or presets, see it explained in plain English, and copy the five-field expression for your crontab. Runs in your browser.',
+    category: 'Developer',
+    keywords: ['cron generator', 'cron expression generator', 'crontab generator', 'cron schedule generator', 'cron job expression'],
+    icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM12 7v5l3 2',
+  },
+  {
+    slug: 'regex-generator',
+    name: 'Regex Generator',
+    tagline: 'Build regex from common patterns, no syntax.',
+    description:
+      'Free online regex generator. Build regular expressions for emails, URLs, phone numbers, dates, IPs and more from a menu of common patterns, then test them live and copy. No regex syntax required. Runs in your browser.',
+    category: 'Developer',
+    keywords: ['regex generator', 'regular expression generator', 'regex pattern generator', 'build regex online', 'regex maker'],
+    icon: 'M4 17l6-6-6-6M12 19h8',
+  },
+  {
+    slug: 'html-table-generator',
+    name: 'HTML Table Generator',
+    tagline: 'Build an HTML table and copy the markup.',
+    description:
+      'Free online HTML table generator. Set the rows and columns, edit cell text in a live grid, toggle a header row and border styling, and copy clean HTML table markup. Runs entirely in your browser.',
+    category: 'Developer',
+    keywords: ['html table generator', 'table html generator', 'create html table', 'html table maker', 'generate table html'],
+    icon: 'M4 4h16v16H4zM4 9h16M4 14h16M9 4v16M15 4v16',
+  },
+  {
+    slug: 'markdown-table-generator',
+    name: 'Markdown Table Generator',
+    tagline: 'Build a Markdown table from a grid.',
+    description:
+      'Free online Markdown table generator. Fill in a live grid, choose column alignment, and get a clean, aligned Markdown table you can paste into READMEs, GitHub and docs. Runs entirely in your browser.',
+    category: 'Developer',
+    keywords: ['markdown table generator', 'md table generator', 'create markdown table', 'github table generator', 'markdown table maker'],
+    icon: 'M3 5h18v14H3zM3 10h18M3 15h18M8 5v14M14 5v14',
+  },
+  {
+    slug: 'schema-markup-generator',
+    name: 'Schema Markup Generator',
+    tagline: 'JSON-LD structured data for rich results.',
+    description:
+      'Free online schema markup generator. Create JSON-LD structured data for common Schema.org types — Article, Product, LocalBusiness, FAQ, Organization and more — for rich search results. Runs in your browser.',
+    category: 'Developer',
+    keywords: ['schema markup generator', 'json-ld generator', 'structured data generator', 'schema.org generator', 'rich results markup'],
+    icon: 'M8 3H6a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2 2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h2M16 3h2a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2 2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-2',
+  },
+  {
+    slug: 'code-snippet-generator',
+    name: 'Code Snippet Image Generator',
+    tagline: 'Turn code into a shareable image.',
+    description:
+      'Free online code snippet image generator. Paste code, pick a theme and window style, and export a polished PNG image of your snippet for slides, docs and social — like Carbon. Rendered in your browser.',
+    category: 'Developer',
+    keywords: ['code snippet generator', 'code to image', 'carbon code image', 'code screenshot generator', 'beautiful code image'],
+    icon: 'M8 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-2M9 12l2 2 4-4',
+  },
+
+  // ---- Batch 7: Writing & naming ----
+  {
+    slug: 'hashtag-generator',
+    name: 'Hashtag Generator',
+    tagline: 'Turn keywords into social hashtags.',
+    description:
+      'Free online hashtag generator. Turn a topic or keywords into a set of relevant hashtags for Instagram, TikTok, X and LinkedIn, with camel-case and popularity variations. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['hashtag generator', 'instagram hashtag generator', 'social media hashtags', 'hashtag maker', 'tiktok hashtag generator'],
+    icon: 'M10 3 8 21M16 3l-2 18M4 8h16M3 16h16',
+  },
+  {
+    slug: 'headline-generator',
+    name: 'Headline Generator',
+    tagline: 'Catchy blog & article headline ideas.',
+    description:
+      'Free online headline generator. Enter a topic and get catchy, click-worthy blog and article headline ideas using proven copywriting formulas — how-tos, listicles and questions. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['headline generator', 'blog title generator', 'article headline generator', 'catchy headline maker', 'title generator'],
+    icon: 'M4 6h16M4 12h16M4 18h10',
+  },
+  {
+    slug: 'brand-name-generator',
+    name: 'Brand Name Generator',
+    tagline: 'Inventive brand & startup name ideas.',
+    description:
+      'Free online brand name generator. Generate inventive brand and startup name ideas from a keyword using blends, prefixes, suffixes and invented words, with a matching tagline hint. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['brand name generator', 'business name generator', 'startup name generator', 'brand name ideas', 'company name maker'],
+    icon: 'M12 2l2.4 7.4H22l-6 4.5 2.3 7.1L12 16.7 5.7 21l2.3-7.1-6-4.5h7.6z',
+  },
+  {
+    slug: 'domain-name-generator',
+    name: 'Domain Name Generator',
+    tagline: 'Available-looking domain ideas & TLDs.',
+    description:
+      'Free online domain name generator. Turn a keyword into domain name ideas across popular TLDs — .com, .io, .app, .dev and more — with prefixes, suffixes and blends to spark availability. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['domain name generator', 'domain name ideas', 'website name generator', 'domain finder', 'available domain generator'],
+    icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20',
+  },
+  {
+    slug: 'slogan-generator',
+    name: 'Slogan Generator',
+    tagline: 'Catchy taglines & slogans for any brand.',
+    description:
+      'Free online slogan generator. Enter your brand or product name to generate catchy taglines and slogans from proven marketing templates, ready to inspire your campaign. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['slogan generator', 'tagline generator', 'catchphrase generator', 'motto generator', 'marketing slogan maker'],
+    icon: 'M3 11l18-5v12L3 15v-4zM11.6 16.8a3 3 0 0 1-5.8-1.6',
+  },
+  {
+    slug: 'random-word-generator',
+    name: 'Random Word Generator',
+    tagline: 'Random words by type, in bulk.',
+    description:
+      'Free online random word generator. Generate random words — nouns, verbs, adjectives or a mix — one at a time or in bulk, great for brainstorming, games, writing prompts and passwords. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['random word generator', 'random words', 'word generator', 'random noun generator', 'random adjective generator'],
+    icon: 'M4 7V5h16v2M9 5v14M7 19h4M14 10h6M14 14h6M14 18h4',
+  },
+  {
+    slug: 'random-sentence-generator',
+    name: 'Random Sentence Generator',
+    tagline: 'Random sentences for prompts & tests.',
+    description:
+      'Free online random sentence generator. Generate grammatically-structured random sentences for writing prompts, typing practice, placeholder copy and creativity exercises. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['random sentence generator', 'sentence generator', 'random sentences', 'writing prompt generator', 'random phrase generator'],
+    icon: 'M4 5h16M4 10h16M4 15h10',
+  },
+  {
+    slug: 'story-generator',
+    name: 'Story Idea Generator',
+    tagline: 'Plot prompts with character, setting & conflict.',
+    description:
+      'Free online story idea generator. Spark your next story with random prompts combining a character, setting, goal and obstacle, plus a genre and opening line. Great for writers beating the blank page. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['story generator', 'story idea generator', 'plot generator', 'writing prompt generator', 'story prompt maker'],
+    icon: 'M4 5a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM14 3v6h6M8 13h8M8 17h5',
+  },
+  {
+    slug: 'poem-generator',
+    name: 'Poem Generator',
+    tagline: 'Short poems from a theme or word.',
+    description:
+      'Free online poem generator. Generate short poems — including haiku and rhyming couplets — from a theme or word to inspire your writing or add a personal touch to a card. Runs entirely in your browser.',
+    category: 'Generators',
+    keywords: ['poem generator', 'poetry generator', 'haiku generator', 'rhyme generator', 'random poem maker'],
+    icon: 'M4 4h16v16H4zM8 8h8M8 12h6M8 16h4',
+  },
+  {
+    slug: 'acronym-generator',
+    name: 'Acronym Generator',
+    tagline: 'Build acronyms & backronyms from words.',
+    description:
+      'Free online acronym generator. Turn a phrase into an acronym, or build a backronym by finding words that fit each letter of a name, for projects, teams and branding. Runs entirely in your browser.',
+    category: 'Generators',
+    keywords: ['acronym generator', 'backronym generator', 'acronym maker', 'abbreviation generator', 'acronym creator'],
+    icon: 'M4 7V5h16v2M9 5v14M7 19h4M14 6h6M14 12h6M14 18h6',
+  },
+  {
+    slug: 'nickname-generator',
+    name: 'Nickname Generator',
+    tagline: 'Fun nicknames from your name.',
+    description:
+      'Free online nickname generator. Turn a name into fun nicknames — cute, cool and gamer-style — using prefixes, suffixes and playful word pairings. Great for games, social media and friends. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['nickname generator', 'cool nickname generator', 'gamer nickname generator', 'nickname ideas', 'random nickname maker'],
+    icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21a8 8 0 0 1 16 0M18 5l2 2-2 2',
+  },
+  {
+    slug: 'bio-generator',
+    name: 'Bio Generator',
+    tagline: 'Short social & profile bios in seconds.',
+    description:
+      'Free online bio generator. Create short, punchy bios for Instagram, X, LinkedIn and personal sites from your role, interests and a vibe — professional, casual or witty. Runs entirely in your browser.',
+    category: 'Generators',
+    keywords: ['bio generator', 'instagram bio generator', 'social media bio generator', 'profile bio maker', 'short bio generator'],
+    icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21a8 8 0 0 1 16 0M9 8h.01',
+  },
+
+  // ---- Batch 8: Random & fun ----
+  {
+    slug: 'random-string-generator',
+    name: 'Random String Generator',
+    tagline: 'Custom random strings with your character set.',
+    description:
+      'Free online random string generator. Generate random strings of any length from letters, numbers, symbols or a custom character set, in bulk, using secure randomness. Runs entirely in your browser.',
+    category: 'Generators',
+    keywords: ['random string generator', 'random text generator', 'generate random string', 'random alphanumeric generator', 'random character generator'],
+    icon: 'M7 8l-4 4 4 4M17 8l4 4-4 4M14 4l-4 16',
+  },
+  {
+    slug: 'dice-roller',
+    name: 'Dice Roller',
+    tagline: 'Roll D4–D20 dice, any count, with totals.',
+    description:
+      'Free online dice roller. Roll any number of dice from D4 to D20 (and D100) with a modifier and running total, for board games and tabletop RPGs. Uses secure randomness. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['dice roller', 'roll dice online', 'virtual dice', 'd20 roller', 'dnd dice roller'],
+    icon: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2ZM8.5 8.5h.01M15.5 8.5h.01M8.5 15.5h.01M15.5 15.5h.01M12 12h.01',
+  },
+  {
+    slug: 'coin-flip',
+    name: 'Coin Flip',
+    tagline: 'Flip a virtual coin, heads or tails.',
+    description:
+      'Free online coin flip. Flip a fair virtual coin for heads or tails, flip several at once, and see running stats — a quick, unbiased way to decide. Uses secure randomness. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['coin flip', 'flip a coin', 'coin toss online', 'heads or tails', 'virtual coin flip'],
+    icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM12 6v12M9 9h4a2 2 0 0 1 0 4H9M9 13h4a2 2 0 0 1 0 4H9',
+  },
+  {
+    slug: 'lottery-number-generator',
+    name: 'Lottery Number Generator',
+    tagline: 'Random picks for Powerball, EuroMillions & more.',
+    description:
+      'Free online lottery number generator. Generate random number picks for Powerball, Mega Millions, EuroMillions, Lotto 6/49 or a custom game, with a bonus ball. Uses secure randomness. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['lottery number generator', 'random lottery numbers', 'powerball generator', 'lucky number generator', 'lotto number picker'],
+    icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM8 12a4 4 0 1 0 8 0 4 4 0 0 0-8 0Z',
+  },
+  {
+    slug: 'random-date-generator',
+    name: 'Random Date Generator',
+    tagline: 'Random dates between two bounds.',
+    description:
+      'Free online random date generator. Generate random dates within a range you set, optionally with times, in bulk, for testing, sampling and games. Uses secure randomness. Runs entirely in your browser.',
+    category: 'Generators',
+    keywords: ['random date generator', 'random date picker', 'generate random dates', 'random date range', 'random datetime generator'],
+    icon: 'M8 3v4M16 3v4M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM9 13h.01M13 13h.01M9 17h.01',
+  },
+  {
+    slug: 'random-picker',
+    name: 'Random Picker / Wheel Spinner',
+    tagline: 'Spin a wheel to pick from your list.',
+    description:
+      'Free online random picker and wheel spinner. Enter a list of names or options and spin a colorful wheel to pick a winner at random — great for giveaways, decisions and classrooms. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['random picker', 'wheel spinner', 'wheel of names', 'random name picker', 'spin the wheel'],
+    icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM12 2v10l7 7M12 12 5 19M12 12l7-7M12 12 5 5',
+  },
+  {
+    slug: 'team-generator',
+    name: 'Team Generator',
+    tagline: 'Split a list of names into fair teams.',
+    description:
+      'Free online team generator. Paste a list of names and split them randomly into a set number of teams or by team size, with balanced groups — great for sports, class and games. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['team generator', 'random team generator', 'group generator', 'team picker', 'split into teams'],
+    icon: 'M9 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM3 20a6 6 0 0 1 12 0M17 11a3 3 0 1 0 0-6M15 20a6 6 0 0 1 6-3',
+  },
+  {
+    slug: 'random-letter-generator',
+    name: 'Random Letter Generator',
+    tagline: 'Random letters A–Z, in bulk.',
+    description:
+      'Free online random letter generator. Generate random letters from A to Z, uppercase or lowercase, one or many at a time — great for games, drawing prompts and teaching. Uses secure randomness. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['random letter generator', 'random letter picker', 'generate random letters', 'random alphabet generator', 'pick a random letter'],
+    icon: 'M4 20 9 6l5 14M6 15h6M16 20V8M16 8h3a2 2 0 0 1 0 4h-3',
+  },
+  {
+    slug: 'name-combiner',
+    name: 'Name Combiner Generator',
+    tagline: 'Blend two names into one (ship name).',
+    description:
+      'Free online name combiner. Blend two names into portmanteau combinations — for couple ship names, brand mashups, pet names and baby names. Generates several blends to choose from. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['name combiner', 'name blender', 'ship name generator', 'couple name generator', 'combine two names'],
+    icon: 'M8 7a4 4 0 1 0 0 .01M16 7a4 4 0 1 0 0 .01M8 21v-4a4 4 0 0 1 8 0v4',
+  },
+  {
+    slug: 'zodiac-generator',
+    name: 'Zodiac Sign Generator',
+    tagline: 'Find your zodiac sign & traits from a date.',
+    description:
+      'Free online zodiac sign finder. Enter a birth date to get the Western zodiac sign, its element, dates and key traits, plus the Chinese zodiac animal for the year. Runs entirely in your browser.',
+    category: 'Generators',
+    keywords: ['zodiac generator', 'zodiac sign finder', 'star sign calculator', 'chinese zodiac calculator', 'what is my zodiac sign'],
+    icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM12 6l1.8 3.6 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4L6.2 10.2l4-.6z',
+  },
+  {
+    slug: 'excuse-generator',
+    name: 'Excuse Generator',
+    tagline: 'Random excuses for any situation.',
+    description:
+      'Free online excuse generator. Generate funny, plausible excuses for being late, missing work, skipping the gym or ducking an event — for laughs, not lying. Runs entirely in your browser.',
+    category: 'Generators',
+    keywords: ['excuse generator', 'random excuse generator', 'funny excuses', 'excuse maker', 'late excuse generator'],
+    icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM9 9a3 3 0 0 1 6 0c0 2-3 2-3 4M12 17h.01',
+  },
+  {
+    slug: 'insult-compliment-generator',
+    name: 'Compliment & Insult Generator',
+    tagline: 'Playful compliments or cheeky roasts.',
+    description:
+      'Free online compliment and insult generator. Generate warm, uplifting compliments or lighthearted, playful insults (Shakespearean roasts included) for fun and banter. All in good humor. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['compliment generator', 'insult generator', 'random compliment', 'funny insult generator', 'shakespearean insult generator'],
+    icon: 'M12 21s-8-4.5-8-10a4.5 4.5 0 0 1 8-3 4.5 4.5 0 0 1 8 3c0 5.5-8 10-8 10Z',
+  },
+  {
+    slug: 'trivia-generator',
+    name: 'Trivia Question Generator',
+    tagline: 'Random trivia questions with answers.',
+    description:
+      'Free online trivia question generator. Draw random trivia questions across categories — science, history, geography, pop culture and more — with reveal-on-click answers for quizzes and game night. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['trivia generator', 'trivia question generator', 'random trivia', 'quiz question generator', 'trivia questions and answers'],
+    icon: 'M9 9a3 3 0 0 1 6 0c0 2-3 2-3 4M12 17h.01M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z',
+  },
+  {
+    slug: 'recipe-generator',
+    name: 'Recipe Idea Generator',
+    tagline: 'Random meal ideas from ingredients.',
+    description:
+      'Free online recipe idea generator. Get random meal ideas — a dish name, key ingredients and a simple method sketch — by cuisine and meal type, to break out of a cooking rut. Runs entirely in your browser.',
+    category: 'Generators',
+    keywords: ['recipe generator', 'random recipe generator', 'meal idea generator', 'what to cook generator', 'dinner idea generator'],
+    icon: 'M7 3v8a3 3 0 0 0 6 0V3M10 11v10M17 3c-1.5 1-2 3-2 6s0 4 2 5v7',
+  },
+  {
+    slug: 'workout-generator',
+    name: 'Workout Generator',
+    tagline: 'Random workout routines by focus.',
+    description:
+      'Free online workout generator. Generate a random workout routine by focus — full body, upper, lower, core or cardio — with exercises, sets and reps scaled to your level. No equipment options included. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['workout generator', 'random workout generator', 'workout routine generator', 'exercise generator', 'wod generator'],
+    icon: 'M6.5 6.5h11M4 10h2v4H4zM18 10h2v4h-2zM6 12h12M8 9h1v6H8zM15 9h1v6h-1z',
+  },
+  {
+    slug: 'emoji-generator',
+    name: 'Emoji Generator',
+    tagline: 'Random emojis & fun emoji combos.',
+    description:
+      'Free online emoji generator. Get random emojis by category, build fun emoji combos and reactions, and copy them with one click for chats, captions and posts. Runs entirely in your browser.',
+    category: 'Generators',
+    keywords: ['emoji generator', 'random emoji generator', 'emoji picker', 'emoji combo generator', 'random emoji'],
+    icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM8 10h.01M16 10h.01M8 15c1 1.5 2.5 2 4 2s3-.5 4-2',
+  },
+
+  // ---- Batch 9: Documents ----
+  {
+    slug: 'invoice-generator',
+    name: 'Invoice Generator',
+    tagline: 'Create & download professional invoices.',
+    description:
+      'Free online invoice generator. Fill in your business and client details, add line items with automatic totals and tax, preview a clean invoice and download it as a PDF. Runs entirely in your browser — nothing uploaded.',
+    category: 'PDF',
+    keywords: ['invoice generator', 'free invoice maker', 'create invoice online', 'invoice pdf generator', 'invoice template'],
+    icon: 'M6 2h9l5 5v15a0 0 0 0 1 0 0H6a0 0 0 0 1 0 0zM14 2v6h6M9 13h6M9 17h6M9 9h2',
+  },
+  {
+    slug: 'receipt-generator',
+    name: 'Receipt Generator',
+    tagline: 'Generate itemized receipts as PDF.',
+    description:
+      'Free online receipt generator. Create itemized sales receipts with store details, line items, subtotal, tax and total, then download as a PDF. Great for small businesses and reimbursements. Runs in your browser.',
+    category: 'PDF',
+    keywords: ['receipt generator', 'free receipt maker', 'create receipt online', 'receipt pdf generator', 'itemized receipt template'],
+    icon: 'M5 2h14v20l-2-1.5L15 22l-2-1.5L11 22l-2-1.5L7 22l-2-1.5zM9 8h6M9 12h6M9 16h4',
+  },
+  {
+    slug: 'purchase-order-generator',
+    name: 'Purchase Order Generator',
+    tagline: 'Create purchase orders and download PDF.',
+    description:
+      'Free online purchase order generator. Enter buyer and vendor details, add ordered items with quantities and prices, and download a professional PO as a PDF. Runs entirely in your browser — nothing uploaded.',
+    category: 'PDF',
+    keywords: ['purchase order generator', 'po generator', 'create purchase order', 'purchase order template', 'purchase order pdf'],
+    icon: 'M6 2h9l5 5v15H6zM14 2v6h6M9 12h6M9 16h6M9 8h2',
+  },
+  {
+    slug: 'resume-generator',
+    name: 'Resume Generator',
+    tagline: 'Build a clean resume and export to PDF.',
+    description:
+      'Free online resume generator. Enter your experience, education and skills into a clean template, preview it live, and export a print-ready PDF. Your data stays in your browser — nothing is uploaded.',
+    category: 'PDF',
+    keywords: ['resume generator', 'resume builder', 'cv maker', 'create resume online', 'resume pdf generator'],
+    icon: 'M6 2h12v20H6zM9 7h6M9 11h6M9 15h4M9 2v4',
+  },
+  {
+    slug: 'cover-letter-generator',
+    name: 'Cover Letter Generator',
+    tagline: 'Draft a cover letter from a template.',
+    description:
+      'Free online cover letter generator. Fill in your details and the job, pick a tone, and generate a polished cover letter you can edit, copy or print to PDF. Runs entirely in your browser — nothing uploaded.',
+    category: 'PDF',
+    keywords: ['cover letter generator', 'cover letter maker', 'cover letter template', 'write cover letter', 'job application letter generator'],
+    icon: 'M4 5h16v14H4zM4 7l8 6 8-6',
+  },
+  {
+    slug: 'certificate-generator',
+    name: 'Certificate Generator',
+    tagline: 'Design award certificates & download.',
+    description:
+      'Free online certificate generator. Create award, completion and appreciation certificates with a decorative border, recipient name, title and date, and download as a PDF or PNG. Runs in your browser.',
+    category: 'PDF',
+    keywords: ['certificate generator', 'certificate maker', 'award certificate template', 'certificate of completion generator', 'printable certificate'],
+    icon: 'M12 3a5 5 0 1 0 0 10 5 5 0 0 0 0-10ZM8.5 12.5 7 22l5-3 5 3-1.5-9.5',
+  },
+  {
+    slug: 'terms-conditions-generator',
+    name: 'Terms & Conditions Generator',
+    tagline: 'Draft a T&C template for your site.',
+    description:
+      'Free online terms and conditions generator. Answer a few questions about your website or app and generate a customizable terms of service template you can copy or download. A starting point, not legal advice. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['terms and conditions generator', 'terms of service generator', 'tos generator', 't&c template', 'terms of use generator'],
+    icon: 'M6 2h9l5 5v15H6zM14 2v6h6M9 12h6M9 16h6',
+  },
+  {
+    slug: 'privacy-policy-generator',
+    name: 'Privacy Policy Generator',
+    tagline: 'Generate a privacy policy template.',
+    description:
+      'Free online privacy policy generator. Answer questions about the data your site collects and generate a customizable privacy policy template you can copy or download. A starting point, not legal advice. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['privacy policy generator', 'privacy policy maker', 'privacy policy template', 'gdpr privacy policy generator', 'free privacy policy'],
+    icon: 'M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6zM9 12l2 2 4-4',
+  },
+  {
+    slug: 'pdf-generator',
+    name: 'Text to PDF Generator',
+    tagline: 'Turn text into a downloadable PDF.',
+    description:
+      'Free online text to PDF generator. Paste or write text, choose page size, font size and margins, and download a clean multi-page PDF. Built with an in-browser PDF engine — your text is never uploaded.',
+    category: 'PDF',
+    keywords: ['pdf generator', 'text to pdf', 'create pdf online', 'make pdf from text', 'text to pdf converter'],
+    icon: 'M6 2h9l5 5v15H6zM14 2v6h6M9 13h6M9 17h4',
+  },
+
+  // ---- Batch 10: Media ----
+  {
+    slug: 'audio-tone-generator',
+    name: 'Audio Tone Generator',
+    tagline: 'Play & download pure tones by frequency.',
+    description:
+      'Free online audio tone generator. Play pure sine, square, triangle or sawtooth tones at any frequency and volume, useful for testing speakers, tinnitus matching and tuning, and download the tone as a WAV. Runs in your browser.',
+    category: 'Audio & Video',
+    keywords: ['audio tone generator', 'frequency generator', 'sine wave generator', 'test tone generator', 'online tone generator'],
+    icon: 'M3 12h3l3-8 4 16 3-10 2 6h3',
+  },
+  {
+    slug: 'waveform-generator',
+    name: 'Waveform Generator',
+    tagline: 'Render an audio file as a waveform image.',
+    description:
+      'Free online waveform generator. Load an audio file and render its waveform as a clean image you can customize and download as PNG — great for podcasts, music and social posts. Decoded in your browser, never uploaded.',
+    category: 'Audio & Video',
+    keywords: ['waveform generator', 'audio waveform image', 'waveform maker', 'soundwave generator', 'audio to waveform'],
+    icon: 'M2 12h2l2-6 3 12 3-9 2 6 3-4 2 2h3',
+  },
+  {
+    slug: 'spectrogram-generator',
+    name: 'Spectrogram Generator',
+    tagline: 'Visualize audio frequencies over time.',
+    description:
+      'Free online spectrogram generator. Visualize the frequency content of an audio file or your microphone over time as a color spectrogram, and download the image. Analyzed in your browser — nothing is uploaded.',
+    category: 'Audio & Video',
+    keywords: ['spectrogram generator', 'audio spectrogram', 'frequency spectrogram', 'spectrogram maker', 'audio frequency analyzer'],
+    icon: 'M4 4v16h16M7 16v2M11 12v6M15 8v10M19 14v4M7 12a1 1 0 1 0 0 .01M11 8a1 1 0 1 0 0 .01',
+  },
 ];
 
 export const categories: ToolCategory[] = [

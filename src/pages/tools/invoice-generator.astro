@@ -1,0 +1,124 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="invoice-generator">
+  <div class="flex flex-col gap-5">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">From (your business)
+        <textarea id="iv-from" class="field min-h-24 resize-y text-[13px]">Acme Studio
+123 Main St
+Springfield, CA 90000
+hello@acme.example</textarea>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Bill to (client)
+        <textarea id="iv-to" class="field min-h-24 resize-y text-[13px]">Client Co
+456 Oak Ave
+Riverside, NY 10001</textarea>
+      </label>
+    </div>
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Invoice #
+        <input id="iv-number" class="field" value="INV-001" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Date
+        <input id="iv-date" type="date" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Currency
+        <select id="iv-currency" class="field"><option value="$">$ USD</option><option value="€">€ EUR</option><option value="£">£ GBP</option><option value="₹">₹ INR</option></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Tax %
+        <input id="iv-tax" type="number" min="0" max="100" step="0.1" value="0" class="field" />
+      </label>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <span class="text-sm text-ink-subtle">Line items</span>
+        <button id="iv-add" class="btn btn-secondary py-1 text-[13px]">+ Add item</button>
+      </div>
+      <div id="iv-items" class="flex flex-col gap-2"></div>
+    </div>
+
+    <div class="flex items-center justify-between border-t border-hairline pt-4">
+      <span class="text-sm text-ink-subtle">Total</span>
+      <span id="iv-total" class="font-mono text-xl text-ink"></span>
+    </div>
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Notes
+      <input id="iv-notes" class="field" placeholder="Payment due within 30 days. Thank you!" />
+    </label>
+
+    <button id="iv-dl" class="btn btn-primary w-fit">Download PDF</button>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free invoice generator lets you create professional invoices in
+      minutes. Add your business and client details, line items with quantities
+      and prices, and an optional tax rate — the totals update automatically — then
+      download a clean PDF. It's ideal for freelancers and small businesses.
+      Everything is generated in your browser, so your financial details are never
+      uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { buildDocPdf, downloadPdf, subtotal, money, type LineItem } from '../../lib/pdfdoc';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const itemsWrap = $('iv-items')!;
+  let items: LineItem[] = [
+    { description: 'Design services', qty: 10, price: 75 },
+    { description: 'Consulting', qty: 4, price: 120 },
+  ];
+
+  ($('iv-date') as HTMLInputElement).value = new Date().toISOString().slice(0, 10);
+
+  function renderItems() {
+    itemsWrap.innerHTML = items.map((it, i) => `
+      <div class="flex gap-2" data-i="${i}">
+        <input class="iv-desc field flex-1 text-[13px]" placeholder="Description" value="${it.description.replace(/"/g, '&quot;')}" />
+        <input class="iv-qty field w-20 text-[13px]" type="number" min="0" step="1" value="${it.qty}" />
+        <input class="iv-price field w-24 text-[13px]" type="number" min="0" step="0.01" value="${it.price}" />
+        <button class="iv-del btn btn-secondary px-3" title="Remove">×</button>
+      </div>`).join('');
+    itemsWrap.querySelectorAll<HTMLElement>('[data-i]').forEach((row) => {
+      const i = Number(row.dataset.i);
+      row.querySelector('.iv-desc')!.addEventListener('input', (e) => { items[i].description = (e.target as HTMLInputElement).value; total(); });
+      row.querySelector('.iv-qty')!.addEventListener('input', (e) => { items[i].qty = Number((e.target as HTMLInputElement).value) || 0; total(); });
+      row.querySelector('.iv-price')!.addEventListener('input', (e) => { items[i].price = Number((e.target as HTMLInputElement).value) || 0; total(); });
+      row.querySelector('.iv-del')!.addEventListener('click', () => { items.splice(i, 1); renderItems(); total(); });
+    });
+  }
+
+  function total() {
+    const cur = ($('iv-currency') as HTMLSelectElement).value;
+    const tax = Number(($('iv-tax') as HTMLInputElement).value) || 0;
+    const sub = subtotal(items);
+    $('iv-total').textContent = money(sub + sub * (tax / 100), cur);
+  }
+
+  $('iv-add').addEventListener('click', () => { items.push({ description: '', qty: 1, price: 0 }); renderItems(); total(); });
+  ['iv-currency', 'iv-tax'].forEach((id) => $(id).addEventListener('input', total));
+
+  $('iv-dl').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    btn.disabled = true; btn.textContent = 'Generating…';
+    try {
+      const bytes = await buildDocPdf({
+        docType: 'INVOICE',
+        number: ($('iv-number') as HTMLInputElement).value,
+        date: ($('iv-date') as HTMLInputElement).value,
+        fromLabel: 'From', from: ($('iv-from') as HTMLTextAreaElement).value.split('\n'),
+        toLabel: 'Bill To', to: ($('iv-to') as HTMLTextAreaElement).value.split('\n'),
+        items, currency: ($('iv-currency') as HTMLSelectElement).value,
+        taxRate: Number(($('iv-tax') as HTMLInputElement).value) || 0,
+        notes: ($('iv-notes') as HTMLInputElement).value,
+      });
+      downloadPdf(bytes, `${($('iv-number') as HTMLInputElement).value || 'invoice'}.pdf`);
+    } finally { btn.disabled = false; btn.textContent = 'Download PDF'; }
+  });
+
+  renderItems(); total();
+</script>

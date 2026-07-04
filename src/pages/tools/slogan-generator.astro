@@ -1,0 +1,75 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="slogan-generator">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Brand or product name
+      <input id="sl-name" class="field" value="Acme" spellcheck="false" />
+    </label>
+    <div class="flex flex-wrap items-center gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="sl-count" type="number" min="4" max="40" value="12" class="field w-28" />
+      </label>
+      <button id="sl-gen" class="btn btn-primary ml-auto">Generate</button>
+      <button id="sl-copy" class="btn btn-secondary">Copy all</button>
+    </div>
+    <ul id="sl-out" class="flex flex-col gap-2"></ul>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free slogan generator creates catchy taglines and slogans for your
+      brand or product from proven marketing sentence patterns. Enter your name and
+      generate a list of ready-to-riff-on lines — some bold, some playful, some
+      benefit-driven. Use them as-is or as a springboard for your own. Everything
+      runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { shuffle, pick } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const nameEl = $('sl-name') as HTMLInputElement;
+  const countEl = $('sl-count') as HTMLInputElement;
+  const out = $('sl-out')!;
+
+  const T: ((n: string) => string)[] = [
+    (n) => `${n}. Simply better.`,
+    (n) => `Think ${n}.`,
+    (n) => `${n} — where quality meets you.`,
+    (n) => `Powered by ${n}.`,
+    (n) => `Life's better with ${n}.`,
+    (n) => `${n}: made for the moment.`,
+    (n) => `Discover the ${n} difference.`,
+    (n) => `Your world, the ${n} way.`,
+    (n) => `${n}. Ahead of the curve.`,
+    (n) => `Do more with ${n}.`,
+    (n) => `${n} — built to last.`,
+    (n) => `The future is ${n}.`,
+    (n) => `Nothing beats ${n}.`,
+    (n) => `${n}. Every single day.`,
+    (n) => `Rethink everything with ${n}.`,
+    (n) => `${n}: it just works.`,
+  ];
+
+  function generate() {
+    const name = nameEl.value.trim() || 'Acme';
+    const n = Math.max(4, Math.min(40, Number(countEl.value) || 12));
+    const picked = shuffle(T).slice(0, Math.min(n, T.length)).map((f) => f(name));
+    while (picked.length < n) picked.push(pick(T)(name));
+    out.innerHTML = picked.map((s) => `<li class="panel px-4 py-2.5 text-[15px] text-ink">${s}</li>`).join('');
+  }
+
+  [nameEl, countEl].forEach((el) => el.addEventListener('input', generate));
+  $('sl-gen').addEventListener('click', generate);
+  $('sl-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText([...out.querySelectorAll('li')].map((li) => li.textContent).join('\n'));
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  });
+  generate();
+</script>

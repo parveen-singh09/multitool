@@ -1,0 +1,87 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="random-token-generator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Length (chars)
+        <input id="rt-len" type="number" min="8" max="256" value="32" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Encoding
+        <select id="rt-enc" class="field">
+          <option value="hex">hex</option>
+          <option value="base62" selected>base62</option>
+          <option value="base64url">base64url</option>
+          <option value="custom">custom alphabet</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="rt-count" type="number" min="1" max="500" value="5" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Custom alphabet
+        <input id="rt-alpha" class="field font-mono text-[13px]" value="ABCDEFGHJKLMNPQRSTUVWXYZ23456789" spellcheck="false" />
+      </label>
+    </div>
+    <div class="flex flex-wrap items-center gap-4">
+      <button id="rt-gen" class="btn btn-primary ml-auto">Generate</button>
+      <button id="rt-copy" class="btn btn-secondary">Copy all</button>
+    </div>
+    <textarea id="rt-out" class="field min-h-56 resize-y font-mono text-[13px]" readonly aria-label="Generated tokens"></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free random token generator creates secure random tokens at any length
+      and in several encodings — hex, base62, base64url, or your own custom
+      alphabet. Use them for CSRF tokens, session identifiers, reset links, access
+      tokens and unique references. When you pick an encoding the length is exact;
+      the custom alphabet mode draws each character uniformly from the set you
+      provide. All tokens use the Web Crypto API and stay in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { randBytes, randString } from '../../lib/random';
+  import { toHex, toBase62, toBase64Url } from '../../lib/encoding';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const lenEl = $('rt-len') as HTMLInputElement;
+  const encEl = $('rt-enc') as HTMLSelectElement;
+  const countEl = $('rt-count') as HTMLInputElement;
+  const alphaEl = $('rt-alpha') as HTMLInputElement;
+  const out = $('rt-out') as HTMLTextAreaElement;
+
+  function token(len: number): string {
+    if (encEl.value === 'custom') {
+      const ab = alphaEl.value || 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      return randString(len, ab);
+    }
+    // Generate enough bytes then trim to the requested character length.
+    const bytes = randBytes(len);
+    let s = '';
+    if (encEl.value === 'hex') s = toHex(bytes);
+    else if (encEl.value === 'base64url') s = toBase64Url(bytes);
+    else s = toBase62(bytes);
+    return s.slice(0, len);
+  }
+
+  function generate() {
+    const len = Math.max(8, Math.min(256, Number(lenEl.value) || 32));
+    const n = Math.max(1, Math.min(500, Number(countEl.value) || 1));
+    const list: string[] = [];
+    for (let i = 0; i < n; i++) list.push(token(len));
+    out.value = list.join('\n');
+  }
+
+  ['rt-len', 'rt-enc', 'rt-count', 'rt-alpha'].forEach((id) => $(id).addEventListener('input', generate));
+  $('rt-gen').addEventListener('click', generate);
+  $('rt-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  });
+  generate();
+</script>

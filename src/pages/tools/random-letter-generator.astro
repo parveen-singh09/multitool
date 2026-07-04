@@ -1,0 +1,65 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="random-letter-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="rl-count" type="number" min="1" max="500" value="10" class="field w-28" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Case
+        <select id="rl-case" class="field w-36"><option value="upper">UPPERCASE</option><option value="lower">lowercase</option><option value="mixed">Mixed</option></select>
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="rl-unique" type="checkbox" class="accent-[#5e6ad2]" /> No repeats</label>
+      <button id="rl-gen" class="btn btn-primary ml-auto">Generate</button>
+      <button id="rl-copy" class="btn btn-secondary">Copy all</button>
+    </div>
+    <textarea id="rl-out" class="field min-h-56 resize-y font-mono text-[16px] tracking-widest" readonly aria-label="Generated letters"></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free random letter generator picks random letters from A to Z in
+      uppercase, lowercase or mixed case. Turn on "no repeats" to draw each letter
+      at most once. It's great for word games, drawing prompts, teaching the
+      alphabet and picking a random starting letter. Uses your browser's secure
+      random source. Runs entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { randInt, shuffle, ALPHA_UPPER, ALPHA_LOWER } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const out = $('rl-out') as HTMLTextAreaElement;
+
+  function generate() {
+    const n = Math.max(1, Math.min(500, Number(($('rl-count') as HTMLInputElement).value) || 10));
+    const cs = ($('rl-case') as HTMLSelectElement).value;
+    const unique = ($('rl-unique') as HTMLInputElement).checked;
+    const letterAt = (i: number) => {
+      const base = cs === 'lower' ? ALPHA_LOWER : cs === 'mixed' ? (randInt(0, 1) ? ALPHA_UPPER : ALPHA_LOWER) : ALPHA_UPPER;
+      return base[i];
+    };
+    let result: string[];
+    if (unique) {
+      const pool = shuffle(Array.from({ length: 26 }, (_, i) => i)).slice(0, Math.min(n, 26));
+      result = pool.map((i) => letterAt(i));
+    } else {
+      result = Array.from({ length: n }, () => letterAt(randInt(0, 25)));
+    }
+    out.value = result.join(' ');
+  }
+
+  ['rl-count', 'rl-case', 'rl-unique'].forEach((id) => $(id).addEventListener('input', generate));
+  $('rl-gen').addEventListener('click', generate);
+  $('rl-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  });
+  generate();
+</script>

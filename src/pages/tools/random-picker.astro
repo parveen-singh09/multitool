@@ -1,0 +1,116 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="random-picker">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Options (one per line)
+        <textarea id="wp-items" class="field min-h-48 resize-y text-[14px]">Alice
+Bob
+Charlie
+Dana
+Eli
+Farah</textarea>
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="wp-remove" type="checkbox" class="accent-[#5e6ad2]" /> Remove winner after spin</label>
+    </div>
+
+    <div class="flex flex-col items-center gap-4">
+      <div class="relative">
+        <canvas id="wp-canvas" width="360" height="360" class="max-w-full"></canvas>
+        <div class="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-2xl" style="color:#5e6ad2">◀</div>
+      </div>
+      <button id="wp-spin" class="btn btn-primary">Spin</button>
+      <p id="wp-winner" class="text-lg font-semibold text-ink" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free random picker spins a colorful wheel to choose one option from your
+      list at random — perfect for giveaways, picking who goes first, classroom
+      participation and settling friendly arguments. Enter your options, hit spin,
+      and optionally remove the winner so you can keep drawing. The result uses your
+      browser's secure random source. Runs entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { randInt, randFloat } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const canvas = $('wp-canvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+  const itemsEl = $('wp-items') as HTMLTextAreaElement;
+  const winnerEl = $('wp-winner')!;
+  let angle = 0, spinning = false;
+
+  const COLORS = ['#5e6ad2', '#e05299', '#f5a623', '#27a644', '#4a9ee0', '#9b59b6', '#e07a5f', '#3aa99f'];
+
+  function items(): string[] {
+    return itemsEl.value.split('\n').map((s) => s.trim()).filter(Boolean);
+  }
+
+  function draw() {
+    const list = items();
+    const cx = 180, cy = 180, r = 170;
+    ctx.clearRect(0, 0, 360, 360);
+    if (!list.length) return;
+    const seg = (Math.PI * 2) / list.length;
+    for (let i = 0; i < list.length; i++) {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, angle + i * seg, angle + (i + 1) * seg);
+      ctx.closePath();
+      ctx.fillStyle = COLORS[i % COLORS.length];
+      ctx.fill();
+      // Label.
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(angle + i * seg + seg / 2);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#fff';
+      ctx.font = '600 15px Inter, system-ui, sans-serif';
+      ctx.fillText(list[i].slice(0, 16), r - 14, 5);
+      ctx.restore();
+    }
+    ctx.beginPath(); ctx.arc(cx, cy, 24, 0, Math.PI * 2); ctx.fillStyle = '#010102'; ctx.fill();
+  }
+
+  function spin() {
+    const list = items();
+    if (spinning || list.length < 2) return;
+    spinning = true; winnerEl.textContent = '';
+    const target = randFloat() * Math.PI * 2;
+    const total = Math.PI * 2 * randInt(4, 7) + target;
+    const start = angle, t0 = performance.now(), dur = 4000;
+    function frame(now: number) {
+      const t = Math.min(1, (now - t0) / dur);
+      const ease = 1 - Math.pow(1 - t, 3);
+      angle = start + total * ease;
+      draw();
+      if (t < 1) requestAnimationFrame(frame);
+      else {
+        spinning = false;
+        // Pointer at 0 rad (right). Which segment is there?
+        const seg = (Math.PI * 2) / list.length;
+        const norm = ((-angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+        const idx = Math.floor(norm / seg) % list.length;
+        const winner = list[idx];
+        winnerEl.textContent = `🎉 ${winner}`;
+        if (($('wp-remove') as HTMLInputElement).checked) {
+          const remaining = list.filter((_, i) => i !== idx);
+          itemsEl.value = remaining.join('\n');
+          draw();
+        }
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  itemsEl.addEventListener('input', draw);
+  $('wp-spin').addEventListener('click', spin);
+  draw();
+</script>

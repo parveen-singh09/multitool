@@ -1,0 +1,65 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="fake-phone-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Format
+        <select id="fp-fmt" class="field w-40">
+          <option value="us" selected>US</option>
+          <option value="uk">UK</option>
+          <option value="intl">International</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="fp-count" type="number" min="1" max="1000" value="10" class="field w-28" />
+      </label>
+      <button id="fp-gen" class="btn btn-primary ml-auto">Generate</button>
+      <button id="fp-copy" class="btn btn-secondary">Copy all</button>
+    </div>
+    <textarea id="fp-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated phone numbers"></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free fake phone number generator creates random phone numbers in US, UK
+      and international formats for testing forms and validation. The US numbers
+      use the reserved 555-01xx range and the UK numbers use Ofcom's fictional
+      drama range, so they can never dial a real person. Generated locally in your
+      browser — nothing is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { phoneUS, phoneUK, phoneIntl } from '../../lib/fakegen';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const fmtEl = $('fp-fmt') as HTMLSelectElement;
+  const countEl = $('fp-count') as HTMLInputElement;
+  const out = $('fp-out') as HTMLTextAreaElement;
+
+  function one(): string {
+    if (fmtEl.value === 'uk') return phoneUK();
+    if (fmtEl.value === 'intl') return phoneIntl();
+    return phoneUS();
+  }
+
+  function generate() {
+    const n = Math.max(1, Math.min(1000, Number(countEl.value) || 1));
+    const list: string[] = [];
+    for (let i = 0; i < n; i++) list.push(one());
+    out.value = list.join('\n');
+  }
+
+  [fmtEl, countEl].forEach((el) => el.addEventListener('input', generate));
+  $('fp-gen').addEventListener('click', generate);
+  $('fp-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  });
+  generate();
+</script>

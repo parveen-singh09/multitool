@@ -1,0 +1,144 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="certificate-generator">
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <div class="flex flex-col gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Certificate title
+        <input id="ce-title" class="field" value="Certificate of Achievement" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Recipient name
+        <input id="ce-name" class="field" value="Jane Doe" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Description line
+        <input id="ce-desc" class="field" value="has successfully completed the Web Development course" />
+      </label>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Date
+          <input id="ce-date" class="field" value="July 4, 2026" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Signature name
+          <input id="ce-sig" class="field" value="A. Director" />
+        </label>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Accent color
+          <input id="ce-color" type="color" value="#5e6ad2" class="field h-10 cursor-pointer p-1" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Border style
+          <select id="ce-border" class="field"><option value="classic">Classic</option><option value="modern">Modern</option><option value="double">Double line</option></select>
+        </label>
+      </div>
+      <div class="flex gap-2">
+        <button id="ce-png" class="btn btn-primary">Download PNG</button>
+        <button id="ce-pdf" class="btn btn-secondary">Download PDF</button>
+      </div>
+    </div>
+
+    <div class="flex items-start justify-center">
+      <canvas id="ce-canvas" width="1000" height="720" class="w-full rounded-[8px] border border-hairline"></canvas>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free certificate generator designs award, completion and appreciation
+      certificates with a decorative border, the recipient's name, a description,
+      date and signature line. Choose an accent color and border style, preview it
+      live, and download as a print-ready PNG or PDF. Everything is drawn in your
+      browser — nothing is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const canvas = $('ce-canvas') as HTMLCanvasElement;
+  const v = (id: string) => ($(id) as HTMLInputElement | HTMLSelectElement).value;
+
+  function draw() {
+    const W = canvas.width, H = canvas.height;
+    const ctx = canvas.getContext('2d')!;
+    const accent = v('ce-color');
+    const border = v('ce-border');
+    ctx.fillStyle = '#fffdf8'; ctx.fillRect(0, 0, W, H);
+
+    // Border.
+    ctx.strokeStyle = accent;
+    if (border === 'double') {
+      ctx.lineWidth = 6; ctx.strokeRect(24, 24, W - 48, H - 48);
+      ctx.lineWidth = 2; ctx.strokeRect(40, 40, W - 80, H - 80);
+    } else if (border === 'modern') {
+      ctx.lineWidth = 14; ctx.strokeRect(30, 30, W - 60, H - 60);
+    } else {
+      ctx.lineWidth = 4; ctx.strokeRect(28, 28, W - 56, H - 56);
+      ctx.lineWidth = 1; ctx.strokeRect(38, 38, W - 76, H - 76);
+    }
+
+    ctx.textAlign = 'center';
+    // Title.
+    ctx.fillStyle = accent;
+    ctx.font = '700 46px Georgia, serif';
+    ctx.fillText(v('ce-title'), W / 2, 180);
+    // "This certifies that".
+    ctx.fillStyle = '#666';
+    ctx.font = 'italic 20px Georgia, serif';
+    ctx.fillText('This certificate is proudly presented to', W / 2, 250);
+    // Name.
+    ctx.fillStyle = '#111';
+    ctx.font = '700 56px Georgia, serif';
+    ctx.fillText(v('ce-name'), W / 2, 340);
+    // Underline.
+    ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(W / 2 - 250, 360); ctx.lineTo(W / 2 + 250, 360); ctx.stroke();
+    // Description (wrapped).
+    ctx.fillStyle = '#444'; ctx.font = '22px Georgia, serif';
+    wrap(ctx, v('ce-desc'), W - 260).forEach((line, i) => ctx.fillText(line, W / 2, 420 + i * 30));
+    // Date + signature.
+    ctx.fillStyle = '#111'; ctx.font = '20px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(180, 620); ctx.lineTo(400, 620); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(600, 620); ctx.lineTo(820, 620); ctx.stroke();
+    ctx.font = '18px Georgia, serif';
+    ctx.fillText(v('ce-date'), 290, 650); ctx.fillText(v('ce-sig'), 710, 650);
+    ctx.fillStyle = '#888'; ctx.font = '13px Georgia, serif';
+    ctx.fillText('DATE', 290, 672); ctx.fillText('SIGNATURE', 710, 672);
+  }
+
+  function wrap(ctx: CanvasRenderingContext2D, s: string, maxW: number): string[] {
+    const words = s.split(/\s+/); const lines: string[] = []; let line = '';
+    for (const w of words) {
+      const test = line ? line + ' ' + w : w;
+      if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+      else line = test;
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  ['ce-title', 'ce-name', 'ce-desc', 'ce-date', 'ce-sig', 'ce-color', 'ce-border'].forEach((id) => $(id).addEventListener('input', draw));
+
+  $('ce-png').addEventListener('click', () => {
+    const a = document.createElement('a'); a.href = canvas.toDataURL('image/png'); a.download = 'certificate.png'; a.click();
+  });
+  $('ce-pdf').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    btn.disabled = true; btn.textContent = 'Generating…';
+    try {
+      const { PDFDocument } = await import('pdf-lib');
+      const pdf = await PDFDocument.create();
+      const pngBytes = await new Promise<Uint8Array>((res) => canvas.toBlob(async (b) => res(new Uint8Array(await b!.arrayBuffer())), 'image/png'));
+      const png = await pdf.embedPng(pngBytes);
+      const page = pdf.addPage([canvas.width, canvas.height]);
+      page.drawImage(png, { x: 0, y: 0, width: canvas.width, height: canvas.height });
+      const bytes = await pdf.save();
+      const url = URL.createObjectURL(new Blob([bytes.slice()], { type: 'application/pdf' }));
+      const a = document.createElement('a'); a.href = url; a.download = 'certificate.pdf'; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } finally { btn.disabled = false; btn.textContent = 'Download PDF'; }
+  });
+
+  draw();
+</script>

@@ -1,0 +1,120 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="flexbox-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex gap-2">
+      <button id="fx-tab-flex" class="btn btn-primary">Flexbox</button>
+      <button id="fx-tab-grid" class="btn btn-secondary">Grid</button>
+    </div>
+
+    <div id="fx-flex-ctrls" class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">flex-direction
+        <select id="fx-dir" class="field"><option>row</option><option>row-reverse</option><option>column</option><option>column-reverse</option></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">justify-content
+        <select id="fx-justify" class="field"><option>flex-start</option><option>center</option><option>flex-end</option><option>space-between</option><option>space-around</option><option>space-evenly</option></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">align-items
+        <select id="fx-align" class="field"><option>stretch</option><option>flex-start</option><option>center</option><option>flex-end</option><option>baseline</option></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">flex-wrap
+        <select id="fx-wrap" class="field"><option>nowrap</option><option>wrap</option><option>wrap-reverse</option></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">gap: <span id="fx-gapv" class="text-ink">12px</span>
+        <input id="fx-gap" type="range" min="0" max="48" value="12" class="w-full accent-[#5e6ad2]" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Items
+        <input id="fx-items" type="number" min="1" max="12" value="4" class="field" />
+      </label>
+    </div>
+
+    <div id="fx-grid-ctrls" class="hidden grid-cols-2 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Columns
+        <input id="fx-cols" type="number" min="1" max="6" value="3" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">gap: <span id="fx-ggapv" class="text-ink">12px</span>
+        <input id="fx-ggap" type="range" min="0" max="48" value="12" class="w-full accent-[#5e6ad2]" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Items
+        <input id="fx-gitems" type="number" min="1" max="18" value="6" class="field" />
+      </label>
+    </div>
+
+    <div id="fx-preview" class="min-h-40 rounded-[12px] border border-hairline bg-surface-2 p-4"></div>
+
+    <div class="flex items-start gap-2">
+      <code id="fx-css" class="field whitespace-pre-wrap font-mono text-[13px]"></code>
+      <button id="fx-copy" class="btn btn-secondary whitespace-nowrap">Copy</button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free Flexbox and CSS Grid generator lets you experiment with container
+      properties visually. In Flexbox mode, adjust direction, justify-content,
+      align-items, wrap and gap; in Grid mode, set the number of columns and the
+      gap. The preview updates live and the container CSS is ready to copy. It's a
+      fast way to learn and lock in a responsive layout. Runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const preview = $('fx-preview') as HTMLElement;
+  const cssEl = $('fx-css')!;
+  let mode: 'flex' | 'grid' = 'flex';
+
+  function box(i: number): string {
+    return `<div style="background:#5e6ad2;color:#fff;border-radius:8px;padding:16px 20px;font:500 14px sans-serif;text-align:center">${i}</div>`;
+  }
+
+  function update() {
+    let css = '';
+    if (mode === 'flex') {
+      const dir = ($('fx-dir') as HTMLSelectElement).value;
+      const justify = ($('fx-justify') as HTMLSelectElement).value;
+      const align = ($('fx-align') as HTMLSelectElement).value;
+      const wrap = ($('fx-wrap') as HTMLSelectElement).value;
+      const gap = ($('fx-gap') as HTMLInputElement).value;
+      const items = Math.max(1, Math.min(12, Number(($('fx-items') as HTMLInputElement).value) || 4));
+      $('fx-gapv').textContent = `${gap}px`;
+      Object.assign(preview.style, { display: 'flex', flexDirection: dir, justifyContent: justify, alignItems: align, flexWrap: wrap, gap: `${gap}px`, gridTemplateColumns: '' } as any);
+      preview.innerHTML = Array.from({ length: items }, (_, i) => box(i + 1)).join('');
+      css = `display: flex;\nflex-direction: ${dir};\njustify-content: ${justify};\nalign-items: ${align};\nflex-wrap: ${wrap};\ngap: ${gap}px;`;
+    } else {
+      const cols = Math.max(1, Math.min(6, Number(($('fx-cols') as HTMLInputElement).value) || 3));
+      const gap = ($('fx-ggap') as HTMLInputElement).value;
+      const items = Math.max(1, Math.min(18, Number(($('fx-gitems') as HTMLInputElement).value) || 6));
+      $('fx-ggapv').textContent = `${gap}px`;
+      Object.assign(preview.style, { display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: `${gap}px`, flexDirection: '', justifyContent: '', alignItems: '', flexWrap: '' } as any);
+      preview.innerHTML = Array.from({ length: items }, (_, i) => box(i + 1)).join('');
+      css = `display: grid;\ngrid-template-columns: repeat(${cols}, 1fr);\ngap: ${gap}px;`;
+    }
+    cssEl.textContent = `.container {\n  ${css.replace(/\n/g, '\n  ')}\n}`;
+  }
+
+  function setMode(m: 'flex' | 'grid') {
+    mode = m;
+    $('fx-flex-ctrls').classList.toggle('hidden', m !== 'flex');
+    $('fx-flex-ctrls').classList.toggle('grid', m === 'flex');
+    $('fx-grid-ctrls').classList.toggle('hidden', m !== 'grid');
+    $('fx-grid-ctrls').classList.toggle('grid', m === 'grid');
+    ($('fx-tab-flex') as HTMLElement).className = `btn ${m === 'flex' ? 'btn-primary' : 'btn-secondary'}`;
+    ($('fx-tab-grid') as HTMLElement).className = `btn ${m === 'grid' ? 'btn-primary' : 'btn-secondary'}`;
+    update();
+  }
+
+  document.querySelectorAll('#fx-flex-ctrls select, #fx-flex-ctrls input, #fx-grid-ctrls input').forEach((el) => el.addEventListener('input', update));
+  $('fx-tab-flex').addEventListener('click', () => setMode('flex'));
+  $('fx-tab-grid').addEventListener('click', () => setMode('grid'));
+  $('fx-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(cssEl.textContent || '');
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+  setMode('flex');
+</script>

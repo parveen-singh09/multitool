@@ -1,0 +1,79 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="headline-generator">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Topic
+      <input id="hd-topic" class="field" value="remote work" spellcheck="false" />
+    </label>
+    <div class="flex flex-wrap items-center gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="hd-count" type="number" min="3" max="30" value="10" class="field w-28" />
+      </label>
+      <button id="hd-gen" class="btn btn-primary ml-auto">Generate</button>
+      <button id="hd-copy" class="btn btn-secondary">Copy all</button>
+    </div>
+    <ol id="hd-out" class="flex flex-col gap-2"></ol>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free headline generator turns any topic into catchy, click-worthy blog
+      and article headlines using proven copywriting formulas — how-tos, numbered
+      listicles, questions and curiosity hooks. Generate a batch, pick the ones
+      that fit, and refine from there. It's a great way to beat writer's block and
+      test angles. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { shuffle, randInt, pick } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const topicEl = $('hd-topic') as HTMLInputElement;
+  const countEl = $('hd-count') as HTMLInputElement;
+  const out = $('hd-out')!;
+
+  const NUM = () => randInt(5, 21);
+  const YEAR = new Date().getFullYear();
+
+  const TEMPLATES: ((t: string) => string)[] = [
+    (t) => `${NUM()} ${cap(t)} Tips You Wish You Knew Sooner`,
+    (t) => `How to Master ${cap(t)} in ${randInt(7, 60)} Days`,
+    (t) => `The Ultimate Guide to ${cap(t)} (${YEAR} Edition)`,
+    (t) => `Why ${cap(t)} Is More Important Than You Think`,
+    (t) => `${NUM()} Common ${cap(t)} Mistakes and How to Avoid Them`,
+    (t) => `What Nobody Tells You About ${cap(t)}`,
+    (t) => `${cap(t)}: A Beginner's Guide That Actually Works`,
+    (t) => `Stop Wasting Time — Do ${cap(t)} the Right Way`,
+    (t) => `${NUM()} ${cap(t)} Secrets the Experts Swear By`,
+    (t) => `Is Your ${cap(t)} Strategy Holding You Back?`,
+    (t) => `The Surprising Truth About ${cap(t)}`,
+    (t) => `From Zero to Pro: Your ${cap(t)} Roadmap`,
+    (t) => `${NUM()} Tools That Make ${cap(t)} Effortless`,
+    (t) => `How I Improved My ${cap(t)} in One Week`,
+  ];
+
+  const cap = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase());
+
+  function generate() {
+    const topic = topicEl.value.trim() || 'productivity';
+    const n = Math.max(3, Math.min(30, Number(countEl.value) || 10));
+    const picked = shuffle(TEMPLATES).slice(0, Math.min(n, TEMPLATES.length)).map((f) => f(topic));
+    while (picked.length < n) picked.push(pick(TEMPLATES)(topic));
+    out.innerHTML = picked.map((h) => `<li class="panel px-4 py-2.5 text-[15px] text-ink">${h}</li>`).join('');
+  }
+
+  [topicEl, countEl].forEach((el) => el.addEventListener('input', generate));
+  $('hd-gen').addEventListener('click', generate);
+  $('hd-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    const text = [...out.querySelectorAll('li')].map((li) => li.textContent).join('\n');
+    await navigator.clipboard.writeText(text);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  });
+  generate();
+</script>

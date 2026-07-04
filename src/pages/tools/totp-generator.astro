@@ -1,0 +1,135 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="totp-generator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Base32 secret
+        <div class="flex gap-2">
+          <input id="tp-secret" class="field font-mono text-[13px]" spellcheck="false" autocomplete="off" />
+          <button id="tp-new" type="button" class="btn btn-secondary whitespace-nowrap">New</button>
+        </div>
+      </label>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Account
+          <input id="tp-account" class="field" value="user@example.com" spellcheck="false" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Issuer
+          <input id="tp-issuer" class="field" value="ToolCities" spellcheck="false" />
+        </label>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Digits
+          <select id="tp-digits" class="field"><option>6</option><option>8</option></select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Algorithm
+          <select id="tp-alg" class="field"><option value="SHA-1">SHA1</option><option value="SHA-256">SHA256</option><option value="SHA-512">SHA512</option></select>
+        </label>
+      </div>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">otpauth URL
+        <textarea id="tp-url" class="field min-h-20 resize-y font-mono text-[12px] break-all" readonly></textarea>
+      </label>
+    </div>
+
+    <div class="flex flex-col items-center gap-4">
+      <div class="panel panel-lift flex w-full flex-col items-center gap-2 p-6">
+        <span class="text-sm text-ink-subtle">Current code</span>
+        <span id="tp-code" class="font-mono text-4xl tracking-[0.2em] text-ink">------</span>
+        <div class="h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
+          <div id="tp-bar" class="h-full bg-[#5e6ad2] transition-[width] duration-1000 ease-linear" style="width:100%"></div>
+        </div>
+        <span id="tp-remain" class="text-[13px] text-ink-tertiary"></span>
+      </div>
+      <div class="flex w-full items-center justify-center rounded-[8px] border border-hairline bg-white p-4">
+        <canvas id="tp-qr" class="max-w-full" aria-label="otpauth QR code"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free TOTP and 2FA code generator creates a Base32 shared secret and
+      shows the live time-based one-time password (TOTP) that authenticator apps
+      like Google Authenticator and Authy produce. Scan the otpauth QR code to add
+      the secret to your app, then confirm the 6-digit code here matches. The code
+      refreshes every 30 seconds. All computation — HMAC-based per RFC 6238 —
+      happens in your browser, so the secret is never uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import QRCode from 'qrcode';
+  import { randBytes } from '../../lib/random';
+  import { toBase32, fromBase32 } from '../../lib/encoding';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const secretEl = $('tp-secret') as HTMLInputElement;
+  const accountEl = $('tp-account') as HTMLInputElement;
+  const issuerEl = $('tp-issuer') as HTMLInputElement;
+  const digitsEl = $('tp-digits') as HTMLSelectElement;
+  const algEl = $('tp-alg') as HTMLSelectElement;
+  const urlEl = $('tp-url') as HTMLTextAreaElement;
+  const codeEl = $('tp-code')!;
+  const barEl = $('tp-bar') as HTMLElement;
+  const remainEl = $('tp-remain')!;
+  const qr = $('tp-qr') as HTMLCanvasElement;
+
+  const PERIOD = 30;
+
+  async function hotp(secret: Uint8Array, counter: number, digits: number, hash: string): Promise<string> {
+    const buf = new ArrayBuffer(8);
+    const view = new DataView(buf);
+    // 64-bit big-endian counter (high word is 0 for realistic time ranges).
+    view.setUint32(0, Math.floor(counter / 0x100000000));
+    view.setUint32(4, counter >>> 0);
+    const key = await crypto.subtle.importKey('raw', secret, { name: 'HMAC', hash }, false, ['sign']);
+    const hmac = new Uint8Array(await crypto.subtle.sign('HMAC', key, buf));
+    const offset = hmac[hmac.length - 1] & 0x0f;
+    const bin = ((hmac[offset] & 0x7f) << 24) | (hmac[offset + 1] << 16) | (hmac[offset + 2] << 8) | hmac[offset + 3];
+    return String(bin % 10 ** digits).padStart(digits, '0');
+  }
+
+  function otpauthUrl(): string {
+    const label = encodeURIComponent(`${issuerEl.value}:${accountEl.value}`);
+    const params = new URLSearchParams({
+      secret: secretEl.value,
+      issuer: issuerEl.value,
+      algorithm: algEl.value.replace('-', ''),
+      digits: digitsEl.value,
+      period: String(PERIOD),
+    });
+    return `otpauth://totp/${label}?${params.toString()}`;
+  }
+
+  async function refreshMeta() {
+    urlEl.value = otpauthUrl();
+    try { await QRCode.toCanvas(qr, urlEl.value, { width: 180, margin: 1 }); } catch {}
+  }
+
+  async function tick() {
+    let secret: Uint8Array;
+    try { secret = fromBase32(secretEl.value); } catch { codeEl.textContent = 'ERROR'; return; }
+    if (!secret.length) { codeEl.textContent = '------'; return; }
+    const now = Date.now() / 1000;
+    const counter = Math.floor(now / PERIOD);
+    const digits = Number(digitsEl.value);
+    codeEl.textContent = await hotp(secret, counter, digits, algEl.value);
+    const remain = PERIOD - Math.floor(now % PERIOD);
+    remainEl.textContent = `refreshes in ${remain}s`;
+    barEl.style.width = `${(remain / PERIOD) * 100}%`;
+  }
+
+  function newSecret() {
+    secretEl.value = toBase32(randBytes(20)); // 160-bit secret
+    refreshMeta();
+    tick();
+  }
+
+  [secretEl, accountEl, issuerEl, digitsEl, algEl].forEach((el) => el.addEventListener('input', () => { refreshMeta(); tick(); }));
+  $('tp-new').addEventListener('click', newSecret);
+
+  newSecret();
+  setInterval(tick, 1000);
+</script>

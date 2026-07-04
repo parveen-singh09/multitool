@@ -1,0 +1,58 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="dice-roller">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Dice type
+        <select id="dr-sides" class="field w-28"><option>4</option><option>6</option><option>8</option><option>10</option><option>12</option><option selected>20</option><option>100</option></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="dr-count" type="number" min="1" max="20" value="2" class="field w-24" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Modifier
+        <input id="dr-mod" type="number" value="0" class="field w-24" />
+      </label>
+      <button id="dr-roll" class="btn btn-primary ml-auto">Roll</button>
+    </div>
+    <div id="dr-dice" class="flex flex-wrap gap-3"></div>
+    <div class="panel panel-lift flex items-center justify-between p-5">
+      <span class="text-sm text-ink-subtle">Total</span>
+      <span id="dr-total" class="font-mono text-3xl text-ink">0</span>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free dice roller rolls any number of dice from D4 up to D20, plus a
+      percentile D100, with an optional modifier and a running total — everything a
+      board game or tabletop RPG needs when the physical dice have gone missing.
+      Each roll uses your browser's secure random source for fair, unbiased
+      results. Runs entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { randInt } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const diceEl = $('dr-dice')!;
+  const totalEl = $('dr-total')!;
+
+  function roll() {
+    const sides = Number(($('dr-sides') as HTMLSelectElement).value);
+    const count = Math.max(1, Math.min(20, Number(($('dr-count') as HTMLInputElement).value) || 1));
+    const mod = Number(($('dr-mod') as HTMLInputElement).value) || 0;
+    let sum = 0;
+    const rolls: number[] = [];
+    for (let i = 0; i < count; i++) { const r = randInt(1, sides); rolls.push(r); sum += r; }
+    diceEl.innerHTML = rolls.map((r) => `<div class="flex h-16 w-16 items-center justify-center rounded-[12px] border border-hairline bg-surface-2 font-mono text-2xl text-ink">${r}</div>`).join('');
+    totalEl.textContent = String(sum + mod) + (mod ? ` (${sum}${mod > 0 ? '+' : ''}${mod})` : '');
+  }
+
+  ['dr-sides', 'dr-count', 'dr-mod'].forEach((id) => $(id).addEventListener('input', roll));
+  $('dr-roll').addEventListener('click', roll);
+  roll();
+</script>

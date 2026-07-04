@@ -1,0 +1,97 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="banner-generator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Size preset
+        <select id="bn-size" class="field">
+          <option value="1500,500">Twitter/X header (1500×500)</option>
+          <option value="1200,630">Open Graph / Facebook (1200×630)</option>
+          <option value="1584,396">LinkedIn cover (1584×396)</option>
+          <option value="2560,1440">YouTube channel art (2560×1440)</option>
+          <option value="1280,720">Web banner (1280×720)</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Heading
+        <input id="bn-title" class="field" value="Your Brand" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Subtext
+        <input id="bn-sub" class="field" value="Tagline goes here" />
+      </label>
+      <div class="grid grid-cols-3 gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Color A
+          <input id="bn-c1" type="color" value="#5e6ad2" class="field h-10 cursor-pointer p-1" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Color B
+          <input id="bn-c2" type="color" value="#010102" class="field h-10 cursor-pointer p-1" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Text
+          <input id="bn-fg" type="color" value="#ffffff" class="field h-10 cursor-pointer p-1" />
+        </label>
+      </div>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Background
+        <select id="bn-bgtype" class="field"><option value="gradient">Gradient</option><option value="solid">Solid (Color A)</option></select>
+      </label>
+    </div>
+
+    <div class="flex flex-col items-center gap-4">
+      <div class="flex w-full items-center justify-center overflow-auto rounded-[12px] border border-hairline bg-surface-2 p-4">
+        <canvas id="bn-canvas" class="max-w-full"></canvas>
+      </div>
+      <button id="bn-dl" class="btn btn-primary">Download PNG</button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free banner generator creates social media and web banners at the exact
+      preset sizes each platform expects — Twitter/X, Facebook, LinkedIn, YouTube
+      and a general web banner. Add a heading and subtext over a gradient or solid
+      background in your brand colors, then download a pixel-perfect PNG.
+      Everything is rendered in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const canvas = $('bn-canvas') as HTMLCanvasElement;
+
+  function draw() {
+    const [w, h] = ($('bn-size') as HTMLSelectElement).value.split(',').map(Number);
+    const c1 = ($('bn-c1') as HTMLInputElement).value;
+    const c2 = ($('bn-c2') as HTMLInputElement).value;
+    const fg = ($('bn-fg') as HTMLInputElement).value;
+    const title = ($('bn-title') as HTMLInputElement).value;
+    const sub = ($('bn-sub') as HTMLInputElement).value;
+    const bgtype = ($('bn-bgtype') as HTMLSelectElement).value;
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d')!;
+    if (bgtype === 'gradient') {
+      const g = ctx.createLinearGradient(0, 0, w, h);
+      g.addColorStop(0, c1); g.addColorStop(1, c2);
+      ctx.fillStyle = g;
+    } else { ctx.fillStyle = c1; }
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = fg;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const ts = h * 0.22;
+    ctx.font = `700 ${ts}px Inter, system-ui, sans-serif`;
+    ctx.fillText(title, w / 2, h / 2 - (sub ? ts * 0.35 : 0));
+    if (sub) {
+      ctx.font = `400 ${ts * 0.42}px Inter, system-ui, sans-serif`;
+      ctx.globalAlpha = 0.9;
+      ctx.fillText(sub, w / 2, h / 2 + ts * 0.55);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  ['bn-size', 'bn-title', 'bn-sub', 'bn-c1', 'bn-c2', 'bn-fg', 'bn-bgtype'].forEach((id) => $(id).addEventListener('input', draw));
+  $('bn-dl').addEventListener('click', () => {
+    const a = document.createElement('a'); a.href = canvas.toDataURL('image/png'); a.download = 'banner.png'; a.click();
+  });
+  draw();
+</script>

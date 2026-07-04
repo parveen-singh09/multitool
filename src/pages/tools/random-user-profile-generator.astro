@@ -1,0 +1,73 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="random-user-profile-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="ru-count" type="number" min="1" max="200" value="3" class="field w-28" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Gender
+        <select id="ru-sex" class="field w-32"><option value="any" selected>Any</option><option value="male">Male</option><option value="female">Female</option></select>
+      </label>
+      <button id="ru-gen" class="btn btn-primary ml-auto">Generate</button>
+      <button id="ru-copy" class="btn btn-secondary">Copy JSON</button>
+    </div>
+    <textarea id="ru-out" class="field min-h-80 resize-y font-mono text-[13px]" readonly aria-label="Generated profiles as JSON"></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free random user profile generator creates complete fake user records —
+      name, username, email, phone, full address, birthday and avatar initials —
+      and outputs them as clean JSON you can drop straight into tests, seeds and
+      API mocks. Every field is fictional and uses reserved test ranges where
+      needed. Generated entirely in your browser, so nothing is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { firstName, lastName, email, phoneUS, username, address, birthDate, type Sex } from '../../lib/fakegen';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const countEl = $('ru-count') as HTMLInputElement;
+  const sexEl = $('ru-sex') as HTMLSelectElement;
+  const out = $('ru-out') as HTMLTextAreaElement;
+
+  function profile(sex: Sex) {
+    const first = firstName(sex);
+    const last = lastName();
+    const a = address();
+    return {
+      firstName: first,
+      lastName: last,
+      username: username(),
+      email: email(first, last),
+      phone: phoneUS(),
+      birthday: birthDate(),
+      initials: (first[0] + last[0]).toUpperCase(),
+      address: {
+        street: a.street, city: a.city, state: a.stateAbbr, zip: a.zip, country: a.country,
+      },
+    };
+  }
+
+  function generate() {
+    const n = Math.max(1, Math.min(200, Number(countEl.value) || 1));
+    const list = [];
+    for (let i = 0; i < n; i++) list.push(profile(sexEl.value as Sex));
+    out.value = JSON.stringify(list, null, 2);
+  }
+
+  [countEl, sexEl].forEach((el) => el.addEventListener('input', generate));
+  $('ru-gen').addEventListener('click', generate);
+  $('ru-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy JSON'), 1500);
+  });
+  generate();
+</script>

@@ -1,0 +1,65 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="coin-flip">
+  <div class="flex flex-col items-center gap-6">
+    <div id="cf-coin" class="flex h-40 w-40 items-center justify-center rounded-full border-4 border-[#5e6ad2] bg-surface-2 text-2xl font-semibold text-ink">—</div>
+    <div class="flex flex-wrap items-end justify-center gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Flip how many
+        <input id="cf-count" type="number" min="1" max="100" value="1" class="field w-28" />
+      </label>
+      <button id="cf-flip" class="btn btn-primary">Flip</button>
+      <button id="cf-reset" class="btn btn-secondary">Reset stats</button>
+    </div>
+    <div class="flex gap-8 text-center">
+      <div><div id="cf-heads" class="font-mono text-2xl text-ink">0</div><div class="text-[13px] text-ink-subtle">Heads</div></div>
+      <div><div id="cf-tails" class="font-mono text-2xl text-ink">0</div><div class="text-[13px] text-ink-subtle">Tails</div></div>
+      <div><div id="cf-total" class="font-mono text-2xl text-ink">0</div><div class="text-[13px] text-ink-subtle">Total</div></div>
+    </div>
+    <p id="cf-log" class="max-w-md break-words text-center font-mono text-[13px] text-ink-tertiary"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free coin flip tool tosses a fair virtual coin for heads or tails — a
+      quick, unbiased way to settle a decision or start a game. Flip one at a time
+      or several at once, and watch the running heads/tails tally build up. Each
+      flip uses your browser's secure random source, so it's genuinely 50/50. Runs
+      in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { randInt } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const coin = $('cf-coin')!;
+  let heads = 0, tails = 0;
+  const recent: string[] = [];
+
+  function flip() {
+    const n = Math.max(1, Math.min(100, Number(($('cf-count') as HTMLInputElement).value) || 1));
+    let last = '';
+    for (let i = 0; i < n; i++) {
+      const h = randInt(0, 1) === 0;
+      if (h) heads++; else tails++;
+      last = h ? 'Heads' : 'Tails';
+      recent.unshift(h ? 'H' : 'T');
+    }
+    recent.splice(60);
+    coin.textContent = n === 1 ? last : `${n} flips`;
+    $('cf-heads').textContent = String(heads);
+    $('cf-tails').textContent = String(tails);
+    $('cf-total').textContent = String(heads + tails);
+    $('cf-log').textContent = recent.join(' ');
+  }
+
+  $('cf-flip').addEventListener('click', flip);
+  $('cf-reset').addEventListener('click', () => {
+    heads = 0; tails = 0; recent.length = 0;
+    ['cf-heads', 'cf-tails', 'cf-total'].forEach((id) => ($(id).textContent = '0'));
+    $('cf-log').textContent = ''; coin.textContent = '—';
+  });
+</script>

@@ -1,0 +1,83 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="terms-conditions-generator">
+  <div class="flex flex-col gap-4">
+    <div class="panel flex items-start gap-3 p-4">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0 text-ink-subtle" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM12 8v5M12 16h.01"/></svg>
+      <p class="text-[13px] leading-relaxed text-ink-subtle">This produces a <strong class="text-ink">starting-point template</strong>, not legal advice. Have a qualified professional review terms before you publish them.</p>
+    </div>
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Company / site name<input id="tc-name" class="field" value="Acme" /></label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Website URL<input id="tc-url" class="field" value="https://acme.example" /></label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Governing country/state<input id="tc-law" class="field" value="California, USA" /></label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Contact email<input id="tc-email" class="field" value="legal@acme.example" /></label>
+    </div>
+    <div class="flex flex-wrap gap-4">
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="tc-accounts" type="checkbox" class="accent-[#5e6ad2]" checked /> User accounts</label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="tc-payments" type="checkbox" class="accent-[#5e6ad2]" /> Paid services</label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="tc-ugc" type="checkbox" class="accent-[#5e6ad2]" /> User content</label>
+    </div>
+    <div class="flex gap-2">
+      <button id="tc-gen" class="btn btn-primary">Generate</button>
+      <button id="tc-copy" class="btn btn-secondary">Copy</button>
+      <button id="tc-dl" class="btn btn-secondary">Download .txt</button>
+    </div>
+    <textarea id="tc-out" class="field min-h-96 resize-y text-[13px] leading-relaxed" readonly></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free terms and conditions generator builds a customizable terms of
+      service template for your website or app. Answer a few questions — your
+      company name, jurisdiction, and whether you offer accounts, paid services or
+      user content — and it assembles the relevant clauses. It's a solid starting
+      point, but not a substitute for legal advice. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const out = $('tc-out') as HTMLTextAreaElement;
+  const v = (id: string) => ($(id) as HTMLInputElement).value;
+  const on = (id: string) => ($(id) as HTMLInputElement).checked;
+
+  function generate() {
+    const name = v('tc-name') || 'the Company';
+    const url = v('tc-url') || 'our website';
+    const law = v('tc-law') || 'your jurisdiction';
+    const email = v('tc-email') || 'contact us';
+    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const s: string[] = [];
+    let n = 1;
+    s.push(`TERMS AND CONDITIONS\n\nLast updated: ${today}\n`);
+    s.push(`${n++}. Agreement to Terms\nBy accessing ${url} ("the Service"), operated by ${name}, you agree to be bound by these Terms and Conditions. If you disagree with any part, you may not access the Service.`);
+    s.push(`${n++}. Use of the Service\nYou agree to use the Service only for lawful purposes and in a way that does not infringe the rights of others or restrict their use of the Service.`);
+    if (on('tc-accounts')) s.push(`${n++}. User Accounts\nWhen you create an account, you must provide accurate information and are responsible for safeguarding your password and for all activity under your account.`);
+    if (on('tc-payments')) s.push(`${n++}. Purchases and Payment\nIf you purchase a paid service, you agree to provide current, complete and accurate payment information. Fees are non-refundable except as required by law or expressly stated.`);
+    if (on('tc-ugc')) s.push(`${n++}. User Content\nYou retain ownership of content you submit, but grant ${name} a worldwide, non-exclusive license to use, display and distribute it in connection with the Service. You are solely responsible for the content you post.`);
+    s.push(`${n++}. Intellectual Property\nThe Service and its original content, features and functionality are and will remain the exclusive property of ${name}.`);
+    s.push(`${n++}. Termination\nWe may terminate or suspend access to the Service immediately, without prior notice, for any breach of these Terms.`);
+    s.push(`${n++}. Limitation of Liability\nIn no event shall ${name} be liable for any indirect, incidental or consequential damages arising from your use of the Service.`);
+    s.push(`${n++}. Governing Law\nThese Terms shall be governed by the laws of ${law}, without regard to conflict of law provisions.`);
+    s.push(`${n++}. Changes to These Terms\nWe reserve the right to modify these Terms at any time. Continued use of the Service after changes constitutes acceptance.`);
+    s.push(`${n++}. Contact\nQuestions about these Terms can be sent to ${email}.`);
+    out.value = s.join('\n\n');
+  }
+
+  ['tc-name', 'tc-url', 'tc-law', 'tc-email', 'tc-accounts', 'tc-payments', 'tc-ugc'].forEach((id) => $(id).addEventListener('input', generate));
+  $('tc-gen').addEventListener('click', generate);
+  $('tc-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!'; setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+  $('tc-dl').addEventListener('click', () => {
+    const url = URL.createObjectURL(new Blob([out.value], { type: 'text/plain' }));
+    const a = document.createElement('a'); a.href = url; a.download = 'terms-and-conditions.txt'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  generate();
+</script>

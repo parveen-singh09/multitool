@@ -1,0 +1,80 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="serial-number-generator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Prefix
+        <input id="sn-prefix" class="field font-mono" placeholder="SN-" value="SN-" spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Suffix
+        <input id="sn-suffix" class="field font-mono" placeholder="" spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Digits
+        <input id="sn-len" type="number" min="1" max="12" value="6" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="sn-count" type="number" min="1" max="1000" value="10" class="field" />
+      </label>
+    </div>
+    <div class="flex flex-wrap items-center gap-4">
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="sn-mode" type="checkbox" class="accent-[#5e6ad2]" checked /> Sequential (unchecked = random)
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        Start at <input id="sn-start" type="number" min="0" value="1" class="field w-24" />
+      </label>
+      <button id="sn-gen" class="btn btn-primary ml-auto">Generate</button>
+      <button id="sn-copy" class="btn btn-secondary">Copy all</button>
+    </div>
+    <textarea id="sn-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated serial numbers"></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free serial number generator creates serial numbers in bulk with a
+      custom prefix, suffix and zero-padded number. Choose sequential mode to
+      count up from a starting value, or random mode for unpredictable numbers.
+      Perfect for products, tickets, assets and test data. Everything is
+      generated in your browser and never uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { randInt } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const prefix = $('sn-prefix') as HTMLInputElement;
+  const suffix = $('sn-suffix') as HTMLInputElement;
+  const lenEl = $('sn-len') as HTMLInputElement;
+  const countEl = $('sn-count') as HTMLInputElement;
+  const modeEl = $('sn-mode') as HTMLInputElement;
+  const startEl = $('sn-start') as HTMLInputElement;
+  const out = $('sn-out') as HTMLTextAreaElement;
+
+  function generate() {
+    const len = Math.max(1, Math.min(12, Number(lenEl.value) || 1));
+    const n = Math.max(1, Math.min(1000, Number(countEl.value) || 1));
+    const seq = modeEl.checked;
+    const start = Number(startEl.value) || 0;
+    const max = Math.pow(10, len);
+    const list: string[] = [];
+    for (let i = 0; i < n; i++) {
+      const num = seq ? (start + i) % max : randInt(0, max - 1);
+      list.push(prefix.value + String(num).padStart(len, '0') + suffix.value);
+    }
+    out.value = list.join('\n');
+  }
+
+  ['sn-prefix', 'sn-suffix', 'sn-len', 'sn-count', 'sn-mode', 'sn-start'].forEach((id) => $(id).addEventListener('input', generate));
+  $('sn-gen').addEventListener('click', generate);
+  $('sn-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  });
+  generate();
+</script>

@@ -1,0 +1,113 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+
+const keyframeLib = `fade|0%{opacity:0}100%{opacity:1}
+slide-up|0%{transform:translateY(30px);opacity:0}100%{transform:translateY(0);opacity:1}
+slide-left|0%{transform:translateX(30px);opacity:0}100%{transform:translateX(0);opacity:1}
+bounce|0%,100%{transform:translateY(0)}50%{transform:translateY(-30px)}
+pulse|0%,100%{transform:scale(1)}50%{transform:scale(1.15)}
+spin|0%{transform:rotate(0)}100%{transform:rotate(360deg)}
+shake|0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}
+flip|0%{transform:perspective(400px) rotateY(0)}100%{transform:perspective(400px) rotateY(360deg)}`;
+---
+
+<ToolLayout slug="css-animation-generator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Effect
+        <select id="an-effect" class="field">
+          <option value="fade">Fade in</option>
+          <option value="slide-up">Slide up</option>
+          <option value="slide-left">Slide left</option>
+          <option value="bounce">Bounce</option>
+          <option value="pulse">Pulse</option>
+          <option value="spin">Spin</option>
+          <option value="shake">Shake</option>
+          <option value="flip">Flip</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Duration: <span id="an-dv" class="text-ink">1s</span>
+        <input id="an-dur" type="range" min="100" max="4000" step="100" value="1000" class="w-full accent-[#5e6ad2]" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Delay: <span id="an-delayv" class="text-ink">0s</span>
+        <input id="an-delay" type="range" min="0" max="3000" step="100" value="0" class="w-full accent-[#5e6ad2]" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Timing function
+        <select id="an-timing" class="field"><option>ease</option><option>ease-in</option><option>ease-out</option><option>ease-in-out</option><option>linear</option><option value="cubic-bezier(.68,-.55,.27,1.55)">bounce (cubic-bezier)</option></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Iterations
+        <select id="an-iter" class="field"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="infinite" selected>infinite</option></select>
+      </label>
+      <button id="an-replay" class="btn btn-secondary w-fit">Replay</button>
+    </div>
+
+    <div class="flex flex-col gap-4">
+      <div class="flex min-h-56 items-center justify-center overflow-hidden rounded-[12px] border border-hairline bg-surface-2 p-8">
+        <div id="an-box" class="flex h-24 w-24 items-center justify-center rounded-[12px] bg-[#5e6ad2] text-sm font-medium text-white">Demo</div>
+      </div>
+      <div class="flex items-start gap-2">
+        <code id="an-css" class="field whitespace-pre-wrap font-mono text-[12px]"></code>
+        <button id="an-copy" class="btn btn-secondary whitespace-nowrap">Copy</button>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free CSS animation generator turns common motion effects — fade, slide,
+      bounce, pulse, spin, shake and flip — into ready-to-use
+      <code class="font-mono text-ink">@keyframes</code> and the
+      <code class="font-mono text-ink">animation</code> shorthand. Adjust
+      duration, delay, timing function and iteration count and watch the preview
+      update live. Copy the CSS straight into your stylesheet. Runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script is:inline define:vars={{ keyframeLib }}>
+  window.__kf = Object.fromEntries(keyframeLib.split('\n').map((l) => {
+    const [name, body] = l.split('|');
+    return [name, body];
+  }));
+</script>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const box = $('an-box') as HTMLElement;
+  const cssEl = $('an-css')!;
+  const kf = (window as any).__kf as Record<string, string>;
+  const ids = ['an-effect', 'an-dur', 'an-delay', 'an-timing', 'an-iter'];
+
+  let styleTag: HTMLStyleElement;
+
+  function update() {
+    const effect = ($('an-effect') as HTMLSelectElement).value;
+    const dur = Number(($('an-dur') as HTMLInputElement).value) / 1000;
+    const delay = Number(($('an-delay') as HTMLInputElement).value) / 1000;
+    const timing = ($('an-timing') as HTMLSelectElement).value;
+    const iter = ($('an-iter') as HTMLSelectElement).value;
+    $('an-dv').textContent = `${dur}s`; $('an-delayv').textContent = `${delay}s`;
+
+    const kfBody = kf[effect];
+    const keyframes = `@keyframes ${effect} {\n  ${kfBody.replace(/}/g, '}\n  ').trim()}\n}`;
+    const anim = `animation: ${effect} ${dur}s ${timing} ${delay}s ${iter};`;
+
+    if (!styleTag) { styleTag = document.createElement('style'); document.head.appendChild(styleTag); }
+    styleTag.textContent = keyframes;
+    box.style.animation = 'none';
+    void box.offsetWidth; // reflow to restart
+    box.style.animation = `${effect} ${dur}s ${timing} ${delay}s ${iter}`;
+
+    cssEl.textContent = `${keyframes}\n\n.element {\n  ${anim}\n}`;
+  }
+
+  ids.forEach((id) => $(id).addEventListener('input', update));
+  $('an-replay').addEventListener('click', update);
+  $('an-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(cssEl.textContent || '');
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+  update();
+</script>

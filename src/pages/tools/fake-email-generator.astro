@@ -1,0 +1,51 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="fake-email-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="fe-count" type="number" min="1" max="1000" value="10" class="field w-28" />
+      </label>
+      <button id="fe-gen" class="btn btn-primary ml-auto">Generate</button>
+      <button id="fe-copy" class="btn btn-secondary">Copy all</button>
+    </div>
+    <textarea id="fe-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated emails"></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free fake email generator creates random email addresses derived from
+      names, using example and test domains that will never deliver mail. They're
+      ideal for testing signup forms, seeding databases and building sample
+      mailing lists without touching a real inbox. Generated locally in your
+      browser — nothing is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { firstName, lastName, email } from '../../lib/fakegen';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const countEl = $('fe-count') as HTMLInputElement;
+  const out = $('fe-out') as HTMLTextAreaElement;
+
+  function generate() {
+    const n = Math.max(1, Math.min(1000, Number(countEl.value) || 1));
+    const list: string[] = [];
+    for (let i = 0; i < n; i++) list.push(email(firstName(), lastName()));
+    out.value = list.join('\n');
+  }
+
+  countEl.addEventListener('input', generate);
+  $('fe-gen').addEventListener('click', generate);
+  $('fe-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  });
+  generate();
+</script>

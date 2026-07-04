@@ -1,0 +1,59 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="imei-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        How many
+        <input id="im-count" type="number" min="1" max="500" value="10" class="field w-28" />
+      </label>
+      <button id="im-gen" class="btn btn-primary ml-auto">Generate</button>
+      <button id="im-copy" class="btn btn-secondary">Copy all</button>
+    </div>
+    <textarea id="im-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated IMEI numbers"></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free IMEI number generator creates 15-digit IMEI numbers that pass the
+      Luhn checksum used to validate real device identifiers. It's built for app
+      developers and QA testers who need syntactically valid sample IMEIs — these
+      are randomly generated and do not correspond to any real phone or device.
+      Everything is generated locally in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { luhnCheckDigit, randInt } from '../../lib/random';
+
+  const countEl = document.getElementById('im-count') as HTMLInputElement;
+  const out = document.getElementById('im-out') as HTMLTextAreaElement;
+
+  // A handful of real Reporting Body Identifiers to make TACs look plausible.
+  const RBI = ['01', '35', '86', '99', '10', '44'];
+
+  function imei(): string {
+    let body = RBI[randInt(0, RBI.length - 1)];
+    while (body.length < 14) body += randInt(0, 9);
+    return body + luhnCheckDigit(body);
+  }
+
+  function generate() {
+    const n = Math.max(1, Math.min(500, Number(countEl.value) || 1));
+    const list: string[] = [];
+    for (let i = 0; i < n; i++) list.push(imei());
+    out.value = list.join('\n');
+  }
+
+  document.getElementById('im-gen')!.addEventListener('click', generate);
+  document.getElementById('im-copy')!.addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  });
+  generate();
+</script>

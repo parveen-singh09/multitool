@@ -1,0 +1,76 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="gitignore-generator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-3">
+      <fieldset class="grid grid-cols-2 gap-x-4 gap-y-2">
+        <legend class="w-full text-[12px] uppercase tracking-wide text-ink-tertiary">Languages, frameworks & tools</legend>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input class="gi-r accent-[#5e6ad2]" type="checkbox" value="node" checked /> Node</label>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input class="gi-r accent-[#5e6ad2]" type="checkbox" value="python" /> Python</label>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input class="gi-r accent-[#5e6ad2]" type="checkbox" value="java" /> Java</label>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input class="gi-r accent-[#5e6ad2]" type="checkbox" value="macos" checked /> macOS</label>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input class="gi-r accent-[#5e6ad2]" type="checkbox" value="windows" /> Windows</label>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input class="gi-r accent-[#5e6ad2]" type="checkbox" value="vscode" /> VS Code</label>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input class="gi-r accent-[#5e6ad2]" type="checkbox" value="jetbrains" /> JetBrains</label>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input class="gi-r accent-[#5e6ad2]" type="checkbox" value="env" checked /> Env files</label>
+      </fieldset>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <label class="text-sm text-ink-subtle">.gitignore</label>
+      <textarea id="gi-out" class="field min-h-72 resize-y font-mono text-[12px]" readonly></textarea>
+      <div class="flex gap-2">
+        <button id="gi-copy" class="btn btn-secondary">Copy</button>
+        <button id="gi-dl" class="btn btn-secondary">Download</button>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free .gitignore generator builds a combined
+      <code class="font-mono text-ink">.gitignore</code> from the languages,
+      frameworks and tools you select — Node, Python, Java, macOS, Windows, VS
+      Code, JetBrains and environment files. It keeps build artifacts, dependency
+      folders, OS clutter and secrets out of your repository. Copy or download the
+      result. Generated in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const out = $('gi-out') as HTMLTextAreaElement;
+
+  const BLOCKS: Record<string, { title: string; body: string }> = {
+    node: { title: 'Node', body: 'node_modules/\nnpm-debug.log*\nyarn-error.log*\ndist/\n.cache/\ncoverage/' },
+    python: { title: 'Python', body: '__pycache__/\n*.py[cod]\n.venv/\nvenv/\n*.egg-info/\n.pytest_cache/\n.mypy_cache/' },
+    java: { title: 'Java', body: '*.class\ntarget/\n*.jar\n*.war\n.gradle/\nbuild/' },
+    macos: { title: 'macOS', body: '.DS_Store\n.AppleDouble\n.LSOverride\n._*' },
+    windows: { title: 'Windows', body: 'Thumbs.db\nehthumbs.db\nDesktop.ini\n$RECYCLE.BIN/' },
+    vscode: { title: 'VS Code', body: '.vscode/*\n!.vscode/settings.json\n!.vscode/extensions.json' },
+    jetbrains: { title: 'JetBrains', body: '.idea/\n*.iml\n*.iws\nout/' },
+    env: { title: 'Environment', body: '.env\n.env.local\n.env.*.local\n*.pem' },
+  };
+
+  function build() {
+    const checked = [...document.querySelectorAll<HTMLInputElement>('.gi-r:checked')].map((el) => el.value);
+    out.value = checked.map((k) => `# ${BLOCKS[k].title}\n${BLOCKS[k].body}`).join('\n\n');
+  }
+
+  document.querySelectorAll('.gi-r').forEach((el) => el.addEventListener('change', build));
+  $('gi-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+  $('gi-dl').addEventListener('click', () => {
+    const url = URL.createObjectURL(new Blob([out.value], { type: 'text/plain' }));
+    const a = document.createElement('a'); a.href = url; a.download = '.gitignore'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  build();
+</script>

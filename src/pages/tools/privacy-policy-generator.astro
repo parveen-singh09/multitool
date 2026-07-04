@@ -1,0 +1,89 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="privacy-policy-generator">
+  <div class="flex flex-col gap-4">
+    <div class="panel flex items-start gap-3 p-4">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0 text-ink-subtle" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM12 8v5M12 16h.01"/></svg>
+      <p class="text-[13px] leading-relaxed text-ink-subtle">This produces a <strong class="text-ink">starting-point template</strong>, not legal advice. Have a qualified professional review your policy, especially for GDPR/CCPA compliance.</p>
+    </div>
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Company / site name<input id="pp-name" class="field" value="Acme" /></label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Website URL<input id="pp-url" class="field" value="https://acme.example" /></label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Contact email<input id="pp-email" class="field" value="privacy@acme.example" /></label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Effective date<input id="pp-date" class="field" value="July 4, 2026" /></label>
+    </div>
+    <fieldset class="flex flex-wrap gap-4">
+      <legend class="w-full text-[12px] uppercase tracking-wide text-ink-tertiary">Data you collect</legend>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="pp-personal" type="checkbox" class="accent-[#5e6ad2]" checked /> Personal info (name, email)</label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="pp-cookies" type="checkbox" class="accent-[#5e6ad2]" checked /> Cookies</label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="pp-analytics" type="checkbox" class="accent-[#5e6ad2]" /> Analytics</label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="pp-thirdparty" type="checkbox" class="accent-[#5e6ad2]" /> Third-party services</label>
+    </fieldset>
+    <div class="flex gap-2">
+      <button id="pp-gen" class="btn btn-primary">Generate</button>
+      <button id="pp-copy" class="btn btn-secondary">Copy</button>
+      <button id="pp-dl" class="btn btn-secondary">Download .txt</button>
+    </div>
+    <textarea id="pp-out" class="field min-h-96 resize-y text-[13px] leading-relaxed" readonly></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free privacy policy generator builds a customizable privacy policy for
+      your website or app. Tell it what data you collect — personal information,
+      cookies, analytics, third-party services — and it assembles matching sections
+      covering how data is used, stored and shared, plus user rights. It's a
+      starting point, not legal advice. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const out = $('pp-out') as HTMLTextAreaElement;
+  const v = (id: string) => ($(id) as HTMLInputElement).value;
+  const on = (id: string) => ($(id) as HTMLInputElement).checked;
+
+  function generate() {
+    const name = v('pp-name') || 'the Company';
+    const url = v('pp-url') || 'our website';
+    const email = v('pp-email') || 'contact us';
+    const date = v('pp-date') || new Date().toLocaleDateString();
+    const s: string[] = [];
+    let n = 1;
+    s.push(`PRIVACY POLICY\n\nEffective date: ${date}\n`);
+    s.push(`${name} ("we", "us") operates ${url} (the "Service"). This policy explains what information we collect and how we use it.`);
+    const collected: string[] = [];
+    if (on('pp-personal')) collected.push('personal information you provide, such as your name and email address');
+    if (on('pp-cookies')) collected.push('cookies and similar tracking technologies');
+    if (on('pp-analytics')) collected.push('usage and analytics data about how you interact with the Service');
+    if (on('pp-thirdparty')) collected.push('information from third-party services you connect');
+    s.push(`${n++}. Information We Collect\nWe may collect: ${collected.length ? collected.join('; ') : 'only the information necessary to provide the Service'}.`);
+    s.push(`${n++}. How We Use Your Information\nWe use the information we collect to operate, maintain and improve the Service, to communicate with you, and to comply with legal obligations.`);
+    if (on('pp-cookies')) s.push(`${n++}. Cookies\nWe use cookies to remember your preferences and understand how the Service is used. You can instruct your browser to refuse cookies, though some features may not function properly.`);
+    if (on('pp-analytics')) s.push(`${n++}. Analytics\nWe may use third-party analytics providers to help us measure traffic and usage trends. These providers may collect information sent by your browser.`);
+    if (on('pp-thirdparty')) s.push(`${n++}. Third-Party Services\nThe Service may contain links to or integrations with third-party services that have their own privacy policies. We are not responsible for their practices.`);
+    s.push(`${n++}. Data Retention\nWe retain personal information only as long as necessary for the purposes set out in this policy, unless a longer retention period is required by law.`);
+    s.push(`${n++}. Your Rights\nDepending on your location, you may have the right to access, correct, delete or restrict the use of your personal information. To exercise these rights, contact us at ${email}.`);
+    s.push(`${n++}. Security\nWe take reasonable measures to protect your information, but no method of transmission or storage is completely secure.`);
+    s.push(`${n++}. Changes to This Policy\nWe may update this policy from time to time. We will post any changes on this page with an updated effective date.`);
+    s.push(`${n++}. Contact Us\nIf you have questions about this policy, contact us at ${email}.`);
+    out.value = s.join('\n\n');
+  }
+
+  ['pp-name', 'pp-url', 'pp-email', 'pp-date', 'pp-personal', 'pp-cookies', 'pp-analytics', 'pp-thirdparty'].forEach((id) => $(id).addEventListener('input', generate));
+  $('pp-gen').addEventListener('click', generate);
+  $('pp-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!'; setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+  $('pp-dl').addEventListener('click', () => {
+    const url = URL.createObjectURL(new Blob([out.value], { type: 'text/plain' }));
+    const a = document.createElement('a'); a.href = url; a.download = 'privacy-policy.txt'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  generate();
+</script>

@@ -1,0 +1,75 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="resume-generator">
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <div class="flex flex-col gap-3">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Full name<input id="re-name" class="field" value="Jane Doe" /></label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Job title<input id="re-title" class="field" value="Product Designer" /></label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Email<input id="re-email" class="field" value="jane@example.com" /></label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Phone<input id="re-phone" class="field" value="(555) 010-1234" /></label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Location<input id="re-loc" class="field" value="San Francisco, CA" /></label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Website<input id="re-web" class="field" value="janedoe.example" /></label>
+      </div>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Summary<textarea id="re-summary" class="field min-h-20 resize-y text-[13px]">Product designer with 6+ years crafting intuitive digital products.</textarea></label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Experience (one role per line: Role — Company — Dates)<textarea id="re-exp" class="field min-h-24 resize-y text-[13px]">Senior Designer — Acme Inc — 2021–Present
+Designer — Studio Co — 2018–2021</textarea></label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Education (one per line)<textarea id="re-edu" class="field min-h-16 resize-y text-[13px]">BFA Design — State University — 2018</textarea></label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Skills (comma separated)<input id="re-skills" class="field" value="Figma, Prototyping, User Research, HTML/CSS" /></label>
+      <button id="re-print" class="btn btn-primary w-fit">Download / Print PDF</button>
+    </div>
+
+    <div class="rounded-[12px] border border-hairline bg-white p-6 text-[#111]" id="re-preview"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free resume generator turns your details into a clean, single-column
+      resume with a live preview. Fill in your contact info, summary, experience,
+      education and skills, and use the print button to save a polished PDF via
+      your browser's print dialog (choose "Save as PDF"). Your information stays in
+      your browser and is never uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const preview = $('re-preview')!;
+  const v = (id: string) => ($(id) as HTMLInputElement | HTMLTextAreaElement).value;
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const ids = ['re-name', 're-title', 're-email', 're-phone', 're-loc', 're-web', 're-summary', 're-exp', 're-edu', 're-skills'];
+
+  function lines(id: string): string[] { return v(id).split('\n').map((s) => s.trim()).filter(Boolean); }
+
+  function render() {
+    const contact = ['re-email', 're-phone', 're-loc', 're-web'].map(v).filter(Boolean).map(esc).join(' · ');
+    const exp = lines('re-exp').map((l) => `<div style="margin-bottom:6px"><strong>${esc(l)}</strong></div>`).join('');
+    const edu = lines('re-edu').map((l) => `<div style="margin-bottom:4px">${esc(l)}</div>`).join('');
+    const skills = v('re-skills').split(',').map((s) => s.trim()).filter(Boolean).map((s) => `<span style="display:inline-block;background:#eef;border-radius:4px;padding:2px 8px;margin:0 4px 4px 0;font-size:12px">${esc(s)}</span>`).join('');
+    preview.innerHTML = `
+      <div style="font-family:Inter,system-ui,sans-serif;line-height:1.4">
+        <h1 style="margin:0;font-size:26px;color:#111">${esc(v('re-name'))}</h1>
+        <div style="color:#5e6ad2;font-weight:600;font-size:15px">${esc(v('re-title'))}</div>
+        <div style="color:#555;font-size:12px;margin-top:4px">${contact}</div>
+        <hr style="border:none;border-top:1px solid #ddd;margin:12px 0" />
+        ${v('re-summary') ? `<p style="font-size:13px;color:#333;margin:0 0 12px">${esc(v('re-summary'))}</p>` : ''}
+        <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:#888;margin:12px 0 6px">Experience</h2>${exp}
+        <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:#888;margin:12px 0 6px">Education</h2>${edu}
+        <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:#888;margin:12px 0 6px">Skills</h2><div>${skills}</div>
+      </div>`;
+  }
+
+  ids.forEach((id) => $(id).addEventListener('input', render));
+  $('re-print').addEventListener('click', () => {
+    const w = window.open('', '_blank');
+    if (!w) return;
+    w.document.write(`<html><head><title>${esc(v('re-name'))} — Resume</title></head><body style="margin:40px">${preview.innerHTML}</body></html>`);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 250);
+  });
+  render();
+</script>

@@ -1,0 +1,107 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="regex-generator">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Common pattern
+      <select id="rg-preset" class="field">
+        <option value="">Custom</option>
+        <option value="^[\\w.+-]+@[\\w-]+\\.[\\w.-]+$">Email address</option>
+        <option value="^https?:\\/\\/[^\\s/$.?#].[^\\s]*$">URL (http/https)</option>
+        <option value="^\\+?[1-9]\\d{1,14}$">Phone (E.164)</option>
+        <option value="^\\d{4}-\\d{2}-\\d{2}$">Date (YYYY-MM-DD)</option>
+        <option value="^(25[0-5]|2[0-4]\\d|1?\\d?\\d)(\\.(25[0-5]|2[0-4]\\d|1?\\d?\\d)){3}$">IPv4 address</option>
+        <option value="^#?([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$">Hex color</option>
+        <option value="^[a-z0-9]+(?:-[a-z0-9]+)*$">Slug (kebab-case)</option>
+        <option value="^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}$">Strong password</option>
+        <option value="^\\d{5}(-\\d{4})?$">US ZIP code</option>
+      </select>
+    </label>
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Pattern
+      <div class="flex items-center gap-2">
+        <span class="font-mono text-ink-tertiary">/</span>
+        <input id="rg-pattern" class="field font-mono text-[13px]" spellcheck="false" autocomplete="off" />
+        <span class="font-mono text-ink-tertiary">/</span>
+        <input id="rg-flags" class="field w-20 font-mono text-[13px]" value="" placeholder="gim" spellcheck="false" />
+      </div>
+    </label>
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Test string
+      <textarea id="rg-test" class="field min-h-28 resize-y font-mono text-[13px]" placeholder="Type text to test your pattern against…">test@example.com
+not-an-email
+hello@toolcities.com</textarea>
+    </label>
+    <div class="panel flex flex-col gap-2 p-4">
+      <p id="rg-status" class="text-sm"></p>
+      <div id="rg-matches" class="flex flex-wrap gap-2"></div>
+    </div>
+    <button id="rg-copy" class="btn btn-secondary w-fit">Copy regex</button>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free regex generator gives you ready-made regular expressions for the
+      things people match most — emails, URLs, phone numbers, dates, IP addresses,
+      hex colors, slugs and strong passwords — with no need to remember the syntax.
+      Pick a pattern or write your own, add flags, and test it live against your
+      own text with matches highlighted. Runs entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const patternEl = $('rg-pattern') as HTMLInputElement;
+  const flagsEl = $('rg-flags') as HTMLInputElement;
+  const testEl = $('rg-test') as HTMLTextAreaElement;
+  const statusEl = $('rg-status')!;
+  const matchesEl = $('rg-matches')!;
+
+  $('rg-preset').addEventListener('change', () => {
+    const v = ($('rg-preset') as HTMLSelectElement).value;
+    if (v) patternEl.value = v;
+    run();
+  });
+
+  function run() {
+    matchesEl.innerHTML = '';
+    if (!patternEl.value) { statusEl.textContent = 'Enter or pick a pattern.'; statusEl.style.color = ''; return; }
+    let re: RegExp;
+    try {
+      re = new RegExp(patternEl.value, flagsEl.value);
+    } catch (e) {
+      statusEl.textContent = 'Invalid regex: ' + (e as Error).message;
+      statusEl.style.color = '#e5484d';
+      return;
+    }
+    const lines = testEl.value.split('\n');
+    let total = 0;
+    for (const line of lines) {
+      const global = re.flags.includes('g') ? re : new RegExp(re.source, re.flags + 'g');
+      const found = line.match(global);
+      if (found) {
+        total += found.length;
+        found.forEach((m) => {
+          const chip = document.createElement('span');
+          chip.className = 'status-badge';
+          chip.style.color = '#27a644';
+          chip.textContent = m || '(empty)';
+          matchesEl.appendChild(chip);
+        });
+      }
+    }
+    statusEl.style.color = total ? '#27a644' : '#8a8f98';
+    statusEl.textContent = total ? `✓ ${total} match${total === 1 ? '' : 'es'} found.` : 'No matches.';
+  }
+
+  [patternEl, flagsEl, testEl].forEach((el) => el.addEventListener('input', run));
+  $('rg-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(`/${patternEl.value}/${flagsEl.value}`);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy regex'), 1500);
+  });
+
+  patternEl.value = '^[\\w.+-]+@[\\w-]+\\.[\\w.-]+$';
+  run();
+</script>

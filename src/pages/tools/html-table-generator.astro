@@ -1,0 +1,111 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="html-table-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Rows
+        <input id="ht-rows" type="number" min="1" max="30" value="3" class="field w-24" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Columns
+        <input id="ht-cols" type="number" min="1" max="12" value="3" class="field w-24" />
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="ht-header" type="checkbox" class="accent-[#5e6ad2]" checked /> Header row</label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="ht-border" type="checkbox" class="accent-[#5e6ad2]" checked /> Bordered</label>
+    </div>
+
+    <div class="overflow-auto rounded-[8px] border border-hairline p-3">
+      <table id="ht-grid" class="w-full border-collapse text-sm"></table>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <label class="text-sm text-ink-subtle">HTML output</label>
+      <textarea id="ht-out" class="field min-h-40 resize-y font-mono text-[12px]" readonly></textarea>
+      <button id="ht-copy" class="btn btn-secondary w-fit">Copy HTML</button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free HTML table generator lets you set the number of rows and columns,
+      type directly into a live editable grid, and toggle a header row and borders.
+      It outputs clean, semantic HTML table markup — with
+      <code class="font-mono text-ink">&lt;thead&gt;</code> and
+      <code class="font-mono text-ink">&lt;tbody&gt;</code> — ready to copy into
+      your page. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const grid = $('ht-grid') as HTMLTableElement;
+  const out = $('ht-out') as HTMLTextAreaElement;
+  let data: string[][] = [];
+
+  function ensureData(rows: number, cols: number) {
+    const next: string[][] = [];
+    for (let r = 0; r < rows; r++) {
+      next[r] = [];
+      for (let c = 0; c < cols; c++) {
+        next[r][c] = data[r]?.[c] ?? (r === 0 ? `Header ${c + 1}` : `Cell ${r},${c + 1}`);
+      }
+    }
+    data = next;
+  }
+
+  function renderGrid() {
+    const rows = data.length, cols = data[0]?.length ?? 0;
+    grid.innerHTML = '';
+    for (let r = 0; r < rows; r++) {
+      const tr = document.createElement('tr');
+      for (let c = 0; c < cols; c++) {
+        const cell = document.createElement('td');
+        cell.contentEditable = 'true';
+        cell.className = 'border border-hairline px-2 py-1 text-ink outline-none focus:bg-surface-2';
+        cell.textContent = data[r][c];
+        cell.addEventListener('input', () => { data[r][c] = cell.textContent || ''; buildOut(); });
+        tr.appendChild(cell);
+      }
+      grid.appendChild(tr);
+    }
+  }
+
+  function buildOut() {
+    const header = ($('ht-header') as HTMLInputElement).checked;
+    const border = ($('ht-border') as HTMLInputElement).checked;
+    const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const attr = border ? ' border="1" cellpadding="6" cellspacing="0"' : '';
+    let html = `<table${attr}>\n`;
+    let start = 0;
+    if (header) {
+      html += '  <thead>\n    <tr>\n' + data[0].map((c) => `      <th>${esc(c)}</th>`).join('\n') + '\n    </tr>\n  </thead>\n';
+      start = 1;
+    }
+    html += '  <tbody>\n';
+    for (let r = start; r < data.length; r++) {
+      html += '    <tr>\n' + data[r].map((c) => `      <td>${esc(c)}</td>`).join('\n') + '\n    </tr>\n';
+    }
+    html += '  </tbody>\n</table>';
+    out.value = html;
+  }
+
+  function rebuild() {
+    const rows = Math.max(1, Math.min(30, Number(($('ht-rows') as HTMLInputElement).value) || 3));
+    const cols = Math.max(1, Math.min(12, Number(($('ht-cols') as HTMLInputElement).value) || 3));
+    ensureData(rows, cols);
+    renderGrid();
+    buildOut();
+  }
+
+  ['ht-rows', 'ht-cols'].forEach((id) => $(id).addEventListener('input', rebuild));
+  ['ht-header', 'ht-border'].forEach((id) => $(id).addEventListener('change', buildOut));
+  $('ht-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy HTML'), 1500);
+  });
+  rebuild();
+</script>

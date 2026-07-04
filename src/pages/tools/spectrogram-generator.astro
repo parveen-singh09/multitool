@@ -1,0 +1,130 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="spectrogram-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap gap-2">
+      <label id="sp-drop" class="btn btn-secondary cursor-pointer">
+        Load audio file
+        <input id="sp-file" type="file" accept="audio/*" class="sr-only" />
+      </label>
+      <button id="sp-mic" class="btn btn-secondary">Use microphone</button>
+      <button id="sp-stop" class="btn btn-secondary">Stop</button>
+      <button id="sp-dl" class="btn btn-primary">Download PNG</button>
+    </div>
+    <p id="sp-status" class="text-[13px] text-ink-subtle">Load an audio file or start your microphone to draw a spectrogram.</p>
+    <div class="overflow-hidden rounded-[12px] border border-hairline">
+      <canvas id="sp-canvas" width="900" height="320" class="w-full bg-black"></canvas>
+    </div>
+    <p id="sp-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free spectrogram generator visualizes how the frequencies in a sound
+      change over time. Play an audio file or use your microphone and watch a live
+      color spectrogram scroll across the screen — brighter colors mean more energy
+      at that frequency. It's great for exploring music, speech and noise. All
+      analysis uses the Web Audio API in your browser; nothing is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const canvas = $('sp-canvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+  const err = $('sp-error')!;
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  let ac: AudioContext | null = null;
+  let analyser: AnalyserNode | null = null;
+  let raf = 0;
+  let source: AudioNode | null = null;
+  let audioEl: HTMLAudioElement | null = null;
+  let micStream: MediaStream | null = null;
+
+  // Viridis-ish color ramp for intensity 0..255.
+  function color(v: number): string {
+    const t = v / 255;
+    const r = Math.floor(255 * Math.min(1, Math.max(0, 1.5 * t - 0.4)));
+    const g = Math.floor(255 * Math.min(1, Math.max(0, t)));
+    const b = Math.floor(255 * Math.min(1, Math.max(0, 1 - t * 1.2 + 0.2)));
+    return `rgb(${r},${g},${b})`;
+  }
+
+  function start(node: AudioNode) {
+    stop(false);
+    analyser = ac!.createAnalyser();
+    analyser.fftSize = 1024;
+    node.connect(analyser);
+    source = node;
+    const bins = analyser.frequencyBinCount;
+    const data = new Uint8Array(bins);
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const draw = () => {
+      analyser!.getByteFrequencyData(data);
+      // Scroll left by 1px.
+      const img = ctx.getImageData(1, 0, canvas.width - 1, canvas.height);
+      ctx.putImageData(img, 0, 0);
+      const x = canvas.width - 1;
+      for (let y = 0; y < canvas.height; y++) {
+        const bin = Math.floor((1 - y / canvas.height) * bins);
+        ctx.fillStyle = color(data[bin] || 0);
+        ctx.fillRect(x, y, 1, 1);
+      }
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+  }
+
+  function stop(clearStatus = true) {
+    if (raf) cancelAnimationFrame(raf), (raf = 0);
+    if (source) { try { source.disconnect(); } catch {} source = null; }
+    if (audioEl) { audioEl.pause(); audioEl = null; }
+    if (micStream) { micStream.getTracks().forEach((t) => t.stop()); micStream = null; }
+    if (clearStatus) $('sp-status').textContent = 'Stopped.';
+  }
+
+  async function fromFile(file: File) {
+    setErr('');
+    ac = ac || new (window.AudioContext || (window as any).webkitAudioContext)();
+    await ac.resume();
+    audioEl = new Audio(URL.createObjectURL(file));
+    audioEl.crossOrigin = 'anonymous';
+    const src = ac.createMediaElementSource(audioEl);
+    src.connect(ac.destination);
+    start(src);
+    audioEl.play();
+    $('sp-status').textContent = `Playing ${file.name} — spectrogram is live.`;
+    audioEl.onended = () => $('sp-status').textContent = 'Playback finished.';
+  }
+
+  async function fromMic() {
+    setErr('');
+    try {
+      ac = ac || new (window.AudioContext || (window as any).webkitAudioContext)();
+      await ac.resume();
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const src = ac.createMediaStreamSource(micStream);
+      start(src);
+      $('sp-status').textContent = 'Listening to microphone — spectrogram is live.';
+    } catch (e) {
+      setErr('Could not access the microphone.');
+    }
+  }
+
+  ($('sp-file') as HTMLInputElement).addEventListener('change', (e) => {
+    const f = (e.target as HTMLInputElement).files?.[0]; if (f) fromFile(f);
+  });
+  $('sp-mic').addEventListener('click', fromMic);
+  $('sp-stop').addEventListener('click', () => stop());
+  $('sp-dl').addEventListener('click', () => {
+    const a = document.createElement('a'); a.href = canvas.toDataURL('image/png'); a.download = 'spectrogram.png'; a.click();
+  });
+</script>

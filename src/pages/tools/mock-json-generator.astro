@@ -1,0 +1,96 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="mock-json-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Rows
+        <input id="mj-count" type="number" min="1" max="500" value="10" class="field w-28" />
+      </label>
+      <fieldset class="flex flex-1 flex-wrap items-center gap-x-4 gap-y-1">
+        <legend class="w-full text-[12px] uppercase tracking-wide text-ink-tertiary">Fields</legend>
+        <label class="flex items-center gap-1.5 text-sm text-ink-subtle"><input type="checkbox" class="mj-f accent-[#5e6ad2]" value="id" checked /> id</label>
+        <label class="flex items-center gap-1.5 text-sm text-ink-subtle"><input type="checkbox" class="mj-f accent-[#5e6ad2]" value="name" checked /> name</label>
+        <label class="flex items-center gap-1.5 text-sm text-ink-subtle"><input type="checkbox" class="mj-f accent-[#5e6ad2]" value="email" checked /> email</label>
+        <label class="flex items-center gap-1.5 text-sm text-ink-subtle"><input type="checkbox" class="mj-f accent-[#5e6ad2]" value="phone" /> phone</label>
+        <label class="flex items-center gap-1.5 text-sm text-ink-subtle"><input type="checkbox" class="mj-f accent-[#5e6ad2]" value="address" /> address</label>
+        <label class="flex items-center gap-1.5 text-sm text-ink-subtle"><input type="checkbox" class="mj-f accent-[#5e6ad2]" value="company" /> company</label>
+        <label class="flex items-center gap-1.5 text-sm text-ink-subtle"><input type="checkbox" class="mj-f accent-[#5e6ad2]" value="birthday" /> birthday</label>
+        <label class="flex items-center gap-1.5 text-sm text-ink-subtle"><input type="checkbox" class="mj-f accent-[#5e6ad2]" value="username" /> username</label>
+      </fieldset>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <button id="mj-gen" class="btn btn-primary">Generate</button>
+      <button id="mj-copy" class="btn btn-secondary">Copy JSON</button>
+      <button id="mj-dl" class="btn btn-secondary">Download .json</button>
+    </div>
+    <textarea id="mj-out" class="field min-h-80 resize-y font-mono text-[13px]" readonly aria-label="Generated mock JSON"></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free mock JSON data generator builds arrays of realistic fake records
+      with exactly the fields you choose — id, name, email, phone, address,
+      company, birthday and username. It's perfect for stubbing out APIs, seeding
+      a database, or feeding a front end before the backend exists. Copy the JSON
+      or download it as a file. Everything is generated in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { firstName, lastName, email, phoneUS, username, companyName, address, birthDate } from '../../lib/fakegen';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const countEl = $('mj-count') as HTMLInputElement;
+  const out = $('mj-out') as HTMLTextAreaElement;
+
+  function fields(): string[] {
+    return [...document.querySelectorAll<HTMLInputElement>('.mj-f:checked')].map((el) => el.value);
+  }
+
+  function record(id: number, fs: string[]) {
+    const first = firstName();
+    const last = lastName();
+    const rec: Record<string, unknown> = {};
+    for (const f of fs) {
+      if (f === 'id') rec.id = id;
+      else if (f === 'name') rec.name = `${first} ${last}`;
+      else if (f === 'email') rec.email = email(first, last);
+      else if (f === 'phone') rec.phone = phoneUS();
+      else if (f === 'username') rec.username = username();
+      else if (f === 'company') rec.company = companyName();
+      else if (f === 'birthday') rec.birthday = birthDate();
+      else if (f === 'address') {
+        const a = address();
+        rec.address = { street: a.street, city: a.city, state: a.stateAbbr, zip: a.zip };
+      }
+    }
+    return rec;
+  }
+
+  function generate() {
+    const n = Math.max(1, Math.min(500, Number(countEl.value) || 1));
+    const fs = fields();
+    const list = [];
+    for (let i = 0; i < n; i++) list.push(record(i + 1, fs));
+    out.value = JSON.stringify(list, null, 2);
+  }
+
+  countEl.addEventListener('input', generate);
+  document.querySelectorAll('.mj-f').forEach((el) => el.addEventListener('change', generate));
+  $('mj-gen').addEventListener('click', generate);
+  $('mj-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy JSON'), 1500);
+  });
+  $('mj-dl').addEventListener('click', () => {
+    const url = URL.createObjectURL(new Blob([out.value], { type: 'application/json' }));
+    const a = document.createElement('a'); a.href = url; a.download = 'mock-data.json'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  generate();
+</script>

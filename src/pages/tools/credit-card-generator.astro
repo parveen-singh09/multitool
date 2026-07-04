@@ -1,0 +1,72 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="credit-card-generator">
+  <div class="flex flex-col gap-4">
+    <div class="panel flex items-start gap-3 p-4">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0 text-ink-subtle" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM12 8v5M12 16h.01"/></svg>
+      <p class="text-[13px] leading-relaxed text-ink-subtle">These are <strong class="text-ink">test numbers</strong> that only satisfy the Luhn checksum and card-scheme format. They are <strong class="text-ink">not real cards</strong>, carry no funds, and cannot be used for purchases — they exist for payment-form and QA testing.</p>
+    </div>
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Scheme
+        <select id="cc-scheme" class="field w-40">
+          <option value="Visa" selected>Visa</option>
+          <option value="Mastercard">Mastercard</option>
+          <option value="Amex">American Express</option>
+          <option value="Discover">Discover</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="cc-count" type="number" min="1" max="200" value="5" class="field w-28" />
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="cc-full" type="checkbox" class="accent-[#5e6ad2]" checked /> Include expiry & CVV
+      </label>
+      <button id="cc-gen" class="btn btn-primary ml-auto">Generate</button>
+      <button id="cc-copy" class="btn btn-secondary">Copy all</button>
+    </div>
+    <textarea id="cc-out" class="field min-h-56 resize-y font-mono text-[13px]" readonly aria-label="Generated test card numbers"></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free credit card number generator creates test card numbers that pass
+      the Luhn (mod-10) checksum and match the prefix and length rules of Visa,
+      Mastercard, American Express and Discover. Optionally include a random
+      expiry date and CVV. They're built for testing checkout forms and payment
+      validation logic — they are not real cards and hold no money. Everything is
+      generated locally in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { creditCard } from '../../lib/fakegen';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const schemeEl = $('cc-scheme') as HTMLSelectElement;
+  const countEl = $('cc-count') as HTMLInputElement;
+  const fullEl = $('cc-full') as HTMLInputElement;
+  const out = $('cc-out') as HTMLTextAreaElement;
+
+  function generate() {
+    const n = Math.max(1, Math.min(200, Number(countEl.value) || 1));
+    const list: string[] = [];
+    for (let i = 0; i < n; i++) {
+      const c = creditCard(schemeEl.value as any);
+      list.push(fullEl.checked ? `${c.number}  exp ${c.expiry}  cvv ${c.cvv}` : c.number);
+    }
+    out.value = list.join('\n');
+  }
+
+  [schemeEl, countEl, fullEl].forEach((el) => el.addEventListener('input', generate));
+  $('cc-gen').addEventListener('click', generate);
+  $('cc-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  });
+  generate();
+</script>

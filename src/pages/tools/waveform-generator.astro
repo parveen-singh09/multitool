@@ -1,0 +1,116 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="waveform-generator">
+  <div class="flex flex-col gap-4">
+    <label id="wf-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose an audio file or drop it here</span>
+      <span class="text-[13px] text-ink-tertiary">Decoded in your browser — never uploaded</span>
+      <input id="wf-file" type="file" accept="audio/*" class="sr-only" />
+    </label>
+
+    <div id="wf-panel" class="hidden flex-col gap-4">
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Wave color
+          <input id="wf-color" type="color" value="#5e6ad2" class="field h-10 cursor-pointer p-1" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Background
+          <input id="wf-bg" type="color" value="#010102" class="field h-10 cursor-pointer p-1" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Style
+          <select id="wf-style" class="field"><option value="bars">Bars</option><option value="filled">Filled</option><option value="line">Line</option></select>
+        </label>
+        <label class="flex items-center gap-2 pt-6 text-sm text-ink-subtle"><input id="wf-transparent" type="checkbox" class="accent-[#5e6ad2]" /> Transparent bg</label>
+      </div>
+      <p id="wf-status" class="text-[13px] text-ink-subtle"></p>
+      <div class="overflow-auto rounded-[12px] border border-hairline p-2">
+        <canvas id="wf-canvas" width="1200" height="300" class="w-full"></canvas>
+      </div>
+      <button id="wf-dl" class="btn btn-primary w-fit">Download PNG</button>
+    </div>
+    <p id="wf-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free waveform generator renders any audio file as a clean waveform
+      image. Load an MP3, WAV, OGG or M4A, choose the wave color, background and
+      style — bars, filled or a single line — and download a crisp PNG for
+      podcasts, music releases, thumbnails and social posts. The audio is decoded
+      with the Web Audio API in your browser and never uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const fileInput = $('wf-file') as HTMLInputElement;
+  const drop = $('wf-drop')!;
+  const panel = $('wf-panel')!;
+  const canvas = $('wf-canvas') as HTMLCanvasElement;
+  const err = $('wf-error')!;
+  let peaks: number[] = [];
+
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  async function load(file: File) {
+    setErr(''); $('wf-status').textContent = 'Decoding audio…';
+    try {
+      const ac = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const buf = await ac.decodeAudioData(await file.arrayBuffer());
+      const data = buf.getChannelData(0);
+      const buckets = 800;
+      const block = Math.floor(data.length / buckets);
+      peaks = [];
+      for (let i = 0; i < buckets; i++) {
+        let max = 0;
+        for (let j = 0; j < block; j++) { const v = Math.abs(data[i * block + j] || 0); if (v > max) max = v; }
+        peaks.push(max);
+      }
+      panel.classList.remove('hidden'); panel.classList.add('flex');
+      $('wf-status').textContent = `${file.name} · ${buf.duration.toFixed(1)}s`;
+      draw();
+    } catch (e) {
+      setErr('Could not decode that audio file.');
+    }
+  }
+
+  function draw() {
+    const ctx = canvas.getContext('2d')!;
+    const W = canvas.width, H = canvas.height, mid = H / 2;
+    const color = ($('wf-color') as HTMLInputElement).value;
+    const bg = ($('wf-bg') as HTMLInputElement).value;
+    const style = ($('wf-style') as HTMLSelectElement).value;
+    const transparent = ($('wf-transparent') as HTMLInputElement).checked;
+    ctx.clearRect(0, 0, W, H);
+    if (!transparent) { ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H); }
+    ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineWidth = 2;
+    const n = peaks.length, bw = W / n;
+    if (style === 'line') {
+      ctx.beginPath();
+      peaks.forEach((p, i) => { const y = mid - p * mid; i === 0 ? ctx.moveTo(0, y) : ctx.lineTo(i * bw, y); });
+      ctx.stroke();
+    } else {
+      peaks.forEach((p, i) => {
+        const h = Math.max(1, p * mid);
+        if (style === 'bars') ctx.fillRect(i * bw, mid - h, Math.max(1, bw - 1), h * 2);
+        else ctx.fillRect(i * bw, mid - h, bw + 0.5, h * 2);
+      });
+    }
+  }
+
+  ['wf-color', 'wf-bg', 'wf-style', 'wf-transparent'].forEach((id) => $(id).addEventListener('input', () => peaks.length && draw()));
+  fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) load(fileInput.files[0]); });
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) load(f); });
+  $('wf-dl').addEventListener('click', () => {
+    const a = document.createElement('a'); a.href = canvas.toDataURL('image/png'); a.download = 'waveform.png'; a.click();
+  });
+</script>

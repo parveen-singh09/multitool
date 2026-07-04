@@ -1,0 +1,74 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="zodiac-generator">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Birth date
+      <input id="zo-date" type="date" value="1995-07-15" class="field w-56" />
+    </label>
+    <div id="zo-out" class="grid grid-cols-1 gap-4 sm:grid-cols-2"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free zodiac sign finder takes a birth date and tells you the Western
+      (tropical) zodiac sign along with its element, ruling dates and signature
+      traits, plus the Chinese zodiac animal for the birth year. It's a fun way to
+      learn about star signs for yourself, friends or characters. Everything is
+      computed in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const out = $('zo-out')!;
+
+  // [name, element, symbol, traits, endMonth, endDay] — sign runs up to end date.
+  const SIGNS = [
+    ['Capricorn', 'Earth', '♑', 'Disciplined, responsible, ambitious', 1, 19],
+    ['Aquarius', 'Air', '♒', 'Independent, original, humanitarian', 2, 18],
+    ['Pisces', 'Water', '♓', 'Intuitive, compassionate, artistic', 3, 20],
+    ['Aries', 'Fire', '♈', 'Bold, energetic, competitive', 4, 19],
+    ['Taurus', 'Earth', '♉', 'Reliable, patient, devoted', 5, 20],
+    ['Gemini', 'Air', '♊', 'Curious, adaptable, expressive', 6, 20],
+    ['Cancer', 'Water', '♋', 'Loyal, emotional, nurturing', 7, 22],
+    ['Leo', 'Fire', '♌', 'Confident, generous, warm', 8, 22],
+    ['Virgo', 'Earth', '♍', 'Analytical, kind, hardworking', 9, 22],
+    ['Libra', 'Air', '♎', 'Diplomatic, fair, social', 10, 22],
+    ['Scorpio', 'Water', '♏', 'Passionate, resourceful, brave', 11, 21],
+    ['Sagittarius', 'Fire', '♐', 'Optimistic, adventurous, honest', 12, 21],
+    ['Capricorn', 'Earth', '♑', 'Disciplined, responsible, ambitious', 12, 31],
+  ] as const;
+
+  const CHINESE = ['Monkey', 'Rooster', 'Dog', 'Pig', 'Rat', 'Ox', 'Tiger', 'Rabbit', 'Dragon', 'Snake', 'Horse', 'Goat'];
+
+  function find(m: number, d: number) {
+    for (const s of SIGNS) {
+      if (m < s[4] || (m === s[4] && d <= s[5])) return s;
+    }
+    return SIGNS[0];
+  }
+
+  function render() {
+    const val = ($('zo-date') as HTMLInputElement).value;
+    if (!val) return;
+    const [y, m, d] = val.split('-').map(Number);
+    const sign = find(m, d);
+    const animal = CHINESE[y % 12];
+    out.innerHTML = `
+      <div class="panel panel-lift flex flex-col gap-2 p-5">
+        <div class="flex items-center gap-3"><span class="text-4xl">${sign[2]}</span><div><div class="text-xl font-semibold text-ink">${sign[0]}</div><div class="text-[13px] text-ink-subtle">${sign[1]} sign</div></div></div>
+        <p class="text-[15px] text-ink-subtle">${sign[3]}.</p>
+      </div>
+      <div class="panel panel-lift flex flex-col gap-2 p-5">
+        <div class="text-[13px] uppercase tracking-wide text-ink-tertiary">Chinese zodiac</div>
+        <div class="text-xl font-semibold text-ink">Year of the ${animal}</div>
+        <p class="text-[15px] text-ink-subtle">Based on the birth year ${y}.</p>
+      </div>`;
+  }
+
+  $('zo-date').addEventListener('input', render);
+  render();
+</script>

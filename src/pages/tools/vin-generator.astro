@@ -1,0 +1,74 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="vin-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        How many
+        <input id="vn-count" type="number" min="1" max="500" value="10" class="field w-28" />
+      </label>
+      <button id="vn-gen" class="btn btn-primary ml-auto">Generate</button>
+      <button id="vn-copy" class="btn btn-secondary">Copy all</button>
+    </div>
+    <textarea id="vn-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated VINs"></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free VIN generator creates 17-character vehicle identification numbers
+      with a valid position-9 check digit, computed with the official North
+      American transliteration and weighting scheme. It excludes the letters I, O
+      and Q as the standard requires. These VINs are random samples for testing
+      and demos — they do not identify any real vehicle. Runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { randInt } from '../../lib/random';
+
+  const countEl = document.getElementById('vn-count') as HTMLInputElement;
+  const out = document.getElementById('vn-out') as HTMLTextAreaElement;
+
+  // VIN uses A-Z (no I,O,Q) and 0-9.
+  const CHARS = 'ABCDEFGHJKLMNPRSTUVWXYZ0123456789';
+  const WEIGHTS = [8, 7, 6, 5, 4, 3, 2, 10, 0, 9, 8, 7, 6, 5, 4, 3, 2];
+  const TRANS: Record<string, number> = {
+    A: 1, B: 2, C: 3, D: 4, E: 5, F: 6, G: 7, H: 8,
+    J: 1, K: 2, L: 3, M: 4, N: 5, P: 7, R: 9,
+    S: 2, T: 3, U: 4, V: 5, W: 6, X: 7, Y: 8, Z: 9,
+    '0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
+  };
+
+  function checkDigit(chars: string[]): string {
+    let sum = 0;
+    for (let i = 0; i < 17; i++) sum += TRANS[chars[i]] * WEIGHTS[i];
+    const r = sum % 11;
+    return r === 10 ? 'X' : String(r);
+  }
+
+  function vin(): string {
+    const chars: string[] = [];
+    for (let i = 0; i < 17; i++) chars.push(CHARS[randInt(0, CHARS.length - 1)]);
+    chars[8] = checkDigit(chars); // fix position 9 (index 8) to a valid check digit
+    return chars.join('');
+  }
+
+  function generate() {
+    const n = Math.max(1, Math.min(500, Number(countEl.value) || 1));
+    const list: string[] = [];
+    for (let i = 0; i < n; i++) list.push(vin());
+    out.value = list.join('\n');
+  }
+
+  document.getElementById('vn-gen')!.addEventListener('click', generate);
+  document.getElementById('vn-copy')!.addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  });
+  generate();
+</script>

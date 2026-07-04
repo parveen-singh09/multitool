@@ -1,0 +1,117 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+
+const sampleCode = `function greet(name) {
+  return \`Hello, \${name}!\`;
+}
+
+console.log(greet("world"));`;
+---
+
+<ToolLayout slug="code-snippet-generator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Code
+        <textarea id="cd-code" class="field min-h-48 resize-y font-mono text-[13px]" spellcheck="false" set:text={sampleCode}></textarea>
+      </label>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Theme
+          <select id="cd-theme" class="field"><option value="dark">Dark</option><option value="midnight">Midnight</option><option value="light">Light</option></select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Window title
+          <input id="cd-title" class="field" value="script.js" />
+        </label>
+      </div>
+      <div class="flex flex-wrap items-center gap-4">
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="cd-dots" type="checkbox" class="accent-[#5e6ad2]" checked /> Traffic-light dots</label>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="cd-lines" type="checkbox" class="accent-[#5e6ad2]" /> Line numbers</label>
+      </div>
+    </div>
+
+    <div class="flex flex-col items-center gap-4">
+      <div class="flex w-full items-center justify-center overflow-auto rounded-[12px] border border-hairline bg-surface-2 p-4">
+        <canvas id="cd-canvas" class="max-w-full"></canvas>
+      </div>
+      <button id="cd-dl" class="btn btn-primary">Download PNG</button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free code snippet image generator turns a block of code into a polished
+      PNG image — with a window frame, optional traffic-light dots and line numbers
+      — perfect for slides, documentation, blog posts and social media. Pick a
+      theme, set the window title, and download. The code is rendered on a canvas
+      in your browser, so nothing is sent anywhere.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const canvas = $('cd-canvas') as HTMLCanvasElement;
+
+  const THEMES: Record<string, { bg: string; win: string; fg: string; num: string }> = {
+    dark: { bg: '#1e1e2e', win: '#181825', fg: '#cdd6f4', num: '#585b70' },
+    midnight: { bg: '#0d1117', win: '#010409', fg: '#c9d1d9', num: '#484f58' },
+    light: { bg: '#ffffff', win: '#f0f1f2', fg: '#1f2328', num: '#8c959f' },
+  };
+
+  function draw() {
+    const code = ($('cd-code') as HTMLTextAreaElement).value || '';
+    const theme = THEMES[($('cd-theme') as HTMLSelectElement).value];
+    const title = ($('cd-title') as HTMLInputElement).value;
+    const dots = ($('cd-dots') as HTMLInputElement).checked;
+    const lineNums = ($('cd-lines') as HTMLInputElement).checked;
+    const ctx = canvas.getContext('2d')!;
+    const fontSize = 26, lineHeight = 38, pad = 48, titleH = 64;
+    const scale = 2; // render at 2x for crisp text
+    ctx.font = `${fontSize}px "JetBrains Mono", ui-monospace, monospace`;
+
+    const lines = code.split('\n');
+    const numGutter = lineNums ? ctx.measureText(String(lines.length)).width + 30 : 0;
+    let maxW = 0;
+    for (const l of lines) maxW = Math.max(maxW, ctx.measureText(l).width);
+
+    const cw = Math.ceil(maxW + pad * 2 + numGutter);
+    const ch = Math.ceil(titleH + lines.length * lineHeight + pad);
+    canvas.width = cw * scale;
+    canvas.height = ch * scale;
+    canvas.style.width = cw + 'px';
+    ctx.scale(scale, scale);
+
+    // Outer background.
+    ctx.fillStyle = theme.bg; ctx.fillRect(0, 0, cw, ch);
+    // Window title bar.
+    ctx.fillStyle = theme.win;
+    ctx.beginPath(); ctx.roundRect(16, 16, cw - 32, ch - 32, 12); ctx.fill();
+    if (dots) {
+      const cols = ['#ff5f56', '#ffbd2e', '#27c93f'];
+      cols.forEach((c, i) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(46 + i * 26, 42, 8, 0, Math.PI * 2); ctx.fill(); });
+    }
+    if (title) {
+      ctx.fillStyle = theme.num;
+      ctx.font = `500 22px Inter, system-ui, sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(title, cw / 2, 42);
+    }
+    // Code.
+    ctx.font = `${fontSize}px "JetBrains Mono", ui-monospace, monospace`;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    lines.forEach((line, i) => {
+      const y = titleH + 12 + i * lineHeight;
+      if (lineNums) {
+        ctx.fillStyle = theme.num;
+        ctx.fillText(String(i + 1), 40, y);
+      }
+      ctx.fillStyle = theme.fg;
+      ctx.fillText(line, 40 + numGutter, y);
+    });
+  }
+
+  ['cd-code', 'cd-theme', 'cd-title', 'cd-dots', 'cd-lines'].forEach((id) => $(id).addEventListener('input', draw));
+  $('cd-dl').addEventListener('click', () => {
+    const a = document.createElement('a'); a.href = canvas.toDataURL('image/png'); a.download = 'code-snippet.png'; a.click();
+  });
+  draw();
+</script>

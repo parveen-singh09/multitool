@@ -1,0 +1,76 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="meta-tag-generator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Page title
+        <input id="mt-title" class="field" value="My Awesome Page" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Description
+        <textarea id="mt-desc" class="field min-h-20 resize-y">A short, compelling description of the page for search results.</textarea>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Keywords (comma-separated)
+        <input id="mt-keywords" class="field" value="tools, online, free" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Author
+        <input id="mt-author" class="field" value="" placeholder="Your name" />
+      </label>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Robots
+          <select id="mt-robots" class="field"><option value="index, follow">index, follow</option><option value="noindex, follow">noindex, follow</option><option value="index, nofollow">index, nofollow</option><option value="noindex, nofollow">noindex, nofollow</option></select>
+        </label>
+        <label class="flex items-center gap-2 pt-6 text-sm text-ink-subtle"><input id="mt-viewport" type="checkbox" class="accent-[#5e6ad2]" checked /> Viewport + charset</label>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <label class="text-sm text-ink-subtle">Generated meta tags</label>
+      <textarea id="mt-out" class="field min-h-72 resize-y font-mono text-[12px]" readonly></textarea>
+      <button id="mt-copy" class="btn btn-secondary w-fit">Copy tags</button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free meta tag generator produces the SEO meta tags every page should
+      have — title, description, keywords, author, robots, plus the viewport and
+      charset tags — ready to paste into your HTML <code class="font-mono text-ink">&lt;head&gt;</code>.
+      A clear title and description directly shape how your page appears in search
+      results. Everything is generated in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const out = $('mt-out') as HTMLTextAreaElement;
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  function build() {
+    const title = ($('mt-title') as HTMLInputElement).value;
+    const desc = ($('mt-desc') as HTMLTextAreaElement).value;
+    const kw = ($('mt-keywords') as HTMLInputElement).value;
+    const author = ($('mt-author') as HTMLInputElement).value;
+    const robots = ($('mt-robots') as HTMLSelectElement).value;
+    const vp = ($('mt-viewport') as HTMLInputElement).checked;
+    const lines: string[] = [];
+    if (vp) { lines.push('<meta charset="UTF-8">'); lines.push('<meta name="viewport" content="width=device-width, initial-scale=1.0">'); }
+    if (title) lines.push(`<title>${esc(title)}</title>`);
+    if (desc) lines.push(`<meta name="description" content="${esc(desc)}">`);
+    if (kw) lines.push(`<meta name="keywords" content="${esc(kw)}">`);
+    if (author) lines.push(`<meta name="author" content="${esc(author)}">`);
+    if (robots) lines.push(`<meta name="robots" content="${robots}">`);
+    out.value = lines.join('\n');
+  }
+
+  ['mt-title', 'mt-desc', 'mt-keywords', 'mt-author', 'mt-robots', 'mt-viewport'].forEach((id) => $(id).addEventListener('input', build));
+  $('mt-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy tags'), 1500);
+  });
+  build();
+</script>

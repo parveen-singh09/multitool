@@ -1,0 +1,72 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="aztec-generator">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Data to encode
+      <textarea id="az-text" class="field min-h-24 resize-y font-mono text-[13px]" placeholder="Enter text or data…" spellcheck="false">TOOLCITIES AZTEC SAMPLE</textarea>
+    </label>
+
+    <div class="flex justify-center rounded-[8px] border border-hairline bg-white p-6">
+      <canvas id="az-canvas" class="max-w-full"></canvas>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <button id="az-png" type="button" class="btn btn-primary">Download PNG</button>
+      <button id="az-svg" type="button" class="btn btn-secondary">Download SVG</button>
+    </div>
+    <p id="az-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free Aztec code generator encodes any text into an Aztec 2D barcode —
+      the square code with a bullseye in the centre that's printed on train and
+      event tickets because it scans reliably even from a phone screen. Type your
+      content, preview the code, and download it as a PNG or scalable SVG.
+      Encoding runs entirely in your browser, so your data is never uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { toCanvas, toSVG } from '../../lib/barcode';
+
+  const textEl = document.getElementById('az-text') as HTMLTextAreaElement;
+  const canvas = document.getElementById('az-canvas') as HTMLCanvasElement;
+  const err = document.getElementById('az-error')!;
+  const BCID = 'azteccode';
+
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  async function draw() {
+    const text = textEl.value.trim();
+    if (!text) { setErr('Enter some text to encode.'); return; }
+    try {
+      await toCanvas(canvas, { bcid: BCID, text, scale: 5 });
+      setErr('');
+    } catch (e) {
+      setErr('Could not encode that data.');
+    }
+  }
+
+  function download(href: string, name: string) {
+    const a = document.createElement('a'); a.href = href; a.download = name; a.click();
+  }
+
+  let t: number;
+  textEl.addEventListener('input', () => { clearTimeout(t); t = window.setTimeout(draw, 200); });
+  document.getElementById('az-png')!.addEventListener('click', () => download(canvas.toDataURL('image/png'), 'aztec.png'));
+  document.getElementById('az-svg')!.addEventListener('click', async () => {
+    try {
+      const svg = await toSVG({ bcid: BCID, text: textEl.value.trim(), scale: 5 });
+      const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+      download(url, 'aztec.svg');
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch { setErr('Could not encode that data.'); }
+  });
+
+  draw();
+</script>

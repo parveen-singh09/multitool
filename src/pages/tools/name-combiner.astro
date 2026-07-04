@@ -1,0 +1,66 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="name-combiner">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">First name
+        <input id="nc-a" class="field" value="Brad" spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Second name
+        <input id="nc-b" class="field" value="Angelina" spellcheck="false" />
+      </label>
+    </div>
+    <button id="nc-gen" class="btn btn-primary w-fit">Combine</button>
+    <div id="nc-out" class="grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free name combiner blends two names into portmanteau mashups — the
+      "ship name" trick fans use for couples, plus handy blends for brand mashups,
+      pet names and baby names. It splices the start of one name with the end of
+      the other in several ways so you get a range to pick from. Click any result
+      to copy it. Runs entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const out = $('nc-out')!;
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+
+  function combos(a: string, b: string): string[] {
+    a = a.trim().toLowerCase().replace(/[^a-z]/g, '');
+    b = b.trim().toLowerCase().replace(/[^a-z]/g, '');
+    if (!a || !b) return [];
+    const set = new Set<string>();
+    const ha = Math.ceil(a.length / 2), hb = Math.floor(b.length / 2);
+    set.add(a.slice(0, ha) + b.slice(hb));
+    set.add(b.slice(0, Math.ceil(b.length / 2)) + a.slice(Math.floor(a.length / 2)));
+    set.add(a.slice(0, ha) + b);
+    set.add(a + b.slice(hb));
+    set.add(b.slice(0, hb || 1) + a);
+    // Blend on vowel boundaries.
+    const av = a.search(/[aeiou][^aeiou]*$/);
+    if (av > 0) set.add(a.slice(0, av) + b);
+    set.add(a.slice(0, 2) + b.slice(-3));
+    return [...set].filter((s) => s.length >= 3 && s.length <= 14).map(cap);
+  }
+
+  function generate() {
+    const list = combos(($('nc-a') as HTMLInputElement).value, ($('nc-b') as HTMLInputElement).value);
+    out.innerHTML = list.map((n) => `<button class="panel px-3 py-2.5 text-center text-[15px] font-medium text-ink hover:border-hairline-strong" data-n="${n}">${n}</button>`).join('') || '<p class="text-ink-subtle">Enter two names.</p>';
+    out.querySelectorAll('button').forEach((b) => b.addEventListener('click', async () => {
+      await navigator.clipboard.writeText((b as HTMLElement).dataset.n!);
+      const orig = b.textContent; b.textContent = 'Copied!';
+      setTimeout(() => (b.textContent = orig), 1000);
+    }));
+  }
+
+  ['nc-a', 'nc-b'].forEach((id) => $(id).addEventListener('input', generate));
+  $('nc-gen').addEventListener('click', generate);
+  generate();
+</script>

@@ -1,0 +1,55 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="company-name-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="co-count" type="number" min="1" max="500" value="12" class="field w-28" />
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="co-suffix" type="checkbox" class="accent-[#5e6ad2]" /> Add legal suffix (Inc, LLC…)
+      </label>
+      <button id="co-gen" class="btn btn-primary ml-auto">Generate</button>
+      <button id="co-copy" class="btn btn-secondary">Copy all</button>
+    </div>
+    <textarea id="co-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated company names"></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free company name generator produces business and startup name ideas by
+      combining descriptive words, surnames and industry terms in a few different
+      patterns. Turn on the legal suffix option to append Inc, LLC or Ltd. It's a
+      quick way to brainstorm names or fill sample data with plausible companies.
+      Generated in your browser — nothing is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { companyName } from '../../lib/fakegen';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const countEl = $('co-count') as HTMLInputElement;
+  const suffixEl = $('co-suffix') as HTMLInputElement;
+  const out = $('co-out') as HTMLTextAreaElement;
+
+  function generate() {
+    const n = Math.max(1, Math.min(500, Number(countEl.value) || 1));
+    const list: string[] = [];
+    for (let i = 0; i < n; i++) list.push(companyName(suffixEl.checked));
+    out.value = list.join('\n');
+  }
+
+  [countEl, suffixEl].forEach((el) => el.addEventListener('input', generate));
+  $('co-gen').addEventListener('click', generate);
+  $('co-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  });
+  generate();
+</script>

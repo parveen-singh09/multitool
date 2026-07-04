@@ -1,0 +1,94 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="schema-markup-generator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Schema type
+        <select id="sc-type" class="field">
+          <option value="Article">Article</option>
+          <option value="Product">Product</option>
+          <option value="LocalBusiness">Local Business</option>
+          <option value="Organization">Organization</option>
+          <option value="Person">Person</option>
+          <option value="FAQPage">FAQ Page</option>
+          <option value="Event">Event</option>
+        </select>
+      </label>
+      <div id="sc-fields" class="flex flex-col gap-3"></div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <label class="text-sm text-ink-subtle">JSON-LD (paste into a &lt;script&gt; tag)</label>
+      <textarea id="sc-out" class="field min-h-72 resize-y font-mono text-[12px]" readonly></textarea>
+      <button id="sc-copy" class="btn btn-secondary w-fit">Copy script tag</button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free schema markup generator creates JSON-LD structured data for the
+      most useful Schema.org types — Article, Product, Local Business,
+      Organization, Person, FAQ and Event. Structured data helps search engines
+      understand your content and can unlock rich results like star ratings, FAQs
+      and event details. Fill in the fields and copy the ready-to-embed
+      <code class="font-mono text-ink">&lt;script type="application/ld+json"&gt;</code>.
+      Runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const typeEl = $('sc-type') as HTMLSelectElement;
+  const fieldsEl = $('sc-fields')!;
+  const out = $('sc-out') as HTMLTextAreaElement;
+
+  // Field definitions per type: [key, label, default].
+  const SCHEMAS: Record<string, [string, string, string][]> = {
+    Article: [['headline', 'Headline', 'How to Use Structured Data'], ['author', 'Author name', 'Jane Doe'], ['datePublished', 'Date published', '2026-01-01'], ['image', 'Image URL', 'https://example.com/image.jpg'], ['description', 'Description', 'A short summary.']],
+    Product: [['name', 'Product name', 'Wireless Headphones'], ['image', 'Image URL', 'https://example.com/product.jpg'], ['description', 'Description', 'Noise-cancelling headphones.'], ['brand', 'Brand', 'Acme'], ['price', 'Price', '99.99'], ['priceCurrency', 'Currency', 'USD']],
+    LocalBusiness: [['name', 'Business name', 'Joe\'s Coffee'], ['telephone', 'Phone', '+1-555-010-1234'], ['streetAddress', 'Street', '123 Main St'], ['addressLocality', 'City', 'Springfield'], ['addressRegion', 'State', 'CA'], ['postalCode', 'ZIP', '90000']],
+    Organization: [['name', 'Name', 'Acme Inc'], ['url', 'Website', 'https://example.com'], ['logo', 'Logo URL', 'https://example.com/logo.png']],
+    Person: [['name', 'Name', 'Jane Doe'], ['jobTitle', 'Job title', 'Engineer'], ['url', 'Website', 'https://example.com'], ['email', 'Email', 'jane@example.com']],
+    FAQPage: [['q1', 'Question 1', 'What is your return policy?'], ['a1', 'Answer 1', '30-day returns.'], ['q2', 'Question 2', 'Do you ship internationally?'], ['a2', 'Answer 2', 'Yes, worldwide.']],
+    Event: [['name', 'Event name', 'Web Dev Conf'], ['startDate', 'Start date', '2026-06-01T09:00'], ['location', 'Location', 'Convention Center'], ['description', 'Description', 'A conference for developers.']],
+  };
+
+  function renderFields() {
+    const defs = SCHEMAS[typeEl.value];
+    fieldsEl.innerHTML = defs.map(([key, label, def]) =>
+      `<label class="flex flex-col gap-1 text-sm text-ink-subtle">${label}<input data-key="${key}" class="sc-in field" value="${def.replace(/"/g, '&quot;')}" /></label>`
+    ).join('');
+    fieldsEl.querySelectorAll('.sc-in').forEach((el) => el.addEventListener('input', build));
+  }
+
+  function build() {
+    const type = typeEl.value;
+    const get = (k: string) => (fieldsEl.querySelector(`[data-key="${k}"]`) as HTMLInputElement)?.value ?? '';
+    let obj: Record<string, unknown> = { '@context': 'https://schema.org', '@type': type };
+
+    if (type === 'Article') Object.assign(obj, { headline: get('headline'), author: { '@type': 'Person', name: get('author') }, datePublished: get('datePublished'), image: get('image'), description: get('description') });
+    else if (type === 'Product') Object.assign(obj, { name: get('name'), image: get('image'), description: get('description'), brand: { '@type': 'Brand', name: get('brand') }, offers: { '@type': 'Offer', price: get('price'), priceCurrency: get('priceCurrency') } });
+    else if (type === 'LocalBusiness') Object.assign(obj, { name: get('name'), telephone: get('telephone'), address: { '@type': 'PostalAddress', streetAddress: get('streetAddress'), addressLocality: get('addressLocality'), addressRegion: get('addressRegion'), postalCode: get('postalCode') } });
+    else if (type === 'Organization') Object.assign(obj, { name: get('name'), url: get('url'), logo: get('logo') });
+    else if (type === 'Person') Object.assign(obj, { name: get('name'), jobTitle: get('jobTitle'), url: get('url'), email: get('email') });
+    else if (type === 'FAQPage') obj.mainEntity = [
+      { '@type': 'Question', name: get('q1'), acceptedAnswer: { '@type': 'Answer', text: get('a1') } },
+      { '@type': 'Question', name: get('q2'), acceptedAnswer: { '@type': 'Answer', text: get('a2') } },
+    ];
+    else if (type === 'Event') Object.assign(obj, { name: get('name'), startDate: get('startDate'), location: { '@type': 'Place', name: get('location') }, description: get('description') });
+
+    out.value = `<script type="application/ld+json">\n${JSON.stringify(obj, null, 2)}\n<\/script>`;
+  }
+
+  typeEl.addEventListener('change', () => { renderFields(); build(); });
+  $('sc-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy script tag'), 1500);
+  });
+  renderFields(); build();
+</script>

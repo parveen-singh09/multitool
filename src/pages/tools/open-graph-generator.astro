@@ -1,0 +1,83 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="open-graph-generator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Title
+        <input id="og-title" class="field" value="My Awesome Page" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Description
+        <textarea id="og-desc" class="field min-h-20 resize-y">A short, compelling description shown in the link preview.</textarea>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Canonical URL
+        <input id="og-url" class="field" value="https://example.com/page" spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Image URL
+        <input id="og-image" class="field" value="https://example.com/og-image.png" spellcheck="false" />
+      </label>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Type
+          <select id="og-type" class="field"><option>website</option><option>article</option><option>product</option><option>profile</option></select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Twitter card
+          <select id="og-card" class="field"><option value="summary_large_image">Large image</option><option value="summary">Summary</option></select>
+        </label>
+      </div>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Site name
+        <input id="og-site" class="field" value="Example" />
+      </label>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <label class="text-sm text-ink-subtle">Generated tags</label>
+      <textarea id="og-out" class="field min-h-72 resize-y font-mono text-[12px]" readonly></textarea>
+      <button id="og-copy" class="btn btn-secondary w-fit">Copy tags</button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free Open Graph generator builds the <code class="font-mono text-ink">og:</code>
+      and Twitter card meta tags that control how your links look when shared on
+      Facebook, LinkedIn, X and messaging apps — the title, description, preview
+      image and type. Add a large, well-sized image (1200×630 works well) for the
+      best previews. Paste the tags into your HTML head. Runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const out = $('og-out') as HTMLTextAreaElement;
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const v = (id: string) => ($(id) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement).value;
+
+  function build() {
+    const lines: string[] = [];
+    const title = v('og-title'), desc = v('og-desc'), url = v('og-url'), image = v('og-image');
+    const type = v('og-type'), card = v('og-card'), site = v('og-site');
+    if (title) lines.push(`<meta property="og:title" content="${esc(title)}">`);
+    if (desc) lines.push(`<meta property="og:description" content="${esc(desc)}">`);
+    if (type) lines.push(`<meta property="og:type" content="${type}">`);
+    if (url) lines.push(`<meta property="og:url" content="${esc(url)}">`);
+    if (image) lines.push(`<meta property="og:image" content="${esc(image)}">`);
+    if (site) lines.push(`<meta property="og:site_name" content="${esc(site)}">`);
+    lines.push('');
+    if (card) lines.push(`<meta name="twitter:card" content="${card}">`);
+    if (title) lines.push(`<meta name="twitter:title" content="${esc(title)}">`);
+    if (desc) lines.push(`<meta name="twitter:description" content="${esc(desc)}">`);
+    if (image) lines.push(`<meta name="twitter:image" content="${esc(image)}">`);
+    out.value = lines.join('\n');
+  }
+
+  ['og-title', 'og-desc', 'og-url', 'og-image', 'og-type', 'og-card', 'og-site'].forEach((id) => $(id).addEventListener('input', build));
+  $('og-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy tags'), 1500);
+  });
+  build();
+</script>

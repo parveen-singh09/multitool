@@ -1,0 +1,97 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="coupon-code-generator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Prefix
+        <input id="cp-prefix" class="field font-mono" placeholder="SAVE" value="SAVE" spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Code length
+        <input id="cp-len" type="number" min="4" max="24" value="8" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="cp-count" type="number" min="1" max="1000" value="20" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Character set
+        <select id="cp-set" class="field">
+          <option value="unambig" selected>No ambiguous (A-Z 2-9)</option>
+          <option value="alnum">Letters + numbers</option>
+          <option value="alpha">Letters only</option>
+          <option value="num">Numbers only</option>
+        </select>
+      </label>
+    </div>
+    <div class="flex flex-wrap items-center gap-4">
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="cp-dash" type="checkbox" class="accent-[#5e6ad2]" /> Group with dashes
+      </label>
+      <button id="cp-gen" class="btn btn-primary ml-auto">Generate</button>
+      <button id="cp-copy" class="btn btn-secondary">Copy all</button>
+    </div>
+    <textarea id="cp-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated coupon codes"></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free coupon code generator creates batches of unique, hard-to-guess
+      promo codes for sales, email campaigns and loyalty programs. Set a prefix
+      like SAVE, pick the length and character set — the no-ambiguous option
+      drops easily-confused characters like O and 0 so codes are easy to read and
+      type. Codes are generated with your browser's secure random source and
+      de-duplicated within each batch. Nothing is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { randString, UNAMBIGUOUS, ALPHA_UPPER, DIGITS } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const prefix = $('cp-prefix') as HTMLInputElement;
+  const lenEl = $('cp-len') as HTMLInputElement;
+  const countEl = $('cp-count') as HTMLInputElement;
+  const setEl = $('cp-set') as HTMLSelectElement;
+  const dashEl = $('cp-dash') as HTMLInputElement;
+  const out = $('cp-out') as HTMLTextAreaElement;
+
+  function alphabet(): string {
+    switch (setEl.value) {
+      case 'alnum': return ALPHA_UPPER + DIGITS;
+      case 'alpha': return ALPHA_UPPER;
+      case 'num': return DIGITS;
+      default: return UNAMBIGUOUS;
+    }
+  }
+
+  function group(s: string): string {
+    return s.match(/.{1,4}/g)?.join('-') ?? s;
+  }
+
+  function generate() {
+    const len = Math.max(4, Math.min(24, Number(lenEl.value) || 8));
+    const n = Math.max(1, Math.min(1000, Number(countEl.value) || 1));
+    const ab = alphabet();
+    const pre = prefix.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const seen = new Set<string>();
+    let guard = 0;
+    while (seen.size < n && guard < n * 20) {
+      guard++;
+      let body = randString(len, ab);
+      if (dashEl.checked) body = group(body);
+      seen.add(pre ? `${pre}-${body}` : body);
+    }
+    out.value = [...seen].join('\n');
+  }
+
+  ['cp-prefix', 'cp-len', 'cp-count', 'cp-set', 'cp-dash'].forEach((id) => $(id).addEventListener('input', generate));
+  $('cp-gen').addEventListener('click', generate);
+  $('cp-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  });
+  generate();
+</script>

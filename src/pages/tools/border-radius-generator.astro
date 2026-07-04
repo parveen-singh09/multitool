@@ -1,0 +1,85 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="border-radius-generator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-3">
+      <div class="flex items-center gap-3">
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="br-link" type="checkbox" class="accent-[#5e6ad2]" checked /> Link all corners</label>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="br-blob" type="checkbox" class="accent-[#5e6ad2]" /> Blob mode (8-point)</label>
+      </div>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Top-left: <span id="br-tlv" class="text-ink">24px</span>
+        <input id="br-tl" type="range" min="0" max="150" value="24" class="w-full accent-[#5e6ad2]" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Top-right: <span id="br-trv" class="text-ink">24px</span>
+        <input id="br-tr" type="range" min="0" max="150" value="24" class="w-full accent-[#5e6ad2]" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Bottom-right: <span id="br-brv" class="text-ink">24px</span>
+        <input id="br-br" type="range" min="0" max="150" value="24" class="w-full accent-[#5e6ad2]" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Bottom-left: <span id="br-blv" class="text-ink">24px</span>
+        <input id="br-bl" type="range" min="0" max="150" value="24" class="w-full accent-[#5e6ad2]" />
+      </label>
+    </div>
+
+    <div class="flex flex-col gap-4">
+      <div class="flex min-h-56 items-center justify-center rounded-[12px] border border-hairline bg-surface-2 p-8">
+        <div id="br-box" class="h-40 w-40 border-2 border-[#5e6ad2] bg-[#5e6ad2]/20"></div>
+      </div>
+      <div class="flex items-center gap-2">
+        <code id="br-css" class="field font-mono text-[13px] break-all"></code>
+        <button id="br-copy" class="btn btn-secondary whitespace-nowrap">Copy</button>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free CSS border-radius generator lets you round each corner
+      independently or all at once, with a live preview. Switch on blob mode to
+      use the 8-value horizontal/vertical radius syntax and create smooth, organic
+      shapes. Copy the ready-to-use <code class="font-mono text-ink">border-radius</code>
+      CSS when you're happy. Runs entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const box = $('br-box') as HTMLElement;
+  const cssEl = $('br-css')!;
+  const corners = ['br-tl', 'br-tr', 'br-br', 'br-bl'];
+  const linkEl = $('br-link') as HTMLInputElement;
+  const blobEl = $('br-blob') as HTMLInputElement;
+
+  function update(source?: string) {
+    if (linkEl.checked && source && !blobEl.checked) {
+      const v = ($(source) as HTMLInputElement).value;
+      corners.forEach((id) => { ($(id) as HTMLInputElement).value = v; });
+    }
+    const [tl, tr, br, bl] = corners.map((id) => Number(($(id) as HTMLInputElement).value));
+    $('br-tlv').textContent = `${tl}px`; $('br-trv').textContent = `${tr}px`;
+    $('br-brv').textContent = `${br}px`; $('br-blv').textContent = `${bl}px`;
+    let value: string;
+    if (blobEl.checked) {
+      // Map each slider to a percentage for an organic blob.
+      const p = (n: number) => `${Math.round((n / 150) * 100)}%`;
+      value = `${p(tl)} ${100 - Math.round((tl / 150) * 100)}% ${p(br)} ${100 - Math.round((br / 150) * 100)}% / ${p(tr)} ${p(bl)} ${100 - Math.round((bl / 150) * 100)}% ${100 - Math.round((tr / 150) * 100)}%`;
+    } else {
+      value = `${tl}px ${tr}px ${br}px ${bl}px`;
+    }
+    box.style.borderRadius = value;
+    cssEl.textContent = `border-radius: ${value};`;
+  }
+
+  corners.forEach((id) => $(id).addEventListener('input', () => update(id)));
+  [linkEl, blobEl].forEach((el) => el.addEventListener('change', () => update()));
+  $('br-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(cssEl.textContent || '');
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+  update();
+</script>

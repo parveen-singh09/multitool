@@ -1,0 +1,101 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+
+const defaultPayload = `{
+  "sub": "1234567890",
+  "name": "Ada Lovelace",
+  "admin": true,
+  "iat": 1700000000
+}`;
+---
+
+<ToolLayout slug="jwt-generator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-4">
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Algorithm
+          <select id="jw-alg" class="field w-32">
+            <option value="HS256" selected>HS256</option>
+            <option value="HS384">HS384</option>
+            <option value="HS512">HS512</option>
+          </select>
+        </label>
+        <label class="flex flex-1 flex-col gap-1 text-sm text-ink-subtle">Secret
+          <input id="jw-secret" class="field font-mono text-[13px]" value="your-256-bit-secret" spellcheck="false" />
+        </label>
+      </div>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Payload (JSON)
+        <textarea id="jw-payload" class="field min-h-48 resize-y font-mono text-[13px]" spellcheck="false" set:text={defaultPayload}></textarea>
+      </label>
+    </div>
+
+    <div class="flex flex-col gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Signed token
+        <textarea id="jw-out" class="field min-h-48 resize-y font-mono text-[13px] break-all" readonly aria-label="Signed JWT"></textarea>
+      </label>
+      <button id="jw-copy" class="btn btn-secondary">Copy token</button>
+      <p id="jw-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free JWT generator builds and signs JSON Web Tokens using HMAC
+      (HS256, HS384 or HS512). Edit the payload claims and secret, and the tool
+      signs the token live with your browser's Web Crypto API — the secret and
+      resulting token never leave your device. Use it to craft test tokens for
+      APIs and to understand JWT structure. For production, keep your signing
+      secret private and long.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { utf8, toBase64Url } from '../../lib/encoding';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const algEl = $('jw-alg') as HTMLSelectElement;
+  const secretEl = $('jw-secret') as HTMLInputElement;
+  const payloadEl = $('jw-payload') as HTMLTextAreaElement;
+  const out = $('jw-out') as HTMLTextAreaElement;
+  const err = $('jw-error')!;
+
+  const HASH: Record<string, string> = { HS256: 'SHA-256', HS384: 'SHA-384', HS512: 'SHA-512' };
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  const b64urlStr = (s: string) => toBase64Url(utf8(s));
+
+  async function sign() {
+    let payloadObj: unknown;
+    try {
+      payloadObj = JSON.parse(payloadEl.value);
+    } catch {
+      setErr('Payload is not valid JSON.');
+      out.value = '';
+      return;
+    }
+    const alg = algEl.value;
+    const header = { alg, typ: 'JWT' };
+    const signingInput = `${b64urlStr(JSON.stringify(header))}.${b64urlStr(JSON.stringify(payloadObj))}`;
+    try {
+      const key = await crypto.subtle.importKey(
+        'raw', utf8(secretEl.value),
+        { name: 'HMAC', hash: HASH[alg] }, false, ['sign'],
+      );
+      const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, utf8(signingInput)));
+      out.value = `${signingInput}.${toBase64Url(sig)}`;
+      setErr('');
+    } catch (e) {
+      setErr('Could not sign the token.');
+    }
+  }
+
+  [algEl, secretEl, payloadEl].forEach((el) => el.addEventListener('input', sign));
+  $('jw-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy token'), 1500);
+  });
+  sign();
+</script>

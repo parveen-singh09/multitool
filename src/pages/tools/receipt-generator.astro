@@ -1,0 +1,120 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="receipt-generator">
+  <div class="flex flex-col gap-5">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Store / business
+        <textarea id="rc-from" class="field min-h-24 resize-y text-[13px]">Corner Store
+789 Market St
+Springfield, CA 90000
+(555) 010-2020</textarea>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Customer (optional)
+        <textarea id="rc-to" class="field min-h-24 resize-y text-[13px]">Walk-in customer</textarea>
+      </label>
+    </div>
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Receipt #
+        <input id="rc-number" class="field" value="R-1001" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Date
+        <input id="rc-date" type="date" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Currency
+        <select id="rc-currency" class="field"><option value="$">$ USD</option><option value="€">€ EUR</option><option value="£">£ GBP</option><option value="₹">₹ INR</option></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Tax %
+        <input id="rc-tax" type="number" min="0" max="100" step="0.1" value="8.5" class="field" />
+      </label>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <span class="text-sm text-ink-subtle">Items</span>
+        <button id="rc-add" class="btn btn-secondary py-1 text-[13px]">+ Add item</button>
+      </div>
+      <div id="rc-items" class="flex flex-col gap-2"></div>
+    </div>
+
+    <div class="flex items-center justify-between border-t border-hairline pt-4">
+      <span class="text-sm text-ink-subtle">Total</span>
+      <span id="rc-total" class="font-mono text-xl text-ink"></span>
+    </div>
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Footer note
+      <input id="rc-notes" class="field" value="Thank you for your purchase!" />
+    </label>
+
+    <button id="rc-dl" class="btn btn-primary w-fit">Download PDF</button>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free receipt generator creates clean, itemized sales receipts with your
+      store details, line items, tax and total, ready to download as a PDF. It's
+      handy for small businesses, market stalls and expense reimbursements. Totals
+      calculate automatically as you type. Everything is generated in your browser
+      and never uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { buildDocPdf, downloadPdf, subtotal, money, type LineItem } from '../../lib/pdfdoc';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const itemsWrap = $('rc-items')!;
+  let items: LineItem[] = [
+    { description: 'Coffee', qty: 2, price: 3.5 },
+    { description: 'Sandwich', qty: 1, price: 7.25 },
+  ];
+  ($('rc-date') as HTMLInputElement).value = new Date().toISOString().slice(0, 10);
+
+  function renderItems() {
+    itemsWrap.innerHTML = items.map((it, i) => `
+      <div class="flex gap-2" data-i="${i}">
+        <input class="rc-desc field flex-1 text-[13px]" placeholder="Item" value="${it.description.replace(/"/g, '&quot;')}" />
+        <input class="rc-qty field w-20 text-[13px]" type="number" min="0" value="${it.qty}" />
+        <input class="rc-price field w-24 text-[13px]" type="number" min="0" step="0.01" value="${it.price}" />
+        <button class="rc-del btn btn-secondary px-3">×</button>
+      </div>`).join('');
+    itemsWrap.querySelectorAll<HTMLElement>('[data-i]').forEach((row) => {
+      const i = Number(row.dataset.i);
+      row.querySelector('.rc-desc')!.addEventListener('input', (e) => { items[i].description = (e.target as HTMLInputElement).value; });
+      row.querySelector('.rc-qty')!.addEventListener('input', (e) => { items[i].qty = Number((e.target as HTMLInputElement).value) || 0; total(); });
+      row.querySelector('.rc-price')!.addEventListener('input', (e) => { items[i].price = Number((e.target as HTMLInputElement).value) || 0; total(); });
+      row.querySelector('.rc-del')!.addEventListener('click', () => { items.splice(i, 1); renderItems(); total(); });
+    });
+  }
+
+  function total() {
+    const cur = ($('rc-currency') as HTMLSelectElement).value;
+    const tax = Number(($('rc-tax') as HTMLInputElement).value) || 0;
+    const sub = subtotal(items);
+    $('rc-total').textContent = money(sub + sub * (tax / 100), cur);
+  }
+
+  $('rc-add').addEventListener('click', () => { items.push({ description: '', qty: 1, price: 0 }); renderItems(); total(); });
+  ['rc-currency', 'rc-tax'].forEach((id) => $(id).addEventListener('input', total));
+
+  $('rc-dl').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    btn.disabled = true; btn.textContent = 'Generating…';
+    try {
+      const bytes = await buildDocPdf({
+        docType: 'RECEIPT',
+        number: ($('rc-number') as HTMLInputElement).value,
+        date: ($('rc-date') as HTMLInputElement).value,
+        fromLabel: 'Store', from: ($('rc-from') as HTMLTextAreaElement).value.split('\n'),
+        toLabel: 'Customer', to: ($('rc-to') as HTMLTextAreaElement).value.split('\n'),
+        items, currency: ($('rc-currency') as HTMLSelectElement).value,
+        taxRate: Number(($('rc-tax') as HTMLInputElement).value) || 0,
+        notes: ($('rc-notes') as HTMLInputElement).value,
+      });
+      downloadPdf(bytes, `${($('rc-number') as HTMLInputElement).value || 'receipt'}.pdf`);
+    } finally { btn.disabled = false; btn.textContent = 'Download PDF'; }
+  });
+
+  renderItems(); total();
+</script>

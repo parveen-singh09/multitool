@@ -1,0 +1,81 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="poem-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Theme / word
+        <input id="pm-theme" class="field" value="ocean" spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Style
+        <select id="pm-style" class="field w-40"><option value="haiku">Haiku</option><option value="couplet">Rhyming couplets</option><option value="free">Free verse</option></select>
+      </label>
+      <button id="pm-gen" class="btn btn-primary ml-auto">Generate</button>
+      <button id="pm-copy" class="btn btn-secondary">Copy</button>
+    </div>
+    <pre id="pm-out" class="panel panel-lift whitespace-pre-wrap p-5 font-sans text-[16px] leading-relaxed text-ink"></pre>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free poem generator writes short poems around a theme or word you
+      choose, in a few styles — a three-line haiku, rhyming couplets, or free
+      verse. It's a playful way to spark ideas, add a personal line to a card, or
+      warm up your own writing. Each generation is different. Everything runs in
+      your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { pick } from '../../lib/random';
+  import { ADJECTIVES, NOUNS, VERBS } from '../../lib/fakedata';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const themeEl = $('pm-theme') as HTMLInputElement;
+  const styleEl = $('pm-style') as HTMLSelectElement;
+  const out = $('pm-out')!;
+
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  function haiku(theme: string): string {
+    return [
+      `${cap(pick(ADJECTIVES))} ${theme} at dawn`,
+      `${cap(pick(NOUNS))} ${pick(VERBS)} beneath the ${pick(NOUNS)}`,
+      `${pick(ADJECTIVES)} light returns`,
+    ].join('\n');
+  }
+
+  function couplet(theme: string): string {
+    const lines: string[] = [];
+    for (let i = 0; i < 2; i++) {
+      lines.push(`The ${pick(ADJECTIVES)} ${theme} ${pick(VERBS)} once more,`);
+      lines.push(`A ${pick(ADJECTIVES)} ${pick(NOUNS)} by the shore.`);
+    }
+    return lines.join('\n');
+  }
+
+  function free(theme: string): string {
+    const lines = [`${cap(theme)},`];
+    for (let i = 0; i < 4; i++) lines.push(`${cap(pick(ADJECTIVES))} and ${pick(ADJECTIVES)}, the ${pick(NOUNS)} ${pick(VERBS)}`);
+    lines.push(`— and still, the ${theme} remains.`);
+    return lines.join('\n');
+  }
+
+  function generate() {
+    const theme = themeEl.value.trim().toLowerCase() || 'ocean';
+    const s = styleEl.value;
+    out.textContent = s === 'haiku' ? haiku(theme) : s === 'couplet' ? couplet(theme) : free(theme);
+  }
+
+  [themeEl, styleEl].forEach((el) => el.addEventListener('input', generate));
+  $('pm-gen').addEventListener('click', generate);
+  $('pm-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.textContent || '');
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+  generate();
+</script>

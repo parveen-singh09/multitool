@@ -1,0 +1,75 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="hashtag-generator">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Topic or keywords (comma or space separated)
+      <input id="hg-input" class="field" value="coffee, morning, cafe" spellcheck="false" />
+    </label>
+    <div class="flex flex-wrap items-center gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="hg-count" type="number" min="5" max="60" value="24" class="field w-28" />
+      </label>
+      <button id="hg-gen" class="btn btn-primary ml-auto">Generate</button>
+      <button id="hg-copy" class="btn btn-secondary">Copy all</button>
+    </div>
+    <div id="hg-out" class="flex flex-wrap gap-2"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free hashtag generator turns your topic and keywords into a set of
+      relevant hashtags for Instagram, TikTok, X and LinkedIn. It mixes your terms
+      with popular engagement tags and common modifiers, in both lowercase and
+      CamelCase for accessibility. Click any tag to copy it, or copy the whole set
+      at once. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { shuffle } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const input = $('hg-input') as HTMLInputElement;
+  const countEl = $('hg-count') as HTMLInputElement;
+  const out = $('hg-out')!;
+
+  const MODIFIERS = ['love', 'life', 'daily', 'gram', 'lover', 'addict', 'community', 'lifestyle', 'inspo', 'goals', 'vibes', 'ofinstagram', 'oftheday'];
+  const POPULAR = ['instagood', 'photooftheday', 'trending', 'viral', 'explore', 'follow', 'instadaily', 'fyp'];
+
+  const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1);
+
+  function generate() {
+    const words = input.value.split(/[\s,]+/).map((w) => w.trim().toLowerCase().replace(/[^a-z0-9]/g, '')).filter(Boolean);
+    const n = Math.max(5, Math.min(60, Number(countEl.value) || 24));
+    const tags = new Set<string>();
+    for (const w of words) {
+      tags.add('#' + w);
+      tags.add('#' + cap(w));
+      for (const m of MODIFIERS) tags.add('#' + w + m);
+    }
+    // Combine pairs.
+    for (let i = 0; i < words.length; i++) for (let j = i + 1; j < words.length; j++) tags.add('#' + cap(words[i]) + cap(words[j]));
+    for (const p of POPULAR) tags.add('#' + p);
+    const list = shuffle([...tags]).slice(0, n);
+    out.innerHTML = list.map((t) => `<button class="status-badge cursor-pointer hover:border-hairline-strong" data-t="${t}">${t}</button>`).join('');
+    out.querySelectorAll('button').forEach((b) => b.addEventListener('click', async () => {
+      await navigator.clipboard.writeText((b as HTMLElement).dataset.t!);
+      const orig = b.textContent; b.textContent = 'Copied!';
+      setTimeout(() => (b.textContent = orig), 1000);
+    }));
+  }
+
+  [input, countEl].forEach((el) => el.addEventListener('input', generate));
+  $('hg-gen').addEventListener('click', generate);
+  $('hg-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    const tags = [...out.querySelectorAll('button')].map((b) => (b as HTMLElement).dataset.t).join(' ');
+    await navigator.clipboard.writeText(tags);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  });
+  generate();
+</script>

@@ -1,0 +1,117 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="avatar-generator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Name or seed
+        <input id="av-seed" class="field" value="Ada Lovelace" spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Style
+        <select id="av-style" class="field"><option value="initials">Initials</option><option value="identicon">Geometric identicon</option></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Shape
+        <select id="av-shape" class="field"><option value="circle">Circle</option><option value="rounded">Rounded square</option><option value="square">Square</option></select>
+      </label>
+      <div class="flex items-center gap-3">
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="av-auto" type="checkbox" class="accent-[#5e6ad2]" checked /> Auto color from seed</label>
+        <input id="av-color" type="color" value="#5e6ad2" class="field h-10 w-16 cursor-pointer p-1" />
+      </div>
+    </div>
+
+    <div class="flex flex-col items-center gap-4">
+      <canvas id="av-canvas" width="256" height="256" class="h-48 w-48"></canvas>
+      <div class="flex flex-wrap justify-center gap-2">
+        <button id="av-shuffle" class="btn btn-secondary">Shuffle seed</button>
+        <button id="av-dl" class="btn btn-primary">Download PNG</button>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free avatar generator makes clean profile placeholders in two styles:
+      an initials avatar that pulls the first letters from a name, or a unique
+      geometric identicon deterministically derived from any seed — the same seed
+      always produces the same pattern. Colors can be auto-derived from the seed or
+      set manually. Download a transparent-friendly PNG. Everything runs in your
+      browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const canvas = $('av-canvas') as HTMLCanvasElement;
+
+  // Simple deterministic string hash.
+  function hash(s: string): number {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+
+  function initials(name: string): string {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  function clip(ctx: CanvasRenderingContext2D, size: number, shape: string) {
+    ctx.beginPath();
+    if (shape === 'circle') ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+    else if (shape === 'rounded') ctx.roundRect(0, 0, size, size, size * 0.22);
+    else ctx.rect(0, 0, size, size);
+    ctx.clip();
+  }
+
+  function draw() {
+    const seed = ($('av-seed') as HTMLInputElement).value || 'seed';
+    const style = ($('av-style') as HTMLSelectElement).value;
+    const shape = ($('av-shape') as HTMLSelectElement).value;
+    const auto = ($('av-auto') as HTMLInputElement).checked;
+    const h = hash(seed);
+    const hue = h % 360;
+    const bg = auto ? `hsl(${hue}, 65%, 55%)` : ($('av-color') as HTMLInputElement).value;
+    const size = 256;
+    const ctx = canvas.getContext('2d')!;
+    ctx.clearRect(0, 0, size, size);
+    ctx.save();
+    clip(ctx, size, shape);
+
+    if (style === 'initials') {
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = `600 ${size * 0.42}px Inter, system-ui, sans-serif`;
+      ctx.fillText(initials(seed), size / 2, size / 2 + size * 0.03);
+    } else {
+      // 5x5 symmetric identicon.
+      ctx.fillStyle = auto ? `hsl(${hue}, 25%, 92%)` : '#f0f1f2';
+      ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = bg;
+      const cells = 5, cs = size / cells;
+      for (let x = 0; x < Math.ceil(cells / 2); x++) {
+        for (let y = 0; y < cells; y++) {
+          if ((h >> (x * cells + y)) & 1) {
+            ctx.fillRect(x * cs, y * cs, cs, cs);
+            ctx.fillRect((cells - 1 - x) * cs, y * cs, cs, cs);
+          }
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  ['av-seed', 'av-style', 'av-shape', 'av-auto', 'av-color'].forEach((id) => $(id).addEventListener('input', draw));
+  $('av-shuffle').addEventListener('click', () => {
+    ($('av-seed') as HTMLInputElement).value = Math.random().toString(36).slice(2, 10);
+    draw();
+  });
+  $('av-dl').addEventListener('click', () => {
+    const a = document.createElement('a'); a.href = canvas.toDataURL('image/png'); a.download = 'avatar.png'; a.click();
+  });
+  draw();
+</script>

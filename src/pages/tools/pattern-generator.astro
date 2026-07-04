@@ -1,0 +1,103 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pattern-generator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Pattern
+        <select id="pt-type" class="field">
+          <option value="dots">Dots</option>
+          <option value="grid">Grid</option>
+          <option value="stripes">Diagonal stripes</option>
+          <option value="checkers">Checkers</option>
+          <option value="cross">Crosses</option>
+          <option value="triangles">Triangles</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Scale: <span id="pt-sv" class="text-ink">40</span>
+        <input id="pt-scale" type="range" min="10" max="100" value="40" class="w-full accent-[#5e6ad2]" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Foreground
+        <input id="pt-fg" type="color" value="#5e6ad2" class="field h-10 cursor-pointer p-1" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Background
+        <input id="pt-bg" type="color" value="#010102" class="field h-10 cursor-pointer p-1" />
+      </label>
+    </div>
+
+    <div id="pt-preview" class="min-h-64 rounded-[12px] border border-hairline"></div>
+
+    <div class="flex flex-wrap gap-2">
+      <button id="pt-dl" class="btn btn-primary">Download SVG</button>
+      <button id="pt-copycss" class="btn btn-secondary">Copy CSS</button>
+      <button id="pt-copysvg" class="btn btn-secondary">Copy SVG</button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free pattern background generator creates seamless, repeating
+      background patterns — dots, grid, diagonal stripes, checkers, crosses and
+      triangles — with your own colors and scale. Download the tile as an SVG or
+      copy a CSS <code class="font-mono text-ink">background-image</code> that
+      embeds it as a data URI, so it tiles perfectly across any element.
+      Everything is generated in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const preview = $('pt-preview')!;
+
+  function tile(): { svg: string; size: number } {
+    const type = ($('pt-type') as HTMLSelectElement).value;
+    const s = Number(($('pt-scale') as HTMLInputElement).value);
+    const fg = ($('pt-fg') as HTMLInputElement).value;
+    const bg = ($('pt-bg') as HTMLInputElement).value;
+    $('pt-sv').textContent = String(s);
+    let shapes = '';
+    if (type === 'dots') shapes = `<circle cx="${s / 2}" cy="${s / 2}" r="${s / 8}" fill="${fg}"/>`;
+    else if (type === 'grid') shapes = `<path d="M0 0H${s}M0 0V${s}" stroke="${fg}" stroke-width="1" fill="none"/>`;
+    else if (type === 'stripes') shapes = `<path d="M-1 1 L1 -1 M0 ${s} L${s} 0 M${s - 1} ${s + 1} L${s + 1} ${s - 1}" stroke="${fg}" stroke-width="${s / 6}"/>`;
+    else if (type === 'checkers') shapes = `<rect width="${s / 2}" height="${s / 2}" fill="${fg}"/><rect x="${s / 2}" y="${s / 2}" width="${s / 2}" height="${s / 2}" fill="${fg}"/>`;
+    else if (type === 'cross') shapes = `<path d="M${s / 2} ${s / 4}V${(s * 3) / 4}M${s / 4} ${s / 2}H${(s * 3) / 4}" stroke="${fg}" stroke-width="${s / 12}"/>`;
+    else shapes = `<path d="M${s / 2} ${s * 0.2} L${s * 0.8} ${s * 0.8} L${s * 0.2} ${s * 0.8} Z" fill="${fg}"/>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}"><rect width="${s}" height="${s}" fill="${bg}"/>${shapes}</svg>`;
+    return { svg, size: s };
+  }
+
+  function dataUri(svg: string): string {
+    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+  }
+
+  function render() {
+    const { svg } = tile();
+    preview.style.backgroundImage = dataUri(svg);
+    preview.style.backgroundRepeat = 'repeat';
+  }
+
+  function cssText(): string {
+    const { svg, size } = tile();
+    return `background-color: ${($('pt-bg') as HTMLInputElement).value};\nbackground-image: ${dataUri(svg)};\nbackground-size: ${size}px ${size}px;`;
+  }
+
+  ['pt-type', 'pt-scale', 'pt-fg', 'pt-bg'].forEach((id) => $(id).addEventListener('input', render));
+  $('pt-dl').addEventListener('click', () => {
+    const url = URL.createObjectURL(new Blob([tile().svg], { type: 'image/svg+xml' }));
+    const a = document.createElement('a'); a.href = url; a.download = 'pattern.svg'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  $('pt-copycss').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(cssText());
+    btn.textContent = 'Copied!'; setTimeout(() => (btn.textContent = 'Copy CSS'), 1500);
+  });
+  $('pt-copysvg').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(tile().svg);
+    btn.textContent = 'Copied!'; setTimeout(() => (btn.textContent = 'Copy SVG'), 1500);
+  });
+  render();
+</script>

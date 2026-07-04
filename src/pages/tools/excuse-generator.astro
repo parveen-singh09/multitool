@@ -1,0 +1,93 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="excuse-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Situation
+        <select id="ex-cat" class="field w-48">
+          <option value="late">Being late</option>
+          <option value="work">Missing work</option>
+          <option value="gym">Skipping the gym</option>
+          <option value="event">Ducking an event</option>
+          <option value="homework">No homework</option>
+        </select>
+      </label>
+      <button id="ex-gen" class="btn btn-primary ml-auto">New excuse</button>
+      <button id="ex-copy" class="btn btn-secondary">Copy</button>
+    </div>
+    <div class="panel panel-lift flex min-h-24 items-center p-5">
+      <p id="ex-out" class="text-lg leading-relaxed text-ink"></p>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free excuse generator serves up random, plausible-sounding (and often
+      funny) excuses for being late, missing work, skipping the gym, ducking an
+      event or forgetting your homework. It's for laughs and creative
+      inspiration — not for actually deceiving anyone. Generate as many as you
+      like. Runs entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { pick } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const out = $('ex-out')!;
+
+  const EXCUSES: Record<string, string[]> = {
+    late: [
+      'My alarm clock staged a silent protest and refused to go off.',
+      'I got stuck behind a parade of ducks crossing the road.',
+      'The elevator and I had a disagreement about which floor was real.',
+      'Time zones are confusing and I briefly lived in the wrong one.',
+      'My GPS rerouted me through a scenic existential crisis.',
+    ],
+    work: [
+      'I was abducted by my couch and held for questioning until noon.',
+      'My cat scheduled an urgent meeting I could not reschedule.',
+      'I caught a rare 24-hour case of Mondays.',
+      'The Wi-Fi went down and I had to physically go outside. It was too much.',
+      'I was heroically defending my home from a very persistent spider.',
+    ],
+    gym: [
+      'My gym clothes were still recovering from last time.',
+      'I did an intense workout carrying groceries up the stairs. Twice.',
+      'The couch and I are in a committed long-term relationship.',
+      'My muscles filed for a rest day and I respect their union.',
+      'Leg day was cancelled on account of legs.',
+    ],
+    event: [
+      'I have a prior commitment to staying exactly where I am.',
+      'My plants need me and they specifically asked for tonight.',
+      'I already RSVP’d "maybe" to my bed and it’s counting on me.',
+      'A documentary I didn’t know I needed just started.',
+      'I’m saving my social energy for a more convenient decade.',
+    ],
+    homework: [
+      'My dog developed a taste for academic literature.',
+      'I finished it, but it achieved sentience and wandered off.',
+      'The printer sensed my deadline and chose violence.',
+      'I was researching, and the research researched back.',
+      'It’s in the cloud, and the cloud is currently raining.',
+    ],
+  };
+
+  function generate() {
+    out.textContent = pick(EXCUSES[($('ex-cat') as HTMLSelectElement).value]);
+  }
+
+  $('ex-cat').addEventListener('change', generate);
+  $('ex-gen').addEventListener('click', generate);
+  $('ex-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.textContent || '');
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+  generate();
+</script>

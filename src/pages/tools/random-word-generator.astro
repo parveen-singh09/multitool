@@ -1,0 +1,69 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="random-word-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Word type
+        <select id="rw-type" class="field w-40">
+          <option value="mix" selected>Any / mix</option>
+          <option value="noun">Nouns</option>
+          <option value="verb">Verbs</option>
+          <option value="adjective">Adjectives</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="rw-count" type="number" min="1" max="500" value="10" class="field w-28" />
+      </label>
+      <button id="rw-gen" class="btn btn-primary ml-auto">Generate</button>
+      <button id="rw-copy" class="btn btn-secondary">Copy all</button>
+    </div>
+    <textarea id="rw-out" class="field min-h-56 resize-y font-mono text-[14px]" readonly aria-label="Generated words"></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free random word generator produces random English words by type —
+      nouns, verbs, adjectives, or a mix. It's handy for brainstorming, word games,
+      writing prompts, creative exercises and picking memorable project names.
+      Generate a single word or a big list at once. Everything runs in your browser
+      with no words sent anywhere.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { pick } from '../../lib/random';
+  import { NOUNS, VERBS, ADJECTIVES } from '../../lib/fakedata';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const typeEl = $('rw-type') as HTMLSelectElement;
+  const countEl = $('rw-count') as HTMLInputElement;
+  const out = $('rw-out') as HTMLTextAreaElement;
+
+  function bank(): string[] {
+    if (typeEl.value === 'noun') return NOUNS;
+    if (typeEl.value === 'verb') return VERBS;
+    if (typeEl.value === 'adjective') return ADJECTIVES;
+    return [...NOUNS, ...VERBS, ...ADJECTIVES];
+  }
+
+  function generate() {
+    const n = Math.max(1, Math.min(500, Number(countEl.value) || 10));
+    const b = bank();
+    const list: string[] = [];
+    for (let i = 0; i < n; i++) list.push(pick(b));
+    out.value = list.join('\n');
+  }
+
+  [typeEl, countEl].forEach((el) => el.addEventListener('input', generate));
+  $('rw-gen').addEventListener('click', generate);
+  $('rw-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(out.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  });
+  generate();
+</script>

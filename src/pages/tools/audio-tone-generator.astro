@@ -1,0 +1,110 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="audio-tone-generator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Frequency (Hz)
+        <input id="at-freq" type="number" min="20" max="20000" value="440" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Waveform
+        <select id="at-wave" class="field"><option value="sine">Sine</option><option value="square">Square</option><option value="triangle">Triangle</option><option value="sawtooth">Sawtooth</option></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Volume: <span id="at-vv" class="text-ink">50%</span>
+        <input id="at-vol" type="range" min="0" max="100" value="50" class="w-full accent-[#5e6ad2]" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Duration (s, for download)
+        <input id="at-dur" type="number" min="1" max="60" value="5" class="field" />
+      </label>
+    </div>
+    <input id="at-slider" type="range" min="20" max="4000" value="440" class="w-full accent-[#5e6ad2]" aria-label="Frequency slider" />
+    <div class="flex flex-wrap gap-2">
+      <button id="at-play" class="btn btn-primary">Play</button>
+      <button id="at-stop" class="btn btn-secondary">Stop</button>
+      <button id="at-dl" class="btn btn-secondary">Download WAV</button>
+    </div>
+    <p class="text-[13px] text-ink-tertiary">Tip: start at a low volume. High-frequency tones can be hard to hear and hard on speakers.</p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free audio tone generator plays pure tones at any frequency from 20 Hz
+      to 20 kHz in four classic waveforms — sine, square, triangle and sawtooth.
+      Use it to test speakers and headphones, match tinnitus frequencies, tune
+      instruments, or study how waveforms sound. You can also download the tone as
+      a WAV file. Everything is synthesized with the Web Audio API in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const freqEl = $('at-freq') as HTMLInputElement;
+  const sliderEl = $('at-slider') as HTMLInputElement;
+  const waveEl = $('at-wave') as HTMLSelectElement;
+  const volEl = $('at-vol') as HTMLInputElement;
+
+  let ctx: AudioContext | null = null;
+  let osc: OscillatorNode | null = null;
+  let gain: GainNode | null = null;
+
+  function type(): OscillatorType { return waveEl.value as OscillatorType; }
+  function freq(): number { return Math.max(20, Math.min(20000, Number(freqEl.value) || 440)); }
+  function vol(): number { return Number(volEl.value) / 100; }
+
+  function play() {
+    stop();
+    ctx = ctx || new (window.AudioContext || (window as any).webkitAudioContext)();
+    osc = ctx.createOscillator();
+    gain = ctx.createGain();
+    osc.type = type();
+    osc.frequency.value = freq();
+    gain.gain.value = vol() * 0.3;
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start();
+  }
+
+  function stop() {
+    if (osc) { try { osc.stop(); } catch {} osc.disconnect(); osc = null; }
+  }
+
+  freqEl.addEventListener('input', () => { sliderEl.value = String(Math.min(4000, freq())); if (osc) osc.frequency.value = freq(); });
+  sliderEl.addEventListener('input', () => { freqEl.value = sliderEl.value; if (osc) osc.frequency.value = freq(); });
+  waveEl.addEventListener('input', () => { if (osc) osc.type = type(); });
+  volEl.addEventListener('input', () => { $('at-vv').textContent = volEl.value + '%'; if (gain) gain.gain.value = vol() * 0.3; });
+
+  $('at-play').addEventListener('click', play);
+  $('at-stop').addEventListener('click', stop);
+
+  // Render an offline buffer and encode WAV for download.
+  $('at-dl').addEventListener('click', async () => {
+    const dur = Math.max(1, Math.min(60, Number(($('at-dur') as HTMLInputElement).value) || 5));
+    const sr = 44100;
+    const oac = new OfflineAudioContext(1, sr * dur, sr);
+    const o = oac.createOscillator(), g = oac.createGain();
+    o.type = type(); o.frequency.value = freq(); g.gain.value = vol() * 0.3;
+    o.connect(g); g.connect(oac.destination);
+    o.start(); o.stop(dur);
+    const buffer = await oac.startRendering();
+    const wav = encodeWav(buffer);
+    const url = URL.createObjectURL(new Blob([wav], { type: 'audio/wav' }));
+    const a = document.createElement('a'); a.href = url; a.download = `tone-${freq()}hz.wav`; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+
+  function encodeWav(buffer: AudioBuffer): ArrayBuffer {
+    const data = buffer.getChannelData(0);
+    const sr = buffer.sampleRate;
+    const out = new ArrayBuffer(44 + data.length * 2);
+    const dv = new DataView(out);
+    const wr = (off: number, s: string) => { for (let i = 0; i < s.length; i++) dv.setUint8(off + i, s.charCodeAt(i)); };
+    wr(0, 'RIFF'); dv.setUint32(4, 36 + data.length * 2, true); wr(8, 'WAVE');
+    wr(12, 'fmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+    dv.setUint32(24, sr, true); dv.setUint32(28, sr * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true);
+    wr(36, 'data'); dv.setUint32(40, data.length * 2, true);
+    let off = 44;
+    for (let i = 0; i < data.length; i++) { const s = Math.max(-1, Math.min(1, data[i])); dv.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7fff, true); off += 2; }
+    return out;
+  }
+</script>

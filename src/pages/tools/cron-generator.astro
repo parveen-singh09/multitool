@@ -1,0 +1,113 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="cron-generator">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Preset
+      <select id="cr-preset" class="field">
+        <option value="">Custom</option>
+        <option value="* * * * *">Every minute</option>
+        <option value="*/5 * * * *">Every 5 minutes</option>
+        <option value="0 * * * *">Every hour</option>
+        <option value="0 0 * * *">Every day at midnight</option>
+        <option value="0 9 * * 1-5">Weekdays at 9am</option>
+        <option value="0 0 * * 0">Every Sunday</option>
+        <option value="0 0 1 * *">First of every month</option>
+      </select>
+    </label>
+    <div class="grid grid-cols-5 gap-2">
+      <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Minute
+        <input id="cr-min" class="field font-mono" value="0" spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Hour
+        <input id="cr-hour" class="field font-mono" value="9" spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Day (month)
+        <input id="cr-dom" class="field font-mono" value="*" spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Month
+        <input id="cr-mon" class="field font-mono" value="*" spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Day (week)
+        <input id="cr-dow" class="field font-mono" value="1-5" spellcheck="false" />
+      </label>
+    </div>
+
+    <div class="panel panel-lift flex flex-col gap-2 p-4">
+      <div class="flex items-center gap-3">
+        <code id="cr-expr" class="font-mono text-lg text-ink"></code>
+        <button id="cr-copy" class="btn btn-secondary ml-auto">Copy</button>
+      </div>
+      <p id="cr-human" class="text-sm text-ink-subtle"></p>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free cron expression generator helps you build and understand cron
+      schedules — the five-field syntax used by crontab, CI pipelines and
+      schedulers. Start from a preset or edit each field (minute, hour, day of
+      month, month, day of week), and the tool explains the schedule in plain
+      English so you can be sure it fires when you expect. Runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const fields = ['cr-min', 'cr-hour', 'cr-dom', 'cr-mon', 'cr-dow'];
+  const exprEl = $('cr-expr')!;
+  const humanEl = $('cr-human')!;
+
+  const DOW = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const MON = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+  function describeField(v: string, unit: string, names?: string[]): string {
+    if (v === '*') return `every ${unit}`;
+    if (v.startsWith('*/')) return `every ${v.slice(2)} ${unit}s`;
+    if (v.includes('-')) {
+      const [a, b] = v.split('-');
+      const na = names ? names[+a] : a, nb = names ? names[+b] : b;
+      return `${unit} ${na} through ${nb}`;
+    }
+    if (v.includes(',')) return `${unit}s ${v}`;
+    return names ? names[+v] ?? v : `${unit} ${v}`;
+  }
+
+  function human(min: string, hour: string, dom: string, mon: string, dow: string): string {
+    const parts: string[] = [];
+    // Time.
+    if (min === '*' && hour === '*') parts.push('Every minute');
+    else if (hour === '*') parts.push(`At ${describeField(min, 'minute')}`);
+    else if (min.match(/^\d+$/) && hour.match(/^\d+$/)) parts.push(`At ${hour.padStart(2, '0')}:${min.padStart(2, '0')}`);
+    else parts.push(`At ${describeField(min, 'minute')} past ${describeField(hour, 'hour')}`);
+    // Day of week / month.
+    if (dow !== '*') parts.push(`on ${describeField(dow, 'day', DOW)}`);
+    if (dom !== '*') parts.push(`on day-of-month ${dom}`);
+    if (mon !== '*') parts.push(`in ${describeField(mon, 'month', MON)}`);
+    return parts.join(', ') + '.';
+  }
+
+  function build() {
+    const vals = fields.map((id) => ($(id) as HTMLInputElement).value.trim() || '*');
+    exprEl.textContent = vals.join(' ');
+    humanEl.textContent = human(vals[0], vals[1], vals[2], vals[3], vals[4]);
+  }
+
+  $('cr-preset').addEventListener('change', () => {
+    const v = ($('cr-preset') as HTMLSelectElement).value;
+    if (!v) return;
+    const parts = v.split(' ');
+    fields.forEach((id, i) => { ($(id) as HTMLInputElement).value = parts[i]; });
+    build();
+  });
+  fields.forEach((id) => $(id).addEventListener('input', build));
+  $('cr-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(exprEl.textContent || '');
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+  build();
+</script>

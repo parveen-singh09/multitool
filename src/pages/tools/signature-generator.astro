@@ -1,0 +1,117 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="signature-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex gap-2">
+      <button id="sg-tab-draw" class="btn btn-primary">Draw</button>
+      <button id="sg-tab-type" class="btn btn-secondary">Type</button>
+    </div>
+
+    <div id="sg-type-ctrls" class="hidden flex-col gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Your name
+        <input id="sg-name" class="field" value="Jane Doe" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Style
+        <select id="sg-font" class="field">
+          <option value="cursive">Cursive</option>
+          <option value="'Brush Script MT', cursive">Brush script</option>
+          <option value="'Segoe Script', cursive">Handwriting</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Ink color
+        <input id="sg-color" type="color" value="#010102" class="field h-10 w-16 cursor-pointer p-1" />
+      </label>
+      <label id="sg-pen-wrap" class="flex flex-col gap-1 text-sm text-ink-subtle">Pen: <span id="sg-pv" class="text-ink">3px</span>
+        <input id="sg-pen" type="range" min="1" max="10" value="3" class="w-40 accent-[#5e6ad2]" />
+      </label>
+      <button id="sg-clear" class="btn btn-secondary ml-auto">Clear</button>
+    </div>
+
+    <div class="rounded-[12px] border border-hairline bg-white">
+      <canvas id="sg-canvas" width="700" height="250" class="w-full touch-none rounded-[12px]"></canvas>
+    </div>
+    <button id="sg-dl" class="btn btn-primary w-fit">Download transparent PNG</button>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free signature generator lets you draw your signature with a mouse,
+      trackpad or finger, or type your name in a handwriting-style font. Pick the
+      ink color and pen thickness, then download a transparent PNG you can drop
+      into documents, contracts and email signatures. Nothing is uploaded — the
+      signature is created entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const canvas = $('sg-canvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+  let mode: 'draw' | 'type' = 'draw';
+  let drawing = false;
+
+  function clear() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+
+  function pos(e: PointerEvent): [number, number] {
+    const r = canvas.getBoundingClientRect();
+    return [(e.clientX - r.left) * (canvas.width / r.width), (e.clientY - r.top) * (canvas.height / r.height)];
+  }
+
+  canvas.addEventListener('pointerdown', (e) => {
+    if (mode !== 'draw') return;
+    drawing = true;
+    const [x, y] = pos(e);
+    ctx.beginPath(); ctx.moveTo(x, y);
+    canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!drawing) return;
+    const [x, y] = pos(e);
+    ctx.strokeStyle = ($('sg-color') as HTMLInputElement).value;
+    ctx.lineWidth = Number(($('sg-pen') as HTMLInputElement).value);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.lineTo(x, y); ctx.stroke();
+  });
+  canvas.addEventListener('pointerup', () => (drawing = false));
+
+  function renderTyped() {
+    clear();
+    const name = ($('sg-name') as HTMLInputElement).value || 'Signature';
+    ctx.fillStyle = ($('sg-color') as HTMLInputElement).value;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    let fs = 90;
+    ctx.font = `${fs}px ${($('sg-font') as HTMLSelectElement).value}`;
+    while (ctx.measureText(name).width > canvas.width - 60 && fs > 20) {
+      fs -= 4; ctx.font = `${fs}px ${($('sg-font') as HTMLSelectElement).value}`;
+    }
+    ctx.fillText(name, canvas.width / 2, canvas.height / 2);
+  }
+
+  function setMode(m: 'draw' | 'type') {
+    mode = m;
+    $('sg-type-ctrls').classList.toggle('hidden', m !== 'type');
+    $('sg-type-ctrls').classList.toggle('flex', m === 'type');
+    $('sg-pen-wrap').classList.toggle('hidden', m !== 'draw');
+    ($('sg-tab-draw') as HTMLElement).className = `btn ${m === 'draw' ? 'btn-primary' : 'btn-secondary'}`;
+    ($('sg-tab-type') as HTMLElement).className = `btn ${m === 'type' ? 'btn-primary' : 'btn-secondary'}`;
+    clear();
+    if (m === 'type') renderTyped();
+  }
+
+  ['sg-name', 'sg-font', 'sg-color'].forEach((id) => $(id).addEventListener('input', () => { if (mode === 'type') renderTyped(); }));
+  $('sg-pen').addEventListener('input', () => { $('sg-pv').textContent = ($('sg-pen') as HTMLInputElement).value + 'px'; });
+  $('sg-tab-draw').addEventListener('click', () => setMode('draw'));
+  $('sg-tab-type').addEventListener('click', () => setMode('type'));
+  $('sg-clear').addEventListener('click', () => { clear(); if (mode === 'type') renderTyped(); });
+  $('sg-dl').addEventListener('click', () => {
+    const a = document.createElement('a'); a.href = canvas.toDataURL('image/png'); a.download = 'signature.png'; a.click();
+  });
+
+  setMode('draw');
+</script>
