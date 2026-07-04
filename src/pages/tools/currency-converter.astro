@@ -1,0 +1,133 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="currency-converter">
+  <div class="flex flex-col gap-4">
+    <div class="status-badge w-fit">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9M12 7v5l3 2"/></svg>
+      <span>Live rates fetched from your browser · <span id="cu-updated">loading…</span></span>
+    </div>
+
+    <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="cu-from-val">From</label>
+        <input id="cu-from-val" type="number" class="field" value="100" inputmode="decimal" />
+        <select id="cu-from" class="field mt-1"></select>
+      </div>
+      <button id="cu-swap" type="button" class="btn btn-secondary mb-1 h-10 w-10 shrink-0 justify-self-center p-0" aria-label="Swap currencies" title="Swap">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
+      </button>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="cu-to-val">To</label>
+        <input id="cu-to-val" type="number" class="field" readonly />
+        <select id="cu-to" class="field mt-1"></select>
+      </div>
+    </div>
+
+    <p id="cu-rate" class="text-[13px] text-ink-tertiary"></p>
+
+    <div>
+      <p class="mb-2 text-[13px] text-ink-subtle">Quick amounts</p>
+      <div id="cu-table" class="overflow-hidden rounded-[8px] border border-hairline"></div>
+    </div>
+
+    <p id="cu-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free currency converter uses live daily exchange rates published by
+      the European Central Bank to convert between more than 30 world currencies.
+      Enter an amount, pick your currencies, and see the converted value plus a
+      quick reference table. Rates are fetched directly from your browser to a
+      public rates service — no account, and the amounts you type are never
+      stored. Rates are indicative and update once per business day.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const NAMES: Record<string, string> = {
+    AUD: 'Australian Dollar', BGN: 'Bulgarian Lev', BRL: 'Brazilian Real', CAD: 'Canadian Dollar',
+    CHF: 'Swiss Franc', CNY: 'Chinese Yuan', CZK: 'Czech Koruna', DKK: 'Danish Krone',
+    EUR: 'Euro', GBP: 'British Pound', HKD: 'Hong Kong Dollar', HUF: 'Hungarian Forint',
+    IDR: 'Indonesian Rupiah', ILS: 'Israeli Shekel', INR: 'Indian Rupee', ISK: 'Icelandic Krona',
+    JPY: 'Japanese Yen', KRW: 'South Korean Won', MXN: 'Mexican Peso', MYR: 'Malaysian Ringgit',
+    NOK: 'Norwegian Krone', NZD: 'New Zealand Dollar', PHP: 'Philippine Peso', PLN: 'Polish Zloty',
+    RON: 'Romanian Leu', SEK: 'Swedish Krona', SGD: 'Singapore Dollar', THB: 'Thai Baht',
+    TRY: 'Turkish Lira', USD: 'US Dollar', ZAR: 'South African Rand',
+  };
+
+  const fromVal = document.getElementById('cu-from-val') as HTMLInputElement;
+  const toVal = document.getElementById('cu-to-val') as HTMLInputElement;
+  const fromSel = document.getElementById('cu-from') as HTMLSelectElement;
+  const toSel = document.getElementById('cu-to') as HTMLSelectElement;
+  const rateLine = document.getElementById('cu-rate')!;
+  const table = document.getElementById('cu-table')!;
+  const updated = document.getElementById('cu-updated')!;
+  const err = document.getElementById('cu-error')!;
+
+  // rates are stored relative to EUR (ECB base). rates['EUR'] = 1.
+  let rates: Record<string, number> = {};
+
+  const fmt = (n: number) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 4 }).format(n);
+
+  function fillSelects() {
+    const codes = Object.keys(NAMES);
+    const opts = codes.map((c) => `<option value="${c}">${c} — ${NAMES[c]}</option>`).join('');
+    fromSel.innerHTML = opts; toSel.innerHTML = opts;
+    fromSel.value = 'USD'; toSel.value = 'EUR';
+  }
+
+  function convert() {
+    if (!Object.keys(rates).length) return;
+    const v = Number(fromVal.value);
+    const from = fromSel.value, to = toSel.value;
+    if (isNaN(v) || !rates[from] || !rates[to]) { toVal.value = ''; return; }
+    // value in EUR = v / rates[from]; then * rates[to]
+    const eur = v / rates[from];
+    const result = eur * rates[to];
+    toVal.value = String(Math.round(result * 1e4) / 1e4);
+    const one = (1 / rates[from]) * rates[to];
+    rateLine.textContent = `1 ${from} = ${fmt(one)} ${to}  ·  1 ${to} = ${fmt(1 / one)} ${from}`;
+    renderTable(from, to);
+  }
+
+  function renderTable(from: string, to: string) {
+    const amounts = [1, 5, 10, 25, 50, 100, 500, 1000];
+    const one = (1 / rates[from]) * rates[to];
+    table.innerHTML = `<table class="w-full text-[13px]">${amounts.map((a) => `
+      <tr class="border-t border-hairline">
+        <td class="px-3 py-2 text-ink-subtle">${fmt(a)} ${from}</td>
+        <td class="px-3 py-2 text-right font-mono text-ink">${fmt(Math.round(a * one * 100) / 100)} ${to}</td>
+      </tr>`).join('')}</table>`;
+  }
+
+  async function loadRates() {
+    try {
+      const res = await fetch('https://api.frankfurter.app/latest?from=EUR');
+      if (!res.ok) throw new Error('bad status ' + res.status);
+      const data = await res.json();
+      rates = { EUR: 1, ...data.rates };
+      updated.textContent = `updated ${data.date}`;
+      convert();
+    } catch (e) {
+      err.textContent = 'Could not load live exchange rates. Check your connection and refresh — the converter needs an internet connection to fetch rates.';
+      err.classList.remove('hidden');
+      updated.textContent = 'unavailable';
+    }
+  }
+
+  fromVal.addEventListener('input', convert);
+  fromSel.addEventListener('change', convert);
+  toSel.addEventListener('change', convert);
+  document.getElementById('cu-swap')!.addEventListener('click', () => {
+    const a = fromSel.value; fromSel.value = toSel.value; toSel.value = a;
+    if (toVal.value) fromVal.value = toVal.value;
+    convert();
+  });
+
+  fillSelects();
+  loadRates();
+</script>

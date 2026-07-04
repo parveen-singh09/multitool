@@ -1,0 +1,105 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pdf-merge">
+  <div class="flex flex-col gap-4">
+    <label id="pm-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose PDF files or drop them here</span>
+      <span class="text-[13px] text-ink-tertiary">Merged in your browser — never uploaded</span>
+      <input id="pm-file" type="file" accept="application/pdf" multiple class="sr-only" />
+    </label>
+
+    <div id="pm-panel" class="hidden flex-col gap-4">
+      <div>
+        <span class="text-[13px] text-ink-subtle"><span id="pm-count">0</span> PDF(s) — drag to reorder</span>
+        <ul id="pm-list" class="mt-2 flex flex-col gap-2"></ul>
+      </div>
+      <button id="pm-make" class="btn btn-primary w-fit">Merge PDFs</button>
+    </div>
+    <p id="pm-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <p id="pm-status" class="hidden text-[13px] text-ink-subtle"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free PDF merge tool combines several PDF files into one document. Add
+      your PDFs, drag them into the order you want, and download the merged
+      result. Page content, sizes and orientation are preserved from each source
+      file. Everything is merged in your browser with an in-page PDF engine, so
+      your documents are never uploaded to a server.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  import { PDFDocument } from 'pdf-lib';
+
+  const fileInput = document.getElementById('pm-file') as HTMLInputElement;
+  const drop = document.getElementById('pm-drop')!;
+  const panel = document.getElementById('pm-panel')!;
+  const list = document.getElementById('pm-list') as HTMLUListElement;
+  const countEl = document.getElementById('pm-count')!;
+  const err = document.getElementById('pm-error')!;
+  const status = document.getElementById('pm-status')!;
+
+  let files: File[] = [];
+  let dragIdx = -1;
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  function addFiles(fl: FileList | File[]) {
+    for (const f of Array.from(fl)) if (f.type === 'application/pdf') files.push(f);
+    if (files.length) { panel.classList.remove('hidden'); panel.classList.add('flex'); }
+    render();
+  }
+
+  function render() {
+    countEl.textContent = String(files.length);
+    list.innerHTML = '';
+    files.forEach((f, i) => {
+      const li = document.createElement('li');
+      li.className = 'panel flex items-center gap-3 p-2'; li.draggable = true;
+      li.innerHTML = `<span class="cursor-grab text-ink-tertiary">⋮⋮</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" class="text-ink-tertiary"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6"/></svg>
+        <span class="flex-1 truncate text-[13px] text-ink-subtle">${f.name}</span>
+        <span class="text-[12px] text-ink-tertiary">${(f.size / 1024).toFixed(0)} KB</span>
+        <button type="button" class="btn btn-tertiary px-2 py-1 text-[13px]" aria-label="Remove">✕</button>`;
+      li.querySelector('button')!.addEventListener('click', () => { files.splice(i, 1); render(); });
+      li.addEventListener('dragstart', () => { dragIdx = i; });
+      li.addEventListener('dragover', (e) => e.preventDefault());
+      li.addEventListener('drop', (e) => { e.preventDefault(); if (dragIdx < 0 || dragIdx === i) return; const [m] = files.splice(dragIdx, 1); files.splice(i, 0, m); dragIdx = -1; render(); });
+      list.appendChild(li);
+    });
+  }
+
+  async function merge() {
+    if (files.length < 2) { setErr('Add at least two PDFs to merge.'); return; }
+    setErr(''); status.classList.remove('hidden'); status.textContent = 'Merging…';
+    try {
+      const out = await PDFDocument.create();
+      for (const f of files) {
+        const src = await PDFDocument.load(await f.arrayBuffer());
+        const pages = await out.copyPages(src, src.getPageIndices());
+        pages.forEach((p) => out.addPage(p));
+      }
+      const bytes = await out.save();
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'merged.pdf'; a.click();
+      status.textContent = `Done — ${out.getPageCount()} pages, ${(blob.size / 1024).toFixed(0)} KB.`;
+    } catch (e) {
+      status.classList.add('hidden');
+      setErr('Could not merge: ' + (e as Error).message + '. Encrypted PDFs are not supported.');
+    }
+  }
+
+  fileInput.addEventListener('change', () => fileInput.files && addFiles(fileInput.files));
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files; if (f) addFiles(f); });
+  document.getElementById('pm-make')!.addEventListener('click', merge);
+</script>

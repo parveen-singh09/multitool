@@ -1,0 +1,125 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="png-to-svg">
+  <div class="flex flex-col gap-4">
+    <label id="pv-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a PNG or image and drop it here</span>
+      <span class="text-[13px] text-ink-tertiary">Vectorized in your browser — never uploaded</span>
+      <input id="pv-file" type="file" accept="image/png,image/jpeg,image/webp,image/bmp" class="sr-only" />
+    </label>
+
+    <div id="pv-panel" class="hidden flex-col gap-4">
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Detail
+          <select id="pv-preset" class="field w-40">
+            <option value="poster2">Flat (2 colors)</option>
+            <option value="poster4">Simple (4 colors)</option>
+            <option value="default" selected>Balanced</option>
+            <option value="detailed">Detailed</option>
+          </select>
+        </label>
+        <button id="pv-trace" class="btn btn-primary">Vectorize</button>
+        <button id="pv-download" class="btn btn-secondary hidden">Download SVG</button>
+      </div>
+      <p id="pv-status" class="text-[13px] text-ink-subtle"></p>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div><span class="text-[13px] text-ink-subtle">Original</span>
+          <div class="panel mt-1 flex justify-center overflow-hidden p-3"><img id="pv-src" class="max-h-72 w-auto max-w-full rounded-[6px]" alt="Source" /></div>
+        </div>
+        <div><span class="text-[13px] text-ink-subtle">SVG result</span>
+          <div id="pv-out" class="panel mt-1 flex max-h-80 items-center justify-center overflow-auto p-3 text-ink-tertiary text-[13px]">Not vectorized yet</div>
+        </div>
+      </div>
+    </div>
+    <p id="pv-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free PNG to SVG converter vectorizes raster images into scalable
+      vector graphics by tracing areas of color into paths. It works best on
+      logos, icons and simple flat graphics rather than detailed photos. Choose
+      how much detail to keep, vectorize, and download a resolution-independent
+      SVG. All tracing happens in your browser, so your image is never uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  import ImageTracer from 'imagetracerjs';
+
+  const fileInput = document.getElementById('pv-file') as HTMLInputElement;
+  const drop = document.getElementById('pv-drop')!;
+  const panel = document.getElementById('pv-panel')!;
+  const srcImg = document.getElementById('pv-src') as HTMLImageElement;
+  const outBox = document.getElementById('pv-out')!;
+  const status = document.getElementById('pv-status')!;
+  const err = document.getElementById('pv-error')!;
+  const presetSel = document.getElementById('pv-preset') as HTMLSelectElement;
+  const dlBtn = document.getElementById('pv-download') as HTMLButtonElement;
+
+  let dataUrl = '';
+  let svg = '';
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  const OPTIONS: Record<string, any> = {
+    poster2: { numberofcolors: 2, ltres: 1, qtres: 1, pathomit: 8 },
+    poster4: { numberofcolors: 4, ltres: 1, qtres: 1, pathomit: 8 },
+    default: { numberofcolors: 16, ltres: 1, qtres: 1, pathomit: 8 },
+    detailed: { numberofcolors: 32, ltres: 0.5, qtres: 0.5, pathomit: 1 },
+  };
+
+  function loadFile(file: File) {
+    setErr('');
+    const reader = new FileReader();
+    reader.onload = () => {
+      dataUrl = reader.result as string;
+      srcImg.src = dataUrl;
+      panel.classList.remove('hidden'); panel.classList.add('flex');
+      status.textContent = `${file.name} ready — click Vectorize.`;
+      outBox.textContent = 'Not vectorized yet';
+      dlBtn.classList.add('hidden');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function trace() {
+    if (!dataUrl) return;
+    setErr('');
+    status.textContent = 'Vectorizing… this can take a few seconds for large images.';
+    // let the status paint before the heavy synchronous trace
+    setTimeout(() => {
+      try {
+        ImageTracer.imageToSVG(dataUrl, (svgstr: string) => {
+          svg = svgstr;
+          outBox.innerHTML = svgstr;
+          const el = outBox.querySelector('svg');
+          if (el) { el.removeAttribute('width'); el.removeAttribute('height'); (el as SVGElement).style.maxWidth = '100%'; (el as SVGElement).style.maxHeight = '18rem'; }
+          const kb = (new Blob([svgstr]).size / 1024).toFixed(1);
+          status.textContent = `Done — SVG is ${kb} KB.`;
+          dlBtn.classList.remove('hidden');
+        }, OPTIONS[presetSel.value]);
+      } catch (e) { setErr('Could not vectorize that image: ' + (e as Error).message); status.textContent = ''; }
+    }, 30);
+  }
+
+  dlBtn.addEventListener('click', () => {
+    if (!svg) return;
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'vectorized.svg'; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+
+  fileInput.addEventListener('change', () => fileInput.files?.[0] && loadFile(fileInput.files[0]));
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) loadFile(f); });
+  document.getElementById('pv-trace')!.addEventListener('click', trace);
+</script>

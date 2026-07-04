@@ -1,0 +1,133 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="audio-compressor">
+  <div class="flex flex-col gap-4">
+    <label id="ac-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose an audio file or drop it here</span>
+      <span class="text-[13px] text-ink-tertiary">Compressed in your browser — never uploaded</span>
+      <input id="ac-file" type="file" accept="audio/*" class="sr-only" />
+    </label>
+
+    <div id="ac-panel" class="hidden flex-col gap-4">
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Bitrate
+          <select id="ac-bitrate" class="field w-40">
+            <option value="192">192 kbps (high)</option>
+            <option value="128" selected>128 kbps (standard)</option>
+            <option value="96">96 kbps (small)</option>
+            <option value="64">64 kbps (voice)</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Channels
+          <select id="ac-channels" class="field w-36">
+            <option value="0" selected>Keep original</option>
+            <option value="1">Mono</option>
+            <option value="2">Stereo</option>
+          </select>
+        </label>
+        <button id="ac-go" class="btn btn-primary">Compress to MP3</button>
+      </div>
+
+      <div id="ac-progwrap" class="hidden flex-col gap-1">
+        <div class="h-1.5 w-full overflow-hidden rounded-full bg-surface-3"><div id="ac-bar" class="h-full w-0 rounded-full transition-all" style="background:var(--color-primary)"></div></div>
+        <span id="ac-status" class="text-[13px] text-ink-subtle"></span>
+      </div>
+
+      <div id="ac-result" class="hidden flex-col gap-3">
+        <div class="grid grid-cols-2 gap-3 text-center">
+          <div class="panel p-4"><div id="ac-before" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Original</div></div>
+          <div class="panel p-4"><div id="ac-after" class="font-mono text-lg" style="color:var(--color-success)">—</div><div class="mt-1 text-[13px] text-ink-subtle">Compressed (<span id="ac-saved">0%</span> smaller)</div></div>
+        </div>
+        <button id="ac-download" class="btn btn-primary w-fit">Download MP3</button>
+        <audio id="ac-preview" controls class="w-full"></audio>
+      </div>
+    </div>
+    <p id="ac-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free audio compressor reduces the file size of MP3, WAV, M4A and other
+      audio by re-encoding to MP3 at a bitrate you choose, with an option to mix
+      down to mono for voice recordings. See the before-and-after sizes and
+      preview the result. All compression runs in your browser, so your audio is
+      never uploaded to a server.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  import { getFFmpeg, fetchFile } from '../../lib/ffmpeg';
+
+  const fileInput = document.getElementById('ac-file') as HTMLInputElement;
+  const drop = document.getElementById('ac-drop')!;
+  const panel = document.getElementById('ac-panel')!;
+  const goBtn = document.getElementById('ac-go') as HTMLButtonElement;
+  const progWrap = document.getElementById('ac-progwrap')!;
+  const bar = document.getElementById('ac-bar') as HTMLElement;
+  const statusEl = document.getElementById('ac-status')!;
+  const result = document.getElementById('ac-result')!;
+  const beforeEl = document.getElementById('ac-before')!;
+  const afterEl = document.getElementById('ac-after')!;
+  const savedEl = document.getElementById('ac-saved')!;
+  const preview = document.getElementById('ac-preview') as HTMLAudioElement;
+  const err = document.getElementById('ac-error')!;
+
+  let file: File | null = null;
+  let outUrl = '';
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+  const fmtSize = (n: number) => n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(2)} MB`;
+
+  function pick(f: File) { file = f; panel.classList.remove('hidden'); panel.classList.add('flex'); result.classList.add('hidden'); setErr(''); }
+
+  async function compress() {
+    if (!file) return;
+    setErr(''); goBtn.disabled = true;
+    progWrap.classList.remove('hidden'); progWrap.classList.add('flex'); result.classList.add('hidden'); bar.style.width = '0%';
+    const br = (document.getElementById('ac-bitrate') as HTMLSelectElement).value;
+    const ch = Number((document.getElementById('ac-channels') as HTMLSelectElement).value);
+    try {
+      const ff = await getFFmpeg({
+        onProgress: (r) => { bar.style.width = Math.min(100, Math.round(r * 100)) + '%'; },
+        onDownload: (n) => { if (n) statusEl.textContent = n; },
+      });
+      statusEl.textContent = 'Compressing…';
+      const inName = 'in.' + (file.name.split('.').pop() || 'mp3');
+      await ff.writeFile(inName, await fetchFile(file));
+      const args = ['-i', inName, '-vn', '-c:a', 'libmp3lame', '-b:a', `${br}k`];
+      if (ch) args.push('-ac', String(ch));
+      args.push('out.mp3');
+      await ff.exec(args);
+      const data = await ff.readFile('out.mp3');
+      const blob = new Blob([data as Uint8Array], { type: 'audio/mpeg' });
+      if (outUrl) URL.revokeObjectURL(outUrl);
+      outUrl = URL.createObjectURL(blob);
+      try { await ff.deleteFile(inName); await ff.deleteFile('out.mp3'); } catch {}
+      preview.src = outUrl;
+      beforeEl.textContent = fmtSize(file.size);
+      afterEl.textContent = fmtSize(blob.size);
+      savedEl.textContent = Math.max(0, Math.round((1 - blob.size / file.size) * 100)) + '%';
+      progWrap.classList.add('hidden');
+      result.classList.remove('hidden'); result.classList.add('flex');
+    } catch (e) { progWrap.classList.add('hidden'); setErr('Compression failed: ' + (e as Error).message); }
+    finally { goBtn.disabled = false; }
+  }
+
+  document.getElementById('ac-download')!.addEventListener('click', () => {
+    if (!outUrl || !file) return;
+    const a = document.createElement('a'); a.href = outUrl; a.download = file.name.replace(/\.[^.]+$/, '') + '-compressed.mp3'; a.click();
+  });
+
+  fileInput.addEventListener('change', () => fileInput.files?.[0] && pick(fileInput.files[0]));
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) pick(f); });
+  goBtn.addEventListener('click', compress);
+</script>

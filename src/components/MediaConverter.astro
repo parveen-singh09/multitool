@@ -1,0 +1,136 @@
+---
+// Reusable audio/video format converter. Reads its config from MEDIA_CONVERSIONS
+// by slug, loads the shared ffmpeg.wasm core on demand, and converts one file
+// to the target format. Everything runs client-side — files never leave the device.
+import { getConversion } from '../lib/media';
+
+export interface Props { slug: string; }
+const { slug } = Astro.props;
+const conv = getConversion(slug);
+if (!conv) throw new Error(`Unknown media conversion: ${slug}`);
+---
+
+<div id="mc-root" data-slug={slug} class="flex flex-col gap-4">
+  <label id="mc-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+    <span class="text-sm text-ink">Choose a file or drop it here</span>
+    <span class="text-[13px] text-ink-tertiary">Converted in your browser — never uploaded</span>
+    <input id="mc-file" type="file" accept={conv.accept} class="sr-only" />
+  </label>
+
+  {conv.slow && (
+    <p class="text-[13px] text-ink-tertiary">
+      Video re-encoding runs entirely in your browser and is CPU-intensive — expect roughly real-time speed, so a few minutes for a few minutes of footage.
+    </p>
+  )}
+
+  <div id="mc-panel" class="hidden flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-3">
+      <span id="mc-fname" class="text-[13px] text-ink-subtle"></span>
+      <button id="mc-go" class="btn btn-primary">Convert to {conv.ext.toUpperCase()}</button>
+    </div>
+
+    <div id="mc-progwrap" class="hidden flex-col gap-1">
+      <div class="h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
+        <div id="mc-bar" class="h-full w-0 rounded-full transition-all" style="background:var(--color-primary)"></div>
+      </div>
+      <span id="mc-status" class="text-[13px] text-ink-subtle"></span>
+    </div>
+
+    <div id="mc-result" class="hidden flex-col gap-3">
+      <div class="flex flex-wrap items-center gap-3">
+        <span id="mc-outinfo" class="text-[13px]" style="color:var(--color-success)"></span>
+        <button id="mc-download" class="btn btn-primary">Download</button>
+      </div>
+      <div id="mc-preview-wrap" class="panel flex justify-center overflow-hidden p-4"></div>
+    </div>
+  </div>
+  <p id="mc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+</div>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  import { getFFmpeg, fetchFile } from '../lib/ffmpeg';
+  import { getConversion } from '../lib/media';
+
+  const root = document.getElementById('mc-root') as HTMLElement;
+  const conv = getConversion(root.dataset.slug!)!;
+
+  const fileInput = document.getElementById('mc-file') as HTMLInputElement;
+  const drop = document.getElementById('mc-drop')!;
+  const panel = document.getElementById('mc-panel')!;
+  const fname = document.getElementById('mc-fname')!;
+  const goBtn = document.getElementById('mc-go') as HTMLButtonElement;
+  const progWrap = document.getElementById('mc-progwrap')!;
+  const bar = document.getElementById('mc-bar') as HTMLElement;
+  const statusEl = document.getElementById('mc-status')!;
+  const result = document.getElementById('mc-result')!;
+  const outInfo = document.getElementById('mc-outinfo')!;
+  const previewWrap = document.getElementById('mc-preview-wrap')!;
+  const err = document.getElementById('mc-error')!;
+
+  let file: File | null = null;
+  let outUrl = '';
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+  const fmtSize = (n: number) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`;
+
+  function pick(f: File) {
+    file = f;
+    fname.textContent = `${f.name} · ${fmtSize(f.size)}`;
+    panel.classList.remove('hidden'); panel.classList.add('flex');
+    result.classList.add('hidden'); result.classList.remove('flex');
+    setErr('');
+  }
+
+  async function convert() {
+    if (!file) return;
+    setErr('');
+    goBtn.disabled = true;
+    progWrap.classList.remove('hidden'); progWrap.classList.add('flex');
+    result.classList.add('hidden');
+    bar.style.width = '0%';
+    try {
+      const ff = await getFFmpeg({
+        onProgress: (r) => { bar.style.width = Math.min(100, Math.round(r * 100)) + '%'; },
+        onDownload: (note) => { if (note) statusEl.textContent = note; },
+      });
+      statusEl.textContent = 'Converting…';
+      const inName = 'input.' + (file.name.split('.').pop() || 'dat');
+      const outName = 'output.' + conv.ext;
+      await ff.writeFile(inName, await fetchFile(file));
+      await ff.exec(conv.args(inName, outName));
+      const data = await ff.readFile(outName);
+      const blob = new Blob([data as Uint8Array], { type: conv.mime });
+      if (outUrl) URL.revokeObjectURL(outUrl);
+      outUrl = URL.createObjectURL(blob);
+      // cleanup vfs
+      try { await ff.deleteFile(inName); await ff.deleteFile(outName); } catch {}
+
+      previewWrap.innerHTML = conv.kind === 'video'
+        ? `<video src="${outUrl}" controls class="max-h-96 w-auto max-w-full rounded-[8px]"></video>`
+        : `<audio src="${outUrl}" controls class="w-full"></audio>`;
+      outInfo.textContent = `Done — ${fmtSize(blob.size)} ${conv.ext.toUpperCase()}`;
+      progWrap.classList.add('hidden');
+      result.classList.remove('hidden'); result.classList.add('flex');
+      bar.style.width = '100%';
+    } catch (e) {
+      progWrap.classList.add('hidden');
+      setErr('Conversion failed: ' + (e as Error).message);
+    } finally { goBtn.disabled = false; }
+  }
+
+  document.getElementById('mc-download')!.addEventListener('click', () => {
+    if (!outUrl || !file) return;
+    const base = file.name.replace(/\.[^.]+$/, '');
+    const a = document.createElement('a'); a.href = outUrl; a.download = `${base}.${conv.ext}`; a.click();
+  });
+
+  fileInput.addEventListener('change', () => fileInput.files?.[0] && pick(fileInput.files[0]));
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) pick(f); });
+  goBtn.addEventListener('click', convert);
+</script>

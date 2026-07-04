@@ -1,0 +1,129 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="video-to-gif">
+  <div class="flex flex-col gap-4">
+    <label id="vg-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a video or drop it here</span>
+      <span class="text-[13px] text-ink-tertiary">Converted in your browser — never uploaded</span>
+      <input id="vg-file" type="file" accept="video/*" class="sr-only" />
+    </label>
+
+    <div id="vg-panel" class="hidden flex-col gap-4">
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Start (s)
+          <input id="vg-start" type="number" class="field w-24" value="0" min="0" step="0.5" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Duration (s)
+          <input id="vg-dur" type="number" class="field w-24" value="3" min="0.5" max="30" step="0.5" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Width (px)
+          <input id="vg-width" type="number" class="field w-24" value="480" min="80" max="1280" step="20" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">FPS
+          <select id="vg-fps" class="field w-24"><option>10</option><option selected>15</option><option>20</option><option>25</option></select>
+        </label>
+        <button id="vg-go" class="btn btn-primary">Make GIF</button>
+      </div>
+
+      <div id="vg-progwrap" class="hidden flex-col gap-1">
+        <div class="h-1.5 w-full overflow-hidden rounded-full bg-surface-3"><div id="vg-bar" class="h-full w-0 rounded-full transition-all" style="background:var(--color-primary)"></div></div>
+        <span id="vg-status" class="text-[13px] text-ink-subtle"></span>
+      </div>
+
+      <div id="vg-result" class="hidden flex-col gap-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <span id="vg-info" class="text-[13px]" style="color:var(--color-success)"></span>
+          <button id="vg-download" class="btn btn-primary">Download GIF</button>
+        </div>
+        <div class="panel flex justify-center overflow-hidden p-4"><img id="vg-preview" class="max-h-96 w-auto max-w-full rounded-[8px]" alt="GIF preview" /></div>
+      </div>
+    </div>
+    <p id="vg-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free video to GIF converter turns a clip from any video into an
+      animated GIF. Choose the start time, duration, width and frame rate, then
+      generate — a two-pass palette is used for clean colors. Keep clips short
+      and the width modest for a reasonable file size. Everything is rendered in
+      your browser with an in-page media engine, so your video is never uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  import { getFFmpeg, fetchFile } from '../../lib/ffmpeg';
+
+  const fileInput = document.getElementById('vg-file') as HTMLInputElement;
+  const drop = document.getElementById('vg-drop')!;
+  const panel = document.getElementById('vg-panel')!;
+  const goBtn = document.getElementById('vg-go') as HTMLButtonElement;
+  const progWrap = document.getElementById('vg-progwrap')!;
+  const bar = document.getElementById('vg-bar') as HTMLElement;
+  const statusEl = document.getElementById('vg-status')!;
+  const result = document.getElementById('vg-result')!;
+  const info = document.getElementById('vg-info')!;
+  const preview = document.getElementById('vg-preview') as HTMLImageElement;
+  const err = document.getElementById('vg-error')!;
+
+  let file: File | null = null;
+  let outUrl = '';
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+  const fmtSize = (n: number) => n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(2)} MB`;
+
+  function pick(f: File) { file = f; panel.classList.remove('hidden'); panel.classList.add('flex'); result.classList.add('hidden'); setErr(''); }
+
+  async function make() {
+    if (!file) return;
+    setErr(''); goBtn.disabled = true;
+    progWrap.classList.remove('hidden'); progWrap.classList.add('flex'); result.classList.add('hidden'); bar.style.width = '0%';
+    const start = Number((document.getElementById('vg-start') as HTMLInputElement).value) || 0;
+    const dur = Number((document.getElementById('vg-dur') as HTMLInputElement).value) || 3;
+    const width = Number((document.getElementById('vg-width') as HTMLInputElement).value) || 480;
+    const fps = Number((document.getElementById('vg-fps') as HTMLSelectElement).value) || 15;
+    try {
+      const ff = await getFFmpeg({
+        onProgress: (r) => { bar.style.width = Math.min(100, Math.round(r * 100)) + '%'; },
+        onDownload: (n) => { if (n) statusEl.textContent = n; },
+      });
+      statusEl.textContent = 'Generating palette…';
+      const inName = 'in.' + (file.name.split('.').pop() || 'mp4');
+      await ff.writeFile(inName, await fetchFile(file));
+      const vf = `fps=${fps},scale=${width}:-1:flags=lanczos`;
+      // pass 1: palette
+      await ff.exec(['-ss', String(start), '-t', String(dur), '-i', inName, '-vf', `${vf},palettegen`, 'palette.png']);
+      statusEl.textContent = 'Encoding GIF…';
+      // pass 2: use palette
+      await ff.exec(['-ss', String(start), '-t', String(dur), '-i', inName, '-i', 'palette.png', '-lavfi', `${vf} [x]; [x][1:v] paletteuse`, 'out.gif']);
+      const data = await ff.readFile('out.gif');
+      const blob = new Blob([data as Uint8Array], { type: 'image/gif' });
+      if (outUrl) URL.revokeObjectURL(outUrl);
+      outUrl = URL.createObjectURL(blob);
+      try { await ff.deleteFile(inName); await ff.deleteFile('palette.png'); await ff.deleteFile('out.gif'); } catch {}
+      preview.src = outUrl;
+      info.textContent = `Done — ${fmtSize(blob.size)} GIF`;
+      progWrap.classList.add('hidden');
+      result.classList.remove('hidden'); result.classList.add('flex');
+    } catch (e) { progWrap.classList.add('hidden'); setErr('Could not make the GIF: ' + (e as Error).message); }
+    finally { goBtn.disabled = false; }
+  }
+
+  document.getElementById('vg-download')!.addEventListener('click', () => {
+    if (!outUrl || !file) return;
+    const a = document.createElement('a'); a.href = outUrl; a.download = file.name.replace(/\.[^.]+$/, '') + '.gif'; a.click();
+  });
+
+  fileInput.addEventListener('change', () => fileInput.files?.[0] && pick(fileInput.files[0]));
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) pick(f); });
+  goBtn.addEventListener('click', make);
+</script>

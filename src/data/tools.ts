@@ -2,6 +2,7 @@
 // and per-tool SEO. Each tool is a "district" in ToolCities.
 
 import { UNIT_CATEGORIES } from '../lib/units';
+import { MEDIA_CONVERSIONS } from '../lib/media';
 
 export type ToolCategory =
   | 'Text'
@@ -10,7 +11,9 @@ export type ToolCategory =
   | 'Converters'
   | 'Calculators'
   | 'Generators'
-  | 'Security';
+  | 'Security'
+  | 'PDF'
+  | 'Audio & Video';
 
 export interface Tool {
   slug: string;
@@ -1528,12 +1531,195 @@ export const tools: Tool[] = [
     keywords: ['base64 to image', 'base64 to png', 'data uri to image', 'decode base64 image', 'base64 image decoder'],
     icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M7 8l-2 2 2 2',
   },
+
+  // ---- Text: voice ----
+  {
+    slug: 'speech-to-text',
+    name: 'Speech to Text',
+    tagline: 'Transcribe your voice into editable text.',
+    description:
+      'Free online speech to text tool. Transcribe your voice into editable text live using your browser’s built-in speech recognition, in many languages. No audio is uploaded or stored.',
+    category: 'Text',
+    keywords: ['speech to text', 'voice to text', 'dictation online', 'transcribe voice', 'speech recognition'],
+    icon: 'M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3ZM5 11a7 7 0 0 0 14 0M12 18v3M8 21h8',
+  },
+
+  // ---- Converters: live rates (fetch public data — see privacy policy) ----
+  {
+    slug: 'currency-converter',
+    name: 'Currency Converter',
+    tagline: 'Live exchange rates for 30+ currencies.',
+    description:
+      'Free online currency converter with live European Central Bank exchange rates for 30+ currencies. Convert any amount and see a quick reference table. Rates fetched in your browser.',
+    category: 'Converters',
+    keywords: ['currency converter', 'exchange rate calculator', 'usd to eur', 'money converter', 'live currency rates'],
+    icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM9.5 9a2.5 2.5 0 0 1 5 0M14.5 15a2.5 2.5 0 0 1-5 0M12 7v10',
+  },
+  {
+    slug: 'crypto-converter',
+    name: 'Cryptocurrency Converter',
+    tagline: 'Live crypto prices in any currency.',
+    description:
+      'Free online cryptocurrency converter with live market prices. Convert Bitcoin, Ethereum, Solana and more to and from world currencies, with a live price table. Prices fetched in your browser.',
+    category: 'Converters',
+    keywords: ['crypto converter', 'bitcoin converter', 'cryptocurrency converter', 'btc to usd', 'eth to usd'],
+    icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM9 8h4a2 2 0 0 1 0 4H9m0 0h4.5a2 2 0 0 1 0 4H9m0-8V6m0 12v-2m2-10v2m0 8v2',
+  },
+
+  // ---- PDF (pdf-lib / pdf.js, all client-side) ----
+  {
+    slug: 'image-to-pdf',
+    name: 'Image to PDF Converter',
+    tagline: 'Combine JPG & PNG images into one PDF.',
+    description:
+      'Free online image to PDF converter. Combine JPG and PNG images into a single PDF, reorder pages, and choose page size and margins. Assembled in your browser — never uploaded.',
+    category: 'PDF',
+    keywords: ['image to pdf', 'jpg to pdf', 'png to pdf', 'convert image to pdf', 'photos to pdf'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'pdf-merge',
+    name: 'PDF Merge',
+    tagline: 'Combine multiple PDFs into one.',
+    description:
+      'Free online PDF merge tool. Combine several PDF files into a single document and reorder them by dragging, preserving page content and sizes. Merged in your browser — never uploaded.',
+    category: 'PDF',
+    keywords: ['pdf merge', 'merge pdf', 'combine pdf', 'join pdf files', 'pdf combiner'],
+    icon: 'M9 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3M15 21h3a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-3M12 8v8M9 12h6',
+  },
+  {
+    slug: 'pdf-split',
+    name: 'PDF Split',
+    tagline: 'Extract pages or split a PDF apart.',
+    description:
+      'Free online PDF split tool. Extract a page range into a new PDF or split every page into its own file. The original is untouched. Runs in your browser — never uploaded.',
+    category: 'PDF',
+    keywords: ['pdf split', 'split pdf', 'extract pdf pages', 'separate pdf pages', 'pdf splitter'],
+    icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M9 13h6M12 13v4',
+  },
+  {
+    slug: 'pdf-to-jpg',
+    name: 'PDF to JPG Converter',
+    tagline: 'Render PDF pages to JPG or PNG images.',
+    description:
+      'Free online PDF to JPG converter. Render each page of a PDF into a JPG or PNG image at your chosen resolution, then download single pages or all of them. Runs in your browser.',
+    category: 'PDF',
+    keywords: ['pdf to jpg', 'pdf to png', 'pdf to image', 'convert pdf to jpg', 'pdf pages to images'],
+    icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 17l2-2 2 2 3-3',
+  },
+  {
+    slug: 'pdf-to-text',
+    name: 'PDF to Text (OCR)',
+    tagline: 'Extract text from PDFs, with OCR fallback.',
+    description:
+      'Free online PDF to text tool. Extract the embedded text layer from digital PDFs instantly, or run in-browser OCR on scanned documents. Copy or download the result. Nothing is uploaded.',
+    category: 'PDF',
+    keywords: ['pdf to text', 'pdf ocr', 'extract text from pdf', 'pdf to txt', 'ocr pdf online'],
+    icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8M8 17h5',
+  },
+
+  // ---- Image: format converters needing decode/vectorize libs ----
+  {
+    slug: 'heic-to-jpg',
+    name: 'HEIC to JPG Converter',
+    tagline: 'Convert iPhone HEIC photos to JPG/PNG.',
+    description:
+      'Free online HEIC to JPG converter. Convert Apple HEIC and HEIF photos into universal JPG or PNG images, in bulk, with adjustable quality. Decoded in your browser — never uploaded.',
+    category: 'Image',
+    keywords: ['heic to jpg', 'heic to jpeg', 'convert heic', 'heic to png', 'iphone photo converter'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'tiff-converter',
+    name: 'TIFF Converter',
+    tagline: 'TIFF ↔ PNG, JPG & WebP.',
+    description:
+      'Free online TIFF converter. Convert TIFF/TIF images to PNG, JPG or WebP, or turn ordinary images into TIFF. Decoded in your browser with a pure-JS engine — never uploaded.',
+    category: 'Image',
+    keywords: ['tiff converter', 'tiff to jpg', 'tiff to png', 'convert tiff', 'tif to jpg'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'png-to-svg',
+    name: 'PNG to SVG (Vectorize)',
+    tagline: 'Trace raster images into scalable SVG.',
+    description:
+      'Free online PNG to SVG converter. Vectorize logos, icons and flat graphics into scalable SVG paths with adjustable detail, then download. Traced in your browser — never uploaded.',
+    category: 'Image',
+    keywords: ['png to svg', 'image to svg', 'vectorize image', 'raster to vector', 'convert png to svg'],
+    icon: 'M12 3l9 5v8l-9 5-9-5V8zM12 3v18M3 8l9 5 9-5',
+  },
+
+  // ---- Audio & Video: straight format conversions (data in src/lib/media.ts) ----
+  ...MEDIA_CONVERSIONS.map((c): Tool => ({
+    slug: c.slug,
+    name: c.name,
+    tagline: c.tagline,
+    description: c.description,
+    category: 'Audio & Video',
+    keywords: c.keywords,
+    icon: c.icon,
+  })),
+
+  // ---- Audio & Video: special tools (custom UI) ----
+  {
+    slug: 'video-to-gif',
+    name: 'Video to GIF Converter',
+    tagline: 'Turn a video clip into an animated GIF.',
+    description:
+      'Free online video to GIF converter. Turn a clip from any video into an animated GIF with adjustable start, duration, width and frame rate, using a clean two-pass palette. Runs in your browser.',
+    category: 'Audio & Video',
+    keywords: ['video to gif', 'mp4 to gif', 'convert video to gif', 'make a gif', 'video to gif converter'],
+    icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
+  },
+  {
+    slug: 'gif-to-mp4',
+    name: 'GIF to MP4 Converter',
+    tagline: 'Convert animated GIFs to compact MP4.',
+    description:
+      'Free online GIF to MP4 converter. Turn animated GIFs into MP4 video that is a fraction of the size for the same animation, ideal for web and messaging. Runs in your browser.',
+    category: 'Audio & Video',
+    keywords: ['gif to mp4', 'convert gif to mp4', 'gif to video', 'gif to mp4 converter', 'animated gif to mp4'],
+    icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
+  },
+  {
+    slug: 'video-compressor',
+    name: 'Video Compressor',
+    tagline: 'Shrink video file size in your browser.',
+    description:
+      'Free online video compressor. Reduce video file size by re-encoding with H.264 at a chosen quality and optional lower resolution, with before-and-after sizes. Runs in your browser.',
+    category: 'Audio & Video',
+    keywords: ['video compressor', 'compress video', 'reduce video size', 'shrink video', 'video compressor online'],
+    icon: 'M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4M4 12h16',
+  },
+  {
+    slug: 'audio-compressor',
+    name: 'Audio Compressor',
+    tagline: 'Reduce audio file size to MP3.',
+    description:
+      'Free online audio compressor. Reduce MP3, WAV and M4A file size by re-encoding to MP3 at a chosen bitrate, with an optional mono mixdown for voice. Runs in your browser.',
+    category: 'Audio & Video',
+    keywords: ['audio compressor', 'compress audio', 'reduce audio size', 'compress mp3', 'shrink audio file'],
+    icon: 'M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4M9 12h6',
+  },
+  {
+    slug: 'audio-speed-changer',
+    name: 'Audio Speed & Pitch Changer',
+    tagline: 'Change audio speed and pitch.',
+    description:
+      'Free online audio speed and pitch changer. Slow down or speed up audio and shift pitch in semitones, independently or linked, for practice, transcription and effects. Runs in your browser.',
+    category: 'Audio & Video',
+    keywords: ['audio speed changer', 'change audio pitch', 'slow down audio', 'pitch shifter', 'speed up audio'],
+    icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM12 7v5l4 2',
+  },
 ];
 
 export const categories: ToolCategory[] = [
   'Text',
   'Developer',
   'Image',
+  'PDF',
+  'Audio & Video',
   'Converters',
   'Calculators',
   'Generators',

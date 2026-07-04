@@ -1,0 +1,171 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="speech-to-text">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Language
+        <select id="st-lang" class="field w-48">
+          <option value="en-US">English (US)</option>
+          <option value="en-GB">English (UK)</option>
+          <option value="es-ES">Spanish (Spain)</option>
+          <option value="es-419">Spanish (Latin America)</option>
+          <option value="fr-FR">French</option>
+          <option value="de-DE">German</option>
+          <option value="it-IT">Italian</option>
+          <option value="pt-BR">Portuguese (Brazil)</option>
+          <option value="hi-IN">Hindi</option>
+          <option value="ja-JP">Japanese</option>
+          <option value="ko-KR">Korean</option>
+          <option value="zh-CN">Chinese (Mandarin)</option>
+          <option value="ar-SA">Arabic</option>
+          <option value="ru-RU">Russian</option>
+        </select>
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="st-punct" type="checkbox" class="accent-[#5e6ad2]" checked /> Auto-capitalize sentences
+      </label>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <button id="st-start" type="button" class="btn btn-primary">
+        <span id="st-dot" class="hidden h-2 w-2 rounded-full" style="background:#e5484d"></span>
+        <span id="st-start-label">Start listening</span>
+      </button>
+      <button id="st-clear" type="button" class="btn btn-secondary">Clear</button>
+      <button id="st-copy" type="button" class="btn btn-secondary">Copy</button>
+      <button id="st-download" type="button" class="btn btn-tertiary">Download .txt</button>
+    </div>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Transcript <span id="st-count" class="text-[12px] text-ink-tertiary"></span>
+      <textarea id="st-out" class="field" rows="8" placeholder="Your speech will appear here as you talk…" spellcheck="true"></textarea>
+    </label>
+    <p id="st-interim" class="min-h-5 text-[13px] italic text-ink-tertiary"></p>
+
+    <p id="st-unsupported" class="hidden text-[13px]" style="color:#e5484d" role="alert">
+      Speech recognition isn't available in this browser. It works in Chrome and Edge on desktop and Android. On other browsers you can still type or paste into the transcript box.
+    </p>
+    <p id="st-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free speech to text tool transcribes your voice into editable text
+      using your browser's built-in speech recognition. Click start, allow
+      microphone access, and speak — words appear live and keep going across
+      pauses. Pick from many languages, then copy or download the transcript.
+      Recognition is handled by your browser (Chrome and Edge support it best);
+      no audio is uploaded or stored by this site.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  const startBtn = document.getElementById('st-start') as HTMLButtonElement;
+  const startLabel = document.getElementById('st-start-label')!;
+  const dot = document.getElementById('st-dot')!;
+  const out = document.getElementById('st-out') as HTMLTextAreaElement;
+  const interim = document.getElementById('st-interim')!;
+  const langSel = document.getElementById('st-lang') as HTMLSelectElement;
+  const punct = document.getElementById('st-punct') as HTMLInputElement;
+  const count = document.getElementById('st-count')!;
+  const unsupported = document.getElementById('st-unsupported')!;
+  const err = document.getElementById('st-error')!;
+
+  function updateCount() {
+    const words = out.value.trim() ? out.value.trim().split(/\s+/).length : 0;
+    count.textContent = `${words} word${words === 1 ? '' : 's'}`;
+  }
+  out.addEventListener('input', updateCount);
+
+  document.getElementById('st-clear')!.addEventListener('click', () => { out.value = ''; interim.textContent = ''; updateCount(); });
+  document.getElementById('st-copy')!.addEventListener('click', async (e) => {
+    await navigator.clipboard.writeText(out.value);
+    const b = e.currentTarget as HTMLButtonElement;
+    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
+  });
+  document.getElementById('st-download')!.addEventListener('click', () => {
+    const blob = new Blob([out.value], { type: 'text/plain' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'transcript.txt'; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+
+  if (!SR) {
+    unsupported.classList.remove('hidden');
+    startBtn.disabled = true;
+    startBtn.classList.add('opacity-50');
+  } else {
+    const recog = new SR();
+    recog.continuous = true;
+    recog.interimResults = true;
+    let listening = false;
+    let manualStop = false;
+
+    const capitalize = (s: string) => s.replace(/(^\s*\w|[.!?]\s+\w)/g, (c) => c.toUpperCase());
+
+    langSel.addEventListener('change', () => { recog.lang = langSel.value; });
+    recog.lang = langSel.value;
+
+    recog.onresult = (ev: any) => {
+      let finalTxt = '';
+      let interimTxt = '';
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        const t = ev.results[i][0].transcript;
+        if (ev.results[i].isFinal) finalTxt += t;
+        else interimTxt += t;
+      }
+      if (finalTxt) {
+        let addition = finalTxt;
+        // add spacing/punctuation heuristics
+        const needsSpace = out.value && !/\s$/.test(out.value);
+        out.value += (needsSpace ? ' ' : '') + addition.trim();
+        if (punct.checked) out.value = capitalize(out.value);
+        updateCount();
+      }
+      interim.textContent = interimTxt;
+    };
+
+    recog.onerror = (ev: any) => {
+      if (ev.error === 'no-speech' || ev.error === 'aborted') return;
+      if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
+        err.textContent = 'Microphone access was blocked. Allow the mic in your browser and try again.';
+      } else {
+        err.textContent = `Recognition error: ${ev.error}`;
+      }
+      err.classList.remove('hidden');
+    };
+
+    recog.onend = () => {
+      // Chrome stops after silence; restart unless the user pressed stop.
+      if (listening && !manualStop) { try { recog.start(); } catch {} }
+      else setListening(false);
+    };
+
+    function setListening(on: boolean) {
+      listening = on;
+      startLabel.textContent = on ? 'Stop listening' : 'Start listening';
+      startBtn.classList.toggle('btn-primary', !on);
+      startBtn.classList.toggle('btn-secondary', on);
+      dot.classList.toggle('hidden', !on);
+      if (on) dot.classList.add('animate-pulse');
+    }
+
+    startBtn.addEventListener('click', () => {
+      err.classList.add('hidden');
+      if (listening) {
+        manualStop = true;
+        recog.stop();
+        setListening(false);
+      } else {
+        manualStop = false;
+        try { recog.start(); setListening(true); } catch { /* already started */ }
+      }
+    });
+  }
+
+  updateCount();
+</script>

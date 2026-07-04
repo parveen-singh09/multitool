@@ -1,0 +1,163 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pdf-to-text">
+  <div class="flex flex-col gap-4">
+    <label id="pt-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a PDF or drop it here</span>
+      <span class="text-[13px] text-ink-tertiary">Text extracted in your browser — never uploaded</span>
+      <input id="pt-file" type="file" accept="application/pdf" class="sr-only" />
+    </label>
+
+    <div id="pt-panel" class="hidden flex-col gap-4">
+      <div class="flex flex-wrap items-center gap-3">
+        <button id="pt-extract" class="btn btn-primary">Extract text</button>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle">
+          <input id="pt-ocr" type="checkbox" class="accent-[#5e6ad2]" /> Force OCR (for scanned PDFs)
+        </label>
+        <button id="pt-copy" class="btn btn-secondary">Copy</button>
+        <button id="pt-download" class="btn btn-tertiary">Download .txt</button>
+      </div>
+      <p id="pt-status" class="text-[13px] text-ink-subtle"></p>
+      <div id="pt-bar-wrap" class="hidden h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
+        <div id="pt-bar" class="h-full w-0 rounded-full transition-all" style="background:var(--color-primary)"></div>
+      </div>
+      <textarea id="pt-out" class="field font-mono text-[13px]" rows="14" spellcheck="false" placeholder="Extracted text will appear here…"></textarea>
+    </div>
+    <p id="pt-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free PDF to text tool extracts written text from a PDF. For digital
+      PDFs it reads the embedded text layer instantly; for scanned documents or
+      images, tick “Force OCR” to recognise the text with optical character
+      recognition. Copy the result or download it as a .txt file. Both the PDF
+      rendering and the OCR run entirely in your browser — your document and its
+      contents are never uploaded to a server.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  import * as pdfjsLib from 'pdfjs-dist';
+  import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+  pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+
+  const fileInput = document.getElementById('pt-file') as HTMLInputElement;
+  const drop = document.getElementById('pt-drop')!;
+  const panel = document.getElementById('pt-panel')!;
+  const out = document.getElementById('pt-out') as HTMLTextAreaElement;
+  const status = document.getElementById('pt-status')!;
+  const err = document.getElementById('pt-error')!;
+  const ocrChk = document.getElementById('pt-ocr') as HTMLInputElement;
+  const barWrap = document.getElementById('pt-bar-wrap')!;
+  const bar = document.getElementById('pt-bar') as HTMLElement;
+
+  let bytes: ArrayBuffer | null = null;
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  function load(file: File) {
+    setErr('');
+    file.arrayBuffer().then((b) => { bytes = b; panel.classList.remove('hidden'); panel.classList.add('flex'); status.textContent = `${file.name} ready.`; });
+  }
+
+  async function extractTextLayer(): Promise<string> {
+    const pdf = await pdfjsLib.getDocument({ data: bytes!.slice(0) }).promise;
+    let text = '';
+    for (let n = 1; n <= pdf.numPages; n++) {
+      status.textContent = `Reading text layer, page ${n} / ${pdf.numPages}…`;
+      const page = await pdf.getPage(n);
+      const content = await page.getTextContent();
+      let last = 0;
+      const line = content.items.map((it: any) => {
+        const s = it.str;
+        // insert newlines when the vertical position jumps
+        const y = it.transform?.[5] ?? 0;
+        let prefix = '';
+        if (last && Math.abs(y - last) > 5) prefix = '\n';
+        last = y;
+        return prefix + s + (it.hasEOL ? '\n' : '');
+      }).join('');
+      text += line + '\n\n';
+    }
+    return text.trim();
+  }
+
+  async function runOcr(): Promise<string> {
+    const Tesseract = await import('tesseract.js');
+    barWrap.classList.remove('hidden');
+    const worker = await Tesseract.createWorker('eng', 1, {
+      // self-hosted assets — no third-party requests
+      workerPath: '/tesseract/worker.min.js',
+      corePath: '/tesseract/',
+      langPath: '/tessdata/',
+      logger: (m: any) => {
+        if (m.status === 'recognizing text') { bar.style.width = Math.round(m.progress * 100) + '%'; }
+        status.textContent = `${m.status}${m.progress ? ' ' + Math.round(m.progress * 100) + '%' : ''}…`;
+      },
+    });
+    const pdf = await pdfjsLib.getDocument({ data: bytes!.slice(0) }).promise;
+    let text = '';
+    for (let n = 1; n <= pdf.numPages; n++) {
+      status.textContent = `OCR page ${n} / ${pdf.numPages}…`;
+      bar.style.width = '0%';
+      const page = await pdf.getPage(n);
+      const viewport = page.getViewport({ scale: 2 });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width; canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvasContext: ctx, viewport, canvas } as any).promise;
+      const { data } = await worker.recognize(canvas);
+      text += data.text + '\n\n';
+    }
+    await worker.terminate();
+    barWrap.classList.add('hidden');
+    return text.trim();
+  }
+
+  async function run() {
+    if (!bytes) return;
+    setErr(''); out.value = '';
+    const btn = document.getElementById('pt-extract') as HTMLButtonElement;
+    btn.disabled = true;
+    try {
+      let text = ocrChk.checked ? '' : await extractTextLayer();
+      if (!ocrChk.checked && text.replace(/\s/g, '').length < 10) {
+        status.textContent = 'Little or no embedded text found — running OCR instead…';
+        text = await runOcr();
+      } else if (ocrChk.checked) {
+        text = await runOcr();
+      }
+      out.value = text || '(No text could be extracted.)';
+      status.textContent = `Done — ${out.value.length.toLocaleString()} characters.`;
+    } catch (e) {
+      barWrap.classList.add('hidden');
+      setErr('Could not extract text: ' + (e as Error).message);
+      status.textContent = '';
+    } finally { btn.disabled = false; }
+  }
+
+  fileInput.addEventListener('change', () => fileInput.files?.[0] && load(fileInput.files[0]));
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) load(f); });
+  document.getElementById('pt-extract')!.addEventListener('click', run);
+  document.getElementById('pt-copy')!.addEventListener('click', async (e) => {
+    await navigator.clipboard.writeText(out.value);
+    const b = e.currentTarget as HTMLButtonElement;
+    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
+  });
+  document.getElementById('pt-download')!.addEventListener('click', () => {
+    const blob = new Blob([out.value], { type: 'text/plain' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'extracted-text.txt'; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+</script>

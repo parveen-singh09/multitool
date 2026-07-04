@@ -1,0 +1,100 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="heic-to-jpg">
+  <div class="flex flex-col gap-4">
+    <label id="hc-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose HEIC/HEIF photos or drop them here</span>
+      <span class="text-[13px] text-ink-tertiary">Converted in your browser — never uploaded</span>
+      <input id="hc-file" type="file" accept=".heic,.heif,image/heic,image/heif" multiple class="sr-only" />
+    </label>
+
+    <div id="hc-panel" class="hidden flex-col gap-4">
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Format
+          <select id="hc-fmt" class="field w-32"><option value="image/jpeg">JPG</option><option value="image/png">PNG</option></select>
+        </label>
+        <label class="flex flex-1 flex-col gap-1 text-sm text-ink-subtle">Quality: <span id="hc-qval" class="text-ink">90%</span>
+          <input id="hc-q" type="range" min="10" max="100" value="90" class="w-full accent-[#5e6ad2]" />
+        </label>
+      </div>
+      <p id="hc-status" class="text-[13px] text-ink-subtle"></p>
+      <div id="hc-grid" class="grid grid-cols-2 gap-3 sm:grid-cols-3"></div>
+    </div>
+    <p id="hc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free HEIC to JPG converter turns Apple HEIC and HEIF photos — the
+      format iPhones use — into universally supported JPG or PNG images. Add one
+      or several photos, choose the format and quality, and download each result.
+      Conversion is done in your browser with an in-page HEIF decoder, so your
+      photos are never uploaded to a server.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  const fileInput = document.getElementById('hc-file') as HTMLInputElement;
+  const drop = document.getElementById('hc-drop')!;
+  const panel = document.getElementById('hc-panel')!;
+  const grid = document.getElementById('hc-grid')!;
+  const status = document.getElementById('hc-status')!;
+  const err = document.getElementById('hc-error')!;
+  const qEl = document.getElementById('hc-q') as HTMLInputElement;
+  const qval = document.getElementById('hc-qval')!;
+  const fmtEl = document.getElementById('hc-fmt') as HTMLSelectElement;
+
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+  qEl.addEventListener('input', () => (qval.textContent = qEl.value + '%'));
+
+  async function convert(files: File[]) {
+    setErr('');
+    panel.classList.remove('hidden'); panel.classList.add('flex');
+    grid.innerHTML = '';
+    const { default: heic2any } = await import('heic2any');
+    const fmt = fmtEl.value;
+    const ext = fmt === 'image/png' ? 'png' : 'jpg';
+    let done = 0;
+    for (const f of files) {
+      status.textContent = `Converting ${f.name} (${done + 1}/${files.length})…`;
+      try {
+        const result = await heic2any({ blob: f, toType: fmt, quality: Number(qEl.value) / 100 });
+        const blob = Array.isArray(result) ? result[0] : result;
+        const url = URL.createObjectURL(blob as Blob);
+        const name = f.name.replace(/\.hei[cf]$/i, '') + '.' + ext;
+        const div = document.createElement('div');
+        div.className = 'panel panel-lift flex flex-col gap-2 p-2';
+        div.innerHTML = `<img src="${url}" class="w-full rounded-[6px]" alt="${name}" />
+          <a href="${url}" download="${name}" class="btn btn-secondary py-1 text-[13px] truncate">Download ${ext.toUpperCase()}</a>`;
+        grid.appendChild(div);
+      } catch (e) {
+        const div = document.createElement('div');
+        div.className = 'panel flex items-center p-3 text-[13px]';
+        div.style.color = '#e5484d';
+        div.textContent = `${f.name}: not a valid HEIC file`;
+        grid.appendChild(div);
+      }
+      done++;
+    }
+    status.textContent = `Done — ${done} file(s) processed.`;
+  }
+
+  function pick(files: FileList | File[]) {
+    const arr = Array.from(files).filter((f) => /\.hei[cf]$/i.test(f.name) || /heic|heif/.test(f.type));
+    if (!arr.length) { setErr('Please choose HEIC or HEIF files.'); return; }
+    convert(arr);
+  }
+
+  fileInput.addEventListener('change', () => fileInput.files && pick(fileInput.files));
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files; if (f) pick(f); });
+</script>

@@ -1,0 +1,135 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="video-compressor">
+  <div class="flex flex-col gap-4">
+    <label id="vc-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a video or drop it here</span>
+      <span class="text-[13px] text-ink-tertiary">Compressed in your browser — never uploaded</span>
+      <input id="vc-file" type="file" accept="video/*" class="sr-only" />
+    </label>
+
+    <div id="vc-panel" class="hidden flex-col gap-4">
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Quality
+          <select id="vc-crf" class="field w-48">
+            <option value="23">High (larger file)</option>
+            <option value="28" selected>Balanced</option>
+            <option value="32">Small (lower quality)</option>
+            <option value="36">Tiny (lowest quality)</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Max width
+          <select id="vc-scale" class="field w-40">
+            <option value="0">Keep original</option>
+            <option value="1280" selected>720p (1280)</option>
+            <option value="854">480p (854)</option>
+            <option value="640">360p (640)</option>
+          </select>
+        </label>
+        <button id="vc-go" class="btn btn-primary">Compress</button>
+      </div>
+      <p class="text-[13px] text-ink-tertiary">Video re-encoding is CPU-intensive and runs locally — expect roughly real-time speed.</p>
+
+      <div id="vc-progwrap" class="hidden flex-col gap-1">
+        <div class="h-1.5 w-full overflow-hidden rounded-full bg-surface-3"><div id="vc-bar" class="h-full w-0 rounded-full transition-all" style="background:var(--color-primary)"></div></div>
+        <span id="vc-status" class="text-[13px] text-ink-subtle"></span>
+      </div>
+
+      <div id="vc-result" class="hidden flex-col gap-3">
+        <div class="grid grid-cols-2 gap-3 text-center">
+          <div class="panel p-4"><div id="vc-before" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Original</div></div>
+          <div class="panel p-4"><div id="vc-after" class="font-mono text-lg" style="color:var(--color-success)">—</div><div class="mt-1 text-[13px] text-ink-subtle">Compressed (<span id="vc-saved">0%</span> smaller)</div></div>
+        </div>
+        <button id="vc-download" class="btn btn-primary w-fit">Download</button>
+        <div class="panel flex justify-center overflow-hidden p-4"><video id="vc-preview" controls class="max-h-96 w-auto max-w-full rounded-[8px]"></video></div>
+      </div>
+    </div>
+    <p id="vc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free video compressor shrinks video file size by re-encoding with
+      H.264 at a quality level you choose, and optionally scaling down the
+      resolution. It's ideal for email attachments, uploads and saving space.
+      See the before-and-after sizes and preview the result before downloading.
+      All compression runs in your browser — your video is never uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  import { getFFmpeg, fetchFile } from '../../lib/ffmpeg';
+
+  const fileInput = document.getElementById('vc-file') as HTMLInputElement;
+  const drop = document.getElementById('vc-drop')!;
+  const panel = document.getElementById('vc-panel')!;
+  const goBtn = document.getElementById('vc-go') as HTMLButtonElement;
+  const progWrap = document.getElementById('vc-progwrap')!;
+  const bar = document.getElementById('vc-bar') as HTMLElement;
+  const statusEl = document.getElementById('vc-status')!;
+  const result = document.getElementById('vc-result')!;
+  const beforeEl = document.getElementById('vc-before')!;
+  const afterEl = document.getElementById('vc-after')!;
+  const savedEl = document.getElementById('vc-saved')!;
+  const preview = document.getElementById('vc-preview') as HTMLVideoElement;
+  const err = document.getElementById('vc-error')!;
+
+  let file: File | null = null;
+  let outUrl = '';
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+  const fmtSize = (n: number) => n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(2)} MB`;
+
+  function pick(f: File) { file = f; panel.classList.remove('hidden'); panel.classList.add('flex'); result.classList.add('hidden'); setErr(''); }
+
+  async function compress() {
+    if (!file) return;
+    setErr(''); goBtn.disabled = true;
+    progWrap.classList.remove('hidden'); progWrap.classList.add('flex'); result.classList.add('hidden'); bar.style.width = '0%';
+    const crf = (document.getElementById('vc-crf') as HTMLSelectElement).value;
+    const scale = Number((document.getElementById('vc-scale') as HTMLSelectElement).value);
+    try {
+      const ff = await getFFmpeg({
+        onProgress: (r) => { bar.style.width = Math.min(100, Math.round(r * 100)) + '%'; },
+        onDownload: (n) => { if (n) statusEl.textContent = n; },
+      });
+      statusEl.textContent = 'Compressing…';
+      const inName = 'in.' + (file.name.split('.').pop() || 'mp4');
+      await ff.writeFile(inName, await fetchFile(file));
+      const args = ['-i', inName, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', crf];
+      if (scale) args.push('-vf', `scale='min(${scale},iw)':-2`);
+      args.push('-c:a', 'aac', '-b:a', '128k', 'out.mp4');
+      await ff.exec(args);
+      const data = await ff.readFile('out.mp4');
+      const blob = new Blob([data as Uint8Array], { type: 'video/mp4' });
+      if (outUrl) URL.revokeObjectURL(outUrl);
+      outUrl = URL.createObjectURL(blob);
+      try { await ff.deleteFile(inName); await ff.deleteFile('out.mp4'); } catch {}
+      preview.src = outUrl;
+      beforeEl.textContent = fmtSize(file.size);
+      afterEl.textContent = fmtSize(blob.size);
+      savedEl.textContent = Math.max(0, Math.round((1 - blob.size / file.size) * 100)) + '%';
+      progWrap.classList.add('hidden');
+      result.classList.remove('hidden'); result.classList.add('flex');
+    } catch (e) { progWrap.classList.add('hidden'); setErr('Compression failed: ' + (e as Error).message); }
+    finally { goBtn.disabled = false; }
+  }
+
+  document.getElementById('vc-download')!.addEventListener('click', () => {
+    if (!outUrl || !file) return;
+    const a = document.createElement('a'); a.href = outUrl; a.download = file.name.replace(/\.[^.]+$/, '') + '-compressed.mp4'; a.click();
+  });
+
+  fileInput.addEventListener('change', () => fileInput.files?.[0] && pick(fileInput.files[0]));
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) pick(f); });
+  goBtn.addEventListener('click', compress);
+</script>

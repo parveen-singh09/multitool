@@ -1,0 +1,137 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="tiff-converter">
+  <div class="flex flex-col gap-4">
+    <label id="tf-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a TIFF (or other image) or drop it here</span>
+      <span class="text-[13px] text-ink-tertiary">Converted in your browser — never uploaded</span>
+      <input id="tf-file" type="file" accept=".tif,.tiff,image/tiff,image/*" class="sr-only" />
+    </label>
+
+    <div id="tf-panel" class="hidden flex-col gap-4">
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Convert to
+          <select id="tf-fmt" class="field w-36">
+            <option value="image/png">PNG</option>
+            <option value="image/jpeg">JPG</option>
+            <option value="image/webp">WebP</option>
+            <option value="image/tiff">TIFF</option>
+          </select>
+        </label>
+        <label id="tf-q-wrap" class="flex flex-1 flex-col gap-1 text-sm text-ink-subtle">Quality: <span id="tf-qval" class="text-ink">90%</span>
+          <input id="tf-q" type="range" min="10" max="100" value="90" class="w-full accent-[#5e6ad2]" />
+        </label>
+        <button id="tf-download" class="btn btn-primary">Download</button>
+      </div>
+      <p id="tf-status" class="text-[13px] text-ink-subtle"></p>
+      <div class="panel flex justify-center overflow-hidden p-4"><img id="tf-preview" class="max-h-96 w-auto max-w-full rounded-[8px]" alt="Converted preview" /></div>
+    </div>
+    <p id="tf-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free TIFF converter turns TIFF/TIF images into PNG, JPG or WebP — and
+      can also convert ordinary images into TIFF. TIFF is common in scanning,
+      publishing and photography but isn't supported by web browsers directly, so
+      this tool decodes it in-page and lets you download a web-friendly version.
+      Everything is processed in your browser and never uploaded to a server.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  import UTIF from 'utif';
+
+  const fileInput = document.getElementById('tf-file') as HTMLInputElement;
+  const drop = document.getElementById('tf-drop')!;
+  const panel = document.getElementById('tf-panel')!;
+  const preview = document.getElementById('tf-preview') as HTMLImageElement;
+  const status = document.getElementById('tf-status')!;
+  const err = document.getElementById('tf-error')!;
+  const fmtEl = document.getElementById('tf-fmt') as HTMLSelectElement;
+  const qEl = document.getElementById('tf-q') as HTMLInputElement;
+  const qval = document.getElementById('tf-qval')!;
+  const qWrap = document.getElementById('tf-q-wrap')!;
+
+  let sourceCanvas: HTMLCanvasElement | null = null;
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  qEl.addEventListener('input', () => { qval.textContent = qEl.value + '%'; convert(); });
+  fmtEl.addEventListener('change', () => {
+    const lossy = fmtEl.value === 'image/jpeg' || fmtEl.value === 'image/webp';
+    qWrap.style.display = lossy ? '' : 'none';
+    convert();
+  });
+
+  async function loadFile(file: File) {
+    setErr('');
+    const buf = await file.arrayBuffer();
+    const canvas = document.createElement('canvas');
+    try {
+      if (/\.tif{1,2}$/i.test(file.name) || file.type === 'image/tiff') {
+        const ifds = UTIF.decode(buf);
+        UTIF.decodeImage(buf, ifds[0]);
+        const rgba = UTIF.toRGBA8(ifds[0]);
+        canvas.width = ifds[0].width; canvas.height = ifds[0].height;
+        const ctx = canvas.getContext('2d')!;
+        const imgData = ctx.createImageData(canvas.width, canvas.height);
+        imgData.data.set(rgba);
+        ctx.putImageData(imgData, 0, 0);
+      } else {
+        // ordinary image -> load via <img> so we can output TIFF
+        await new Promise<void>((res, rej) => {
+          const img = new Image();
+          img.onload = () => { canvas.width = img.naturalWidth; canvas.height = img.naturalHeight; canvas.getContext('2d')!.drawImage(img, 0, 0); res(); };
+          img.onerror = () => rej(new Error('load failed'));
+          img.src = URL.createObjectURL(file);
+        });
+      }
+      sourceCanvas = canvas;
+      panel.classList.remove('hidden'); panel.classList.add('flex');
+      status.textContent = `${file.name} · ${canvas.width}×${canvas.height}`;
+      convert();
+    } catch (e) { setErr('Could not read that image: ' + (e as Error).message); }
+  }
+
+  let outUrl = '';
+  function convert() {
+    if (!sourceCanvas) return;
+    const fmt = fmtEl.value;
+    if (fmt === 'image/tiff') {
+      const ctx = sourceCanvas.getContext('2d')!;
+      const data = ctx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
+      const tiff = UTIF.encodeImage(data.data, sourceCanvas.width, sourceCanvas.height);
+      const blob = new Blob([tiff], { type: 'image/tiff' });
+      if (outUrl) URL.revokeObjectURL(outUrl);
+      outUrl = URL.createObjectURL(blob);
+      // preview can't show TIFF; show the source canvas as a PNG proxy
+      preview.src = sourceCanvas.toDataURL('image/png');
+    } else {
+      sourceCanvas.toBlob((b) => {
+        if (!b) { setErr('Your browser could not encode that format.'); return; }
+        if (outUrl) URL.revokeObjectURL(outUrl);
+        outUrl = URL.createObjectURL(b);
+        preview.src = outUrl;
+      }, fmt, Number(qEl.value) / 100);
+    }
+  }
+
+  document.getElementById('tf-download')!.addEventListener('click', () => {
+    if (!outUrl) return;
+    const ext = fmtEl.value.split('/')[1].replace('jpeg', 'jpg');
+    const a = document.createElement('a'); a.href = outUrl; a.download = `converted.${ext}`; a.click();
+  });
+
+  fileInput.addEventListener('change', () => fileInput.files?.[0] && loadFile(fileInput.files[0]));
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) loadFile(f); });
+</script>

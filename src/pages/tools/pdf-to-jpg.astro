@@ -1,0 +1,115 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pdf-to-jpg">
+  <div class="flex flex-col gap-4">
+    <label id="pj-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a PDF or drop it here</span>
+      <span class="text-[13px] text-ink-tertiary">Rendered to images in your browser — never uploaded</span>
+      <input id="pj-file" type="file" accept="application/pdf" class="sr-only" />
+    </label>
+
+    <div id="pj-panel" class="hidden flex-col gap-4">
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Format
+          <select id="pj-fmt" class="field w-32"><option value="image/jpeg">JPG</option><option value="image/png">PNG</option></select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Scale
+          <select id="pj-scale" class="field w-32"><option value="1">1× (72 dpi)</option><option value="2" selected>2× (144 dpi)</option><option value="3">3× (216 dpi)</option></select>
+        </label>
+        <button id="pj-render" class="btn btn-primary">Render pages</button>
+        <button id="pj-all" class="btn btn-secondary hidden">Download all</button>
+      </div>
+      <p id="pj-status" class="text-[13px] text-ink-subtle"></p>
+      <div id="pj-grid" class="grid grid-cols-2 gap-3 sm:grid-cols-3"></div>
+    </div>
+    <p id="pj-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free PDF to JPG converter renders each page of a PDF into a JPG or PNG
+      image. Pick the output format and resolution, render the pages, then
+      download any single page or all of them. Higher scale gives sharper images
+      for print or zoom. The PDF is rendered entirely in your browser, so your
+      document is never uploaded to a server.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  import * as pdfjsLib from 'pdfjs-dist';
+  import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+  pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+
+  const fileInput = document.getElementById('pj-file') as HTMLInputElement;
+  const drop = document.getElementById('pj-drop')!;
+  const panel = document.getElementById('pj-panel')!;
+  const grid = document.getElementById('pj-grid')!;
+  const status = document.getElementById('pj-status')!;
+  const err = document.getElementById('pj-error')!;
+  const allBtn = document.getElementById('pj-all') as HTMLButtonElement;
+
+  let bytes: ArrayBuffer | null = null;
+  let rendered: { url: string; page: number; ext: string }[] = [];
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  function load(file: File) {
+    setErr('');
+    file.arrayBuffer().then((b) => { bytes = b; panel.classList.remove('hidden'); panel.classList.add('flex'); status.textContent = `${file.name} ready.`; });
+  }
+
+  async function render() {
+    if (!bytes) return;
+    setErr(''); grid.innerHTML = ''; rendered = []; allBtn.classList.add('hidden');
+    const fmt = (document.getElementById('pj-fmt') as HTMLSelectElement).value;
+    const ext = fmt === 'image/png' ? 'png' : 'jpg';
+    const scale = Number((document.getElementById('pj-scale') as HTMLSelectElement).value);
+    try {
+      const pdf = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+      status.textContent = `Rendering ${pdf.numPages} page(s)…`;
+      for (let n = 1; n <= pdf.numPages; n++) {
+        const page = await pdf.getPage(n);
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width; canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d')!;
+        if (ext === 'jpg') { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+        await page.render({ canvasContext: ctx, viewport, canvas } as any).promise;
+        const url = await new Promise<string>((res) => canvas.toBlob((b) => res(URL.createObjectURL(b!)), fmt, 0.92));
+        rendered.push({ url, page: n, ext });
+        addCard(url, n, ext);
+        status.textContent = `Rendered ${n} / ${pdf.numPages}`;
+      }
+      status.textContent = `Done — ${pdf.numPages} page(s).`;
+      if (rendered.length > 1) allBtn.classList.remove('hidden');
+    } catch (e) { setErr('Could not render that PDF: ' + (e as Error).message); }
+  }
+
+  function addCard(url: string, n: number, ext: string) {
+    const div = document.createElement('div');
+    div.className = 'panel panel-lift flex flex-col gap-2 p-2';
+    div.innerHTML = `<img src="${url}" class="w-full rounded-[6px]" alt="Page ${n}" />
+      <a href="${url}" download="page-${n}.${ext}" class="btn btn-secondary py-1 text-[13px]">Page ${n} · ${ext.toUpperCase()}</a>`;
+    grid.appendChild(div);
+  }
+
+  allBtn.addEventListener('click', async () => {
+    for (const r of rendered) {
+      const a = document.createElement('a'); a.href = r.url; a.download = `page-${r.page}.${r.ext}`; a.click();
+      await new Promise((res) => setTimeout(res, 150));
+    }
+  });
+
+  fileInput.addEventListener('change', () => fileInput.files?.[0] && load(fileInput.files[0]));
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) load(f); });
+  document.getElementById('pj-render')!.addEventListener('click', render);
+</script>

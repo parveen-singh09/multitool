@@ -1,0 +1,151 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="crypto-converter">
+  <div class="flex flex-col gap-4">
+    <div class="status-badge w-fit">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9M12 7v5l3 2"/></svg>
+      <span>Live prices fetched from your browser · <span id="cr-updated">loading…</span></span>
+    </div>
+
+    <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="cr-from-val">From</label>
+        <input id="cr-from-val" type="number" class="field" value="1" inputmode="decimal" />
+        <select id="cr-from" class="field mt-1"></select>
+      </div>
+      <button id="cr-swap" type="button" class="btn btn-secondary mb-1 h-10 w-10 shrink-0 justify-self-center p-0" aria-label="Swap" title="Swap">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
+      </button>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="cr-to-val">To</label>
+        <input id="cr-to-val" type="number" class="field" readonly />
+        <select id="cr-to" class="field mt-1"></select>
+      </div>
+    </div>
+
+    <p id="cr-rate" class="text-[13px] text-ink-tertiary"></p>
+
+    <div>
+      <p class="mb-2 text-[13px] text-ink-subtle">Market prices (USD)</p>
+      <div id="cr-table" class="overflow-hidden rounded-[8px] border border-hairline"></div>
+    </div>
+
+    <p id="cr-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free cryptocurrency converter uses live market prices to convert
+      between major coins — Bitcoin, Ethereum, Solana and more — and world
+      currencies, in any direction. Enter an amount, choose what to convert from
+      and to, and see the value plus a live price table. Prices are fetched
+      directly from your browser to a public market-data service; no account is
+      needed and nothing you enter is stored. Crypto prices are volatile, so
+      treat figures as indicative.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  // id -> [symbol, name]. CoinGecko IDs on the left.
+  const COINS: Record<string, [string, string]> = {
+    bitcoin: ['BTC', 'Bitcoin'], ethereum: ['ETH', 'Ethereum'], tether: ['USDT', 'Tether'],
+    binancecoin: ['BNB', 'BNB'], solana: ['SOL', 'Solana'], ripple: ['XRP', 'XRP'],
+    'usd-coin': ['USDC', 'USD Coin'], cardano: ['ADA', 'Cardano'], dogecoin: ['DOGE', 'Dogecoin'],
+    tron: ['TRX', 'TRON'], 'the-open-network': ['TON', 'Toncoin'], polkadot: ['DOT', 'Polkadot'],
+    'matic-network': ['MATIC', 'Polygon'], litecoin: ['LTC', 'Litecoin'], chainlink: ['LINK', 'Chainlink'],
+    'shiba-inu': ['SHIB', 'Shiba Inu'], 'avalanche-2': ['AVAX', 'Avalanche'], 'bitcoin-cash': ['BCH', 'Bitcoin Cash'],
+  };
+  const FIATS: Record<string, string> = {
+    usd: 'US Dollar', eur: 'Euro', gbp: 'British Pound', jpy: 'Japanese Yen',
+    inr: 'Indian Rupee', aud: 'Australian Dollar', cad: 'Canadian Dollar', cny: 'Chinese Yuan',
+  };
+
+  const fromVal = document.getElementById('cr-from-val') as HTMLInputElement;
+  const toVal = document.getElementById('cr-to-val') as HTMLInputElement;
+  const fromSel = document.getElementById('cr-from') as HTMLSelectElement;
+  const toSel = document.getElementById('cr-to') as HTMLSelectElement;
+  const rateLine = document.getElementById('cr-rate')!;
+  const table = document.getElementById('cr-table')!;
+  const updated = document.getElementById('cr-updated')!;
+  const err = document.getElementById('cr-error')!;
+
+  // price[coinId][fiat] = value of 1 coin in that fiat
+  let price: Record<string, Record<string, number>> = {};
+
+  const fmt = (n: number, max = 6) => new Intl.NumberFormat(undefined, { maximumFractionDigits: max }).format(n);
+
+  function fillSelects() {
+    const coinOpts = Object.entries(COINS).map(([id, [sym, name]]) => `<option value="coin:${id}">${sym} — ${name}</option>`).join('');
+    const fiatOpts = Object.entries(FIATS).map(([code, name]) => `<option value="fiat:${code}">${code.toUpperCase()} — ${name}</option>`).join('');
+    const html = `<optgroup label="Crypto">${coinOpts}</optgroup><optgroup label="Currencies">${fiatOpts}</optgroup>`;
+    fromSel.innerHTML = html; toSel.innerHTML = html;
+    fromSel.value = 'coin:bitcoin'; toSel.value = 'fiat:usd';
+  }
+
+  // USD value of one unit of a selection.
+  function usdPerUnit(sel: string): number | null {
+    const [kind, key] = sel.split(':');
+    if (kind === 'coin') return price[key]?.usd ?? null;
+    // fiat: derive USD-per-fiat from bitcoin's price in USD vs that fiat
+    const btc = price['bitcoin'];
+    if (!btc || !btc.usd || !btc[key]) return null;
+    return btc.usd / btc[key]; // USD per 1 unit of fiat
+  }
+
+  function convert() {
+    if (!Object.keys(price).length) return;
+    const v = Number(fromVal.value);
+    const uFrom = usdPerUnit(fromSel.value), uTo = usdPerUnit(toSel.value);
+    if (isNaN(v) || uFrom === null || uTo === null || uTo === 0) { toVal.value = ''; return; }
+    const result = (v * uFrom) / uTo;
+    toVal.value = String(Math.round(result * 1e8) / 1e8);
+    const one = uFrom / uTo;
+    const label = (s: string) => s.split(':')[1] === s ? s : (s.startsWith('coin:') ? COINS[s.split(':')[1]][0] : s.split(':')[1].toUpperCase());
+    rateLine.textContent = `1 ${label(fromSel.value)} = ${fmt(one)} ${label(toSel.value)}`;
+  }
+
+  function renderTable() {
+    const rows = Object.entries(COINS).map(([id, [sym, name]]) => {
+      const p = price[id]?.usd;
+      if (p === undefined) return '';
+      return `<tr class="border-t border-hairline">
+        <td class="px-3 py-2 text-ink-subtle">${sym} <span class="text-ink-tertiary">${name}</span></td>
+        <td class="px-3 py-2 text-right font-mono text-ink">$${fmt(p, 2)}</td>
+      </tr>`;
+    }).join('');
+    table.innerHTML = `<table class="w-full text-[13px]">${rows}</table>`;
+  }
+
+  async function loadPrices() {
+    try {
+      const ids = Object.keys(COINS).join(',');
+      const vs = Object.keys(FIATS).join(',');
+      const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=${vs}`);
+      if (!res.ok) throw new Error('bad status ' + res.status);
+      price = await res.json();
+      if (!Object.keys(price).length) throw new Error('empty');
+      updated.textContent = 'updated just now';
+      convert();
+      renderTable();
+    } catch (e) {
+      err.textContent = 'Could not load live crypto prices. The market-data service may be rate-limited — wait a moment and refresh. An internet connection is required.';
+      err.classList.remove('hidden');
+      updated.textContent = 'unavailable';
+    }
+  }
+
+  fromVal.addEventListener('input', convert);
+  fromSel.addEventListener('change', convert);
+  toSel.addEventListener('change', convert);
+  document.getElementById('cr-swap')!.addEventListener('click', () => {
+    const a = fromSel.value; fromSel.value = toSel.value; toSel.value = a;
+    if (toVal.value) fromVal.value = toVal.value;
+    convert();
+  });
+
+  fillSelects();
+  loadPrices();
+</script>

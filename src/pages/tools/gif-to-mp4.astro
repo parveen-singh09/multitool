@@ -1,0 +1,108 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="gif-to-mp4">
+  <div class="flex flex-col gap-4">
+    <label id="gm-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a GIF or drop it here</span>
+      <span class="text-[13px] text-ink-tertiary">Converted in your browser — never uploaded</span>
+      <input id="gm-file" type="file" accept="image/gif,.gif" class="sr-only" />
+    </label>
+
+    <div id="gm-panel" class="hidden flex-col gap-4">
+      <div class="flex flex-wrap items-center gap-3">
+        <span id="gm-fname" class="text-[13px] text-ink-subtle"></span>
+        <button id="gm-go" class="btn btn-primary">Convert to MP4</button>
+      </div>
+      <div id="gm-progwrap" class="hidden flex-col gap-1">
+        <div class="h-1.5 w-full overflow-hidden rounded-full bg-surface-3"><div id="gm-bar" class="h-full w-0 rounded-full transition-all" style="background:var(--color-primary)"></div></div>
+        <span id="gm-status" class="text-[13px] text-ink-subtle"></span>
+      </div>
+      <div id="gm-result" class="hidden flex-col gap-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <span id="gm-info" class="text-[13px]" style="color:var(--color-success)"></span>
+          <button id="gm-download" class="btn btn-primary">Download MP4</button>
+        </div>
+        <div class="panel flex justify-center overflow-hidden p-4"><video id="gm-preview" controls loop class="max-h-96 w-auto max-w-full rounded-[8px]"></video></div>
+      </div>
+    </div>
+    <p id="gm-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free GIF to MP4 converter turns animated GIFs into MP4 video, which is
+      typically a fraction of the size for the same animation — ideal for
+      websites and messaging. The output uses H.264 with a compatibility tweak so
+      it plays on all devices. Everything runs in your browser with an in-page
+      media engine, so your GIF is never uploaded to a server.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  import { getFFmpeg, fetchFile } from '../../lib/ffmpeg';
+
+  const fileInput = document.getElementById('gm-file') as HTMLInputElement;
+  const drop = document.getElementById('gm-drop')!;
+  const panel = document.getElementById('gm-panel')!;
+  const fname = document.getElementById('gm-fname')!;
+  const goBtn = document.getElementById('gm-go') as HTMLButtonElement;
+  const progWrap = document.getElementById('gm-progwrap')!;
+  const bar = document.getElementById('gm-bar') as HTMLElement;
+  const statusEl = document.getElementById('gm-status')!;
+  const result = document.getElementById('gm-result')!;
+  const info = document.getElementById('gm-info')!;
+  const preview = document.getElementById('gm-preview') as HTMLVideoElement;
+  const err = document.getElementById('gm-error')!;
+
+  let file: File | null = null;
+  let outUrl = '';
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+  const fmtSize = (n: number) => n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(2)} MB`;
+
+  function pick(f: File) { file = f; fname.textContent = `${f.name} · ${fmtSize(f.size)}`; panel.classList.remove('hidden'); panel.classList.add('flex'); result.classList.add('hidden'); setErr(''); }
+
+  async function convert() {
+    if (!file) return;
+    setErr(''); goBtn.disabled = true;
+    progWrap.classList.remove('hidden'); progWrap.classList.add('flex'); result.classList.add('hidden'); bar.style.width = '0%';
+    try {
+      const ff = await getFFmpeg({
+        onProgress: (r) => { bar.style.width = Math.min(100, Math.round(r * 100)) + '%'; },
+        onDownload: (n) => { if (n) statusEl.textContent = n; },
+      });
+      statusEl.textContent = 'Converting…';
+      await ff.writeFile('in.gif', await fetchFile(file));
+      // pad to even dimensions (H.264 requires it) and add yuv420p for compatibility
+      await ff.exec(['-i', 'in.gif', '-movflags', 'faststart', '-pix_fmt', 'yuv420p', '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2', 'out.mp4']);
+      const data = await ff.readFile('out.mp4');
+      const blob = new Blob([data as Uint8Array], { type: 'video/mp4' });
+      if (outUrl) URL.revokeObjectURL(outUrl);
+      outUrl = URL.createObjectURL(blob);
+      try { await ff.deleteFile('in.gif'); await ff.deleteFile('out.mp4'); } catch {}
+      preview.src = outUrl;
+      info.textContent = `Done — ${fmtSize(blob.size)} MP4 (was ${fmtSize(file.size)})`;
+      progWrap.classList.add('hidden');
+      result.classList.remove('hidden'); result.classList.add('flex');
+    } catch (e) { progWrap.classList.add('hidden'); setErr('Could not convert: ' + (e as Error).message); }
+    finally { goBtn.disabled = false; }
+  }
+
+  document.getElementById('gm-download')!.addEventListener('click', () => {
+    if (!outUrl || !file) return;
+    const a = document.createElement('a'); a.href = outUrl; a.download = file.name.replace(/\.[^.]+$/, '') + '.mp4'; a.click();
+  });
+
+  fileInput.addEventListener('change', () => fileInput.files?.[0] && pick(fileInput.files[0]));
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) pick(f); });
+  goBtn.addEventListener('click', convert);
+</script>
