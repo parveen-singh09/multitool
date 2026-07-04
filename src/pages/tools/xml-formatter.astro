@@ -1,0 +1,116 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="xml-formatter">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="xf-beautify" class="btn btn-primary">Beautify</button>
+      <button id="xf-minify" class="btn btn-secondary">Minify</button>
+      <button id="xf-copy" class="btn btn-secondary">Copy</button>
+      <button id="xf-clear" class="btn btn-tertiary">Clear</button>
+      <label class="ml-auto flex items-center gap-2 text-sm text-ink-subtle">
+        Indent
+        <select id="xf-indent" class="field w-auto py-1">
+          <option value="2">2 spaces</option>
+          <option value="4">4 spaces</option>
+          <option value="tab">Tab</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="xf-status" class="hidden rounded-[8px] border px-3 py-2 text-sm" role="status"></div>
+
+    <textarea
+      id="xf-input"
+      class="field min-h-72 resize-y font-mono text-[13px]"
+      placeholder="Paste XML here, e.g. <root><item>value</item></root>"
+      spellcheck="false"
+      aria-label="XML input"
+    ></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free XML formatter beautifies XML with clean, consistent indentation
+      or minifies it down to a single line, with an adjustable indent size. As
+      you format, it checks the document for well-formedness using the browser's
+      own XML parser and reports any errors. Everything runs entirely in your
+      browser, so your data is never uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('xf-input') as HTMLTextAreaElement;
+  const status = document.getElementById('xf-status')!;
+  const indentSel = document.getElementById('xf-indent') as HTMLSelectElement;
+
+  function getIndent(): string {
+    const v = indentSel.value;
+    return v === 'tab' ? '\t' : ' '.repeat(Number(v));
+  }
+
+  function showStatus(msg: string, ok: boolean) {
+    status.textContent = msg;
+    status.classList.remove('hidden');
+    status.style.borderColor = ok ? '#27a644' : '#d14d4d';
+    status.style.color = ok ? '#27a644' : '#e08585';
+  }
+
+  function checkWellFormed(xml: string): string | null {
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    const err = doc.querySelector('parsererror');
+    if (!err) return null;
+    return (err.textContent || 'XML is not well-formed').replace(/\s+/g, ' ').trim();
+  }
+
+  function beautify(xml: string, unit: string): string {
+    let src = xml.replace(/\r\n/g, '\n').replace(/>\s+</g, '><').trim();
+    src = src.replace(/></g, '>\n<');
+    const lines = src.split('\n');
+    let pad = 0;
+    const out: string[] = [];
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (line === '') continue;
+      const isClosing = /^<\//.test(line);
+      const isDecl = /^<[!?]/.test(line);
+      const isSelfContained = /^<[^!?][^>]*>[^<]*<\/[^>]+>$/.test(line);
+      const isOpening = /^<[^!?/][^>]*[^/]>$/.test(line) && !isSelfContained;
+      if (isClosing) pad = Math.max(pad - 1, 0);
+      out.push(unit.repeat(pad) + line);
+      if (isOpening && !isDecl) pad += 1;
+    }
+    return out.join('\n');
+  }
+
+  function minify(xml: string): string {
+    return xml.replace(/\r\n/g, '\n').replace(/>\s+</g, '><').replace(/\n/g, '').trim();
+  }
+
+  function process(doMinify: boolean) {
+    const src = input.value.trim();
+    if (!src) return;
+    const err = checkWellFormed(src);
+    if (err) {
+      showStatus(`Not well-formed: ${err}`, false);
+      return;
+    }
+    input.value = doMinify ? minify(src) : beautify(src, getIndent());
+    showStatus('Well-formed XML ✓', true);
+  }
+
+  document.getElementById('xf-beautify')!.addEventListener('click', () => process(false));
+  document.getElementById('xf-minify')!.addEventListener('click', () => process(true));
+  document.getElementById('xf-clear')!.addEventListener('click', () => {
+    input.value = '';
+    status.classList.add('hidden');
+  });
+  document.getElementById('xf-copy')!.addEventListener('click', async () => {
+    const btn = document.getElementById('xf-copy')!;
+    await navigator.clipboard.writeText(input.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+</script>

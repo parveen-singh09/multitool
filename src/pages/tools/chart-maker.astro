@@ -1,0 +1,288 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="chart-maker">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Data (one "label,value" pair per line)
+      <textarea id="chm-data" class="field min-h-32 resize-y font-mono text-[13px]" spellcheck="false" placeholder="Jan,120&#10;Feb,90&#10;Mar,150">Jan,120
+Feb,90
+Mar,150
+Apr,60</textarea>
+    </label>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Chart type
+        <select id="chm-type" class="field">
+          <option value="bar">Bar</option>
+          <option value="line">Line</option>
+          <option value="pie">Pie</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Title
+        <input id="chm-title" type="text" class="field" placeholder="Chart title" value="Monthly totals" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Base color
+        <input id="chm-color" type="color" value="#5e6ad2" class="field h-10 cursor-pointer p-1" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Background
+        <input id="chm-bg" type="color" value="#ffffff" class="field h-10 cursor-pointer p-1" />
+      </label>
+    </div>
+
+    <p id="chm-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="panel p-4">
+      <canvas id="chm-canvas" class="max-w-full h-auto rounded-[8px]" aria-label="Chart preview"></canvas>
+    </div>
+
+    <div class="flex gap-2">
+      <button id="chm-download" class="btn btn-primary">Download PNG</button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free chart maker turns simple "label,value" data into a bar, line or
+      pie chart with a custom title, color and background, then lets you download
+      it as a PNG. It is handy for quick reports, slides and dashboards without
+      installing anything. Your data is rendered locally in your browser and is
+      never uploaded to a server.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const dataEl = document.getElementById('chm-data') as HTMLTextAreaElement;
+  const typeEl = document.getElementById('chm-type') as HTMLSelectElement;
+  const titleEl = document.getElementById('chm-title') as HTMLInputElement;
+  const colorEl = document.getElementById('chm-color') as HTMLInputElement;
+  const bgEl = document.getElementById('chm-bg') as HTMLInputElement;
+  const canvas = document.getElementById('chm-canvas') as HTMLCanvasElement;
+  const err = document.getElementById('chm-error')!;
+  const ctx = canvas.getContext('2d')!;
+
+  interface Point {
+    label: string;
+    value: number;
+  }
+
+  function parse(): Point[] {
+    const out: Point[] = [];
+    dataEl.value.split('\n').forEach((line) => {
+      const t = line.trim();
+      if (!t) return;
+      const idx = t.lastIndexOf(',');
+      if (idx < 0) return;
+      const label = t.slice(0, idx).trim();
+      const value = Number(t.slice(idx + 1).trim());
+      if (label && !Number.isNaN(value)) out.push({ label, value });
+    });
+    return out;
+  }
+
+  function hueShift(hex: string, i: number, total: number): string {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    const max = Math.max(r, g, b) / 255;
+    const min = Math.min(r, g, b) / 255;
+    const l = (max + min) / 2;
+    const d = max - min;
+    let h = 0;
+    const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+    if (d !== 0) {
+      const rn = r / 255;
+      const gn = g / 255;
+      const bn = b / 255;
+      if (max === rn) h = ((gn - bn) / d) % 6;
+      else if (max === gn) h = (bn - rn) / d + 2;
+      else h = (rn - gn) / d + 4;
+      h *= 60;
+      if (h < 0) h += 360;
+    }
+    const nh = (h + (360 / Math.max(1, total)) * i) % 360;
+    return `hsl(${nh}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`;
+  }
+
+  function render() {
+    err.classList.add('hidden');
+    const points = parse();
+    const W = 800;
+    const H = 500;
+    canvas.width = W;
+    canvas.height = H;
+
+    ctx.fillStyle = bgEl.value;
+    ctx.fillRect(0, 0, W, H);
+
+    const dark = '#1a1a1f';
+    ctx.fillStyle = dark;
+    ctx.font = '600 22px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(titleEl.value || '', W / 2, 16);
+
+    if (!points.length) {
+      ctx.fillStyle = '#888';
+      ctx.font = '15px Inter, system-ui, sans-serif';
+      ctx.fillText('Enter data as "label,value" lines.', W / 2, H / 2);
+      return;
+    }
+
+    const type = typeEl.value;
+    if (type === 'pie') {
+      drawPie(points, W, H);
+    } else {
+      drawAxes(points, W, H, type);
+    }
+  }
+
+  function drawAxes(points: Point[], W: number, H: number, type: string) {
+    const padL = 60;
+    const padR = 24;
+    const padT = 64;
+    const padB = 60;
+    const plotW = W - padL - padR;
+    const plotH = H - padT - padB;
+    const max = Math.max(...points.map((p) => p.value), 0);
+    const min = Math.min(...points.map((p) => p.value), 0);
+    const span = max - min || 1;
+
+    ctx.strokeStyle = '#d0d0d8';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padL, padT);
+    ctx.lineTo(padL, padT + plotH);
+    ctx.lineTo(padL + plotW, padT + plotH);
+    ctx.stroke();
+
+    ctx.fillStyle = '#555';
+    ctx.font = '12px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i <= 4; i++) {
+      const v = min + (span * i) / 4;
+      const y = padT + plotH - (plotH * i) / 4;
+      ctx.fillText(String(Math.round(v * 100) / 100), padL - 8, y);
+      ctx.strokeStyle = '#eee';
+      ctx.beginPath();
+      ctx.moveTo(padL, y);
+      ctx.lineTo(padL + plotW, y);
+      ctx.stroke();
+    }
+
+    const yOf = (v: number) => padT + plotH - ((v - min) / span) * plotH;
+    const step = plotW / points.length;
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#555';
+
+    if (type === 'line') {
+      ctx.strokeStyle = colorEl.value;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      points.forEach((p, i) => {
+        const x = padL + step * i + step / 2;
+        const y = yOf(p.value);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      ctx.fillStyle = colorEl.value;
+      points.forEach((p, i) => {
+        const x = padL + step * i + step / 2;
+        const y = yOf(p.value);
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.fillStyle = '#555';
+      points.forEach((p, i) => {
+        const x = padL + step * i + step / 2;
+        ctx.fillText(p.label, x, padT + plotH + 8);
+      });
+    } else {
+      const bw = step * 0.7;
+      points.forEach((p, i) => {
+        const x = padL + step * i + (step - bw) / 2;
+        const y = yOf(p.value);
+        const zero = yOf(0);
+        ctx.fillStyle = colorEl.value;
+        ctx.fillRect(x, Math.min(y, zero), bw, Math.abs(zero - y));
+        ctx.fillStyle = '#555';
+        ctx.fillText(p.label, x + bw / 2, padT + plotH + 8);
+      });
+    }
+  }
+
+  function drawPie(points: Point[], W: number, H: number) {
+    const total = points.reduce((a, p) => a + Math.max(0, p.value), 0);
+    const cx = W / 2 - 80;
+    const cy = H / 2 + 20;
+    const radius = Math.min(plotRadius(W, H), 160);
+    if (total <= 0) {
+      ctx.fillStyle = '#888';
+      ctx.font = '15px Inter, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Pie charts need positive values.', W / 2, H / 2);
+      return;
+    }
+    let angle = -Math.PI / 2;
+    points.forEach((p, i) => {
+      const slice = (Math.max(0, p.value) / total) * Math.PI * 2;
+      ctx.fillStyle = hueShift(colorEl.value, i, points.length);
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, radius, angle, angle + slice);
+      ctx.closePath();
+      ctx.fill();
+      angle += slice;
+    });
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.font = '13px Inter, system-ui, sans-serif';
+    const lx = cx + radius + 40;
+    let ly = cy - (points.length * 22) / 2;
+    points.forEach((p, i) => {
+      ctx.fillStyle = hueShift(colorEl.value, i, points.length);
+      ctx.fillRect(lx, ly - 7, 14, 14);
+      ctx.fillStyle = '#333';
+      const pct = Math.round((Math.max(0, p.value) / total) * 100);
+      ctx.fillText(`${p.label} (${pct}%)`, lx + 22, ly);
+      ly += 22;
+    });
+  }
+
+  function plotRadius(W: number, H: number): number {
+    return Math.min(W, H) / 2 - 60;
+  }
+
+  [dataEl, typeEl, titleEl, colorEl, bgEl].forEach((el) => el.addEventListener('input', render));
+
+  document.getElementById('chm-download')!.addEventListener('click', () => {
+    if (!parse().length) {
+      err.textContent = 'Add some data first.';
+      err.classList.remove('hidden');
+      return;
+    }
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = 'toolcities-chart.png';
+      link.href = url;
+      link.click();
+      URL.revokeObjectURL(url);
+    }, 'image/png');
+  });
+
+  render();
+</script>

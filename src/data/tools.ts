@@ -2937,6 +2937,842 @@ export const tools: Tool[] = [
     keywords: ['square face generator', 'square head meme', 'square face meme maker', 'squish face photo', 'square face filter'],
     icon: 'M5 5h14v14H5zM9 10h.01M15 10h.01M9 15h6',
   },
+
+  // ─── Validators ───────────────────────────────────────────────
+  {
+    slug: 'email-validator',
+    name: 'Email Validator',
+    tagline: 'Check email address syntax and format.',
+    description:
+      'Free email validator. Check whether an email address is correctly formatted, spot common typos and validate the domain syntax — for one address or a whole list. Runs entirely in your browser.',
+    category: 'Developer',
+    keywords: ['email validator', 'validate email address', 'email format checker', 'check email syntax', 'email verification tool'],
+    icon: 'M4 6h16v12H4zM4 7l8 6 8-6',
+  },
+  {
+    slug: 'json-validator',
+    name: 'JSON Validator',
+    tagline: 'Validate JSON and pinpoint syntax errors.',
+    description:
+      'Free JSON validator. Paste JSON to check if it is valid, with the exact line and column of any syntax error plus a formatted preview. Nothing is uploaded — validation runs in your browser.',
+    category: 'Developer',
+    keywords: ['json validator', 'validate json online', 'json syntax checker', 'json lint', 'check json'],
+    icon: 'M8 4H6a2 2 0 0 0-2 2v3l-1 3 1 3v3a2 2 0 0 0 2 2h2M16 4h2a2 2 0 0 1 2 2v3l1 3-1 3v3a2 2 0 0 1-2 2h-2',
+  },
+  {
+    slug: 'credit-card-validator',
+    name: 'Credit Card Validator',
+    tagline: 'Luhn check and card brand detection.',
+    description:
+      'Free credit card validator. Check a card number against the Luhn algorithm and detect the brand (Visa, Mastercard, Amex, Discover). For testing only — runs locally and nothing is stored or sent.',
+    category: 'Developer',
+    keywords: ['credit card validator', 'luhn check', 'card number validator', 'validate credit card', 'credit card checker'],
+    icon: 'M3 6h18v12H3zM3 10h18M6 15h4',
+  },
+  {
+    slug: 'iban-validator',
+    name: 'IBAN Validator',
+    tagline: 'Check IBAN checksum and structure.',
+    description:
+      'Free IBAN validator. Verify an International Bank Account Number using the ISO 7064 mod-97 checksum and per-country length rules, and see the country and check digits. Runs in your browser.',
+    category: 'Developer',
+    keywords: ['iban validator', 'validate iban', 'iban checker', 'bank account number validator', 'iban checksum'],
+    icon: 'M4 10l8-5 8 5M5 10v8m4-8v8m6-8v8m4-8v8M3 20h18',
+  },
+  {
+    slug: 'url-validator',
+    name: 'URL Validator',
+    tagline: 'Validate URL syntax and inspect parts.',
+    description:
+      'Free URL validator. Check whether a URL is well-formed and break it into protocol, host, port, path, query and fragment. Validate a single URL or a list at once, entirely in your browser.',
+    category: 'Developer',
+    keywords: ['url validator', 'validate url', 'url checker', 'check url format', 'url syntax validator'],
+    icon: 'M9 15l6-6M10 6l1-1a4 4 0 0 1 6 6l-1 1M14 18l-1 1a4 4 0 0 1-6-6l1-1',
+  },
+  {
+    slug: 'phone-number-validator',
+    name: 'Phone Number Validator',
+    tagline: 'Check phone number format by country.',
+    description:
+      'Free phone number validator. Check whether a phone number matches the expected format and length for a chosen country, and see it normalized to E.164. Runs entirely in your browser.',
+    category: 'Developer',
+    keywords: ['phone number validator', 'validate phone number', 'phone format checker', 'e164 validator', 'check phone number'],
+    icon: 'M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z',
+  },
+  {
+    slug: 'xml-validator',
+    name: 'XML Validator',
+    tagline: 'Check XML for well-formedness.',
+    description:
+      'Free XML validator. Paste XML to check it is well-formed, with the location of any parse error and a tidy formatted view. Everything runs in your browser — nothing is uploaded.',
+    category: 'Developer',
+    keywords: ['xml validator', 'validate xml online', 'xml syntax checker', 'well formed xml', 'check xml'],
+    icon: 'M10 8l-4 4 4 4M14 8l4 4-4 4',
+  },
+
+  // ─── Formatters ───────────────────────────────────────────────
+  {
+    slug: 'xml-formatter',
+    name: 'XML Formatter',
+    tagline: 'Beautify and minify XML instantly.',
+    description:
+      'Free XML formatter. Beautify XML with clean indentation or minify it to one line, with adjustable indent size. Well-formedness is checked as you go. Runs entirely in your browser.',
+    category: 'Developer',
+    keywords: ['xml formatter', 'xml beautifier', 'format xml online', 'pretty print xml', 'xml minify'],
+    icon: 'M10 8l-4 4 4 4M14 8l4 4-4 4',
+  },
+  {
+    slug: 'html-formatter',
+    name: 'HTML Formatter',
+    tagline: 'Beautify and minify HTML markup.',
+    description:
+      'Free HTML formatter. Clean up messy markup with consistent indentation or minify it for production, with a configurable indent. Formatting runs in your browser — nothing is uploaded.',
+    category: 'Developer',
+    keywords: ['html formatter', 'html beautifier', 'format html online', 'pretty print html', 'html minify'],
+    icon: 'M8 6l-4 6 4 6M16 6l4 6-4 6M13 4l-2 16',
+  },
+  {
+    slug: 'css-formatter',
+    name: 'CSS Formatter',
+    tagline: 'Beautify and minify CSS stylesheets.',
+    description:
+      'Free CSS formatter. Beautify stylesheets with tidy indentation and spacing, or minify them to save bytes. Adjustable indent size. Runs entirely in your browser — nothing is uploaded.',
+    category: 'Developer',
+    keywords: ['css formatter', 'css beautifier', 'format css online', 'pretty print css', 'css minify'],
+    icon: 'M5 4h14l-1.5 15L12 21l-5.5-2L5 4zM8 8h8M8 12h6',
+  },
+  {
+    slug: 'yaml-formatter',
+    name: 'YAML Formatter',
+    tagline: 'Reformat and validate YAML.',
+    description:
+      'Free YAML formatter. Reformat YAML with consistent indentation and flag syntax errors as you type, with adjustable indent. Parsing and formatting run entirely in your browser.',
+    category: 'Developer',
+    keywords: ['yaml formatter', 'yaml beautifier', 'format yaml online', 'yaml validator', 'pretty print yaml'],
+    icon: 'M4 5l4 6v8m8-14l-4 6M16 5h.01M4 5h.01',
+  },
+  {
+    slug: 'javascript-formatter',
+    name: 'JavaScript Formatter',
+    tagline: 'Beautify and tidy JavaScript code.',
+    description:
+      'Free JavaScript formatter. Re-indent and clean up messy JS with consistent spacing and braces, plus a minify option. Runs entirely in your browser — your code is never uploaded.',
+    category: 'Developer',
+    keywords: ['javascript formatter', 'js beautifier', 'format javascript online', 'js pretty print', 'javascript minify'],
+    icon: 'M6 4h12v16H6zM10 10v5a1 1 0 0 1-2 0m6-5v5',
+  },
+  {
+    slug: 'csv-formatter',
+    name: 'CSV Formatter',
+    tagline: 'Clean up and align CSV data.',
+    description:
+      'Free CSV formatter. Normalize delimiters, trim whitespace and align columns into a clean table, or convert to a chosen separator. Everything runs locally in your browser.',
+    category: 'Developer',
+    keywords: ['csv formatter', 'format csv online', 'clean csv', 'csv beautifier', 'align csv columns'],
+    icon: 'M4 5h16v14H4zM4 9h16M9 5v14M14 5v14',
+  },
+  {
+    slug: 'markdown-formatter',
+    name: 'Markdown Formatter',
+    tagline: 'Tidy Markdown and preview it live.',
+    description:
+      'Free Markdown formatter. Normalize headings, lists and spacing to clean Markdown and see a live rendered preview. Formatting and rendering run entirely in your browser.',
+    category: 'Developer',
+    keywords: ['markdown formatter', 'format markdown online', 'markdown beautifier', 'clean markdown', 'markdown preview'],
+    icon: 'M4 6h16v12H4zM7 15V9l3 3 3-3v6M17 9v6m-2-2l2 2 2-2',
+  },
+
+  // ─── Converters (data formats) ────────────────────────────────
+  {
+    slug: 'yaml-to-json-converter',
+    name: 'YAML to JSON Converter',
+    tagline: 'Convert YAML into formatted JSON.',
+    description:
+      'Free YAML to JSON converter. Paste YAML and get clean, formatted JSON instantly, with syntax errors flagged. Conversion runs entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['yaml to json', 'convert yaml to json', 'yaml json converter', 'yaml to json online', 'yaml parser'],
+    icon: 'M4 5l3 5v6m6-11l-3 5M14 12h6m-3-3l3 3-3 3',
+  },
+  {
+    slug: 'csv-to-json-converter',
+    name: 'CSV to JSON Converter',
+    tagline: 'Turn CSV rows into JSON objects.',
+    description:
+      'Free CSV to JSON converter. Convert CSV with a header row into an array of JSON objects, with delimiter detection and pretty printing. Everything runs locally in your browser.',
+    category: 'Converters',
+    keywords: ['csv to json', 'convert csv to json', 'csv json converter', 'csv to json online', 'csv parser'],
+    icon: 'M4 5h7v14H4zM14 8h6m-3-3l3 3-3 3M14 16h6',
+  },
+  {
+    slug: 'json-to-csv-converter',
+    name: 'JSON to CSV Converter',
+    tagline: 'Flatten JSON arrays into CSV.',
+    description:
+      'Free JSON to CSV converter. Convert an array of JSON objects into CSV with headers, handling nested keys and a chosen delimiter. Conversion runs entirely in your browser.',
+    category: 'Converters',
+    keywords: ['json to csv', 'convert json to csv', 'json csv converter', 'json to csv online', 'export json to csv'],
+    icon: 'M4 5h6v14H4zM14 5h6v14h-6zM10 12h4',
+  },
+  {
+    slug: 'xml-to-json-converter',
+    name: 'XML to JSON Converter',
+    tagline: 'Convert XML documents into JSON.',
+    description:
+      'Free XML to JSON converter. Parse XML and turn elements, attributes and text into structured JSON, formatted for readability. Runs entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['xml to json', 'convert xml to json', 'xml json converter', 'xml to json online', 'parse xml to json'],
+    icon: 'M8 8l-3 4 3 4M13 8l-1 8m8-8h-4m2-2l2 2-2 2',
+  },
+  {
+    slug: 'markdown-to-html-converter',
+    name: 'Markdown to HTML Converter',
+    tagline: 'Render Markdown into clean HTML.',
+    description:
+      'Free Markdown to HTML converter. Paste Markdown and get the equivalent HTML plus a live preview, covering headings, lists, links, code and more. Conversion runs in your browser.',
+    category: 'Converters',
+    keywords: ['markdown to html', 'convert markdown to html', 'md to html', 'markdown html converter', 'render markdown'],
+    icon: 'M4 6h16v12H4zM7 15V9l3 3 3-3v6M18 9l-2 6',
+  },
+  {
+    slug: 'html-to-markdown-converter',
+    name: 'HTML to Markdown Converter',
+    tagline: 'Convert HTML back into Markdown.',
+    description:
+      'Free HTML to Markdown converter. Turn HTML markup into clean Markdown — headings, links, lists, bold, code and blockquotes. Everything runs locally in your browser.',
+    category: 'Converters',
+    keywords: ['html to markdown', 'convert html to markdown', 'html markdown converter', 'html to md', 'markdown from html'],
+    icon: 'M8 6l-4 6 4 6M16 6l4 6-4 6',
+  },
+  {
+    slug: 'toml-to-json-converter',
+    name: 'TOML to JSON Converter',
+    tagline: 'Convert TOML config into JSON.',
+    description:
+      'Free TOML to JSON converter. Parse TOML tables, arrays and key-value pairs into formatted JSON, with syntax errors flagged. Conversion runs entirely in your browser.',
+    category: 'Converters',
+    keywords: ['toml to json', 'convert toml to json', 'toml json converter', 'toml parser', 'toml to json online'],
+    icon: 'M4 6h16M12 6v13M7 19h10',
+  },
+
+  // ─── Parsers ──────────────────────────────────────────────────
+  {
+    slug: 'url-parser',
+    name: 'URL Parser',
+    tagline: 'Break a URL into all its parts.',
+    description:
+      'Free URL parser. Split any URL into protocol, host, port, path, query parameters and fragment, with each query key-value listed. Parsing runs entirely in your browser.',
+    category: 'Developer',
+    keywords: ['url parser', 'parse url', 'url components', 'query string parser', 'url breakdown'],
+    icon: 'M9 15l6-6M10 6l1-1a4 4 0 0 1 6 6l-1 1M14 18l-1 1a4 4 0 0 1-6-6l1-1',
+  },
+  {
+    slug: 'user-agent-parser',
+    name: 'User Agent Parser',
+    tagline: 'Detect browser, OS and device.',
+    description:
+      'Free user agent parser. Paste a User-Agent string to identify the browser, engine, operating system and device type, or parse your own. Runs entirely in your browser.',
+    category: 'Developer',
+    keywords: ['user agent parser', 'parse user agent', 'ua parser', 'browser detection', 'user agent lookup'],
+    icon: 'M4 5h16v12H4zM4 17l3 3m10-3l-3 3M9 9h.01M9 13h6',
+  },
+  {
+    slug: 'query-string-parser',
+    name: 'Query String Parser',
+    tagline: 'Decode URL query parameters.',
+    description:
+      'Free query string parser. Paste a query string or full URL to list every parameter as a decoded key-value pair, and rebuild it. Parsing runs entirely in your browser.',
+    category: 'Developer',
+    keywords: ['query string parser', 'parse query string', 'url parameters', 'querystring decoder', 'url query parser'],
+    icon: 'M6 4v6a2 2 0 0 0 2 2h8a2 2 0 0 1 2 2v6M9 9h.01M13 9h4',
+  },
+  {
+    slug: 'csv-parser',
+    name: 'CSV Parser',
+    tagline: 'Parse CSV into a table and JSON.',
+    description:
+      'Free CSV parser. Paste CSV to view it as a table and as JSON, with delimiter detection and quoted-field handling. Everything runs locally in your browser.',
+    category: 'Developer',
+    keywords: ['csv parser', 'parse csv online', 'csv to table', 'read csv', 'csv reader'],
+    icon: 'M4 5h16v14H4zM4 9h16M9 5v14M14 5v14',
+  },
+  {
+    slug: 'log-parser',
+    name: 'Log Parser',
+    tagline: 'Extract fields from log lines.',
+    description:
+      'Free log parser. Paste log output to split lines into timestamp, level and message, filter by level and search text. Parsing runs entirely in your browser — nothing is uploaded.',
+    category: 'Developer',
+    keywords: ['log parser', 'parse logs online', 'log analyzer', 'log viewer', 'log file parser'],
+    icon: 'M5 4h11l3 3v13H5zM8 11h8M8 15h5M8 7h5',
+  },
+  {
+    slug: 'cron-parser',
+    name: 'Cron Parser',
+    tagline: 'Explain a cron expression in plain English.',
+    description:
+      'Free cron parser. Paste a cron expression to see a plain-English description of its schedule and the next few run times. Parsing runs entirely in your browser.',
+    category: 'Developer',
+    keywords: ['cron parser', 'cron expression explained', 'parse cron', 'cron to human readable', 'cron schedule'],
+    icon: 'M12 7v5l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z',
+  },
+
+  // ─── Analyzers ────────────────────────────────────────────────
+  {
+    slug: 'text-analyzer',
+    name: 'Text Analyzer',
+    tagline: 'Word, character and readability stats.',
+    description:
+      'Free text analyzer. Get word, character, sentence and paragraph counts, average word and sentence length, reading time and top words for any text. Runs in your browser.',
+    category: 'Text',
+    keywords: ['text analyzer', 'text statistics', 'word frequency', 'text analysis tool', 'analyze text online'],
+    icon: 'M4 6h16M4 12h10M4 18h7M18 14v6m3-3h-6',
+  },
+  {
+    slug: 'keyword-density-analyzer',
+    name: 'Keyword Density Analyzer',
+    tagline: 'Find keyword frequency and density.',
+    description:
+      'Free keyword density analyzer. Paste content to see the most frequent words and phrases with counts and density percentages, ideal for SEO checks. Runs entirely in your browser.',
+    category: 'Text',
+    keywords: ['keyword density analyzer', 'keyword density checker', 'seo keyword tool', 'word frequency counter', 'keyword frequency'],
+    icon: 'M10 4a6 6 0 1 0 0 12 6 6 0 0 0 0-12zM20 20l-5.5-5.5',
+  },
+  {
+    slug: 'password-analyzer',
+    name: 'Password Analyzer',
+    tagline: 'Estimate password strength and entropy.',
+    description:
+      'Free password analyzer. Measure a password’s strength, entropy in bits, character variety and estimated crack time, with tips to improve it. Runs locally — nothing is sent.',
+    category: 'Security',
+    keywords: ['password analyzer', 'password strength checker', 'password entropy', 'how strong is my password', 'password meter'],
+    icon: 'M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6zM9 12l2 2 4-4',
+  },
+  {
+    slug: 'color-contrast-analyzer',
+    name: 'Color Contrast Analyzer',
+    tagline: 'WCAG contrast ratio for two colors.',
+    description:
+      'Free color contrast analyzer. Check the WCAG contrast ratio between text and background colors and see AA/AAA pass or fail for normal and large text. Runs in your browser.',
+    category: 'Image',
+    keywords: ['color contrast analyzer', 'wcag contrast checker', 'contrast ratio', 'accessibility contrast', 'color contrast tool'],
+    icon: 'M12 3a9 9 0 0 0 0 18zM12 3a9 9 0 0 1 0 18',
+  },
+  {
+    slug: 'sentiment-analyzer',
+    name: 'Sentiment Analyzer',
+    tagline: 'Gauge positive or negative tone.',
+    description:
+      'Free sentiment analyzer. Paste text to get a positive, neutral or negative sentiment score based on a word lexicon, with the words that drove the result. Runs in your browser.',
+    category: 'Text',
+    keywords: ['sentiment analyzer', 'sentiment analysis online', 'text tone checker', 'positive negative text', 'sentiment score'],
+    icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM8 10h.01M16 10h.01M8 15a5 5 0 0 0 8 0',
+  },
+  {
+    slug: 'image-metadata-analyzer',
+    name: 'Image Metadata Analyzer',
+    tagline: 'Read image dimensions, type and EXIF.',
+    description:
+      'Free image metadata analyzer. Drop an image to read its dimensions, format, file size and available EXIF details. Everything is read locally — your image is never uploaded.',
+    category: 'Image',
+    keywords: ['image metadata analyzer', 'exif viewer', 'image info tool', 'read image metadata', 'photo exif reader'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 3 3 4-4 5 5M9 9h.01',
+  },
+  {
+    slug: 'csv-analyzer',
+    name: 'CSV Analyzer',
+    tagline: 'Column stats and data profiling for CSV.',
+    description:
+      'Free CSV analyzer. Paste CSV to profile each column — data type, unique values, min/max, empty cells and row count — for a quick data-quality overview. Runs in your browser.',
+    category: 'Developer',
+    keywords: ['csv analyzer', 'csv statistics', 'data profiling', 'analyze csv online', 'csv column stats'],
+    icon: 'M4 19V5m0 14h16M8 17V9m4 8V6m4 11v-5',
+  },
+
+  // ─── Checkers ─────────────────────────────────────────────────
+  {
+    slug: 'palindrome-checker',
+    name: 'Palindrome Checker',
+    tagline: 'Check if text reads the same backward.',
+    description:
+      'Free palindrome checker. Test whether a word, phrase or number is a palindrome, ignoring case, spaces and punctuation, and see it reversed. Runs entirely in your browser.',
+    category: 'Text',
+    keywords: ['palindrome checker', 'is it a palindrome', 'palindrome test', 'check palindrome', 'palindrome finder'],
+    icon: 'M8 7l-4 5 4 5M16 7l4 5-4 5M12 5v14',
+  },
+  {
+    slug: 'prime-number-checker',
+    name: 'Prime Number Checker',
+    tagline: 'Test whether a number is prime.',
+    description:
+      'Free prime number checker. Enter a number to check if it is prime, see its factors if not, and find the nearest primes. Calculations run entirely in your browser.',
+    category: 'Calculators',
+    keywords: ['prime number checker', 'is it prime', 'prime test', 'check prime number', 'prime factorization'],
+    icon: 'M12 3l2.5 6.5H21l-5 4 2 7-6-4-6 4 2-7-5-4h6.5z',
+  },
+  {
+    slug: 'leap-year-checker',
+    name: 'Leap Year Checker',
+    tagline: 'Is a given year a leap year?',
+    description:
+      'Free leap year checker. Enter any year to see whether it is a leap year under the Gregorian rules, with the reasoning and the next few leap years. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['leap year checker', 'is it a leap year', 'leap year calculator', 'check leap year', 'leap year test'],
+    icon: 'M5 5h14v14H5zM5 9h14M9 3v4M15 3v4M12 13l1.5 1.5',
+  },
+  {
+    slug: 'readability-checker',
+    name: 'Readability Checker',
+    tagline: 'Flesch reading ease and grade level.',
+    description:
+      'Free readability checker. Paste text to get Flesch Reading Ease, Flesch-Kincaid grade level and other scores, so you can gauge how easy it is to read. Runs in your browser.',
+    category: 'Text',
+    keywords: ['readability checker', 'flesch reading ease', 'reading level checker', 'readability score', 'grade level calculator'],
+    icon: 'M5 4h11l3 3v13H5zM8 11h8M8 15h5',
+  },
+  {
+    slug: 'armstrong-number-checker',
+    name: 'Armstrong Number Checker',
+    tagline: 'Test for narcissistic numbers.',
+    description:
+      'Free Armstrong number checker. Enter a number to check if it equals the sum of its digits each raised to the number of digits, with the full working. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['armstrong number checker', 'narcissistic number', 'is it armstrong number', 'armstrong number test', 'check armstrong number'],
+    icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM9 9l6 6m0-6l-6 6',
+  },
+  {
+    slug: 'perfect-number-checker',
+    name: 'Perfect Number Checker',
+    tagline: 'Check if divisors sum to the number.',
+    description:
+      'Free perfect number checker. Enter a number to see whether it equals the sum of its proper divisors, with the divisor list and result. Calculations run in your browser.',
+    category: 'Calculators',
+    keywords: ['perfect number checker', 'is it a perfect number', 'perfect number test', 'divisor sum', 'check perfect number'],
+    icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM8 12l3 3 5-6',
+  },
+  {
+    slug: 'anagram-checker',
+    name: 'Anagram Checker',
+    tagline: 'Do two words use the same letters?',
+    description:
+      'Free anagram checker. Enter two words or phrases to check whether they are anagrams, ignoring case, spaces and punctuation, with the sorted letters shown. Runs in your browser.',
+    category: 'Text',
+    keywords: ['anagram checker', 'is it an anagram', 'anagram test', 'check anagram', 'anagram solver'],
+    icon: 'M7 8h10M7 12h10M7 16h6M4 4l1 16m14-16l-1 16',
+  },
+
+  // ─── Testers ──────────────────────────────────────────────────
+  {
+    slug: 'typing-speed-tester',
+    name: 'Typing Speed Tester',
+    tagline: 'Measure your words per minute.',
+    description:
+      'Free typing speed tester. Type a sample passage and get your words-per-minute, accuracy and error count in real time. Everything runs in your browser — no sign-up needed.',
+    category: 'Text',
+    keywords: ['typing speed tester', 'typing test', 'wpm test', 'words per minute test', 'typing speed check'],
+    icon: 'M4 7h16v10H4zM7 10h.01M11 10h.01M15 10h.01M8 14h8',
+  },
+  {
+    slug: 'reaction-time-tester',
+    name: 'Reaction Time Tester',
+    tagline: 'How fast are your reflexes?',
+    description:
+      'Free reaction time tester. Wait for the color to change, then click as fast as you can to measure your reaction time in milliseconds over several rounds. Runs in your browser.',
+    category: 'Text',
+    keywords: ['reaction time tester', 'reaction time test', 'reflex test', 'reaction speed test', 'human benchmark'],
+    icon: 'M12 7v5l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z',
+  },
+  {
+    slug: 'click-speed-tester',
+    name: 'Click Speed Tester',
+    tagline: 'Measure your clicks per second (CPS).',
+    description:
+      'Free click speed tester. Click as fast as you can within a set time to measure your clicks per second (CPS), with a live counter and your best score. Runs in your browser.',
+    category: 'Text',
+    keywords: ['click speed tester', 'cps test', 'clicks per second', 'click speed test', 'click test'],
+    icon: 'M9 3v6m-4-2l3 3M3 9h6m3 3l7 3-3 1-1 3-3-7z',
+  },
+  {
+    slug: 'screen-tester',
+    name: 'Screen Tester',
+    tagline: 'Find dead pixels with solid colors.',
+    description:
+      'Free screen tester. Cycle full-screen solid colors and gradients to spot dead or stuck pixels and check backlight uniformity on any display. Runs entirely in your browser.',
+    category: 'Image',
+    keywords: ['screen tester', 'dead pixel test', 'monitor test', 'stuck pixel checker', 'screen color test'],
+    icon: 'M4 5h16v11H4zM9 20h6M12 16v4',
+  },
+  {
+    slug: 'color-blindness-tester',
+    name: 'Color Blindness Tester',
+    tagline: 'Simulate and test color vision.',
+    description:
+      'Free color blindness tester. Take a quick Ishihara-style plate test and simulate protanopia, deuteranopia and tritanopia on your own images. Runs entirely in your browser.',
+    category: 'Image',
+    keywords: ['color blindness tester', 'color blind test', 'ishihara test online', 'color vision test', 'colorblindness simulator'],
+    icon: 'M12 5c-5 0-9 7-9 7s4 7 9 7 9-7 9-7-4-7-9-7zM12 15a3 3 0 1 0 0-6',
+  },
+  {
+    slug: 'keyboard-tester',
+    name: 'Keyboard Tester',
+    tagline: 'Check that every key registers.',
+    description:
+      'Free keyboard tester. Press keys to see them light up on an on-screen keyboard and confirm every key and modifier registers correctly. Runs entirely in your browser.',
+    category: 'Developer',
+    keywords: ['keyboard tester', 'key test', 'keyboard test online', 'check keyboard keys', 'key press test'],
+    icon: 'M3 6h18v12H3zM6 9h.01M10 9h.01M14 9h.01M18 9h.01M8 13h8',
+  },
+
+  // ─── Estimators ───────────────────────────────────────────────
+  {
+    slug: 'reading-time-estimator',
+    name: 'Reading Time Estimator',
+    tagline: 'How long your text takes to read.',
+    description:
+      'Free reading time estimator. Paste text to estimate reading and speaking time at your chosen words-per-minute, with word and sentence counts. Runs entirely in your browser.',
+    category: 'Calculators',
+    keywords: ['reading time estimator', 'reading time calculator', 'how long to read', 'words per minute', 'speaking time estimator'],
+    icon: 'M4 5h11l3 3v11H4zM12 3v5h5M12 12v5l3-2',
+  },
+  {
+    slug: 'project-cost-estimator',
+    name: 'Project Cost Estimator',
+    tagline: 'Estimate cost from hours and rates.',
+    description:
+      'Free project cost estimator. Add tasks with hours and hourly rates to estimate total project cost, apply a contingency and see a per-task breakdown. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['project cost estimator', 'project cost calculator', 'estimate project cost', 'labor cost estimator', 'job cost calculator'],
+    icon: 'M4 5h16v14H4zM8 9h8M8 13h5M16 17l2 2 3-3',
+  },
+  {
+    slug: 'calorie-burn-estimator',
+    name: 'Calorie Burn Estimator',
+    tagline: 'Calories burned by activity and time.',
+    description:
+      'Free calorie burn estimator. Estimate calories burned from an activity, your weight and duration using MET values across dozens of exercises. Runs entirely in your browser.',
+    category: 'Calculators',
+    keywords: ['calorie burn estimator', 'calories burned calculator', 'exercise calorie calculator', 'met calorie calculator', 'activity calories'],
+    icon: 'M12 3c1 3-1 4-1 6a3 3 0 0 0 6 0c0-1-.5-2-1-3 2 1 4 4 4 7a6 6 0 0 1-12 0c0-4 3-5 4-10z',
+  },
+  {
+    slug: 'paint-estimator',
+    name: 'Paint Estimator',
+    tagline: 'How much paint your walls need.',
+    description:
+      'Free paint estimator. Enter room dimensions, doors and windows to estimate the wall area, paint quantity and number of coats needed. Calculations run in your browser.',
+    category: 'Calculators',
+    keywords: ['paint estimator', 'paint calculator', 'how much paint do i need', 'wall paint calculator', 'paint coverage calculator'],
+    icon: 'M4 4h13v6H4zM17 6h3v5l-6 2v3M11 18v3',
+  },
+  {
+    slug: 'wallpaper-estimator',
+    name: 'Wallpaper Estimator',
+    tagline: 'Rolls of wallpaper for a room.',
+    description:
+      'Free wallpaper estimator. Enter wall dimensions and roll size to estimate how many rolls of wallpaper you need, accounting for pattern repeat and waste. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['wallpaper estimator', 'wallpaper calculator', 'how many rolls of wallpaper', 'wallpaper coverage', 'rolls calculator'],
+    icon: 'M4 4h16v5H4zM6 9v11m6-11v11m6-11v11M4 20h16',
+  },
+  {
+    slug: 'freelance-rate-estimator',
+    name: 'Freelance Rate Estimator',
+    tagline: 'Set your hourly and day rate.',
+    description:
+      'Free freelance rate estimator. Turn your target income, expenses, billable days and time off into a recommended hourly and daily rate. Calculations run in your browser.',
+    category: 'Calculators',
+    keywords: ['freelance rate estimator', 'freelance rate calculator', 'hourly rate calculator', 'day rate calculator', 'freelance pricing'],
+    icon: 'M12 3v18M8 7h6a2 2 0 0 1 0 4H9a2 2 0 0 0 0 4h7',
+  },
+
+  // ─── Predictors ───────────────────────────────────────────────
+  {
+    slug: 'gender-predictor',
+    name: 'Gender Predictor',
+    tagline: 'Chinese-calendar baby gender for fun.',
+    description:
+      'Free gender predictor. A just-for-fun tool that guesses baby gender from the Chinese lunar calendar using conception month and mother’s age. For entertainment only — runs in your browser.',
+    category: 'Calculators',
+    keywords: ['gender predictor', 'baby gender predictor', 'chinese gender predictor', 'boy or girl predictor', 'gender prediction'],
+    icon: 'M10 14a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm3-3l6-6m-4 0h4v4',
+  },
+  {
+    slug: 'love-predictor',
+    name: 'Love Predictor',
+    tagline: 'Fun love compatibility percentage.',
+    description:
+      'Free love predictor. Enter two names for a just-for-fun compatibility percentage and playful message. Purely for entertainment — the score runs in your browser.',
+    category: 'Calculators',
+    keywords: ['love predictor', 'love calculator', 'love compatibility test', 'name compatibility', 'love percentage calculator'],
+    icon: 'M12 20s-7-4.5-9-9a4.5 4.5 0 0 1 9-2 4.5 4.5 0 0 1 9 2c-2 4.5-9 9-9 9z',
+  },
+  {
+    slug: 'life-expectancy-predictor',
+    name: 'Life Expectancy Predictor',
+    tagline: 'Rough lifespan estimate from habits.',
+    description:
+      'Free life expectancy predictor. Answer a few lifestyle questions for a rough life-expectancy estimate based on general averages. For entertainment and awareness only — runs in your browser.',
+    category: 'Calculators',
+    keywords: ['life expectancy predictor', 'life expectancy calculator', 'lifespan calculator', 'how long will i live', 'longevity calculator'],
+    icon: 'M4 12h4l2 6 4-14 2 8h4',
+  },
+  {
+    slug: 'child-height-predictor',
+    name: 'Child Height Predictor',
+    tagline: "Estimate a child's adult height.",
+    description:
+      'Free child height predictor. Estimate a child’s likely adult height from the parents’ heights using the mid-parental method. A rough guide only — calculations run in your browser.',
+    category: 'Calculators',
+    keywords: ['child height predictor', 'adult height calculator', 'how tall will my child be', 'height predictor', 'midparental height'],
+    icon: 'M8 21V8a2 2 0 0 1 4 0v13M6 21h8M16 21V4m0 0l-2 2m2-2l2 2',
+  },
+  {
+    slug: 'lucky-number-predictor',
+    name: 'Lucky Number Predictor',
+    tagline: 'Personal lucky numbers from your name.',
+    description:
+      'Free lucky number predictor. Enter your name and birth date for a set of just-for-fun lucky numbers derived from numerology. For entertainment only — runs in your browser.',
+    category: 'Calculators',
+    keywords: ['lucky number predictor', 'lucky number generator', 'numerology lucky number', 'my lucky numbers', 'lucky number calculator'],
+    icon: 'M12 3l2.5 6.5H21l-5 4 2 7-6-4-6 4 2-7-5-4h6.5z',
+  },
+  {
+    slug: 'career-predictor',
+    name: 'Career Predictor',
+    tagline: 'Fun career suggestions from a quiz.',
+    description:
+      'Free career predictor. Answer a short interests quiz to get playful career suggestions that match your style. For fun and inspiration only — everything runs in your browser.',
+    category: 'Calculators',
+    keywords: ['career predictor', 'career quiz', 'what job should i have', 'career test', 'career suggestion tool'],
+    icon: 'M4 8h16v11H4zM9 8V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M4 13h16',
+  },
+
+  // ─── Simulators ───────────────────────────────────────────────
+  {
+    slug: 'probability-simulator',
+    name: 'Probability Simulator',
+    tagline: 'Run coin and dice trials at scale.',
+    description:
+      'Free probability simulator. Run thousands of coin flips or dice rolls to watch outcomes converge on theoretical probability, with live charts. Everything runs in your browser.',
+    category: 'Calculators',
+    keywords: ['probability simulator', 'coin flip simulator', 'dice roll simulator', 'monte carlo simulator', 'probability experiment'],
+    icon: 'M4 6h7v7H4zM13 11h7v7h-7zM7 9h.01M16 14h.01',
+  },
+  {
+    slug: 'roulette-simulator',
+    name: 'Roulette Simulator',
+    tagline: 'Practice roulette with fake chips.',
+    description:
+      'Free roulette simulator. Place bets with virtual chips and spin a European wheel to see how strategies play out over many rounds. For practice only — runs in your browser.',
+    category: 'Generators',
+    keywords: ['roulette simulator', 'free roulette', 'roulette practice', 'roulette wheel simulator', 'virtual roulette'],
+    icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm0 5a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 3v5M12 16v5',
+  },
+  {
+    slug: 'slot-machine-simulator',
+    name: 'Slot Machine Simulator',
+    tagline: 'Spin virtual reels for fun.',
+    description:
+      'Free slot machine simulator. Spin three reels with virtual credits and watch your balance over time. Purely for fun with no real money — everything runs in your browser.',
+    category: 'Generators',
+    keywords: ['slot machine simulator', 'free slot machine', 'slot simulator', 'virtual slots', 'slot machine game'],
+    icon: 'M5 7h14v10H5zM9 7v10M15 7v10M7 3h10v4H7z',
+  },
+  {
+    slug: 'monty-hall-simulator',
+    name: 'Monty Hall Simulator',
+    tagline: 'See why switching doors wins.',
+    description:
+      'Free Monty Hall simulator. Play the three-door puzzle and run thousands of automated trials to see the win rate for staying versus switching. Runs entirely in your browser.',
+    category: 'Calculators',
+    keywords: ['monty hall simulator', 'monty hall problem', 'three door problem', 'monty hall game', 'switch or stay simulator'],
+    icon: 'M5 20V6l4-2v16M15 20V6l4-2v16M9 12h.01M19 12h.01',
+  },
+  {
+    slug: 'stock-market-simulator',
+    name: 'Stock Market Simulator',
+    tagline: 'Practice trading with fake money.',
+    description:
+      'Free stock market simulator. Trade a simulated stock with virtual cash on a random-walk price and track your portfolio value. For practice only — everything runs in your browser.',
+    category: 'Calculators',
+    keywords: ['stock market simulator', 'trading simulator', 'paper trading', 'stock simulator', 'investing simulator'],
+    icon: 'M4 19V5m0 14h16M8 15l3-4 3 2 4-6',
+  },
+  {
+    slug: 'savings-goal-simulator',
+    name: 'Savings Goal Simulator',
+    tagline: 'See how savings grow over time.',
+    description:
+      'Free savings goal simulator. Enter a starting balance, monthly contribution and interest rate to project how long a savings goal takes to reach, with a growth chart. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['savings goal simulator', 'savings calculator', 'savings goal calculator', 'compound savings simulator', 'save money calculator'],
+    icon: 'M4 19V5m0 14h16M7 16l3-3 3 1 4-5M18 6h3v3',
+  },
+
+  // ─── Makers ───────────────────────────────────────────────────
+  {
+    slug: 'collage-maker',
+    name: 'Collage Maker',
+    tagline: 'Combine photos into a grid collage.',
+    description:
+      'Free collage maker. Drop several photos into a grid layout, adjust spacing and background, then download the collage as a PNG. Everything is composed locally — nothing is uploaded.',
+    category: 'Image',
+    keywords: ['collage maker', 'photo collage maker', 'picture collage', 'make a collage', 'image collage tool'],
+    icon: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+  },
+  {
+    slug: 'chart-maker',
+    name: 'Chart Maker',
+    tagline: 'Bar, line and pie charts from data.',
+    description:
+      'Free chart maker. Paste or type data to draw bar, line or pie charts with custom colors and labels, then download as PNG. Charts are rendered locally in your browser.',
+    category: 'Image',
+    keywords: ['chart maker', 'graph maker', 'create charts online', 'bar chart maker', 'pie chart generator'],
+    icon: 'M4 19V5m0 14h16M8 17V9m4 8V6m4 11v-4',
+  },
+  {
+    slug: 'word-cloud-maker',
+    name: 'Word Cloud Maker',
+    tagline: 'Turn text into a word cloud.',
+    description:
+      'Free word cloud maker. Paste text to generate a word cloud sized by frequency, with color and font options, then download it as a PNG. Rendered entirely in your browser.',
+    category: 'Image',
+    keywords: ['word cloud maker', 'word cloud generator', 'tag cloud maker', 'create word cloud', 'text cloud generator'],
+    icon: 'M6 12h4M12 9h6M8 15h8M5 9h.01M19 15h.01',
+  },
+  {
+    slug: 'subtitle-maker',
+    name: 'Subtitle Maker',
+    tagline: 'Build SRT subtitle files by hand.',
+    description:
+      'Free subtitle maker. Add caption lines with start and end times to build a valid SRT subtitle file, then download it. Everything is created locally in your browser.',
+    category: 'Audio & Video',
+    keywords: ['subtitle maker', 'srt maker', 'create subtitles', 'subtitle file generator', 'srt file creator'],
+    icon: 'M4 5h16v14H4zM7 15h4M13 15h4M7 11h10',
+  },
+  {
+    slug: 'sprite-sheet-maker',
+    name: 'Sprite Sheet Maker',
+    tagline: 'Pack images into one sprite sheet.',
+    description:
+      'Free sprite sheet maker. Drop multiple images to pack them into a single sprite sheet on a grid, with adjustable columns and padding, then download the PNG. Runs in your browser.',
+    category: 'Image',
+    keywords: ['sprite sheet maker', 'sprite sheet generator', 'css sprite generator', 'game sprite packer', 'texture atlas maker'],
+    icon: 'M4 4h4v4H4zM10 4h4v4h-4zM16 4h4v4h-4zM4 10h4v4H4zM10 10h4v4h-4z',
+  },
+  {
+    slug: 'sticker-maker',
+    name: 'Sticker Maker',
+    tagline: 'Add a die-cut outline to any image.',
+    description:
+      'Free sticker maker. Drop an image to add a white die-cut border and rounded corners for a sticker look, then download the PNG. Everything is composed locally in your browser.',
+    category: 'Image',
+    keywords: ['sticker maker', 'sticker creator', 'make stickers online', 'die cut sticker', 'sticker outline generator'],
+    icon: 'M5 5h10l4 4v10H5zM15 5v4h4',
+  },
+
+  // ─── Creators ─────────────────────────────────────────────────
+  {
+    slug: 'email-signature-creator',
+    name: 'Email Signature Creator',
+    tagline: 'Build an HTML email signature.',
+    description:
+      'Free email signature creator. Fill in your name, title, company and links to build a clean HTML email signature, preview it live and copy the code. Runs entirely in your browser.',
+    category: 'Generators',
+    keywords: ['email signature creator', 'email signature generator', 'html signature maker', 'create email signature', 'signature template'],
+    icon: 'M4 6h16v12H4zM4 7l8 6 8-6M7 17h4',
+  },
+  {
+    slug: 'timeline-creator',
+    name: 'Timeline Creator',
+    tagline: 'Make a visual event timeline.',
+    description:
+      'Free timeline creator. Add dated events to build a clean horizontal or vertical timeline, then download it as a PNG. Everything is composed locally in your browser.',
+    category: 'Image',
+    keywords: ['timeline creator', 'timeline maker', 'create a timeline', 'timeline generator', 'event timeline maker'],
+    icon: 'M4 12h16M7 12v-4m0 4v4m5-4v-6m0 6v6m5-6v-3m0 3v3',
+  },
+  {
+    slug: 'gantt-chart-creator',
+    name: 'Gantt Chart Creator',
+    tagline: 'Plan tasks on a Gantt timeline.',
+    description:
+      'Free Gantt chart creator. Add tasks with start and end dates to draw a Gantt chart of your project schedule, then download it as a PNG. Everything runs in your browser.',
+    category: 'Image',
+    keywords: ['gantt chart creator', 'gantt chart maker', 'create gantt chart', 'project timeline chart', 'gantt generator'],
+    icon: 'M4 5h16v14H4zM6 9h6M6 12h9M6 15h4',
+  },
+  {
+    slug: 'org-chart-creator',
+    name: 'Org Chart Creator',
+    tagline: 'Draw an organization hierarchy.',
+    description:
+      'Free org chart creator. Enter roles and reporting lines from an indented list to draw an organization chart, then download it as a PNG. Everything is rendered in your browser.',
+    category: 'Image',
+    keywords: ['org chart creator', 'org chart maker', 'organizational chart generator', 'create org chart', 'hierarchy chart maker'],
+    icon: 'M9 4h6v4H9zM4 16h6v4H4zM14 16h6v4h-6zM12 8v4M7 16v-2h10v2',
+  },
+  {
+    slug: 'checklist-creator',
+    name: 'Checklist Creator',
+    tagline: 'Build and print a task checklist.',
+    description:
+      'Free checklist creator. Type tasks to build a clean, tickable checklist you can check off, print or download as text. Everything is saved locally in your browser.',
+    category: 'Generators',
+    keywords: ['checklist creator', 'checklist maker', 'create a checklist', 'todo list maker', 'printable checklist'],
+    icon: 'M4 6h2l1 1 2-2M11 6h9M4 12h2l1 1 2-2M11 12h9M4 18h2l1 1 2-2M11 18h9',
+  },
+  {
+    slug: 'seating-chart-creator',
+    name: 'Seating Chart Creator',
+    tagline: 'Arrange guests across tables.',
+    description:
+      'Free seating chart creator. Add guests and tables to arrange a seating plan for a wedding, class or event, then download it as a PNG. Everything runs in your browser.',
+    category: 'Image',
+    keywords: ['seating chart creator', 'seating chart maker', 'wedding seating chart', 'table plan maker', 'seating plan generator'],
+    icon: 'M7 10a2 2 0 1 0 0-.01M17 10a2 2 0 1 0 0-.01M5 20v-3a3 3 0 0 1 3-3M19 20v-3a3 3 0 0 0-3-3M12 14a3 3 0 0 0-3 3v3h6v-3a3 3 0 0 0-3-3z',
+  },
+
+  // ─── Downloaders (client-side only) ───────────────────────────
+  {
+    slug: 'svg-downloader',
+    name: 'SVG Downloader',
+    tagline: 'Paste SVG code and save it as a file.',
+    description:
+      'Free SVG downloader. Paste SVG markup to preview it, then download it as an .svg file or rasterize it to a PNG at a chosen size. Everything runs locally in your browser.',
+    category: 'Image',
+    keywords: ['svg downloader', 'download svg', 'svg to file', 'save svg', 'svg to png download'],
+    icon: 'M12 4v10m-4-4l4 4 4-4M5 18h14',
+  },
+  {
+    slug: 'base64-file-downloader',
+    name: 'Base64 File Downloader',
+    tagline: 'Turn a data URI into a saved file.',
+    description:
+      'Free base64 file downloader. Paste a base64 string or data URI to decode it and download the resulting file, with type auto-detected. Everything runs locally in your browser.',
+    category: 'Developer',
+    keywords: ['base64 file downloader', 'base64 to file', 'data uri to file', 'decode base64 download', 'base64 decoder download'],
+    icon: 'M12 4v10m-4-4l4 4 4-4M5 18h14M9 8H7V6',
+  },
+  {
+    slug: 'ics-calendar-downloader',
+    name: 'ICS Calendar Downloader',
+    tagline: 'Create a calendar event .ics file.',
+    description:
+      'Free ICS calendar downloader. Enter an event’s title, time and location to build a valid .ics file you can import into any calendar. Everything is created in your browser.',
+    category: 'Generators',
+    keywords: ['ics calendar downloader', 'ics file generator', 'create ics file', 'calendar event generator', 'ical download'],
+    icon: 'M5 5h14v14H5zM5 9h14M9 3v4M15 3v4M12 13v3m-2-2h4',
+  },
+  {
+    slug: 'vcard-downloader',
+    name: 'vCard Downloader',
+    tagline: 'Build a contact .vcf file.',
+    description:
+      'Free vCard downloader. Enter contact details to build a valid .vcf vCard you can import into any address book, with a QR option. Everything is created in your browser.',
+    category: 'Generators',
+    keywords: ['vcard downloader', 'vcf file generator', 'create vcard', 'contact card generator', 'vcf download'],
+    icon: 'M4 5h16v14H4zM9 10a2 2 0 1 0 0-.01M6 16a3 3 0 0 1 6 0M14 9h4M14 13h4',
+  },
 ];
 
 export const categories: ToolCategory[] = [

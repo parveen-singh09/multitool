@@ -1,0 +1,201 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="timeline-creator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Timeline title
+        <input id="tlc-title" class="field" type="text" value="Company Roadmap" />
+      </label>
+
+      <div id="tlc-rows" class="flex flex-col gap-3"></div>
+
+      <div class="flex gap-2">
+        <button id="tlc-add" class="btn btn-secondary">Add event</button>
+        <button id="tlc-png" class="btn btn-primary">Download PNG</button>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <span class="text-sm text-ink-subtle">Preview</span>
+      <div class="panel p-4">
+        <canvas id="tlc-canvas" class="max-w-full h-auto rounded-[8px]" aria-label="Timeline preview"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free timeline creator turns a list of dated events into a clean
+      vertical timeline you can download as a PNG. Add or remove rows, give each
+      event a date, title and short description, and the timeline redraws
+      instantly. It is handy for project roadmaps, history lessons, résumés or
+      event planning. Everything is composed locally in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  interface Event { date: string; title: string; desc: string; }
+
+  const rowsEl = document.getElementById('tlc-rows') as HTMLDivElement;
+  const titleEl = document.getElementById('tlc-title') as HTMLInputElement;
+  const canvas = document.getElementById('tlc-canvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+
+  let events: Event[] = [
+    { date: '2024 Q1', title: 'Kickoff', desc: 'Project scoped and team assembled.' },
+    { date: '2024 Q3', title: 'Beta launch', desc: 'First public beta released to users.' },
+    { date: '2025 Q1', title: 'General availability', desc: 'Full launch across all regions.' },
+  ];
+
+  function renderRows(): void {
+    rowsEl.innerHTML = '';
+    events.forEach((ev, i) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'panel p-3 flex flex-col gap-2';
+
+      const top = document.createElement('div');
+      top.className = 'grid grid-cols-1 gap-3 sm:grid-cols-2';
+
+      const dateInput = document.createElement('input');
+      dateInput.className = 'field';
+      dateInput.placeholder = 'Date';
+      dateInput.value = ev.date;
+      dateInput.addEventListener('input', () => { events[i].date = dateInput.value; draw(); });
+
+      const titleInput = document.createElement('input');
+      titleInput.className = 'field';
+      titleInput.placeholder = 'Title';
+      titleInput.value = ev.title;
+      titleInput.addEventListener('input', () => { events[i].title = titleInput.value; draw(); });
+
+      top.append(dateInput, titleInput);
+
+      const descInput = document.createElement('input');
+      descInput.className = 'field';
+      descInput.placeholder = 'Description';
+      descInput.value = ev.desc;
+      descInput.addEventListener('input', () => { events[i].desc = descInput.value; draw(); });
+
+      const remove = document.createElement('button');
+      remove.className = 'btn btn-tertiary self-start';
+      remove.textContent = 'Remove';
+      remove.addEventListener('click', () => { events.splice(i, 1); renderRows(); draw(); });
+
+      wrap.append(top, descInput, remove);
+      rowsEl.appendChild(wrap);
+    });
+  }
+
+  function wrapText(text: string, max: number): string[] {
+    const words = text.split(/\s+/).filter(Boolean);
+    const lines: string[] = [];
+    let line = '';
+    words.forEach((w) => {
+      const test = line ? `${line} ${w}` : w;
+      if (ctx.measureText(test).width > max && line) {
+        lines.push(line);
+        line = w;
+      } else {
+        line = test;
+      }
+    });
+    if (line) lines.push(line);
+    return lines.length ? lines : [''];
+  }
+
+  function draw(): void {
+    const scale = 2;
+    const width = 720;
+    const padTop = 90;
+    const padBottom = 40;
+    const lineX = 70;
+    const textX = 110;
+    const maxTextW = width - textX - 40;
+
+    ctx.font = '14px Inter, system-ui, sans-serif';
+    const blocks = events.map((ev) => {
+      const descLines = wrapText(ev.desc, maxTextW);
+      const height = 26 + 22 + descLines.length * 20 + 26;
+      return { ev, descLines, height };
+    });
+
+    const totalH = blocks.reduce((a, b) => a + b.height, 0);
+    const height = padTop + totalH + padBottom;
+
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+    canvas.style.width = width + 'px';
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+
+    ctx.fillStyle = '#0f1011';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = '#f7f8f8';
+    ctx.font = '600 24px Inter, system-ui, sans-serif';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(titleEl.value || 'Timeline', 40, 52);
+
+    const accent = '#5e6ad2';
+    const spineTop = padTop - 10;
+    const spineBottom = height - padBottom + 4;
+    ctx.strokeStyle = '#34343a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(lineX, spineTop);
+    ctx.lineTo(lineX, spineBottom);
+    ctx.stroke();
+
+    let y = padTop;
+    blocks.forEach(({ ev, descLines }) => {
+      const dotY = y + 6;
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.arc(lineX, dotY, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#0f1011';
+      ctx.beginPath();
+      ctx.arc(lineX, dotY, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#828fff';
+      ctx.font = '600 13px Inter, system-ui, sans-serif';
+      ctx.fillText(ev.date, textX, y + 4);
+
+      ctx.fillStyle = '#f7f8f8';
+      ctx.font = '600 17px Inter, system-ui, sans-serif';
+      ctx.fillText(ev.title, textX, y + 28);
+
+      ctx.fillStyle = '#8a8f98';
+      ctx.font = '14px Inter, system-ui, sans-serif';
+      let dy = y + 50;
+      descLines.forEach((l) => {
+        ctx.fillText(l, textX, dy);
+        dy += 20;
+      });
+
+      y += 26 + 22 + descLines.length * 20 + 26;
+    });
+  }
+
+  document.getElementById('tlc-add')!.addEventListener('click', () => {
+    events.push({ date: '', title: 'New event', desc: '' });
+    renderRows();
+    draw();
+  });
+
+  titleEl.addEventListener('input', draw);
+
+  document.getElementById('tlc-png')!.addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.download = 'toolcities-timeline.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+
+  renderRows();
+  draw();
+</script>

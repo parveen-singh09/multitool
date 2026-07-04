@@ -1,0 +1,147 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="svg-downloader">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        SVG markup
+        <textarea id="svgd-input" class="field min-h-72 resize-y font-mono text-[13px]" placeholder="Paste your SVG markup here" spellcheck="false"></textarea>
+      </label>
+
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          PNG width (px)
+          <input id="svgd-width" type="number" min="1" max="8192" value="512" class="field" />
+        </label>
+      </div>
+
+      <p id="svgd-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+      <div class="flex flex-wrap gap-2">
+        <button id="svgd-dl-svg" class="btn btn-primary">Download SVG</button>
+        <button id="svgd-dl-png" class="btn btn-secondary">Download PNG</button>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-center">
+      <div class="panel panel-lift flex aspect-square w-full max-w-sm items-center justify-center overflow-hidden p-6">
+        <div id="svgd-preview" class="flex h-full w-full items-center justify-center [&_svg]:h-full [&_svg]:w-full" aria-label="SVG preview"></div>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free SVG downloader lets you paste SVG markup, preview it live, and save
+      it as an <code>.svg</code> file or rasterize it to a PNG at any width you
+      choose. Handy for exporting icons, logos or illustrations copied from a design
+      tool or code snippet. Your markup is parsed and rendered entirely in your
+      browser, and nothing is ever uploaded to a server.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('svgd-input') as HTMLTextAreaElement;
+  const widthEl = document.getElementById('svgd-width') as HTMLInputElement;
+  const preview = document.getElementById('svgd-preview') as HTMLDivElement;
+  const err = document.getElementById('svgd-error') as HTMLParagraphElement;
+
+  function showError(msg: string): void {
+    err.textContent = msg;
+    err.classList.remove('hidden');
+  }
+
+  function clearError(): void {
+    err.classList.add('hidden');
+  }
+
+  function parseSvg(): SVGSVGElement | null {
+    const text = input.value.trim();
+    if (!text) {
+      preview.innerHTML = '';
+      clearError();
+      return null;
+    }
+    const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
+    const parseError = doc.querySelector('parsererror');
+    const svg = doc.querySelector('svg');
+    if (parseError || !svg) {
+      showError('That does not look like valid SVG markup.');
+      return null;
+    }
+    clearError();
+    return svg as SVGSVGElement;
+  }
+
+  function render(): void {
+    const svg = parseSvg();
+    preview.innerHTML = '';
+    if (svg) preview.appendChild(svg.cloneNode(true));
+  }
+
+  function currentSvgString(): string | null {
+    const svg = parseSvg();
+    if (!svg) return null;
+    return new XMLSerializer().serializeToString(svg);
+  }
+
+  function triggerDownload(blob: Blob, filename: string): void {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.download = filename;
+    a.href = url;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function downloadSvg(): void {
+    const str = currentSvgString();
+    if (!str) return;
+    triggerDownload(new Blob([str], { type: 'image/svg+xml' }), 'toolcities.svg');
+  }
+
+  function downloadPng(): void {
+    const str = currentSvgString();
+    if (!str) return;
+    const width = Math.max(1, Math.min(8192, Number(widthEl.value) || 512));
+
+    const svgBlob = new Blob([str], { type: 'image/svg+xml' });
+    const svgUrl = URL.createObjectURL(svgBlob);
+    const img = new Image();
+    img.onload = () => {
+      const ratio = img.height && img.width ? img.height / img.width : 1;
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = Math.round(width * ratio);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        URL.revokeObjectURL(svgUrl);
+        showError('Unable to create a canvas for PNG export.');
+        return;
+      }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(svgUrl);
+      canvas.toBlob((blob) => {
+        if (blob) triggerDownload(blob, 'toolcities.png');
+      }, 'image/png');
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(svgUrl);
+      showError('Could not rasterize this SVG to PNG.');
+    };
+    img.src = svgUrl;
+  }
+
+  input.addEventListener('input', render);
+  document.getElementById('svgd-dl-svg')!.addEventListener('click', downloadSvg);
+  document.getElementById('svgd-dl-png')!.addEventListener('click', downloadPng);
+
+  if (!input.value.trim()) {
+    input.value =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><circle cx="50" cy="50" r="40" fill="#5e6ad2"/></svg>';
+  }
+  render();
+</script>

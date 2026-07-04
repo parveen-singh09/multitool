@@ -1,0 +1,150 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="slot-machine-simulator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-3">
+      <div class="panel panel-lift p-4"><div id="sm-credits" class="font-display text-xl font-semibold text-primary-hover">100</div><div class="mt-1 text-[13px] text-ink-subtle">Credits</div></div>
+      <div class="panel p-4"><div id="sm-lastwin" class="font-mono text-lg text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Last win</div></div>
+      <div class="panel p-4"><div id="sm-spins" class="font-mono text-lg text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Spins</div></div>
+    </div>
+
+    <div class="panel panel-lift flex items-center justify-center gap-3 p-6 sm:gap-6">
+      <div id="sm-reel-0" class="flex h-24 w-24 items-center justify-center rounded-[12px] border border-hairline bg-surface-2 text-5xl">❔</div>
+      <div id="sm-reel-1" class="flex h-24 w-24 items-center justify-center rounded-[12px] border border-hairline bg-surface-2 text-5xl">❔</div>
+      <div id="sm-reel-2" class="flex h-24 w-24 items-center justify-center rounded-[12px] border border-hairline bg-surface-2 text-5xl">❔</div>
+    </div>
+
+    <p id="sm-msg" class="min-h-5 text-center text-[13px] text-ink-subtle" role="status"></p>
+
+    <div class="flex flex-wrap items-end justify-center gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Bet per spin
+        <input id="sm-bet" type="number" min="1" value="5" class="field w-28" />
+      </label>
+      <button id="sm-spin" class="btn btn-primary">Spin</button>
+      <button id="sm-reset" class="btn btn-secondary">Reset credits</button>
+    </div>
+
+    <div class="panel panel-lift p-4">
+      <div class="mb-2 text-[13px] text-ink-subtle">Payouts (per credit bet)</div>
+      <div id="sm-paytable" class="grid grid-cols-1 gap-1 font-mono text-[13px] text-ink-muted sm:grid-cols-2"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free slot machine simulator spins three reels of symbols with a short
+      animation and pays out virtual credits when they line up. Set your bet, hit
+      spin, and watch the reels roll before landing on a result that's scored
+      against the payout table — three of a kind pays the most, with smaller wins
+      for matching pairs and any cherries. No real money is involved and there are
+      no purchases; this is purely for fun. Every spin uses your browser's secure
+      random source and runs entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { randInt } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+
+  const SYMBOLS = ['🍒', '🍋', '🔔', '⭐', '💎', '7️⃣'] as const;
+  // Multiplier applied to the bet for three-of-a-kind of each symbol.
+  const TRIPLE: Record<string, number> = { '🍒': 10, '🍋': 15, '🔔': 20, '⭐': 30, '💎': 50, '7️⃣': 100 };
+  const PAIR_MULT = 2; // any matching pair pays 2x
+  const CHERRY_MULT = 1; // a single cherry returns the stake
+
+  const START = 100;
+  let credits = START;
+  let spins = 0;
+  let timer: number | null = null;
+
+  const betInput = $('sm-bet') as HTMLInputElement;
+  const msg = $('sm-msg')!;
+  const reels = [$('sm-reel-0'), $('sm-reel-1'), $('sm-reel-2')];
+
+  function renderStats() {
+    $('sm-credits').textContent = credits.toLocaleString();
+    $('sm-spins').textContent = String(spins);
+  }
+
+  function evaluate(a: string, b: string, c: string, bet: number): { win: number; label: string } {
+    if (a === b && b === c) return { win: bet * TRIPLE[a], label: `Three ${a} — jackpot!` };
+    if (a === b || b === c || a === c) {
+      const sym = a === b ? a : b === c ? b : a;
+      return { win: bet * PAIR_MULT, label: `Pair of ${sym}` };
+    }
+    const cherries = [a, b, c].filter((s) => s === '🍒').length;
+    if (cherries > 0) return { win: bet * CHERRY_MULT * cherries, label: `${cherries} cherry` };
+    return { win: 0, label: 'No win' };
+  }
+
+  function spin() {
+    if (timer !== null) return; // already spinning
+    const bet = Math.floor(Number(betInput.value) || 0);
+    if (bet <= 0) { msg.textContent = 'Enter a bet of at least 1 credit.'; return; }
+    if (bet > credits) { msg.textContent = 'Not enough credits for that bet.'; return; }
+
+    credits -= bet;
+    renderStats();
+    msg.textContent = 'Spinning…';
+
+    const final = [randInt(0, 5), randInt(0, 5), randInt(0, 5)];
+    // Reels stop one after another for a classic feel.
+    const stopAt = [500, 800, 1100];
+    const start = performance.now();
+
+    timer = window.setInterval(() => {
+      const elapsed = performance.now() - start;
+      let allStopped = true;
+      for (let i = 0; i < 3; i++) {
+        if (elapsed >= stopAt[i]) {
+          reels[i].textContent = SYMBOLS[final[i]];
+        } else {
+          reels[i].textContent = SYMBOLS[randInt(0, 5)];
+          allStopped = false;
+        }
+      }
+      if (allStopped) {
+        window.clearInterval(timer!);
+        timer = null;
+        finish(final, bet);
+      }
+    }, 80);
+  }
+
+  function finish(final: number[], bet: number) {
+    spins++;
+    const [a, b, c] = final.map((i) => SYMBOLS[i]);
+    const { win, label } = evaluate(a, b, c, bet);
+    credits += win;
+    $('sm-lastwin').textContent = win.toLocaleString();
+    msg.textContent = win > 0 ? `${label} — won ${win.toLocaleString()} credits!` : 'No win this time.';
+    renderStats();
+    if (credits <= 0) msg.textContent = 'Out of credits — hit Reset to play again.';
+  }
+
+  function reset() {
+    if (timer !== null) { window.clearInterval(timer); timer = null; }
+    credits = START; spins = 0;
+    $('sm-lastwin').textContent = '0';
+    reels.forEach((r) => (r.textContent = '❔'));
+    msg.textContent = 'Credits reset to 100.';
+    renderStats();
+  }
+
+  function renderPaytable() {
+    const rows = SYMBOLS.map((s) => `<div>${s} ${s} ${s}<span class="float-right text-ink">${TRIPLE[s]}×</span></div>`);
+    rows.push(`<div>Any pair<span class="float-right text-ink">${PAIR_MULT}×</span></div>`);
+    rows.push(`<div>Each 🍒<span class="float-right text-ink">${CHERRY_MULT}×</span></div>`);
+    $('sm-paytable').innerHTML = rows.join('');
+  }
+
+  $('sm-spin').addEventListener('click', spin);
+  $('sm-reset').addEventListener('click', reset);
+  window.addEventListener('beforeunload', () => { if (timer !== null) window.clearInterval(timer); });
+  renderPaytable();
+  renderStats();
+</script>

@@ -1,0 +1,145 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="user-agent-parser">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="uap-mine" class="btn btn-secondary">Use my user agent</button>
+      <button id="uap-clear" class="btn btn-tertiary">Clear</button>
+    </div>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      User-Agent string
+      <textarea
+        id="uap-in"
+        class="field min-h-32 resize-y font-mono text-[13px]"
+        placeholder="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        spellcheck="false"
+      ></textarea>
+    </label>
+
+    <div id="uap-results" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="panel p-4"><div id="uap-browser" class="font-display text-lg font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Browser</div></div>
+      <div class="panel p-4"><div id="uap-engine" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Rendering engine</div></div>
+      <div class="panel p-4"><div id="uap-os" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Operating system</div></div>
+      <div class="panel p-4"><div id="uap-device" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Device type</div></div>
+      <div class="panel p-4 sm:col-span-2"><div id="uap-cpu" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">CPU / architecture</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free user agent parser reads a User-Agent string and identifies the
+      browser and version, the rendering engine, the operating system and version
+      and the device type using regular-expression heuristics. Leave the box empty
+      and it loads your own browser's user agent. Because UA strings are freely
+      editable and often spoofed, treat the result as a best-effort guess. Parsing
+      runs entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('uap-in') as HTMLTextAreaElement;
+
+  interface Match { name: string; re: RegExp; }
+
+  const browsers: Match[] = [
+    { name: 'Edge', re: /Edg(?:e|A|iOS)?\/([\d.]+)/ },
+    { name: 'Opera', re: /(?:OPR|Opera)\/([\d.]+)/ },
+    { name: 'Samsung Internet', re: /SamsungBrowser\/([\d.]+)/ },
+    { name: 'Vivaldi', re: /Vivaldi\/([\d.]+)/ },
+    { name: 'Brave', re: /Brave\/([\d.]+)/ },
+    { name: 'Chrome', re: /(?:Chrome|CriOS)\/([\d.]+)/ },
+    { name: 'Firefox', re: /(?:Firefox|FxiOS)\/([\d.]+)/ },
+    { name: 'Safari', re: /Version\/([\d.]+).*Safari/ },
+    { name: 'Internet Explorer', re: /(?:MSIE |rv:)([\d.]+)/ },
+  ];
+
+  const engines: Match[] = [
+    { name: 'Blink', re: /Chrome\/([\d.]+)/ },
+    { name: 'Gecko', re: /rv:([\d.]+)\) Gecko/ },
+    { name: 'WebKit', re: /AppleWebKit\/([\d.]+)/ },
+    { name: 'Trident', re: /Trident\/([\d.]+)/ },
+    { name: 'Presto', re: /Presto\/([\d.]+)/ },
+  ];
+
+  function detectBrowser(ua: string): string {
+    for (const b of browsers) {
+      const m = ua.match(b.re);
+      if (m) return b.name + ' ' + m[1];
+    }
+    return 'Unknown';
+  }
+
+  function detectEngine(ua: string): string {
+    // Edge/Opera/Chrome all use Blink but report AppleWebKit too; check Blink first.
+    if (/Trident\//.test(ua)) { const m = ua.match(engines[3].re); return 'Trident ' + (m ? m[1] : ''); }
+    if (/Chrome\/|Chromium\//.test(ua) && !/Edge\//.test(ua)) { const m = ua.match(/(?:Chrome|Chromium)\/([\d.]+)/); return 'Blink ' + (m ? m[1] : ''); }
+    if (/Gecko\/|rv:.*Gecko/.test(ua) && /Firefox/.test(ua)) { const m = ua.match(engines[1].re); return 'Gecko ' + (m ? m[1] : ''); }
+    if (/AppleWebKit\//.test(ua)) { const m = ua.match(engines[2].re); return 'WebKit ' + (m ? m[1] : ''); }
+    if (/Presto\//.test(ua)) { const m = ua.match(engines[4].re); return 'Presto ' + (m ? m[1] : ''); }
+    return 'Unknown';
+  }
+
+  function detectOS(ua: string): string {
+    let m: RegExpMatchArray | null;
+    if ((m = ua.match(/Windows NT ([\d.]+)/))) {
+      const map: Record<string, string> = { '10.0': '10/11', '6.3': '8.1', '6.2': '8', '6.1': '7', '6.0': 'Vista', '5.1': 'XP' };
+      return 'Windows ' + (map[m[1]] || m[1]);
+    }
+    if ((m = ua.match(/Android ([\d.]+)/))) return 'Android ' + m[1];
+    if (/Android/.test(ua)) return 'Android';
+    if ((m = ua.match(/(?:iPhone|iPad|iPod)(?:.*?OS ([\d_]+))?/))) return 'iOS ' + (m[1] ? m[1].replace(/_/g, '.') : '');
+    if ((m = ua.match(/Mac OS X ([\d_]+)/))) return 'macOS ' + m[1].replace(/_/g, '.');
+    if (/Mac OS X/.test(ua)) return 'macOS';
+    if (/CrOS/.test(ua)) return 'Chrome OS';
+    if (/Linux/.test(ua)) return 'Linux';
+    return 'Unknown';
+  }
+
+  function detectDevice(ua: string): string {
+    if (/iPad|Tablet|Nexus 7|SM-T/.test(ua)) return 'Tablet';
+    if (/Mobi|iPhone|iPod|Android.*Mobile|Windows Phone|BlackBerry|Opera Mini/.test(ua)) return 'Mobile';
+    if (/Android/.test(ua)) return 'Tablet';
+    if (/TV|SmartTV|AppleTV/.test(ua)) return 'TV';
+    if (/bot|crawl|spider|slurp|bingpreview/i.test(ua)) return 'Bot / crawler';
+    return 'Desktop';
+  }
+
+  function detectCPU(ua: string): string {
+    if (/Win64|WOW64|x64|x86_64|amd64/i.test(ua)) return '64-bit (x64)';
+    if (/arm64|aarch64/i.test(ua)) return 'ARM 64-bit';
+    if (/\barm\b|armv/i.test(ua)) return 'ARM';
+    if (/i686|i386|x86/i.test(ua)) return '32-bit (x86)';
+    return 'Unknown';
+  }
+
+  function parse() {
+    const ua = input.value.trim();
+    const set = (id: string, val: string) => (document.getElementById(id)!.textContent = val.trim() || '—');
+    if (!ua) {
+      ['uap-browser', 'uap-engine', 'uap-os', 'uap-device', 'uap-cpu'].forEach((id) => (document.getElementById(id)!.textContent = '—'));
+      return;
+    }
+    set('uap-browser', detectBrowser(ua));
+    set('uap-engine', detectEngine(ua));
+    set('uap-os', detectOS(ua));
+    set('uap-device', detectDevice(ua));
+    set('uap-cpu', detectCPU(ua));
+  }
+
+  document.getElementById('uap-mine')!.addEventListener('click', () => {
+    input.value = navigator.userAgent;
+    parse();
+  });
+  document.getElementById('uap-clear')!.addEventListener('click', () => {
+    input.value = '';
+    parse();
+  });
+  input.addEventListener('input', parse);
+
+  input.value = navigator.userAgent;
+  parse();
+</script>

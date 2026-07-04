@@ -1,0 +1,109 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="toml-to-json-converter">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="t2j-convert" class="btn btn-primary">Convert to JSON</button>
+      <button id="t2j-copy" class="btn btn-secondary">Copy</button>
+      <button id="t2j-clear" class="btn btn-tertiary">Clear</button>
+      <label class="ml-auto flex items-center gap-2 text-sm text-ink-subtle">
+        Indent
+        <select id="t2j-indent" class="field w-auto py-1">
+          <option value="2">2 spaces</option>
+          <option value="4">4 spaces</option>
+          <option value="tab">Tab</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="t2j-status" class="hidden rounded-[8px] border px-3 py-2 text-sm" role="status"></div>
+
+    <div class="grid gap-4 md:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        TOML input
+        <textarea
+          id="t2j-input"
+          class="field min-h-72 resize-y font-mono text-[13px]"
+          placeholder={'title = "ToolCities"\n\n[owner]\nname = "Ada"\nports = [80, 443]'}
+          spellcheck="false"
+          aria-label="TOML input"
+        ></textarea>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        JSON output
+        <textarea
+          id="t2j-output"
+          class="field min-h-72 resize-y font-mono text-[13px]"
+          placeholder="Formatted JSON appears here"
+          spellcheck="false"
+          readonly
+          aria-label="JSON output"
+        ></textarea>
+      </label>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free TOML to JSON converter parses TOML configuration into formatted
+      JSON. It supports <code>[table]</code> and dotted <code>[a.b]</code> nested
+      tables, arrays of tables, and key-value pairs with strings, integers,
+      floats, booleans and arrays; dates are kept as strings. Syntax errors are
+      flagged with a line number. It covers the common subset of TOML rather
+      than every corner of the specification, and runs entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { parseToml } from '../../lib/dataformats';
+
+  const input = document.getElementById('t2j-input') as HTMLTextAreaElement;
+  const output = document.getElementById('t2j-output') as HTMLTextAreaElement;
+  const status = document.getElementById('t2j-status')!;
+  const indentSel = document.getElementById('t2j-indent') as HTMLSelectElement;
+
+  function getIndent(): string | number {
+    const v = indentSel.value;
+    return v === 'tab' ? '\t' : Number(v);
+  }
+
+  function showStatus(msg: string, ok: boolean) {
+    status.textContent = msg;
+    status.classList.remove('hidden');
+    status.style.borderColor = ok ? '#27a644' : '#d14d4d';
+    status.style.color = ok ? '#27a644' : '#e08585';
+  }
+
+  function convert() {
+    if (!input.value.trim()) {
+      output.value = '';
+      status.classList.add('hidden');
+      return;
+    }
+    try {
+      const parsed = parseToml(input.value);
+      output.value = JSON.stringify(parsed, null, getIndent());
+      showStatus('Converted to JSON ✓', true);
+    } catch (e) {
+      output.value = '';
+      showStatus((e as Error).message, false);
+    }
+  }
+
+  document.getElementById('t2j-convert')!.addEventListener('click', convert);
+  indentSel.addEventListener('change', () => { if (output.value) convert(); });
+  document.getElementById('t2j-clear')!.addEventListener('click', () => {
+    input.value = '';
+    output.value = '';
+    status.classList.add('hidden');
+  });
+  document.getElementById('t2j-copy')!.addEventListener('click', async () => {
+    const btn = document.getElementById('t2j-copy')!;
+    await navigator.clipboard.writeText(output.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+</script>

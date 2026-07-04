@@ -1,0 +1,154 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="html-to-markdown-converter">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="h2m-convert" class="btn btn-primary">Convert to Markdown</button>
+      <button id="h2m-copy" class="btn btn-secondary">Copy</button>
+      <button id="h2m-clear" class="btn btn-tertiary">Clear</button>
+    </div>
+
+    <div class="grid gap-4 md:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        HTML input
+        <textarea
+          id="h2m-input"
+          class="field min-h-72 resize-y font-mono text-[13px]"
+          placeholder={'<h1>Title</h1>\n<p>Some <strong>bold</strong> text and a <a href="https://example.com">link</a>.</p>'}
+          spellcheck="false"
+          aria-label="HTML input"
+        ></textarea>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Markdown output
+        <textarea
+          id="h2m-output"
+          class="field min-h-72 resize-y font-mono text-[13px]"
+          placeholder="Markdown appears here"
+          spellcheck="false"
+          readonly
+          aria-label="Markdown output"
+        ></textarea>
+      </label>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free HTML to Markdown converter walks the HTML DOM with the browser's
+      DOMParser and emits clean Markdown. It handles headings, paragraphs, bold
+      and italic, links and images, ordered and unordered lists, inline code and
+      fenced code blocks, blockquotes, line breaks and horizontal rules. Unknown
+      tags fall back to their text content. The output updates as you type and
+      runs entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('h2m-input') as HTMLTextAreaElement;
+  const output = document.getElementById('h2m-output') as HTMLTextAreaElement;
+
+  // Convert child nodes of a parent to Markdown, joined.
+  function childrenToMd(node: Node, listDepth: number): string {
+    let out = '';
+    node.childNodes.forEach((child) => { out += nodeToMd(child, listDepth); });
+    return out;
+  }
+
+  function nodeToMd(node: Node, listDepth: number): string {
+    if (node.nodeType === Node.TEXT_NODE) {
+      // Collapse runs of whitespace but keep single spaces.
+      return (node.nodeValue ?? '').replace(/\s+/g, ' ');
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return '';
+
+    const el = node as Element;
+    const tag = el.tagName.toLowerCase();
+    const inner = () => childrenToMd(el, listDepth).trim();
+
+    switch (tag) {
+      case 'h1': case 'h2': case 'h3':
+      case 'h4': case 'h5': case 'h6': {
+        const level = Number(tag[1]);
+        return `\n\n${'#'.repeat(level)} ${inner()}\n\n`;
+      }
+      case 'p':
+        return `\n\n${childrenToMd(el, listDepth).trim()}\n\n`;
+      case 'br':
+        return '  \n';
+      case 'hr':
+        return '\n\n---\n\n';
+      case 'strong': case 'b':
+        return `**${inner()}**`;
+      case 'em': case 'i':
+        return `*${inner()}*`;
+      case 'code':
+        // Inline code only when not inside a <pre> (handled by pre case).
+        return `\`${el.textContent ?? ''}\``;
+      case 'pre': {
+        const codeEl = el.querySelector('code');
+        const text = (codeEl ?? el).textContent ?? '';
+        return `\n\n\`\`\`\n${text.replace(/\n$/, '')}\n\`\`\`\n\n`;
+      }
+      case 'blockquote': {
+        const body = childrenToMd(el, listDepth).trim();
+        const quoted = body.split('\n').map((l) => `> ${l}`.replace(/\s+$/, '')).join('\n');
+        return `\n\n${quoted}\n\n`;
+      }
+      case 'a': {
+        const href = el.getAttribute('href') ?? '';
+        const title = el.getAttribute('title');
+        return `[${inner()}](${href}${title ? ` "${title}"` : ''})`;
+      }
+      case 'img': {
+        const src = el.getAttribute('src') ?? '';
+        const alt = el.getAttribute('alt') ?? '';
+        const title = el.getAttribute('title');
+        return `![${alt}](${src}${title ? ` "${title}"` : ''})`;
+      }
+      case 'ul': case 'ol': {
+        const ordered = tag === 'ol';
+        const items = Array.from(el.children).filter((c) => c.tagName.toLowerCase() === 'li');
+        const indent = '  '.repeat(listDepth);
+        const rendered = items.map((li, idx) => {
+          const marker = ordered ? `${idx + 1}.` : '-';
+          const content = childrenToMd(li, listDepth + 1).trim().replace(/\n{2,}/g, '\n');
+          return `${indent}${marker} ${content}`;
+        }).join('\n');
+        return `\n\n${rendered}\n\n`;
+      }
+      case 'li':
+        return inner();
+      case 'script': case 'style':
+        return '';
+      default:
+        return childrenToMd(el, listDepth);
+    }
+  }
+
+  function convert() {
+    if (!input.value.trim()) { output.value = ''; return; }
+    const doc = new DOMParser().parseFromString(input.value, 'text/html');
+    const md = childrenToMd(doc.body, 0);
+    // Normalise excessive blank lines and trim.
+    output.value = md.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  input.addEventListener('input', convert);
+  document.getElementById('h2m-convert')!.addEventListener('click', convert);
+  document.getElementById('h2m-clear')!.addEventListener('click', () => {
+    input.value = '';
+    output.value = '';
+  });
+  document.getElementById('h2m-copy')!.addEventListener('click', async () => {
+    const btn = document.getElementById('h2m-copy')!;
+    await navigator.clipboard.writeText(output.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+
+  convert();
+</script>

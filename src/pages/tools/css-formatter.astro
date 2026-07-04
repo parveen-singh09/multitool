@@ -1,0 +1,158 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="css-formatter">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="cf-beautify" class="btn btn-primary">Beautify</button>
+      <button id="cf-minify" class="btn btn-secondary">Minify</button>
+      <button id="cf-copy" class="btn btn-secondary">Copy</button>
+      <button id="cf-clear" class="btn btn-tertiary">Clear</button>
+      <label class="ml-auto flex items-center gap-2 text-sm text-ink-subtle">
+        Indent
+        <select id="cf-indent" class="field w-auto py-1">
+          <option value="2">2 spaces</option>
+          <option value="4">4 spaces</option>
+          <option value="tab">Tab</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="cf-status" class="hidden rounded-[8px] border px-3 py-2 text-sm" role="status"></div>
+
+    <textarea
+      id="cf-input"
+      class="field min-h-72 resize-y font-mono text-[13px]"
+      placeholder="Paste CSS here, e.g. body{margin:0;color:red}"
+      spellcheck="false"
+      aria-label="CSS input"
+    ></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free CSS formatter beautifies stylesheets with tidy indentation and
+      spacing, putting each rule and declaration on its own line, or minifies
+      them to save bytes for production. The indent size is adjustable and
+      comments are preserved. Everything runs entirely in your browser, so
+      nothing is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('cf-input') as HTMLTextAreaElement;
+  const status = document.getElementById('cf-status')!;
+  const indentSel = document.getElementById('cf-indent') as HTMLSelectElement;
+
+  function getIndent(): string {
+    const v = indentSel.value;
+    return v === 'tab' ? '\t' : ' '.repeat(Number(v));
+  }
+
+  function showStatus(msg: string, ok: boolean) {
+    status.textContent = msg;
+    status.classList.remove('hidden');
+    status.style.borderColor = ok ? '#27a644' : '#d14d4d';
+    status.style.color = ok ? '#27a644' : '#e08585';
+  }
+
+  function beautify(css: string, unit: string): string {
+    const src = css.replace(/\r\n/g, '\n');
+    let out = '';
+    let indent = 0;
+    let i = 0;
+    const n = src.length;
+    const pad = () => unit.repeat(indent);
+    const skipWs = () => {
+      while (i < n && /\s/.test(src[i])) i++;
+    };
+
+    while (i < n) {
+      const c = src[i];
+      if (c === '/' && src[i + 1] === '*') {
+        const end = src.indexOf('*/', i + 2);
+        const comment = src.slice(i, end === -1 ? n : end + 2).trim();
+        out = out.replace(/[ \t]+$/, '');
+        if (out && !out.endsWith('\n')) out += '\n';
+        out += pad() + comment + '\n' + pad();
+        i = end === -1 ? n : end + 2;
+        skipWs();
+        continue;
+      }
+      if (c === '{') {
+        out = out.replace(/\s+$/, '') + ' {\n';
+        indent += 1;
+        i++;
+        skipWs();
+        out += pad();
+        continue;
+      }
+      if (c === '}') {
+        out = out.replace(/\s+$/, '');
+        indent = Math.max(indent - 1, 0);
+        if (out && !out.endsWith('\n')) out += '\n';
+        out += pad() + '}\n';
+        i++;
+        skipWs();
+        out += pad();
+        continue;
+      }
+      if (c === ';') {
+        out = out.replace(/[ \t]+$/, '') + ';\n';
+        i++;
+        skipWs();
+        out += pad();
+        continue;
+      }
+      if (/\s/.test(c)) {
+        if (!/\s$/.test(out) && out.length > 0) out += ' ';
+        i++;
+        continue;
+      }
+      out += c;
+      i++;
+    }
+
+    return out
+      .split('\n')
+      .map((line) => {
+        const t = line.replace(/\s+$/, '');
+        if (/;\s*$/.test(t) && t.includes(':')) return t.replace(/\s*:\s*/, ': ');
+        return t;
+      })
+      .filter((line, idx, arr) => !(line === '' && (arr[idx - 1] === '' || idx === 0)))
+      .join('\n')
+      .trim();
+  }
+
+  function minify(css: string): string {
+    return css
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\s+/g, ' ')
+      .replace(/\s*([{}:;,])\s*/g, '$1')
+      .replace(/;}/g, '}')
+      .trim();
+  }
+
+  function process(doMinify: boolean) {
+    const src = input.value.trim();
+    if (!src) return;
+    input.value = doMinify ? minify(src) : beautify(src, getIndent());
+    showStatus(doMinify ? 'Minified ✓' : 'Formatted ✓', true);
+  }
+
+  document.getElementById('cf-beautify')!.addEventListener('click', () => process(false));
+  document.getElementById('cf-minify')!.addEventListener('click', () => process(true));
+  document.getElementById('cf-clear')!.addEventListener('click', () => {
+    input.value = '';
+    status.classList.add('hidden');
+  });
+  document.getElementById('cf-copy')!.addEventListener('click', async () => {
+    const btn = document.getElementById('cf-copy')!;
+    await navigator.clipboard.writeText(input.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+</script>

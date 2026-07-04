@@ -1,0 +1,201 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="word-cloud-maker">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Text
+      <textarea id="wcm-text" class="field min-h-32 resize-y font-mono text-[13px]" spellcheck="false" placeholder="Paste your text here…">Words words words. Great ideas need great words, and the best words repeat until they become memorable. Repeat the words, shape the ideas, and let the cloud show which words matter most.</textarea>
+    </label>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Color scheme
+        <select id="wcm-scheme" class="field">
+          <option value="lavender">Lavender</option>
+          <option value="ocean">Ocean</option>
+          <option value="sunset">Sunset</option>
+          <option value="forest">Forest</option>
+          <option value="mono">Monochrome</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Background
+        <input id="wcm-bg" type="color" value="#ffffff" class="field h-10 cursor-pointer p-1" />
+      </label>
+    </div>
+
+    <label class="flex items-center gap-2 text-sm text-ink-subtle">
+      <input id="wcm-stop" type="checkbox" checked class="h-4 w-4" />
+      Ignore common stopwords (the, and, of…)
+    </label>
+
+    <p id="wcm-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="panel p-4">
+      <canvas id="wcm-canvas" class="max-w-full h-auto rounded-[8px]" aria-label="Word cloud preview"></canvas>
+    </div>
+
+    <div class="flex gap-2">
+      <button id="wcm-render" class="btn btn-secondary">Regenerate</button>
+      <button id="wcm-download" class="btn btn-primary">Download PNG</button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free word cloud maker turns any block of text into a cloud where the
+      most frequent words appear largest. It counts word frequency, optionally
+      skips common stopwords, and places the top words with a spiral layout that
+      avoids overlaps. Pick a color scheme and background, then download the
+      result as a PNG. All text is processed locally in your browser and is never
+      uploaded to a server.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const textEl = document.getElementById('wcm-text') as HTMLTextAreaElement;
+  const schemeEl = document.getElementById('wcm-scheme') as HTMLSelectElement;
+  const bgEl = document.getElementById('wcm-bg') as HTMLInputElement;
+  const stopEl = document.getElementById('wcm-stop') as HTMLInputElement;
+  const canvas = document.getElementById('wcm-canvas') as HTMLCanvasElement;
+  const err = document.getElementById('wcm-error')!;
+  const ctx = canvas.getContext('2d')!;
+
+  const STOPWORDS = new Set(
+    (
+      'a an and are as at be but by for from has have he her him his i in is it its ' +
+      'me my no not of on or our so that the their them they this to us was we were ' +
+      'what when where which who will with you your yours it\'s'
+    ).split(' ')
+  );
+
+  const SCHEMES: Record<string, string[]> = {
+    lavender: ['#5e6ad2', '#7b83e0', '#9aa0ec', '#4c56b8', '#8f7be0'],
+    ocean: ['#1e88e5', '#00acc1', '#26a69a', '#5c6bc0', '#0277bd'],
+    sunset: ['#ef6c00', '#e53935', '#d81b60', '#f9a825', '#c2185b'],
+    forest: ['#2e7d32', '#558b2f', '#00695c', '#33691e', '#1b5e20'],
+    mono: ['#2a2a30', '#45454f', '#5f5f6b', '#7a7a86', '#33333a'],
+  };
+
+  interface WordBox {
+    word: string;
+    size: number;
+    color: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  }
+
+  function countWords(): [string, number][] {
+    const skip = stopEl.checked;
+    const freq = new Map<string, number>();
+    const tokens = textEl.value.toLowerCase().match(/[a-z0-9']+/g) || [];
+    for (const t of tokens) {
+      if (t.length < 2) continue;
+      if (skip && STOPWORDS.has(t)) continue;
+      freq.set(t, (freq.get(t) || 0) + 1);
+    }
+    return [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 40);
+  }
+
+  function overlaps(a: WordBox, boxes: WordBox[]): boolean {
+    for (const b of boxes) {
+      if (
+        a.x < b.x + b.w &&
+        a.x + a.w > b.x &&
+        a.y < b.y + b.h &&
+        a.y + a.h > b.y
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function render() {
+    err.classList.add('hidden');
+    const words = countWords();
+    const W = 900;
+    const H = 560;
+    canvas.width = W;
+    canvas.height = H;
+    ctx.fillStyle = bgEl.value;
+    ctx.fillRect(0, 0, W, H);
+
+    if (!words.length) {
+      ctx.fillStyle = '#888';
+      ctx.font = '15px Inter, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Enter some text to build a word cloud.', W / 2, H / 2);
+      return;
+    }
+
+    const maxF = words[0][1];
+    const minF = words[words.length - 1][1];
+    const fSpan = maxF - minF || 1;
+    const palette = SCHEMES[schemeEl.value] || SCHEMES.lavender;
+    const placed: WordBox[] = [];
+    const cx = W / 2;
+    const cy = H / 2;
+
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
+
+    words.forEach(([word, f], i) => {
+      const size = 16 + Math.round(((f - minF) / fSpan) * 72);
+      ctx.font = `700 ${size}px Inter, system-ui, sans-serif`;
+      const w = ctx.measureText(word).width;
+      const h = size * 1.15;
+      const color = palette[i % palette.length];
+
+      let angle = 0;
+      let radius = 0;
+      let x = cx - w / 2;
+      let y = cy - h / 2;
+      let box: WordBox = { word, size, color, x, y, w, h };
+      let tries = 0;
+      while (overlaps(box, placed) && tries < 600) {
+        angle += 0.35;
+        radius += 1.4;
+        x = cx - w / 2 + Math.cos(angle) * radius;
+        y = cy - h / 2 + Math.sin(angle) * radius;
+        box = { word, size, color, x, y, w, h };
+        tries++;
+      }
+      if (x < 4 || y < 4 || x + w > W - 4 || y + h > H - 4) return;
+      placed.push(box);
+    });
+
+    placed.forEach((b) => {
+      ctx.font = `700 ${b.size}px Inter, system-ui, sans-serif`;
+      ctx.fillStyle = b.color;
+      ctx.fillText(b.word, b.x, b.y);
+    });
+  }
+
+  [textEl, schemeEl, bgEl, stopEl].forEach((el) => el.addEventListener('input', render));
+  document.getElementById('wcm-render')!.addEventListener('click', render);
+
+  document.getElementById('wcm-download')!.addEventListener('click', () => {
+    if (!countWords().length) {
+      err.textContent = 'Add some text first.';
+      err.classList.remove('hidden');
+      return;
+    }
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = 'toolcities-word-cloud.png';
+      link.href = url;
+      link.click();
+      URL.revokeObjectURL(url);
+    }, 'image/png');
+  });
+
+  render();
+</script>

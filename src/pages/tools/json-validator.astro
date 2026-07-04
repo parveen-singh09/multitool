@@ -1,0 +1,124 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="json-validator">
+  <div class="flex flex-col gap-4">
+    <div id="jv-status" class="hidden rounded-[8px] border px-3 py-2 text-sm" role="status"></div>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      JSON to validate
+      <textarea id="jv-in" class="field min-h-72 resize-y font-mono text-[13px]" placeholder='Paste JSON here, e.g. {"hello":"world"}' spellcheck="false"></textarea>
+    </label>
+
+    <div id="jv-caret-wrap" class="hidden">
+      <div class="eyebrow">Error location</div>
+      <pre id="jv-caret" class="panel p-4 overflow-x-auto font-mono text-[13px] text-ink whitespace-pre"></pre>
+    </div>
+
+    <div id="jv-preview-wrap" class="hidden">
+      <div class="flex items-center gap-2">
+        <div class="eyebrow">Formatted preview</div>
+        <button id="jv-copy" class="btn btn-secondary ml-auto">Copy</button>
+      </div>
+      <pre id="jv-preview" class="panel p-4 mt-2 overflow-x-auto font-mono text-[13px] text-ink whitespace-pre"></pre>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free JSON validator parses pasted JSON and tells you instantly if it
+      is valid. When there is a syntax error it shows the message along with the
+      exact line and column, drawing a caret directly under the offending
+      character so you can spot the problem fast. Valid JSON is confirmed and
+      pretty-printed for easy reading. Nothing is uploaded — validation runs
+      entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('jv-in') as HTMLTextAreaElement;
+  const status = document.getElementById('jv-status')!;
+  const caretWrap = document.getElementById('jv-caret-wrap')!;
+  const caret = document.getElementById('jv-caret')!;
+  const previewWrap = document.getElementById('jv-preview-wrap')!;
+  const preview = document.getElementById('jv-preview')!;
+
+  function showStatus(msg: string, ok: boolean) {
+    status.textContent = msg;
+    status.classList.remove('hidden');
+    status.style.borderColor = ok ? '#27a644' : '#d14d4d';
+    status.style.color = ok ? '#27a644' : '#e08585';
+  }
+
+  // Try to derive a 0-based character position from the parser message.
+  function positionFromError(msg: string, text: string): number | null {
+    const posMatch = msg.match(/position (\d+)/i);
+    if (posMatch) return Math.min(Number(posMatch[1]), text.length);
+    const lineCol = msg.match(/line (\d+) column (\d+)/i);
+    if (lineCol) {
+      const line = Number(lineCol[1]);
+      const col = Number(lineCol[2]);
+      const lines = text.split('\n');
+      let idx = 0;
+      for (let i = 0; i < line - 1 && i < lines.length; i++) idx += lines[i].length + 1;
+      return idx + (col - 1);
+    }
+    return null;
+  }
+
+  function lineColFromPos(text: string, pos: number): { line: number; col: number } {
+    let line = 1;
+    let col = 1;
+    for (let i = 0; i < pos && i < text.length; i++) {
+      if (text[i] === '\n') { line++; col = 1; } else { col++; }
+    }
+    return { line, col };
+  }
+
+  function renderCaret(text: string, pos: number, line: number, col: number) {
+    const lines = text.split('\n');
+    const target = lines[line - 1] ?? '';
+    const shown = target.length > 200 ? target.slice(0, 200) + '…' : target;
+    const pointer = ' '.repeat(Math.max(0, col - 1)) + '^';
+    caret.textContent = `line ${line}, column ${col}\n\n${shown}\n${pointer}`;
+    caretWrap.classList.remove('hidden');
+  }
+
+  function validate() {
+    caretWrap.classList.add('hidden');
+    previewWrap.classList.add('hidden');
+    const text = input.value;
+    if (!text.trim()) {
+      status.classList.add('hidden');
+      return;
+    }
+    try {
+      const parsed = JSON.parse(text);
+      showStatus('Valid JSON ✓', true);
+      preview.textContent = JSON.stringify(parsed, null, 2);
+      previewWrap.classList.remove('hidden');
+    } catch (e) {
+      const msg = (e as Error).message;
+      const pos = positionFromError(msg, text);
+      if (pos !== null) {
+        const { line, col } = lineColFromPos(text, pos);
+        showStatus(`Invalid JSON at line ${line}, column ${col}: ${msg}`, false);
+        renderCaret(text, pos, line, col);
+      } else {
+        showStatus(`Invalid JSON: ${msg}`, false);
+      }
+    }
+  }
+
+  document.getElementById('jv-copy')!.addEventListener('click', async () => {
+    const btn = document.getElementById('jv-copy')!;
+    await navigator.clipboard.writeText(preview.textContent ?? '');
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+
+  input.addEventListener('input', validate);
+  validate();
+</script>

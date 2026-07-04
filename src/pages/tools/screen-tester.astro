@@ -1,0 +1,110 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="screen-tester">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap gap-2">
+      <button class="btn btn-secondary" data-color="#ff0000">Red</button>
+      <button class="btn btn-secondary" data-color="#00ff00">Green</button>
+      <button class="btn btn-secondary" data-color="#0000ff">Blue</button>
+      <button class="btn btn-secondary" data-color="#ffffff">White</button>
+      <button class="btn btn-secondary" data-color="#000000">Black</button>
+      <button class="btn btn-secondary" data-color="#00ffff">Cyan</button>
+      <button class="btn btn-secondary" data-color="#ff00ff">Magenta</button>
+      <button class="btn btn-secondary" data-color="#ffff00">Yellow</button>
+      <button class="btn btn-secondary" data-color="gradient">Gradient</button>
+      <button id="st-fs" class="btn btn-primary ml-auto">Fullscreen</button>
+    </div>
+
+    <div
+      id="st-area"
+      class="flex min-h-72 cursor-pointer select-none items-center justify-center rounded-[12px] text-center text-sm"
+      style="background:#ff0000"
+      role="button"
+      tabindex="0"
+      aria-label="Screen test area — click to advance color"
+    >
+      <span id="st-hint" class="rounded-[8px] bg-black/40 px-3 py-2 text-white">Click to advance color · <span id="st-label">Red</span></span>
+    </div>
+
+    <p class="text-[13px] text-ink-subtle">
+      Click the area (or press Fullscreen, then click) to cycle through colors.
+      Look for dots that stay a different color — dead pixels stay black, stuck
+      pixels stay lit. Press Esc to leave fullscreen.
+    </p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free screen tester fills your display with solid colors and a gradient
+      so you can spot dead or stuck pixels and check backlight uniformity. Cycle
+      red, green, blue, white, black, cyan, magenta and yellow, then switch to
+      fullscreen for an unobstructed view. Dead pixels stay black on every color;
+      stuck pixels stay lit on one channel. It's a quick check for new monitors,
+      phones and laptops. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const area = $('st-area');
+  const label = $('st-label');
+  const hint = $('st-hint');
+
+  const cycle: { color: string; name: string }[] = [
+    { color: '#ff0000', name: 'Red' },
+    { color: '#00ff00', name: 'Green' },
+    { color: '#0000ff', name: 'Blue' },
+    { color: '#ffffff', name: 'White' },
+    { color: '#000000', name: 'Black' },
+    { color: '#00ffff', name: 'Cyan' },
+    { color: '#ff00ff', name: 'Magenta' },
+    { color: '#ffff00', name: 'Yellow' },
+    { color: 'gradient', name: 'Gradient' },
+  ];
+  let index = 0;
+
+  function apply(color: string, name: string) {
+    if (color === 'gradient') {
+      area.style.background = 'linear-gradient(90deg, #000, #fff)';
+    } else {
+      area.style.background = color;
+    }
+    label.textContent = name;
+    // Keep the hint readable on light backgrounds.
+    const light = ['#ffffff', '#00ffff', '#ffff00', '#00ff00', 'gradient'];
+    hint.style.color = light.includes(color) ? '#000' : '#fff';
+    hint.style.background = light.includes(color) ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
+  }
+
+  function advance() {
+    index = (index + 1) % cycle.length;
+    apply(cycle[index].color, cycle[index].name);
+  }
+
+  area.addEventListener('click', advance);
+  area.addEventListener('keydown', (e) => {
+    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); advance(); }
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('[data-color]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const color = btn.dataset.color!;
+      const found = cycle.findIndex((c) => c.color === color);
+      if (found >= 0) index = found;
+      apply(cycle[index].color, cycle[index].name);
+    });
+  });
+
+  $('st-fs').addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      area.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  });
+
+  apply(cycle[0].color, cycle[0].name);
+</script>

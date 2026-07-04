@@ -1,0 +1,116 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="json-to-csv-converter">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="j2c-convert" class="btn btn-primary">Convert to CSV</button>
+      <button id="j2c-copy" class="btn btn-secondary">Copy</button>
+      <button id="j2c-clear" class="btn btn-tertiary">Clear</button>
+      <label class="ml-auto flex items-center gap-2 text-sm text-ink-subtle">
+        Delimiter
+        <select id="j2c-delim" class="field w-auto py-1">
+          <option value=",">Comma</option>
+          <option value=";">Semicolon</option>
+          <option value="tab">Tab</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="j2c-status" class="hidden rounded-[8px] border px-3 py-2 text-sm" role="status"></div>
+
+    <div class="grid gap-4 md:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        JSON input (array of objects)
+        <textarea
+          id="j2c-input"
+          class="field min-h-72 resize-y font-mono text-[13px]"
+          placeholder={'[\n  {"name":"Ada","role":{"team":"eng"}},\n  {"name":"Grace","role":{"team":"ops"}}\n]'}
+          spellcheck="false"
+          aria-label="JSON input"
+        ></textarea>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        CSV output
+        <textarea
+          id="j2c-output"
+          class="field min-h-72 resize-y font-mono text-[13px]"
+          placeholder="CSV appears here"
+          spellcheck="false"
+          readonly
+          aria-label="CSV output"
+        ></textarea>
+      </label>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free JSON to CSV converter turns an array of JSON objects into CSV.
+      It builds the header from the union of every object's keys, flattens one
+      level of nested objects into dot-separated columns like
+      <code>role.team</code>, and quotes any field that contains the delimiter,
+      quotes or line breaks. Pick a comma, semicolon or tab delimiter to match
+      your spreadsheet. Everything runs locally in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { jsonToCsv } from '../../lib/dataformats';
+  import type { Json } from '../../lib/dataformats';
+
+  const input = document.getElementById('j2c-input') as HTMLTextAreaElement;
+  const output = document.getElementById('j2c-output') as HTMLTextAreaElement;
+  const status = document.getElementById('j2c-status')!;
+  const delimSel = document.getElementById('j2c-delim') as HTMLSelectElement;
+
+  function showStatus(msg: string, ok: boolean) {
+    status.textContent = msg;
+    status.classList.remove('hidden');
+    status.style.borderColor = ok ? '#27a644' : '#d14d4d';
+    status.style.color = ok ? '#27a644' : '#e08585';
+  }
+
+  function resolveDelimiter(): string {
+    return delimSel.value === 'tab' ? '\t' : delimSel.value;
+  }
+
+  function convert() {
+    if (!input.value.trim()) {
+      output.value = '';
+      status.classList.add('hidden');
+      return;
+    }
+    let parsed: Json;
+    try {
+      parsed = JSON.parse(input.value) as Json;
+    } catch (e) {
+      output.value = '';
+      showStatus(`Invalid JSON: ${(e as Error).message}`, false);
+      return;
+    }
+    try {
+      output.value = jsonToCsv(parsed, resolveDelimiter());
+      showStatus('Converted to CSV ✓', true);
+    } catch (e) {
+      output.value = '';
+      showStatus((e as Error).message, false);
+    }
+  }
+
+  document.getElementById('j2c-convert')!.addEventListener('click', convert);
+  delimSel.addEventListener('change', () => { if (output.value) convert(); });
+  document.getElementById('j2c-clear')!.addEventListener('click', () => {
+    input.value = '';
+    output.value = '';
+    status.classList.add('hidden');
+  });
+  document.getElementById('j2c-copy')!.addEventListener('click', async () => {
+    const btn = document.getElementById('j2c-copy')!;
+    await navigator.clipboard.writeText(output.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+</script>

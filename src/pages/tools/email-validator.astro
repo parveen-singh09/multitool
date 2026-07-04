@@ -1,0 +1,112 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="email-validator">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Email address(es) — one per line
+      <textarea id="ev-in" class="field min-h-32 resize-y font-mono text-[13px]" placeholder="name@example.com&#10;another@domain.org" spellcheck="false">name@example.com</textarea>
+    </label>
+
+    <div class="grid grid-cols-3 gap-3 text-center">
+      <div class="panel panel-lift p-4"><div id="ev-total" class="font-display text-xl font-semibold text-primary-hover">0</div><div class="mt-1 text-[13px] text-ink-subtle">Total</div></div>
+      <div class="panel p-4"><div id="ev-valid" class="font-mono text-lg text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Valid</div></div>
+      <div class="panel p-4"><div id="ev-invalid" class="font-mono text-lg text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Invalid</div></div>
+    </div>
+
+    <div id="ev-results" class="flex flex-col gap-2"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free email validator checks whether one address or a whole list is
+      correctly formatted. It uses a robust regular expression to verify the
+      local part and domain syntax, flags common typos such as gmial.com or
+      gmal.com, and counts how many addresses are valid. Paste one address per
+      line to check them in bulk. All validation runs entirely in your browser,
+      so nothing is uploaded or stored.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('ev-in') as HTMLTextAreaElement;
+  const results = document.getElementById('ev-results')!;
+  const totalEl = document.getElementById('ev-total')!;
+  const validEl = document.getElementById('ev-valid')!;
+  const invalidEl = document.getElementById('ev-invalid')!;
+
+  // Robust, practical email syntax check.
+  const EMAIL_RE =
+    /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+
+  const TYPO_MAP: Record<string, string> = {
+    'gmial.com': 'gmail.com',
+    'gmal.com': 'gmail.com',
+    'gmai.com': 'gmail.com',
+    'gmaill.com': 'gmail.com',
+    'gnail.com': 'gmail.com',
+    'gmail.co': 'gmail.com',
+    'gmail.cm': 'gmail.com',
+    'hotmial.com': 'hotmail.com',
+    'hotmai.com': 'hotmail.com',
+    'hotmal.com': 'hotmail.com',
+    'yaho.com': 'yahoo.com',
+    'yahooo.com': 'yahoo.com',
+    'yahoo.co': 'yahoo.com',
+    'outlok.com': 'outlook.com',
+    'outllok.com': 'outlook.com',
+    'iclod.com': 'icloud.com',
+    'iclould.com': 'icloud.com',
+  };
+
+  function suggest(email: string): string | null {
+    const at = email.lastIndexOf('@');
+    if (at < 0) return null;
+    const domain = email.slice(at + 1).toLowerCase();
+    const fix = TYPO_MAP[domain];
+    if (fix) return email.slice(0, at + 1) + fix;
+    return null;
+  }
+
+  function row(text: string, ok: boolean, hint: string | null): HTMLDivElement {
+    const el = document.createElement('div');
+    el.className = 'panel p-4 flex flex-wrap items-center gap-2';
+    const badge = document.createElement('span');
+    badge.className = 'font-mono text-[13px] font-semibold';
+    badge.textContent = ok ? '✓ valid' : '✕ invalid';
+    badge.style.color = ok ? '#27a644' : '#e5484d';
+    const addr = document.createElement('span');
+    addr.className = 'font-mono text-[13px] text-ink break-all';
+    addr.textContent = text;
+    el.appendChild(badge);
+    el.appendChild(addr);
+    if (hint) {
+      const s = document.createElement('span');
+      s.className = 'ml-auto text-[13px] text-ink-muted';
+      s.textContent = `Did you mean ${hint}?`;
+      el.appendChild(s);
+    }
+    return el;
+  }
+
+  function validate() {
+    const lines = input.value.split('\n').map((l) => l.trim()).filter((l) => l !== '');
+    results.replaceChildren();
+    let valid = 0;
+    for (const line of lines) {
+      const ok = EMAIL_RE.test(line) && line.length <= 254;
+      const hint = suggest(line);
+      if (ok && !hint) valid++;
+      else if (ok && hint) valid++; // valid syntax, but note the possible typo
+      results.appendChild(row(line, ok, hint));
+    }
+    totalEl.textContent = String(lines.length);
+    validEl.textContent = String(valid);
+    invalidEl.textContent = String(lines.length - valid);
+  }
+
+  input.addEventListener('input', validate);
+  validate();
+</script>

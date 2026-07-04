@@ -1,0 +1,192 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="csv-analyzer">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Paste CSV data
+      <textarea id="csva-in" class="field min-h-32 resize-y font-mono text-[13px]" placeholder="name,age,active&#10;Ada,36,true&#10;Grace,42,false" spellcheck="false"></textarea>
+    </label>
+
+    <div class="flex flex-wrap items-center gap-4">
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        Delimiter
+        <select id="csva-delim" class="field w-auto py-1">
+          <option value="auto" selected>Auto-detect</option>
+          <option value=",">Comma</option>
+          <option value=";">Semicolon</option>
+          <option value="\t">Tab</option>
+          <option value="|">Pipe</option>
+        </select>
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="csva-header" type="checkbox" checked /> First row is header
+      </label>
+      <span id="csva-detected" class="text-[13px] text-ink-muted"></span>
+    </div>
+
+    <p id="csva-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-3">
+      <div class="panel panel-lift p-4"><div id="csva-rows" class="font-display text-xl font-semibold text-primary-hover">0</div><div class="mt-1 text-[13px] text-ink-subtle">Data rows</div></div>
+      <div class="panel p-4"><div id="csva-cols" class="font-mono text-lg text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Columns</div></div>
+      <div class="panel p-4"><div id="csva-cells" class="font-mono text-lg text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Total cells</div></div>
+    </div>
+
+    <div id="csva-out" class="text-[13px] text-ink-subtle">Paste CSV above to profile its columns.</div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free CSV analyzer profiles pasted CSV data column by column. For each
+      column it infers the data type (number, date, boolean or string), counts
+      non-empty and unique values, and reports the minimum and maximum for numeric
+      columns, plus overall row and column totals. It handles quoted fields with
+      embedded commas and can auto-detect commas, semicolons, tabs or pipes as the
+      delimiter. All parsing runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('csva-in') as HTMLTextAreaElement;
+  const delimSel = document.getElementById('csva-delim') as HTMLSelectElement;
+  const headerChk = document.getElementById('csva-header') as HTMLInputElement;
+  const detected = document.getElementById('csva-detected')!;
+  const err = document.getElementById('csva-error')!;
+  const out = document.getElementById('csva-out')!;
+  const set = (id: string, val: string) => { document.getElementById(id)!.textContent = val; };
+
+  function detectDelimiter(text: string): string {
+    const line = text.split(/\r?\n/).find((l) => l.trim() !== '') || '';
+    const candidates = [',', ';', '\t', '|'];
+    let best = ',', bestCount = -1;
+    for (const d of candidates) {
+      const count = line.split(d).length - 1;
+      if (count > bestCount) { bestCount = count; best = d; }
+    }
+    return best;
+  }
+
+  function parseCsv(text: string, delim: string): string[][] {
+    const rows: string[][] = [];
+    let row: string[] = [];
+    let field = '';
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; }
+          else inQuotes = false;
+        } else field += ch;
+      } else if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === delim) {
+        row.push(field); field = '';
+      } else if (ch === '\n') {
+        row.push(field); field = '';
+        rows.push(row); row = [];
+      } else if (ch === '\r') {
+        // skip; handled by \n
+      } else {
+        field += ch;
+      }
+    }
+    if (field !== '' || row.length) { row.push(field); rows.push(row); }
+    return rows.filter((r) => !(r.length === 1 && r[0] === ''));
+  }
+
+  const NUM_RE = /^-?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/;
+  const BOOL_RE = /^(true|false|yes|no|y|n)$/i;
+
+  function inferType(values: string[]): string {
+    const nonEmpty = values.filter((v) => v.trim() !== '');
+    if (!nonEmpty.length) return 'empty';
+    let num = 0, bool = 0, date = 0;
+    for (const v of nonEmpty) {
+      const t = v.trim();
+      if (NUM_RE.test(t)) num++;
+      if (BOOL_RE.test(t)) bool++;
+      if (!NUM_RE.test(t) && !isNaN(Date.parse(t)) && /[-/:]/.test(t)) date++;
+    }
+    const n = nonEmpty.length;
+    if (bool === n) return 'boolean';
+    if (num === n) return 'number';
+    if (date === n) return 'date';
+    return 'string';
+  }
+
+  function analyze() {
+    err.classList.add('hidden');
+    const text = input.value;
+    if (!text.trim()) {
+      out.textContent = 'Paste CSV above to profile its columns.';
+      set('csva-rows', '0'); set('csva-cols', '0'); set('csva-cells', '0');
+      detected.textContent = '';
+      return;
+    }
+
+    let delim = delimSel.value;
+    if (delim === '\\t') delim = '\t';
+    if (delim === 'auto') {
+      delim = detectDelimiter(text);
+      const label = delim === '\t' ? 'tab' : delim === ',' ? 'comma' : delim === ';' ? 'semicolon' : delim === '|' ? 'pipe' : delim;
+      detected.textContent = `Detected: ${label}`;
+    } else {
+      detected.textContent = '';
+    }
+
+    const grid = parseCsv(text, delim);
+    if (!grid.length) {
+      err.textContent = 'No rows found.';
+      err.classList.remove('hidden');
+      return;
+    }
+
+    const hasHeader = headerChk.checked;
+    const colCount = Math.max(...grid.map((r) => r.length));
+    const headers = hasHeader
+      ? Array.from({ length: colCount }, (_, i) => grid[0][i] || `Column ${i + 1}`)
+      : Array.from({ length: colCount }, (_, i) => `Column ${i + 1}`);
+    const dataRows = hasHeader ? grid.slice(1) : grid;
+
+    set('csva-rows', String(dataRows.length));
+    set('csva-cols', String(colCount));
+    set('csva-cells', String(dataRows.length * colCount));
+
+    if (!dataRows.length) {
+      out.textContent = 'No data rows to profile (only a header was found).';
+      return;
+    }
+
+    let html = '<div class="panel overflow-x-auto"><table class="w-full text-left text-[13px]">';
+    html += '<thead><tr class="border-b border-hairline text-ink-subtle">';
+    html += '<th class="px-3 py-2 font-medium">Column</th><th class="px-3 py-2 font-medium">Type</th><th class="px-3 py-2 font-medium">Non-empty</th><th class="px-3 py-2 font-medium">Unique</th><th class="px-3 py-2 font-medium">Min</th><th class="px-3 py-2 font-medium">Max</th></tr></thead><tbody>';
+
+    for (let c = 0; c < colCount; c++) {
+      const col = dataRows.map((r) => r[c] ?? '');
+      const nonEmpty = col.filter((v) => v.trim() !== '');
+      const type = inferType(col);
+      const unique = new Set(nonEmpty.map((v) => v.trim())).size;
+      let min = '—', max = '—';
+      if (type === 'number') {
+        const nums = nonEmpty.map((v) => Number(v.trim())).filter((n) => !isNaN(n));
+        if (nums.length) {
+          min = String(Math.min(...nums));
+          max = String(Math.max(...nums));
+        }
+      }
+      const safe = headers[c].replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      html += `<tr class="border-b border-hairline/50"><td class="px-3 py-1.5 font-mono text-ink">${safe}</td><td class="px-3 py-1.5 text-ink-subtle">${type}</td><td class="px-3 py-1.5 font-mono text-ink">${nonEmpty.length}</td><td class="px-3 py-1.5 font-mono text-ink">${unique}</td><td class="px-3 py-1.5 font-mono text-ink-subtle">${min}</td><td class="px-3 py-1.5 font-mono text-ink-subtle">${max}</td></tr>`;
+    }
+    html += '</tbody></table></div>';
+    out.innerHTML = html;
+  }
+
+  input.addEventListener('input', analyze);
+  delimSel.addEventListener('change', analyze);
+  headerChk.addEventListener('change', analyze);
+  analyze();
+</script>

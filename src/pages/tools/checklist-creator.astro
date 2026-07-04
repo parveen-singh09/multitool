@@ -1,0 +1,112 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="checklist-creator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Checklist title
+        <input id="clc-title" class="field" type="text" value="Packing List" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Tasks (one per line)
+        <textarea id="clc-input" class="field min-h-72 resize-y font-mono text-[13px]" spellcheck="false">Passport and tickets
+Phone charger
+Toiletries
+Chargers and adapters
+Reusable water bottle</textarea>
+      </label>
+
+      <div class="flex gap-2">
+        <button id="clc-print" class="btn btn-primary">Print</button>
+        <button id="clc-copy" class="btn btn-secondary">Copy as text</button>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <span class="text-sm text-ink-subtle">Checklist</span>
+      <div class="panel p-4">
+        <h2 id="clc-heading" class="font-display text-lg font-semibold text-ink"></h2>
+        <ul id="clc-list" class="mt-3 flex flex-col gap-2"></ul>
+        <p id="clc-empty" class="text-sm text-ink-subtle">Type some tasks to build your checklist.</p>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free checklist creator turns a plain list of tasks into an
+      interactive, tickable checklist. Type one task per line and tick items off
+      as you go — your checked state stays put while you work. Print a clean copy
+      or copy the whole list as text to paste elsewhere. Everything is saved
+      locally in your browser, so nothing is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const titleEl = document.getElementById('clc-title') as HTMLInputElement;
+  const input = document.getElementById('clc-input') as HTMLTextAreaElement;
+  const list = document.getElementById('clc-list') as HTMLUListElement;
+  const heading = document.getElementById('clc-heading') as HTMLHeadingElement;
+  const empty = document.getElementById('clc-empty') as HTMLParagraphElement;
+
+  const checked = new Map<string, boolean>();
+
+  function tasks(): string[] {
+    return input.value.split('\n').map((s) => s.trim()).filter((s) => s !== '');
+  }
+
+  function render(): void {
+    heading.textContent = titleEl.value || 'Checklist';
+    const items = tasks();
+    list.innerHTML = '';
+    empty.classList.toggle('hidden', items.length > 0);
+
+    items.forEach((text, i) => {
+      const key = `${i}:${text}`;
+      const li = document.createElement('li');
+      li.className = 'flex items-start gap-2';
+
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      box.className = 'text-ink mt-1 h-4 w-4 cursor-pointer accent-[#5e6ad2]';
+      box.checked = checked.get(key) ?? false;
+      box.addEventListener('change', () => {
+        checked.set(key, box.checked);
+        label.classList.toggle('line-through', box.checked);
+        label.classList.toggle('text-ink-subtle', box.checked);
+      });
+
+      const label = document.createElement('span');
+      label.className = 'text-[15px] leading-relaxed text-ink';
+      label.textContent = text;
+      if (box.checked) {
+        label.classList.add('line-through', 'text-ink-subtle');
+        label.classList.remove('text-ink');
+      }
+
+      li.append(box, label);
+      list.appendChild(li);
+    });
+  }
+
+  document.getElementById('clc-print')!.addEventListener('click', () => window.print());
+
+  document.getElementById('clc-copy')!.addEventListener('click', async () => {
+    const btn = document.getElementById('clc-copy')!;
+    const lines = [titleEl.value || 'Checklist', ''];
+    tasks().forEach((t, i) => {
+      const done = checked.get(`${i}:${t}`) ?? false;
+      lines.push(`${done ? '[x]' : '[ ]'} ${t}`);
+    });
+    await navigator.clipboard.writeText(lines.join('\n'));
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy as text'), 1500);
+  });
+
+  titleEl.addEventListener('input', render);
+  input.addEventListener('input', render);
+  render();
+</script>

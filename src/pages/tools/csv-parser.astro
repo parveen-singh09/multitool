@@ -1,0 +1,216 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="csv-parser">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        Delimiter
+        <select id="csvp-delim" class="field w-auto py-1">
+          <option value="auto">Auto-detect</option>
+          <option value=",">Comma (,)</option>
+          <option value=";">Semicolon (;)</option>
+          <option value="\t">Tab</option>
+          <option value="|">Pipe (|)</option>
+        </select>
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="csvp-header" type="checkbox" class="h-4 w-4" checked />
+        First row is header
+      </label>
+      <span id="csvp-detected" class="ml-auto text-[13px] text-ink-muted"></span>
+    </div>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      CSV
+      <textarea
+        id="csvp-in"
+        class="field min-h-32 resize-y font-mono text-[13px]"
+        placeholder="name,age,city&#10;Ada,36,&quot;London, UK&quot;&#10;Alan,41,Manchester"
+        spellcheck="false"
+      >name,age,city
+Ada,36,"London, UK"
+Alan,41,Manchester</textarea>
+    </label>
+
+    <p id="csvp-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div id="csvp-table-wrap" class="panel p-4 overflow-x-auto">
+      <div class="mb-2 text-sm text-ink-subtle">Table</div>
+      <table id="csvp-table" class="w-full text-sm"></table>
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <div class="flex items-center gap-2 text-sm text-ink-subtle">
+        JSON
+        <button id="csvp-copy" class="btn btn-tertiary ml-auto">Copy JSON</button>
+      </div>
+      <textarea id="csvp-json" class="field min-h-32 resize-y font-mono text-[13px]" readonly spellcheck="false"></textarea>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free CSV parser turns pasted CSV into a readable HTML table and into
+      JSON at the same time. It auto-detects the delimiter — comma, semicolon, tab
+      or pipe — or you can pick one, and it correctly handles quoted fields that
+      contain the delimiter, quotes or line breaks. Toggle whether the first row is
+      a header to switch between arrays of objects and arrays of rows. Everything
+      runs locally in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('csvp-in') as HTMLTextAreaElement;
+  const delimSel = document.getElementById('csvp-delim') as HTMLSelectElement;
+  const headerChk = document.getElementById('csvp-header') as HTMLInputElement;
+  const detected = document.getElementById('csvp-detected')!;
+  const err = document.getElementById('csvp-error')!;
+  const tableWrap = document.getElementById('csvp-table-wrap')!;
+  const table = document.getElementById('csvp-table') as HTMLTableElement;
+  const jsonOut = document.getElementById('csvp-json') as HTMLTextAreaElement;
+
+  function detectDelimiter(text: string): string {
+    const firstLine = text.split(/\r?\n/)[0] || '';
+    const candidates = [',', ';', '\t', '|'];
+    let best = ',';
+    let bestCount = -1;
+    for (const c of candidates) {
+      // Count occurrences outside of quotes.
+      let count = 0;
+      let inQuotes = false;
+      for (let i = 0; i < firstLine.length; i++) {
+        const ch = firstLine[i];
+        if (ch === '"') inQuotes = !inQuotes;
+        else if (ch === c && !inQuotes) count++;
+      }
+      if (count > bestCount) { bestCount = count; best = c; }
+    }
+    return best;
+  }
+
+  function parseCSV(text: string, delim: string): string[][] {
+    const rows: string[][] = [];
+    let field = '';
+    let row: string[] = [];
+    let inQuotes = false;
+    let i = 0;
+
+    while (i < text.length) {
+      const ch = text[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (text[i + 1] === '"') { field += '"'; i += 2; continue; }
+          inQuotes = false; i++; continue;
+        }
+        field += ch; i++; continue;
+      }
+      if (ch === '"') { inQuotes = true; i++; continue; }
+      if (ch === delim) { row.push(field); field = ''; i++; continue; }
+      if (ch === '\n' || ch === '\r') {
+        if (ch === '\r' && text[i + 1] === '\n') i++;
+        row.push(field); field = '';
+        rows.push(row); row = [];
+        i++; continue;
+      }
+      field += ch; i++;
+    }
+    // Flush trailing field/row (skip a stray empty final line).
+    if (field !== '' || row.length) { row.push(field); rows.push(row); }
+    return rows;
+  }
+
+  function delimLabel(d: string): string {
+    return d === '\t' ? 'Tab' : d === ',' ? 'Comma' : d === ';' ? 'Semicolon' : d === '|' ? 'Pipe' : d;
+  }
+
+  function render() {
+    err.classList.add('hidden');
+    const text = input.value.replace(/\n+$/, '');
+    if (!text.trim()) {
+      table.textContent = '';
+      jsonOut.value = '';
+      detected.textContent = '';
+      tableWrap.classList.add('hidden');
+      return;
+    }
+
+    let delim = delimSel.value;
+    if (delim === '\\t') delim = '\t';
+    if (delim === 'auto') {
+      delim = detectDelimiter(text);
+      detected.textContent = 'Detected: ' + delimLabel(delim);
+    } else {
+      detected.textContent = '';
+    }
+
+    let rows: string[][];
+    try {
+      rows = parseCSV(text, delim);
+    } catch (e) {
+      err.textContent = 'Could not parse CSV: ' + (e as Error).message;
+      err.classList.remove('hidden');
+      return;
+    }
+
+    if (!rows.length) { tableWrap.classList.add('hidden'); jsonOut.value = ''; return; }
+    tableWrap.classList.remove('hidden');
+
+    const hasHeader = headerChk.checked;
+    const headerRow = hasHeader ? rows[0] : rows[0].map((_, i) => 'col' + (i + 1));
+    const bodyRows = hasHeader ? rows.slice(1) : rows;
+
+    // Build table.
+    table.textContent = '';
+    const thead = document.createElement('thead');
+    const htr = document.createElement('tr');
+    headerRow.forEach((h) => {
+      const th = document.createElement('th');
+      th.className = 'border-b border-white/10 px-2 py-1 text-left font-display text-primary-hover';
+      th.textContent = h;
+      htr.append(th);
+    });
+    thead.append(htr);
+    table.append(thead);
+
+    const tbody = document.createElement('tbody');
+    bodyRows.forEach((r) => {
+      const tr = document.createElement('tr');
+      for (let c = 0; c < headerRow.length; c++) {
+        const td = document.createElement('td');
+        td.className = 'border-b border-white/5 px-2 py-1 font-mono text-[13px] text-ink align-top';
+        td.textContent = r[c] ?? '';
+        tr.append(td);
+      }
+      tbody.append(tr);
+    });
+    table.append(tbody);
+
+    // Build JSON.
+    let json: unknown;
+    if (hasHeader) {
+      json = bodyRows.map((r) => {
+        const obj: Record<string, string> = {};
+        headerRow.forEach((h, idx) => (obj[h] = r[idx] ?? ''));
+        return obj;
+      });
+    } else {
+      json = bodyRows;
+    }
+    jsonOut.value = JSON.stringify(json, null, 2);
+  }
+
+  document.getElementById('csvp-copy')!.addEventListener('click', async () => {
+    const btn = document.getElementById('csvp-copy')!;
+    await navigator.clipboard.writeText(jsonOut.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy JSON'), 1500);
+  });
+
+  input.addEventListener('input', render);
+  delimSel.addEventListener('change', render);
+  headerChk.addEventListener('change', render);
+  render();
+</script>

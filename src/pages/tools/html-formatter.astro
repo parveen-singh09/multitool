@@ -1,0 +1,140 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="html-formatter">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="hf-beautify" class="btn btn-primary">Beautify</button>
+      <button id="hf-minify" class="btn btn-secondary">Minify</button>
+      <button id="hf-copy" class="btn btn-secondary">Copy</button>
+      <button id="hf-clear" class="btn btn-tertiary">Clear</button>
+      <label class="ml-auto flex items-center gap-2 text-sm text-ink-subtle">
+        Indent
+        <select id="hf-indent" class="field w-auto py-1">
+          <option value="2">2 spaces</option>
+          <option value="4">4 spaces</option>
+          <option value="tab">Tab</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="hf-status" class="hidden rounded-[8px] border px-3 py-2 text-sm" role="status"></div>
+
+    <textarea
+      id="hf-input"
+      class="field min-h-72 resize-y font-mono text-[13px]"
+      placeholder="Paste HTML here, e.g. <ul><li>one</li><li>two</li></ul>"
+      spellcheck="false"
+      aria-label="HTML input"
+    ></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free HTML formatter cleans up messy markup with consistent, tag-aware
+      indentation, or minifies it for production with a configurable indent size.
+      Void elements such as <code>br</code>, <code>img</code> and
+      <code>input</code> are handled correctly, and the contents of
+      <code>pre</code> blocks are preserved as-is. Formatting runs entirely in
+      your browser, so nothing is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('hf-input') as HTMLTextAreaElement;
+  const status = document.getElementById('hf-status')!;
+  const indentSel = document.getElementById('hf-indent') as HTMLSelectElement;
+
+  const VOID = new Set([
+    'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+    'link', 'meta', 'param', 'source', 'track', 'wbr',
+  ]);
+
+  function getIndent(): string {
+    const v = indentSel.value;
+    return v === 'tab' ? '\t' : ' '.repeat(Number(v));
+  }
+
+  function showStatus(msg: string, ok: boolean) {
+    status.textContent = msg;
+    status.classList.remove('hidden');
+    status.style.borderColor = ok ? '#27a644' : '#d14d4d';
+    status.style.color = ok ? '#27a644' : '#e08585';
+  }
+
+  function beautify(html: string, unit: string): string {
+    const tokens = html.replace(/\r\n/g, '\n').match(/<[^>]+>|[^<]+/g) || [];
+    let pad = 0;
+    const out: string[] = [];
+    let i = 0;
+    while (i < tokens.length) {
+      const raw = tokens[i];
+      if (raw.startsWith('<')) {
+        const isClosing = /^<\//.test(raw);
+        const isComment = raw.startsWith('<!--');
+        const isDecl = /^<[!?]/.test(raw);
+        const nameMatch = raw.match(/^<\/?\s*([a-zA-Z0-9-]+)/);
+        const name = nameMatch ? nameMatch[1].toLowerCase() : '';
+        const selfClose = /\/>\s*$/.test(raw) || VOID.has(name);
+
+        if (!isClosing && name === 'pre' && !selfClose) {
+          let buf = raw;
+          i++;
+          while (i < tokens.length) {
+            buf += tokens[i];
+            const done = /^<\/\s*pre/i.test(tokens[i]);
+            i++;
+            if (done) break;
+          }
+          out.push(unit.repeat(pad) + buf);
+          continue;
+        }
+
+        if (isClosing) {
+          pad = Math.max(pad - 1, 0);
+          out.push(unit.repeat(pad) + raw.trim());
+        } else {
+          out.push(unit.repeat(pad) + raw.trim());
+          if (!selfClose && !isComment && !isDecl) pad += 1;
+        }
+        i++;
+      } else {
+        const text = raw.trim();
+        if (text) out.push(unit.repeat(pad) + text);
+        i++;
+      }
+    }
+    return out.join('\n');
+  }
+
+  function minify(html: string): string {
+    return html
+      .replace(/\r\n/g, '\n')
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/>\s+</g, '><')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+
+  function process(doMinify: boolean) {
+    const src = input.value.trim();
+    if (!src) return;
+    input.value = doMinify ? minify(src) : beautify(src, getIndent());
+    showStatus(doMinify ? 'Minified ✓' : 'Formatted ✓', true);
+  }
+
+  document.getElementById('hf-beautify')!.addEventListener('click', () => process(false));
+  document.getElementById('hf-minify')!.addEventListener('click', () => process(true));
+  document.getElementById('hf-clear')!.addEventListener('click', () => {
+    input.value = '';
+    status.classList.add('hidden');
+  });
+  document.getElementById('hf-copy')!.addEventListener('click', async () => {
+    const btn = document.getElementById('hf-copy')!;
+    await navigator.clipboard.writeText(input.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+</script>

@@ -1,0 +1,257 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="ics-calendar-downloader">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Event title
+        <input id="icsd-title" type="text" class="field" placeholder="Team sync" value="Team sync" />
+      </label>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Location
+        <input id="icsd-location" type="text" class="field" placeholder="Meeting room A" />
+      </label>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Description
+        <textarea id="icsd-desc" class="field min-h-32 resize-y" placeholder="Optional notes"></textarea>
+      </label>
+
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="icsd-allday" type="checkbox" class="h-4 w-4" />
+        All-day event
+      </label>
+
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Start
+          <input id="icsd-start" type="datetime-local" class="field" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          End
+          <input id="icsd-end" type="datetime-local" class="field" />
+        </label>
+      </div>
+
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label id="icsd-start-day-wrap" class="hidden flex-col gap-1 text-sm text-ink-subtle">
+          Start date
+          <input id="icsd-start-day" type="date" class="field" />
+        </label>
+        <label id="icsd-end-day-wrap" class="hidden flex-col gap-1 text-sm text-ink-subtle">
+          End date
+          <input id="icsd-end-day" type="date" class="field" />
+        </label>
+      </div>
+
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="icsd-utc" type="checkbox" class="h-4 w-4" checked />
+        Store times in UTC
+      </label>
+
+      <p id="icsd-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+      <div class="flex flex-wrap gap-2">
+        <button id="icsd-dl" class="btn btn-primary">Download .ics</button>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <span class="text-sm text-ink-subtle">Preview</span>
+      <div class="panel p-4">
+        <pre id="icsd-preview" class="font-mono text-[13px] whitespace-pre-wrap text-ink-subtle"></pre>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free ICS calendar downloader builds a valid <code>.ics</code> file from an
+      event’s title, description, location and start and end times. Toggle all-day
+      events, choose UTC or floating times, preview the generated VEVENT, then
+      download a file you can import into Google Calendar, Apple Calendar, Outlook or
+      any other calendar app. Text is escaped per RFC 5455 and the whole file is
+      generated in your browser, so your event details never leave your device.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const titleEl = document.getElementById('icsd-title') as HTMLInputElement;
+  const locEl = document.getElementById('icsd-location') as HTMLInputElement;
+  const descEl = document.getElementById('icsd-desc') as HTMLTextAreaElement;
+  const allDayEl = document.getElementById('icsd-allday') as HTMLInputElement;
+  const startEl = document.getElementById('icsd-start') as HTMLInputElement;
+  const endEl = document.getElementById('icsd-end') as HTMLInputElement;
+  const startDayEl = document.getElementById('icsd-start-day') as HTMLInputElement;
+  const endDayEl = document.getElementById('icsd-end-day') as HTMLInputElement;
+  const utcEl = document.getElementById('icsd-utc') as HTMLInputElement;
+  const preview = document.getElementById('icsd-preview') as HTMLPreElement;
+  const err = document.getElementById('icsd-error') as HTMLParagraphElement;
+
+  const timedWrap = [startEl.parentElement!, endEl.parentElement!];
+  const startDayWrap = document.getElementById('icsd-start-day-wrap') as HTMLLabelElement;
+  const endDayWrap = document.getElementById('icsd-end-day-wrap') as HTMLLabelElement;
+  const utcWrap = utcEl.parentElement!;
+
+  function pad(n: number): string {
+    return String(n).padStart(2, '0');
+  }
+
+  function escapeText(value: string): string {
+    return value
+      .replace(/\\/g, '\\\\')
+      .replace(/;/g, '\\;')
+      .replace(/,/g, '\\,')
+      .replace(/\r\n|\n|\r/g, '\\n');
+  }
+
+  function utcStamp(d: Date): string {
+    return (
+      `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}` +
+      `T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`
+    );
+  }
+
+  function floatingStamp(d: Date): string {
+    return (
+      `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}` +
+      `T${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`
+    );
+  }
+
+  function dayStamp(value: string): string {
+    return value.replace(/-/g, '');
+  }
+
+  function addDay(value: string): string {
+    const d = new Date(`${value}T00:00:00`);
+    d.setDate(d.getDate() + 1);
+    return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+  }
+
+  function fold(line: string): string {
+    if (line.length <= 75) return line;
+    const parts: string[] = [];
+    let rest = line;
+    parts.push(rest.slice(0, 75));
+    rest = rest.slice(75);
+    while (rest.length > 74) {
+      parts.push(` ${rest.slice(0, 74)}`);
+      rest = rest.slice(74);
+    }
+    if (rest.length) parts.push(` ${rest}`);
+    return parts.join('\r\n');
+  }
+
+  function showError(msg: string): void {
+    err.textContent = msg;
+    err.classList.remove('hidden');
+  }
+
+  function clearError(): void {
+    err.classList.add('hidden');
+  }
+
+  function build(): string | null {
+    const title = titleEl.value.trim();
+    if (!title) {
+      showError('Please enter an event title.');
+      return null;
+    }
+
+    const allDay = allDayEl.checked;
+    const lines: string[] = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//ToolCities//ICS Calendar Downloader//EN',
+      'CALSCALE:GREGORIAN',
+      'BEGIN:VEVENT',
+      `UID:${Date.now()}-${Math.random().toString(36).slice(2)}@toolcities`,
+      `DTSTAMP:${utcStamp(new Date())}`,
+      `SUMMARY:${escapeText(title)}`,
+    ];
+
+    if (allDay) {
+      const s = startDayEl.value;
+      const e = endDayEl.value;
+      if (!s) {
+        showError('Please choose a start date.');
+        return null;
+      }
+      lines.push(`DTSTART;VALUE=DATE:${dayStamp(s)}`);
+      // DTEND for all-day events is exclusive: default to the day after start.
+      lines.push(`DTEND;VALUE=DATE:${e ? addDay(e) : addDay(s)}`);
+    } else {
+      if (!startEl.value || !endEl.value) {
+        showError('Please choose a start and end time.');
+        return null;
+      }
+      const start = new Date(startEl.value);
+      const end = new Date(endEl.value);
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        showError('The start or end time is invalid.');
+        return null;
+      }
+      if (end < start) {
+        showError('The end time is before the start time.');
+        return null;
+      }
+      if (utcEl.checked) {
+        lines.push(`DTSTART:${utcStamp(start)}`);
+        lines.push(`DTEND:${utcStamp(end)}`);
+      } else {
+        lines.push(`DTSTART:${floatingStamp(start)}`);
+        lines.push(`DTEND:${floatingStamp(end)}`);
+      }
+    }
+
+    if (locEl.value.trim()) lines.push(`LOCATION:${escapeText(locEl.value.trim())}`);
+    if (descEl.value.trim()) lines.push(`DESCRIPTION:${escapeText(descEl.value.trim())}`);
+
+    lines.push('END:VEVENT', 'END:VCALENDAR');
+    clearError();
+    return lines.map(fold).join('\r\n');
+  }
+
+  function syncMode(): void {
+    const allDay = allDayEl.checked;
+    timedWrap.forEach((w) => w.classList.toggle('hidden', allDay));
+    startDayWrap.classList.toggle('hidden', !allDay);
+    endDayWrap.classList.toggle('hidden', !allDay);
+    utcWrap.classList.toggle('hidden', allDay);
+  }
+
+  function render(): void {
+    const ics = build();
+    preview.textContent = ics ?? '';
+  }
+
+  function download(): void {
+    const ics = build();
+    if (!ics) return;
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.download = 'event.ics';
+    a.href = url;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  [titleEl, locEl, descEl, startEl, endEl, startDayEl, endDayEl].forEach((el) =>
+    el.addEventListener('input', render)
+  );
+  utcEl.addEventListener('change', render);
+  allDayEl.addEventListener('change', () => {
+    syncMode();
+    render();
+  });
+  document.getElementById('icsd-dl')!.addEventListener('click', download);
+
+  syncMode();
+  render();
+</script>

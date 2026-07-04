@@ -1,0 +1,150 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="roulette-simulator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-3">
+      <div class="panel panel-lift p-4"><div id="rs-balance" class="font-display text-xl font-semibold text-primary-hover">1,000</div><div class="mt-1 text-[13px] text-ink-subtle">Chips</div></div>
+      <div class="panel p-4"><div id="rs-result" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Last spin</div></div>
+      <div class="panel p-4"><div id="rs-spins" class="font-mono text-lg text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Spins</div></div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Bet type
+        <select id="rs-bettype" class="field">
+          <option value="red">Red (pays 1:1)</option>
+          <option value="black">Black (pays 1:1)</option>
+          <option value="even">Even (pays 1:1)</option>
+          <option value="odd">Odd (pays 1:1)</option>
+          <option value="low">Low 1–18 (pays 1:1)</option>
+          <option value="high">High 19–36 (pays 1:1)</option>
+          <option value="number">Single number (pays 35:1)</option>
+        </select>
+      </label>
+      <label id="rs-numwrap" class="hidden flex-col gap-1 text-sm text-ink-subtle">Number (0–36)
+        <input id="rs-number" type="number" min="0" max="36" value="17" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Bet amount (chips)
+        <input id="rs-amount" type="number" min="1" value="10" class="field" />
+      </label>
+    </div>
+
+    <p id="rs-msg" class="min-h-5 text-[13px] text-ink-subtle" role="status"></p>
+
+    <div class="flex flex-wrap gap-3">
+      <button id="rs-spin" class="btn btn-primary">Spin</button>
+      <button id="rs-reset" class="btn btn-secondary">Reset chips</button>
+    </div>
+
+    <div class="panel panel-lift p-4">
+      <div class="mb-2 text-[13px] text-ink-subtle">History</div>
+      <div id="rs-history" class="flex flex-col gap-1 font-mono text-[13px] text-ink-muted"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free roulette simulator spins a European single-zero wheel (numbers 0
+      through 36) so you can practice placing bets and see how the odds play out
+      over many rounds. Bet on red or black, odd or even, high or low, or a single
+      number, stake virtual chips, and watch your balance rise and fall with a full
+      spin history. No real money is involved — this is for fun and practice only.
+      Every spin uses your browser's secure random source and runs entirely in your
+      browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { randInt } from '../../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
+
+  const START = 1000;
+  let balance = START;
+  let spins = 0;
+  const history: string[] = [];
+
+  const betType = $('rs-bettype') as HTMLSelectElement;
+  const numWrap = $('rs-numwrap')!;
+  const numInput = $('rs-number') as HTMLInputElement;
+  const amountInput = $('rs-amount') as HTMLInputElement;
+  const msg = $('rs-msg')!;
+
+  function colorOf(n: number): string {
+    if (n === 0) return 'green';
+    return RED.has(n) ? 'red' : 'black';
+  }
+
+  function toggleNumber() {
+    numWrap.classList.toggle('hidden', betType.value !== 'number');
+    numWrap.classList.toggle('flex', betType.value === 'number');
+  }
+
+  function wins(n: number): { win: boolean; payout: number } {
+    const type = betType.value;
+    const c = colorOf(n);
+    switch (type) {
+      case 'red': return { win: c === 'red', payout: 1 };
+      case 'black': return { win: c === 'black', payout: 1 };
+      case 'even': return { win: n !== 0 && n % 2 === 0, payout: 1 };
+      case 'odd': return { win: n % 2 === 1, payout: 1 };
+      case 'low': return { win: n >= 1 && n <= 18, payout: 1 };
+      case 'high': return { win: n >= 19 && n <= 36, payout: 1 };
+      case 'number': {
+        const pick = Math.max(0, Math.min(36, Number(numInput.value) || 0));
+        return { win: n === pick, payout: 35 };
+      }
+      default: return { win: false, payout: 0 };
+    }
+  }
+
+  function render() {
+    $('rs-balance').textContent = balance.toLocaleString();
+    $('rs-spins').textContent = String(spins);
+    $('rs-history').innerHTML = history.length
+      ? history.map((h) => `<div>${h}</div>`).join('')
+      : '<span class="text-ink-tertiary">No spins yet.</span>';
+  }
+
+  function spin() {
+    const amount = Math.floor(Number(amountInput.value) || 0);
+    if (amount <= 0) { msg.textContent = 'Enter a bet amount of at least 1 chip.'; return; }
+    if (amount > balance) { msg.textContent = 'Not enough chips for that bet.'; return; }
+
+    const n = randInt(0, 36);
+    const c = colorOf(n);
+    const { win, payout } = wins(n);
+
+    balance -= amount;
+    let delta = -amount;
+    if (win) { const gain = amount + amount * payout; balance += gain; delta = amount * payout; }
+
+    spins++;
+    const swatch = c === 'red' ? '🔴' : c === 'black' ? '⚫' : '🟢';
+    $('rs-result').textContent = `${n} ${swatch}`;
+    msg.textContent = win
+      ? `Landed on ${n} (${c}). You won ${(amount * payout).toLocaleString()} chips!`
+      : `Landed on ${n} (${c}). You lost ${amount.toLocaleString()} chips.`;
+
+    const sign = delta >= 0 ? '+' : '−';
+    history.unshift(`#${spins}  ${n} ${swatch} ${c.padEnd(5)}  ${sign}${Math.abs(delta).toLocaleString()}  → ${balance.toLocaleString()}`);
+    history.splice(50);
+    render();
+  }
+
+  function reset() {
+    balance = START; spins = 0; history.length = 0;
+    $('rs-result').textContent = '—';
+    msg.textContent = 'Chips reset to 1,000.';
+    render();
+  }
+
+  betType.addEventListener('change', toggleNumber);
+  $('rs-spin').addEventListener('click', spin);
+  $('rs-reset').addEventListener('click', reset);
+  toggleNumber();
+  render();
+</script>

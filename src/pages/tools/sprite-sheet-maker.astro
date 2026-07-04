@@ -1,0 +1,160 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="sprite-sheet-maker">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Images
+      <input id="ssm-files" type="file" accept="image/*" multiple class="field" />
+    </label>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Columns
+        <input id="ssm-cols" type="number" min="1" max="20" step="1" value="4" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Padding (px)
+        <input id="ssm-pad" type="number" min="0" max="100" step="1" value="4" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Background
+        <input id="ssm-bg" type="color" value="#ffffff" class="field h-10 cursor-pointer p-1" />
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle sm:mt-6">
+        <input id="ssm-transparent" type="checkbox" checked class="h-4 w-4" />
+        Transparent background
+      </label>
+    </div>
+
+    <p id="ssm-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="panel p-4">
+      <canvas id="ssm-canvas" class="max-w-full h-auto rounded-[8px]" aria-label="Sprite sheet preview"></canvas>
+    </div>
+
+    <div class="flex gap-2">
+      <button id="ssm-download" class="btn btn-primary">Download PNG</button>
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <span class="text-sm text-ink-subtle">Pixel coordinates</span>
+      <pre id="ssm-coords" class="field min-h-32 resize-y overflow-auto whitespace-pre-wrap font-mono text-[13px]">Add images to see sprite coordinates.</pre>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free sprite sheet maker packs multiple images onto a single grid so you
+      can use one texture atlas in games and CSS. Set the number of columns, the
+      padding between cells and an optional background, then download the combined
+      PNG. The tool also lists the pixel coordinates of every sprite so you can map
+      them in code. All images are packed locally in your browser and are never
+      uploaded to a server.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const filesEl = document.getElementById('ssm-files') as HTMLInputElement;
+  const colsEl = document.getElementById('ssm-cols') as HTMLInputElement;
+  const padEl = document.getElementById('ssm-pad') as HTMLInputElement;
+  const bgEl = document.getElementById('ssm-bg') as HTMLInputElement;
+  const transparentEl = document.getElementById('ssm-transparent') as HTMLInputElement;
+  const canvas = document.getElementById('ssm-canvas') as HTMLCanvasElement;
+  const coordsEl = document.getElementById('ssm-coords')!;
+  const err = document.getElementById('ssm-error')!;
+  const ctx = canvas.getContext('2d')!;
+
+  interface Named {
+    name: string;
+    img: HTMLImageElement;
+  }
+
+  let images: Named[] = [];
+
+  function loadFile(file: File): Promise<Named> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => resolve({ name: file.name, img });
+        img.onerror = () => reject(new Error('Could not decode ' + file.name));
+        img.src = reader.result as string;
+      };
+      reader.onerror = () => reject(new Error('Could not read ' + file.name));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function render() {
+    err.classList.add('hidden');
+    if (!images.length) {
+      canvas.width = 1;
+      canvas.height = 1;
+      coordsEl.textContent = 'Add images to see sprite coordinates.';
+      return;
+    }
+
+    const cols = Math.max(1, Number(colsEl.value) || 1);
+    const pad = Math.max(0, Number(padEl.value) || 0);
+    const rows = Math.ceil(images.length / cols);
+
+    const cellW = Math.max(...images.map((n) => n.img.width));
+    const cellH = Math.max(...images.map((n) => n.img.height));
+
+    canvas.width = cols * cellW + (cols + 1) * pad;
+    canvas.height = rows * cellH + (rows + 1) * pad;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!transparentEl.checked) {
+      ctx.fillStyle = bgEl.value;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    const coords: string[] = [];
+    images.forEach((n, i) => {
+      const c = i % cols;
+      const r = Math.floor(i / cols);
+      const x = pad + c * (cellW + pad);
+      const y = pad + r * (cellH + pad);
+      ctx.drawImage(n.img, x, y);
+      coords.push(`${n.name}: x=${x}, y=${y}, w=${n.img.width}, h=${n.img.height}`);
+    });
+    coordsEl.textContent = coords.join('\n');
+  }
+
+  filesEl.addEventListener('change', async () => {
+    const list = filesEl.files;
+    if (!list || !list.length) return;
+    try {
+      images = await Promise.all(Array.from(list).map(loadFile));
+      render();
+    } catch (e) {
+      err.textContent = (e as Error).message;
+      err.classList.remove('hidden');
+    }
+  });
+
+  [colsEl, padEl, bgEl, transparentEl].forEach((el) => el.addEventListener('input', render));
+
+  document.getElementById('ssm-download')!.addEventListener('click', () => {
+    if (!images.length) {
+      err.textContent = 'Add at least one image first.';
+      err.classList.remove('hidden');
+      return;
+    }
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = 'toolcities-sprite-sheet.png';
+      link.href = url;
+      link.click();
+      URL.revokeObjectURL(url);
+    }, 'image/png');
+  });
+
+  render();
+</script>

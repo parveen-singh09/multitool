@@ -1,0 +1,99 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="perfect-number-checker">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Whole number
+      <input id="perf-in" class="field font-mono text-[13px]" type="text" inputmode="numeric" placeholder="e.g. 28" spellcheck="false" value="28" />
+    </label>
+
+    <p id="perf-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="grid grid-cols-1 gap-3 text-center sm:grid-cols-2">
+      <div class="panel panel-lift p-4"><div id="perf-verdict" class="font-display text-xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Verdict</div></div>
+      <div class="panel p-4"><div id="perf-sum" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Sum of proper divisors</div></div>
+    </div>
+
+    <div class="panel p-4">
+      <div class="text-[13px] text-ink-subtle">Proper divisors</div>
+      <div id="perf-divisors" class="mt-1 font-mono text-[13px] text-ink break-all">—</div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free perfect number checker tests whether a number equals the sum of
+      its proper divisors — the divisors excluding the number itself. If the sum
+      equals the number it is perfect (like 6 = 1 + 2 + 3, or 28); if the sum is
+      less it is deficient, and if greater it is abundant. The tool lists every
+      proper divisor, their total and the verdict. Everything runs in your
+      browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('perf-in') as HTMLInputElement;
+  const err = document.getElementById('perf-error')!;
+  const verdictEl = document.getElementById('perf-verdict')!;
+  const sumEl = document.getElementById('perf-sum')!;
+  const divisorsEl = document.getElementById('perf-divisors')!;
+
+  function properDivisors(n: number): number[] {
+    const small: number[] = [];
+    const large: number[] = [];
+    const limit = Math.floor(Math.sqrt(n));
+    for (let i = 1; i <= limit; i++) {
+      if (n % i === 0) {
+        small.push(i);
+        const pair = n / i;
+        if (pair !== i && pair !== n) large.push(pair);
+      }
+    }
+    return small.concat(large.reverse());
+  }
+
+  function reset(msg?: string) {
+    verdictEl.textContent = '—';
+    verdictEl.className = 'font-display text-xl font-semibold text-primary-hover';
+    sumEl.textContent = '—';
+    divisorsEl.textContent = '—';
+    if (msg) {
+      err.textContent = msg;
+      err.classList.remove('hidden');
+    } else {
+      err.classList.add('hidden');
+    }
+  }
+
+  function check() {
+    const raw = input.value.trim();
+    if (raw === '') { reset(); return; }
+    if (!/^\d+$/.test(raw)) { reset('Please enter a positive whole number.'); return; }
+    const n = Number(raw);
+    if (!Number.isSafeInteger(n)) { reset('Number is too large to check accurately.'); return; }
+    if (n < 1) { reset('Please enter a number of 1 or more.'); return; }
+    err.classList.add('hidden');
+
+    const divisors = properDivisors(n);
+    const sum = divisors.reduce((a, b) => a + b, 0);
+
+    let verdict: string;
+    let perfect = false;
+    if (sum === n) { verdict = 'Perfect number'; perfect = true; }
+    else if (sum < n) verdict = 'Deficient number';
+    else verdict = 'Abundant number';
+
+    verdictEl.textContent = verdict;
+    verdictEl.className = perfect
+      ? 'font-display text-xl font-semibold text-primary-hover'
+      : 'font-display text-xl font-semibold text-ink';
+    sumEl.textContent = String(sum);
+    divisorsEl.textContent = divisors.length ? divisors.join(', ') : 'none';
+  }
+
+  input.addEventListener('input', check);
+  check();
+</script>

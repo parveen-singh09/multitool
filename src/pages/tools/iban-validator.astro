@@ -1,0 +1,122 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="iban-validator">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      IBAN
+      <input id="ibv-in" class="field font-mono text-[13px]" placeholder="DE89 3704 0044 0532 0130 00" spellcheck="false" autocomplete="off" value="DE89 3704 0044 0532 0130 00" />
+    </label>
+
+    <p id="ibv-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="grid grid-cols-3 gap-3 text-center">
+      <div class="panel panel-lift p-4"><div id="ibv-status" class="font-display text-xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Checksum</div></div>
+      <div class="panel p-4"><div id="ibv-country" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Country</div></div>
+      <div class="panel p-4"><div id="ibv-check" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Check digits</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free IBAN validator verifies an International Bank Account Number
+      using the ISO 7064 mod-97 checksum together with a per-country length
+      table covering around twenty countries. It uppercases the input, strips
+      spaces, and reports whether the IBAN is valid along with its country and
+      the two check digits. Everything runs in your browser, so no account
+      details are ever uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('ibv-in') as HTMLInputElement;
+  const err = document.getElementById('ibv-error')!;
+  const statusEl = document.getElementById('ibv-status')!;
+  const countryEl = document.getElementById('ibv-country')!;
+  const checkEl = document.getElementById('ibv-check')!;
+
+  const LENGTHS: Record<string, string> = {
+    AD: 'Andorra', AT: 'Austria', BE: 'Belgium', CH: 'Switzerland', CZ: 'Czechia',
+    DE: 'Germany', DK: 'Denmark', ES: 'Spain', FI: 'Finland', FR: 'France',
+    GB: 'United Kingdom', IE: 'Ireland', IT: 'Italy', LU: 'Luxembourg', NL: 'Netherlands',
+    NO: 'Norway', PL: 'Poland', PT: 'Portugal', SE: 'Sweden', GR: 'Greece', SK: 'Slovakia',
+  };
+
+  const COUNTRY_LEN: Record<string, number> = {
+    AD: 24, AT: 20, BE: 16, CH: 21, CZ: 24, DE: 22, DK: 18, ES: 24, FI: 18, FR: 27,
+    GB: 22, IE: 22, IT: 27, LU: 20, NL: 18, NO: 15, PL: 28, PT: 25, SE: 24, GR: 27, SK: 24,
+  };
+
+  // ISO 7064 mod-97 on the rearranged, letter-expanded string, computed in chunks.
+  function mod97(str: string): number {
+    let remainder = 0;
+    for (let i = 0; i < str.length; i++) {
+      remainder = (remainder * 10 + (str.charCodeAt(i) - 48)) % 97;
+    }
+    return remainder;
+  }
+
+  function expand(iban: string): string {
+    // Move first 4 chars to the end, then map letters A-Z -> 10-35.
+    const rearranged = iban.slice(4) + iban.slice(0, 4);
+    let out = '';
+    for (const ch of rearranged) {
+      const code = ch.charCodeAt(0);
+      if (code >= 65 && code <= 90) out += String(code - 55);
+      else out += ch;
+    }
+    return out;
+  }
+
+  function setStatus(text: string, ok: boolean) {
+    statusEl.textContent = text;
+    statusEl.style.color = ok ? '#27a644' : '#e5484d';
+  }
+
+  function reset() {
+    setStatus('—', true);
+    statusEl.style.color = '';
+    countryEl.textContent = '—';
+    checkEl.textContent = '—';
+  }
+
+  function validate() {
+    err.classList.add('hidden');
+    const iban = input.value.toUpperCase().replace(/\s/g, '');
+    if (iban === '') { reset(); return; }
+
+    if (!/^[A-Z0-9]+$/.test(iban)) {
+      err.textContent = 'An IBAN contains only letters and digits.';
+      err.classList.remove('hidden');
+      reset();
+      return;
+    }
+
+    const cc = iban.slice(0, 2);
+    countryEl.textContent = LENGTHS[cc] ? `${cc} · ${LENGTHS[cc]}` : (/^[A-Z]{2}$/.test(cc) ? cc : '—');
+    checkEl.textContent = /^\d{2}$/.test(iban.slice(2, 4)) ? iban.slice(2, 4) : '—';
+
+    if (!/^[A-Z]{2}\d{2}[A-Z0-9]+$/.test(iban)) {
+      setStatus('Bad format', false);
+      return;
+    }
+
+    const expectedLen = COUNTRY_LEN[cc];
+    if (expectedLen !== undefined && iban.length !== expectedLen) {
+      setStatus('Bad length', false);
+      return;
+    }
+
+    const ok = mod97(expand(iban)) === 1;
+    if (ok && expectedLen === undefined) {
+      setStatus('Pass (unknown country)', true);
+    } else {
+      setStatus(ok ? 'Valid ✓' : 'Invalid ✕', ok);
+    }
+  }
+
+  input.addEventListener('input', validate);
+  validate();
+</script>

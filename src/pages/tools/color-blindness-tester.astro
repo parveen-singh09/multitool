@@ -1,0 +1,254 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="color-blindness-tester">
+  <div class="flex flex-col gap-8">
+    <!-- Plate test -->
+    <section class="flex flex-col gap-4">
+      <h2 class="font-display text-lg font-semibold text-ink">Ishihara-style plate test</h2>
+      <div class="flex flex-col items-center gap-4">
+        <canvas id="cb-plate" width="280" height="280" class="rounded-full" aria-label="Color vision plate"></canvas>
+        <div class="text-[13px] text-ink-subtle">Plate <span id="cb-num">1</span> of <span id="cb-total">5</span> · What number do you see?</div>
+        <div id="cb-choices" class="flex flex-wrap justify-center gap-2"></div>
+        <div id="cb-feedback" class="hidden text-[14px]" role="status"></div>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <button id="cb-restart" class="btn btn-secondary">Restart test</button>
+        <div class="panel panel-lift ml-auto p-3 text-center"><span id="cb-score" class="font-display text-lg font-semibold text-primary-hover">0</span> <span class="text-[13px] text-ink-subtle">/ 5 correct</span></div>
+      </div>
+    </section>
+
+    <!-- CVD simulation -->
+    <section class="flex flex-col gap-4 border-t border-hairline pt-6">
+      <h2 class="font-display text-lg font-semibold text-ink">Simulate color vision on your image</h2>
+      <div class="flex flex-wrap items-center gap-3">
+        <input id="cb-file" type="file" accept="image/*" class="field w-auto py-1 text-[13px]" aria-label="Upload image" />
+        <label class="flex items-center gap-2 text-sm text-ink-subtle">Type
+          <select id="cb-type" class="field w-auto py-1">
+            <option value="normal">Normal</option>
+            <option value="protanopia">Protanopia (red-blind)</option>
+            <option value="deuteranopia">Deuteranopia (green-blind)</option>
+            <option value="tritanopia">Tritanopia (blue-blind)</option>
+          </select>
+        </label>
+      </div>
+      <canvas id="cb-sim" class="max-w-full rounded-[10px] border border-hairline" style="display:none"></canvas>
+      <p id="cb-sim-hint" class="text-[13px] text-ink-subtle">Upload an image, then pick a deficiency to preview how it might appear.</p>
+    </section>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free color blindness tester has two parts: a short Ishihara-style plate
+      test where you identify numbers hidden in colored dots, and a simulator that
+      shows how one of your own images might look with protanopia, deuteranopia or
+      tritanopia. The plates are generated in your browser and the image
+      simulation uses standard color-vision-deficiency transform matrices — nothing
+      is uploaded. This is a screening aid to build intuition, not a medical
+      diagnosis; see an eye-care professional for a proper assessment.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+
+  // ── Plate test ─────────────────────────────────────────────
+  interface Plate {
+    num: number;
+    fig: [number, number, number][]; // figure dot colors
+    bg: [number, number, number][];  // background dot colors
+    choices: number[];
+  }
+
+  // Color families: figure vs background differ mainly on the red-green axis,
+  // which is where the most common deficiencies show up.
+  const plates: Plate[] = [
+    { num: 8, fig: [[201, 108, 76], [214, 130, 92], [188, 96, 66]], bg: [[128, 148, 92], [150, 162, 104], [112, 138, 84]], choices: [3, 8, 6, 0] },
+    { num: 5, fig: [[196, 116, 88], [210, 138, 100], [180, 100, 72]], bg: [[130, 150, 96], [148, 160, 110], [116, 140, 88]], choices: [2, 5, 9, 4] },
+    { num: 2, fig: [[120, 152, 96], [138, 166, 108], [108, 140, 88]], bg: [[200, 120, 84], [214, 134, 96], [186, 106, 74]], choices: [7, 1, 2, 6] },
+    { num: 7, fig: [[204, 112, 80], [216, 126, 92], [190, 100, 70]], bg: [[126, 146, 92], [144, 158, 104], [112, 134, 84]], choices: [7, 4, 1, 9] },
+    { num: 4, fig: [[122, 150, 94], [140, 164, 106], [110, 138, 86]], bg: [[198, 118, 86], [212, 132, 98], [184, 104, 76]], choices: [1, 4, 7, 9] },
+  ];
+
+  const plateCanvas = $('cb-plate') as HTMLCanvasElement;
+  const pctx = plateCanvas.getContext('2d')!;
+  const numEl = $('cb-num');
+  const choicesEl = $('cb-choices');
+  const feedbackEl = $('cb-feedback');
+  const scoreEl = $('cb-score');
+  $('cb-total').textContent = String(plates.length);
+
+  let plateIndex = 0;
+  let score = 0;
+  let answered = false;
+
+  // 5x7 pixel font for digits 0-9.
+  const glyphs: Record<number, string[]> = {
+    0: ['01110', '10001', '10011', '10101', '11001', '10001', '01110'],
+    1: ['00100', '01100', '00100', '00100', '00100', '00100', '01110'],
+    2: ['01110', '10001', '00001', '00010', '00100', '01000', '11111'],
+    3: ['11111', '00010', '00100', '00010', '00001', '10001', '01110'],
+    4: ['00010', '00110', '01010', '10010', '11111', '00010', '00010'],
+    5: ['11111', '10000', '11110', '00001', '00001', '10001', '01110'],
+    6: ['00110', '01000', '10000', '11110', '10001', '10001', '01110'],
+    7: ['11111', '00001', '00010', '00100', '01000', '01000', '01000'],
+    8: ['01110', '10001', '10001', '01110', '10001', '10001', '01110'],
+    9: ['01110', '10001', '10001', '01111', '00001', '00010', '01100'],
+  };
+
+  function inGlyph(num: number, nx: number, ny: number): boolean {
+    // nx, ny normalized 0..1 across the plate. Map to 5x7 grid centered.
+    const g = glyphs[num];
+    const cols = 5, rows = 7;
+    // Use central 60% of canvas for the digit.
+    const gx = (nx - 0.2) / 0.6;
+    const gy = (ny - 0.15) / 0.7;
+    if (gx < 0 || gx >= 1 || gy < 0 || gy >= 1) return false;
+    const col = Math.floor(gx * cols);
+    const row = Math.floor(gy * rows);
+    return g[row][col] === '1';
+  }
+
+  function drawPlate() {
+    const plate = plates[plateIndex];
+    const W = plateCanvas.width, H = plateCanvas.height;
+    pctx.clearRect(0, 0, W, H);
+    // dark background circle
+    pctx.fillStyle = '#12121a';
+    pctx.beginPath();
+    pctx.arc(W / 2, H / 2, W / 2, 0, Math.PI * 2);
+    pctx.fill();
+
+    const cx = W / 2, cy = H / 2, R = W / 2 - 2;
+    const dots = 900;
+    for (let i = 0; i < dots; i++) {
+      // random point in circle
+      const ang = Math.random() * Math.PI * 2;
+      const rad = Math.sqrt(Math.random()) * R;
+      const x = cx + Math.cos(ang) * rad;
+      const y = cy + Math.sin(ang) * rad;
+      const r = 3 + Math.random() * 5;
+      const nx = x / W, ny = y / H;
+      const pal = inGlyph(plate.num, nx, ny) ? plate.fig : plate.bg;
+      const c = pal[Math.floor(Math.random() * pal.length)];
+      pctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
+      pctx.beginPath();
+      pctx.arc(x, y, r, 0, Math.PI * 2);
+      pctx.fill();
+    }
+  }
+
+  function renderChoices() {
+    const plate = plates[plateIndex];
+    choicesEl.innerHTML = '';
+    answered = false;
+    feedbackEl.classList.add('hidden');
+    plate.choices.forEach((choice) => {
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-secondary';
+      btn.textContent = String(choice);
+      btn.addEventListener('click', () => pick(choice, btn));
+      choicesEl.appendChild(btn);
+    });
+    // A "nothing / can't tell" option.
+    const none = document.createElement('button');
+    none.className = 'btn btn-tertiary';
+    none.textContent = 'Nothing';
+    none.addEventListener('click', () => pick(-1, none));
+    choicesEl.appendChild(none);
+  }
+
+  function pick(choice: number, btn: HTMLButtonElement) {
+    if (answered) return;
+    answered = true;
+    const plate = plates[plateIndex];
+    const correct = choice === plate.num;
+    if (correct) { score++; scoreEl.textContent = String(score); }
+    btn.style.borderColor = correct ? '#27a644' : '#e5484d';
+    feedbackEl.classList.remove('hidden');
+    feedbackEl.style.color = correct ? '#27a644' : '#e08585';
+    feedbackEl.textContent = correct
+      ? 'Correct!'
+      : `Most people see a ${plate.num} here.`;
+    window.setTimeout(next, 1100);
+  }
+
+  function next() {
+    plateIndex++;
+    if (plateIndex >= plates.length) {
+      feedbackEl.classList.remove('hidden');
+      feedbackEl.style.color = '#a9a9c0';
+      feedbackEl.textContent = `Test complete — you matched ${score} of ${plates.length}. This is a screening aid, not a diagnosis.`;
+      choicesEl.innerHTML = '';
+      numEl.textContent = String(plates.length);
+      return;
+    }
+    numEl.textContent = String(plateIndex + 1);
+    drawPlate();
+    renderChoices();
+  }
+
+  function restart() {
+    plateIndex = 0;
+    score = 0;
+    scoreEl.textContent = '0';
+    numEl.textContent = '1';
+    drawPlate();
+    renderChoices();
+  }
+
+  $('cb-restart').addEventListener('click', restart);
+  restart();
+
+  // ── CVD image simulation ───────────────────────────────────
+  const fileInput = $('cb-file') as HTMLInputElement;
+  const typeSel = $('cb-type') as HTMLSelectElement;
+  const simCanvas = $('cb-sim') as HTMLCanvasElement;
+  const simCtx = simCanvas.getContext('2d')!;
+  const simHint = $('cb-sim-hint');
+  let sourceImage: HTMLImageElement | null = null;
+
+  // Standard CVD simulation matrices (Machado / Brettel style approximations).
+  const matrices: Record<string, number[]> = {
+    normal: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    protanopia: [0.567, 0.433, 0, 0.558, 0.442, 0, 0, 0.242, 0.758],
+    deuteranopia: [0.625, 0.375, 0, 0.7, 0.3, 0, 0, 0.3, 0.7],
+    tritanopia: [0.95, 0.05, 0, 0, 0.433, 0.567, 0, 0.475, 0.525],
+  };
+
+  function renderSim() {
+    if (!sourceImage) return;
+    const maxW = 640;
+    const scale = Math.min(1, maxW / sourceImage.naturalWidth);
+    const w = Math.round(sourceImage.naturalWidth * scale);
+    const h = Math.round(sourceImage.naturalHeight * scale);
+    simCanvas.width = w;
+    simCanvas.height = h;
+    simCanvas.style.display = 'block';
+    simCtx.drawImage(sourceImage, 0, 0, w, h);
+    const m = matrices[typeSel.value];
+    if (typeSel.value === 'normal') { simHint.textContent = 'Showing the original image.'; return; }
+    const img = simCtx.getImageData(0, 0, w, h);
+    const d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i], g = d[i + 1], b = d[i + 2];
+      d[i] = Math.min(255, m[0] * r + m[1] * g + m[2] * b);
+      d[i + 1] = Math.min(255, m[3] * r + m[4] * g + m[5] * b);
+      d[i + 2] = Math.min(255, m[6] * r + m[7] * g + m[8] * b);
+    }
+    simCtx.putImageData(img, 0, 0);
+    simHint.textContent = `Simulated ${typeSel.value}. This is an approximation for illustration only.`;
+  }
+
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { sourceImage = img; renderSim(); URL.revokeObjectURL(url); };
+    img.src = url;
+  });
+  typeSel.addEventListener('change', renderSim);
+</script>

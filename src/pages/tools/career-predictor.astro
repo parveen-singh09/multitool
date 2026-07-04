@@ -1,0 +1,171 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="career-predictor">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        1. On a free afternoon, you'd rather…
+        <select id="cp-q1" class="field" data-q>
+          <option value="realistic">Build or fix something with your hands</option>
+          <option value="investigative">Solve a tricky puzzle or read up on a topic</option>
+          <option value="artistic">Draw, write, play music or create</option>
+          <option value="social">Meet friends and chat</option>
+          <option value="enterprising">Pitch an idea or organise an event</option>
+          <option value="conventional">Sort, plan and tidy your schedule</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        2. Which task sounds most satisfying?
+        <select id="cp-q2" class="field" data-q>
+          <option value="investigative">Analysing data to find a pattern</option>
+          <option value="artistic">Designing something beautiful</option>
+          <option value="social">Helping someone learn a new skill</option>
+          <option value="enterprising">Leading a team to hit a target</option>
+          <option value="conventional">Getting the accounts to balance perfectly</option>
+          <option value="realistic">Assembling a machine that works</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        3. Friends would describe you as…
+        <select id="cp-q3" class="field" data-q>
+          <option value="social">Warm and supportive</option>
+          <option value="enterprising">Persuasive and driven</option>
+          <option value="investigative">Curious and logical</option>
+          <option value="artistic">Imaginative and expressive</option>
+          <option value="conventional">Reliable and organised</option>
+          <option value="realistic">Practical and hands-on</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        4. Your ideal workspace is…
+        <select id="cp-q4" class="field" data-q>
+          <option value="artistic">A studio full of colour and ideas</option>
+          <option value="realistic">A workshop, lab or the outdoors</option>
+          <option value="conventional">A calm, well-ordered office</option>
+          <option value="social">Somewhere full of people to help</option>
+          <option value="enterprising">A fast-moving startup floor</option>
+          <option value="investigative">A quiet room to think and research</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        5. What matters most in a job?
+        <select id="cp-q5" class="field" data-q>
+          <option value="enterprising">Growth, influence and rewards</option>
+          <option value="social">Making a positive difference</option>
+          <option value="investigative">Learning and solving hard problems</option>
+          <option value="artistic">Freedom to create</option>
+          <option value="conventional">Stability and clear structure</option>
+          <option value="realistic">Seeing tangible results</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        6. Pick a mini-project you'd enjoy most.
+        <select id="cp-q6" class="field" data-q>
+          <option value="conventional">Building a tidy budget spreadsheet</option>
+          <option value="investigative">Coding a small experiment</option>
+          <option value="artistic">Filming and editing a short video</option>
+          <option value="social">Running a community workshop</option>
+          <option value="realistic">Renovating a piece of furniture</option>
+          <option value="enterprising">Launching a small side business</option>
+        </select>
+      </label>
+    </div>
+
+    <button id="cp-go" type="button" class="btn btn-primary self-start">Reveal my career</button>
+
+    <div class="panel panel-lift p-4 text-center">
+      <div id="cp-result" class="font-display text-2xl font-semibold text-primary-hover">—</div>
+      <div id="cp-blurb" class="mt-1 text-[13px] text-ink-subtle">Answer the six questions, then reveal your match</div>
+    </div>
+
+    <div class="panel p-4 text-center">
+      <div id="cp-ideas" class="font-mono text-[13px] text-ink">—</div>
+      <div class="mt-1 text-[13px] text-ink-subtle">Career ideas to explore</div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free career predictor asks six quick questions about your interests
+      and working style, then scores your answers across six classic career
+      themes to suggest a direction that might suit you. It is a light,
+      inspiration-only quiz, loosely inspired by interest-based career models.
+      Everything runs in your browser and nothing is stored.
+    </p>
+    <p>
+      For entertainment only — this is a novelty tool and not medical, scientific
+      or professional advice.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  type Bucket = 'realistic' | 'investigative' | 'artistic' | 'social' | 'enterprising' | 'conventional';
+
+  const go = document.getElementById('cp-go') as HTMLButtonElement;
+  const resultEl = document.getElementById('cp-result')!;
+  const blurbEl = document.getElementById('cp-blurb')!;
+  const ideasEl = document.getElementById('cp-ideas')!;
+  const selects = Array.from(document.querySelectorAll<HTMLSelectElement>('select[data-q]'));
+
+  const info: Record<Bucket, { title: string; blurb: string; ideas: string }> = {
+    realistic: {
+      title: 'The Builder',
+      blurb: 'You love practical, hands-on work with visible results.',
+      ideas: 'Engineer · Electrician · Chef · Vet · Pilot',
+    },
+    investigative: {
+      title: 'The Analyst',
+      blurb: 'You thrive on curiosity, research and solving hard problems.',
+      ideas: 'Data Scientist · Researcher · Doctor · Software Engineer · Analyst',
+    },
+    artistic: {
+      title: 'The Creator',
+      blurb: 'You are happiest when you can imagine and make new things.',
+      ideas: 'Designer · Writer · Musician · Filmmaker · Architect',
+    },
+    social: {
+      title: 'The Helper',
+      blurb: 'You are energised by supporting, teaching and connecting with people.',
+      ideas: 'Teacher · Nurse · Counsellor · HR Lead · Community Worker',
+    },
+    enterprising: {
+      title: 'The Leader',
+      blurb: 'You are driven by influence, growth and making things happen.',
+      ideas: 'Entrepreneur · Sales Lead · Marketer · Lawyer · Product Manager',
+    },
+    conventional: {
+      title: 'The Organiser',
+      blurb: 'You bring order, structure and reliability to everything you touch.',
+      ideas: 'Accountant · Analyst · Operations Lead · Auditor · Administrator',
+    },
+  };
+
+  const order: Bucket[] = ['realistic', 'investigative', 'artistic', 'social', 'enterprising', 'conventional'];
+
+  function predict() {
+    const scores: Record<Bucket, number> = {
+      realistic: 0, investigative: 0, artistic: 0, social: 0, enterprising: 0, conventional: 0,
+    };
+
+    selects.forEach((sel) => {
+      const val = sel.value as Bucket;
+      scores[val] += 1;
+    });
+
+    // Highest score wins; ties resolved by the fixed bucket order for stability.
+    let best: Bucket = order[0];
+    for (const key of order) {
+      if (scores[key] > scores[best]) best = key;
+    }
+
+    const winner = info[best];
+    resultEl.textContent = winner.title;
+    blurbEl.textContent = winner.blurb;
+    ideasEl.textContent = winner.ideas;
+  }
+
+  go.addEventListener('click', predict);
+</script>

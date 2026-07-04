@@ -1,0 +1,114 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="lucky-number-predictor">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Your name
+        <input id="lnp-name" type="text" value="Jordan" class="field" autocomplete="off" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Your birth date
+        <input id="lnp-date" type="date" value="1995-06-15" class="field" />
+      </label>
+    </div>
+
+    <p id="lnp-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="panel panel-lift p-4 text-center">
+      <div id="lnp-lifepath" class="font-display text-2xl font-semibold text-primary-hover">—</div>
+      <div class="mt-1 text-[13px] text-ink-subtle">Your numerology life-path number</div>
+    </div>
+
+    <div class="panel p-4 text-center">
+      <div id="lnp-lucky" class="font-mono text-lg text-ink">—</div>
+      <div class="mt-1 text-[13px] text-ink-subtle">Your lucky numbers</div>
+    </div>
+
+    <div class="panel p-4 text-[13px] text-ink-muted">
+      Your life-path number comes from summing your birth date digits; the lucky
+      numbers are derived from your name and date, so the same inputs always give
+      the same result.
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free lucky number predictor blends numerology with your name and birth
+      date to reveal your life-path number and a set of personal lucky numbers.
+      The life-path number is calculated by reducing your birth date to a single
+      digit, and the lucky numbers are derived from a stable hash of your name and
+      date, so the same details always produce the same numbers. Everything runs
+      in your browser and nothing is stored.
+    </p>
+    <p>
+      For entertainment only — this is a novelty tool and not medical, scientific
+      or professional advice.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const nameEl = document.getElementById('lnp-name') as HTMLInputElement;
+  const dateEl = document.getElementById('lnp-date') as HTMLInputElement;
+  const err = document.getElementById('lnp-error')!;
+  const lifePathEl = document.getElementById('lnp-lifepath')!;
+  const luckyEl = document.getElementById('lnp-lucky')!;
+
+  // Reduce a number to a single digit, preserving master numbers 11, 22, 33.
+  function reduce(n: number): number {
+    while (n > 9 && n !== 11 && n !== 22 && n !== 33) {
+      n = String(n).split('').reduce((a, d) => a + Number(d), 0);
+    }
+    return n;
+  }
+
+  // Deterministic string hash (FNV-1a style).
+  function hash(str: string): number {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  function calc() {
+    err.classList.add('hidden');
+    const name = nameEl.value.trim().toLowerCase();
+    const date = dateEl.value; // yyyy-mm-dd
+
+    if (!name || !date) {
+      lifePathEl.textContent = '—';
+      luckyEl.textContent = '—';
+      return;
+    }
+
+    // Life-path number from birth date digits.
+    const digits = date.replace(/\D/g, '');
+    if (!digits) {
+      err.textContent = 'Enter a valid birth date.';
+      err.classList.remove('hidden');
+      return;
+    }
+    const digitSum = digits.split('').reduce((a, d) => a + Number(d), 0);
+    lifePathEl.textContent = String(reduce(digitSum));
+
+    // Lucky numbers from a stable hash of name + date.
+    const seed = hash(`${name}|${date}`);
+    const lucky: number[] = [];
+    let cursor = seed;
+    while (lucky.length < 5) {
+      cursor = (Math.imul(cursor, 1103515245) + 12345) >>> 0;
+      const n = (cursor % 49) + 1; // 1..49
+      if (!lucky.includes(n)) lucky.push(n);
+    }
+    luckyEl.textContent = lucky.sort((a, b) => a - b).join('  ·  ');
+  }
+
+  nameEl.addEventListener('input', calc);
+  dateEl.addEventListener('input', calc);
+  calc();
+</script>

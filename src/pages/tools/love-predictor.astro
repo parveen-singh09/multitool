@@ -1,0 +1,94 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="love-predictor">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Your name
+        <input id="lp-a" type="text" value="Alex" class="field" autocomplete="off" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Their name
+        <input id="lp-b" type="text" value="Sam" class="field" autocomplete="off" />
+      </label>
+    </div>
+
+    <p id="lp-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="panel panel-lift p-4 text-center">
+      <div id="lp-score" class="font-display text-2xl font-semibold text-primary-hover">—</div>
+      <div id="lp-message" class="mt-1 text-[13px] text-ink-subtle">Enter two names to see your match</div>
+    </div>
+
+    <div class="panel p-4 text-[13px] text-ink-muted">
+      The same pair of names always gives the same score — it is a stable
+      calculation based on the letters, not a random number.
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free love predictor turns two names into a playful compatibility
+      percentage and a fun message. The score is derived from a stable hash of
+      the combined letters, so the same two names will always produce the same
+      result. Enter your name and someone else's to see your match. Everything
+      runs in your browser and nothing is saved.
+    </p>
+    <p>
+      For entertainment only — this is a novelty tool and not medical, scientific
+      or professional advice.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const aEl = document.getElementById('lp-a') as HTMLInputElement;
+  const bEl = document.getElementById('lp-b') as HTMLInputElement;
+  const err = document.getElementById('lp-error')!;
+  const scoreEl = document.getElementById('lp-score')!;
+  const messageEl = document.getElementById('lp-message')!;
+
+  // Deterministic string hash (FNV-1a style) — stable across sessions.
+  function hash(str: string): number {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  function tier(pct: number): string {
+    if (pct >= 90) return 'A match made in the stars — soulmates! 💞';
+    if (pct >= 75) return 'Strong sparks — this could be something special. ✨';
+    if (pct >= 60) return 'Great potential — keep the good vibes going. 😊';
+    if (pct >= 45) return 'A promising start — worth exploring. 🌱';
+    if (pct >= 30) return 'It could work with a little effort. 🤝';
+    return 'Opposites attract... sometimes. 🎲';
+  }
+
+  function calc() {
+    err.classList.add('hidden');
+    const a = aEl.value.trim().toLowerCase();
+    const b = bEl.value.trim().toLowerCase();
+
+    if (!a || !b) {
+      scoreEl.textContent = '—';
+      messageEl.textContent = 'Enter two names to see your match';
+      return;
+    }
+
+    // Order-independent: sort the two names so A+B equals B+A.
+    const combined = [a, b].sort().join('+');
+    const pct = hash(combined) % 101;
+
+    scoreEl.textContent = `${pct}%`;
+    messageEl.textContent = tier(pct);
+  }
+
+  aEl.addEventListener('input', calc);
+  bEl.addEventListener('input', calc);
+  calc();
+</script>

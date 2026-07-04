@@ -1,0 +1,157 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="yaml-formatter">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="yf-beautify" class="btn btn-primary">Reformat</button>
+      <button id="yf-validate" class="btn btn-secondary">Validate</button>
+      <button id="yf-copy" class="btn btn-secondary">Copy</button>
+      <button id="yf-clear" class="btn btn-tertiary">Clear</button>
+      <label class="ml-auto flex items-center gap-2 text-sm text-ink-subtle">
+        Indent
+        <select id="yf-indent" class="field w-auto py-1">
+          <option value="2">2 spaces</option>
+          <option value="4">4 spaces</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="yf-status" class="hidden rounded-[8px] border px-3 py-2 text-sm" role="status"></div>
+
+    <textarea
+      id="yf-input"
+      class="field min-h-72 resize-y font-mono text-[13px]"
+      placeholder="Paste YAML here, e.g.&#10;name: example&#10;items:&#10;  - one&#10;  - two"
+      spellcheck="false"
+      aria-label="YAML input"
+    ></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free YAML formatter reformats YAML with consistent indentation and
+      flags obvious syntax errors such as tab characters, mismatched indentation
+      and misplaced list markers, with an adjustable indent size. Parsing and
+      formatting run entirely in your browser, so nothing is uploaded. Note that
+      it normalizes structure and spacing rather than performing a full spec
+      parse, so highly complex documents may need review.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('yf-input') as HTMLTextAreaElement;
+  const status = document.getElementById('yf-status')!;
+  const indentSel = document.getElementById('yf-indent') as HTMLSelectElement;
+
+  function getIndentSize(): number {
+    return Number(indentSel.value);
+  }
+
+  function showStatus(msg: string, ok: boolean) {
+    status.textContent = msg;
+    status.classList.remove('hidden');
+    status.style.borderColor = ok ? '#27a644' : '#d14d4d';
+    status.style.color = ok ? '#27a644' : '#e08585';
+  }
+
+  interface Line {
+    depth: number;
+    content: string;
+    raw: string;
+    num: number;
+  }
+
+  // Validate + collect logical lines. Returns error string or null.
+  function analyze(src: string): { lines: Line[]; error: string | null } {
+    const rawLines = src.replace(/\r\n/g, '\n').split('\n');
+    const lines: Line[] = [];
+    const indentStack: number[] = [0];
+
+    for (let i = 0; i < rawLines.length; i++) {
+      const raw = rawLines[i];
+      const num = i + 1;
+      if (/\t/.test(raw.replace(/[^\t]*$/, '')) && /^\s*\t/.test(raw)) {
+        return { lines, error: `Line ${num}: tabs are not allowed for indentation in YAML.` };
+      }
+      const trimmed = raw.trim();
+      if (trimmed === '' || trimmed.startsWith('#')) {
+        lines.push({ depth: -1, content: trimmed, raw, num });
+        continue;
+      }
+      const leading = raw.length - raw.replace(/^ +/, '').length;
+
+      // Track indentation levels loosely for structure sanity.
+      if (leading > indentStack[indentStack.length - 1]) {
+        indentStack.push(leading);
+      } else {
+        while (indentStack.length > 1 && leading < indentStack[indentStack.length - 1]) {
+          indentStack.pop();
+        }
+        if (leading !== indentStack[indentStack.length - 1]) {
+          return { lines, error: `Line ${num}: inconsistent indentation.` };
+        }
+      }
+
+      const depth = indentStack.length - 1;
+      lines.push({ depth, content: trimmed, raw, num });
+    }
+    return { lines, error: null };
+  }
+
+  function reformat(src: string, size: number): string | null {
+    const { lines, error } = analyze(src);
+    if (error) {
+      showStatus(error, false);
+      return null;
+    }
+    const unit = ' '.repeat(size);
+    const out = lines.map((l) => {
+      if (l.depth < 0) return l.content; // blank or comment
+      let content = l.content;
+      // Normalize "key:   value" -> "key: value"; "key :value" -> "key: value"
+      const kv = content.match(/^(-\s+)?([^:#][^:]*?)\s*:\s*(.*)$/);
+      if (kv && !content.startsWith('- ') === !kv[1]) {
+        const dash = kv[1] ? '- ' : '';
+        const key = kv[2].trim();
+        const val = kv[3].trim();
+        content = val === '' ? `${dash}${key}:` : `${dash}${key}: ${val}`;
+      } else if (content.startsWith('-')) {
+        content = content.replace(/^-\s*/, '- ').trimEnd();
+      }
+      return unit.repeat(l.depth) + content;
+    });
+    return out.join('\n').replace(/[ \t]+$/gm, '');
+  }
+
+  document.getElementById('yf-beautify')!.addEventListener('click', () => {
+    const src = input.value.trim();
+    if (!src) return;
+    const result = reformat(input.value, getIndentSize());
+    if (result !== null) {
+      input.value = result;
+      showStatus('Reformatted ✓', true);
+    }
+  });
+
+  document.getElementById('yf-validate')!.addEventListener('click', () => {
+    const src = input.value.trim();
+    if (!src) return;
+    const { error } = analyze(input.value);
+    if (error) showStatus(error, false);
+    else showStatus('No obvious syntax errors ✓', true);
+  });
+
+  document.getElementById('yf-clear')!.addEventListener('click', () => {
+    input.value = '';
+    status.classList.add('hidden');
+  });
+  document.getElementById('yf-copy')!.addEventListener('click', async () => {
+    const btn = document.getElementById('yf-copy')!;
+    await navigator.clipboard.writeText(input.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+</script>

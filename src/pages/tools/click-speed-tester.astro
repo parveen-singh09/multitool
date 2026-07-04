@@ -1,0 +1,127 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="click-speed-tester">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Duration
+        <select id="cs-duration" class="field w-auto py-1">
+          <option value="5">5 seconds</option>
+          <option value="10">10 seconds</option>
+        </select>
+      </label>
+      <button id="cs-reset" class="btn btn-secondary ml-auto">Reset</button>
+    </div>
+
+    <div
+      id="cs-area"
+      class="panel flex min-h-64 cursor-pointer select-none flex-col items-center justify-center gap-2 rounded-[12px] p-8 text-center"
+      style="background:#20202e"
+      role="button"
+      tabindex="0"
+      aria-label="Click area"
+    >
+      <div id="cs-area-title" class="text-lg font-medium text-ink">Click here to start</div>
+      <div id="cs-area-sub" class="text-[13px] text-ink-subtle">The timer begins on your first click.</div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-3 text-center">
+      <div class="panel panel-lift p-4"><div id="cs-cps" class="font-display text-xl font-semibold text-primary-hover">0.0</div><div class="mt-1 text-[13px] text-ink-subtle">CPS</div></div>
+      <div class="panel p-4"><div id="cs-clicks" class="font-mono text-lg text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Clicks</div></div>
+      <div class="panel p-4"><div id="cs-remaining" class="font-mono text-lg text-ink">0.0s</div><div class="mt-1 text-[13px] text-ink-subtle">Time left</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free click speed tester measures how fast you can click, in clicks per
+      second (CPS). Pick a 5 or 10 second window, then click the area as rapidly as
+      you can — the timer starts on your first click and a live counter shows your
+      current CPS. When the time is up you get your final CPS and total click
+      count. Hit Reset to try again. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const area = $('cs-area');
+  const title = $('cs-area-title');
+  const sub = $('cs-area-sub');
+  const cpsEl = $('cs-cps');
+  const clicksEl = $('cs-clicks');
+  const remainingEl = $('cs-remaining');
+  const durationSel = $('cs-duration') as HTMLSelectElement;
+
+  type Phase = 'idle' | 'running' | 'done';
+  let phase: Phase = 'idle';
+  let clicks = 0;
+  let startTime = 0;
+  let duration = 5;
+  let timerId: number | null = null;
+
+  function stopTimer() {
+    if (timerId !== null) { clearInterval(timerId); timerId = null; }
+  }
+
+  function reset() {
+    stopTimer();
+    phase = 'idle';
+    clicks = 0;
+    startTime = 0;
+    cpsEl.textContent = '0.0';
+    clicksEl.textContent = '0';
+    duration = Number(durationSel.value);
+    remainingEl.textContent = duration.toFixed(1) + 's';
+    area.style.background = '#20202e';
+    title.textContent = 'Click here to start';
+    sub.textContent = 'The timer begins on your first click.';
+  }
+
+  function finish() {
+    stopTimer();
+    phase = 'done';
+    const cps = clicks / duration;
+    cpsEl.textContent = cps.toFixed(2);
+    remainingEl.textContent = '0.0s';
+    area.style.background = '#20202e';
+    title.textContent = `Done — ${cps.toFixed(2)} CPS`;
+    sub.textContent = `${clicks} clicks in ${duration}s. Click to go again.`;
+  }
+
+  function tick() {
+    const elapsed = (performance.now() - startTime) / 1000;
+    const left = Math.max(0, duration - elapsed);
+    remainingEl.textContent = left.toFixed(1) + 's';
+    cpsEl.textContent = (clicks / Math.max(elapsed, 0.001)).toFixed(2);
+    if (left <= 0) finish();
+  }
+
+  function handleClick() {
+    if (phase === 'done') { reset(); return; }
+    if (phase === 'idle') {
+      phase = 'running';
+      duration = Number(durationSel.value);
+      startTime = performance.now();
+      clicks = 0;
+      area.style.background = '#2a2a3e';
+      title.textContent = 'Keep clicking!';
+      sub.textContent = 'Go as fast as you can.';
+      timerId = window.setInterval(tick, 50);
+    }
+    if (phase === 'running') {
+      clicks++;
+      clicksEl.textContent = String(clicks);
+    }
+  }
+
+  area.addEventListener('click', handleClick);
+  area.addEventListener('keydown', (e) => {
+    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); handleClick(); }
+  });
+  durationSel.addEventListener('change', reset);
+  $('cs-reset').addEventListener('click', reset);
+
+  reset();
+</script>

@@ -1,0 +1,162 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="xml-to-json-converter">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="x2j-convert" class="btn btn-primary">Convert to JSON</button>
+      <button id="x2j-copy" class="btn btn-secondary">Copy</button>
+      <button id="x2j-clear" class="btn btn-tertiary">Clear</button>
+      <label class="ml-auto flex items-center gap-2 text-sm text-ink-subtle">
+        Indent
+        <select id="x2j-indent" class="field w-auto py-1">
+          <option value="2">2 spaces</option>
+          <option value="4">4 spaces</option>
+          <option value="tab">Tab</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="x2j-status" class="hidden rounded-[8px] border px-3 py-2 text-sm" role="status"></div>
+
+    <div class="grid gap-4 md:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        XML input
+        <textarea
+          id="x2j-input"
+          class="field min-h-72 resize-y font-mono text-[13px]"
+          placeholder={'<book id="1">\n  <title>YAML</title>\n  <tags>\n    <tag>fast</tag>\n  </tags>\n</book>'}
+          spellcheck="false"
+          aria-label="XML input"
+        ></textarea>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        JSON output
+        <textarea
+          id="x2j-output"
+          class="field min-h-72 resize-y font-mono text-[13px]"
+          placeholder="Formatted JSON appears here"
+          spellcheck="false"
+          readonly
+          aria-label="JSON output"
+        ></textarea>
+      </label>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free XML to JSON converter parses XML with the browser's built-in
+      DOMParser and maps it to structured JSON. Elements become objects,
+      attributes are grouped under an <code>@attributes</code> key, and text
+      content is stored under <code>#text</code> when an element also has
+      attributes or children. Repeated child elements become arrays. Parse
+      errors are flagged. Everything runs in your browser — nothing is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  type XmlValue = string | { [key: string]: unknown };
+
+  const input = document.getElementById('x2j-input') as HTMLTextAreaElement;
+  const output = document.getElementById('x2j-output') as HTMLTextAreaElement;
+  const status = document.getElementById('x2j-status')!;
+  const indentSel = document.getElementById('x2j-indent') as HTMLSelectElement;
+
+  function getIndent(): string | number {
+    const v = indentSel.value;
+    return v === 'tab' ? '\t' : Number(v);
+  }
+
+  function showStatus(msg: string, ok: boolean) {
+    status.textContent = msg;
+    status.classList.remove('hidden');
+    status.style.borderColor = ok ? '#27a644' : '#d14d4d';
+    status.style.color = ok ? '#27a644' : '#e08585';
+  }
+
+  function elementToJson(el: Element): XmlValue {
+    const obj: { [key: string]: unknown } = {};
+
+    if (el.attributes.length > 0) {
+      const attrs: { [key: string]: string } = {};
+      for (let i = 0; i < el.attributes.length; i++) {
+        const a = el.attributes[i];
+        attrs[a.name] = a.value;
+      }
+      obj['@attributes'] = attrs;
+    }
+
+    const children = Array.from(el.childNodes).filter(
+      (n) => n.nodeType === Node.ELEMENT_NODE,
+    ) as Element[];
+
+    let text = '';
+    el.childNodes.forEach((n) => {
+      if (n.nodeType === Node.TEXT_NODE || n.nodeType === Node.CDATA_SECTION_NODE) {
+        text += n.nodeValue ?? '';
+      }
+    });
+    text = text.trim();
+
+    if (children.length === 0) {
+      if (Object.keys(obj).length === 0) return text;
+      if (text !== '') obj['#text'] = text;
+      return obj;
+    }
+
+    for (const child of children) {
+      const key = child.nodeName;
+      const value = elementToJson(child);
+      if (key in obj) {
+        const existing = obj[key];
+        if (Array.isArray(existing)) existing.push(value);
+        else obj[key] = [existing, value];
+      } else {
+        obj[key] = value;
+      }
+    }
+    if (text !== '') obj['#text'] = text;
+    return obj;
+  }
+
+  function convert() {
+    if (!input.value.trim()) {
+      output.value = '';
+      status.classList.add('hidden');
+      return;
+    }
+    const doc = new DOMParser().parseFromString(input.value, 'application/xml');
+    const parseError = doc.querySelector('parsererror');
+    if (parseError) {
+      output.value = '';
+      showStatus(`XML parse error: ${parseError.textContent?.replace(/\s+/g, ' ').trim() ?? 'invalid XML'}`, false);
+      return;
+    }
+    const root = doc.documentElement;
+    if (!root) {
+      output.value = '';
+      showStatus('XML parse error: no root element', false);
+      return;
+    }
+    const result = { [root.nodeName]: elementToJson(root) };
+    output.value = JSON.stringify(result, null, getIndent());
+    showStatus('Converted to JSON ✓', true);
+  }
+
+  document.getElementById('x2j-convert')!.addEventListener('click', convert);
+  indentSel.addEventListener('change', () => { if (output.value) convert(); });
+  document.getElementById('x2j-clear')!.addEventListener('click', () => {
+    input.value = '';
+    output.value = '';
+    status.classList.add('hidden');
+  });
+  document.getElementById('x2j-copy')!.addEventListener('click', async () => {
+    const btn = document.getElementById('x2j-copy')!;
+    await navigator.clipboard.writeText(output.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+</script>

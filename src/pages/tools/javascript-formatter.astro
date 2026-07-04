@@ -1,0 +1,252 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="javascript-formatter">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="jsf-beautify" class="btn btn-primary">Beautify</button>
+      <button id="jsf-minify" class="btn btn-secondary">Minify</button>
+      <button id="jsf-copy" class="btn btn-secondary">Copy</button>
+      <button id="jsf-clear" class="btn btn-tertiary">Clear</button>
+      <label class="ml-auto flex items-center gap-2 text-sm text-ink-subtle">
+        Indent
+        <select id="jsf-indent" class="field w-auto py-1">
+          <option value="2">2 spaces</option>
+          <option value="4">4 spaces</option>
+          <option value="tab">Tab</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="jsf-status" class="hidden rounded-[8px] border px-3 py-2 text-sm" role="status"></div>
+
+    <textarea
+      id="jsf-input"
+      class="field min-h-72 resize-y font-mono text-[13px]"
+      placeholder="Paste JavaScript here, e.g. function add(a,b){return a+b}"
+      spellcheck="false"
+      aria-label="JavaScript input"
+    ></textarea>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free JavaScript formatter re-indents messy JS using brace depth for
+      consistent nesting, with an adjustable indent size, and offers a minify
+      option that strips comments and extra whitespace. Strings, template
+      literals and line comments are respected during formatting. Everything
+      runs entirely in your browser — your code is never uploaded. It is a
+      lightweight indenter rather than a full parser, so unusual code may need a
+      quick review.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('jsf-input') as HTMLTextAreaElement;
+  const status = document.getElementById('jsf-status')!;
+  const indentSel = document.getElementById('jsf-indent') as HTMLSelectElement;
+
+  function getIndent(): string {
+    const v = indentSel.value;
+    return v === 'tab' ? '\t' : ' '.repeat(Number(v));
+  }
+
+  function showStatus(msg: string, ok: boolean) {
+    status.textContent = msg;
+    status.classList.remove('hidden');
+    status.style.borderColor = ok ? '#27a644' : '#d14d4d';
+    status.style.color = ok ? '#27a644' : '#e08585';
+  }
+
+  // Walk the source char by char, tracking strings/comments so braces inside
+  // them don't affect depth. Insert newlines around { } and after ;.
+  function beautify(code: string, unit: string): string {
+    const src = code.replace(/\r\n/g, '\n');
+    let out = '';
+    let depth = 0;
+    let i = 0;
+    const n = src.length;
+
+    const newline = () => {
+      out = out.replace(/[ \t]+$/, '');
+      out += '\n' + unit.repeat(Math.max(depth, 0));
+    };
+
+    while (i < n) {
+      const c = src[i];
+      const next = src[i + 1];
+
+      // Line comment: copy to end of line verbatim.
+      if (c === '/' && next === '/') {
+        const end = src.indexOf('\n', i);
+        const stop = end === -1 ? n : end;
+        out = out.replace(/[ \t]+$/, '') + (out.endsWith('\n') || out === '' ? '' : ' ') + src.slice(i, stop);
+        i = stop;
+        continue;
+      }
+      // Block comment: copy verbatim.
+      if (c === '/' && next === '*') {
+        const end = src.indexOf('*/', i + 2);
+        const stop = end === -1 ? n : end + 2;
+        out += src.slice(i, stop);
+        i = stop;
+        continue;
+      }
+      // Strings and template literals: copy verbatim including escapes.
+      if (c === '"' || c === "'" || c === '`') {
+        const quote = c;
+        let j = i + 1;
+        let buf = c;
+        while (j < n) {
+          const ch = src[j];
+          buf += ch;
+          if (ch === '\\') {
+            buf += src[j + 1] ?? '';
+            j += 2;
+            continue;
+          }
+          if (ch === quote) {
+            j++;
+            break;
+          }
+          j++;
+        }
+        out += buf;
+        i = j;
+        continue;
+      }
+
+      if (c === '{') {
+        out = out.replace(/[ \t]+$/, '');
+        if (out !== '' && !out.endsWith('\n')) out += ' ';
+        out += '{';
+        depth++;
+        newline();
+        i++;
+        while (i < n && /[ \t]/.test(src[i])) i++;
+        continue;
+      }
+      if (c === '}') {
+        depth = Math.max(depth - 1, 0);
+        out = out.replace(/[ \t]*$/, '');
+        if (!out.endsWith('\n')) out += '\n';
+        out += unit.repeat(depth) + '}';
+        i++;
+        // Keep trailing constructs like `};`, `else`, `)` on suitable lines.
+        while (i < n && /[ \t]/.test(src[i])) i++;
+        if (src[i] === ';') {
+          out += ';';
+          i++;
+        }
+        newline();
+        while (i < n && /[ \t]/.test(src[i])) i++;
+        continue;
+      }
+      if (c === ';') {
+        out += ';';
+        i++;
+        while (i < n && /[ \t]/.test(src[i])) i++;
+        if (src[i] !== '\n') newline();
+        continue;
+      }
+      if (c === '\n') {
+        if (!out.endsWith('\n')) newline();
+        i++;
+        while (i < n && /[ \t]/.test(src[i])) i++;
+        continue;
+      }
+      if (/[ \t]/.test(c)) {
+        if (!/[ \t]$/.test(out) && !out.endsWith('\n') && out !== '') out += ' ';
+        i++;
+        continue;
+      }
+      out += c;
+      i++;
+    }
+
+    return out
+      .split('\n')
+      .map((l) => l.replace(/[ \t]+$/, ''))
+      .filter((l, idx, arr) => !(l.trim() === '' && arr[idx - 1]?.trim() === ''))
+      .join('\n')
+      .trim();
+  }
+
+  function minify(code: string): string {
+    const src = code.replace(/\r\n/g, '\n');
+    let out = '';
+    let i = 0;
+    const n = src.length;
+    while (i < n) {
+      const c = src[i];
+      const next = src[i + 1];
+      if (c === '/' && next === '/') {
+        const end = src.indexOf('\n', i);
+        i = end === -1 ? n : end;
+        continue;
+      }
+      if (c === '/' && next === '*') {
+        const end = src.indexOf('*/', i + 2);
+        i = end === -1 ? n : end + 2;
+        continue;
+      }
+      if (c === '"' || c === "'" || c === '`') {
+        const quote = c;
+        let j = i + 1;
+        out += c;
+        while (j < n) {
+          const ch = src[j];
+          out += ch;
+          if (ch === '\\') {
+            out += src[j + 1] ?? '';
+            j += 2;
+            continue;
+          }
+          if (ch === quote) {
+            j++;
+            break;
+          }
+          j++;
+        }
+        i = j;
+        continue;
+      }
+      if (/\s/.test(c)) {
+        // Collapse runs of whitespace to a single space, but drop it when it
+        // sits next to punctuation to keep output tight.
+        let j = i;
+        while (j < n && /\s/.test(src[j])) j++;
+        const prev = out[out.length - 1] || '';
+        const nextCh = src[j] || '';
+        if (/[\w$]/.test(prev) && /[\w$]/.test(nextCh)) out += ' ';
+        i = j;
+        continue;
+      }
+      out += c;
+      i++;
+    }
+    return out.trim();
+  }
+
+  function process(doMinify: boolean) {
+    const src = input.value.trim();
+    if (!src) return;
+    input.value = doMinify ? minify(src) : beautify(src, getIndent());
+    showStatus(doMinify ? 'Minified ✓' : 'Formatted ✓', true);
+  }
+
+  document.getElementById('jsf-beautify')!.addEventListener('click', () => process(false));
+  document.getElementById('jsf-minify')!.addEventListener('click', () => process(true));
+  document.getElementById('jsf-clear')!.addEventListener('click', () => {
+    input.value = '';
+    status.classList.add('hidden');
+  });
+  document.getElementById('jsf-copy')!.addEventListener('click', async () => {
+    const btn = document.getElementById('jsf-copy')!;
+    await navigator.clipboard.writeText(input.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+</script>

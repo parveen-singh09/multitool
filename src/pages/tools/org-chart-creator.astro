@@ -1,0 +1,222 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="org-chart-creator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Roles (indent with spaces or tabs to show who reports to whom)
+        <textarea id="occ-input" class="field min-h-72 resize-y font-mono text-[13px]" spellcheck="false">CEO
+  VP Engineering
+    Backend Lead
+    Frontend Lead
+  VP Marketing
+    Content Manager
+    SEO Specialist
+  VP Sales</textarea>
+      </label>
+
+      <div class="flex gap-2">
+        <button id="occ-png" class="btn btn-primary">Download PNG</button>
+      </div>
+      <p id="occ-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <span class="text-sm text-ink-subtle">Preview</span>
+      <div class="panel p-4 overflow-auto">
+        <canvas id="occ-canvas" class="max-w-full h-auto rounded-[8px]" aria-label="Org chart preview"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free org chart creator turns an indented list of roles into an
+      organization chart with boxes and connecting lines, then downloads it as a
+      PNG. Indentation sets the hierarchy — each level of spaces or tabs nests a
+      role under the one above it. It is a fast way to map reporting lines for a
+      team, department or whole company. Everything is rendered in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  interface Node { name: string; children: Node[]; x: number; width: number; }
+
+  const input = document.getElementById('occ-input') as HTMLTextAreaElement;
+  const canvas = document.getElementById('occ-canvas') as HTMLCanvasElement;
+  const errEl = document.getElementById('occ-error') as HTMLParagraphElement;
+  const ctx = canvas.getContext('2d')!;
+
+  const BOX_W = 150;
+  const BOX_H = 44;
+  const GAP_X = 24;
+  const GAP_Y = 60;
+  const PAD = 30;
+
+  function parseTree(): Node[] {
+    const lines = input.value.split('\n').filter((l) => l.trim() !== '');
+    const roots: Node[] = [];
+    const stack: { node: Node; indent: number }[] = [];
+
+    lines.forEach((line) => {
+      const match = line.match(/^[\t ]*/);
+      const indent = match ? match[0].replace(/\t/g, '  ').length : 0;
+      const node: Node = { name: line.trim(), children: [], x: 0, width: 0 };
+
+      while (stack.length && stack[stack.length - 1].indent >= indent) stack.pop();
+
+      if (stack.length === 0) {
+        roots.push(node);
+      } else {
+        stack[stack.length - 1].node.children.push(node);
+      }
+      stack.push({ node, indent });
+    });
+
+    return roots;
+  }
+
+  // First pass: compute subtree widths.
+  function measure(node: Node): number {
+    if (node.children.length === 0) {
+      node.width = BOX_W;
+      return node.width;
+    }
+    let total = 0;
+    node.children.forEach((c, i) => {
+      total += measure(c);
+      if (i < node.children.length - 1) total += GAP_X;
+    });
+    node.width = Math.max(BOX_W, total);
+    return node.width;
+  }
+
+  // Second pass: assign x (left edge of subtree region) and center boxes.
+  function assign(node: Node, left: number): void {
+    if (node.children.length === 0) {
+      node.x = left + (node.width - BOX_W) / 2;
+      return;
+    }
+    let cursor = left;
+    node.children.forEach((c) => {
+      assign(c, cursor);
+      cursor += c.width + GAP_X;
+    });
+    const first = node.children[0];
+    const last = node.children[node.children.length - 1];
+    const childrenCenter = (first.x + BOX_W / 2 + last.x + BOX_W / 2) / 2;
+    node.x = childrenCenter - BOX_W / 2;
+  }
+
+  function depth(nodes: Node[]): number {
+    let max = 0;
+    nodes.forEach((n) => { max = Math.max(max, 1 + depth(n.children)); });
+    return max;
+  }
+
+  function drawNode(node: Node, level: number): void {
+    const x = node.x;
+    const y = PAD + level * (BOX_H + GAP_Y);
+    const cx = x + BOX_W / 2;
+
+    // connectors to children
+    if (node.children.length) {
+      const childY = PAD + (level + 1) * (BOX_H + GAP_Y);
+      const midY = y + BOX_H + GAP_Y / 2;
+      ctx.strokeStyle = '#34343a';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx, y + BOX_H);
+      ctx.lineTo(cx, midY);
+      ctx.stroke();
+
+      node.children.forEach((c) => {
+        const ccx = c.x + BOX_W / 2;
+        ctx.beginPath();
+        ctx.moveTo(ccx, midY);
+        ctx.lineTo(ccx, childY);
+        ctx.stroke();
+      });
+      const firstCx = node.children[0].x + BOX_W / 2;
+      const lastCx = node.children[node.children.length - 1].x + BOX_W / 2;
+      ctx.beginPath();
+      ctx.moveTo(firstCx, midY);
+      ctx.lineTo(lastCx, midY);
+      ctx.stroke();
+    }
+
+    // box
+    ctx.fillStyle = level === 0 ? '#5e6ad2' : '#141516';
+    ctx.strokeStyle = level === 0 ? '#5e6ad2' : '#34343a';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(x, y, BOX_W, BOX_H, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = level === 0 ? '#ffffff' : '#f7f8f8';
+    ctx.font = '600 13px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    let label = node.name;
+    while (ctx.measureText(label).width > BOX_W - 16 && label.length > 1) {
+      label = label.slice(0, -2) + '…';
+    }
+    ctx.fillText(label, cx, y + BOX_H / 2);
+
+    node.children.forEach((c) => drawNode(c, level + 1));
+  }
+
+  function draw(): void {
+    errEl.classList.add('hidden');
+    const roots = parseTree();
+
+    if (roots.length === 0) {
+      canvas.width = 10;
+      canvas.height = 10;
+      return;
+    }
+
+    // Layout roots side by side.
+    let cursor = PAD;
+    roots.forEach((r) => {
+      measure(r);
+      assign(r, cursor);
+      cursor += r.width + GAP_X;
+    });
+
+    const totalW = cursor - GAP_X + PAD;
+    const levels = depth(roots);
+    const totalH = PAD * 2 + levels * BOX_H + (levels - 1) * GAP_Y;
+
+    const scale = 2;
+    canvas.width = totalW * scale;
+    canvas.height = totalH * scale;
+    canvas.style.width = totalW + 'px';
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+
+    ctx.fillStyle = '#0f1011';
+    ctx.fillRect(0, 0, totalW, totalH);
+
+    roots.forEach((r) => drawNode(r, 0));
+  }
+
+  input.addEventListener('input', draw);
+
+  document.getElementById('occ-png')!.addEventListener('click', () => {
+    if (parseTree().length === 0) {
+      errEl.textContent = 'Add at least one role to generate a chart.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+    const link = document.createElement('a');
+    link.download = 'toolcities-org-chart.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+
+  draw();
+</script>

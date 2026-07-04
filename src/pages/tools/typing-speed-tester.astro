@@ -1,0 +1,140 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="typing-speed-tester">
+  <div class="flex flex-col gap-4">
+    <div id="tt-passage" class="panel p-4 text-[15px] leading-relaxed text-ink-subtle font-mono select-none" aria-live="polite"></div>
+
+    <textarea
+      id="tt-input"
+      class="field min-h-32 resize-y font-mono text-[14px]"
+      placeholder="Start typing here — the timer starts on your first keystroke."
+      spellcheck="false"
+      autocomplete="off"
+      aria-label="Typing input"
+    ></textarea>
+
+    <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
+      <div class="panel panel-lift p-4"><div id="tt-wpm" class="font-display text-xl font-semibold text-primary-hover">0</div><div class="mt-1 text-[13px] text-ink-subtle">WPM</div></div>
+      <div class="panel p-4"><div id="tt-acc" class="font-mono text-lg text-ink">100%</div><div class="mt-1 text-[13px] text-ink-subtle">Accuracy</div></div>
+      <div class="panel p-4"><div id="tt-err" class="font-mono text-lg text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Errors</div></div>
+      <div class="panel p-4"><div id="tt-time" class="font-mono text-lg text-ink">0.0s</div><div class="mt-1 text-[13px] text-ink-subtle">Time</div></div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="tt-restart" class="btn btn-primary">New passage</button>
+      <span id="tt-done" class="hidden text-[13px] text-primary-hover">Passage complete — nice work!</span>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free typing speed tester shows you a sample passage and measures your
+      words-per-minute, accuracy and error count in real time as you type. The
+      timer starts on your first keystroke and WPM is calculated the standard way,
+      treating every five characters as one word. Hit New passage to try a fresh
+      excerpt. Everything runs in your browser — nothing is uploaded and no
+      sign-up is needed.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const passages = [
+    'The quick brown fox jumps over the lazy dog while the sun sets slowly behind the distant hills and a gentle breeze moves through the tall grass.',
+    'Success is not final and failure is not fatal, it is the courage to continue that counts in the long run when the road ahead seems difficult.',
+    'A journey of a thousand miles begins with a single step, so take that step today and let each small effort carry you a little further forward.',
+    'Practice makes progress, not perfection, and every keystroke you make helps your fingers learn the map of the keyboard just a little bit better.',
+    'The best way to predict the future is to create it, one careful decision at a time, building steadily toward the life you actually want to live.',
+    'Curiosity is the engine of achievement, pushing us to ask better questions, explore new ideas, and keep learning long after school has ended.',
+  ];
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const passageEl = $('tt-passage');
+  const input = $('tt-input') as HTMLTextAreaElement;
+  const wpmEl = $('tt-wpm');
+  const accEl = $('tt-acc');
+  const errEl = $('tt-err');
+  const timeEl = $('tt-time');
+  const doneEl = $('tt-done');
+
+  let target = '';
+  let startTime = 0;
+  let timerId: number | null = null;
+
+  function renderPassage(typed: string) {
+    let html = '';
+    for (let i = 0; i < target.length; i++) {
+      const ch = target[i];
+      const safe = ch === '<' ? '&lt;' : ch === '>' ? '&gt;' : ch === '&' ? '&amp;' : ch;
+      if (i < typed.length) {
+        const ok = typed[i] === ch;
+        const color = ok ? '#27a644' : '#e5484d';
+        const bg = ok ? 'transparent' : 'rgba(229,72,77,0.15)';
+        html += `<span style="color:${color};background:${bg}">${safe}</span>`;
+      } else if (i === typed.length) {
+        html += `<span style="border-bottom:2px solid #5e6ad2">${safe}</span>`;
+      } else {
+        html += safe;
+      }
+    }
+    passageEl.innerHTML = html;
+  }
+
+  function stats() {
+    const typed = input.value;
+    let errors = 0;
+    for (let i = 0; i < typed.length; i++) {
+      if (typed[i] !== target[i]) errors++;
+    }
+    const correct = typed.length - errors;
+    const acc = typed.length ? Math.round((correct / typed.length) * 100) : 100;
+    const elapsedMin = startTime ? (performance.now() - startTime) / 60000 : 0;
+    const wpm = elapsedMin > 0 ? Math.round((typed.length / 5) / elapsedMin) : 0;
+    wpmEl.textContent = String(wpm);
+    accEl.textContent = acc + '%';
+    errEl.textContent = String(errors);
+    renderPassage(typed);
+  }
+
+  function tick() {
+    if (!startTime) return;
+    timeEl.textContent = ((performance.now() - startTime) / 1000).toFixed(1) + 's';
+    stats();
+  }
+
+  function reset(newPassage: boolean) {
+    if (timerId !== null) { clearInterval(timerId); timerId = null; }
+    if (newPassage || !target) {
+      target = passages[Math.floor(Math.random() * passages.length)];
+    }
+    startTime = 0;
+    input.value = '';
+    input.disabled = false;
+    wpmEl.textContent = '0';
+    accEl.textContent = '100%';
+    errEl.textContent = '0';
+    timeEl.textContent = '0.0s';
+    doneEl.classList.add('hidden');
+    renderPassage('');
+  }
+
+  input.addEventListener('input', () => {
+    if (!startTime && input.value.length > 0) {
+      startTime = performance.now();
+      timerId = window.setInterval(tick, 100);
+    }
+    stats();
+    if (input.value.length >= target.length) {
+      if (timerId !== null) { clearInterval(timerId); timerId = null; }
+      timeEl.textContent = ((performance.now() - startTime) / 1000).toFixed(1) + 's';
+      input.disabled = true;
+      doneEl.classList.remove('hidden');
+    }
+  });
+
+  $('tt-restart').addEventListener('click', () => reset(true));
+
+  reset(true);
+</script>

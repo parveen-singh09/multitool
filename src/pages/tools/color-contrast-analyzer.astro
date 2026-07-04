@@ -1,0 +1,124 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="color-contrast-analyzer">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Text color
+        <div class="flex items-center gap-2">
+          <input id="cca-fg-color" type="color" value="#ffffff" class="h-9 w-10 cursor-pointer rounded border border-hairline bg-transparent" />
+          <input id="cca-fg-hex" type="text" value="#ffffff" class="field font-mono text-[13px]" spellcheck="false" />
+        </div>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Background color
+        <div class="flex items-center gap-2">
+          <input id="cca-bg-color" type="color" value="#010102" class="h-9 w-10 cursor-pointer rounded border border-hairline bg-transparent" />
+          <input id="cca-bg-hex" type="text" value="#010102" class="field font-mono text-[13px]" spellcheck="false" />
+        </div>
+      </label>
+    </div>
+
+    <p id="cca-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div id="cca-sample" class="panel flex min-h-24 items-center justify-center p-6 text-center">
+      <div>
+        <div class="text-xl font-semibold">Sample large text</div>
+        <div class="text-sm">The quick brown fox jumps over the lazy dog.</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-3">
+      <div class="panel panel-lift p-4"><div id="cca-ratio" class="font-display text-xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Contrast ratio</div></div>
+      <div class="panel p-4"><div id="cca-aa-normal" class="font-mono text-lg">—</div><div class="mt-1 text-[13px] text-ink-subtle">AA normal (4.5)</div></div>
+      <div class="panel p-4"><div id="cca-aaa-normal" class="font-mono text-lg">—</div><div class="mt-1 text-[13px] text-ink-subtle">AAA normal (7)</div></div>
+      <div class="panel p-4"><div id="cca-aa-large" class="font-mono text-lg">—</div><div class="mt-1 text-[13px] text-ink-subtle">AA large (3)</div></div>
+      <div class="panel p-4"><div id="cca-aaa-large" class="font-mono text-lg">—</div><div class="mt-1 text-[13px] text-ink-subtle">AAA large (4.5)</div></div>
+      <div class="panel p-4"><div id="cca-ui" class="font-mono text-lg">—</div><div class="mt-1 text-[13px] text-ink-subtle">UI / graphics (3)</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free color contrast analyzer computes the WCAG contrast ratio between a
+      text color and a background color and tells you whether it passes AA and AAA
+      requirements for normal and large text. Enter hex values or use the native
+      color pickers and watch the live sample update. Meeting a ratio of 4.5:1 for
+      body text and 3:1 for large text keeps your interface readable. Everything
+      runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { hexToRgb, type RGB } from '../../lib/colors';
+
+  const fgColor = document.getElementById('cca-fg-color') as HTMLInputElement;
+  const fgHex = document.getElementById('cca-fg-hex') as HTMLInputElement;
+  const bgColor = document.getElementById('cca-bg-color') as HTMLInputElement;
+  const bgHex = document.getElementById('cca-bg-hex') as HTMLInputElement;
+  const err = document.getElementById('cca-error')!;
+  const sample = document.getElementById('cca-sample') as HTMLElement;
+  const set = (id: string, val: string) => { document.getElementById(id)!.textContent = val; };
+
+  function relativeLuminance({ r, g, b }: RGB): number {
+    const chan = (c: number) => {
+      const s = c / 255;
+      return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * chan(r) + 0.7152 * chan(g) + 0.0722 * chan(b);
+  }
+
+  function verdict(id: string, pass: boolean) {
+    const el = document.getElementById(id)!;
+    el.textContent = pass ? '✓ Pass' : '✗ Fail';
+    el.style.color = pass ? '#27a644' : '#e5484d';
+  }
+
+  function analyze() {
+    err.classList.add('hidden');
+    const fg = hexToRgb(fgHex.value);
+    const bg = hexToRgb(bgHex.value);
+    if (!fg || !bg) {
+      err.textContent = 'Enter valid hex colors (e.g. #ffffff or #fff).';
+      err.classList.remove('hidden');
+      return;
+    }
+
+    const l1 = relativeLuminance(fg);
+    const l2 = relativeLuminance(bg);
+    const ratio = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+
+    set('cca-ratio', `${ratio.toFixed(2)}:1`);
+    verdict('cca-aa-normal', ratio >= 4.5);
+    verdict('cca-aaa-normal', ratio >= 7);
+    verdict('cca-aa-large', ratio >= 3);
+    verdict('cca-aaa-large', ratio >= 4.5);
+    verdict('cca-ui', ratio >= 3);
+
+    sample.style.background = bgHex.value;
+    sample.style.color = fgHex.value;
+  }
+
+  function syncFromPicker(picker: HTMLInputElement, hex: HTMLInputElement) {
+    hex.value = picker.value;
+    analyze();
+  }
+  function syncFromHex(hex: HTMLInputElement, picker: HTMLInputElement) {
+    const rgb = hexToRgb(hex.value);
+    if (rgb) {
+      let h = hex.value.trim().replace(/^#/, '');
+      if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+      picker.value = `#${h.toLowerCase()}`;
+    }
+    analyze();
+  }
+
+  fgColor.addEventListener('input', () => syncFromPicker(fgColor, fgHex));
+  bgColor.addEventListener('input', () => syncFromPicker(bgColor, bgHex));
+  fgHex.addEventListener('input', () => syncFromHex(fgHex, fgColor));
+  bgHex.addEventListener('input', () => syncFromHex(bgHex, bgColor));
+  analyze();
+</script>

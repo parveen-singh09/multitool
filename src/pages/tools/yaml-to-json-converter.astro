@@ -1,0 +1,109 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="yaml-to-json-converter">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="y2j-convert" class="btn btn-primary">Convert to JSON</button>
+      <button id="y2j-copy" class="btn btn-secondary">Copy</button>
+      <button id="y2j-clear" class="btn btn-tertiary">Clear</button>
+      <label class="ml-auto flex items-center gap-2 text-sm text-ink-subtle">
+        Indent
+        <select id="y2j-indent" class="field w-auto py-1">
+          <option value="2">2 spaces</option>
+          <option value="4">4 spaces</option>
+          <option value="tab">Tab</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="y2j-status" class="hidden rounded-[8px] border px-3 py-2 text-sm" role="status"></div>
+
+    <div class="grid gap-4 md:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        YAML input
+        <textarea
+          id="y2j-input"
+          class="field min-h-72 resize-y font-mono text-[13px]"
+          placeholder={"name: ToolCities\nport: 8080\ntags:\n  - fast\n  - local"}
+          spellcheck="false"
+          aria-label="YAML input"
+        ></textarea>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        JSON output
+        <textarea
+          id="y2j-output"
+          class="field min-h-72 resize-y font-mono text-[13px]"
+          placeholder="Formatted JSON appears here"
+          spellcheck="false"
+          readonly
+          aria-label="JSON output"
+        ></textarea>
+      </label>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free YAML to JSON converter parses YAML — nested maps, lists, scalars,
+      quoted strings, numbers, booleans and null — and returns clean, formatted
+      JSON. Syntax problems are flagged so you can fix them fast. It handles the
+      common subset of YAML used in config files rather than every edge of the
+      specification. Everything runs in your browser, so nothing you paste is
+      ever uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { parseYaml } from '../../lib/dataformats';
+
+  const input = document.getElementById('y2j-input') as HTMLTextAreaElement;
+  const output = document.getElementById('y2j-output') as HTMLTextAreaElement;
+  const status = document.getElementById('y2j-status')!;
+  const indentSel = document.getElementById('y2j-indent') as HTMLSelectElement;
+
+  function getIndent(): string | number {
+    const v = indentSel.value;
+    return v === 'tab' ? '\t' : Number(v);
+  }
+
+  function showStatus(msg: string, ok: boolean) {
+    status.textContent = msg;
+    status.classList.remove('hidden');
+    status.style.borderColor = ok ? '#27a644' : '#d14d4d';
+    status.style.color = ok ? '#27a644' : '#e08585';
+  }
+
+  function convert() {
+    if (!input.value.trim()) {
+      output.value = '';
+      status.classList.add('hidden');
+      return;
+    }
+    try {
+      const parsed = parseYaml(input.value);
+      output.value = JSON.stringify(parsed, null, getIndent());
+      showStatus('Converted to JSON ✓', true);
+    } catch (e) {
+      output.value = '';
+      showStatus((e as Error).message, false);
+    }
+  }
+
+  document.getElementById('y2j-convert')!.addEventListener('click', convert);
+  indentSel.addEventListener('change', () => { if (output.value) convert(); });
+  document.getElementById('y2j-clear')!.addEventListener('click', () => {
+    input.value = '';
+    output.value = '';
+    status.classList.add('hidden');
+  });
+  document.getElementById('y2j-copy')!.addEventListener('click', async () => {
+    const btn = document.getElementById('y2j-copy')!;
+    await navigator.clipboard.writeText(output.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+</script>

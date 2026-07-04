@@ -1,0 +1,169 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="email-signature-creator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-4">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Full name
+          <input id="esc-name" class="field" type="text" value="Alex Morgan" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Job title
+          <input id="esc-title" class="field" type="text" value="Product Designer" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Company
+          <input id="esc-company" class="field" type="text" value="ToolCities" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Phone
+          <input id="esc-phone" class="field" type="text" value="+1 555 010 2030" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Email
+          <input id="esc-email" class="field" type="email" value="alex@toolcities.com" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Website
+          <input id="esc-website" class="field" type="text" value="toolcities.com" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Accent color
+          <input id="esc-accent" class="field h-10 cursor-pointer p-1" type="color" value="#5e6ad2" />
+        </label>
+      </div>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Links (one per line, as <code class="text-ink-muted">Label | https://url</code>)
+        <textarea id="esc-links" class="field min-h-32 resize-y font-mono text-[13px]" spellcheck="false">LinkedIn | https://linkedin.com/in/alexmorgan
+Twitter | https://twitter.com/alexmorgan</textarea>
+      </label>
+
+      <div class="flex gap-2">
+        <button id="esc-copy" class="btn btn-primary">Copy HTML</button>
+        <button id="esc-copy-rich" class="btn btn-secondary">Copy signature</button>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <span class="text-sm text-ink-subtle">Live preview</span>
+      <div class="panel p-4">
+        <div id="esc-preview"></div>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free email signature creator turns your name, title, company and
+      links into a clean, inline-styled HTML signature. Fill in the fields,
+      preview it live, then copy the HTML source to paste into Gmail, Outlook,
+      Apple Mail or any client that accepts a custom signature. Everything runs
+      entirely in your browser — nothing is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const ids = ['esc-name', 'esc-title', 'esc-company', 'esc-phone', 'esc-email', 'esc-website', 'esc-accent', 'esc-links'];
+  const preview = document.getElementById('esc-preview') as HTMLDivElement;
+  const copyBtn = document.getElementById('esc-copy') as HTMLButtonElement;
+  const copyRichBtn = document.getElementById('esc-copy-rich') as HTMLButtonElement;
+
+  const val = (id: string): string => (document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement).value.trim();
+
+  function esc(s: string): string {
+    return s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  interface Link { label: string; url: string; }
+
+  function parseLinks(): Link[] {
+    return val('esc-links')
+      .split('\n')
+      .map((line) => {
+        const idx = line.indexOf('|');
+        if (idx === -1) return { label: line.trim(), url: line.trim() };
+        return { label: line.slice(0, idx).trim(), url: line.slice(idx + 1).trim() };
+      })
+      .filter((l) => l.label !== '' || l.url !== '');
+  }
+
+  function buildHtml(): string {
+    const name = esc(val('esc-name'));
+    const title = esc(val('esc-title'));
+    const company = esc(val('esc-company'));
+    const phone = esc(val('esc-phone'));
+    const email = esc(val('esc-email'));
+    const website = esc(val('esc-website'));
+    const accent = val('esc-accent') || '#5e6ad2';
+
+    const contactRows: string[] = [];
+    if (phone) contactRows.push(`<span style="color:#555555;">${phone}</span>`);
+    if (email) {
+      const href = email.startsWith('mailto:') ? email : `mailto:${email}`;
+      contactRows.push(`<a href="${esc(href)}" style="color:${esc(accent)};text-decoration:none;">${email}</a>`);
+    }
+    if (website) {
+      const href = /^https?:\/\//.test(website) ? website : `https://${website}`;
+      contactRows.push(`<a href="${esc(href)}" style="color:${esc(accent)};text-decoration:none;">${website}</a>`);
+    }
+
+    const links = parseLinks()
+      .map((l) => {
+        const href = /^https?:\/\//.test(l.url) ? l.url : `https://${l.url}`;
+        return `<a href="${esc(href)}" style="color:${esc(accent)};text-decoration:none;font-weight:600;">${esc(l.label)}</a>`;
+      })
+      .join('<span style="color:#cccccc;"> &nbsp;·&nbsp; </span>');
+
+    const titleLine = [title, company].filter((s) => s !== '').join(', ');
+
+    return [
+      `<table cellpadding="0" cellspacing="0" border="0" style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#222222;border-collapse:collapse;">`,
+      `<tr><td style="border-left:3px solid ${esc(accent)};padding-left:14px;">`,
+      name ? `<div style="font-size:17px;font-weight:700;color:#111111;">${name}</div>` : '',
+      titleLine ? `<div style="font-size:13px;color:#666666;margin-top:2px;">${titleLine}</div>` : '',
+      contactRows.length ? `<div style="margin-top:8px;font-size:13px;">${contactRows.join('<span style="color:#cccccc;"> &nbsp;·&nbsp; </span>')}</div>` : '',
+      links ? `<div style="margin-top:6px;font-size:13px;">${links}</div>` : '',
+      `</td></tr>`,
+      `</table>`,
+    ]
+      .filter((s) => s !== '')
+      .join('');
+  }
+
+  function render(): void {
+    preview.innerHTML = buildHtml();
+  }
+
+  copyBtn.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(buildHtml());
+    copyBtn.textContent = 'Copied!';
+    setTimeout(() => (copyBtn.textContent = 'Copy HTML'), 1500);
+  });
+
+  copyRichBtn.addEventListener('click', async () => {
+    const html = buildHtml();
+    try {
+      const item = new ClipboardItem({
+        'text/html': new Blob([html], { type: 'text/html' }),
+        'text/plain': new Blob([preview.textContent ?? ''], { type: 'text/plain' }),
+      });
+      await navigator.clipboard.write([item]);
+    } catch {
+      await navigator.clipboard.writeText(html);
+    }
+    copyRichBtn.textContent = 'Copied!';
+    setTimeout(() => (copyRichBtn.textContent = 'Copy signature'), 1500);
+  });
+
+  ids.forEach((id) => document.getElementById(id)!.addEventListener('input', render));
+  render();
+</script>

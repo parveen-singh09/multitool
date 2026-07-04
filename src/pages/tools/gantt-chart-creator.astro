@@ -1,0 +1,198 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="gantt-chart-creator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Project title
+        <input id="gcc-title" class="field" type="text" value="Launch Plan" />
+      </label>
+
+      <div id="gcc-rows" class="flex flex-col gap-3"></div>
+
+      <div class="flex gap-2">
+        <button id="gcc-add" class="btn btn-secondary">Add task</button>
+        <button id="gcc-png" class="btn btn-primary">Download PNG</button>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <span class="text-sm text-ink-subtle">Preview</span>
+      <div class="panel p-4">
+        <canvas id="gcc-canvas" class="max-w-full h-auto rounded-[8px]" aria-label="Gantt chart preview"></canvas>
+      </div>
+      <p id="gcc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free Gantt chart creator turns a list of tasks with start and end
+      dates into a clear project timeline of horizontal bars, then lets you
+      download it as a PNG. Add or remove tasks and the chart rescales its date
+      axis automatically. It is ideal for sprint planning, event schedules and
+      project roadmaps. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  interface Task { name: string; start: string; end: string; }
+
+  const rowsEl = document.getElementById('gcc-rows') as HTMLDivElement;
+  const titleEl = document.getElementById('gcc-title') as HTMLInputElement;
+  const canvas = document.getElementById('gcc-canvas') as HTMLCanvasElement;
+  const errEl = document.getElementById('gcc-error') as HTMLParagraphElement;
+  const ctx = canvas.getContext('2d')!;
+
+  const DAY = 86400000;
+
+  let tasks: Task[] = [
+    { name: 'Research', start: '2025-01-06', end: '2025-01-17' },
+    { name: 'Design', start: '2025-01-15', end: '2025-02-07' },
+    { name: 'Build', start: '2025-02-03', end: '2025-03-14' },
+    { name: 'Launch', start: '2025-03-10', end: '2025-03-21' },
+  ];
+
+  function renderRows(): void {
+    rowsEl.innerHTML = '';
+    tasks.forEach((t, i) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'panel p-3 flex flex-col gap-2';
+
+      const nameInput = document.createElement('input');
+      nameInput.className = 'field';
+      nameInput.placeholder = 'Task name';
+      nameInput.value = t.name;
+      nameInput.addEventListener('input', () => { tasks[i].name = nameInput.value; draw(); });
+
+      const grid = document.createElement('div');
+      grid.className = 'grid grid-cols-1 gap-3 sm:grid-cols-2';
+
+      const startInput = document.createElement('input');
+      startInput.className = 'field';
+      startInput.type = 'date';
+      startInput.value = t.start;
+      startInput.addEventListener('input', () => { tasks[i].start = startInput.value; draw(); });
+
+      const endInput = document.createElement('input');
+      endInput.className = 'field';
+      endInput.type = 'date';
+      endInput.value = t.end;
+      endInput.addEventListener('input', () => { tasks[i].end = endInput.value; draw(); });
+
+      grid.append(startInput, endInput);
+
+      const remove = document.createElement('button');
+      remove.className = 'btn btn-tertiary self-start';
+      remove.textContent = 'Remove';
+      remove.addEventListener('click', () => { tasks.splice(i, 1); renderRows(); draw(); });
+
+      wrap.append(nameInput, grid, remove);
+      rowsEl.appendChild(wrap);
+    });
+  }
+
+  function fmt(ms: number): string {
+    const d = new Date(ms);
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  function draw(): void {
+    errEl.classList.add('hidden');
+    const valid = tasks
+      .map((t) => ({ name: t.name, s: Date.parse(t.start), e: Date.parse(t.end) }))
+      .filter((t) => !isNaN(t.s) && !isNaN(t.e));
+
+    if (valid.some((t) => t.e < t.s)) {
+      errEl.textContent = 'A task ends before it starts — check the dates.';
+      errEl.classList.remove('hidden');
+    }
+
+    const scale = 2;
+    const width = 720;
+    const rowH = 40;
+    const padTop = 90;
+    const padBottom = 30;
+    const labelW = 150;
+    const chartX = labelW + 20;
+    const chartW = width - chartX - 30;
+
+    const rows = valid.length ? valid : [{ name: '—', s: Date.now(), e: Date.now() + DAY }];
+    const minT = Math.min(...rows.map((r) => r.s));
+    const maxT = Math.max(...rows.map((r) => r.e));
+    const span = Math.max(maxT - minT, DAY);
+
+    const height = padTop + rows.length * rowH + padBottom;
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+    canvas.style.width = width + 'px';
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+
+    ctx.fillStyle = '#0f1011';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = '#f7f8f8';
+    ctx.font = '600 24px Inter, system-ui, sans-serif';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(titleEl.value || 'Gantt Chart', 30, 52);
+
+    const xOf = (t: number): number => chartX + ((t - minT) / span) * chartW;
+
+    // gridlines + date labels
+    const ticks = 5;
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    for (let i = 0; i <= ticks; i++) {
+      const t = minT + (span * i) / ticks;
+      const x = chartX + (chartW * i) / ticks;
+      ctx.strokeStyle = '#23252a';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, padTop - 8);
+      ctx.lineTo(x, height - padBottom);
+      ctx.stroke();
+      ctx.fillStyle = '#62666d';
+      ctx.fillText(fmt(t), x, padTop - 14);
+    }
+    ctx.textAlign = 'left';
+
+    rows.forEach((r, i) => {
+      const y = padTop + i * rowH;
+      ctx.fillStyle = '#8a8f98';
+      ctx.font = '13px Inter, system-ui, sans-serif';
+      const label = r.name.length > 20 ? r.name.slice(0, 19) + '…' : r.name;
+      ctx.fillText(label, 30, y + rowH / 2 + 4);
+
+      const bx = xOf(r.s);
+      const bw = Math.max(xOf(r.e) - bx, 4);
+      ctx.fillStyle = '#5e6ad2';
+      const by = y + 8;
+      const bh = rowH - 16;
+      const rad = 5;
+      ctx.beginPath();
+      ctx.roundRect(bx, by, bw, bh, rad);
+      ctx.fill();
+    });
+  }
+
+  document.getElementById('gcc-add')!.addEventListener('click', () => {
+    tasks.push({ name: 'New task', start: '', end: '' });
+    renderRows();
+    draw();
+  });
+
+  titleEl.addEventListener('input', draw);
+
+  document.getElementById('gcc-png')!.addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.download = 'toolcities-gantt.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+
+  renderRows();
+  draw();
+</script>

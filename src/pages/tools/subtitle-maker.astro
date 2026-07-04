@@ -1,0 +1,167 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="subtitle-maker">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-4">
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="subm-add" class="btn btn-secondary">Add caption</button>
+        <button id="subm-download" class="btn btn-primary">Download .srt</button>
+      </div>
+
+      <p id="subm-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+      <div id="subm-rows" class="flex flex-col gap-3"></div>
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <span class="text-sm text-ink-subtle">SRT preview</span>
+      <pre id="subm-preview" class="field min-h-72 resize-y overflow-auto whitespace-pre-wrap font-mono text-[13px]"></pre>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free subtitle maker lets you build a valid SRT subtitle file by hand.
+      Add caption rows with start and end times in <code>hh:mm:ss,ms</code> format
+      and your text, watch the SRT preview update live, then download the finished
+      <code>.srt</code> file. Times are validated as you type. Everything is created
+      locally in your browser and is never uploaded to a server.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const rowsEl = document.getElementById('subm-rows')!;
+  const previewEl = document.getElementById('subm-preview')!;
+  const err = document.getElementById('subm-error')!;
+
+  const TIME_RE = /^(\d{2}):([0-5]\d):([0-5]\d),(\d{3})$/;
+
+  interface Row {
+    start: string;
+    end: string;
+    text: string;
+  }
+
+  let rows: Row[] = [
+    { start: '00:00:00,000', end: '00:00:02,500', text: 'Welcome to the show.' },
+    { start: '00:00:02,600', end: '00:00:05,000', text: 'Let\'s get started.' },
+  ];
+
+  function timeToMs(t: string): number {
+    const m = TIME_RE.exec(t);
+    if (!m) return NaN;
+    return (
+      Number(m[1]) * 3600000 +
+      Number(m[2]) * 60000 +
+      Number(m[3]) * 1000 +
+      Number(m[4])
+    );
+  }
+
+  function buildSrt(): string {
+    return rows
+      .map((r, i) => `${i + 1}\n${r.start} --> ${r.end}\n${r.text}`)
+      .join('\n\n');
+  }
+
+  function validate(): string | null {
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      const s = timeToMs(r.start);
+      const e = timeToMs(r.end);
+      if (Number.isNaN(s)) return `Caption ${i + 1}: start time must be hh:mm:ss,ms.`;
+      if (Number.isNaN(e)) return `Caption ${i + 1}: end time must be hh:mm:ss,ms.`;
+      if (e <= s) return `Caption ${i + 1}: end time must be after start time.`;
+    }
+    return null;
+  }
+
+  function refresh() {
+    previewEl.textContent = buildSrt();
+    const problem = validate();
+    if (problem) {
+      err.textContent = problem;
+      err.classList.remove('hidden');
+    } else {
+      err.classList.add('hidden');
+    }
+  }
+
+  function makeInput(value: string, placeholder: string, onInput: (v: string) => void): HTMLInputElement {
+    const el = document.createElement('input');
+    el.type = 'text';
+    el.className = 'field font-mono text-[13px]';
+    el.value = value;
+    el.placeholder = placeholder;
+    el.addEventListener('input', () => onInput(el.value));
+    return el;
+  }
+
+  function renderRows() {
+    rowsEl.replaceChildren();
+    rows.forEach((row, i) => {
+      const card = document.createElement('div');
+      card.className = 'panel flex flex-col gap-2 p-3';
+
+      const times = document.createElement('div');
+      times.className = 'grid grid-cols-2 gap-2';
+      times.appendChild(makeInput(row.start, '00:00:00,000', (v) => { row.start = v; refresh(); }));
+      times.appendChild(makeInput(row.end, '00:00:02,000', (v) => { row.end = v; refresh(); }));
+
+      const text = document.createElement('input');
+      text.type = 'text';
+      text.className = 'field';
+      text.value = row.text;
+      text.placeholder = 'Caption text';
+      text.addEventListener('input', () => { row.text = text.value; refresh(); });
+
+      const bar = document.createElement('div');
+      bar.className = 'flex items-center justify-between';
+      const label = document.createElement('span');
+      label.className = 'text-[13px] text-ink-muted';
+      label.textContent = `Caption ${i + 1}`;
+      const del = document.createElement('button');
+      del.className = 'btn btn-tertiary';
+      del.textContent = 'Remove';
+      del.addEventListener('click', () => {
+        rows.splice(i, 1);
+        renderRows();
+        refresh();
+      });
+      bar.append(label, del);
+
+      card.append(bar, times, text);
+      rowsEl.appendChild(card);
+    });
+  }
+
+  document.getElementById('subm-add')!.addEventListener('click', () => {
+    const last = rows[rows.length - 1];
+    const start = last ? last.end : '00:00:00,000';
+    rows.push({ start, end: start, text: '' });
+    renderRows();
+    refresh();
+  });
+
+  document.getElementById('subm-download')!.addEventListener('click', () => {
+    const problem = validate();
+    if (problem) {
+      err.textContent = problem;
+      err.classList.remove('hidden');
+      return;
+    }
+    const blob = new Blob([buildSrt() + '\n'], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = 'toolcities-subtitles.srt';
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+  });
+
+  renderRows();
+  refresh();
+</script>
