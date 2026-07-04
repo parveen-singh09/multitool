@@ -1,0 +1,164 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="macro-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap gap-2" role="tablist" aria-label="Units">
+      <button type="button" class="btn btn-primary" data-unit="metric" aria-selected="true">Metric</button>
+      <button type="button" class="btn btn-secondary" data-unit="imperial" aria-selected="false">Imperial</button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Sex
+        <select id="m-sex" class="field">
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Age (years)
+        <input id="m-age" type="number" min="1" step="1" class="field" value="30" inputmode="numeric" />
+      </label>
+    </div>
+
+    <!-- Metric height/weight -->
+    <div id="m-metric" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Height (cm)
+        <input id="m-cm" type="number" min="0" step="0.1" class="field" value="175" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Weight (kg)
+        <input id="m-kg" type="number" min="0" step="0.1" class="field" value="70" inputmode="decimal" />
+      </label>
+    </div>
+
+    <!-- Imperial height/weight -->
+    <div id="m-imperial" class="hidden grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Height (ft)
+        <input id="m-ft" type="number" min="0" step="1" class="field" value="5" inputmode="numeric" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Height (in)
+        <input id="m-in" type="number" min="0" step="0.1" class="field" value="9" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Weight (lb)
+        <input id="m-lb" type="number" min="0" step="0.1" class="field" value="154" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Activity level
+        <select id="m-activity" class="field">
+          <option value="1.2">Sedentary (little/no exercise)</option>
+          <option value="1.375">Light (1-3 days/week)</option>
+          <option value="1.55" selected>Moderate (3-5 days/week)</option>
+          <option value="1.725">Active (6-7 days/week)</option>
+          <option value="1.9">Very active (hard exercise/physical job)</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Goal
+        <select id="m-goal" class="field">
+          <option value="-0.2">Lose weight (−20%)</option>
+          <option value="0" selected>Maintain (0%)</option>
+          <option value="0.15">Gain muscle (+15%)</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div id="m-calories" class="font-display text-4xl font-semibold text-primary-hover">—</div>
+      <div id="m-calories-sub" class="mt-2 text-sm text-ink-muted"></div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div class="panel p-5 text-center">
+        <div id="m-protein" class="font-mono text-xl text-ink">—</div>
+        <div class="mt-1 text-[13px] text-ink-subtle">Protein · 30%</div>
+      </div>
+      <div class="panel p-5 text-center">
+        <div id="m-carbs" class="font-mono text-xl text-ink">—</div>
+        <div class="mt-1 text-[13px] text-ink-subtle">Carbs · 40%</div>
+      </div>
+      <div class="panel p-5 text-center">
+        <div id="m-fat" class="font-mono text-xl text-ink">—</div>
+        <div class="mt-1 text-[13px] text-ink-subtle">Fat · 30%</div>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free macro calculator estimates your daily calorie target and how to
+      split it across protein, carbs, and fat. It finds your BMR with the
+      Mifflin-St Jeor equation, scales it by your activity level to get total
+      daily energy expenditure, then adjusts for your goal before dividing
+      calories into a 30% protein, 40% carb, 30% fat split. These numbers are
+      general guides, not medical advice. Runs entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const sel = (id: string) => document.getElementById(id) as unknown as HTMLSelectElement;
+
+  let unit: 'metric' | 'imperial' = 'metric';
+  const tabs = Array.from(document.querySelectorAll('[data-unit]')) as HTMLButtonElement[];
+
+  function setUnit(next: 'metric' | 'imperial') {
+    unit = next;
+    tabs.forEach((b) => {
+      const active = b.dataset.unit === unit;
+      b.classList.toggle('btn-primary', active);
+      b.classList.toggle('btn-secondary', !active);
+      b.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    document.getElementById('m-metric')!.classList.toggle('hidden', unit !== 'metric');
+    document.getElementById('m-metric')!.classList.toggle('grid', unit === 'metric');
+    document.getElementById('m-imperial')!.classList.toggle('hidden', unit !== 'imperial');
+    document.getElementById('m-imperial')!.classList.toggle('grid', unit === 'imperial');
+    calc();
+  }
+  tabs.forEach((b) => b.addEventListener('click', () => setUnit(b.dataset.unit as 'metric' | 'imperial')));
+
+  function calc() {
+    const sex = sel('m-sex').value;
+    const age = Number($('m-age').value);
+    let cm: number, kg: number;
+    if (unit === 'metric') {
+      cm = Number($('m-cm').value);
+      kg = Number($('m-kg').value);
+    } else {
+      const totalIn = Number($('m-ft').value) * 12 + Number($('m-in').value);
+      cm = totalIn * 2.54;
+      kg = Number($('m-lb').value) * 0.45359237;
+    }
+
+    const clear = () => {
+      document.getElementById('m-calories')!.textContent = '—';
+      document.getElementById('m-calories-sub')!.textContent = '';
+      document.getElementById('m-protein')!.textContent = '—';
+      document.getElementById('m-carbs')!.textContent = '—';
+      document.getElementById('m-fat')!.textContent = '—';
+    };
+    if (!(age > 0) || !(cm > 0) || !(kg > 0)) { clear(); return; }
+
+    const bmr = 10 * kg + 6.25 * cm - 5 * age + (sex === 'male' ? 5 : -161);
+    const tdee = bmr * Number(sel('m-activity').value);
+    const target = tdee * (1 + Number(sel('m-goal').value));
+
+    const proteinG = Math.round((target * 0.3) / 4);
+    const carbsG = Math.round((target * 0.4) / 4);
+    const fatG = Math.round((target * 0.3) / 9);
+
+    document.getElementById('m-calories')!.textContent = Math.round(target).toLocaleString() + ' cal';
+    document.getElementById('m-calories-sub')!.textContent =
+      `Target calories/day · TDEE ${Math.round(tdee).toLocaleString()} · BMR ${Math.round(bmr).toLocaleString()}`;
+    document.getElementById('m-protein')!.textContent = proteinG + ' g';
+    document.getElementById('m-carbs')!.textContent = carbsG + ' g';
+    document.getElementById('m-fat')!.textContent = fatG + ' g';
+  }
+
+  document
+    .querySelectorAll('#m-sex, #m-age, #m-cm, #m-kg, #m-ft, #m-in, #m-lb, #m-activity, #m-goal')
+    .forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

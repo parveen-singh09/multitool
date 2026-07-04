@@ -1,0 +1,112 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="credit-card-payoff-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Balance
+        <input id="cc-balance" type="number" min="0" step="100" class="field" value="5000" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">APR (%)
+        <input id="cc-apr" type="number" min="0" step="0.01" class="field" value="20" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Monthly payment
+        <input id="cc-payment" type="number" min="0" step="10" class="field" value="200" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div id="cc-warn" class="hidden panel p-4 text-center text-sm" style="color:#e5484d;">
+      Your monthly payment is not enough to cover the interest, so this balance will never be paid off. Increase the payment above the monthly interest charge.
+    </div>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div id="cc-months" class="font-display text-4xl font-semibold text-primary-hover">—</div>
+      <div id="cc-sub" class="mt-2 text-sm text-ink-muted"></div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="panel p-5 text-center"><div id="cc-interest" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total interest paid</div></div>
+      <div class="panel p-5 text-center"><div id="cc-total" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total paid</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free credit card payoff calculator shows how long it will take to clear
+      your balance with a fixed monthly payment, along with the total interest and
+      total amount you will pay. It simulates the balance month by month, applying
+      interest at your APR before each payment. If the payment is too small to cover
+      the monthly interest, it warns you that the balance will never be paid off.
+      Runs entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const balanceEl = document.getElementById('cc-balance') as HTMLInputElement;
+  const aprEl = document.getElementById('cc-apr') as HTMLInputElement;
+  const paymentEl = document.getElementById('cc-payment') as HTMLInputElement;
+
+  const warnEl = document.getElementById('cc-warn')!;
+  const monthsEl = document.getElementById('cc-months')!;
+  const subEl = document.getElementById('cc-sub')!;
+  const interestEl = document.getElementById('cc-interest')!;
+  const totalEl = document.getElementById('cc-total')!;
+
+  const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+
+  function reset() {
+    monthsEl.textContent = '—';
+    subEl.textContent = '';
+    interestEl.textContent = totalEl.textContent = '—';
+  }
+
+  function calc() {
+    const balance = Number(balanceEl.value);
+    const apr = Number(aprEl.value);
+    const payment = Number(paymentEl.value);
+
+    warnEl.classList.add('hidden');
+
+    if (!(balance > 0) || !(payment > 0)) { reset(); return; }
+
+    const r = apr / 12 / 100;
+    const firstInterest = balance * r;
+
+    if (r > 0 && payment <= firstInterest) {
+      warnEl.classList.remove('hidden');
+      reset();
+      return;
+    }
+
+    let bal = balance;
+    let months = 0;
+    let totalInterest = 0;
+    const cap = 12000; // safety cap: 1000 years
+
+    while (bal > 0 && months < cap) {
+      const interest = bal * r;
+      totalInterest += interest;
+      bal = bal + interest - payment;
+      months++;
+      if (bal < 0) bal = 0;
+    }
+
+    const totalPaid = balance + totalInterest;
+    const years = Math.floor(months / 12);
+    const remMonths = months % 12;
+    let human = '';
+    if (years > 0) human += `${years} year${years !== 1 ? 's' : ''}`;
+    if (remMonths > 0) human += `${years > 0 ? ' ' : ''}${remMonths} month${remMonths !== 1 ? 's' : ''}`;
+    if (!human) human = '0 months';
+
+    monthsEl.textContent = `${months} mo`;
+    subEl.textContent = human;
+    interestEl.textContent = money(totalInterest);
+    totalEl.textContent = money(totalPaid);
+  }
+
+  [balanceEl, aprEl, paymentEl].forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

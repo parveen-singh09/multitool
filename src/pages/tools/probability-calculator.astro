@@ -1,0 +1,89 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="probability-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Probability of A (%)
+        <input id="p-a" type="number" inputmode="decimal" step="any" min="0" max="100" class="field font-mono" value="50" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Probability of B (%)
+        <input id="p-b" type="number" inputmode="decimal" step="any" min="0" max="100" class="field font-mono" value="25" />
+      </label>
+    </div>
+
+    <p id="p-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-3">
+      <div class="panel panel-lift p-5"><div id="p-and" class="font-display text-xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">P(A ∩ B)</div></div>
+      <div class="panel panel-lift p-5"><div id="p-or" class="font-display text-xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">P(A ∪ B)</div></div>
+      <div class="panel p-5"><div id="p-nota" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">P(not A)</div></div>
+      <div class="panel p-5"><div id="p-notb" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">P(not B)</div></div>
+      <div class="panel p-5"><div id="p-neither" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">P(neither)</div></div>
+      <div class="panel p-5"><div id="p-onlya" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">P(A not B)</div></div>
+    </div>
+
+    <p class="text-[13px] text-ink-tertiary">
+      Results assume events A and B are independent — the outcome of one does not
+      affect the other.
+    </p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free probability calculator finds the chance of single and combined
+      events. Enter the probability of A and B as percentages to get P(A and B),
+      P(A or B), the complements, and the probability that neither event occurs.
+      It assumes the two events are independent. All calculations run in your
+      browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const aEl = document.getElementById('p-a') as HTMLInputElement;
+  const bEl = document.getElementById('p-b') as HTMLInputElement;
+  const errEl = document.getElementById('p-error')!;
+
+  const pct = (v: number): string => {
+    const r = Math.round(v * 1e6) / 1e6;
+    return `${r}%`;
+  };
+
+  const ids = ['p-and', 'p-or', 'p-nota', 'p-notb', 'p-neither', 'p-onlya'];
+  const setEmpty = () => ids.forEach((id) => (document.getElementById(id)!.textContent = '—'));
+
+  function calc() {
+    errEl.classList.add('hidden');
+    const av = parseFloat(aEl.value);
+    const bv = parseFloat(bEl.value);
+
+    if (isNaN(av) || isNaN(bv)) { setEmpty(); return; }
+    if (av < 0 || av > 100 || bv < 0 || bv > 100) {
+      errEl.textContent = 'Probabilities must be between 0 and 100%.';
+      errEl.classList.remove('hidden');
+      setEmpty();
+      return;
+    }
+
+    const pa = av / 100;
+    const pb = bv / 100;
+    const both = pa * pb;
+    const either = pa + pb - both;
+    const neither = (1 - pa) * (1 - pb);
+    const onlyA = pa * (1 - pb);
+
+    document.getElementById('p-and')!.textContent = pct(both * 100);
+    document.getElementById('p-or')!.textContent = pct(either * 100);
+    document.getElementById('p-nota')!.textContent = pct((1 - pa) * 100);
+    document.getElementById('p-notb')!.textContent = pct((1 - pb) * 100);
+    document.getElementById('p-neither')!.textContent = pct(neither * 100);
+    document.getElementById('p-onlya')!.textContent = pct(onlyA * 100);
+  }
+
+  [aEl, bEl].forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

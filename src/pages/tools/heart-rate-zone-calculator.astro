@@ -1,0 +1,82 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="heart-rate-zone-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Age (years)
+        <input id="hr-age" type="number" min="1" max="120" step="1" class="field" value="30" inputmode="numeric" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Resting heart rate (optional, bpm)
+        <input id="hr-rest" type="number" min="0" max="200" step="1" class="field" placeholder="e.g. 60" inputmode="numeric" />
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div id="hr-max" class="font-display text-4xl font-semibold text-primary-hover">—</div>
+      <div id="hr-method" class="mt-2 text-sm text-ink-muted">estimated maximum heart rate</div>
+    </div>
+
+    <div class="panel p-5">
+      <div class="flex flex-col gap-2 text-sm">
+        <div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">Zone 1 · Very light · 50–60%</span><span id="hr-z1" class="font-mono text-ink-muted">—</span></div>
+        <div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">Zone 2 · Light · 60–70%</span><span id="hr-z2" class="font-mono text-ink-muted">—</span></div>
+        <div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">Zone 3 · Moderate / aerobic · 70–80%</span><span id="hr-z3" class="font-mono text-ink-muted">—</span></div>
+        <div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">Zone 4 · Hard / anaerobic · 80–90%</span><span id="hr-z4" class="font-mono text-ink-muted">—</span></div>
+        <div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">Zone 5 · Maximum · 90–100%</span><span id="hr-z5" class="font-mono text-ink-muted">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>This free target heart rate zone calculator estimates your maximum heart rate and the five training zones for cardio and endurance work. If you enter a resting heart rate it uses the Karvonen (heart rate reserve) method for more personalized zones; otherwise it works from a straight percentage of your max heart rate. These figures are general guides, not medical advice — check with a doctor before starting intense exercise. Runs entirely in your browser.</p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+
+  function calc() {
+    const age = Number($('hr-age').value);
+    const restRaw = $('hr-rest').value.trim();
+    const rest = restRaw === '' ? 0 : Number(restRaw);
+    const maxEl = document.getElementById('hr-max')!;
+    const methodEl = document.getElementById('hr-method')!;
+    const zoneIds = ['hr-z1', 'hr-z2', 'hr-z3', 'hr-z4', 'hr-z5'];
+
+    if (!(age > 0)) {
+      maxEl.textContent = '—';
+      methodEl.textContent = 'estimated maximum heart rate';
+      zoneIds.forEach((id) => (document.getElementById(id)!.textContent = '—'));
+      return;
+    }
+
+    const maxHR = 220 - age;
+    maxEl.textContent = `${Math.round(maxHR)} bpm`;
+
+    const useKarvonen = rest > 0;
+    methodEl.textContent = useKarvonen
+      ? 'max heart rate — zones use the Karvonen method'
+      : 'estimated maximum heart rate';
+
+    const target = (intensity: number) =>
+      useKarvonen ? (maxHR - rest) * intensity + rest : maxHR * intensity;
+
+    const bounds: [number, number][] = [
+      [0.5, 0.6],
+      [0.6, 0.7],
+      [0.7, 0.8],
+      [0.8, 0.9],
+      [0.9, 1.0],
+    ];
+    bounds.forEach(([lo, hi], i) => {
+      const low = Math.round(target(lo));
+      const high = Math.round(target(hi));
+      document.getElementById(zoneIds[i])!.textContent = `${low}–${high} bpm`;
+    });
+  }
+
+  document.querySelectorAll('#hr-age, #hr-rest').forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

@@ -1,0 +1,117 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="auto-loan-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Vehicle price
+        <input id="al-price" type="number" min="0" step="100" class="field" value="30000" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Down payment
+        <input id="al-down" type="number" min="0" step="100" class="field" value="5000" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Trade-in value
+        <input id="al-trade" type="number" min="0" step="100" class="field" value="0" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Sales tax (%)
+        <input id="al-tax" type="number" min="0" step="0.01" class="field" value="0" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Loan term (months)
+        <input id="al-term" type="number" min="1" step="1" class="field" value="60" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Interest rate (APR %)
+        <input id="al-rate" type="number" min="0" step="0.01" class="field" value="6" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-5 text-center">
+      <div id="al-payment" class="font-display text-2xl font-semibold text-primary-hover">—</div>
+      <div class="mt-1 text-[13px] text-ink-subtle">Monthly payment</div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div class="panel p-5 text-center"><div id="al-financed" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Amount financed</div></div>
+      <div class="panel p-5 text-center"><div id="al-interest" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total interest</div></div>
+      <div class="panel p-5 text-center"><div id="al-total" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total cost</div></div>
+    </div>
+
+    <div class="panel p-5">
+      <div class="flex flex-col gap-2 text-sm">
+        <div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">Sales tax</span><span id="al-taxamt" class="font-mono text-ink-muted">—</span></div>
+        <div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">Amount financed</span><span id="al-financed2" class="font-mono text-ink-muted">—</span></div>
+        <div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">Total interest</span><span id="al-interest2" class="font-mono text-ink-muted">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free auto loan calculator estimates your monthly car payment, the amount
+      financed, total interest, and the full cost of the loan. It factors in your
+      down payment, trade-in value, and sales tax, then applies the standard
+      amortized payment formula across your chosen term and APR. Adjust any input to
+      see the numbers update instantly. All calculations run in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const priceEl = document.getElementById('al-price') as HTMLInputElement;
+  const downEl = document.getElementById('al-down') as HTMLInputElement;
+  const tradeEl = document.getElementById('al-trade') as HTMLInputElement;
+  const taxEl = document.getElementById('al-tax') as HTMLInputElement;
+  const termEl = document.getElementById('al-term') as HTMLInputElement;
+  const rateEl = document.getElementById('al-rate') as HTMLInputElement;
+
+  const paymentEl = document.getElementById('al-payment')!;
+  const financedEl = document.getElementById('al-financed')!;
+  const interestEl = document.getElementById('al-interest')!;
+  const totalEl = document.getElementById('al-total')!;
+  const taxAmtEl = document.getElementById('al-taxamt')!;
+  const financed2El = document.getElementById('al-financed2')!;
+  const interest2El = document.getElementById('al-interest2')!;
+
+  const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+
+  function reset() {
+    paymentEl.textContent = '—';
+    financedEl.textContent = interestEl.textContent = totalEl.textContent = '—';
+    taxAmtEl.textContent = financed2El.textContent = interest2El.textContent = '—';
+  }
+
+  function calc() {
+    const price = Number(priceEl.value);
+    const down = Number(downEl.value);
+    const trade = Number(tradeEl.value);
+    const taxPct = Number(taxEl.value);
+    const n = Number(termEl.value);
+    const apr = Number(rateEl.value);
+
+    const taxable = Math.max(price - trade, 0);
+    const taxAmt = taxable * (taxPct / 100);
+    const financed = price - down - trade + taxAmt;
+
+    if (!(financed > 0) || !(n > 0)) { reset(); return; }
+
+    const r = apr / 12 / 100;
+    let emi: number;
+    if (r === 0) emi = financed / n;
+    else emi = (financed * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+
+    const totalPaid = emi * n;
+    const interest = totalPaid - financed;
+
+    paymentEl.textContent = money(emi);
+    financedEl.textContent = money(financed);
+    interestEl.textContent = money(interest);
+    totalEl.textContent = money(totalPaid + down + trade);
+
+    taxAmtEl.textContent = money(taxAmt);
+    financed2El.textContent = money(financed);
+    interest2El.textContent = money(interest);
+  }
+
+  [priceEl, downEl, tradeEl, taxEl, termEl, rateEl].forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

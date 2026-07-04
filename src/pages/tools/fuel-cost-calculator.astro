@@ -1,0 +1,112 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="fuel-cost-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap gap-2">
+      <button id="fc-metric" data-unit="metric" class="btn btn-primary">Metric (km, L/100km)</button>
+      <button id="fc-us" data-unit="us" class="btn btn-secondary">US (miles, MPG)</button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle"><span id="fc-dist-label">Trip distance (km)</span>
+        <input id="fc-dist" type="number" min="0" step="1" class="field" value="300" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle"><span id="fc-eff-label">Fuel efficiency (L/100km)</span>
+        <input id="fc-eff" type="number" min="0" step="0.1" class="field" value="7.5" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle"><span id="fc-price-label">Fuel price (per L)</span>
+        <input id="fc-price" type="number" min="0" step="0.01" class="field" value="1.60" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div id="fc-cost" class="font-display text-4xl font-semibold text-primary-hover">—</div>
+      <div id="fc-cost-note" class="mt-2 text-sm text-ink-muted">Total fuel cost</div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="panel p-5 text-center">
+        <div id="fc-fuel" class="font-mono text-xl text-ink">—</div>
+        <div id="fc-fuel-label" class="mt-1 text-[13px] text-ink-subtle">Fuel needed (L)</div>
+      </div>
+      <div class="panel p-5 text-center">
+        <div id="fc-per" class="font-mono text-xl text-ink">—</div>
+        <div id="fc-per-label" class="mt-1 text-[13px] text-ink-subtle">Cost per km</div>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free fuel cost calculator estimates what a trip will cost in gas based
+      on the distance, your vehicle's fuel efficiency, and the current fuel price.
+      Switch between metric (km, L/100km, price per litre) and US units (miles,
+      MPG, price per gallon) and see the total cost, fuel needed, and cost per
+      distance instantly. Runs entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const dist = document.getElementById('fc-dist') as HTMLInputElement;
+  const eff = document.getElementById('fc-eff') as HTMLInputElement;
+  const price = document.getElementById('fc-price') as HTMLInputElement;
+  const metricBtn = document.getElementById('fc-metric') as HTMLButtonElement;
+  const usBtn = document.getElementById('fc-us') as HTMLButtonElement;
+
+  let unit: 'metric' | 'us' = 'metric';
+
+  const money = (n: number) =>
+    n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+
+  function setUnit(next: 'metric' | 'us') {
+    unit = next;
+    if (unit === 'metric') {
+      metricBtn.className = 'btn btn-primary';
+      usBtn.className = 'btn btn-secondary';
+      document.getElementById('fc-dist-label')!.textContent = 'Trip distance (km)';
+      document.getElementById('fc-eff-label')!.textContent = 'Fuel efficiency (L/100km)';
+      document.getElementById('fc-price-label')!.textContent = 'Fuel price (per L)';
+      document.getElementById('fc-fuel-label')!.textContent = 'Fuel needed (L)';
+      document.getElementById('fc-per-label')!.textContent = 'Cost per km';
+    } else {
+      usBtn.className = 'btn btn-primary';
+      metricBtn.className = 'btn btn-secondary';
+      document.getElementById('fc-dist-label')!.textContent = 'Trip distance (miles)';
+      document.getElementById('fc-eff-label')!.textContent = 'Fuel efficiency (MPG)';
+      document.getElementById('fc-price-label')!.textContent = 'Fuel price (per gallon)';
+      document.getElementById('fc-fuel-label')!.textContent = 'Fuel needed (gal)';
+      document.getElementById('fc-per-label')!.textContent = 'Cost per mile';
+    }
+    calc();
+  }
+
+  function calc() {
+    const d = Number(dist.value) || 0;
+    const e = Number(eff.value) || 0;
+    const p = Number(price.value) || 0;
+
+    let fuel = 0;
+    if (unit === 'metric') {
+      fuel = (d / 100) * e; // litres
+    } else {
+      fuel = e > 0 ? d / e : 0; // gallons
+    }
+
+    const cost = fuel * p;
+    const perDist = d > 0 ? cost / d : 0;
+
+    document.getElementById('fc-cost')!.textContent = money(cost);
+    document.getElementById('fc-fuel')!.textContent =
+      money(fuel) + (unit === 'metric' ? ' L' : ' gal');
+    document.getElementById('fc-per')!.textContent = perDist.toFixed(3);
+  }
+
+  [dist, eff, price].forEach((el) => el.addEventListener('input', calc));
+  metricBtn.addEventListener('click', () => setUnit('metric'));
+  usBtn.addEventListener('click', () => setUnit('us'));
+
+  calc();
+</script>

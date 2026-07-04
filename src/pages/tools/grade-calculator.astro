@@ -1,0 +1,145 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="grade-calculator">
+  <div class="flex flex-col gap-4">
+    <!-- Part A: EZ grader -->
+    <div class="panel p-6">
+      <h2 class="mb-4 font-display text-lg font-semibold text-ink">EZ grader</h2>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Total questions
+          <input id="gc-total" type="number" min="1" step="1" class="field" value="20" inputmode="numeric" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Count by
+          <select id="gc-mode" class="field">
+            <option value="wrong">Wrong answers</option>
+            <option value="correct">Correct answers</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Number
+          <input id="gc-num" type="number" min="0" step="1" class="field" value="3" inputmode="numeric" />
+        </label>
+      </div>
+
+      <div class="mt-4 panel panel-lift p-6 text-center">
+        <div id="gc-pct" class="font-display text-4xl font-semibold text-primary-hover">—</div>
+        <div id="gc-letter" class="mt-2 text-sm text-ink-muted"></div>
+      </div>
+    </div>
+
+    <!-- Part B: Weighted grade -->
+    <div class="panel p-6">
+      <h2 class="mb-4 font-display text-lg font-semibold text-ink">Weighted grade</h2>
+
+      <div id="wg-rows" class="flex flex-col gap-3"></div>
+
+      <div class="mt-4 flex gap-2">
+        <button id="wg-add" class="btn btn-secondary">Add assignment</button>
+      </div>
+
+      <div class="mt-4 panel panel-lift p-6 text-center">
+        <div id="wg-overall" class="font-display text-4xl font-semibold text-primary-hover">—</div>
+        <div id="wg-note" class="mt-2 text-sm text-ink-muted"></div>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free grade calculator does two jobs in one place: a quick EZ grader
+      that turns a test score into a percentage and letter grade, and a weighted
+      grade calculator that combines assignments by their weight to find your
+      overall course grade. Enter your numbers and the results update instantly.
+      Runs entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  // ---- Part A: EZ grader ----
+  const total = document.getElementById('gc-total') as HTMLInputElement;
+  const mode = document.getElementById('gc-mode') as unknown as HTMLSelectElement;
+  const num = document.getElementById('gc-num') as HTMLInputElement;
+
+  function letterFor(pct: number): string {
+    if (pct >= 90) return 'A';
+    if (pct >= 80) return 'B';
+    if (pct >= 70) return 'C';
+    if (pct >= 60) return 'D';
+    return 'F';
+  }
+
+  function calcEZ() {
+    const t = Math.max(1, Math.floor(Number(total.value) || 0));
+    let n = Math.max(0, Math.floor(Number(num.value) || 0));
+    if (n > t) n = t;
+    const correct = mode.value === 'correct' ? n : t - n;
+    const pct = (correct / t) * 100;
+    document.getElementById('gc-pct')!.textContent = pct.toFixed(1) + '%';
+    document.getElementById('gc-letter')!.textContent =
+      `${correct} / ${t} correct — grade ${letterFor(pct)}`;
+  }
+  [total, num].forEach((el) => el.addEventListener('input', calcEZ));
+  mode.addEventListener('change', calcEZ);
+
+  // ---- Part B: Weighted grade ----
+  const rowsWrap = document.getElementById('wg-rows') as HTMLDivElement;
+  const addBtn = document.getElementById('wg-add') as HTMLButtonElement;
+
+  function addRow(name = '', grade = '', weight = '') {
+    const row = document.createElement('div');
+    row.className = 'wg-row grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end';
+    row.innerHTML = `
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Assignment
+        <input type="text" class="wg-name field" placeholder="Assignment" value="${name}" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Grade (%)
+        <input type="number" min="0" step="0.1" inputmode="decimal" class="wg-grade field w-28" value="${grade}" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Weight (%)
+        <input type="number" min="0" step="0.1" inputmode="decimal" class="wg-weight field w-28" value="${weight}" />
+      </label>
+      <button type="button" class="wg-remove btn btn-secondary">Remove</button>
+    `;
+    rowsWrap.appendChild(row);
+    row.querySelectorAll('input').forEach((el) => el.addEventListener('input', calcWeighted));
+    row.querySelector('.wg-remove')!.addEventListener('click', () => {
+      row.remove();
+      calcWeighted();
+    });
+  }
+
+  function calcWeighted() {
+    let sumGW = 0;
+    let sumW = 0;
+    document.querySelectorAll<HTMLDivElement>('.wg-row').forEach((row) => {
+      const g = Number((row.querySelector('.wg-grade') as HTMLInputElement).value);
+      const w = Number((row.querySelector('.wg-weight') as HTMLInputElement).value);
+      if (!isNaN(g) && !isNaN(w) && w > 0) {
+        sumGW += g * w;
+        sumW += w;
+      }
+    });
+    const out = document.getElementById('wg-overall')!;
+    const note = document.getElementById('wg-note')!;
+    if (sumW <= 0) {
+      out.textContent = '—';
+      note.textContent = 'Enter at least one grade and weight.';
+      return;
+    }
+    const overall = sumGW / sumW;
+    out.textContent = overall.toFixed(1) + '%';
+    note.textContent = `Grade ${letterFor(overall)} · total weight entered ${sumW.toFixed(0)}%`;
+  }
+
+  addBtn.addEventListener('click', () => addRow());
+
+  // Start with 3 rows
+  addRow('Homework', '90', '20');
+  addRow('Midterm', '85', '30');
+  addRow('Final', '80', '50');
+
+  calcEZ();
+  calcWeighted();
+</script>

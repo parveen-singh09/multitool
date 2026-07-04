@@ -1,0 +1,152 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="triangle-calculator">
+  <div class="flex flex-col gap-4">
+    <p class="text-[13px] text-ink-subtle">
+      Fill in any two sides and leave the third blank — the missing side is
+      solved with the Pythagorean theorem (a² + b² = c²).
+    </p>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Leg a
+        <input id="t-a" type="number" inputmode="decimal" step="any" min="0" class="field font-mono" value="3" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Leg b
+        <input id="t-b" type="number" inputmode="decimal" step="any" min="0" class="field font-mono" value="4" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Hypotenuse c
+        <input id="t-c" type="number" inputmode="decimal" step="any" min="0" class="field font-mono" placeholder="blank = solve" />
+      </label>
+    </div>
+
+    <p id="t-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div id="t-solved" class="font-mono text-3xl font-semibold text-primary-hover">—</div>
+      <div id="t-solved-label" class="mt-2 text-sm text-ink-muted">Solved side</div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
+      <div class="panel p-4"><div id="t-area" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Area</div></div>
+      <div class="panel p-4"><div id="t-perim" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Perimeter</div></div>
+      <div class="panel p-4"><div id="t-anga" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Angle at a</div></div>
+      <div class="panel p-4"><div id="t-angb" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Angle at b</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free right triangle calculator solves the missing side of a right
+      triangle using the Pythagorean theorem. Enter any two of the two legs and
+      the hypotenuse, and it finds the third side plus the area, perimeter and
+      both acute angles. It also flags impossible triangles where the hypotenuse
+      is not the longest side. All calculations run in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const aEl = document.getElementById('t-a') as HTMLInputElement;
+  const bEl = document.getElementById('t-b') as HTMLInputElement;
+  const cEl = document.getElementById('t-c') as HTMLInputElement;
+  const errEl = document.getElementById('t-error')!;
+  const solvedEl = document.getElementById('t-solved')!;
+  const solvedLabel = document.getElementById('t-solved-label')!;
+
+  const round = (n: number) => Math.round(n * 1e6) / 1e6;
+
+  // Parse a field: blank/empty counts as "unknown" (null).
+  function val(el: HTMLInputElement): number | null {
+    const t = el.value.trim();
+    if (t === '') return null;
+    const n = parseFloat(t);
+    return isNaN(n) ? NaN : n;
+  }
+
+  const secondaryIds = ['t-area', 't-perim', 't-anga', 't-angb'];
+  const clearSecondary = () => secondaryIds.forEach((id) => (document.getElementById(id)!.textContent = '—'));
+
+  function showError(msg: string) {
+    errEl.textContent = msg;
+    errEl.classList.remove('hidden');
+    solvedEl.textContent = '—';
+    solvedLabel.textContent = 'Solved side';
+    clearSecondary();
+  }
+
+  function calc() {
+    errEl.classList.add('hidden');
+
+    const a = val(aEl);
+    const b = val(bEl);
+    const c = val(cEl);
+
+    if (a === null && b === null && c === null) {
+      solvedEl.textContent = '—';
+      solvedLabel.textContent = 'Solved side';
+      clearSecondary();
+      return;
+    }
+
+    if ([a, b, c].some((v) => v !== null && (isNaN(v as number) || (v as number) < 0))) {
+      showError('Sides must be non-negative numbers.');
+      return;
+    }
+
+    const known = [a, b, c].filter((v) => v !== null && (v as number) > 0).length;
+    if (known < 2) {
+      showError('Enter at least two positive sides.');
+      return;
+    }
+
+    let A = a as number, B = b as number, C = c as number;
+    let solvedName = '';
+
+    if (a !== null && a > 0 && b !== null && b > 0 && (c === null || c === 0)) {
+      C = Math.sqrt(A * A + B * B);
+      solvedName = 'Hypotenuse c';
+      solvedEl.textContent = String(round(C));
+    } else if (a !== null && a > 0 && c !== null && c > 0 && (b === null || b === 0)) {
+      if (C <= A) { showError('The hypotenuse must be longer than each leg.'); return; }
+      B = Math.sqrt(C * C - A * A);
+      solvedName = 'Leg b';
+      solvedEl.textContent = String(round(B));
+    } else if (b !== null && b > 0 && c !== null && c > 0 && (a === null || a === 0)) {
+      if (C <= B) { showError('The hypotenuse must be longer than each leg.'); return; }
+      A = Math.sqrt(C * C - B * B);
+      solvedName = 'Leg a';
+      solvedEl.textContent = String(round(A));
+    } else {
+      // All three provided — validate consistency.
+      A = a as number; B = b as number; C = c as number;
+      if (C <= A || C <= B) { showError('The hypotenuse must be the longest side.'); return; }
+      const expected = Math.sqrt(A * A + B * B);
+      if (Math.abs(expected - C) > 1e-6) {
+        showError(`These sides do not form a right triangle (c should be ${round(expected)}).`);
+        return;
+      }
+      solvedName = 'All sides given';
+      solvedEl.textContent = String(round(C));
+    }
+
+    solvedLabel.textContent = solvedName;
+
+    const area = 0.5 * A * B;
+    const perim = A + B + C;
+    const angA = Math.atan2(A, B) * (180 / Math.PI); // angle opposite leg a
+    const angB = Math.atan2(B, A) * (180 / Math.PI); // angle opposite leg b
+
+    document.getElementById('t-area')!.textContent = String(round(area));
+    document.getElementById('t-perim')!.textContent = String(round(perim));
+    document.getElementById('t-anga')!.textContent = `${round(angA)}°`;
+    document.getElementById('t-angb')!.textContent = `${round(angB)}°`;
+  }
+
+  [aEl, bEl, cEl].forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

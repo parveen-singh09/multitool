@@ -1,0 +1,124 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="bac-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-1 text-sm text-ink-subtle">Sex
+      <div class="flex flex-wrap gap-2" role="tablist" id="bac-sex">
+        <button type="button" class="btn btn-primary" data-sex="male" aria-selected="true">Male</button>
+        <button type="button" class="btn btn-secondary" data-sex="female" aria-selected="false">Female</button>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-1 text-sm text-ink-subtle">Weight unit
+      <div class="flex flex-wrap gap-2" role="tablist" id="bac-unit">
+        <button type="button" class="btn btn-primary" data-unit="kg" aria-selected="true">Metric (kg)</button>
+        <button type="button" class="btn btn-secondary" data-unit="lb" aria-selected="false">Imperial (lb)</button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle"><span id="bac-weight-label">Body weight (kg)</span>
+        <input id="bac-weight" type="number" min="0" step="0.1" class="field" value="70" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Number of standard drinks
+        <input id="bac-drinks" type="number" min="0" step="0.5" class="field" value="2" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Grams of alcohol per drink
+        <input id="bac-grams" type="number" min="0" step="0.1" class="field" value="14" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Hours since first drink
+        <input id="bac-hours" type="number" min="0" step="0.25" class="field" value="1" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div id="bac-value" class="font-display text-4xl font-semibold text-primary-hover">—</div>
+      <div id="bac-status" class="mt-2 text-sm text-ink-muted"></div>
+    </div>
+
+    <div class="panel p-5">
+      <div class="flex flex-col gap-2 text-sm">
+        <div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">Total alcohol consumed</span><span id="bac-total" class="font-mono text-ink-muted">—</span></div>
+        <div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">Eliminated over time</span><span id="bac-elim" class="font-mono text-ink-muted">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>This free blood alcohol content (BAC) calculator estimates your BAC using the Widmark formula, based on your sex, body weight, how much you drank, and how long ago. The result is a rough guide only — actual BAC depends on many factors this estimate cannot capture, and it should never be treated as a green light to drive. Never drive after drinking. Runs entirely in your browser.</p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  let sex = 'male';
+  let unit = 'kg';
+
+  function setToggle(groupId: string, dataAttr: string, value: string) {
+    document.querySelectorAll(`#${groupId} button`).forEach((b) => {
+      const btn = b as HTMLButtonElement;
+      const active = btn.getAttribute(dataAttr) === value;
+      btn.className = active ? 'btn btn-primary' : 'btn btn-secondary';
+      btn.setAttribute('aria-selected', String(active));
+    });
+  }
+
+  function calc() {
+    const weightInput = Number($('bac-weight').value);
+    const drinks = Number($('bac-drinks').value);
+    const gramsPerDrink = Number($('bac-grams').value);
+    const hours = Number($('bac-hours').value);
+    const valueEl = document.getElementById('bac-value')!;
+    const statusEl = document.getElementById('bac-status')!;
+    const totalEl = document.getElementById('bac-total')!;
+    const elimEl = document.getElementById('bac-elim')!;
+
+    if (!(weightInput > 0) || !(drinks >= 0) || !(gramsPerDrink >= 0) || !(hours >= 0)) {
+      valueEl.textContent = '—';
+      statusEl.textContent = '';
+      statusEl.style.color = '';
+      totalEl.textContent = '—';
+      elimEl.textContent = '—';
+      return;
+    }
+
+    const weightKg = unit === 'lb' ? weightInput * 0.45359237 : weightInput;
+    const weightGrams = weightKg * 1000;
+    const r = sex === 'male' ? 0.68 : 0.55;
+    const alcoholGrams = drinks * gramsPerDrink;
+    const eliminated = 0.015 * hours;
+    let bac = (alcoholGrams / (weightGrams * r)) * 100 - eliminated;
+    if (bac < 0) bac = 0;
+
+    valueEl.textContent = `${bac.toFixed(3)}%`;
+
+    let label: string;
+    let color: string;
+    if (bac < 0.02) { label = 'Minimal impairment'; color = 'var(--color-success)'; }
+    else if (bac < 0.05) { label = 'Caution — mild impairment'; color = 'var(--color-success)'; }
+    else if (bac < 0.08) { label = 'Impaired'; color = '#e5484d'; }
+    else { label = 'Legally intoxicated (US)'; color = '#e5484d'; }
+    statusEl.textContent = `${label} — estimate only, never drive after drinking`;
+    statusEl.style.color = color;
+
+    totalEl.textContent = `${alcoholGrams.toFixed(1)} g alcohol`;
+    elimEl.textContent = `${eliminated.toFixed(3)}% over ${hours} h`;
+  }
+
+  document.querySelectorAll('#bac-sex button').forEach((b) => {
+    b.addEventListener('click', () => { sex = (b as HTMLElement).getAttribute('data-sex')!; setToggle('bac-sex', 'data-sex', sex); calc(); });
+  });
+  document.querySelectorAll('#bac-unit button').forEach((b) => {
+    b.addEventListener('click', () => {
+      unit = (b as HTMLElement).getAttribute('data-unit')!;
+      setToggle('bac-unit', 'data-unit', unit);
+      const lbl = document.getElementById('bac-weight-label')!;
+      lbl.textContent = unit === 'lb' ? 'Body weight (lb)' : 'Body weight (kg)';
+      calc();
+    });
+  });
+  document.querySelectorAll('#bac-weight, #bac-drinks, #bac-grams, #bac-hours').forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

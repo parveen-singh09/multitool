@@ -1,0 +1,82 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="final-grade-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Current grade (%)
+        <input id="fg-current" type="number" min="0" step="0.1" class="field" value="88" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Desired course grade (%)
+        <input id="fg-desired" type="number" min="0" step="0.1" class="field" value="90" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Final exam weight (%)
+        <input id="fg-weight" type="number" min="0" max="100" step="0.1" class="field" value="30" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div id="fg-required" class="font-display text-4xl font-semibold text-primary-hover">—</div>
+      <div id="fg-note" class="mt-2 text-sm text-ink-muted"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free final grade calculator tells you exactly what score you need on
+      your final exam to reach the course grade you want. Enter your current
+      grade, your target, and how much the final is worth, and it works out the
+      required exam score, flagging when a target is already secured or out of
+      reach. Runs entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const current = document.getElementById('fg-current') as HTMLInputElement;
+  const desired = document.getElementById('fg-desired') as HTMLInputElement;
+  const weight = document.getElementById('fg-weight') as HTMLInputElement;
+
+  function calc() {
+    const c = Number(current.value) || 0;
+    const d = Number(desired.value) || 0;
+    const wPct = Number(weight.value) || 0;
+    const w = wPct / 100;
+
+    const out = document.getElementById('fg-required')!;
+    const note = document.getElementById('fg-note')!;
+
+    if (w <= 0) {
+      out.textContent = '—';
+      out.style.color = '';
+      note.textContent = 'Enter a final exam weight greater than 0%.';
+      return;
+    }
+
+    const required = (d - c * (1 - w)) / w;
+
+    if (required <= 0) {
+      out.textContent = '0%';
+      out.style.color = 'var(--color-success)';
+      note.textContent = "You've already secured it — you need 0% on the final.";
+      return;
+    }
+
+    if (required > 100) {
+      const maxReachable = c * (1 - w) + 100 * w;
+      out.textContent = required.toFixed(1) + '%';
+      out.style.color = '#e5484d';
+      note.textContent =
+        `Not achievable with the final alone. Even a perfect 100% only reaches ${maxReachable.toFixed(1)}%.`;
+      return;
+    }
+
+    out.textContent = required.toFixed(1) + '%';
+    out.style.color = '';
+    note.textContent = `Score ${required.toFixed(1)}% on the final to finish with ${d.toFixed(1)}%.`;
+  }
+
+  [current, desired, weight].forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

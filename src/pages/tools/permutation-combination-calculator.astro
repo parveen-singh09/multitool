@@ -1,0 +1,131 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="permutation-combination-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        n (total items)
+        <input id="pc-n" type="number" inputmode="numeric" step="1" min="0" class="field font-mono" value="10" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        r (items chosen)
+        <input id="pc-r" type="number" inputmode="numeric" step="1" min="0" class="field font-mono" value="3" />
+      </label>
+    </div>
+
+    <p id="pc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="panel panel-lift p-6 text-center"><div id="pc-npr" class="font-mono text-2xl font-semibold text-primary-hover break-all">—</div><div class="mt-1 text-[13px] text-ink-subtle">Permutations (ₙPᵣ)</div></div>
+      <div class="panel panel-lift p-6 text-center"><div id="pc-ncr" class="font-mono text-2xl font-semibold text-primary-hover break-all">—</div><div class="mt-1 text-[13px] text-ink-subtle">Combinations (ₙCᵣ)</div></div>
+    </div>
+
+    <div class="panel p-5">
+      <div class="flex flex-col gap-2 text-sm">
+        <div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">n!</span><span id="pc-nfact" class="font-mono text-ink-muted break-all">—</span></div>
+        <div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">r!</span><span id="pc-rfact" class="font-mono text-ink-muted break-all">—</span></div>
+        <div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">(n − r)!</span><span id="pc-nrfact" class="font-mono text-ink-muted break-all">—</span></div>
+      </div>
+    </div>
+
+    <p id="pc-approx" class="hidden text-[13px] text-ink-tertiary" role="status">
+      Some values exceed the safe integer range and are shown in exponential
+      notation as approximations.
+    </p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free permutation and combination calculator computes ₙPᵣ and ₙCᵣ for
+      any values of n and r. Permutations count ordered arrangements while
+      combinations count unordered selections. Enter the total number of items
+      and how many are chosen to see both results along with the factorials
+      involved. All calculations run in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const nEl = document.getElementById('pc-n') as HTMLInputElement;
+  const rEl = document.getElementById('pc-r') as HTMLInputElement;
+  const errEl = document.getElementById('pc-error')!;
+  const approxEl = document.getElementById('pc-approx')!;
+
+  const SAFE = Number.MAX_SAFE_INTEGER;
+
+  // Format a number, switching to exponential notation above the safe range.
+  function fmtBig(n: number): { text: string; approx: boolean } {
+    if (!isFinite(n)) return { text: '∞ (too large)', approx: true };
+    if (n > SAFE) return { text: n.toExponential(4), approx: true };
+    return { text: String(n), approx: false };
+  }
+
+  function factorial(n: number): number {
+    let f = 1;
+    for (let i = 2; i <= n; i++) f *= i;
+    return f;
+  }
+
+  // Multiply-down forms to delay overflow: nPr = n*(n-1)*...*(n-r+1).
+  function nPr(n: number, r: number): number {
+    let p = 1;
+    for (let i = 0; i < r; i++) p *= n - i;
+    return p;
+  }
+
+  // nCr = product of (n-r+i)/i for i=1..r — keeps intermediate values small.
+  function nCr(n: number, r: number): number {
+    r = Math.min(r, n - r);
+    let c = 1;
+    for (let i = 1; i <= r; i++) c = (c * (n - r + i)) / i;
+    return Math.round(c);
+  }
+
+  const setEmpty = () => {
+    ['pc-npr', 'pc-ncr', 'pc-nfact', 'pc-rfact', 'pc-nrfact'].forEach(
+      (id) => (document.getElementById(id)!.textContent = '—'),
+    );
+  };
+
+  function calc() {
+    errEl.classList.add('hidden');
+    approxEl.classList.add('hidden');
+
+    const n = parseInt(nEl.value, 10);
+    const r = parseInt(rEl.value, 10);
+
+    if (isNaN(n) || isNaN(r)) { setEmpty(); return; }
+    if (n < 0 || r < 0) {
+      errEl.textContent = 'n and r must be non-negative integers.';
+      errEl.classList.remove('hidden');
+      setEmpty();
+      return;
+    }
+    if (r > n) {
+      errEl.textContent = 'r cannot be greater than n.';
+      errEl.classList.remove('hidden');
+      setEmpty();
+      return;
+    }
+
+    let anyApprox = false;
+    const write = (id: string, val: number) => {
+      const { text, approx } = fmtBig(val);
+      document.getElementById(id)!.textContent = text;
+      if (approx) anyApprox = true;
+    };
+
+    write('pc-npr', nPr(n, r));
+    write('pc-ncr', nCr(n, r));
+    write('pc-nfact', factorial(n));
+    write('pc-rfact', factorial(r));
+    write('pc-nrfact', factorial(n - r));
+
+    if (anyApprox) approxEl.classList.remove('hidden');
+  }
+
+  [nEl, rEl].forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

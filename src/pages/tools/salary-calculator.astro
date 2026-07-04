@@ -1,0 +1,112 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="salary-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Pay rate amount
+        <input id="sal-amount" type="number" min="0" step="0.01" class="field" value="25" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Pay basis
+        <select id="sal-basis" class="field">
+          <option value="hourly">Hourly</option>
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="biweekly">Bi-weekly</option>
+          <option value="monthly">Monthly</option>
+          <option value="annual">Annual</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Hours per week
+        <input id="sal-hpw" type="number" min="0" step="0.5" class="field" value="40" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Days per week
+        <input id="sal-dpw" type="number" min="1" step="0.5" class="field" value="5" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Weeks per year
+        <input id="sal-wpy" type="number" min="1" step="1" class="field" value="52" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center"><div id="sal-annual" class="font-display text-4xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Annual</div></div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div class="panel p-5 text-center"><div id="sal-hourly" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Hourly</div></div>
+      <div class="panel p-5 text-center"><div id="sal-daily" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Daily</div></div>
+      <div class="panel p-5 text-center"><div id="sal-weekly" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Weekly</div></div>
+      <div class="panel p-5 text-center"><div id="sal-biweekly" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Bi-weekly</div></div>
+      <div class="panel p-5 text-center"><div id="sal-monthly" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Monthly</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free salary calculator converts any pay rate between hourly, daily,
+      weekly, bi-weekly, monthly, and annual figures. Enter a rate on any basis
+      and adjust hours, days, and weeks worked to see the full breakdown of what
+      you earn. Runs entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const amount = document.getElementById('sal-amount') as HTMLInputElement;
+  const basis = document.getElementById('sal-basis') as unknown as HTMLSelectElement;
+  const hpw = document.getElementById('sal-hpw') as HTMLInputElement;
+  const dpw = document.getElementById('sal-dpw') as HTMLInputElement;
+  const wpy = document.getElementById('sal-wpy') as HTMLInputElement;
+  const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+
+  function calc() {
+    const amt = Number(amount.value) || 0;
+    const hoursPerWeek = Number(hpw.value) || 0;
+    const daysPerWeek = Number(dpw.value) || 0;
+    const weeksPerYear = Number(wpy.value) || 0;
+    const hoursPerDay = daysPerWeek > 0 ? hoursPerWeek / daysPerWeek : 0;
+
+    // Derive hourly rate from the selected basis first.
+    let hourly = 0;
+    switch (basis.value) {
+      case 'hourly':
+        hourly = amt;
+        break;
+      case 'daily':
+        hourly = hoursPerDay > 0 ? amt / hoursPerDay : 0;
+        break;
+      case 'weekly':
+        hourly = hoursPerWeek > 0 ? amt / hoursPerWeek : 0;
+        break;
+      case 'biweekly':
+        hourly = hoursPerWeek > 0 ? amt / 2 / hoursPerWeek : 0;
+        break;
+      case 'monthly': {
+        const annualFromMonthly = amt * 12;
+        hourly = hoursPerWeek * weeksPerYear > 0 ? annualFromMonthly / (hoursPerWeek * weeksPerYear) : 0;
+        break;
+      }
+      case 'annual':
+        hourly = hoursPerWeek * weeksPerYear > 0 ? amt / (hoursPerWeek * weeksPerYear) : 0;
+        break;
+    }
+
+    const annual = hourly * hoursPerWeek * weeksPerYear;
+    const daily = hourly * hoursPerDay;
+    const weekly = hourly * hoursPerWeek;
+    const biweekly = weekly * 2;
+    const monthly = annual / 12;
+
+    document.getElementById('sal-annual')!.textContent = money(annual);
+    document.getElementById('sal-hourly')!.textContent = money(hourly);
+    document.getElementById('sal-daily')!.textContent = money(daily);
+    document.getElementById('sal-weekly')!.textContent = money(weekly);
+    document.getElementById('sal-biweekly')!.textContent = money(biweekly);
+    document.getElementById('sal-monthly')!.textContent = money(monthly);
+  }
+  [amount, hpw, dpw, wpy].forEach((el) => el.addEventListener('input', calc));
+  basis.addEventListener('change', calc);
+  calc();
+</script>

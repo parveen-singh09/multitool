@@ -1,0 +1,224 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="debt-payoff-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="flex gap-2" data-method="avalanche">
+      <button id="dp-avalanche" type="button" class="btn btn-primary">Avalanche</button>
+      <button id="dp-snowball" type="button" class="btn btn-secondary">Snowball</button>
+    </div>
+
+    <p id="dp-method-note" class="text-[13px] text-ink-subtle">Avalanche targets the highest APR first to minimize interest.</p>
+
+    <div class="hidden sm:grid sm:grid-cols-[1.4fr_1fr_1fr_1fr_auto] gap-2 px-1 text-[12px] font-medium text-ink-subtle">
+      <span>Debt name</span>
+      <span>Balance</span>
+      <span>APR %</span>
+      <span>Min payment</span>
+      <span></span>
+    </div>
+
+    <div id="dp-rows" class="flex flex-col gap-3"></div>
+
+    <div>
+      <button id="dp-add" type="button" class="btn btn-secondary">Add debt</button>
+    </div>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle sm:max-w-xs">Extra monthly payment
+      <input id="dp-extra" type="number" min="0" step="10" class="field" value="200" inputmode="decimal" />
+    </label>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div id="dp-months" class="font-display text-4xl font-semibold text-primary-hover">—</div>
+      <div id="dp-sub" class="mt-2 text-sm text-ink-muted"></div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="panel p-5 text-center"><div id="dp-interest" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total interest paid</div></div>
+      <div class="panel p-5 text-center"><div id="dp-total" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total paid</div></div>
+    </div>
+
+    <div id="dp-warn" class="hidden panel p-4 text-center text-sm" style="color:#e5484d;">
+      Your total payment (minimums plus extra) is not enough to cover the combined interest, so the debt cannot be paid off. Increase your minimum payments or extra amount.
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free debt payoff calculator compares the snowball and avalanche
+      strategies to show how fast you can become debt-free. Add each of your debts
+      with its balance, APR, and minimum payment, then set an extra monthly amount.
+      The avalanche method attacks the highest APR first to save the most interest,
+      while the snowball method clears the smallest balance first for quick wins.
+      Freed-up minimums roll into the next target automatically. Runs entirely in
+      your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const rowsEl = document.getElementById('dp-rows')!;
+  const addEl = document.getElementById('dp-add') as HTMLButtonElement;
+  const extraEl = document.getElementById('dp-extra') as HTMLInputElement;
+  const avalancheBtn = document.getElementById('dp-avalanche') as HTMLButtonElement;
+  const tabsEl = avalancheBtn.parentElement as HTMLElement;
+  const snowballBtn = document.getElementById('dp-snowball') as HTMLButtonElement;
+  const noteEl = document.getElementById('dp-method-note')!;
+
+  const monthsEl = document.getElementById('dp-months')!;
+  const subEl = document.getElementById('dp-sub')!;
+  const interestEl = document.getElementById('dp-interest')!;
+  const totalEl = document.getElementById('dp-total')!;
+  const warnEl = document.getElementById('dp-warn')!;
+
+  const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+
+  function addRow(name: string, balance: number, apr: number, min: number) {
+    const row = document.createElement('div');
+    row.className = 'dp-row grid grid-cols-1 gap-2 sm:grid-cols-[1.4fr_1fr_1fr_1fr_auto]';
+    row.innerHTML = `
+      <input class="dp-name field" type="text" placeholder="Debt name" value="${name}" />
+      <input class="dp-balance field" type="number" min="0" step="100" inputmode="decimal" placeholder="Balance" value="${balance}" />
+      <input class="dp-apr field" type="number" min="0" step="0.01" inputmode="decimal" placeholder="APR %" value="${apr}" />
+      <input class="dp-min field" type="number" min="0" step="10" inputmode="decimal" placeholder="Min pmt" value="${min}" />
+      <button type="button" class="dp-remove btn btn-secondary" aria-label="Remove debt">Remove</button>
+    `;
+    rowsEl.appendChild(row);
+    row.querySelectorAll('input').forEach((inp) => inp.addEventListener('input', calc));
+    const remove = row.querySelector('.dp-remove') as HTMLButtonElement;
+    remove.addEventListener('click', () => { row.remove(); calc(); });
+  }
+
+  function getMethod(): string {
+    return tabsEl.getAttribute('data-method') || 'avalanche';
+  }
+
+  function setMethod(method: string) {
+    tabsEl.setAttribute('data-method', method);
+    if (method === 'avalanche') {
+      avalancheBtn.className = 'btn btn-primary';
+      snowballBtn.className = 'btn btn-secondary';
+      noteEl.textContent = 'Avalanche targets the highest APR first to minimize interest.';
+    } else {
+      snowballBtn.className = 'btn btn-primary';
+      avalancheBtn.className = 'btn btn-secondary';
+      noteEl.textContent = 'Snowball targets the smallest balance first for quick wins.';
+    }
+    calc();
+  }
+
+  function reset() {
+    monthsEl.textContent = '—';
+    subEl.textContent = '';
+    interestEl.textContent = totalEl.textContent = '—';
+  }
+
+  interface Debt { balance: number; apr: number; min: number; }
+
+  function readDebts(): Debt[] {
+    const rows = Array.from(rowsEl.querySelectorAll('.dp-row')) as HTMLElement[];
+    const debts: Debt[] = [];
+    for (const row of rows) {
+      const balance = Number((row.querySelector('.dp-balance') as HTMLInputElement).value);
+      const apr = Number((row.querySelector('.dp-apr') as HTMLInputElement).value);
+      const min = Number((row.querySelector('.dp-min') as HTMLInputElement).value);
+      if (balance > 0) debts.push({ balance, apr, min: Math.max(min, 0) });
+    }
+    return debts;
+  }
+
+  function calc() {
+    warnEl.classList.add('hidden');
+    const debts = readDebts();
+    const extra = Number(extraEl.value) || 0;
+    if (debts.length === 0) { reset(); return; }
+
+    // Working copies
+    const bals = debts.map((d) => d.balance);
+    const rates = debts.map((d) => d.apr / 12 / 100);
+    const mins = debts.map((d) => d.min);
+    const totalStart = bals.reduce((a, b) => a + b, 0);
+
+    const method = getMethod();
+    let months = 0;
+    let totalInterest = 0;
+    const cap = 12000;
+
+    while (bals.some((b) => b > 0) && months < cap) {
+      // Accrue interest
+      for (let i = 0; i < bals.length; i++) {
+        if (bals[i] > 0) {
+          const interest = bals[i] * rates[i];
+          totalInterest += interest;
+          bals[i] += interest;
+        }
+      }
+
+      // Budget = sum of minimums for still-active debts + extra + freed minimums
+      const freed = mins.reduce((sum, m, i) => sum + (bals[i] <= 0 ? m : 0), 0);
+      let budget = extra + freed;
+
+      // Pay minimums on active debts
+      for (let i = 0; i < bals.length; i++) {
+        if (bals[i] > 0) {
+          const pay = Math.min(mins[i], bals[i]);
+          bals[i] -= pay;
+          budget += mins[i] - pay; // leftover from overpaid min rolls into budget
+        }
+      }
+
+      // Choose target among active debts
+      const active = bals.map((b, i) => i).filter((i) => bals[i] > 0);
+      if (active.length > 0) {
+        active.sort((a, b) => {
+          if (method === 'snowball') return bals[a] - bals[b];
+          return rates[b] - rates[a]; // avalanche: highest rate first
+        });
+        for (const i of active) {
+          if (budget <= 0) break;
+          const pay = Math.min(budget, bals[i]);
+          bals[i] -= pay;
+          budget -= pay;
+        }
+      }
+
+      // Guard against no-progress infinite loop
+      const remaining = bals.reduce((a, b) => a + (b > 0 ? b : 0), 0);
+      months++;
+      if (months >= cap) break;
+      // Detect stall: if nothing was actually reduced this month
+      if (remaining >= totalStart && months > 1 && extra + mins.reduce((a, b) => a + b, 0) <= 0) break;
+    }
+
+    if (months >= cap || bals.some((b) => b > 0.01)) {
+      warnEl.classList.remove('hidden');
+      reset();
+      return;
+    }
+
+    const totalPaid = totalStart + totalInterest;
+    const years = Math.floor(months / 12);
+    const remMonths = months % 12;
+    let human = '';
+    if (years > 0) human += `${years} year${years !== 1 ? 's' : ''}`;
+    if (remMonths > 0) human += `${years > 0 ? ' ' : ''}${remMonths} month${remMonths !== 1 ? 's' : ''}`;
+    if (!human) human = '0 months';
+
+    monthsEl.textContent = `${months} mo`;
+    subEl.textContent = `${human} · ${method === 'snowball' ? 'Snowball' : 'Avalanche'} method`;
+    interestEl.textContent = money(totalInterest);
+    totalEl.textContent = money(totalPaid);
+  }
+
+  addEl.addEventListener('click', () => { addRow('', 0, 20, 50); });
+  avalancheBtn.addEventListener('click', () => setMethod('avalanche'));
+  snowballBtn.addEventListener('click', () => setMethod('snowball'));
+  extraEl.addEventListener('input', calc);
+
+  // Seed starting rows
+  addRow('Credit card', 5000, 22, 100);
+  addRow('Car loan', 12000, 6, 250);
+  addRow('Personal loan', 3000, 12, 80);
+  calc();
+</script>

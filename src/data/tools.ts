@@ -862,6 +862,26 @@ export const tools: Tool[] = [
     icon: 'M4 8h16l-2 4H6zM6 12h12l1 8H5zM9 4h6l1 4H8z',
   },
   {
+    slug: 'silver-calculator',
+    name: 'Silver Value Calculator',
+    tagline: 'Scrap silver value by weight & fineness.',
+    description:
+      'Free silver value calculator. Work out the melt value of silver by weight and fineness from the live spot price, for scrap, sterling, coins or bullion. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['silver calculator', 'silver value calculator', 'scrap silver calculator', 'silver price calculator', 'silver melt value calculator'],
+    icon: 'M4 8h16l-2 4H6zM6 12h12l1 8H5zM9 4h6l1 4H8z',
+  },
+  {
+    slug: 'platinum-calculator',
+    name: 'Platinum Value Calculator',
+    tagline: 'Scrap platinum value by weight & fineness.',
+    description:
+      'Free platinum value calculator. Work out the melt value of platinum by weight and fineness from the live spot price, for scrap, jewelry or bullion. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['platinum calculator', 'platinum value calculator', 'scrap platinum calculator', 'platinum price calculator', 'platinum melt value calculator'],
+    icon: 'M4 8h16l-2 4H6zM6 12h12l1 8H5zM9 4h6l1 4H8z',
+  },
+  {
     slug: 'dynasty-trade-calculator',
     name: 'Dynasty Trade Calculator',
     tagline: 'Weigh fantasy football trades by value.',
@@ -870,6 +890,214 @@ export const tools: Tool[] = [
     category: 'Calculators',
     keywords: ['dynasty trade calculator', 'fantasy football trade calculator', 'dynasty trade value chart', 'ff trade analyzer', 'dynasty value calculator'],
     icon: 'M7 10 3 14l4 4M17 6l4 4-4 4M3 14h13M8 10h13',
+  },
+
+  // ---- Calculators: Finance (added) ----
+  {
+    slug: 'retirement-calculator',
+    name: 'Retirement Calculator',
+    tagline: 'Project your 401(k) balance at retirement.',
+    description:
+      'Free online retirement calculator. Project your 401(k) or retirement savings balance from current age, contributions, employer match and expected return. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['retirement calculator', '401k calculator', 'retirement savings calculator', 'nest egg calculator', 'retirement planning calculator'],
+    icon: 'M3 3v18h18M7 15l4-4 3 3 5-6M20 8v4h-4',
+  },
+  {
+    slug: 'auto-loan-calculator',
+    name: 'Auto Loan Calculator',
+    tagline: 'Monthly car payment with tax & trade-in.',
+    description:
+      'Free online auto loan calculator. Estimate your monthly car payment from price, down payment, trade-in, sales tax, term and APR, plus total interest. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['auto loan calculator', 'car loan calculator', 'car payment calculator', 'vehicle finance calculator', 'monthly car payment'],
+    icon: 'M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11M5 11h14v5H5zM7 16v2M17 16v2M7.5 13.5h.01M16.5 13.5h.01',
+  },
+  {
+    slug: 'credit-card-payoff-calculator',
+    name: 'Credit Card Payoff Calculator',
+    tagline: 'Months to clear a balance & interest cost.',
+    description:
+      'Free online credit card payoff calculator. See how many months it takes to clear a balance at a fixed monthly payment and APR, and the total interest paid. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['credit card payoff calculator', 'credit card interest calculator', 'debt payoff calculator', 'pay off credit card', 'card balance calculator'],
+    icon: 'M3 7h18v10H3zM3 10h18M6 14h4',
+  },
+  {
+    slug: 'debt-payoff-calculator',
+    name: 'Debt Payoff Calculator',
+    tagline: 'Snowball vs avalanche, months to debt-free.',
+    description:
+      'Free online debt payoff calculator. Compare the snowball and avalanche methods across multiple debts, with extra payments, to find months to debt-free and total interest. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['debt payoff calculator', 'debt snowball calculator', 'debt avalanche calculator', 'pay off debt calculator', 'debt free calculator'],
+    icon: 'M3 3v18h18M7 17l3-3 3 3 4-5M6 21v-4M12 21v-6M18 21v-9',
+  },
+  {
+    slug: 'inflation-calculator',
+    name: 'Inflation Calculator',
+    tagline: 'Future cost & purchasing power over time.',
+    description:
+      'Free online inflation calculator. See what an amount will cost in future years and how much today’s money will be worth in real terms at a given inflation rate. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['inflation calculator', 'purchasing power calculator', 'cost of living calculator', 'future value of money', 'inflation rate calculator'],
+    icon: 'M3 3v18h18M7 14l4-6 3 4 5-8M19 4v4h-4',
+  },
+  {
+    slug: 'salary-calculator',
+    name: 'Salary Calculator',
+    tagline: 'Convert pay between hourly and annual.',
+    description:
+      'Free online salary calculator. Convert a pay rate between hourly, daily, weekly, bi-weekly, monthly and annual figures using your hours and weeks worked. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['salary calculator', 'hourly to salary calculator', 'annual salary calculator', 'wage calculator', 'pay rate calculator'],
+    icon: 'M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
+  },
+  {
+    slug: 'margin-calculator',
+    name: 'Margin Calculator',
+    tagline: 'Profit, gross margin & markup from cost.',
+    description:
+      'Free online profit margin calculator. Enter cost and sale price to get profit, gross margin percentage and markup, or find the price needed for a target margin. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['margin calculator', 'profit margin calculator', 'markup calculator', 'gross margin calculator', 'selling price calculator'],
+    icon: 'M4 20L20 4M8 6a2 2 0 1 1-.01 0M16 18a2 2 0 1 1-.01 0',
+  },
+
+  // ---- Calculators: Health & Fitness (added) ----
+  {
+    slug: 'macro-calculator',
+    name: 'Macro Calculator',
+    tagline: 'Daily protein, carbs & fat targets.',
+    description:
+      'Free online macro calculator. Get your daily calorie target and protein, carb and fat grams from your stats, activity level and goal using the Mifflin-St Jeor equation. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['macro calculator', 'macronutrient calculator', 'iifym calculator', 'protein carb fat calculator', 'macros calculator'],
+    icon: 'M12 3a9 9 0 1 0 9 9h-9zM12 3v9M12 3a9 9 0 0 1 9 9',
+  },
+  {
+    slug: 'one-rep-max-calculator',
+    name: 'One Rep Max Calculator',
+    tagline: 'Estimate your 1RM & training percentages.',
+    description:
+      'Free online one rep max calculator. Estimate your 1RM from weight and reps with the Epley and Brzycki formulas, plus a full table of training percentages. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['one rep max calculator', '1rm calculator', 'max lift calculator', 'bench press max calculator', 'epley formula calculator'],
+    icon: 'M6.5 6.5h11M4 10h2v4H4zM18 10h2v4h-2zM6 12h12M8 9h1v6H8zM15 9h1v6h-1z',
+  },
+  {
+    slug: 'sleep-calculator',
+    name: 'Sleep Calculator',
+    tagline: 'Best bedtimes & wake times by sleep cycle.',
+    description:
+      'Free online sleep calculator. Find the best times to go to bed or wake up based on 90-minute sleep cycles so you wake between cycles feeling refreshed. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['sleep calculator', 'bedtime calculator', 'sleep cycle calculator', 'wake up time calculator', 'when to sleep calculator'],
+    icon: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z',
+  },
+  {
+    slug: 'bac-calculator',
+    name: 'BAC Calculator',
+    tagline: 'Estimate blood alcohol with the Widmark formula.',
+    description:
+      'Free online BAC calculator. Estimate blood alcohol content from drinks, body weight, sex and time using the Widmark formula. An estimate only — never a guide to drive. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['bac calculator', 'blood alcohol calculator', 'widmark formula calculator', 'alcohol level calculator', 'drink calculator'],
+    icon: 'M8 3h8l-1 8a4 4 0 0 1-6 0zM7 21h10M12 15v6M8.5 7h7',
+  },
+  {
+    slug: 'heart-rate-zone-calculator',
+    name: 'Heart Rate Zone Calculator',
+    tagline: 'Target training zones from your max HR.',
+    description:
+      'Free online heart rate zone calculator. Find your maximum heart rate and five target training zones in beats per minute, with optional Karvonen resting-rate method. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['heart rate zone calculator', 'target heart rate calculator', 'max heart rate calculator', 'karvonen calculator', 'training zone calculator'],
+    icon: 'M3 12h4l2-6 4 12 2-6h6',
+  },
+  {
+    slug: 'ovulation-calculator',
+    name: 'Ovulation Calculator',
+    tagline: 'Estimate your fertile window & ovulation.',
+    description:
+      'Free online ovulation calculator. Estimate your most fertile days, ovulation date and next period from your last period and average cycle length. An estimate, not contraception. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['ovulation calculator', 'fertility calculator', 'fertile window calculator', 'ovulation date calculator', 'conception calculator'],
+    icon: 'M12 2a7 7 0 0 0-4 12.7V21a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-6.3A7 7 0 0 0 12 2ZM12 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z',
+  },
+
+  // ---- Calculators: Math (added) ----
+  {
+    slug: 'quadratic-calculator',
+    name: 'Quadratic Equation Calculator',
+    tagline: 'Solve ax² + bx + c = 0 with steps.',
+    description:
+      'Free online quadratic equation calculator. Solve ax²+bx+c=0 for real or complex roots, with the discriminant and vertex shown. Handles linear cases too. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['quadratic calculator', 'quadratic equation solver', 'quadratic formula calculator', 'roots calculator', 'solve quadratic'],
+    icon: 'M4 4v16M4 20c8 0 8-16 16-16M14 8h6M14 8v-2',
+  },
+  {
+    slug: 'probability-calculator',
+    name: 'Probability Calculator',
+    tagline: 'Combine event probabilities (AND, OR).',
+    description:
+      'Free online probability calculator. Find the probability of two independent events happening together, either one, neither or just one, from P(A) and P(B). Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['probability calculator', 'probability of two events', 'p(a and b) calculator', 'combined probability calculator', 'odds calculator'],
+    icon: 'M6 6h.01M18 18h.01M8 5a3 3 0 1 1 0 .01M16 19a3 3 0 1 1 0-.01M5 19 19 5',
+  },
+  {
+    slug: 'permutation-combination-calculator',
+    name: 'Permutation & Combination Calculator',
+    tagline: 'nPr and nCr from n and r.',
+    description:
+      'Free online permutation and combination calculator. Compute nPr and nCr from n and r, with factorials shown and big-number handling. Fast and private. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['permutation calculator', 'combination calculator', 'npr calculator', 'ncr calculator', 'nCr nPr calculator'],
+    icon: 'M4 6h6v6H4zM14 12h6v6h-6zM10 9h4M14 15h-4M17 9V6h3',
+  },
+  {
+    slug: 'triangle-calculator',
+    name: 'Right Triangle Calculator',
+    tagline: 'Solve sides, area & angles (Pythagoras).',
+    description:
+      'Free online right triangle calculator. Enter any two sides to solve the third with the Pythagorean theorem, plus area, perimeter and both acute angles. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['triangle calculator', 'pythagorean theorem calculator', 'right triangle calculator', 'hypotenuse calculator', 'triangle side calculator'],
+    icon: 'M4 20h16L4 4zM4 16h4v4',
+  },
+
+  // ---- Calculators: Everyday / School (added) ----
+  {
+    slug: 'grade-calculator',
+    name: 'Grade Calculator',
+    tagline: 'Score percentage & weighted class grade.',
+    description:
+      'Free online grade calculator. Turn correct answers into a percentage and letter grade, and work out your weighted overall grade from assignments and their weights. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['grade calculator', 'ez grader', 'test grade calculator', 'weighted grade calculator', 'class grade calculator'],
+    icon: 'M4 5h13a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM8 9h7M8 13h5M17 3l3 3-3 3',
+  },
+  {
+    slug: 'final-grade-calculator',
+    name: 'Final Grade Calculator',
+    tagline: 'Find the final exam score you need.',
+    description:
+      'Free online final grade calculator. Work out the score you need on your final exam to reach a target course grade, from your current grade and the exam’s weight. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['final grade calculator', 'final exam calculator', 'what do i need on my final', 'grade needed calculator', 'exam grade calculator'],
+    icon: 'M4 5h13a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM8 9h7M8 13h5M15 15l2 2 3-3',
+  },
+  {
+    slug: 'fuel-cost-calculator',
+    name: 'Fuel Cost Calculator',
+    tagline: 'Trip fuel cost by distance & efficiency.',
+    description:
+      'Free online fuel cost calculator. Estimate the fuel needed and total cost of a trip from distance, fuel efficiency and price, in metric or US units. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['fuel cost calculator', 'gas cost calculator', 'trip cost calculator', 'gas mileage calculator', 'fuel calculator'],
+    icon: 'M5 21V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v15M4 21h12M6 8h8M16 9l3 2v6a2 2 0 0 1-2 2',
   },
 
   // ---- Text / Numerology ----

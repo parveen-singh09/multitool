@@ -1,0 +1,124 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="retirement-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Current age
+        <input id="rt-age" type="number" min="0" step="1" class="field" value="30" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Retirement age
+        <input id="rt-retire" type="number" min="0" step="1" class="field" value="65" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Current savings
+        <input id="rt-balance" type="number" min="0" step="100" class="field" value="25000" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Monthly contribution
+        <input id="rt-monthly" type="number" min="0" step="10" class="field" value="500" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Employer match (% of contribution)
+        <input id="rt-match" type="number" min="0" step="1" class="field" value="0" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Expected annual return (%)
+        <input id="rt-return" type="number" min="0" step="0.1" class="field" value="7" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div id="rt-final" class="font-display text-4xl font-semibold text-primary-hover">—</div>
+      <div id="rt-sub" class="mt-2 text-sm text-ink-muted"></div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="panel p-5 text-center"><div id="rt-contrib" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total contributions</div></div>
+      <div class="panel p-5 text-center"><div id="rt-growth" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total growth</div></div>
+    </div>
+
+    <div class="panel p-5">
+      <div class="flex flex-col gap-2 text-sm">
+        <div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">Starting balance</span><span id="rt-start" class="font-mono text-ink-muted">—</span></div>
+        <div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">Your contributions</span><span id="rt-you" class="font-mono text-ink-muted">—</span></div>
+        <div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">Employer match</span><span id="rt-employer" class="font-mono text-ink-muted">—</span></div>
+        <div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">Investment growth</span><span id="rt-growth2" class="font-mono text-ink-muted">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free retirement calculator projects the future value of your 401(k) or
+      retirement savings by growing your current balance and monthly contributions
+      month by month at your expected annual return. Add an optional employer match
+      to see how matched contributions accelerate your nest egg, and view how much
+      of the final balance comes from contributions versus compound growth. All
+      calculations run in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const ageEl = document.getElementById('rt-age') as HTMLInputElement;
+  const retireEl = document.getElementById('rt-retire') as HTMLInputElement;
+  const balanceEl = document.getElementById('rt-balance') as HTMLInputElement;
+  const monthlyEl = document.getElementById('rt-monthly') as HTMLInputElement;
+  const matchEl = document.getElementById('rt-match') as HTMLInputElement;
+  const returnEl = document.getElementById('rt-return') as HTMLInputElement;
+
+  const finalEl = document.getElementById('rt-final')!;
+  const subEl = document.getElementById('rt-sub')!;
+  const contribEl = document.getElementById('rt-contrib')!;
+  const growthEl = document.getElementById('rt-growth')!;
+  const startEl = document.getElementById('rt-start')!;
+  const youEl = document.getElementById('rt-you')!;
+  const employerEl = document.getElementById('rt-employer')!;
+  const growth2El = document.getElementById('rt-growth2')!;
+
+  const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+
+  function reset() {
+    finalEl.textContent = '—';
+    subEl.textContent = '';
+    contribEl.textContent = growthEl.textContent = '—';
+    startEl.textContent = youEl.textContent = employerEl.textContent = growth2El.textContent = '—';
+  }
+
+  function calc() {
+    const age = Number(ageEl.value);
+    const retire = Number(retireEl.value);
+    const start = Number(balanceEl.value);
+    const monthly = Number(monthlyEl.value);
+    const matchPct = Number(matchEl.value);
+    const annual = Number(returnEl.value);
+
+    const months = Math.round((retire - age) * 12);
+    if (!(months > 0) || !(start >= 0) || !(monthly >= 0)) { reset(); return; }
+
+    const r = annual / 12 / 100;
+    const employerMonthly = monthly * (matchPct / 100);
+    const contribPerMonth = monthly + employerMonthly;
+
+    let balance = start;
+    for (let i = 0; i < months; i++) {
+      balance = balance * (1 + r) + contribPerMonth;
+    }
+
+    const yourContrib = monthly * months;
+    const employerContrib = employerMonthly * months;
+    const totalContrib = yourContrib + employerContrib;
+    const growth = balance - start - totalContrib;
+
+    finalEl.textContent = money(balance);
+    subEl.textContent = `Projected balance at age ${retire} over ${months} months`;
+    contribEl.textContent = money(totalContrib);
+    growthEl.textContent = money(growth);
+
+    startEl.textContent = money(start);
+    youEl.textContent = money(yourContrib);
+    employerEl.textContent = money(employerContrib);
+    growth2El.textContent = money(growth);
+  }
+
+  [ageEl, retireEl, balanceEl, monthlyEl, matchEl, returnEl].forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>
