@@ -1,0 +1,111 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="apush-calculator">
+  <div class="flex flex-col gap-5">
+    <div class="flex flex-col gap-3">
+      <span class="eyebrow text-primary-hover">Section I</span>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Multiple choice correct (of 55)
+          <input id="aph-mc" type="number" min="0" max="55" class="field" value="40" inputmode="numeric" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Short-answer points (of 9)
+          <input id="aph-saq" type="number" min="0" max="9" class="field" value="6" inputmode="numeric" />
+        </label>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-3">
+      <span class="eyebrow text-primary-hover">Section II — Essays</span>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">DBQ points (of 7)
+          <input id="aph-dbq" type="number" min="0" max="7" class="field" value="5" inputmode="numeric" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Long essay points (of 6)
+          <input id="aph-leq" type="number" min="0" max="6" class="field" value="4" inputmode="numeric" />
+        </label>
+      </div>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div class="text-sm text-ink-subtle">Predicted AP score</div>
+      <div id="aph-score" class="mt-1 font-display text-5xl font-semibold text-primary-hover">—</div>
+      <div id="aph-composite" class="mt-2 text-sm text-ink-muted"></div>
+    </div>
+
+    <div id="aph-scale" class="flex flex-col gap-1.5 text-[13px] text-ink-subtle"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free APUSH score calculator predicts your 1–5 AP US History score from
+      all four scored parts: the 55-question multiple-choice section, the
+      short-answer questions (9 points), the document-based question (7 points)
+      and the long essay (6 points). Each part is weighted to its share of the
+      exam — MC 40%, SAQ 20%, DBQ 25% and LEQ 15% — to form a composite out of
+      130, which is then mapped to a 1–5 scale using a typical curve. Because
+      College Board re-curves annually, treat the result as an estimate for
+      practice, not an official prediction. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+
+  // Weighted composite out of ~130.
+  // MC: 55 q → 40% (0.9455/q). SAQ: 9 → 20% (2.888/pt).
+  // DBQ: 7 → 25% (4.643/pt). LEQ: 6 → 15% (3.25/pt).
+  const MC_W = 0.9455;
+  const SAQ_W = 2.888;
+  const DBQ_W = 4.643;
+  const LEQ_W = 3.25;
+
+  const CUTS: { min: number; score: number }[] = [
+    { min: 98, score: 5 },
+    { min: 82, score: 4 },
+    { min: 65, score: 3 },
+    { min: 46, score: 2 },
+    { min: 0, score: 1 },
+  ];
+
+  function clamp(v: number, lo: number, hi: number) {
+    return Math.max(lo, Math.min(hi, v));
+  }
+
+  function calc() {
+    const mc = clamp(Number($('aph-mc').value) || 0, 0, 55);
+    const saq = clamp(Number($('aph-saq').value) || 0, 0, 9);
+    const dbq = clamp(Number($('aph-dbq').value) || 0, 0, 7);
+    const leq = clamp(Number($('aph-leq').value) || 0, 0, 6);
+
+    const composite = mc * MC_W + saq * SAQ_W + dbq * DBQ_W + leq * LEQ_W;
+    const rounded = Math.round(composite);
+    const score = CUTS.find((c) => rounded >= c.min)!.score;
+
+    document.getElementById('aph-score')!.textContent = String(score);
+    document.getElementById('aph-composite')!.textContent = `Composite ${rounded} / 130`;
+
+    const bands = [
+      ['5', '98–130'],
+      ['4', '82–97'],
+      ['3', '65–81'],
+      ['2', '46–64'],
+      ['1', '0–45'],
+    ];
+    document.getElementById('aph-scale')!.innerHTML = bands
+      .map(([s, range]) => {
+        const active = Number(s) === score;
+        return `<div class="flex items-center justify-between rounded-[6px] px-3 py-1.5 ${active ? 'bg-surface-2 text-ink' : ''}">
+          <span>Score ${s}</span><span class="font-mono">${range}</span>
+        </div>`;
+      })
+      .join('');
+  }
+
+  document
+    .querySelectorAll('#aph-mc, #aph-saq, #aph-dbq, #aph-leq')
+    .forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

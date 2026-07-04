@@ -1,0 +1,122 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="creatinine-clearance-calculator">
+  <div class="flex flex-col gap-5">
+    <div class="flex flex-wrap gap-2" role="tablist" aria-label="Units">
+      <button data-unit="metric" class="crcl-tab btn btn-primary" aria-selected="true">Metric (mg/dL, kg)</button>
+      <button data-unit="si" class="crcl-tab btn btn-secondary" aria-selected="false">SI (µmol/L)</button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Sex
+        <select id="crcl-sex" class="field">
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Age (years)
+        <input id="crcl-age" type="number" min="1" max="120" class="field" value="55" inputmode="numeric" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Weight (kg)
+        <input id="crcl-weight" type="number" min="1" class="field" value="80" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle"><span id="crcl-scr-label">Serum creatinine (mg/dL)</span>
+        <input id="crcl-scr" type="number" min="0.1" step="0.01" class="field" value="1.1" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div class="text-sm text-ink-subtle">Creatinine clearance (Cockcroft-Gault)</div>
+      <div id="crcl-value" class="mt-1 font-display text-4xl font-semibold text-primary-hover">—</div>
+      <div id="crcl-stage" class="mt-2 text-sm text-ink-muted"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free creatinine clearance calculator estimates kidney function using
+      the Cockcroft-Gault equation from age, weight, sex and serum creatinine. The
+      result, in mL/min, approximates how much blood your kidneys filter per
+      minute and is widely used to guide medication dosing. For women the estimate
+      is multiplied by 0.85. It also shows the rough CKD stage the value falls in.
+      This is an educational estimate — actual clinical decisions require a
+      healthcare professional and may use other equations like CKD-EPI. All
+      calculations run in your browser and nothing is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  let unit: 'metric' | 'si' = 'metric';
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const sexEl = document.getElementById('crcl-sex') as unknown as HTMLSelectElement;
+
+  function stage(crcl: number): [string, string] {
+    if (crcl >= 90) return ['Normal kidney function (Stage 1)', '#27a644'];
+    if (crcl >= 60) return ['Mildly reduced (Stage 2)', '#27a644'];
+    if (crcl >= 45) return ['Mild–moderate (Stage 3a)', '#d2a05e'];
+    if (crcl >= 30) return ['Moderate–severe (Stage 3b)', '#d2a05e'];
+    if (crcl >= 15) return ['Severely reduced (Stage 4)', '#e5484d'];
+    return ['Kidney failure (Stage 5)', '#e5484d'];
+  }
+
+  function calc() {
+    const male = sexEl.value === 'male';
+    const age = Number($('crcl-age').value);
+    const weight = Number($('crcl-weight').value);
+    let scr = Number($('crcl-scr').value); // mg/dL after conversion
+
+    const valueEl = document.getElementById('crcl-value')!;
+    const stageEl = document.getElementById('crcl-stage')!;
+
+    // SI µmol/L → mg/dL: divide by 88.42
+    if (unit === 'si') scr = scr / 88.42;
+
+    if (!(age > 0) || !(weight > 0) || !(scr > 0)) {
+      valueEl.textContent = '—';
+      stageEl.textContent = '';
+      return;
+    }
+
+    // Cockcroft-Gault: ((140 − age) × weight) / (72 × Scr), ×0.85 if female.
+    let crcl = ((140 - age) * weight) / (72 * scr);
+    if (!male) crcl *= 0.85;
+
+    if (!isFinite(crcl) || crcl <= 0) {
+      valueEl.textContent = '—';
+      stageEl.textContent = '';
+      return;
+    }
+
+    valueEl.textContent = crcl.toFixed(1) + ' mL/min';
+    const [label, color] = stage(crcl);
+    stageEl.textContent = label;
+    stageEl.style.color = color;
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.crcl-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      unit = tab.dataset.unit as 'metric' | 'si';
+      document.querySelectorAll('.crcl-tab').forEach((t) => {
+        const active = t === tab;
+        t.setAttribute('aria-selected', String(active));
+        t.classList.toggle('btn-primary', active);
+        t.classList.toggle('btn-secondary', !active);
+      });
+      document.getElementById('crcl-scr-label')!.textContent =
+        unit === 'metric' ? 'Serum creatinine (mg/dL)' : 'Serum creatinine (µmol/L)';
+      const scrEl = $('crcl-scr');
+      // Convert the displayed value so the estimate is stable across the toggle.
+      const cur = Number(scrEl.value);
+      if (cur > 0) scrEl.value = unit === 'si' ? (cur * 88.42).toFixed(0) : (cur / 88.42).toFixed(2);
+      calc();
+    });
+  });
+
+  document
+    .querySelectorAll('#crcl-sex, #crcl-age, #crcl-weight, #crcl-scr')
+    .forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

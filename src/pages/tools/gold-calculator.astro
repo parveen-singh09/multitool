@@ -1,0 +1,118 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="gold-calculator">
+  <div class="flex flex-col gap-5">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Spot price (per troy ounce)
+        <input id="gold-spot" type="number" min="0" step="0.01" class="field" value="2350" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Currency symbol
+        <input id="gold-cur" type="text" maxlength="3" class="field" value="$" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Weight
+        <input id="gold-weight" type="number" min="0" step="0.01" class="field" value="10" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Weight unit
+        <select id="gold-unit" class="field">
+          <option value="1">Troy ounce (ozt)</option>
+          <option value="0.9114583">Ounce (oz)</option>
+          <option value="0.03215075" selected>Gram (g)</option>
+          <option value="0.05">Pennyweight (dwt)</option>
+          <option value="0.00003215075">Milligram (mg)</option>
+          <option value="32.150747">Kilogram (kg)</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Purity / Karat
+        <select id="gold-karat" class="field">
+          <option value="1">24K (99.9% pure)</option>
+          <option value="0.9167">22K (91.7%)</option>
+          <option value="0.75">18K (75%)</option>
+          <option value="0.585" selected>14K (58.5%)</option>
+          <option value="0.4167">10K (41.7%)</option>
+          <option value="0.375">9K (37.5%)</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Buyer pays (% of melt)
+        <input id="gold-pct" type="number" min="0" max="100" class="field" value="100" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-6">
+      <div class="flex items-baseline justify-between">
+        <span class="text-sm text-ink-subtle">Estimated value</span>
+        <span id="gold-value" class="font-display text-4xl font-semibold text-primary-hover">—</span>
+      </div>
+      <div id="gold-breakdown" class="mt-5 flex flex-col gap-2 text-sm"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free gold value calculator works out the melt value of gold from its
+      weight, karat and the current spot price. Enter the live spot price per troy
+      ounce (from any market source), pick your weight unit and karat, and it
+      figures the pure gold content and its value. Use the “buyer pays” field to
+      model a scrap or pawn offer that’s a percentage of melt. It handles grams,
+      ounces, troy ounces, pennyweight and kilograms, and karats from 9K to 24K.
+      Prices change constantly, so refresh the spot price for an accurate figure —
+      this tool doesn’t fetch live rates. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const sel = (id: string) => document.getElementById(id) as unknown as HTMLSelectElement;
+
+  function money(n: number, cur: string): string {
+    return cur + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function calc() {
+    const spot = Number($('gold-spot').value) || 0;
+    const cur = ($('gold-cur').value || '$').trim();
+    const weight = Number($('gold-weight').value) || 0;
+    const toOzt = Number(sel('gold-unit').value); // factor: unit → troy ounces
+    const purity = Number(sel('gold-karat').value);
+    const pct = (Number($('gold-pct').value) || 0) / 100;
+
+    const valueEl = document.getElementById('gold-value')!;
+    const breakdownEl = document.getElementById('gold-breakdown')!;
+
+    if (!(spot > 0) || !(weight > 0)) {
+      valueEl.textContent = '—';
+      breakdownEl.innerHTML = '';
+      return;
+    }
+
+    const totalOzt = weight * toOzt;
+    const pureOzt = totalOzt * purity;
+    const melt = pureOzt * spot;
+    const payout = melt * pct;
+
+    valueEl.textContent = money(payout, cur);
+
+    const rows: [string, string][] = [
+      ['Total weight', totalOzt.toFixed(4) + ' ozt'],
+      ['Pure gold content', pureOzt.toFixed(4) + ' ozt'],
+      ['Melt value (100%)', money(melt, cur)],
+    ];
+    if (pct !== 1) rows.push([`Payout at ${(pct * 100).toFixed(0)}%`, money(payout, cur)]);
+
+    breakdownEl.innerHTML = rows
+      .map(
+        ([label, val]) => `<div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0">
+          <span class="text-ink-subtle">${label}</span>
+          <span class="font-mono text-ink-muted">${val}</span>
+        </div>`
+      )
+      .join('');
+  }
+
+  document
+    .querySelectorAll('#gold-spot, #gold-cur, #gold-weight, #gold-unit, #gold-karat, #gold-pct')
+    .forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

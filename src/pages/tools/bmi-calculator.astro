@@ -34,6 +34,37 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div id="bmi-value" class="font-display text-4xl font-semibold text-primary-hover">—</div>
       <div id="bmi-cat" class="mt-2 text-sm text-ink-muted"></div>
     </div>
+
+    <!-- BMI range chart -->
+    <div class="flex flex-col gap-3">
+      <span class="text-[13px] text-ink-subtle">Where you sit on the BMI scale</span>
+      <div class="relative pt-6">
+        <!-- Moving marker -->
+        <div id="bmi-marker" class="absolute top-0 -translate-x-1/2 transition-[left] duration-300 ease-out" style="left:0">
+          <span class="block rounded-[4px] bg-ink px-1.5 py-0.5 font-mono text-[11px] font-medium text-canvas" id="bmi-marker-val">—</span>
+          <span class="mx-auto block h-0 w-0 border-x-4 border-t-4 border-x-transparent" style="border-top-color:var(--color-ink)"></span>
+        </div>
+        <!-- Segmented bar -->
+        <div class="flex h-3 overflow-hidden rounded-full">
+          <span style="width:14%;background:#5e9fd2" title="Underweight"></span>
+          <span style="width:26%;background:#27a644" title="Normal"></span>
+          <span style="width:20%;background:#d2a05e" title="Overweight"></span>
+          <span style="width:40%;background:#e5484d" title="Obese"></span>
+        </div>
+        <!-- Scale ticks -->
+        <div class="relative mt-1 h-4 text-[11px] text-ink-tertiary">
+          <span class="absolute -translate-x-1/2" style="left:14%">18.5</span>
+          <span class="absolute -translate-x-1/2" style="left:40%">25</span>
+          <span class="absolute -translate-x-1/2" style="left:60%">30</span>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2 text-[12px] sm:grid-cols-4">
+        <span class="flex items-center gap-1.5 text-ink-subtle"><span class="h-2.5 w-2.5 rounded-full" style="background:#5e9fd2"></span>Underweight &lt; 18.5</span>
+        <span class="flex items-center gap-1.5 text-ink-subtle"><span class="h-2.5 w-2.5 rounded-full" style="background:#27a644"></span>Normal 18.5–24.9</span>
+        <span class="flex items-center gap-1.5 text-ink-subtle"><span class="h-2.5 w-2.5 rounded-full" style="background:#d2a05e"></span>Overweight 25–29.9</span>
+        <span class="flex items-center gap-1.5 text-ink-subtle"><span class="h-2.5 w-2.5 rounded-full" style="background:#e5484d"></span>Obese 30+</span>
+      </div>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -70,12 +101,25 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       m = totalIn * 0.0254;
       kg = Number($('bmi-lb').value) * 0.45359237;
     }
-    if (!(m > 0) || !(kg > 0)) { valueEl.textContent = '—'; catEl.textContent = ''; return; }
+    const marker = document.getElementById('bmi-marker')!;
+    const markerVal = document.getElementById('bmi-marker-val')!;
+    if (!(m > 0) || !(kg > 0)) {
+      valueEl.textContent = '—'; catEl.textContent = '';
+      markerVal.textContent = '—'; marker.style.left = '0';
+      return;
+    }
     const bmi = kg / (m * m);
     valueEl.textContent = bmi.toFixed(1);
     const [label, color] = category(bmi);
     catEl.textContent = label;
     catEl.style.color = color;
+
+    // Chart scale spans BMI 15–40 (4% per unit; ticks at 18.5→14%, 25→40%, 30→60%).
+    const pos = Math.max(0, Math.min(100, 14 + (bmi - 18.5) * 4));
+    marker.style.left = pos + '%';
+    markerVal.textContent = bmi.toFixed(1);
+    markerVal.style.background = color;
+    (marker.querySelector('span:last-child') as HTMLElement).style.borderTopColor = color;
   }
 
   document.querySelectorAll<HTMLButtonElement>('.bmi-tab').forEach((tab) => {

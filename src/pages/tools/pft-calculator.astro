@@ -1,0 +1,241 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pft-calculator">
+  <div class="flex flex-col gap-5">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Sex
+        <select id="pft-sex" class="field">
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Age group
+        <select id="pft-age" class="field">
+          <option value="0">17–20</option>
+          <option value="1" selected>21–25</option>
+          <option value="2">26–30</option>
+          <option value="3">31–35</option>
+          <option value="4">36–40</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="flex flex-col gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Upper body event
+        <select id="pft-ube" class="field">
+          <option value="pullups">Pull-ups (max 100 pts)</option>
+          <option value="pushups">Push-ups (max 70 pts)</option>
+        </select>
+      </label>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle"><span id="pft-ube-label">Pull-ups (reps)</span>
+          <input id="pft-reps" type="number" min="0" class="field" value="15" inputmode="numeric" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Plank (mm:ss)
+          <input id="pft-plank" type="text" class="field font-mono" value="3:00" placeholder="3:00" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">3-Mile Run (mm:ss)
+          <input id="pft-run" type="text" class="field font-mono" value="21:00" placeholder="21:00" />
+        </label>
+      </div>
+    </div>
+
+    <div class="panel panel-lift p-6">
+      <div class="flex items-baseline justify-between">
+        <span class="text-sm text-ink-subtle">Total score (of 300)</span>
+        <span id="pft-total" class="font-display text-4xl font-semibold text-primary-hover">—</span>
+      </div>
+      <div id="pft-status" class="mt-1 text-right text-sm"></div>
+      <div id="pft-breakdown" class="mt-5 flex flex-col gap-2 text-sm"></div>
+    </div>
+
+    <!-- Published scoring tiers for the selected sex + age group -->
+    <div class="panel panel-lift p-6">
+      <div class="flex flex-col gap-1">
+        <span class="eyebrow text-primary-hover">Scoring standards</span>
+        <span id="pft-ref-caption" class="text-sm text-ink-subtle"></span>
+      </div>
+      <div class="mt-4 overflow-x-auto">
+        <table id="pft-ref-table" class="w-full border-collapse text-[13px]"></table>
+      </div>
+      <p class="mt-3 text-[12px] leading-relaxed text-ink-tertiary">
+        Published USMC PFT tiers for this age group and sex. An “N/A” means the
+        source lists no value at that tier (e.g. pull-ups have no 50/40 tier for
+        women; push-ups cap at 70 points so have no 100/90 tier). Scores between
+        tiers are interpolated. Cross-check against your official scorecard.
+      </p>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free USMC Physical Fitness Test (PFT) calculator scores the three PFT
+      events — your choice of pull-ups or push-ups, the forearm plank, and the
+      three-mile run — for a combined total out of 300. Pick your age group
+      (17–40) and sex, enter your raw results, and see per-event points plus your
+      class (First, Second or Third). Choosing push-ups caps the upper-body event
+      at 70 points, matching the Marine Corps rule. Scoring interpolates between
+      the published point tiers (100, 90, 75, 60, 50 and 40), and the full tier
+      chart for your selected group is shown right on the page so you can verify
+      every reading. Values are an estimate for training, not an official
+      scorecard. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import {
+    PULLUPS,
+    PUSHUPS,
+    PLANK,
+    RUN,
+    AGE_GROUPS,
+    scoreEvent,
+    timeToSec,
+    secToTime,
+    colIndex,
+    type EventStd,
+    type Sex,
+  } from '../../data/pftStandards';
+
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const sel = (id: string) => document.getElementById(id) as unknown as HTMLSelectElement;
+
+  // Raw numeric for scoring: seconds for time events, reps otherwise. null if blank.
+  function rawFor(id: string, isTime: boolean): number | null {
+    const v = $(id).value.trim();
+    if (!v) return null;
+    const n = isTime ? timeToSec(v) : Number(v);
+    return isFinite(n) ? n : null;
+  }
+
+  function calc() {
+    const sex = sel('pft-sex').value as Sex;
+    const ageIndex = Number(sel('pft-age').value);
+    const ube = sel('pft-ube').value;
+    const upper: EventStd = ube === 'pullups' ? PULLUPS : PUSHUPS;
+
+    document.getElementById('pft-ube-label')!.textContent =
+      ube === 'pullups' ? 'Pull-ups (reps)' : 'Push-ups (reps)';
+
+    // event, input id, is-time
+    const events: [EventStd, string, boolean][] = [
+      [upper, 'pft-reps', false],
+      [PLANK, 'pft-plank', true],
+      [RUN, 'pft-run', true],
+    ];
+
+    const rows: string[] = [];
+    let total = 0;
+    let complete = true;
+    let failed = false;
+
+    for (const [event, id, isTime] of events) {
+      const raw = rawFor(id, isTime);
+      if (raw === null) {
+        complete = false;
+        rows.push(row(event.shortLabel, '—', null));
+        continue;
+      }
+      const pts = scoreEvent(event, sex, ageIndex, raw);
+      total += pts;
+      const pass = pts >= 40;
+      if (!pass) failed = true;
+      rows.push(row(event.shortLabel, String(pts), pass));
+    }
+
+    document.getElementById('pft-breakdown')!.innerHTML = rows.join('');
+    const totalEl = document.getElementById('pft-total')!;
+    const statusEl = document.getElementById('pft-status')!;
+
+    if (!complete) {
+      totalEl.textContent = '—';
+      statusEl.textContent = 'Fill in all three events';
+      statusEl.style.color = 'var(--color-ink-subtle)';
+      return;
+    }
+
+    totalEl.textContent = String(total);
+    const [label, color] = classify(total, failed);
+    statusEl.textContent = label;
+    statusEl.style.color = color;
+  }
+
+  function classify(total: number, failed: boolean): [string, string] {
+    if (failed) return ['FAIL — below 40 on an event', '#e5484d'];
+    if (total >= 235) return ['1st Class', '#27a644'];
+    if (total >= 200) return ['2nd Class', '#27a644'];
+    if (total >= 150) return ['3rd Class', '#d2a05e'];
+    return ['FAIL — below 150', '#e5484d'];
+  }
+
+  function row(label: string, pts: string, pass: boolean | null): string {
+    const color = pass === null ? 'var(--color-ink-tertiary)' : pass ? '#27a644' : '#e5484d';
+    return `<div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0">
+      <span class="text-ink-subtle">${label}</span>
+      <span class="font-mono" style="color:${color}">${pts}</span>
+    </div>`;
+  }
+
+  // Build the reference table for the selected sex + age group. The upper-body
+  // column reflects the chosen event (pull-ups or push-ups).
+  function buildReference() {
+    const sex = sel('pft-sex').value as Sex;
+    const ageIndex = Number(sel('pft-age').value);
+    const ube = sel('pft-ube').value;
+    const upper: EventStd = ube === 'pullups' ? PULLUPS : PUSHUPS;
+    const ci = colIndex(ageIndex, sex);
+    const cols: EventStd[] = [upper, PLANK, RUN];
+
+    document.getElementById('pft-ref-caption')!.textContent =
+      `${sex === 'male' ? 'Male' : 'Female'} · ${AGE_GROUPS[ageIndex]} · raw score needed per tier`;
+
+    const fmt = (cell: unknown, isTime: boolean): string => {
+      if (cell === null || cell === undefined) return '<span class="text-ink-tertiary">N/A</span>';
+      if (isTime) return secToTime(timeToSec(String(cell)));
+      return String(cell);
+    };
+
+    // Every tier that appears in any column, high -> low.
+    const pointSet = new Set<number>();
+    for (const e of cols) for (const r of e.rows) pointSet.add(r[0] as number);
+    const points = [...pointSet].sort((a, b) => b - a);
+
+    const byPoints: Record<string, Record<number, unknown>> = {};
+    for (const e of cols) {
+      const m: Record<number, unknown> = {};
+      for (const r of e.rows) m[r[0] as number] = r[ci];
+      byPoints[e.key] = m;
+    }
+
+    const head = `<thead><tr class="text-left text-[12px] text-ink-subtle">
+      <th class="py-1.5 pr-3 font-medium">Pts</th>
+      ${cols.map((e) => `<th class="py-1.5 px-2 font-medium">${e.shortLabel}${e.unit !== 'time' && e.unit !== 'reps' ? ` (${e.unit})` : ''}</th>`).join('')}
+    </tr></thead>`;
+
+    const body = points
+      .map((p) => {
+        const cells = cols
+          .map((e) => `<td class="py-1.5 px-2 font-mono text-ink-muted">${fmt(byPoints[e.key][p], e.isTime)}</td>`)
+          .join('');
+        return `<tr class="border-t border-hairline">
+          <td class="py-1.5 pr-3 font-mono text-ink">${p}</td>${cells}
+        </tr>`;
+      })
+      .join('');
+
+    document.getElementById('pft-ref-table')!.innerHTML = head + `<tbody>${body}</tbody>`;
+  }
+
+  function update() {
+    calc();
+    buildReference();
+  }
+
+  document
+    .querySelectorAll('#pft-sex, #pft-age, #pft-ube, #pft-reps, #pft-plank, #pft-run')
+    .forEach((el) => el.addEventListener('input', update));
+  update();
+</script>

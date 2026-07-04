@@ -1,0 +1,186 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="dynasty-trade-calculator">
+  <div class="flex flex-col gap-5">
+    <div class="flex flex-col gap-2">
+      <label class="text-sm text-ink-subtle" for="dt-search">Add a player or pick</label>
+      <div class="flex gap-2">
+        <input id="dt-search" list="dt-assets" class="field" placeholder="Start typing… e.g. Ja'Marr Chase" autocomplete="off" />
+        <button id="dt-add-a" class="btn btn-secondary whitespace-nowrap">+ Side A</button>
+        <button id="dt-add-b" class="btn btn-secondary whitespace-nowrap">+ Side B</button>
+      </div>
+      <datalist id="dt-assets"></datalist>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div class="panel panel-lift flex flex-col gap-3 p-5">
+        <div class="flex items-baseline justify-between">
+          <h3 class="font-display text-lg font-semibold text-ink">Side A</h3>
+          <span id="dt-total-a" class="font-mono text-xl text-primary-hover">0</span>
+        </div>
+        <ul id="dt-list-a" class="flex flex-col gap-2 text-sm"></ul>
+      </div>
+      <div class="panel panel-lift flex flex-col gap-3 p-5">
+        <div class="flex items-baseline justify-between">
+          <h3 class="font-display text-lg font-semibold text-ink">Side B</h3>
+          <span id="dt-total-b" class="font-mono text-xl text-primary-hover">0</span>
+        </div>
+        <ul id="dt-list-b" class="flex flex-col gap-2 text-sm"></ul>
+      </div>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div id="dt-verdict" class="font-display text-2xl font-semibold text-ink">Add assets to both sides</div>
+      <div id="dt-detail" class="mt-2 text-sm text-ink-muted"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free dynasty fantasy football trade calculator helps you weigh a trade
+      by total value. Add players and rookie picks to each side, and it sums a
+      value score for each and tells you who comes out ahead and by how much.
+      Values are a snapshot for 1QR/PPR dynasty leagues and are meant as a
+      starting point for discussion — real value depends on your league’s scoring,
+      roster needs and contention window. Update your own reads on top. Everything
+      runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  // Snapshot dynasty values (1QB PPR-ish), 0–10000 scale. Illustrative, not live.
+  const ASSETS: Record<string, number> = {
+    "Ja'Marr Chase": 9800,
+    'Justin Jefferson': 9500,
+    'CeeDee Lamb': 9200,
+    'Bijan Robinson': 9000,
+    'Jahmyr Gibbs': 8600,
+    'Amon-Ra St. Brown': 8500,
+    'Malik Nabers': 8400,
+    'Puka Nacua': 8200,
+    'Breece Hall': 7600,
+    'Nico Collins': 7500,
+    'Marvin Harrison Jr.': 7400,
+    'Brian Thomas Jr.': 7300,
+    'Drake London': 7200,
+    'Garrett Wilson': 7100,
+    'De\'Von Achane': 7000,
+    'Jonathan Taylor': 6600,
+    'A.J. Brown': 6400,
+    'Jaylen Waddle': 6000,
+    'Chris Olave': 5900,
+    'Rome Odunze': 5800,
+    'Josh Allen': 5700,
+    'Jayden Daniels': 5600,
+    'Patrick Mahomes': 5400,
+    'Lamar Jackson': 5200,
+    'Saquon Barkley': 5000,
+    'Derrick Henry': 3800,
+    'Travis Kelce': 2400,
+    'Brock Bowers': 6800,
+    'Sam LaPorta': 5000,
+    'Trey McBride': 4800,
+    '2025 1st (early)': 5200,
+    '2025 1st (mid)': 4300,
+    '2025 1st (late)': 3400,
+    '2025 2nd': 2000,
+    '2025 3rd': 900,
+    '2026 1st (projected)': 4000,
+    '2026 2nd (projected)': 1800,
+  };
+
+  const sides: { a: string[]; b: string[] } = { a: [], b: [] };
+
+  // Populate datalist.
+  const datalist = document.getElementById('dt-assets')!;
+  datalist.innerHTML = Object.keys(ASSETS)
+    .map((name) => `<option value="${name.replace(/"/g, '&quot;')}"></option>`)
+    .join('');
+
+  const search = document.getElementById('dt-search') as HTMLInputElement;
+
+  function render() {
+    for (const side of ['a', 'b'] as const) {
+      const list = document.getElementById(`dt-list-${side}`)!;
+      const items = sides[side];
+      if (!items.length) {
+        list.innerHTML = '<li class="text-ink-tertiary">Nothing yet.</li>';
+      } else {
+        list.innerHTML = items
+          .map(
+            (name, i) => `<li class="flex items-center justify-between gap-2 rounded-[6px] bg-surface-2 px-3 py-1.5">
+              <span class="text-ink">${name}</span>
+              <span class="flex items-center gap-3">
+                <span class="font-mono text-ink-subtle">${ASSETS[name]}</span>
+                <button data-side="${side}" data-i="${i}" class="dt-remove text-ink-tertiary transition-colors hover:text-[#e5484d]" aria-label="Remove">✕</button>
+              </span>
+            </li>`
+          )
+          .join('');
+      }
+      const total = items.reduce((s, n) => s + (ASSETS[n] || 0), 0);
+      document.getElementById(`dt-total-${side}`)!.textContent = total.toLocaleString('en-US');
+    }
+
+    document.querySelectorAll<HTMLButtonElement>('.dt-remove').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const side = btn.dataset.side as 'a' | 'b';
+        sides[side].splice(Number(btn.dataset.i), 1);
+        render();
+      });
+    });
+
+    verdict();
+  }
+
+  function verdict() {
+    const ta = sides.a.reduce((s, n) => s + (ASSETS[n] || 0), 0);
+    const tb = sides.b.reduce((s, n) => s + (ASSETS[n] || 0), 0);
+    const vEl = document.getElementById('dt-verdict')!;
+    const dEl = document.getElementById('dt-detail')!;
+
+    if (!sides.a.length || !sides.b.length) {
+      vEl.textContent = 'Add assets to both sides';
+      vEl.style.color = 'var(--color-ink)';
+      dEl.textContent = '';
+      return;
+    }
+
+    const diff = Math.abs(ta - tb);
+    const bigger = ta === tb ? null : ta > tb ? 'A' : 'B';
+    const pct = Math.max(ta, tb) > 0 ? (diff / Math.max(ta, tb)) * 100 : 0;
+
+    if (bigger === null || pct < 5) {
+      vEl.textContent = 'Fair trade';
+      vEl.style.color = '#27a644';
+      dEl.textContent = `Values are within ${pct.toFixed(0)}% — essentially even.`;
+    } else {
+      vEl.textContent = `Side ${bigger} wins`;
+      vEl.style.color = '#d2a05e';
+      dEl.textContent = `Side ${bigger} gets ${diff.toLocaleString('en-US')} more value (${pct.toFixed(0)}% edge).`;
+    }
+  }
+
+  function add(side: 'a' | 'b') {
+    const name = search.value.trim();
+    if (!name || !(name in ASSETS)) {
+      search.focus();
+      return;
+    }
+    sides[side].push(name);
+    search.value = '';
+    render();
+    search.focus();
+  }
+
+  document.getElementById('dt-add-a')!.addEventListener('click', () => add('a'));
+  document.getElementById('dt-add-b')!.addEventListener('click', () => add('b'));
+  search.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') add('a');
+  });
+
+  render();
+</script>

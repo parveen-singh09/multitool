@@ -1,0 +1,123 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="peptide-calculator">
+  <div class="flex flex-col gap-5">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Peptide in vial (mg)
+        <input id="pep-amount" type="number" min="0" step="0.1" class="field" value="5" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Bacteriostatic water added (mL)
+        <input id="pep-water" type="number" min="0" step="0.1" class="field" value="2" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Desired dose
+        <input id="pep-dose" type="number" min="0" step="1" class="field" value="250" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Dose unit
+        <select id="pep-dose-unit" class="field">
+          <option value="mcg" selected>micrograms (mcg)</option>
+          <option value="mg">milligrams (mg)</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle sm:col-span-2">Syringe type
+        <select id="pep-syringe" class="field">
+          <option value="100" selected>U-100 insulin (100 units / mL)</option>
+          <option value="50">U-50 insulin (50 units / 0.5 mL)</option>
+          <option value="40">U-40 insulin (40 units / mL)</option>
+        </select>
+      </label>
+    </div>
+
+    <p id="pep-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div class="panel panel-lift p-5 text-center">
+        <div class="text-[13px] text-ink-subtle">Draw to</div>
+        <div id="pep-units" class="mt-1 font-display text-3xl font-semibold text-primary-hover">—</div>
+        <div class="text-[12px] text-ink-tertiary">syringe units</div>
+      </div>
+      <div class="panel panel-lift p-5 text-center">
+        <div class="text-[13px] text-ink-subtle">Volume</div>
+        <div id="pep-volume" class="mt-1 font-display text-3xl font-semibold text-ink">—</div>
+        <div class="text-[12px] text-ink-tertiary">mL per dose</div>
+      </div>
+      <div class="panel panel-lift p-5 text-center">
+        <div class="text-[13px] text-ink-subtle">Concentration</div>
+        <div id="pep-conc" class="mt-1 font-display text-3xl font-semibold text-ink">—</div>
+        <div class="text-[12px] text-ink-tertiary">mcg / unit</div>
+      </div>
+    </div>
+
+    <div id="pep-doses" class="text-center text-sm text-ink-muted"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free peptide reconstitution calculator tells you exactly how far to
+      draw on an insulin syringe for a target dose. Enter how many milligrams of
+      peptide are in the vial, how much bacteriostatic water you added, and your
+      desired dose — it computes the concentration, the volume per dose and the
+      syringe units to draw (for U-100, U-50 or U-40 syringes). It also shows how
+      many doses the vial holds. This is a math tool for reference only; it is not
+      medical advice and does not endorse any use. Follow your healthcare
+      provider’s guidance. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const sel = (id: string) => document.getElementById(id) as unknown as HTMLSelectElement;
+  const err = document.getElementById('pep-error')!;
+
+  function setDash() {
+    document.getElementById('pep-units')!.textContent = '—';
+    document.getElementById('pep-volume')!.textContent = '—';
+    document.getElementById('pep-conc')!.textContent = '—';
+    document.getElementById('pep-doses')!.textContent = '';
+  }
+
+  function calc() {
+    err.classList.add('hidden');
+    const amountMg = Number($('pep-amount').value) || 0;
+    const waterMl = Number($('pep-water').value) || 0;
+    let dose = Number($('pep-dose').value) || 0;
+    const doseUnit = sel('pep-dose-unit').value;
+    const unitsPerMl = Number(sel('pep-syringe').value);
+
+    if (!(amountMg > 0) || !(waterMl > 0) || !(dose > 0)) {
+      setDash();
+      return;
+    }
+
+    // Work in micrograms.
+    const doseMcg = doseUnit === 'mg' ? dose * 1000 : dose;
+    const totalMcg = amountMg * 1000;
+    const concMcgPerMl = totalMcg / waterMl; // mcg per mL
+    const volumeMl = doseMcg / concMcgPerMl; // mL to draw
+    const drawUnits = volumeMl * unitsPerMl; // syringe units
+    const mcgPerUnit = concMcgPerMl / unitsPerMl;
+
+    document.getElementById('pep-units')!.textContent = drawUnits.toFixed(1);
+    document.getElementById('pep-volume')!.textContent = volumeMl.toFixed(3);
+    document.getElementById('pep-conc')!.textContent = mcgPerUnit.toFixed(1);
+
+    const maxUnits = unitsPerMl === 50 ? 50 : unitsPerMl; // U-50 barrel holds 50 units
+    if (drawUnits > maxUnits) {
+      err.textContent = `That dose needs ${drawUnits.toFixed(1)} units — more than one ${
+        unitsPerMl === 40 ? 'U-40' : unitsPerMl === 50 ? 'U-50' : 'U-100'
+      } syringe holds. Use less water or split the dose.`;
+      err.classList.remove('hidden');
+    }
+
+    const doses = totalMcg / doseMcg;
+    document.getElementById('pep-doses')!.textContent =
+      `This vial holds about ${doses.toFixed(1)} doses of ${dose} ${doseUnit}.`;
+  }
+
+  document
+    .querySelectorAll('#pep-amount, #pep-water, #pep-dose, #pep-dose-unit, #pep-syringe')
+    .forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

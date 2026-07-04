@@ -763,6 +763,126 @@ export const tools: Tool[] = [
     keywords: ['gpa calculator', 'grade point average calculator', 'college gpa calculator', 'weighted gpa calculator', 'calculate gpa'],
     icon: 'M22 10 12 5 2 10l10 5 10-5ZM6 12v5c0 1 3 3 6 3s6-2 6-3v-5M22 10v6',
   },
+
+  // ---- Calculators: Fitness Standards ----
+  {
+    slug: 'aft-calculator',
+    name: 'AFT Calculator',
+    tagline: 'Army Fitness Test score by event.',
+    description:
+      'Free Army Fitness Test (AFT) calculator. Score all six events — deadlift, power throw, push-ups, sprint-drag-carry, plank and the 2-mile run — out of 600 against the official age and sex standards, with the full scoring chart shown for verification. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['aft calculator', 'army fitness test calculator', 'acft calculator', 'army combat fitness test score', 'aft score chart'],
+    icon: 'M6.5 6.5h11M4 10h2v4H4zM18 10h2v4h-2zM6 12h12M8 9h1v6H8zM15 9h1v6h-1z',
+  },
+  {
+    slug: 'pft-calculator',
+    name: 'PFT Calculator',
+    tagline: 'USMC Physical Fitness Test score.',
+    description:
+      'Free USMC PFT calculator. Score pull-ups or push-ups, plank hold and the 3-mile run against Marine Corps age and sex standards for a total out of 300. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['pft calculator', 'usmc pft calculator', 'marine corps pft score', 'physical fitness test calculator', 'pft score chart'],
+    icon: 'M12 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM8 8h8l-1 6H9zM9 14l-2 8M15 14l2 8',
+  },
+
+  // ---- Calculators: AP Exam Scores ----
+  {
+    slug: 'ap-lang-calculator',
+    name: 'AP Lang Score Calculator',
+    tagline: 'Predict your AP English Language score.',
+    description:
+      'Free AP English Language & Composition score calculator. Enter multiple-choice and essay scores to estimate your 1–5 AP Lang score from the composite. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['ap lang calculator', 'ap english language score calculator', 'ap lang score calculator', 'ap exam score predictor', 'ap english lang curve'],
+    icon: 'M4 5h13a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM20 7v12M8 9h7M8 13h5',
+  },
+  {
+    slug: 'apush-calculator',
+    name: 'APUSH Score Calculator',
+    tagline: 'Predict your AP US History score.',
+    description:
+      'Free APUSH score calculator. Enter your multiple-choice, short-answer, DBQ and long-essay scores to estimate your 1–5 AP US History score. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['apush calculator', 'ap us history score calculator', 'apush score calculator', 'ap exam score predictor', 'apush curve'],
+    icon: 'M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6M10 10h.01M14 10h.01',
+  },
+
+  // ---- Calculators: Health & Medical ----
+  {
+    slug: 'biological-age-calculator',
+    name: 'Biological Age Calculator',
+    tagline: 'Estimate your body’s real age.',
+    description:
+      'Free biological age calculator. Estimate your body’s age from lifestyle factors like exercise, sleep, diet, smoking and stress compared to your actual age. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['biological age calculator', 'body age calculator', 'real age calculator', 'metabolic age calculator', 'how old is my body'],
+    icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM12 7v5l3 3M8 3.5 6 6M16 3.5 18 6',
+  },
+  {
+    slug: 'creatinine-clearance-calculator',
+    name: 'Creatinine Clearance Calculator',
+    tagline: 'Cockcroft-Gault CrCl estimate.',
+    description:
+      'Free creatinine clearance calculator. Estimate renal function (CrCl) with the Cockcroft-Gault equation from age, weight, sex and serum creatinine. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['creatinine clearance calculator', 'cockcroft gault calculator', 'crcl calculator', 'renal function calculator', 'gfr estimate'],
+    icon: 'M12 3c3 4 5 6.5 5 9.5a5 5 0 0 1-10 0C7 9.5 9 7 12 3ZM10 13a2 2 0 0 0 4 0',
+  },
+  {
+    slug: 'peptide-calculator',
+    name: 'Peptide Reconstitution Calculator',
+    tagline: 'Dose, volume & units for peptides.',
+    description:
+      'Free peptide reconstitution calculator. Work out how much bacteriostatic water to add and the syringe units to draw for a target peptide dose. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['peptide calculator', 'peptide reconstitution calculator', 'peptide dosage calculator', 'bacteriostatic water calculator', 'peptide dose units'],
+    icon: 'M9 3h6M10 3v5l-3 8a3 3 0 0 0 3 4h4a3 3 0 0 0 3-4l-3-8V3M8 14h8',
+  },
+
+  // ---- Calculators: Finance & Value ----
+  {
+    slug: 'texas-paycheck-calculator',
+    name: 'Texas Paycheck Calculator',
+    tagline: 'Take-home pay for Texas, no state tax.',
+    description:
+      'Free Texas paycheck calculator. Estimate your take-home pay after federal income tax, Social Security and Medicare — Texas has no state income tax. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['texas paycheck calculator', 'texas take home pay calculator', 'texas salary calculator', 'net pay calculator texas', 'texas payroll calculator'],
+    icon: 'M3 6h18v12H3zM3 10h18M7 15h4M12 2 8 6M12 2l4 4',
+  },
+  {
+    slug: 'gold-calculator',
+    name: 'Gold Value Calculator',
+    tagline: 'Scrap gold value by weight & karat.',
+    description:
+      'Free gold value calculator. Work out the melt value of gold by weight and karat from the current spot price, for scrap, jewelry or coins. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['gold calculator', 'gold value calculator', 'scrap gold calculator', 'gold price calculator', 'gold melt value calculator'],
+    icon: 'M4 8h16l-2 4H6zM6 12h12l1 8H5zM9 4h6l1 4H8z',
+  },
+  {
+    slug: 'dynasty-trade-calculator',
+    name: 'Dynasty Trade Calculator',
+    tagline: 'Weigh fantasy football trades by value.',
+    description:
+      'Free dynasty fantasy football trade calculator. Add players and picks to each side and compare total trade value to see who wins the deal. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['dynasty trade calculator', 'fantasy football trade calculator', 'dynasty trade value chart', 'ff trade analyzer', 'dynasty value calculator'],
+    icon: 'M7 10 3 14l4 4M17 6l4 4-4 4M3 14h13M8 10h13',
+  },
+
+  // ---- Text / Numerology ----
+  {
+    slug: 'gematria-calculator',
+    name: 'Gematria Calculator',
+    tagline: 'Numeric value of words & phrases.',
+    description:
+      'Free gematria calculator. Convert words and phrases to their numeric value using English Ordinal, Full Reduction, Hebrew, Simple and Jewish gematria ciphers. Runs in your browser.',
+    category: 'Text',
+    keywords: ['gematria calculator', 'english gematria calculator', 'hebrew gematria calculator', 'numerology calculator', 'gematria value'],
+    icon: 'M4 7V5h16v2M9 5v14M7 19h4M14 9h6l-6 8h6',
+  },
 ];
 
 export const categories: ToolCategory[] = [

@@ -1,0 +1,115 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="gematria-calculator">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Word or phrase
+      <input id="gem-input" type="text" class="field text-lg" value="wisdom" placeholder="Type a word or phrase" spellcheck="false" autocomplete="off" />
+    </label>
+
+    <div id="gem-grid" class="grid grid-cols-1 gap-3 sm:grid-cols-2"></div>
+
+    <details class="panel p-4 text-[13px] text-ink-subtle">
+      <summary class="cursor-pointer text-ink">Per-letter breakdown (English Ordinal)</summary>
+      <div id="gem-letters" class="mt-3 flex flex-wrap gap-1.5 font-mono"></div>
+    </details>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free gematria calculator converts any word or phrase into its numeric
+      value across several classic ciphers: English Ordinal (A=1…Z=26), Full
+      Reduction (digits summed to 1–9), Reverse Ordinal, the Pythagorean and
+      Jewish/Latin systems, and Hebrew gematria for Hebrew text. Gematria is a
+      numerology practice that assigns numbers to letters; this tool is for
+      curiosity, wordplay and study, not divination. Everything runs in your
+      browser — nothing is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('gem-input') as HTMLInputElement;
+  const grid = document.getElementById('gem-grid')!;
+  const lettersEl = document.getElementById('gem-letters')!;
+
+  const A = 'a'.charCodeAt(0);
+
+  // English Ordinal: a=1..z=26
+  const ordinal = (ch: string) => ch.charCodeAt(0) - A + 1;
+  // Full Reduction (Pythagorean): 1..9 repeating
+  const reduction = (ch: string) => ((ch.charCodeAt(0) - A) % 9) + 1;
+  // Reverse Ordinal: a=26..z=1
+  const reverse = (ch: string) => 26 - (ch.charCodeAt(0) - A);
+  // Jewish/Latin (a=1..i=9, j=10..r=90 by tens, s=100..z by hundreds — simplified "Simple/Jewish")
+  const jewishMap: Record<string, number> = {
+    a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8, i: 9,
+    j: 600, k: 10, l: 20, m: 30, n: 40, o: 50, p: 60, q: 70, r: 80,
+    s: 90, t: 100, u: 200, v: 700, w: 900, x: 300, y: 400, z: 500,
+  };
+
+  // Hebrew gematria (standard mispar hechrachi)
+  const hebrewMap: Record<string, number> = {
+    'א': 1, 'ב': 2, 'ג': 3, 'ד': 4, 'ה': 5, 'ו': 6, 'ז': 7, 'ח': 8, 'ט': 9,
+    'י': 10, 'כ': 20, 'ך': 20, 'ל': 30, 'מ': 40, 'ם': 40, 'נ': 50, 'ן': 50,
+    'ס': 60, 'ע': 70, 'פ': 80, 'ף': 80, 'צ': 90, 'ץ': 90, 'ק': 100, 'ר': 200,
+    'ש': 300, 'ת': 400,
+  };
+
+  function sumLatin(s: string, fn: (ch: string) => number): number {
+    let total = 0;
+    for (const ch of s.toLowerCase()) {
+      if (ch >= 'a' && ch <= 'z') total += fn(ch);
+    }
+    return total;
+  }
+
+  function sumHebrew(s: string): number {
+    let total = 0;
+    for (const ch of s) total += hebrewMap[ch] || 0;
+    return total;
+  }
+
+  function calc() {
+    const s = input.value;
+    const hasHebrew = /[֐-׿]/.test(s);
+
+    const results: [string, number, string][] = hasHebrew
+      ? [
+          ['Hebrew Standard', sumHebrew(s), 'א=1, ב=2 … ת=400'],
+          ['English Ordinal', sumLatin(s, ordinal), 'A=1 … Z=26'],
+        ]
+      : [
+          ['English Ordinal', sumLatin(s, ordinal), 'A=1 … Z=26'],
+          ['Full Reduction', sumLatin(s, reduction), 'Pythagorean 1–9'],
+          ['Reverse Ordinal', sumLatin(s, reverse), 'A=26 … Z=1'],
+          ['Jewish / Latin', sumLatin(s, (c) => jewishMap[c]), 'Classic Latin cipher'],
+        ];
+
+    grid.innerHTML = results
+      .map(
+        ([name, val, note]) => `
+        <div class="panel panel-lift flex flex-col gap-1 p-4">
+          <span class="text-[13px] text-ink-subtle">${name}</span>
+          <span class="font-display text-3xl font-semibold text-primary-hover">${val}</span>
+          <span class="text-[12px] text-ink-tertiary">${note}</span>
+        </div>`
+      )
+      .join('');
+
+    // Per-letter breakdown (ordinal), Latin only.
+    const chars = [...s.toLowerCase()].filter((c) => c >= 'a' && c <= 'z');
+    lettersEl.innerHTML = chars.length
+      ? chars
+          .map(
+            (c) =>
+              `<span class="rounded-[4px] bg-surface-2 px-1.5 py-0.5 text-ink">${c.toUpperCase()}=${ordinal(c)}</span>`
+          )
+          .join('')
+      : '<span class="text-ink-tertiary">No Latin letters to break down.</span>';
+  }
+
+  input.addEventListener('input', calc);
+  calc();
+</script>
