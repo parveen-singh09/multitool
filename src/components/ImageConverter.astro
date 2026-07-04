@@ -1,0 +1,118 @@
+---
+// Reusable canvas-based image format converter. Loads an image (or SVG),
+// draws it to a canvas and re-encodes to the target MIME type the browser
+// supports natively (image/png, image/jpeg, image/webp). Everything runs
+// client-side — files are never uploaded.
+export interface Props {
+  /** Target MIME, e.g. 'image/png'. */
+  to: string;
+  /** File input accept attribute. */
+  accept?: string;
+  /** Download extension, e.g. 'png'. */
+  ext: string;
+  /** Show a quality slider (for lossy targets). */
+  quality?: boolean;
+  /** Fill transparent areas with white (for JPEG targets). */
+  flatten?: boolean;
+}
+const { to, accept = 'image/*', ext, quality = false, flatten = false } = Astro.props;
+---
+
+<div id="im-root" data-to={to} data-ext={ext} data-quality={String(quality)} data-flatten={String(flatten)} class="flex flex-col gap-4">
+  <label id="im-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+    <span class="text-sm text-ink">Choose an image or drop it here</span>
+    <span class="text-[13px] text-ink-tertiary">Converted in your browser — never uploaded</span>
+    <input id="im-file" type="file" accept={accept} class="sr-only" />
+  </label>
+
+  <div id="im-panel" class="hidden flex-col gap-4">
+    {quality && (
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Quality: <span id="im-qval" class="text-ink">90%</span>
+        <input id="im-q" type="range" min="10" max="100" value="90" class="w-full accent-[#5e6ad2]" />
+      </label>
+    )}
+    <div class="flex flex-wrap items-center gap-3">
+      <button id="im-download" class="btn btn-primary">Download</button>
+      <span id="im-info" class="text-[13px] text-ink-subtle"></span>
+    </div>
+    <div class="panel flex justify-center overflow-hidden p-4" style="background-image:linear-gradient(45deg,#2a2a2e 25%,transparent 25%),linear-gradient(-45deg,#2a2a2e 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#2a2a2e 75%),linear-gradient(-45deg,transparent 75%,#2a2a2e 75%);background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0">
+      <img id="im-preview" class="max-h-96 w-auto max-w-full rounded-[8px]" alt="Converted preview" />
+    </div>
+  </div>
+  <p id="im-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+</div>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  const root = document.getElementById('im-root') as HTMLElement;
+  const to = root.dataset.to!;
+  const ext = root.dataset.ext!;
+  const useQuality = root.dataset.quality === 'true';
+  const flatten = root.dataset.flatten === 'true';
+
+  const fileInput = document.getElementById('im-file') as HTMLInputElement;
+  const drop = document.getElementById('im-drop')!;
+  const panel = document.getElementById('im-panel')!;
+  const preview = document.getElementById('im-preview') as HTMLImageElement;
+  const info = document.getElementById('im-info')!;
+  const err = document.getElementById('im-error')!;
+  const q = document.getElementById('im-q') as HTMLInputElement | null;
+  const qval = document.getElementById('im-qval');
+
+  let img = new Image();
+  let blob: Blob | null = null;
+  let originalSize = 0;
+  const fmtSize = (n: number) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`;
+
+  function setErr(m: string) { err.textContent = m; err.classList.toggle('hidden', !m); }
+
+  function loadFile(file: File) {
+    setErr('');
+    originalSize = file.size;
+    const reader = new FileReader();
+    reader.onload = () => {
+      img = new Image();
+      img.onload = () => { panel.classList.remove('hidden'); panel.classList.add('flex'); convert(); };
+      img.onerror = () => setErr('Could not read that image file.');
+      // For SVG, ensure it has intrinsic size; if not, default to 512.
+      img.src = reader.result as string;
+    };
+    reader.onerror = () => setErr('Could not read that file.');
+    reader.readAsDataURL(file);
+  }
+
+  function convert() {
+    const canvas = document.createElement('canvas');
+    let w = img.naturalWidth || 512, h = img.naturalHeight || 512;
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d')!;
+    if (flatten) { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h); }
+    ctx.drawImage(img, 0, 0, w, h);
+    const quality = useQuality && q ? Number(q.value) / 100 : undefined;
+    canvas.toBlob((b) => {
+      if (!b) { setErr('Your browser could not encode this format.'); return; }
+      blob = b;
+      preview.src = URL.createObjectURL(b);
+      info.textContent = `${w}×${h} · ${fmtSize(originalSize)} → ${fmtSize(b.size)}`;
+    }, to, quality);
+  }
+
+  q?.addEventListener('input', () => { if (qval) qval.textContent = q.value + '%'; convert(); });
+  fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) loadFile(fileInput.files[0]); });
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) loadFile(f); });
+
+  document.getElementById('im-download')!.addEventListener('click', () => {
+    if (!blob) return;
+    const a = document.createElement('a');
+    a.download = `converted.${ext}`;
+    a.href = URL.createObjectURL(blob);
+    a.click();
+  });
+</script>

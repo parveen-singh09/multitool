@@ -1,6 +1,8 @@
 // Central tool registry. Drives the home grid, dynamic routes, sitemap,
 // and per-tool SEO. Each tool is a "district" in ToolCities.
 
+import { UNIT_CATEGORIES } from '../lib/units';
+
 export type ToolCategory =
   | 'Text'
   | 'Developer'
@@ -1110,6 +1112,421 @@ export const tools: Tool[] = [
     category: 'Text',
     keywords: ['gematria calculator', 'english gematria calculator', 'hebrew gematria calculator', 'numerology calculator', 'gematria value'],
     icon: 'M4 7V5h16v2M9 5v14M7 19h4M14 9h6l-6 8h6',
+  },
+
+  // ---- Converters: Units (data lives in src/lib/units.ts) ----
+  ...UNIT_CATEGORIES.map((c): Tool => ({
+    slug: c.slug,
+    name: c.name,
+    tagline: c.tagline,
+    description: c.description,
+    category: 'Converters',
+    keywords: c.keywords,
+    icon: c.icon,
+  })),
+
+  // ---- Converters: Color ----
+  {
+    slug: 'hex-to-rgb',
+    name: 'HEX to RGB Converter',
+    tagline: 'Turn hex color codes into RGB values.',
+    description:
+      'Free online HEX to RGB converter. Turn any hex color code into red, green and blue values for CSS, plus HSL, HSV, CMYK and the nearest color name. Runs in your browser.',
+    category: 'Converters',
+    keywords: ['hex to rgb', 'hex to rgb converter', 'hex color to rgb', 'convert hex to rgb', 'hexadecimal to rgb'],
+    icon: 'M12 3a9 9 0 1 0 0 18 3 3 0 0 0 0-6h-1a2 2 0 0 1 0-4h2a4 4 0 0 0 0-8Z',
+  },
+  {
+    slug: 'rgb-to-hex',
+    name: 'RGB to HEX Converter',
+    tagline: 'Turn RGB values into hex color codes.',
+    description:
+      'Free online RGB to HEX converter. Turn red, green and blue values into a hex color code for CSS and design tools, plus HSL, HSV and CMYK. Runs entirely in your browser.',
+    category: 'Converters',
+    keywords: ['rgb to hex', 'rgb to hex converter', 'rgb color to hex', 'convert rgb to hex', 'rgb to hexadecimal'],
+    icon: 'M12 3a9 9 0 1 0 0 18 3 3 0 0 0 0-6h-1a2 2 0 0 1 0-4h2a4 4 0 0 0 0-8Z',
+  },
+  {
+    slug: 'rgb-to-hsl-hsv',
+    name: 'RGB to HSL / HSV Converter',
+    tagline: 'Convert RGB to HSL and HSV/HSB.',
+    description:
+      'Free online RGB to HSL and HSV converter. Convert red, green and blue into hue, saturation, lightness (HSL) and value (HSB), plus HEX and CMYK. Runs in your browser.',
+    category: 'Converters',
+    keywords: ['rgb to hsl', 'rgb to hsv', 'hsl converter', 'hsv converter', 'rgb to hsb'],
+    icon: 'M12 3a9 9 0 1 0 0 18 3 3 0 0 0 0-6h-1a2 2 0 0 1 0-4h2a4 4 0 0 0 0-8Z',
+  },
+  {
+    slug: 'cmyk-converter',
+    name: 'CMYK Converter',
+    tagline: 'Convert CMYK to and from RGB & HEX.',
+    description:
+      'Free online CMYK converter. Convert colors between the CMYK print model and HEX, RGB, HSL and HSV screen models with accurate math. Runs entirely in your browser.',
+    category: 'Converters',
+    keywords: ['cmyk converter', 'rgb to cmyk', 'cmyk to rgb', 'hex to cmyk', 'cmyk color converter'],
+    icon: 'M8 8a4 4 0 1 0 0 8M12 8a4 4 0 1 1 0 8M16 8a4 4 0 1 0 0 8',
+  },
+  {
+    slug: 'color-name',
+    name: 'Color Name to Code',
+    tagline: 'CSS color names to HEX & RGB, both ways.',
+    description:
+      'Free online color name converter. Look up any of the 148 CSS named colors as HEX and RGB, or find the nearest color name for a hex or RGB value. Runs in your browser.',
+    category: 'Converters',
+    keywords: ['color name to code', 'css color names', 'color name to hex', 'html color names', 'name to rgb'],
+    icon: 'M4 7V5h16v2M9 5v14M7 19h4M14 9h6l-6 8h6',
+  },
+  {
+    slug: 'gradient-generator',
+    name: 'CSS Gradient Generator',
+    tagline: 'Build linear, radial & conic CSS gradients.',
+    description:
+      'Free online CSS gradient generator. Build linear, radial and conic gradients with multiple color stops, adjustable angle and positions, and copy the CSS. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['gradient generator', 'css gradient generator', 'linear gradient generator', 'radial gradient', 'background gradient css'],
+    icon: 'M4 4h16v16H4zM4 12h16M12 4v16',
+  },
+
+  // ---- Converters: Numbers ----
+  {
+    slug: 'binary-converter',
+    name: 'Binary Converter',
+    tagline: 'Decimal ↔ binary, and text to binary.',
+    description:
+      'Free online binary converter. Convert decimal numbers to binary and back, and translate text to 8-bit binary ASCII codes, with hex and octal shown too. Runs in your browser.',
+    category: 'Converters',
+    keywords: ['binary converter', 'decimal to binary', 'binary to decimal', 'text to binary', 'binary translator'],
+    icon: 'M4 7V5h16v2M9 5v14M7 19h4M14 6h3v12h-3M14 6v12',
+  },
+  {
+    slug: 'hex-converter',
+    name: 'Hexadecimal Converter',
+    tagline: 'Decimal ↔ hex, and text to hex bytes.',
+    description:
+      'Free online hexadecimal converter. Convert decimal numbers to hex and back, and translate text to its UTF-8 hex byte codes, with binary and octal shown too. Runs in your browser.',
+    category: 'Converters',
+    keywords: ['hex converter', 'decimal to hex', 'hex to decimal', 'text to hex', 'hexadecimal converter'],
+    icon: 'M4 7V5h16v2M9 5v14M7 19h4M15 9h5l-5 6h5',
+  },
+  {
+    slug: 'roman-numeral-converter',
+    name: 'Roman Numeral Converter',
+    tagline: 'Numbers to Roman numerals and back.',
+    description:
+      'Free online Roman numeral converter. Convert numbers to Roman numerals and Roman numerals back to numbers, with subtractive notation and large-value overlines. Runs in your browser.',
+    category: 'Converters',
+    keywords: ['roman numeral converter', 'roman numerals', 'number to roman numerals', 'roman numeral translator', 'convert to roman numerals'],
+    icon: 'M6 6v12M10 6v12M14 6l2 12M18 6l-2 12',
+  },
+  {
+    slug: 'number-to-words',
+    name: 'Number to Words Converter',
+    tagline: 'Spell out numbers in English & currency.',
+    description:
+      'Free online number to words converter. Spell out any number in English for cheques, contracts and invoices, with decimals, negatives and a dollars-and-cents currency mode. Runs in your browser.',
+    category: 'Converters',
+    keywords: ['number to words', 'number to words converter', 'spell out numbers', 'number in words', 'amount in words'],
+    icon: 'M4 7V5h16v2M9 5v14M7 19h4M13 15h6M13 11h6M13 7h6',
+  },
+  {
+    slug: 'fraction-to-decimal',
+    name: 'Fraction to Decimal Converter',
+    tagline: 'Fractions ↔ decimals & percentages.',
+    description:
+      'Free online fraction to decimal converter. Convert fractions and mixed numbers to decimals and percentages, and turn decimals — including repeating ones — into simplified fractions. Runs in your browser.',
+    category: 'Converters',
+    keywords: ['fraction to decimal', 'fraction to decimal converter', 'decimal to fraction', 'fraction to percent', 'convert fraction to decimal'],
+    icon: 'M17 5 7 19M8 6.5a1.5 1.5 0 1 0 0 .01M16 17.5a1.5 1.5 0 1 0 0 .01',
+  },
+  {
+    slug: 'scientific-notation-converter',
+    name: 'Scientific Notation Converter',
+    tagline: 'Decimals ↔ scientific & E-notation.',
+    description:
+      'Free online scientific notation converter. Convert decimal numbers to scientific notation and back, with E-notation, engineering notation and order of magnitude shown. Runs in your browser.',
+    category: 'Converters',
+    keywords: ['scientific notation converter', 'standard form converter', 'e notation converter', 'decimal to scientific notation', 'exponential notation'],
+    icon: 'M3 3v18h18M7 15l3-4 3 2 4-6M18 7h2v2',
+  },
+
+  // ---- Text & Data ----
+  {
+    slug: 'json-converter',
+    name: 'JSON to XML / YAML / CSV',
+    tagline: 'Convert JSON into XML, YAML or CSV.',
+    description:
+      'Free online JSON converter. Transform JSON into XML, YAML or CSV with nested-structure support and copy the result. Fast, private and runs entirely in your browser.',
+    category: 'Developer',
+    keywords: ['json to xml', 'json to yaml', 'json to csv', 'json converter', 'convert json'],
+    icon: 'M8 3H6a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2 2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h2M16 3h2a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2 2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-2',
+  },
+  {
+    slug: 'morse-code-translator',
+    name: 'Morse Code Translator',
+    tagline: 'Text ↔ Morse with audio playback.',
+    description:
+      'Free online Morse code translator. Convert text to Morse code and back, covering letters, numbers and punctuation, and play your message as audio beeps. Runs in your browser.',
+    category: 'Text',
+    keywords: ['morse code translator', 'text to morse code', 'morse code to text', 'morse code converter', 'morse translator'],
+    icon: 'M4 12h2M9 12h.01M13 12h4M20 12h.01M4 12v0',
+  },
+  {
+    slug: 'unicode-converter',
+    name: 'Unicode & Emoji Converter',
+    tagline: 'Characters ↔ code points & escapes.',
+    description:
+      'Free online Unicode and emoji converter. Reveal the code points behind any text or emoji and encode them as HTML entities, JavaScript escapes and U+ notation. Runs in your browser.',
+    category: 'Developer',
+    keywords: ['unicode converter', 'emoji to unicode', 'unicode to text', 'character code converter', 'html entity codes'],
+    icon: 'M4 7V5h16v2M9 5v14M7 19h4M14 5l3 14M20 5l-3 14',
+  },
+  {
+    slug: 'ascii-art-generator',
+    name: 'ASCII Art Generator',
+    tagline: 'Turn text into big ASCII letter art.',
+    description:
+      'Free online ASCII art generator. Turn text into large ASCII letter banners for code comments, terminals and READMEs, in several styles, and copy the result. Runs in your browser.',
+    category: 'Text',
+    keywords: ['ascii art generator', 'text to ascii art', 'ascii text generator', 'text art generator', 'ascii banner'],
+    icon: 'M4 5h16v14H4zM8 9v6M8 9h3M8 12h2M14 9v6M16 9v6M14 9h2',
+  },
+  {
+    slug: 'barcode-generator',
+    name: 'Barcode Generator',
+    tagline: 'Create Code 128 barcodes (PNG / SVG).',
+    description:
+      'Free online barcode generator. Create Code 128 barcodes from any text or numbers, adjust the height and label, and download as PNG or SVG. Generated privately in your browser.',
+    category: 'Generators',
+    keywords: ['barcode generator', 'code 128 generator', 'create barcode', 'free barcode maker', 'barcode png svg'],
+    icon: 'M4 5v14M7 5v14M9 5v14M12 5v14M14 5v14M17 5v14M20 5v14',
+  },
+  {
+    slug: 'text-to-speech',
+    name: 'Text to Speech',
+    tagline: 'Read text aloud with natural voices.',
+    description:
+      'Free online text to speech tool. Read any text aloud using the voices built into your device, with adjustable rate and pitch. Uses your browser — text never leaves your device.',
+    category: 'Text',
+    keywords: ['text to speech', 'tts online', 'read text aloud', 'text to voice', 'speech synthesizer'],
+    icon: 'M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14',
+  },
+
+  // ---- Converters: Date & Time ----
+  {
+    slug: 'timezone-converter',
+    name: 'Time Zone Converter',
+    tagline: 'Compare a time across world zones.',
+    description:
+      'Free online time zone converter. Convert a date and time across multiple world cities and zones at once, with daylight saving handled automatically. Runs in your browser.',
+    category: 'Converters',
+    keywords: ['time zone converter', 'timezone converter', 'world clock converter', 'meeting time planner', 'utc time converter'],
+    icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20',
+  },
+  {
+    slug: 'date-format-converter',
+    name: 'Date Format Converter',
+    tagline: 'One date shown in every format.',
+    description:
+      'Free online date format converter. Parse a date in almost any format or as a Unix timestamp and see it in ISO 8601, RFC 2822, US, European and long forms at once. Runs in your browser.',
+    category: 'Converters',
+    keywords: ['date format converter', 'date converter', 'iso 8601 converter', 'change date format', 'date to timestamp'],
+    icon: 'M8 3v4M16 3v4M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM8 13h3M8 17h5',
+  },
+
+  // ---- Developer / CSS ----
+  {
+    slug: 'px-to-rem',
+    name: 'PX to REM Converter',
+    tagline: 'Convert px to rem & em for CSS.',
+    description:
+      'Free online PX to REM converter. Convert pixel values to rem and em units for responsive CSS with a custom root font size, and back again, with a reference table. Runs in your browser.',
+    category: 'Developer',
+    keywords: ['px to rem', 'px to rem converter', 'rem to px', 'px to em', 'pixel to rem'],
+    icon: 'M4 7V5h16v2M9 5v14M7 19h4M14 12h6M17 9v6',
+  },
+  {
+    slug: 'sql-formatter',
+    name: 'SQL Formatter',
+    tagline: 'Beautify & format SQL queries.',
+    description:
+      'Free online SQL formatter. Beautify messy SQL into clean, readable queries with clause-per-line layout, indentation and configurable keyword case. Runs entirely in your browser.',
+    category: 'Developer',
+    keywords: ['sql formatter', 'sql beautifier', 'format sql online', 'sql pretty print', 'sql query formatter'],
+    icon: 'M4 6a8 3 0 0 0 16 0 8 3 0 0 0-16 0v12a8 3 0 0 0 16 0V6M4 12a8 3 0 0 0 16 0',
+  },
+  {
+    slug: 'curl-to-code',
+    name: 'cURL to Code',
+    tagline: 'Convert curl to fetch, axios or Python.',
+    description:
+      'Free online cURL to code converter. Turn a curl command into JavaScript fetch, Node.js axios or Python requests code, including method, headers and body. Runs in your browser.',
+    category: 'Developer',
+    keywords: ['curl to code', 'curl to fetch', 'curl to python', 'curl converter', 'curl to javascript'],
+    icon: 'M8 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h2M16 3h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-2M10 12h4',
+  },
+  {
+    slug: 'json-to-typescript',
+    name: 'JSON to TypeScript',
+    tagline: 'Generate TypeScript interfaces from JSON.',
+    description:
+      'Free online JSON to TypeScript converter. Turn a JSON sample into clean TypeScript interfaces, inferring types for nested objects and arrays. Fast, private and runs in your browser.',
+    category: 'Developer',
+    keywords: ['json to typescript', 'json to interface', 'json to ts', 'generate typescript types', 'json to type'],
+    icon: 'M3 3h18v18H3zM7 9h4M9 9v6M13 15h2a2 2 0 0 0 0-4 2 2 0 0 1 0-4h2',
+  },
+  {
+    slug: 'js-beautifier',
+    name: 'JavaScript Beautifier / Minifier',
+    tagline: 'Format or minify JavaScript code.',
+    description:
+      'Free online JavaScript beautifier and minifier. Beautify messy code with clean indentation, or minify it to shrink file size, preserving strings and comments. Runs in your browser.',
+    category: 'Developer',
+    keywords: ['javascript beautifier', 'js minifier', 'js beautifier', 'format javascript', 'minify javascript'],
+    icon: 'M4 17l6-6-6-6M12 19h8',
+  },
+  {
+    slug: 'coordinate-converter',
+    name: 'Coordinate Converter',
+    tagline: 'GPS decimal ↔ DMS, DDM & UTM.',
+    description:
+      'Free online GPS coordinate converter. Convert latitude and longitude between decimal degrees, DMS, DDM and UTM, and build a geo URI. Great for maps and navigation. Runs in your browser.',
+    category: 'Converters',
+    keywords: ['coordinate converter', 'gps coordinate converter', 'decimal to dms', 'lat long converter', 'utm converter'],
+    icon: 'M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7ZM12 9a2 2 0 1 0 0 .01',
+  },
+  {
+    slug: 'ip-address-converter',
+    name: 'IP Address Converter',
+    tagline: 'IPv4 ↔ integer, hex & binary.',
+    description:
+      'Free online IP address converter. Convert an IPv4 address between dotted-decimal, 32-bit integer, hexadecimal, binary and IPv4-mapped IPv6 forms. Runs entirely in your browser.',
+    category: 'Converters',
+    keywords: ['ip address converter', 'ip to decimal', 'ip to integer', 'ip to hex', 'ipv4 converter'],
+    icon: 'M4 7h16v10H4zM4 12h16M8 9.5h.01M8 14.5h.01',
+  },
+  {
+    slug: 'text-encoding-converter',
+    name: 'Text Encoding Converter',
+    tagline: 'Text ↔ UTF-8, UTF-16 & ASCII bytes.',
+    description:
+      'Free online text encoding converter. See the raw bytes behind text in UTF-8, UTF-16 and ASCII in hex, decimal or binary, and decode UTF-8 bytes back to text. Runs in your browser.',
+    category: 'Developer',
+    keywords: ['text encoding converter', 'utf-8 converter', 'text to bytes', 'ascii converter', 'utf-8 to text'],
+    icon: 'M4 7V5h16v2M9 5v14M7 19h4M15 9l3 3-3 3M20 12h-5',
+  },
+  {
+    slug: 'css-to-scss',
+    name: 'CSS to SCSS Converter',
+    tagline: 'Convert CSS to nested SCSS with variables.',
+    description:
+      'Free online CSS to SCSS converter. Rewrite plain CSS into SCSS with nested selectors and repeated colors pulled into variables. Valid Sass output, generated in your browser.',
+    category: 'Developer',
+    keywords: ['css to scss', 'css to sass', 'convert css to scss', 'scss converter', 'css to scss online'],
+    icon: 'M4 3h16l-1.5 17L12 22l-6.5-2zM8 8h8l-.5 5L12 14l-3.5-1',
+  },
+
+  // ---- Converters: Everyday sizes ----
+  {
+    slug: 'shoe-size-converter',
+    name: 'Shoe & Clothing Size Converter',
+    tagline: 'US, UK & EU shoe and clothing sizes.',
+    description:
+      'Free online shoe and clothing size converter. Convert between US, UK and EU shoe sizes with foot length in cm, plus clothing sizes, using full charts. Runs in your browser.',
+    category: 'Converters',
+    keywords: ['shoe size converter', 'clothing size converter', 'us to uk shoe size', 'eu shoe size converter', 'shoe size chart'],
+    icon: 'M3 7c2 0 3 1 5 1s3 3 6 3 6 1 6 3v3H3zM3 14h18',
+  },
+  {
+    slug: 'bra-size-converter',
+    name: 'Bra Size Converter',
+    tagline: 'US, UK, EU & FR band and cup sizes.',
+    description:
+      'Free online bra size converter. Convert band and cup sizes between US, UK, European and French systems, handling the differing band numbers and cup letters. Runs in your browser.',
+    category: 'Converters',
+    keywords: ['bra size converter', 'bra size chart', 'us to uk bra size', 'eu bra size converter', 'cup size converter'],
+    icon: 'M4 6c2 0 3 4 8 4s6-4 8-4v3a8 8 0 0 1-16 0zM4 6v3M20 6v3',
+  },
+  {
+    slug: 'aspect-ratio-calculator',
+    name: 'Aspect Ratio Calculator',
+    tagline: 'Screen ratios & proportional resize.',
+    description:
+      'Free online aspect ratio calculator. Find the simplified ratio of any screen or image size and resize dimensions while keeping the ratio, with common presets. Runs in your browser.',
+    category: 'Converters',
+    keywords: ['aspect ratio calculator', 'screen resolution calculator', 'ratio calculator', '16:9 calculator', 'image aspect ratio'],
+    icon: 'M3 5h18v14H3zM7 9h6v6H7z',
+  },
+
+  // ---- Image: format converters (canvas-based, no upload) ----
+  {
+    slug: 'jpg-to-png',
+    name: 'JPG to PNG Converter',
+    tagline: 'Convert JPEG photos to lossless PNG.',
+    description:
+      'Free online JPG to PNG converter. Turn JPEG photos into lossless PNG images right in your browser, with no quality loss and no uploads. Fast, private and free.',
+    category: 'Image',
+    keywords: ['jpg to png', 'jpeg to png', 'convert jpg to png', 'jpg to png converter', 'change jpg to png'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'png-to-webp',
+    name: 'PNG to WebP Converter',
+    tagline: 'Shrink PNGs to modern WebP format.',
+    description:
+      'Free online PNG to WebP converter. Convert PNG images to smaller WebP files with adjustable quality, keeping transparency. Runs entirely in your browser — no uploads.',
+    category: 'Image',
+    keywords: ['png to webp', 'convert png to webp', 'png to webp converter', 'webp converter', 'compress png to webp'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'webp-to-jpg',
+    name: 'WebP to JPG Converter',
+    tagline: 'Convert WebP images to JPEG.',
+    description:
+      'Free online WebP to JPG converter. Turn WebP images into widely compatible JPEG files with adjustable quality, flattening transparency to white. Runs in your browser — no uploads.',
+    category: 'Image',
+    keywords: ['webp to jpg', 'webp to jpeg', 'convert webp to jpg', 'webp to jpg converter', 'change webp to jpg'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'svg-to-png',
+    name: 'SVG to PNG Converter',
+    tagline: 'Rasterize SVG vectors to PNG.',
+    description:
+      'Free online SVG to PNG converter. Rasterize scalable vector graphics into PNG images with transparency, for platforms that do not accept SVG. Runs in your browser — no uploads.',
+    category: 'Image',
+    keywords: ['svg to png', 'convert svg to png', 'svg to png converter', 'rasterize svg', 'svg to image'],
+    icon: 'M4 5h16v14H4zM8 15l3-3 2 2 3-4M15 8h.01',
+  },
+  {
+    slug: 'bmp-converter',
+    name: 'BMP Converter',
+    tagline: 'Convert images to 24-bit BMP.',
+    description:
+      'Free online BMP converter. Convert JPG, PNG and WebP images into uncompressed 24-bit Windows Bitmap (.bmp) files. Encoded in your browser from raw pixels — no uploads.',
+    category: 'Image',
+    keywords: ['bmp converter', 'png to bmp', 'jpg to bmp', 'convert to bmp', 'image to bmp'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4',
+  },
+  {
+    slug: 'ico-converter',
+    name: 'ICO Converter (Favicon)',
+    tagline: 'Make multi-size .ico favicons.',
+    description:
+      'Free online ICO converter. Turn any image into a multi-resolution Windows icon or favicon (.ico) at 16, 32, 48 and 64 pixels using embedded PNG data. Runs in your browser.',
+    category: 'Image',
+    keywords: ['ico converter', 'favicon generator', 'png to ico', 'convert to ico', 'favicon converter'],
+    icon: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
+  },
+  {
+    slug: 'base64-to-image',
+    name: 'Base64 to Image',
+    tagline: 'Decode Base64 or data URIs to images.',
+    description:
+      'Free online Base64 to image converter. Decode a Base64 string or data URI back into a viewable image and download it. The counterpart to image-to-Base64. Runs in your browser.',
+    category: 'Image',
+    keywords: ['base64 to image', 'base64 to png', 'data uri to image', 'decode base64 image', 'base64 image decoder'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M7 8l-2 2 2 2',
   },
 ];
 

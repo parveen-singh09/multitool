@@ -1,0 +1,159 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="coordinate-converter">
+  <div class="flex flex-col gap-5">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Latitude (decimal degrees)
+        <input id="co-lat" type="number" step="any" class="field font-mono" placeholder="51.5074" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Longitude (decimal degrees)
+        <input id="co-lng" type="number" step="any" class="field font-mono" placeholder="-0.1278" />
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="panel p-3">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] uppercase tracking-wide text-ink-tertiary">DMS (degrees minutes seconds)</span>
+          <button class="co-copy btn btn-secondary px-2 py-1 text-[12px]" data-t="co-dms" type="button">Copy</button>
+        </div>
+        <div id="co-dms" class="mt-1 font-mono text-[14px] text-ink"></div>
+      </div>
+      <div class="panel p-3">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] uppercase tracking-wide text-ink-tertiary">DDM (degrees decimal minutes)</span>
+          <button class="co-copy btn btn-secondary px-2 py-1 text-[12px]" data-t="co-ddm" type="button">Copy</button>
+        </div>
+        <div id="co-ddm" class="mt-1 font-mono text-[14px] text-ink"></div>
+      </div>
+      <div class="panel p-3">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] uppercase tracking-wide text-ink-tertiary">UTM (approx.)</span>
+          <button class="co-copy btn btn-secondary px-2 py-1 text-[12px]" data-t="co-utm" type="button">Copy</button>
+        </div>
+        <div id="co-utm" class="mt-1 font-mono text-[14px] text-ink"></div>
+      </div>
+      <div class="panel p-3">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] uppercase tracking-wide text-ink-tertiary">Geo URI</span>
+          <button class="co-copy btn btn-secondary px-2 py-1 text-[12px]" data-t="co-geo" type="button">Copy</button>
+        </div>
+        <div id="co-geo" class="mt-1 font-mono text-[14px] text-ink"></div>
+      </div>
+    </div>
+
+    <div class="border-t border-hairline pt-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Parse DMS → decimal (e.g. 51°30'26.6"N 0°7'40.1"W)
+        <input id="co-parse" class="field font-mono" spellcheck="false" autocomplete="off" />
+      </label>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free coordinate converter turns GPS latitude and longitude between
+      decimal degrees, degrees-minutes-seconds (DMS), degrees-decimal-minutes
+      (DDM) and an approximate UTM grid reference, and builds a shareable geo
+      URI. You can also paste a DMS string to convert it back to decimal. Useful
+      for maps, surveying, aviation and marine navigation. Runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const latEl = document.getElementById('co-lat') as HTMLInputElement;
+  const lngEl = document.getElementById('co-lng') as HTMLInputElement;
+  const dms = document.getElementById('co-dms')!;
+  const ddm = document.getElementById('co-ddm')!;
+  const utm = document.getElementById('co-utm')!;
+  const geo = document.getElementById('co-geo')!;
+  const parseEl = document.getElementById('co-parse') as HTMLInputElement;
+
+  function toDms(dec: number, pos: string, neg: string): string {
+    const dir = dec >= 0 ? pos : neg;
+    const abs = Math.abs(dec);
+    const d = Math.floor(abs);
+    const mFloat = (abs - d) * 60;
+    const m = Math.floor(mFloat);
+    const s = ((mFloat - m) * 60).toFixed(1);
+    return `${d}°${m}'${s}"${dir}`;
+  }
+  function toDdm(dec: number, pos: string, neg: string): string {
+    const dir = dec >= 0 ? pos : neg;
+    const abs = Math.abs(dec);
+    const d = Math.floor(abs);
+    const m = ((abs - d) * 60).toFixed(3);
+    return `${d}° ${m}'${dir}`;
+  }
+
+  // Simplified UTM forward (WGS84). Accurate to ~1m for most latitudes.
+  function toUtm(lat: number, lng: number): string {
+    if (Math.abs(lat) > 84) return 'N/A (polar)';
+    const a = 6378137, e = 0.0818191908;
+    const zone = Math.floor((lng + 180) / 6) + 1;
+    const lng0 = ((zone - 1) * 6 - 180 + 3) * Math.PI / 180;
+    const phi = lat * Math.PI / 180, lam = lng * Math.PI / 180;
+    const N = a / Math.sqrt(1 - e * e * Math.sin(phi) ** 2);
+    const T = Math.tan(phi) ** 2;
+    const C = (e * e / (1 - e * e)) * Math.cos(phi) ** 2;
+    const A = Math.cos(phi) * (lam - lng0);
+    const e2 = e * e, e4 = e2 * e2, e6 = e4 * e2;
+    const M = a * ((1 - e2 / 4 - 3 * e4 / 64 - 5 * e6 / 256) * phi
+      - (3 * e2 / 8 + 3 * e4 / 32 + 45 * e6 / 1024) * Math.sin(2 * phi)
+      + (15 * e4 / 256 + 45 * e6 / 1024) * Math.sin(4 * phi)
+      - (35 * e6 / 3072) * Math.sin(6 * phi));
+    const k0 = 0.9996;
+    let easting = k0 * N * (A + (1 - T + C) * A ** 3 / 6 + (5 - 18 * T + T * T + 72 * C - 58 * (e2 / (1 - e2))) * A ** 5 / 120) + 500000;
+    let northing = k0 * (M + N * Math.tan(phi) * (A * A / 2 + (5 - T + 9 * C + 4 * C * C) * A ** 4 / 24 + (61 - 58 * T + T * T + 600 * C - 330 * (e2 / (1 - e2))) * A ** 6 / 720));
+    if (lat < 0) northing += 10000000;
+    const band = 'CDEFGHJKLMNPQRSTUVWX'[Math.floor((lat + 80) / 8)] || '?';
+    return `${zone}${band} ${Math.round(easting)}E ${Math.round(northing)}N`;
+  }
+
+  function render() {
+    const lat = Number(latEl.value), lng = Number(lngEl.value);
+    if (isNaN(lat) || isNaN(lng) || latEl.value === '' || lngEl.value === '') {
+      dms.textContent = ddm.textContent = utm.textContent = geo.textContent = '—'; return;
+    }
+    dms.textContent = `${toDms(lat, 'N', 'S')} ${toDms(lng, 'E', 'W')}`;
+    ddm.textContent = `${toDdm(lat, 'N', 'S')} ${toDdm(lng, 'E', 'W')}`;
+    utm.textContent = toUtm(lat, lng);
+    geo.textContent = `geo:${lat},${lng}`;
+  }
+
+  function parseDms(str: string): { lat: number; lng: number } | null {
+    const re = /(\d+(?:\.\d+)?)[°\s]+(?:(\d+(?:\.\d+)?)['\s]+)?(?:(\d+(?:\.\d+)?)["\s]*)?([NSEW])/gi;
+    const matches = [...str.matchAll(re)];
+    if (matches.length < 2) return null;
+    const val = (m: RegExpMatchArray) => {
+      let dec = Number(m[1]) + (Number(m[2] || 0)) / 60 + (Number(m[3] || 0)) / 3600;
+      if (/[SW]/i.test(m[4])) dec = -dec;
+      return dec;
+    };
+    const parts = matches.map((m) => ({ dec: val(m), dir: m[4].toUpperCase() }));
+    const lat = parts.find((p) => 'NS'.includes(p.dir))?.dec;
+    const lng = parts.find((p) => 'EW'.includes(p.dir))?.dec;
+    if (lat === undefined || lng === undefined) return null;
+    return { lat, lng };
+  }
+
+  [latEl, lngEl].forEach((el) => el.addEventListener('input', render));
+  parseEl.addEventListener('input', () => {
+    const r = parseDms(parseEl.value);
+    if (r) { latEl.value = String(Math.round(r.lat * 1e6) / 1e6); lngEl.value = String(Math.round(r.lng * 1e6) / 1e6); render(); }
+  });
+  document.querySelectorAll<HTMLButtonElement>('.co-copy').forEach((b) => {
+    b.addEventListener('click', async () => {
+      const t = document.getElementById(b.dataset.t!)!;
+      await navigator.clipboard.writeText(t.textContent || '');
+      b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
+    });
+  });
+
+  latEl.value = '51.5074'; lngEl.value = '-0.1278'; render();
+</script>

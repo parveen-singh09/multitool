@@ -1,0 +1,140 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="sql-formatter">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Keyword case
+        <select id="sf-case" class="field w-36">
+          <option value="upper">UPPERCASE</option>
+          <option value="lower">lowercase</option>
+          <option value="keep">Keep as-is</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Indent
+        <select id="sf-indent" class="field w-28">
+          <option value="2">2 spaces</option>
+          <option value="4">4 spaces</option>
+          <option value="tab">Tab</option>
+        </select>
+      </label>
+      <button id="sf-format" type="button" class="btn btn-primary">Format</button>
+      <button id="sf-copy" type="button" class="btn btn-secondary">Copy</button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        SQL input
+        <textarea id="sf-in" class="field font-mono text-[13px]" rows="14" spellcheck="false" placeholder="select id, name from users where age > 21 order by name"></textarea>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Formatted
+        <textarea id="sf-out" class="field font-mono text-[13px]" rows="14" readonly spellcheck="false"></textarea>
+      </label>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free SQL formatter beautifies messy SQL queries into clean, readable
+      statements with each major clause on its own line and consistent
+      indentation. Choose keyword casing and indent width to match your style
+      guide. It works with SELECT, INSERT, UPDATE, DELETE and joins. Your query
+      is formatted entirely in your browser and never uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('sf-in') as HTMLTextAreaElement;
+  const output = document.getElementById('sf-out') as HTMLTextAreaElement;
+  const caseSel = document.getElementById('sf-case') as HTMLSelectElement;
+  const indentSel = document.getElementById('sf-indent') as HTMLSelectElement;
+
+  const NEWLINE_BEFORE = ['SELECT', 'FROM', 'WHERE', 'GROUP BY', 'ORDER BY', 'HAVING', 'LIMIT', 'INSERT INTO', 'VALUES', 'UPDATE', 'SET', 'DELETE FROM', 'UNION', 'UNION ALL'];
+  const JOINS = ['LEFT JOIN', 'RIGHT JOIN', 'INNER JOIN', 'OUTER JOIN', 'FULL JOIN', 'CROSS JOIN', 'JOIN'];
+  const KEYWORDS = [
+    ...NEWLINE_BEFORE, ...JOINS, 'ON', 'AND', 'OR', 'AS', 'IN', 'IS', 'NOT', 'NULL', 'LIKE',
+    'BETWEEN', 'DISTINCT', 'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'ASC', 'DESC', 'CASE', 'WHEN', 'THEN', 'ELSE', 'END',
+  ];
+
+  function indentStr() {
+    const v = indentSel.value;
+    return v === 'tab' ? '\t' : ' '.repeat(Number(v));
+  }
+
+  function applyCase(word: string): string {
+    if (caseSel.value === 'keep') return word;
+    return caseSel.value === 'upper' ? word.toUpperCase() : word.toLowerCase();
+  }
+
+  function format(sql: string): string {
+    // collapse whitespace, protect strings
+    const strings: string[] = [];
+    let s = sql.replace(/'(?:[^'\\]|\\.)*'/g, (m) => { strings.push(m); return `\x00${strings.length - 1}\x00`; });
+    s = s.replace(/\s+/g, ' ').trim();
+
+    // uppercase multi-word phrases first for detection
+    const ind = indentStr();
+    // Normalize keyword case using word boundaries
+    const sorted = [...KEYWORDS].sort((a, b) => b.length - a.length);
+    for (const kw of sorted) {
+      const re = new RegExp(`\\b${kw.replace(/ /g, '\\s+')}\\b`, 'gi');
+      s = s.replace(re, () => applyCase(kw));
+    }
+
+    // put newlines before major clauses
+    for (const kw of [...NEWLINE_BEFORE, ...JOINS]) {
+      const cased = applyCase(kw);
+      const re = new RegExp(`\\s*\\b${cased.replace(/ /g, '\\s+')}\\b`, 'g');
+      s = s.replace(re, `\n${cased}`);
+    }
+    // AND/OR indented under WHERE
+    for (const kw of ['AND', 'OR']) {
+      const cased = applyCase(kw);
+      s = s.replace(new RegExp(`\\s+\\b${cased}\\b`, 'g'), `\n${ind}${cased}`);
+    }
+    // commas in select lists -> new line + indent
+    s = s.replace(/,\s*/g, `,\n${ind}`);
+
+    // indent columns after SELECT
+    const lines = s.split('\n').map((l) => l.trim()).filter(Boolean);
+    const result: string[] = [];
+    for (const line of lines) {
+      const upper = line.toUpperCase();
+      if (NEWLINE_BEFORE.some((k) => upper.startsWith(k)) || JOINS.some((k) => upper.startsWith(k))) {
+        result.push(line);
+      } else if (upper.startsWith('AND') || upper.startsWith('OR')) {
+        result.push(line);
+      } else {
+        result.push(ind + line);
+      }
+    }
+    let outStr = result.join('\n').trim();
+    // restore strings
+    outStr = outStr.replace(/\x00(\d+)\x00/g, (_, i) => strings[Number(i)]);
+    // ensure semicolons hug the previous token
+    return outStr.replace(/\s*;\s*/g, ';\n').trim();
+  }
+
+  function run() {
+    if (!input.value.trim()) { output.value = ''; return; }
+    output.value = format(input.value);
+  }
+
+  document.getElementById('sf-format')!.addEventListener('click', run);
+  input.addEventListener('input', run);
+  caseSel.addEventListener('change', run);
+  indentSel.addEventListener('change', run);
+  document.getElementById('sf-copy')!.addEventListener('click', async (e) => {
+    await navigator.clipboard.writeText(output.value);
+    const b = e.currentTarget as HTMLButtonElement;
+    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
+  });
+
+  input.value = 'select id, name, email from users u left join orders o on o.user_id = u.id where age > 21 and status = \'active\' order by name desc';
+  run();
+</script>

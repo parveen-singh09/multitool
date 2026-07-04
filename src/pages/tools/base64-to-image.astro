@@ -1,0 +1,104 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="base64-to-image">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Base64 or data URI
+      <textarea id="b2i-in" class="field font-mono text-[13px]" rows="6" spellcheck="false" placeholder="data:image/png;base64,iVBORw0KGgo… or just the base64 part"></textarea>
+    </label>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        If raw base64, assume type
+        <select id="b2i-type" class="field w-40">
+          <option value="image/png">PNG</option>
+          <option value="image/jpeg">JPEG</option>
+          <option value="image/webp">WebP</option>
+          <option value="image/gif">GIF</option>
+          <option value="image/svg+xml">SVG</option>
+        </select>
+      </label>
+      <button id="b2i-download" type="button" class="btn btn-primary self-end" disabled>Download</button>
+    </div>
+
+    <p id="b2i-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div id="b2i-wrap" class="hidden">
+      <span class="text-[13px] text-ink-subtle" id="b2i-info"></span>
+      <div class="panel mt-2 flex justify-center overflow-hidden p-4" style="background-image:linear-gradient(45deg,#2a2a2e 25%,transparent 25%),linear-gradient(-45deg,#2a2a2e 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#2a2a2e 75%),linear-gradient(-45deg,transparent 75%,#2a2a2e 75%);background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0">
+        <img id="b2i-preview" class="max-h-96 w-auto max-w-full rounded-[8px]" alt="Decoded image preview" />
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free Base64 to image converter decodes a Base64 string or data URI
+      back into a viewable image you can download. Paste a full
+      <code>data:image/…;base64,…</code> URI or just the raw Base64 and pick the
+      image type. It's the counterpart to encoding an image as Base64 for CSS or
+      HTML. Decoding happens entirely in your browser — nothing is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('b2i-in') as HTMLTextAreaElement;
+  const typeSel = document.getElementById('b2i-type') as HTMLSelectElement;
+  const preview = document.getElementById('b2i-preview') as HTMLImageElement;
+  const wrap = document.getElementById('b2i-wrap')!;
+  const info = document.getElementById('b2i-info')!;
+  const err = document.getElementById('b2i-error')!;
+  const dlBtn = document.getElementById('b2i-download') as HTMLButtonElement;
+  let currentType = 'image/png';
+
+  function setErr(m: string) { err.textContent = m; err.classList.toggle('hidden', !m); if (m) { wrap.classList.add('hidden'); dlBtn.disabled = true; } }
+
+  function render() {
+    const raw = input.value.trim();
+    if (!raw) { setErr(''); wrap.classList.add('hidden'); dlBtn.disabled = true; return; }
+
+    let dataUri: string;
+    let b64: string;
+    if (raw.startsWith('data:')) {
+      const m = raw.match(/^data:([^;,]+)?(;base64)?,(.*)$/s);
+      if (!m) { setErr('That does not look like a valid data URI.'); return; }
+      currentType = m[1] || 'image/png';
+      b64 = m[3].replace(/\s/g, '');
+      dataUri = raw.replace(/\s/g, '');
+    } else {
+      currentType = typeSel.value;
+      b64 = raw.replace(/\s/g, '');
+      dataUri = `data:${currentType};base64,${b64}`;
+    }
+
+    // validate base64 (svg may be URL-encoded rather than base64, allow that too)
+    if (currentType !== 'image/svg+xml' && !/^[A-Za-z0-9+/]+={0,2}$/.test(b64)) {
+      setErr('The Base64 data contains invalid characters.'); return;
+    }
+
+    const test = new Image();
+    test.onload = () => {
+      setErr('');
+      preview.src = dataUri;
+      let bytes = 0;
+      try { bytes = atob(b64).length; } catch { bytes = Math.round(b64.length * 0.75); }
+      info.textContent = `${test.naturalWidth}×${test.naturalHeight} · ${currentType} · ~${bytes < 1024 ? bytes + ' B' : (bytes / 1024).toFixed(1) + ' KB'}`;
+      wrap.classList.remove('hidden');
+      dlBtn.disabled = false;
+      dlBtn.dataset.uri = dataUri;
+    };
+    test.onerror = () => setErr('Could not decode that as an image. Check the data and selected type.');
+    test.src = dataUri;
+  }
+
+  input.addEventListener('input', render);
+  typeSel.addEventListener('change', render);
+  dlBtn.addEventListener('click', () => {
+    if (!dlBtn.dataset.uri) return;
+    const ext = currentType.split('/')[1].replace('+xml', '').replace('jpeg', 'jpg');
+    const a = document.createElement('a'); a.download = `image.${ext}`; a.href = dlBtn.dataset.uri; a.click();
+  });
+</script>

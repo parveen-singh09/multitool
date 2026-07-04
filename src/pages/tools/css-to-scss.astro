@@ -1,0 +1,146 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="css-to-scss">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-3">
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="cs-nest" type="checkbox" class="accent-[#5e6ad2]" checked /> Nest related selectors
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="cs-vars" type="checkbox" class="accent-[#5e6ad2]" checked /> Extract repeated colors to variables
+      </label>
+      <button id="cs-copy" type="button" class="btn btn-secondary">Copy</button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        CSS input
+        <textarea id="cs-in" class="field font-mono text-[13px]" rows="16" spellcheck="false"></textarea>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        SCSS output
+        <textarea id="cs-out" class="field font-mono text-[13px]" rows="16" readonly spellcheck="false"></textarea>
+      </label>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free CSS to SCSS converter rewrites plain CSS into SCSS syntax. It can
+      nest rules that share a parent selector (turning <code>.card</code> and
+      <code>.card .title</code> into nested blocks) and pull repeated color
+      values out into <code>$variables</code> at the top. The output is valid
+      SCSS you can drop into a Sass build. Everything is processed in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('cs-in') as HTMLTextAreaElement;
+  const output = document.getElementById('cs-out') as HTMLTextAreaElement;
+  const nestEl = document.getElementById('cs-nest') as HTMLInputElement;
+  const varsEl = document.getElementById('cs-vars') as HTMLInputElement;
+
+  interface Rule { selector: string; body: string; }
+
+  function parseRules(css: string): Rule[] {
+    // strip comments
+    const clean = css.replace(/\/\*[\s\S]*?\*\//g, '');
+    const rules: Rule[] = [];
+    const re = /([^{}]+)\{([^{}]*)\}/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(clean))) {
+      rules.push({ selector: m[1].trim().replace(/\s+/g, ' '), body: m[2].trim() });
+    }
+    return rules;
+  }
+
+  function extractVars(rules: Rule[]): { vars: Map<string, string>; } {
+    const colorCount = new Map<string, number>();
+    const colorRe = /#[0-9a-fA-F]{3,8}\b|rgba?\([^)]+\)|hsla?\([^)]+\)/g;
+    for (const r of rules) {
+      const found = r.body.match(colorRe) || [];
+      for (const c of found) colorCount.set(c.toLowerCase(), (colorCount.get(c.toLowerCase()) || 0) + 1);
+    }
+    const vars = new Map<string, string>();
+    let i = 1;
+    for (const [color, n] of colorCount) if (n >= 2) vars.set(color, `$color-${i++}`);
+    return { vars };
+  }
+
+  function applyVars(body: string, vars: Map<string, string>): string {
+    let out = body;
+    for (const [color, name] of vars) {
+      out = out.replace(new RegExp(color.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), name);
+    }
+    return out;
+  }
+
+  const fmtBody = (body: string, indent: string) =>
+    body.split(';').map((d) => d.trim()).filter(Boolean).map((d) => `${indent}${d};`).join('\n');
+
+  function build(): string {
+    const raw = input.value;
+    if (!raw.trim()) return '';
+    const rules = parseRules(raw);
+    const { vars } = varsEl.checked ? extractVars(rules) : { vars: new Map<string, string>() };
+
+    let header = '';
+    if (vars.size) header = [...vars].map(([color, name]) => `${name}: ${color};`).join('\n') + '\n\n';
+
+    if (!nestEl.checked) {
+      const body = rules.map((r) => `${r.selector} {\n${fmtBody(applyVars(r.body, vars), '  ')}\n}`).join('\n\n');
+      return header + body;
+    }
+
+    // Nest: group by first token of selector.
+    const tree: Record<string, { self?: string; children: Rule[] }> = {};
+    for (const r of rules) {
+      const parts = r.selector.split(' ');
+      const root = parts[0];
+      tree[root] = tree[root] || { children: [] };
+      if (parts.length === 1) tree[root].self = r.body;
+      else tree[root].children.push({ selector: parts.slice(1).join(' '), body: r.body });
+    }
+    const blocks = Object.entries(tree).map(([root, { self, children }]) => {
+      let inner = self ? fmtBody(applyVars(self, vars), '  ') : '';
+      const nested = children.map((c) => {
+        const sel = /^[.#:&\[]/.test(c.selector) ? `&${c.selector.startsWith('&') ? c.selector.slice(1) : ' ' + c.selector}` : c.selector;
+        return `  ${c.selector} {\n${fmtBody(applyVars(c.body, vars), '    ')}\n  }`;
+      }).join('\n');
+      return `${root} {\n${[inner, nested].filter(Boolean).join('\n')}\n}`;
+    }).join('\n\n');
+    return header + blocks;
+  }
+
+  function run() { output.value = build(); }
+
+  input.addEventListener('input', run);
+  nestEl.addEventListener('change', run);
+  varsEl.addEventListener('change', run);
+  document.getElementById('cs-copy')!.addEventListener('click', async (e) => {
+    await navigator.clipboard.writeText(output.value);
+    const b = e.currentTarget as HTMLButtonElement;
+    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
+  });
+
+  input.value = `.card {
+  background: #ffffff;
+  border: 1px solid #ddd;
+  padding: 16px;
+}
+.card .title {
+  color: #333333;
+  font-size: 18px;
+}
+.card .body {
+  color: #333333;
+}
+.btn {
+  background: #ffffff;
+  color: #333333;
+}`;
+  run();
+</script>

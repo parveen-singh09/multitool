@@ -1,0 +1,142 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="json-converter">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="text-[13px] text-ink-subtle">Convert JSON to</span>
+      <div class="flex flex-wrap gap-2" role="tablist" aria-label="Output format">
+        <button data-fmt="xml" class="jc-tab btn btn-primary" aria-selected="true">XML</button>
+        <button data-fmt="yaml" class="jc-tab btn btn-secondary" aria-selected="false">YAML</button>
+        <button data-fmt="csv" class="jc-tab btn btn-secondary" aria-selected="false">CSV</button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        JSON input
+        <textarea id="jc-in" class="field font-mono text-[13px]" rows="12" spellcheck="false" placeholder={'{\n  "name": "Ada",\n  "age": 36\n}'}></textarea>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        <span class="flex items-center justify-between">Output <button id="jc-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button></span>
+        <textarea id="jc-out" class="field font-mono text-[13px]" rows="12" readonly spellcheck="false"></textarea>
+      </label>
+    </div>
+
+    <p id="jc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free JSON converter transforms JSON into XML, YAML or CSV. Paste your
+      JSON, pick a target format, and copy the result. CSV works best on an array
+      of flat objects (it builds a header row from the keys); XML and YAML handle
+      nested structures. Your data is parsed and converted entirely in your
+      browser — nothing is uploaded to a server.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('jc-in') as HTMLTextAreaElement;
+  const output = document.getElementById('jc-out') as HTMLTextAreaElement;
+  const err = document.getElementById('jc-error')!;
+  let fmt = 'xml';
+
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  function toXml(obj: any, indent = 0): string {
+    const pad = '  '.repeat(indent);
+    if (obj === null) return '';
+    if (Array.isArray(obj)) return obj.map((v) => `${pad}<item>\n${toXml(v, indent + 1)}${pad}</item>\n`).join('');
+    if (typeof obj === 'object') {
+      return Object.entries(obj).map(([k, v]) => {
+        const tag = k.replace(/[^a-zA-Z0-9_.-]/g, '_');
+        if (v !== null && typeof v === 'object') return `${pad}<${tag}>\n${toXml(v, indent + 1)}${pad}</${tag}>\n`;
+        return `${pad}<${tag}>${esc(String(v))}</${tag}>\n`;
+      }).join('');
+    }
+    return `${pad}${esc(String(obj))}\n`;
+  }
+
+  function toYaml(obj: any, indent = 0): string {
+    const pad = '  '.repeat(indent);
+    if (Array.isArray(obj)) {
+      if (!obj.length) return `${pad}[]\n`;
+      return obj.map((v) => {
+        if (v !== null && typeof v === 'object') return `${pad}-\n${toYaml(v, indent + 1)}`;
+        return `${pad}- ${fmtScalar(v)}\n`;
+      }).join('');
+    }
+    if (obj !== null && typeof obj === 'object') {
+      const keys = Object.keys(obj);
+      if (!keys.length) return `${pad}{}\n`;
+      return keys.map((k) => {
+        const v = obj[k];
+        if (v !== null && typeof v === 'object' && Object.keys(v).length)
+          return `${pad}${k}:\n${toYaml(v, indent + 1)}`;
+        if (v !== null && typeof v === 'object')
+          return `${pad}${k}: ${Array.isArray(v) ? '[]' : '{}'}\n`;
+        return `${pad}${k}: ${fmtScalar(v)}\n`;
+      }).join('');
+    }
+    return `${pad}${fmtScalar(obj)}\n`;
+  }
+  function fmtScalar(v: any): string {
+    if (v === null) return 'null';
+    if (typeof v === 'string') return /[:#\-{}[\],&*!|>'"%@` ]|^$/.test(v) ? JSON.stringify(v) : v;
+    return String(v);
+  }
+
+  function toCsv(obj: any): string {
+    const rows = Array.isArray(obj) ? obj : [obj];
+    const headers = Array.from(new Set(rows.flatMap((r) => (r && typeof r === 'object' ? Object.keys(r) : []))));
+    if (!headers.length) return rows.map((r) => cell(r)).join('\n');
+    const cell2 = (v: any) => {
+      const s = v === undefined || v === null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const head = headers.map(cell2).join(',');
+    const body = rows.map((r) => headers.map((h) => cell2(r?.[h])).join(',')).join('\n');
+    return head + '\n' + body;
+  }
+  const cell = (v: any) => {
+    const s = v === null ? '' : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+
+  function convert() {
+    err.classList.add('hidden');
+    const raw = input.value.trim();
+    if (!raw) { output.value = ''; return; }
+    let data: any;
+    try { data = JSON.parse(raw); }
+    catch (e) { output.value = ''; err.textContent = 'Invalid JSON: ' + (e as Error).message; err.classList.remove('hidden'); return; }
+    if (fmt === 'xml') output.value = '<?xml version="1.0" encoding="UTF-8"?>\n<root>\n' + toXml(data, 1) + '</root>';
+    else if (fmt === 'yaml') output.value = toYaml(data).trimEnd();
+    else output.value = toCsv(data);
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.jc-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      fmt = tab.dataset.fmt!;
+      document.querySelectorAll('.jc-tab').forEach((t) => {
+        const active = t === tab;
+        t.setAttribute('aria-selected', String(active));
+        t.classList.toggle('btn-primary', active);
+        t.classList.toggle('btn-secondary', !active);
+      });
+      convert();
+    });
+  });
+  input.addEventListener('input', convert);
+  document.getElementById('jc-copy')!.addEventListener('click', async (e) => {
+    await navigator.clipboard.writeText(output.value);
+    const b = e.currentTarget as HTMLButtonElement;
+    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
+  });
+
+  input.value = '[\n  { "name": "Ada", "age": 36 },\n  { "name": "Alan", "age": 41 }\n]';
+  convert();
+</script>

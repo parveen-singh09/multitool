@@ -1,0 +1,175 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="js-beautifier">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <div class="flex gap-2" role="tablist" aria-label="Mode">
+        <button data-mode="beautify" class="jb-tab btn btn-primary" aria-selected="true">Beautify</button>
+        <button data-mode="minify" class="jb-tab btn btn-secondary" aria-selected="false">Minify</button>
+      </div>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Indent
+        <select id="jb-indent" class="field w-28">
+          <option value="2">2 spaces</option>
+          <option value="4">4 spaces</option>
+          <option value="tab">Tab</option>
+        </select>
+      </label>
+      <button id="jb-copy" type="button" class="btn btn-secondary">Copy</button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        JavaScript / JSON input
+        <textarea id="jb-in" class="field font-mono text-[13px]" rows="14" spellcheck="false"></textarea>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        <span class="flex items-center justify-between">Output <span id="jb-stats" class="text-[12px] text-ink-tertiary"></span></span>
+        <textarea id="jb-out" class="field font-mono text-[13px]" rows="14" readonly spellcheck="false"></textarea>
+      </label>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free JavaScript beautifier and minifier reformats code two ways:
+      beautify adds consistent indentation and line breaks to make minified or
+      messy code readable, while minify strips comments and unnecessary
+      whitespace to shrink file size. It preserves strings, template literals,
+      regular expressions and comments correctly. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('jb-in') as HTMLTextAreaElement;
+  const output = document.getElementById('jb-out') as HTMLTextAreaElement;
+  const indentSel = document.getElementById('jb-indent') as HTMLSelectElement;
+  const stats = document.getElementById('jb-stats')!;
+  let mode = 'beautify';
+
+  function indentUnit() { const v = indentSel.value; return v === 'tab' ? '\t' : ' '.repeat(Number(v)); }
+
+  // Tokenize into strings/comments/regex vs code so we don't mangle literals.
+  function tokenize(src: string): { t: 'code' | 'str' | 'comment'; v: string }[] {
+    const out: { t: 'code' | 'str' | 'comment'; v: string }[] = [];
+    let i = 0;
+    let prevSignificant = '';
+    while (i < src.length) {
+      const c = src[i];
+      const two = src.slice(i, i + 2);
+      if (two === '//') { let j = i + 2; while (j < src.length && src[j] !== '\n') j++; out.push({ t: 'comment', v: src.slice(i, j) }); i = j; continue; }
+      if (two === '/*') { let j = i + 2; while (j < src.length && src.slice(j, j + 2) !== '*/') j++; j += 2; out.push({ t: 'comment', v: src.slice(i, j) }); i = j; continue; }
+      if (c === '"' || c === "'" || c === '`') {
+        let j = i + 1; while (j < src.length && src[j] !== c) { if (src[j] === '\\') j++; j++; }
+        out.push({ t: 'str', v: src.slice(i, j + 1) }); i = j + 1; prevSignificant = 'str'; continue;
+      }
+      // regex literal: '/' after an operator or start
+      if (c === '/' && /^$|[=(\[{,;:!&|?+\-*%^~<>]|return|typeof|case|in|of|do|else/.test(prevSignificant)) {
+        let j = i + 1, inClass = false;
+        while (j < src.length && (src[j] !== '/' || inClass)) { if (src[j] === '\\') j++; else if (src[j] === '[') inClass = true; else if (src[j] === ']') inClass = false; j++; }
+        j++; while (j < src.length && /[a-z]/i.test(src[j])) j++;
+        out.push({ t: 'code', v: src.slice(i, j) }); i = j; prevSignificant = 'regex'; continue;
+      }
+      out.push({ t: 'code', v: c });
+      if (!/\s/.test(c)) prevSignificant = /[a-zA-Z0-9_$]/.test(c) ? (prevSignificant.match(/[a-z]+$/i) ? prevSignificant + c : c) : c;
+      i++;
+    }
+    return out;
+  }
+
+  function minify(src: string): string {
+    const toks = tokenize(src);
+    let out = '';
+    for (const tk of toks) {
+      if (tk.t === 'comment') continue;
+      if (tk.t === 'str' || tk.v.length > 1) { out += tk.v; continue; }
+      out += tk.v;
+    }
+    // collapse whitespace in code portions only — rebuild carefully
+    let result = '';
+    for (const tk of toks) {
+      if (tk.t === 'comment') continue;
+      if (tk.t === 'str' || (tk.t === 'code' && tk.v.length > 1)) { result += tk.v; }
+      else result += tk.v;
+    }
+    // second pass: squeeze code whitespace without touching strings
+    return squeeze(toks);
+  }
+
+  function squeeze(toks: { t: string; v: string }[]): string {
+    let out = '';
+    let pending = '';
+    const flush = () => {
+      let s = pending.replace(/[ \t\r\n]+/g, ' ');
+      s = s.replace(/\s*([{}()\[\];,:<>=+\-*/%&|!?~^])\s*/g, '$1');
+      out += s; pending = '';
+    };
+    for (const tk of toks) {
+      if (tk.t === 'comment') continue;
+      if (tk.t === 'str' || (tk.t === 'code' && tk.v.length > 1)) { flush(); out += tk.v; }
+      else pending += tk.v;
+    }
+    flush();
+    return out.trim();
+  }
+
+  function beautify(src: string): string {
+    // normalize first via a light minify to a single spaced stream, then re-indent
+    const ind = indentUnit();
+    const toks = tokenize(src);
+    let level = 0;
+    let out = '';
+    let atLineStart = true;
+    const push = (s: string) => { out += s; atLineStart = false; };
+    const newline = () => { out = out.replace(/[ \t]+$/, ''); out += '\n' + ind.repeat(Math.max(0, level)); atLineStart = true; };
+
+    for (let k = 0; k < toks.length; k++) {
+      const tk = toks[k];
+      if (tk.t === 'str') { push(tk.v); continue; }
+      if (tk.t === 'comment') { if (!atLineStart) push(' '); push(tk.v); if (tk.v.startsWith('//')) newline(); continue; }
+      if (tk.v.length > 1) { push(tk.v); continue; }
+      const c = tk.v;
+      if (/\s/.test(c)) { if (!atLineStart && !/\s$/.test(out)) push(' '); continue; }
+      if (c === '{') { push(' {'); level++; newline(); }
+      else if (c === '}') { level--; if (!atLineStart) newline(); out = out.replace(/\n(\s*)$/, ''); newline(); push('}'); }
+      else if (c === ';') { push(';'); newline(); }
+      else { if (atLineStart) out = out.replace(/[ ]+$/, ''); push(c); }
+    }
+    return out.split('\n').map((l) => l.replace(/\s+$/, '')).filter((l, i, a) => !(l === '' && a[i - 1] === '')).join('\n').trim();
+  }
+
+  function run() {
+    if (!input.value.trim()) { output.value = ''; stats.textContent = ''; return; }
+    const result = mode === 'minify' ? squeeze(tokenize(input.value)) : beautify(input.value);
+    output.value = result;
+    const before = input.value.length, after = result.length;
+    if (mode === 'minify') stats.textContent = `${before} → ${after} chars (${Math.round((1 - after / before) * 100)}% smaller)`;
+    else stats.textContent = `${after} chars`;
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.jb-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      mode = tab.dataset.mode!;
+      document.querySelectorAll('.jb-tab').forEach((t) => {
+        const active = t === tab;
+        t.setAttribute('aria-selected', String(active));
+        t.classList.toggle('btn-primary', active);
+        t.classList.toggle('btn-secondary', !active);
+      });
+      run();
+    });
+  });
+  input.addEventListener('input', run);
+  indentSel.addEventListener('change', run);
+  document.getElementById('jb-copy')!.addEventListener('click', async (e) => {
+    await navigator.clipboard.writeText(output.value);
+    const b = e.currentTarget as HTMLButtonElement;
+    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
+  });
+
+  input.value = 'function greet(name){const msg="Hello, "+name+"!";if(name){console.log(msg)}return msg}';
+  run();
+</script>

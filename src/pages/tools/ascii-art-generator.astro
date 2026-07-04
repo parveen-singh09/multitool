@@ -1,0 +1,118 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="ascii-art-generator">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Text
+      <input id="aa-text" class="field" placeholder="HELLO" maxlength="30" spellcheck="false" autocomplete="off" />
+    </label>
+
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Style
+        <select id="aa-style" class="field w-40">
+          <option value="block">Block</option>
+          <option value="banner">Banner (#)</option>
+          <option value="small">Small</option>
+        </select>
+      </label>
+      <button id="aa-copy" type="button" class="btn btn-secondary">Copy</button>
+    </div>
+
+    <div class="overflow-x-auto rounded-[8px] border border-hairline bg-surface-1 p-4">
+      <pre id="aa-out" class="font-mono text-[11px] leading-tight text-ink" style="white-space:pre"></pre>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free ASCII art generator turns text into large ASCII letter banners
+      — the kind used in code comments, terminal splash screens and README
+      headers. Type a word, choose a style, and copy the monospaced output.
+      Best with short, uppercase words. Everything is rendered in your browser,
+      so nothing you type is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  // Compact 5-row bitmap font (A–Z, 0–9, space, some punctuation).
+  // Each glyph is 5 rows of a fixed-width pattern using '#'/' '.
+  const H = 5;
+  const FONT: Record<string, string[]> = {
+    'A': ['.##.', '#..#', '####', '#..#', '#..#'],
+    'B': ['###.', '#..#', '###.', '#..#', '###.'],
+    'C': ['.###', '#...', '#...', '#...', '.###'],
+    'D': ['###.', '#..#', '#..#', '#..#', '###.'],
+    'E': ['####', '#...', '###.', '#...', '####'],
+    'F': ['####', '#...', '###.', '#...', '#...'],
+    'G': ['.###', '#...', '#.##', '#..#', '.###'],
+    'H': ['#..#', '#..#', '####', '#..#', '#..#'],
+    'I': ['###', '.#.', '.#.', '.#.', '###'],
+    'J': ['..##', '...#', '...#', '#..#', '.##.'],
+    'K': ['#..#', '#.#.', '##..', '#.#.', '#..#'],
+    'L': ['#...', '#...', '#...', '#...', '####'],
+    'M': ['#...#', '##.##', '#.#.#', '#...#', '#...#'],
+    'N': ['#..#', '##.#', '#.##', '#..#', '#..#'],
+    'O': ['.##.', '#..#', '#..#', '#..#', '.##.'],
+    'P': ['###.', '#..#', '###.', '#...', '#...'],
+    'Q': ['.##.', '#..#', '#..#', '#.##', '.###'],
+    'R': ['###.', '#..#', '###.', '#.#.', '#..#'],
+    'S': ['.###', '#...', '.##.', '...#', '###.'],
+    'T': ['###', '.#.', '.#.', '.#.', '.#.'],
+    'U': ['#..#', '#..#', '#..#', '#..#', '.##.'],
+    'V': ['#..#', '#..#', '#..#', '.##.', '.##.'],
+    'W': ['#...#', '#...#', '#.#.#', '##.##', '#...#'],
+    'X': ['#..#', '.##.', '.##.', '.##.', '#..#'],
+    'Y': ['#..#', '.##.', '.#.', '.#.', '.#.'],
+    'Z': ['####', '..#.', '.#..', '#...', '####'],
+    '0': ['.##.', '#..#', '#..#', '#..#', '.##.'],
+    '1': ['.#.', '##.', '.#.', '.#.', '###'],
+    '2': ['###.', '...#', '.##.', '#...', '####'],
+    '3': ['###.', '...#', '.##.', '...#', '###.'],
+    '4': ['#..#', '#..#', '####', '...#', '...#'],
+    '5': ['####', '#...', '###.', '...#', '###.'],
+    '6': ['.##.', '#...', '###.', '#..#', '.##.'],
+    '7': ['####', '...#', '..#.', '.#..', '.#..'],
+    '8': ['.##.', '#..#', '.##.', '#..#', '.##.'],
+    '9': ['.##.', '#..#', '.###', '...#', '.##.'],
+    '!': ['#', '#', '#', '.', '#'],
+    '?': ['###.', '...#', '.##.', '....', '.#..'],
+    '.': ['.', '.', '.', '.', '#'],
+    ',': ['.', '.', '.', '#', '#'],
+    '-': ['....', '....', '####', '....', '....'],
+    '+': ['...', '.#.', '###', '.#.', '...'],
+    ' ': ['..', '..', '..', '..', '..'],
+  };
+
+  const textEl = document.getElementById('aa-text') as HTMLInputElement;
+  const styleEl = document.getElementById('aa-style') as HTMLSelectElement;
+  const out = document.getElementById('aa-out') as HTMLElement;
+
+  function render() {
+    const raw = textEl.value.toUpperCase() || 'HELLO';
+    const style = styleEl.value;
+    const fill = style === 'banner' ? '#' : style === 'small' ? '▪' : '█';
+    const lines: string[] = Array(H).fill('');
+    for (const ch of raw) {
+      const glyph = FONT[ch] || FONT['?'];
+      for (let r = 0; r < H; r++) {
+        const row = (glyph[r] || '').replace(/#/g, fill).replace(/\./g, ' ');
+        lines[r] += row + '  ';
+      }
+    }
+    out.textContent = lines.join('\n');
+  }
+
+  textEl.addEventListener('input', render);
+  styleEl.addEventListener('change', render);
+  document.getElementById('aa-copy')!.addEventListener('click', async (e) => {
+    await navigator.clipboard.writeText(out.textContent || '');
+    const b = e.currentTarget as HTMLButtonElement;
+    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
+  });
+
+  textEl.value = 'HELLO'; render();
+</script>

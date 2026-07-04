@@ -22,9 +22,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle sm:col-span-2">Syringe type
         <select id="pep-syringe" class="field">
-          <option value="100" selected>U-100 insulin (100 units / mL)</option>
-          <option value="50">U-50 insulin (50 units / 0.5 mL)</option>
-          <option value="40">U-40 insulin (40 units / mL)</option>
+          <option value="100" data-cap="100" selected>1 mL insulin (U-100, 100 units)</option>
+          <option value="100" data-cap="50">0.5 mL insulin (U-100, 50 units)</option>
+          <option value="100" data-cap="30">0.3 mL insulin (U-100, 30 units)</option>
+          <option value="40" data-cap="40">U-40 insulin (40 units / mL)</option>
         </select>
       </label>
     </div>
@@ -84,7 +85,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const waterMl = Number($('pep-water').value) || 0;
     let dose = Number($('pep-dose').value) || 0;
     const doseUnit = sel('pep-dose-unit').value;
-    const unitsPerMl = Number(sel('pep-syringe').value);
+    const syringeEl = sel('pep-syringe');
+    const unitsPerMl = Number(syringeEl.value); // scale: units per mL (100 or 40)
+    const opt = syringeEl.options[syringeEl.selectedIndex];
+    const barrelUnits = Number(opt.getAttribute('data-cap')) || unitsPerMl; // barrel capacity in units
 
     if (!(amountMg > 0) || !(waterMl > 0) || !(dose > 0)) {
       setDash();
@@ -103,11 +107,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     document.getElementById('pep-volume')!.textContent = volumeMl.toFixed(3);
     document.getElementById('pep-conc')!.textContent = mcgPerUnit.toFixed(1);
 
-    const maxUnits = unitsPerMl === 50 ? 50 : unitsPerMl; // U-50 barrel holds 50 units
-    if (drawUnits > maxUnits) {
-      err.textContent = `That dose needs ${drawUnits.toFixed(1)} units — more than one ${
-        unitsPerMl === 40 ? 'U-40' : unitsPerMl === 50 ? 'U-50' : 'U-100'
-      } syringe holds. Use less water or split the dose.`;
+    if (drawUnits > barrelUnits) {
+      const label = opt.textContent?.trim() || 'this';
+      err.textContent = `That dose needs ${drawUnits.toFixed(1)} units — more than one ${label} syringe holds (${barrelUnits} units). Use less water or split the dose.`;
       err.classList.remove('hidden');
     }
 

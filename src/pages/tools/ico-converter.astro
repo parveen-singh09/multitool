@@ -1,0 +1,134 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="ico-converter">
+  <div class="flex flex-col gap-4">
+    <label id="ico-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose an image or drop it here</span>
+      <span class="text-[13px] text-ink-tertiary">Best with a square PNG — converted in your browser, never uploaded</span>
+      <input id="ico-file" type="file" accept="image/*" class="sr-only" />
+    </label>
+
+    <div id="ico-panel" class="hidden flex-col gap-4">
+      <div>
+        <span class="text-[13px] text-ink-subtle">Sizes to include</span>
+        <div id="ico-sizes" class="mt-2 flex flex-wrap gap-3"></div>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <button id="ico-download" class="btn btn-primary">Download .ico</button>
+        <span id="ico-info" class="text-[13px] text-ink-subtle"></span>
+      </div>
+      <div class="panel flex items-center justify-center gap-4 p-4">
+        <img id="ico-p16" width="16" height="16" alt="16px" />
+        <img id="ico-p32" width="32" height="32" alt="32px" />
+        <img id="ico-p48" width="48" height="48" alt="48px" />
+        <img id="ico-p64" width="64" height="64" alt="64px" />
+      </div>
+    </div>
+    <p id="ico-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free ICO converter creates Windows icon and favicon <code>.ico</code>
+      files from any image. It renders your image to the standard favicon sizes
+      (16, 32, 48 and 64 pixels) and packs the ones you choose into a single
+      multi-resolution ICO, using embedded PNG data for crisp results. Use a
+      square image for best results. Everything runs in your browser — your
+      image is never uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  const fileInput = document.getElementById('ico-file') as HTMLInputElement;
+  const drop = document.getElementById('ico-drop')!;
+  const panel = document.getElementById('ico-panel')!;
+  const sizesWrap = document.getElementById('ico-sizes')!;
+  const info = document.getElementById('ico-info')!;
+  const err = document.getElementById('ico-error')!;
+  const SIZES = [16, 32, 48, 64];
+  let img: HTMLImageElement | null = null;
+
+  function setErr(m: string) { err.textContent = m; err.classList.toggle('hidden', !m); }
+
+  sizesWrap.innerHTML = SIZES.map((s) => `<label class="flex items-center gap-2 text-sm text-ink-subtle"><input type="checkbox" class="ico-size accent-[#5e6ad2]" value="${s}" ${s <= 48 ? 'checked' : ''}> ${s}×${s}</label>`).join('');
+
+  function pngBlobFor(size: number): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      canvas.getContext('2d')!.drawImage(img!, 0, 0, size, size);
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('encode failed'))), 'image/png');
+    });
+  }
+
+  async function buildIco(sizes: number[]): Promise<Blob> {
+    const pngs = await Promise.all(sizes.map((s) => pngBlobFor(s).then((b) => b.arrayBuffer())));
+    const count = sizes.length;
+    const headerSize = 6 + count * 16;
+    let offset = headerSize;
+    const header = new ArrayBuffer(headerSize);
+    const dv = new DataView(header);
+    dv.setUint16(0, 0, true); // reserved
+    dv.setUint16(2, 1, true); // type = icon
+    dv.setUint16(4, count, true);
+    sizes.forEach((s, i) => {
+      const base = 6 + i * 16;
+      dv.setUint8(base, s >= 256 ? 0 : s);       // width
+      dv.setUint8(base + 1, s >= 256 ? 0 : s);   // height
+      dv.setUint8(base + 2, 0);                  // palette
+      dv.setUint8(base + 3, 0);                  // reserved
+      dv.setUint16(base + 4, 1, true);           // color planes
+      dv.setUint16(base + 6, 32, true);          // bpp
+      dv.setUint32(base + 8, pngs[i].byteLength, true); // size
+      dv.setUint32(base + 12, offset, true);     // offset
+      offset += pngs[i].byteLength;
+    });
+    return new Blob([header, ...pngs], { type: 'image/x-icon' });
+  }
+
+  function refreshPreview() {
+    if (!img) return;
+    for (const s of SIZES) {
+      pngBlobFor(s).then((b) => {
+        const el = document.getElementById(`ico-p${s}`) as HTMLImageElement;
+        el.src = URL.createObjectURL(b);
+      });
+    }
+  }
+
+  function loadFile(file: File) {
+    setErr('');
+    const reader = new FileReader();
+    reader.onload = () => {
+      img = new Image();
+      img.onload = () => { panel.classList.remove('hidden'); panel.classList.add('flex'); refreshPreview(); info.textContent = `Source ${img!.naturalWidth}×${img!.naturalHeight}`; };
+      img.onerror = () => setErr('Could not read that image file.');
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) loadFile(fileInput.files[0]); });
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) loadFile(f); });
+
+  document.getElementById('ico-download')!.addEventListener('click', async () => {
+    if (!img) return;
+    const sizes = Array.from(document.querySelectorAll<HTMLInputElement>('.ico-size:checked')).map((c) => Number(c.value));
+    if (!sizes.length) { setErr('Pick at least one size.'); return; }
+    setErr('');
+    try {
+      const blob = await buildIco(sizes);
+      const a = document.createElement('a'); a.download = 'favicon.ico'; a.href = URL.createObjectURL(blob); a.click();
+    } catch { setErr('Could not build the ICO file.'); }
+  });
+</script>

@@ -61,17 +61,23 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       return;
     }
 
-    let years = end.getFullYear() - start.getFullYear();
-    let months = end.getMonth() - start.getMonth();
-    let days = end.getDate() - start.getDate();
-    if (days < 0) {
-      months--;
-      days += new Date(end.getFullYear(), end.getMonth(), 0).getDate();
-    }
-    if (months < 0) { years--; months += 12; }
+    // Robust Y/M/D via clamped month anchoring (avoids negative-day borrow errors
+    // for end-of-month pairs like Jan 31 -> Mar 1).
+    const addMonthsClamped = (d: Date, m: number): Date => {
+      const idx = d.getMonth() + m;
+      const y = d.getFullYear() + Math.floor(idx / 12);
+      const mo = ((idx % 12) + 12) % 12;
+      const dim = new Date(y, mo + 1, 0).getDate();
+      return new Date(y, mo, Math.min(d.getDate(), dim));
+    };
+    let totalMonths = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+    if (addMonthsClamped(start, totalMonths) > end) totalMonths--;
+    const anchor = addMonthsClamped(start, totalMonths);
+    const years = Math.floor(totalMonths / 12);
+    const months = totalMonths % 12;
+    const days = Math.round((end.getTime() - anchor.getTime()) / 86400000);
 
     const totalDays = Math.floor((end.getTime() - start.getTime()) / 86400000);
-    const totalMonths = years * 12 + months;
 
     main.textContent = `${years} years, ${months} months, ${days} days`;
     sub.textContent = `That's ${totalDays.toLocaleString()} days of life so far.`;

@@ -1,0 +1,117 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="roman-numeral-converter">
+  <div class="flex flex-col gap-4">
+    <p class="text-[13px] text-ink-subtle">Type an Arabic number (1–3,999,999) or a Roman numeral — the other updates instantly.</p>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Number
+      <input id="rn-num" type="text" class="field font-mono" placeholder="2026" inputmode="numeric" spellcheck="false" autocomplete="off" />
+    </label>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Roman numeral
+      <div class="flex gap-2">
+        <input id="rn-rom" type="text" class="field font-mono uppercase" placeholder="MMXXVI" spellcheck="false" autocomplete="off" />
+        <button id="rn-copy" type="button" class="btn btn-secondary">Copy</button>
+      </div>
+    </label>
+
+    <p id="rn-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <p class="text-[13px] text-ink-tertiary">A bar over a numeral (shown here as a leading underscore, e.g. <span class="font-mono">V̄</span> = 5,000) multiplies it by 1,000 for values above 3,999.</p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free Roman numeral converter translates between ordinary numbers and
+      Roman numerals in both directions. Enter a number to see its Roman form,
+      or type a numeral like <code>MMXXVI</code> to read its value. It follows
+      the standard subtractive rules (IV, IX, XL, XC, CD, CM) and supports large
+      values with vinculum (overline) notation. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const numEl = document.getElementById('rn-num') as HTMLInputElement;
+  const romEl = document.getElementById('rn-rom') as HTMLInputElement;
+  const err = document.getElementById('rn-error')!;
+
+  const MAP: [number, string][] = [
+    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'],
+    [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'],
+    [5, 'V'], [4, 'IV'], [1, 'I'],
+  ];
+
+  function toRoman(n: number): string {
+    if (n < 1 || n > 3_999_999) return '';
+    // vinculum: numerals ≥ 4000 use overlined (×1000) part rendered with a combining macron.
+    let thousands = Math.floor(n / 1000);
+    let rest = n % 1000;
+    let out = '';
+    if (thousands >= 4) {
+      // build the thousands part and overline each char
+      let t = '';
+      let big = thousands;
+      for (const [v, s] of MAP) { while (big >= v) { t += s; big -= v; } }
+      out += t.split('').map((c) => c + '̄').join('');
+      thousands = 0;
+    }
+    let base = thousands * 1000 + rest;
+    for (const [v, s] of MAP) { while (base >= v) { out += s; base -= v; } }
+    return out;
+  }
+
+  function fromRoman(raw: string): number | null {
+    const s = raw.toUpperCase().replace(/̄/g, '').trim();
+    if (!s) return null;
+    if (!/^[MDCLXVI]+$/.test(s)) return null;
+    const vals: Record<string, number> = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
+    let total = 0, prev = 0;
+    for (let i = s.length - 1; i >= 0; i--) {
+      const v = vals[s[i]];
+      if (v < prev) total -= v; else { total += v; prev = v; }
+    }
+    // round-trip validation to reject malformed numerals like IIII or VX
+    if (toRoman(total).replace(/̄/g, '') !== s) return null;
+    return total;
+  }
+
+  function fromNum() {
+    err.classList.add('hidden');
+    const v = numEl.value.trim();
+    if (!v) { romEl.value = ''; return; }
+    const n = Number(v);
+    if (!Number.isInteger(n) || n < 1 || n > 3_999_999) {
+      romEl.value = '';
+      err.textContent = 'Enter a whole number from 1 to 3,999,999.';
+      err.classList.remove('hidden');
+      return;
+    }
+    romEl.value = toRoman(n);
+  }
+
+  function fromRom() {
+    err.classList.add('hidden');
+    const n = fromRoman(romEl.value);
+    if (romEl.value.trim() && n === null) {
+      numEl.value = '';
+      err.textContent = 'That is not a valid Roman numeral.';
+      err.classList.remove('hidden');
+      return;
+    }
+    numEl.value = n === null ? '' : String(n);
+  }
+
+  numEl.addEventListener('input', fromNum);
+  romEl.addEventListener('input', fromRom);
+  document.getElementById('rn-copy')!.addEventListener('click', async (e) => {
+    await navigator.clipboard.writeText(romEl.value);
+    const b = e.currentTarget as HTMLButtonElement;
+    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
+  });
+
+  numEl.value = '2026'; fromNum();
+</script>

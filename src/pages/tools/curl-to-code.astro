@@ -1,0 +1,154 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="curl-to-code">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      cURL command
+      <textarea id="ct-in" class="field font-mono text-[13px]" rows="5" spellcheck="false" placeholder={"curl -X POST https://api.example.com/users -H 'Content-Type: application/json' -d '{\"name\":\"Ada\"}'"}></textarea>
+    </label>
+
+    <div class="flex flex-wrap gap-2" role="tablist" aria-label="Target language">
+      <button data-lang="fetch" class="ct-tab btn btn-primary" aria-selected="true">JS fetch</button>
+      <button data-lang="node" class="ct-tab btn btn-secondary" aria-selected="false">Node axios</button>
+      <button data-lang="python" class="ct-tab btn btn-secondary" aria-selected="false">Python requests</button>
+    </div>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      <span class="flex items-center justify-between">Generated code <button id="ct-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button></span>
+      <textarea id="ct-out" class="field font-mono text-[13px]" rows="12" readonly spellcheck="false"></textarea>
+    </label>
+    <p id="ct-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free cURL to code converter turns a <code>curl</code> command into
+      ready-to-run code for JavaScript <code>fetch</code>, Node.js with axios, or
+      Python <code>requests</code>. Paste a curl command — including method,
+      headers and body — and copy the equivalent snippet. It's perfect for
+      turning API docs and copied requests into working code. Runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  interface Parsed { method: string; url: string; headers: Record<string, string>; data: string | null; }
+
+  const input = document.getElementById('ct-in') as HTMLTextAreaElement;
+  const output = document.getElementById('ct-out') as HTMLTextAreaElement;
+  const err = document.getElementById('ct-error')!;
+  let lang = 'fetch';
+
+  // Tokenize respecting single/double quotes and line continuations.
+  function tokenize(cmd: string): string[] {
+    const s = cmd.replace(/\\\r?\n/g, ' ').trim();
+    const tokens: string[] = [];
+    let i = 0;
+    while (i < s.length) {
+      while (i < s.length && /\s/.test(s[i])) i++;
+      if (i >= s.length) break;
+      let tok = '';
+      if (s[i] === "'" || s[i] === '"') {
+        const q = s[i++];
+        while (i < s.length && s[i] !== q) { tok += s[i++]; }
+        i++;
+      } else {
+        while (i < s.length && !/\s/.test(s[i])) {
+          if (s[i] === "'" || s[i] === '"') {
+            const q = s[i++];
+            while (i < s.length && s[i] !== q) tok += s[i++];
+            i++;
+          } else tok += s[i++];
+        }
+      }
+      tokens.push(tok);
+    }
+    return tokens;
+  }
+
+  function parse(cmd: string): Parsed | null {
+    const t = tokenize(cmd);
+    if (!t.length || t[0] !== 'curl') { if (t.length && !/^https?:/.test(t[0])) return null; }
+    const p: Parsed = { method: '', url: '', headers: {}, data: null };
+    for (let i = t[0] === 'curl' ? 1 : 0; i < t.length; i++) {
+      const a = t[i];
+      if (a === '-X' || a === '--request') p.method = t[++i];
+      else if (a === '-H' || a === '--header') {
+        const h = t[++i]; const idx = h.indexOf(':');
+        if (idx > -1) p.headers[h.slice(0, idx).trim()] = h.slice(idx + 1).trim();
+      } else if (a === '-d' || a === '--data' || a === '--data-raw' || a === '--data-binary') p.data = t[++i];
+      else if (a === '-u' || a === '--user') p.headers['Authorization'] = 'Basic ' + btoa(t[++i]);
+      else if (a === '--compressed' || a === '-L' || a === '--location' || a === '-s' || a === '--silent') continue;
+      else if (/^https?:\/\//.test(a) || (!p.url && !a.startsWith('-'))) p.url = a;
+    }
+    if (!p.method) p.method = p.data ? 'POST' : 'GET';
+    if (!p.url) return null;
+    return p;
+  }
+
+  function genFetch(p: Parsed): string {
+    const opts: string[] = [`method: '${p.method}'`];
+    if (Object.keys(p.headers).length) opts.push(`headers: ${JSON.stringify(p.headers, null, 2).replace(/\n/g, '\n  ')}`);
+    if (p.data) opts.push(`body: ${JSON.stringify(p.data)}`);
+    return `const res = await fetch(${JSON.stringify(p.url)}, {\n  ${opts.join(',\n  ')}\n});\nconst data = await res.json();\nconsole.log(data);`;
+  }
+  function genNode(p: Parsed): string {
+    const cfg: string[] = [`method: '${p.method}'`, `url: ${JSON.stringify(p.url)}`];
+    if (Object.keys(p.headers).length) cfg.push(`headers: ${JSON.stringify(p.headers, null, 2).replace(/\n/g, '\n  ')}`);
+    if (p.data) { try { cfg.push(`data: ${JSON.stringify(JSON.parse(p.data), null, 2).replace(/\n/g, '\n  ')}`); } catch { cfg.push(`data: ${JSON.stringify(p.data)}`); } }
+    return `const axios = require('axios');\n\nconst res = await axios({\n  ${cfg.join(',\n  ')}\n});\nconsole.log(res.data);`;
+  }
+  function genPython(p: Parsed): string {
+    const lines = ['import requests', ''];
+    if (Object.keys(p.headers).length) lines.push(`headers = ${pyDict(p.headers)}`);
+    let dataArg = '';
+    if (p.data) {
+      try { const j = JSON.parse(p.data); lines.push(`json_data = ${pyDict(j)}`); dataArg = ', json=json_data'; }
+      catch { lines.push(`data = ${JSON.stringify(p.data)}`); dataArg = ', data=data'; }
+    }
+    const headArg = Object.keys(p.headers).length ? ', headers=headers' : '';
+    lines.push(`response = requests.${p.method.toLowerCase()}(${JSON.stringify(p.url)}${headArg}${dataArg})`);
+    lines.push('print(response.json())');
+    return lines.join('\n');
+  }
+  function pyDict(obj: any, indent = 0): string {
+    if (obj === null) return 'None';
+    if (typeof obj === 'boolean') return obj ? 'True' : 'False';
+    if (typeof obj !== 'object') return JSON.stringify(obj);
+    const pad = '    '.repeat(indent + 1);
+    const entries = Object.entries(obj).map(([k, v]) => `${pad}${JSON.stringify(k)}: ${pyDict(v, indent + 1)}`);
+    return `{\n${entries.join(',\n')}\n${'    '.repeat(indent)}}`;
+  }
+
+  function run() {
+    err.classList.add('hidden');
+    if (!input.value.trim()) { output.value = ''; return; }
+    const p = parse(input.value);
+    if (!p) { output.value = ''; err.textContent = 'Could not parse that curl command. Make sure it includes a URL.'; err.classList.remove('hidden'); return; }
+    output.value = lang === 'fetch' ? genFetch(p) : lang === 'node' ? genNode(p) : genPython(p);
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.ct-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      lang = tab.dataset.lang!;
+      document.querySelectorAll('.ct-tab').forEach((t) => {
+        const active = t === tab;
+        t.setAttribute('aria-selected', String(active));
+        t.classList.toggle('btn-primary', active);
+        t.classList.toggle('btn-secondary', !active);
+      });
+      run();
+    });
+  });
+  input.addEventListener('input', run);
+  document.getElementById('ct-copy')!.addEventListener('click', async (e) => {
+    await navigator.clipboard.writeText(output.value);
+    const b = e.currentTarget as HTMLButtonElement;
+    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
+  });
+
+  input.value = "curl -X POST https://api.example.com/users -H 'Content-Type: application/json' -d '{\"name\":\"Ada\",\"age\":36}'";
+  run();
+</script>

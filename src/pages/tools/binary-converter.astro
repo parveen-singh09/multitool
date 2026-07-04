@@ -1,0 +1,138 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="binary-converter">
+  <div class="flex flex-col gap-5">
+    <div class="flex flex-wrap gap-2" role="tablist" aria-label="Mode">
+      <button data-mode="num" class="bc-tab btn btn-primary" aria-selected="true">Number ↔ Binary</button>
+      <button data-mode="text" class="bc-tab btn btn-secondary" aria-selected="false">Text ↔ Binary</button>
+    </div>
+
+    <div id="bc-num" class="flex flex-col gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Decimal
+        <input id="bc-dec" type="text" class="field font-mono" placeholder="42" inputmode="numeric" spellcheck="false" autocomplete="off" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Binary
+        <div class="flex gap-2">
+          <input id="bc-bin" type="text" class="field font-mono" placeholder="101010" spellcheck="false" autocomplete="off" />
+          <button class="btn btn-secondary bc-copy" data-t="bc-bin" type="button">Copy</button>
+        </div>
+      </label>
+      <div class="flex gap-3 text-[13px] text-ink-tertiary">
+        <span>Hex: <span id="bc-hex" class="font-mono text-ink-subtle">2a</span></span>
+        <span>Octal: <span id="bc-oct" class="font-mono text-ink-subtle">52</span></span>
+      </div>
+    </div>
+
+    <div id="bc-textwrap" class="hidden flex-col gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Text
+        <textarea id="bc-txt" class="field" rows="2" placeholder="Hi" spellcheck="false"></textarea>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Binary (8-bit, space-separated)
+        <div class="flex gap-2">
+          <textarea id="bc-txtbin" class="field font-mono" rows="2" placeholder="01001000 01101001"></textarea>
+          <button class="btn btn-secondary bc-copy self-start" data-t="bc-txtbin" type="button">Copy</button>
+        </div>
+      </label>
+    </div>
+
+    <p id="bc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free binary converter turns decimal numbers into binary and back,
+      and also converts text to binary using 8-bit ASCII/UTF-8 codes. Type in
+      any field and the rest update live, with hex and octal shown too. It's a
+      handy companion for programming, digital electronics and computer-science
+      study. All conversion runs entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const decEl = document.getElementById('bc-dec') as HTMLInputElement;
+  const binEl = document.getElementById('bc-bin') as HTMLInputElement;
+  const hexEl = document.getElementById('bc-hex')!;
+  const octEl = document.getElementById('bc-oct')!;
+  const txtEl = document.getElementById('bc-txt') as HTMLTextAreaElement;
+  const txtBinEl = document.getElementById('bc-txtbin') as HTMLTextAreaElement;
+  const numWrap = document.getElementById('bc-num')!;
+  const textWrap = document.getElementById('bc-textwrap')!;
+  const err = document.getElementById('bc-error')!;
+
+  function setErr(msg: string) { err.textContent = msg; err.classList.toggle('hidden', !msg); }
+
+  decEl.addEventListener('input', () => {
+    setErr('');
+    const v = decEl.value.trim();
+    if (!v) { binEl.value = ''; hexEl.textContent = ''; octEl.textContent = ''; return; }
+    if (!/^-?\d+$/.test(v)) { setErr('Enter a whole number.'); return; }
+    const n = BigInt(v);
+    const neg = n < 0n; const abs = neg ? -n : n;
+    binEl.value = (neg ? '-' : '') + abs.toString(2);
+    hexEl.textContent = (neg ? '-' : '') + abs.toString(16);
+    octEl.textContent = (neg ? '-' : '') + abs.toString(8);
+  });
+
+  binEl.addEventListener('input', () => {
+    setErr('');
+    const v = binEl.value.trim();
+    if (!v) { decEl.value = ''; hexEl.textContent = ''; octEl.textContent = ''; return; }
+    if (!/^-?[01]+$/.test(v)) { setErr('Binary can only contain 0 and 1.'); return; }
+    const neg = v.startsWith('-');
+    const n = BigInt((neg ? '-' : '') + '0b' + v.replace('-', ''));
+    const abs = neg ? -n : n;
+    decEl.value = n.toString(10);
+    hexEl.textContent = (neg ? '-' : '') + abs.toString(16);
+    octEl.textContent = (neg ? '-' : '') + abs.toString(8);
+  });
+
+  txtEl.addEventListener('input', () => {
+    const bytes = new TextEncoder().encode(txtEl.value);
+    txtBinEl.value = Array.from(bytes).map((b) => b.toString(2).padStart(8, '0')).join(' ');
+  });
+  txtBinEl.addEventListener('input', () => {
+    setErr('');
+    const groups = txtBinEl.value.trim().split(/\s+/).filter(Boolean);
+    if (!groups.length) { txtEl.value = ''; return; }
+    if (!groups.every((g) => /^[01]{1,8}$/.test(g))) { setErr('Use 8-bit binary groups of 0s and 1s.'); return; }
+    try {
+      const bytes = Uint8Array.from(groups.map((g) => parseInt(g, 2)));
+      txtEl.value = new TextDecoder().decode(bytes);
+    } catch { setErr('Could not decode those bytes.'); }
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('.bc-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const mode = tab.dataset.mode;
+      document.querySelectorAll('.bc-tab').forEach((t) => {
+        const active = t === tab;
+        t.setAttribute('aria-selected', String(active));
+        t.classList.toggle('btn-primary', active);
+        t.classList.toggle('btn-secondary', !active);
+      });
+      numWrap.classList.toggle('hidden', mode !== 'num');
+      numWrap.classList.toggle('flex', mode === 'num');
+      textWrap.classList.toggle('hidden', mode !== 'text');
+      textWrap.classList.toggle('flex', mode === 'text');
+      setErr('');
+    });
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('.bc-copy').forEach((b) => {
+    b.addEventListener('click', async () => {
+      const t = document.getElementById(b.dataset.t!) as HTMLInputElement | HTMLTextAreaElement;
+      await navigator.clipboard.writeText(t.value);
+      b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
+    });
+  });
+
+  decEl.value = '42'; decEl.dispatchEvent(new Event('input'));
+  txtEl.value = 'Hi'; txtEl.dispatchEvent(new Event('input'));
+</script>

@@ -1,0 +1,90 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="text-to-speech">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Text to speak
+      <textarea id="tts-text" class="field" rows="5" placeholder="Type or paste text to hear it read aloud…" spellcheck="false"></textarea>
+    </label>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Voice
+        <select id="tts-voice" class="field"></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Rate: <span id="tts-rate-val">1.0</span>×
+        <input id="tts-rate" type="range" min="0.5" max="2" step="0.1" value="1" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Pitch: <span id="tts-pitch-val">1.0</span>
+        <input id="tts-pitch" type="range" min="0" max="2" step="0.1" value="1" />
+      </label>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <button id="tts-play" type="button" class="btn btn-primary">▶ Speak</button>
+      <button id="tts-pause" type="button" class="btn btn-secondary">Pause</button>
+      <button id="tts-stop" type="button" class="btn btn-secondary">Stop</button>
+    </div>
+
+    <p id="tts-unsupported" class="hidden text-[13px]" style="color:#e5484d" role="alert">
+      Your browser does not support speech synthesis. Try a recent version of Chrome, Edge or Safari.
+    </p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free text to speech tool reads any text aloud using the voices built
+      into your device, with adjustable speed and pitch. It's handy for
+      proofreading, accessibility, learning pronunciation or just resting your
+      eyes. Because it uses your browser's built-in speech synthesis, the text
+      never leaves your device — no account and no uploads.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const synth = window.speechSynthesis;
+  const textEl = document.getElementById('tts-text') as HTMLTextAreaElement;
+  const voiceSel = document.getElementById('tts-voice') as HTMLSelectElement;
+  const rate = document.getElementById('tts-rate') as HTMLInputElement;
+  const pitch = document.getElementById('tts-pitch') as HTMLInputElement;
+  const rateVal = document.getElementById('tts-rate-val')!;
+  const pitchVal = document.getElementById('tts-pitch-val')!;
+  const unsupported = document.getElementById('tts-unsupported')!;
+
+  if (!synth) {
+    unsupported.classList.remove('hidden');
+  } else {
+    let voices: SpeechSynthesisVoice[] = [];
+    function loadVoices() {
+      voices = synth.getVoices();
+      voiceSel.innerHTML = voices.map((v, i) => `<option value="${i}">${v.name} (${v.lang})${v.default ? ' — default' : ''}</option>`).join('');
+    }
+    loadVoices();
+    synth.onvoiceschanged = loadVoices;
+
+    rate.addEventListener('input', () => (rateVal.textContent = Number(rate.value).toFixed(1)));
+    pitch.addEventListener('input', () => (pitchVal.textContent = Number(pitch.value).toFixed(1)));
+
+    document.getElementById('tts-play')!.addEventListener('click', () => {
+      if (!textEl.value.trim()) return;
+      synth.cancel();
+      const u = new SpeechSynthesisUtterance(textEl.value);
+      const v = voices[Number(voiceSel.value)];
+      if (v) u.voice = v;
+      u.rate = Number(rate.value);
+      u.pitch = Number(pitch.value);
+      synth.speak(u);
+    });
+    document.getElementById('tts-pause')!.addEventListener('click', () => {
+      if (synth.paused) synth.resume(); else synth.pause();
+    });
+    document.getElementById('tts-stop')!.addEventListener('click', () => synth.cancel());
+
+    textEl.value = 'Hello! This text is being read aloud by your browser.';
+  }
+</script>

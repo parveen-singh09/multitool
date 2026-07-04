@@ -1,0 +1,108 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="json-to-typescript">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Root type name
+        <input id="jt-name" class="field w-40 font-mono" value="Root" spellcheck="false" autocomplete="off" />
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="jt-optional" type="checkbox" class="accent-[#5e6ad2]" /> Mark all fields optional
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        JSON input
+        <textarea id="jt-in" class="field font-mono text-[13px]" rows="14" spellcheck="false"></textarea>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        <span class="flex items-center justify-between">TypeScript interfaces <button id="jt-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button></span>
+        <textarea id="jt-out" class="field font-mono text-[13px]" rows="14" readonly spellcheck="false"></textarea>
+      </label>
+    </div>
+    <p id="jt-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free JSON to TypeScript converter turns a JSON sample into clean
+      TypeScript <code>interface</code> definitions, inferring types for strings,
+      numbers, booleans, arrays and nested objects. It creates named interfaces
+      for nested structures and merges array element shapes. Paste a real API
+      response and get typed models in seconds. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('jt-in') as HTMLTextAreaElement;
+  const output = document.getElementById('jt-out') as HTMLTextAreaElement;
+  const nameEl = document.getElementById('jt-name') as HTMLInputElement;
+  const optEl = document.getElementById('jt-optional') as HTMLInputElement;
+  const err = document.getElementById('jt-error')!;
+
+  const interfaces = new Map<string, string>();
+
+  const pascal = (s: string) => s.replace(/(^\w|[-_ ]\w)/g, (m) => m.replace(/[-_ ]/, '').toUpperCase()).replace(/[^a-zA-Z0-9]/g, '') || 'Type';
+  const validKey = (k: string) => /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(k) ? k : JSON.stringify(k);
+
+  function typeOf(val: any, name: string): string {
+    if (val === null) return 'null';
+    if (Array.isArray(val)) {
+      if (!val.length) return 'any[]';
+      const elemTypes = new Set(val.map((v) => typeOf(v, singular(name))));
+      return (elemTypes.size === 1 ? [...elemTypes][0] : `(${[...elemTypes].join(' | ')})`) + '[]';
+    }
+    if (typeof val === 'object') { return buildInterface(val, name); }
+    return typeof val === 'number' ? 'number' : typeof val === 'boolean' ? 'boolean' : 'string';
+  }
+  const singular = (s: string) => s.replace(/ies$/, 'y').replace(/s$/, '') || s;
+
+  function buildInterface(obj: Record<string, any>, name: string): string {
+    const typeName = pascal(name);
+    const opt = optEl.checked ? '?' : '';
+    const lines = Object.entries(obj).map(([k, v]) => {
+      const t = typeOf(v, k);
+      return `  ${validKey(k)}${opt}: ${t};`;
+    });
+    interfaces.set(typeName, `interface ${typeName} {\n${lines.join('\n')}\n}`);
+    return typeName;
+  }
+
+  function run() {
+    err.classList.add('hidden');
+    interfaces.clear();
+    const raw = input.value.trim();
+    if (!raw) { output.value = ''; return; }
+    let data: any;
+    try { data = JSON.parse(raw); }
+    catch (e) { output.value = ''; err.textContent = 'Invalid JSON: ' + (e as Error).message; err.classList.remove('hidden'); return; }
+    const rootName = pascal(nameEl.value || 'Root');
+    if (Array.isArray(data)) {
+      const t = typeOf(data, rootName);
+      if (!interfaces.size) { output.value = `type ${rootName} = ${t};`; return; }
+    } else if (typeof data === 'object' && data !== null) {
+      buildInterface(data, rootName);
+    } else {
+      output.value = `type ${rootName} = ${typeOf(data, rootName)};`; return;
+    }
+    // root interface last so dependencies read top-down; reverse insertion
+    output.value = [...interfaces.values()].reverse().join('\n\n');
+  }
+
+  input.addEventListener('input', run);
+  nameEl.addEventListener('input', run);
+  optEl.addEventListener('change', run);
+  document.getElementById('jt-copy')!.addEventListener('click', async (e) => {
+    await navigator.clipboard.writeText(output.value);
+    const b = e.currentTarget as HTMLButtonElement;
+    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
+  });
+
+  input.value = '{\n  "id": 1,\n  "name": "Ada",\n  "active": true,\n  "roles": ["admin", "user"],\n  "profile": {\n    "age": 36,\n    "city": "London"\n  }\n}';
+  run();
+</script>

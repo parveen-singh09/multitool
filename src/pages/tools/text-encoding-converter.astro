@@ -1,0 +1,117 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="text-encoding-converter">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Text
+      <textarea id="te-text" class="field" rows="3" placeholder="Héllo 😀" spellcheck="false"></textarea>
+    </label>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="text-[13px] text-ink-subtle">Byte view:</span>
+      <div class="flex gap-2" role="tablist">
+        <button data-enc="utf8" class="te-tab btn btn-primary" aria-selected="true">UTF-8</button>
+        <button data-enc="utf16" class="te-tab btn btn-secondary" aria-selected="false">UTF-16</button>
+        <button data-enc="ascii" class="te-tab btn btn-secondary" aria-selected="false">ASCII / Latin-1</button>
+      </div>
+      <span class="text-[13px] text-ink-subtle">Base:</span>
+      <select id="te-radix" class="field w-24 py-1 text-[13px]">
+        <option value="16">Hex</option>
+        <option value="10">Decimal</option>
+        <option value="2">Binary</option>
+      </select>
+    </div>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      <span class="flex items-center justify-between">Bytes <span id="te-count" class="text-[12px] text-ink-tertiary"></span></span>
+      <div class="flex gap-2">
+        <textarea id="te-bytes" class="field font-mono text-[13px]" rows="4" readonly spellcheck="false"></textarea>
+        <button id="te-copy" type="button" class="btn btn-secondary self-start">Copy</button>
+      </div>
+    </label>
+
+    <div class="border-t border-hairline pt-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Decode UTF-8 bytes back to text (hex or decimal, space-separated)
+        <input id="te-decode" class="field font-mono text-[13px]" placeholder="48 c3 a9 6c 6c 6f" spellcheck="false" autocomplete="off" />
+      </label>
+      <p class="mt-2 text-[13px]">Decoded: <span id="te-decoded" class="font-mono text-ink"></span></p>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free text encoding converter shows the raw bytes behind any text in
+      UTF-8, UTF-16 and ASCII/Latin-1, in hexadecimal, decimal or binary. It's a
+      practical way to see how multi-byte characters and emoji are stored, debug
+      encoding issues and inspect byte counts. A UTF-8 decoder converts bytes
+      back into text. Everything runs in your browser using the TextEncoder API.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const textEl = document.getElementById('te-text') as HTMLTextAreaElement;
+  const bytesEl = document.getElementById('te-bytes') as HTMLTextAreaElement;
+  const radix = document.getElementById('te-radix') as HTMLSelectElement;
+  const count = document.getElementById('te-count')!;
+  const decode = document.getElementById('te-decode') as HTMLInputElement;
+  const decoded = document.getElementById('te-decoded')!;
+  let enc = 'utf8';
+
+  function bytesFor(text: string): number[] {
+    if (enc === 'utf8') return Array.from(new TextEncoder().encode(text));
+    if (enc === 'utf16') {
+      const arr: number[] = [];
+      for (let i = 0; i < text.length; i++) { const c = text.charCodeAt(i); arr.push(c & 0xff, (c >> 8) & 0xff); }
+      return arr;
+    }
+    // ascii / latin-1
+    return Array.from(text).map((ch) => { const c = ch.charCodeAt(0); return c > 255 ? 63 : c; }); // '?' for out-of-range
+  }
+
+  function render() {
+    const bytes = bytesFor(textEl.value);
+    const r = Number(radix.value);
+    const pad = r === 16 ? 2 : r === 2 ? 8 : 0;
+    bytesEl.value = bytes.map((b) => { const s = b.toString(r); return pad ? s.padStart(pad, '0') : s; }).join(' ');
+    count.textContent = `${bytes.length} bytes · ${Array.from(textEl.value).length} characters`;
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.te-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      enc = tab.dataset.enc!;
+      document.querySelectorAll('.te-tab').forEach((t) => {
+        const active = t === tab;
+        t.setAttribute('aria-selected', String(active));
+        t.classList.toggle('btn-primary', active);
+        t.classList.toggle('btn-secondary', !active);
+      });
+      render();
+    });
+  });
+  textEl.addEventListener('input', render);
+  radix.addEventListener('change', render);
+  document.getElementById('te-copy')!.addEventListener('click', async (e) => {
+    await navigator.clipboard.writeText(bytesEl.value);
+    const b = e.currentTarget as HTMLButtonElement;
+    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
+  });
+
+  decode.addEventListener('input', () => {
+    const raw = decode.value.trim();
+    if (!raw) { decoded.textContent = ''; return; }
+    const isHex = /[a-fA-F]/.test(raw) || /\b0x/.test(raw);
+    const groups = raw.replace(/0x/gi, '').split(/[\s,]+/).filter(Boolean);
+    try {
+      const nums = groups.map((g) => parseInt(g, isHex ? 16 : 10));
+      if (nums.some((n) => isNaN(n) || n < 0 || n > 255)) { decoded.textContent = '(invalid bytes)'; return; }
+      decoded.textContent = new TextDecoder().decode(Uint8Array.from(nums));
+    } catch { decoded.textContent = '(could not decode)'; }
+  });
+
+  textEl.value = 'Héllo 😀'; render();
+  decode.value = '48 c3 a9 6c 6c 6f'; decode.dispatchEvent(new Event('input'));
+</script>

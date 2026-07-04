@@ -1,0 +1,112 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="morse-code-translator">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Text
+      <textarea id="mc-text" class="field" rows="3" placeholder="Hello world" spellcheck="false"></textarea>
+    </label>
+
+    <div class="flex items-center justify-center gap-2 text-ink-tertiary">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v16M8 8v8M16 8v8M4 11v2M20 11v2"/></svg>
+    </div>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Morse code
+      <textarea id="mc-morse" class="field font-mono" rows="3" placeholder=".... . .-.. .-.. ---" spellcheck="false"></textarea>
+    </label>
+
+    <div class="flex flex-wrap gap-2">
+      <button id="mc-play" type="button" class="btn btn-secondary">▶ Play beeps</button>
+      <button id="mc-copy" type="button" class="btn btn-secondary">Copy Morse</button>
+      <button id="mc-swap" type="button" class="btn btn-tertiary">Swap</button>
+    </div>
+    <p id="mc-note" class="text-[13px] text-ink-tertiary">Use “/” or a double space to separate words in Morse. Unknown characters are skipped.</p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free Morse code translator converts text to Morse code and Morse code
+      back to text in real time. It covers letters, digits and common
+      punctuation, and can play your message as audio beeps using standard
+      timing so you can hear the dots and dashes. Everything runs in your browser
+      with the Web Audio API — nothing is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const MAP: Record<string, string> = {
+    A: '.-', B: '-...', C: '-.-.', D: '-..', E: '.', F: '..-.', G: '--.', H: '....',
+    I: '..', J: '.---', K: '-.-', L: '.-..', M: '--', N: '-.', O: '---', P: '.--.',
+    Q: '--.-', R: '.-.', S: '...', T: '-', U: '..-', V: '...-', W: '.--', X: '-..-',
+    Y: '-.--', Z: '--..', '0': '-----', '1': '.----', '2': '..---', '3': '...--',
+    '4': '....-', '5': '.....', '6': '-....', '7': '--...', '8': '---..', '9': '----.',
+    '.': '.-.-.-', ',': '--..--', '?': '..--..', "'": '.----.', '!': '-.-.--',
+    '/': '-..-.', '(': '-.--.', ')': '-.--.-', '&': '.-...', ':': '---...',
+    ';': '-.-.-.', '=': '-...-', '+': '.-.-.', '-': '-....-', '_': '..--.-',
+    '"': '.-..-.', '$': '...-..-', '@': '.--.-.',
+  };
+  const REV: Record<string, string> = Object.fromEntries(Object.entries(MAP).map(([k, v]) => [v, k]));
+
+  const textEl = document.getElementById('mc-text') as HTMLTextAreaElement;
+  const morseEl = document.getElementById('mc-morse') as HTMLTextAreaElement;
+  let lastEdited: 'text' | 'morse' = 'text';
+
+  function textToMorse(t: string): string {
+    return t.toUpperCase().split(/(\s+)/).map((token) => {
+      if (/^\s+$/.test(token)) return '/';
+      return token.split('').map((c) => MAP[c] ?? '').filter(Boolean).join(' ');
+    }).join(' ').replace(/\s*\/\s*/g, ' / ').trim();
+  }
+  function morseToText(m: string): string {
+    return m.trim().split(/\s*\/\s*|\s{2,}/).map((word) =>
+      word.trim().split(/\s+/).map((code) => REV[code] ?? '').join(''),
+    ).join(' ');
+  }
+
+  textEl.addEventListener('input', () => { lastEdited = 'text'; morseEl.value = textToMorse(textEl.value); });
+  morseEl.addEventListener('input', () => { lastEdited = 'morse'; textEl.value = morseToText(morseEl.value); });
+
+  document.getElementById('mc-swap')!.addEventListener('click', () => {
+    const t = textEl.value; textEl.value = morseEl.value; morseEl.value = t;
+    lastEdited === 'text' ? morseEl.dispatchEvent(new Event('input')) : textEl.dispatchEvent(new Event('input'));
+  });
+  document.getElementById('mc-copy')!.addEventListener('click', async (e) => {
+    await navigator.clipboard.writeText(morseEl.value);
+    const b = e.currentTarget as HTMLButtonElement;
+    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy Morse'), 1400);
+  });
+
+  document.getElementById('mc-play')!.addEventListener('click', () => {
+    const code = morseEl.value.trim();
+    if (!code) return;
+    const AC = window.AudioContext || (window as any).webkitAudioContext;
+    const ctx = new AC();
+    const unit = 0.08; // seconds per dot
+    let t = ctx.currentTime + 0.05;
+    const beep = (dur: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = 600; osc.type = 'sine';
+      osc.connect(gain); gain.connect(ctx.destination);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.3, t + 0.005);
+      gain.gain.setValueAtTime(0.3, t + dur - 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      osc.start(t); osc.stop(t + dur);
+      t += dur + unit;
+    };
+    for (const ch of code) {
+      if (ch === '.') beep(unit);
+      else if (ch === '-') beep(unit * 3);
+      else if (ch === ' ') t += unit * 2;
+      else if (ch === '/') t += unit * 4;
+    }
+    setTimeout(() => ctx.close(), (t - ctx.currentTime + 0.3) * 1000);
+  });
+
+  textEl.value = 'Hello world'; textEl.dispatchEvent(new Event('input'));
+</script>

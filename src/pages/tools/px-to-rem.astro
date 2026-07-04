@@ -1,0 +1,88 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="px-to-rem">
+  <div class="flex flex-col gap-5">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Root font size (base)
+      <div class="flex items-center gap-2">
+        <input id="pr-base" type="number" class="field w-28" value="16" min="1" step="1" />
+        <span class="text-ink-tertiary">px = 1rem</span>
+      </div>
+    </label>
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Pixels (px)
+        <input id="pr-px" type="number" class="field font-mono" value="24" step="any" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        REM
+        <div class="flex gap-2">
+          <input id="pr-rem" type="number" class="field font-mono" step="any" />
+          <button class="btn btn-secondary pr-copy" data-t="pr-rem" type="button">Copy</button>
+        </div>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        EM
+        <div class="flex gap-2">
+          <input id="pr-em" type="number" class="field font-mono" step="any" />
+          <button class="btn btn-secondary pr-copy" data-t="pr-em" type="button">Copy</button>
+        </div>
+      </label>
+    </div>
+
+    <div>
+      <span class="text-[13px] text-ink-subtle">Quick reference</span>
+      <div id="pr-table" class="mt-2 overflow-hidden rounded-[8px] border border-hairline"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free PX to REM converter turns pixel values into <code>rem</code> and
+      <code>em</code> units for responsive CSS, and back again. Set your root
+      font size (16px by default) and type into any field to convert live. Using
+      rem keeps your layout scalable and respects the user's browser font-size
+      preference. A reference table of common sizes is included. Runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const base = document.getElementById('pr-base') as HTMLInputElement;
+  const px = document.getElementById('pr-px') as HTMLInputElement;
+  const rem = document.getElementById('pr-rem') as HTMLInputElement;
+  const em = document.getElementById('pr-em') as HTMLInputElement;
+  const table = document.getElementById('pr-table')!;
+
+  const round = (n: number) => Math.round(n * 1e5) / 1e5;
+  function b() { return Number(base.value) || 16; }
+
+  function fromPx() { const v = Number(px.value); rem.value = String(round(v / b())); em.value = rem.value; renderTable(); }
+  function fromRem() { const v = Number(rem.value); px.value = String(round(v * b())); em.value = String(round(v)); }
+  function fromEm() { const v = Number(em.value); px.value = String(round(v * b())); rem.value = String(round(v)); }
+
+  function renderTable() {
+    const sizes = [8, 12, 14, 16, 18, 20, 24, 32, 48, 64];
+    table.innerHTML = `<table class="w-full text-[13px]">
+      <tr class="bg-surface-2 text-ink-subtle"><td class="px-3 py-2">px</td><td class="px-3 py-2 text-right">rem</td></tr>
+      ${sizes.map((s) => `<tr class="border-t border-hairline"><td class="px-3 py-2 font-mono text-ink-subtle">${s}px</td><td class="px-3 py-2 text-right font-mono text-ink">${round(s / b())}rem</td></tr>`).join('')}
+    </table>`;
+  }
+
+  px.addEventListener('input', fromPx);
+  rem.addEventListener('input', fromRem);
+  em.addEventListener('input', fromEm);
+  base.addEventListener('input', fromPx);
+  document.querySelectorAll<HTMLButtonElement>('.pr-copy').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const t = document.getElementById(btn.dataset.t!) as HTMLInputElement;
+      await navigator.clipboard.writeText(`${t.value}${btn.dataset.t === 'pr-rem' ? 'rem' : 'em'}`);
+      btn.textContent = 'Copied!'; setTimeout(() => (btn.textContent = 'Copy'), 1400);
+    });
+  });
+
+  fromPx();
+</script>

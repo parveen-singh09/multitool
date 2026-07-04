@@ -1,0 +1,115 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="date-format-converter">
+  <div class="flex flex-col gap-5">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Enter a date (any common format, or a Unix timestamp)
+        <input id="df-in" class="field font-mono" placeholder="2026-07-04 14:30 or 1751640600" spellcheck="false" autocomplete="off" />
+      </label>
+      <div class="flex items-end">
+        <button id="df-now" type="button" class="btn btn-secondary w-full sm:w-auto">Now</button>
+      </div>
+    </div>
+
+    <p id="df-parsed" class="text-[13px] text-ink-tertiary"></p>
+    <p id="df-error" class="hidden text-[13px]" style="color:#e5484d" role="alert">Could not understand that date. Try a format like 2026-07-04, Jul 4 2026, or 07/04/2026.</p>
+
+    <div id="df-out" class="overflow-hidden rounded-[8px] border border-hairline"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free date format converter parses a date you type — in almost any
+      common format, or as a Unix timestamp — and shows it in a wide range of
+      standard formats at once: ISO 8601, RFC 2822, US and European styles, long
+      written forms, the Unix timestamp and more. Click any row to copy it.
+      Everything is parsed and formatted in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('df-in') as HTMLInputElement;
+  const parsed = document.getElementById('df-parsed')!;
+  const err = document.getElementById('df-error')!;
+  const out = document.getElementById('df-out')!;
+
+  const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const p2 = (n: number) => String(n).padStart(2, '0');
+
+  function parse(raw: string): Date | null {
+    const v = raw.trim();
+    if (!v) return null;
+    // pure number => unix timestamp (seconds if 10 digits, ms if 13)
+    if (/^\d{9,13}$/.test(v)) {
+      const n = Number(v);
+      return new Date(v.length <= 10 ? n * 1000 : n);
+    }
+    const d = new Date(v);
+    if (!isNaN(d.getTime())) return d;
+    // try DD/MM/YYYY (Date() assumes US MM/DD) — swap if day > 12
+    const m = v.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})/);
+    if (m && Number(m[1]) > 12) {
+      const d2 = new Date(`${m[2]}/${m[1]}/${m[3]}`);
+      if (!isNaN(d2.getTime())) return d2;
+    }
+    return null;
+  }
+
+  function formats(d: Date): [string, string][] {
+    const Y = d.getFullYear(), Mo = d.getMonth(), D = d.getDate();
+    const h = d.getHours(), mi = d.getMinutes(), s = d.getSeconds();
+    const h12 = ((h + 11) % 12) + 1, ap = h < 12 ? 'AM' : 'PM';
+    const iso = d.toISOString();
+    return [
+      ['ISO 8601', iso],
+      ['ISO date', `${Y}-${p2(Mo + 1)}-${p2(D)}`],
+      ['RFC 2822', d.toUTCString()],
+      ['US (MM/DD/YYYY)', `${p2(Mo + 1)}/${p2(D)}/${Y}`],
+      ['European (DD/MM/YYYY)', `${p2(D)}/${p2(Mo + 1)}/${Y}`],
+      ['Long', `${DAYS[d.getDay()]}, ${MON[Mo]} ${D}, ${Y}`],
+      ['Short', `${MON[Mo].slice(0, 3)} ${D}, ${Y}`],
+      ['12-hour time', `${h12}:${p2(mi)}:${p2(s)} ${ap}`],
+      ['24-hour time', `${p2(h)}:${p2(mi)}:${p2(s)}`],
+      ['Unix timestamp (s)', String(Math.floor(d.getTime() / 1000))],
+      ['Unix timestamp (ms)', String(d.getTime())],
+      ['Day of year', String(Math.floor((d.getTime() - new Date(Y, 0, 0).getTime()) / 86400000))],
+    ];
+  }
+
+  function render() {
+    const d = parse(input.value);
+    if (!d) { out.innerHTML = ''; parsed.textContent = ''; err.classList.toggle('hidden', !input.value.trim()); return; }
+    err.classList.add('hidden');
+    parsed.textContent = `Parsed as: ${d.toString()}`;
+    out.innerHTML = `<table class="w-full text-[13px]">${
+      formats(d).map(([label, val]) => `
+        <tr class="df-row cursor-pointer border-t border-hairline transition-colors hover:bg-surface-2" data-copy="${val.replace(/"/g, '&quot;')}">
+          <td class="px-3 py-2 text-ink-subtle">${label}</td>
+          <td class="px-3 py-2 text-right font-mono text-ink">${val}</td>
+        </tr>`).join('')
+    }</table>`;
+    out.querySelectorAll<HTMLElement>('.df-row').forEach((row) => {
+      row.addEventListener('click', async () => {
+        await navigator.clipboard.writeText(row.dataset.copy!);
+        const cell = row.querySelector('td:last-child')!;
+        const old = cell.textContent;
+        cell.textContent = 'Copied!';
+        setTimeout(() => (cell.textContent = old), 1000);
+      });
+    });
+  }
+
+  input.addEventListener('input', render);
+  document.getElementById('df-now')!.addEventListener('click', () => {
+    input.value = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    render();
+  });
+
+  input.value = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  render();
+</script>

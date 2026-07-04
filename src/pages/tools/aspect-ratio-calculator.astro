@@ -1,0 +1,105 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="aspect-ratio-calculator">
+  <div class="flex flex-col gap-5">
+    <div>
+      <span class="text-[13px] text-ink-subtle">Original size</span>
+      <div class="mt-2 flex flex-wrap items-center gap-2">
+        <input id="ar-w" type="number" class="field w-28 font-mono" value="1920" min="1" aria-label="Width" />
+        <span class="text-ink-tertiary">×</span>
+        <input id="ar-h" type="number" class="field w-28 font-mono" value="1080" min="1" aria-label="Height" />
+        <span class="status-badge" id="ar-ratio">16:9</span>
+      </div>
+    </div>
+
+    <div class="border-t border-hairline pt-4">
+      <span class="text-[13px] text-ink-subtle">Resize — enter a new width or height to keep the ratio</span>
+      <div class="mt-2 flex flex-wrap items-center gap-2">
+        <input id="ar-nw" type="number" class="field w-28 font-mono" placeholder="width" aria-label="New width" />
+        <span class="text-ink-tertiary">×</span>
+        <input id="ar-nh" type="number" class="field w-28 font-mono" placeholder="height" aria-label="New height" />
+      </div>
+    </div>
+
+    <div>
+      <span class="text-[13px] text-ink-subtle">Common presets</span>
+      <div id="ar-presets" class="mt-2 flex flex-wrap gap-2"></div>
+    </div>
+
+    <div>
+      <span class="text-[13px] text-ink-subtle">Preview</span>
+      <div class="mt-2 flex h-40 items-center justify-center rounded-[8px] border border-hairline bg-surface-1 p-3">
+        <div id="ar-box" class="rounded-[6px] border border-hairline-strong bg-surface-3" style="width:160px;height:90px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free aspect ratio calculator finds the simplified ratio of any screen
+      or image size — like 1920×1080 = 16:9 — and resizes dimensions while
+      keeping that ratio locked. Type a new width or height and the other is
+      computed for you. Handy presets cover common video, monitor and social
+      formats. Everything is calculated in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const w = document.getElementById('ar-w') as HTMLInputElement;
+  const h = document.getElementById('ar-h') as HTMLInputElement;
+  const ratioBadge = document.getElementById('ar-ratio')!;
+  const nw = document.getElementById('ar-nw') as HTMLInputElement;
+  const nh = document.getElementById('ar-nh') as HTMLInputElement;
+  const presets = document.getElementById('ar-presets')!;
+  const box = document.getElementById('ar-box')!;
+
+  const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a);
+
+  const PRESETS: [string, number, number][] = [
+    ['16:9 · 1920×1080', 1920, 1080], ['16:9 · 3840×2160 (4K)', 3840, 2160],
+    ['4:3 · 1024×768', 1024, 768], ['21:9 · 3440×1440', 3440, 1440],
+    ['1:1 · 1080×1080', 1080, 1080], ['9:16 · 1080×1920', 1080, 1920],
+    ['3:2 · 2160×1440', 2160, 1440], ['16:10 · 1920×1200', 1920, 1200],
+  ];
+
+  function ratioOf(a: number, b: number): string {
+    if (!a || !b) return '—';
+    const g = gcd(a, b) || 1;
+    return `${a / g}:${b / g}`;
+  }
+
+  function updateRatio() {
+    const a = Number(w.value), b = Number(h.value);
+    ratioBadge.textContent = ratioOf(a, b);
+    // preview scaled to fit 200x120
+    if (a && b) {
+      const scale = Math.min(220 / a, 120 / b);
+      (box as HTMLElement).style.width = `${Math.round(a * scale)}px`;
+      (box as HTMLElement).style.height = `${Math.round(b * scale)}px`;
+    }
+    nw.value = ''; nh.value = '';
+  }
+
+  [w, h].forEach((el) => el.addEventListener('input', updateRatio));
+  nw.addEventListener('input', () => {
+    const a = Number(w.value), b = Number(h.value), v = Number(nw.value);
+    if (a && b && v) nh.value = String(Math.round((v * b / a) * 100) / 100);
+  });
+  nh.addEventListener('input', () => {
+    const a = Number(w.value), b = Number(h.value), v = Number(nh.value);
+    if (a && b && v) nw.value = String(Math.round((v * a / b) * 100) / 100);
+  });
+
+  presets.innerHTML = PRESETS.map((p, i) => `<button type="button" class="btn btn-secondary px-3 py-1 text-[13px]" data-i="${i}">${p[0]}</button>`).join('');
+  presets.querySelectorAll<HTMLButtonElement>('button').forEach((b) => {
+    b.addEventListener('click', () => {
+      const [, pw, ph] = PRESETS[Number(b.dataset.i)];
+      w.value = String(pw); h.value = String(ph); updateRatio();
+    });
+  });
+
+  updateRatio();
+</script>

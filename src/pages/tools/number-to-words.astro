@@ -1,0 +1,118 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="number-to-words">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Number
+      <input id="nw-num" type="text" class="field font-mono" placeholder="1234.56" inputmode="decimal" spellcheck="false" autocomplete="off" />
+    </label>
+
+    <div class="flex flex-wrap gap-4 text-sm text-ink-subtle">
+      <label class="flex items-center gap-2"><input id="nw-caps" type="checkbox" class="accent-[#5e6ad2]" /> Capitalize</label>
+      <label class="flex items-center gap-2"><input id="nw-and" type="checkbox" class="accent-[#5e6ad2]" checked /> Use “and” (British)</label>
+      <label class="flex items-center gap-2"><input id="nw-currency" type="checkbox" class="accent-[#5e6ad2]" /> Currency (dollars &amp; cents)</label>
+    </div>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      In words
+      <div class="flex gap-2">
+        <textarea id="nw-out" class="field" rows="3" readonly></textarea>
+        <button id="nw-copy" type="button" class="btn btn-secondary self-start">Copy</button>
+      </div>
+    </label>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free number to words converter spells out any number in plain
+      English — perfect for writing cheques, contracts and invoices. It handles
+      values into the quintillions, decimals, negatives and an optional currency
+      mode that writes “dollars” and “cents”. Toggle British-style “and” and
+      capitalization to match your document. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const numEl = document.getElementById('nw-num') as HTMLInputElement;
+  const out = document.getElementById('nw-out') as HTMLTextAreaElement;
+  const caps = document.getElementById('nw-caps') as HTMLInputElement;
+  const useAnd = document.getElementById('nw-and') as HTMLInputElement;
+  const currency = document.getElementById('nw-currency') as HTMLInputElement;
+
+  const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+    'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+  const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+  const SCALE = ['', 'thousand', 'million', 'billion', 'trillion', 'quadrillion', 'quintillion'];
+
+  function chunk(n: number): string {
+    // 0..999
+    let s = '';
+    if (n >= 100) {
+      s += ONES[Math.floor(n / 100)] + ' hundred';
+      n %= 100;
+      if (n) s += useAnd.checked ? ' and ' : ' ';
+    }
+    if (n >= 20) {
+      s += TENS[Math.floor(n / 10)];
+      if (n % 10) s += '-' + ONES[n % 10];
+    } else if (n > 0) {
+      s += ONES[n];
+    }
+    return s.trim();
+  }
+
+  function intToWords(digits: string): string {
+    // operate on a digit string to safely handle very large integers
+    let s = digits.replace(/^0+(?=\d)/, '');
+    if (s === '0') return 'zero';
+    const groups: number[] = [];
+    while (s.length) { groups.unshift(Number(s.slice(-3))); s = s.slice(0, -3); }
+    const parts: string[] = [];
+    groups.forEach((g, i) => {
+      if (g === 0) return;
+      const scale = SCALE[groups.length - 1 - i];
+      parts.push(chunk(g) + (scale ? ' ' + scale : ''));
+    });
+    return parts.join(' ').trim();
+  }
+
+  function convert() {
+    const raw = numEl.value.trim().replace(/,/g, '');
+    if (!raw) { out.value = ''; return; }
+    if (!/^-?\d*\.?\d+$/.test(raw)) { out.value = 'Enter a valid number.'; return; }
+
+    const neg = raw.startsWith('-');
+    const [intPart, decPart] = raw.replace(/^-/, '').split('.');
+
+    let result: string;
+    if (currency.checked) {
+      const dollars = intToWords(intPart || '0');
+      const cents = decPart ? (decPart + '00').slice(0, 2) : '00';
+      const dW = `${dollars} dollar${intPart === '1' && !decPart ? '' : 's'}`;
+      result = Number(cents) > 0
+        ? `${dW} and ${intToWords(String(Number(cents)))} cent${cents === '01' ? '' : 's'}`
+        : dW;
+    } else {
+      result = intToWords(intPart || '0');
+      if (decPart && /[1-9]/.test(decPart)) {
+        const spoken = decPart.split('').map((d) => ONES[Number(d)]).join(' ');
+        result += ' point ' + spoken;
+      }
+    }
+    if (neg) result = 'negative ' + result;
+    if (caps.checked) result = result.charAt(0).toUpperCase() + result.slice(1);
+    out.value = result;
+  }
+
+  [numEl, caps, useAnd, currency].forEach((el) => el.addEventListener('input', convert));
+  document.getElementById('nw-copy')!.addEventListener('click', async (e) => {
+    await navigator.clipboard.writeText(out.value);
+    const b = e.currentTarget as HTMLButtonElement;
+    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
+  });
+
+  numEl.value = '1234.56'; convert();
+</script>

@@ -1,0 +1,137 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="hex-converter">
+  <div class="flex flex-col gap-5">
+    <div class="flex flex-wrap gap-2" role="tablist" aria-label="Mode">
+      <button data-mode="num" class="hx-tab btn btn-primary" aria-selected="true">Number ↔ Hex</button>
+      <button data-mode="text" class="hx-tab btn btn-secondary" aria-selected="false">Text ↔ Hex</button>
+    </div>
+
+    <div id="hx-num" class="flex flex-col gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Decimal
+        <input id="hx-dec" type="text" class="field font-mono" placeholder="255" inputmode="numeric" spellcheck="false" autocomplete="off" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Hexadecimal
+        <div class="flex gap-2">
+          <input id="hx-hex" type="text" class="field font-mono" placeholder="ff" spellcheck="false" autocomplete="off" />
+          <button class="btn btn-secondary hx-copy" data-t="hx-hex" type="button">Copy</button>
+        </div>
+      </label>
+      <div class="flex gap-3 text-[13px] text-ink-tertiary">
+        <span>Binary: <span id="hx-bin" class="font-mono text-ink-subtle">11111111</span></span>
+        <span>Octal: <span id="hx-oct" class="font-mono text-ink-subtle">377</span></span>
+      </div>
+    </div>
+
+    <div id="hx-textwrap" class="hidden flex-col gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Text
+        <textarea id="hx-txt" class="field" rows="2" placeholder="Hi" spellcheck="false"></textarea>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Hex (UTF-8 bytes)
+        <div class="flex gap-2">
+          <textarea id="hx-txthex" class="field font-mono" rows="2" placeholder="48 69"></textarea>
+          <button class="btn btn-secondary hx-copy self-start" data-t="hx-txthex" type="button">Copy</button>
+        </div>
+      </label>
+    </div>
+
+    <p id="hx-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free hexadecimal converter turns decimal numbers into hex and back,
+      and converts text to its UTF-8 hex byte codes. Type into any field and the
+      binary and octal equivalents update alongside. Hex is the compact base-16
+      notation used for colors, memory addresses and byte data. All conversion
+      runs entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const decEl = document.getElementById('hx-dec') as HTMLInputElement;
+  const hexEl = document.getElementById('hx-hex') as HTMLInputElement;
+  const binEl = document.getElementById('hx-bin')!;
+  const octEl = document.getElementById('hx-oct')!;
+  const txtEl = document.getElementById('hx-txt') as HTMLTextAreaElement;
+  const txtHexEl = document.getElementById('hx-txthex') as HTMLTextAreaElement;
+  const numWrap = document.getElementById('hx-num')!;
+  const textWrap = document.getElementById('hx-textwrap')!;
+  const err = document.getElementById('hx-error')!;
+
+  function setErr(msg: string) { err.textContent = msg; err.classList.toggle('hidden', !msg); }
+
+  decEl.addEventListener('input', () => {
+    setErr('');
+    const v = decEl.value.trim();
+    if (!v) { hexEl.value = ''; binEl.textContent = ''; octEl.textContent = ''; return; }
+    if (!/^-?\d+$/.test(v)) { setErr('Enter a whole number.'); return; }
+    const n = BigInt(v); const neg = n < 0n; const abs = neg ? -n : n;
+    hexEl.value = (neg ? '-' : '') + abs.toString(16);
+    binEl.textContent = (neg ? '-' : '') + abs.toString(2);
+    octEl.textContent = (neg ? '-' : '') + abs.toString(8);
+  });
+
+  hexEl.addEventListener('input', () => {
+    setErr('');
+    const v = hexEl.value.trim().replace(/^0x/i, '');
+    if (!v) { decEl.value = ''; binEl.textContent = ''; octEl.textContent = ''; return; }
+    if (!/^-?[0-9a-fA-F]+$/.test(v)) { setErr('Hex can only contain 0–9 and A–F.'); return; }
+    const neg = v.startsWith('-');
+    const n = BigInt((neg ? '-' : '') + '0x' + v.replace('-', ''));
+    const abs = neg ? -n : n;
+    decEl.value = n.toString(10);
+    binEl.textContent = (neg ? '-' : '') + abs.toString(2);
+    octEl.textContent = (neg ? '-' : '') + abs.toString(8);
+  });
+
+  txtEl.addEventListener('input', () => {
+    const bytes = new TextEncoder().encode(txtEl.value);
+    txtHexEl.value = Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join(' ');
+  });
+  txtHexEl.addEventListener('input', () => {
+    setErr('');
+    const groups = txtHexEl.value.trim().replace(/0x/gi, '').split(/\s+/).filter(Boolean);
+    if (!groups.length) { txtEl.value = ''; return; }
+    if (!groups.every((g) => /^[0-9a-fA-F]{1,2}$/.test(g))) { setErr('Use hex byte pairs like 48 69.'); return; }
+    try {
+      const bytes = Uint8Array.from(groups.map((g) => parseInt(g, 16)));
+      txtEl.value = new TextDecoder().decode(bytes);
+    } catch { setErr('Could not decode those bytes.'); }
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('.hx-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const mode = tab.dataset.mode;
+      document.querySelectorAll('.hx-tab').forEach((t) => {
+        const active = t === tab;
+        t.setAttribute('aria-selected', String(active));
+        t.classList.toggle('btn-primary', active);
+        t.classList.toggle('btn-secondary', !active);
+      });
+      numWrap.classList.toggle('hidden', mode !== 'num');
+      numWrap.classList.toggle('flex', mode === 'num');
+      textWrap.classList.toggle('hidden', mode !== 'text');
+      textWrap.classList.toggle('flex', mode === 'text');
+      setErr('');
+    });
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('.hx-copy').forEach((b) => {
+    b.addEventListener('click', async () => {
+      const t = document.getElementById(b.dataset.t!) as HTMLInputElement | HTMLTextAreaElement;
+      await navigator.clipboard.writeText(t.value);
+      b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
+    });
+  });
+
+  decEl.value = '255'; decEl.dispatchEvent(new Event('input'));
+  txtEl.value = 'Hi'; txtEl.dispatchEvent(new Event('input'));
+</script>

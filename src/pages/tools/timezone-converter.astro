@@ -1,0 +1,122 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="timezone-converter">
+  <div class="flex flex-col gap-5">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Date &amp; time
+        <input id="tz-datetime" type="datetime-local" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Source time zone
+        <select id="tz-from" class="field"></select>
+      </label>
+    </div>
+
+    <div>
+      <div class="mb-2 flex items-center justify-between">
+        <span class="text-[13px] text-ink-subtle">Converted times</span>
+        <button id="tz-add" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">+ Add zone</button>
+      </div>
+      <div id="tz-list" class="flex flex-col gap-2"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free time zone converter shows what a chosen date and time is across
+      any number of cities and zones at once — ideal for scheduling calls and
+      meetings across the world. It uses your browser's built-in IANA time zone
+      database, so daylight saving is handled automatically for each zone. Pick a
+      source time, add the zones you care about, and read the results instantly.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const ZONES = [
+    'UTC', 'America/Los_Angeles', 'America/Denver', 'America/Chicago', 'America/New_York',
+    'America/Sao_Paulo', 'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Moscow',
+    'Africa/Cairo', 'Africa/Johannesburg', 'Asia/Dubai', 'Asia/Kolkata', 'Asia/Bangkok',
+    'Asia/Shanghai', 'Asia/Singapore', 'Asia/Tokyo', 'Asia/Seoul', 'Australia/Sydney',
+    'Pacific/Auckland', 'Pacific/Honolulu',
+  ];
+  const local = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (!ZONES.includes(local)) ZONES.unshift(local);
+
+  const dtEl = document.getElementById('tz-datetime') as HTMLInputElement;
+  const fromEl = document.getElementById('tz-from') as HTMLSelectElement;
+  const list = document.getElementById('tz-list')!;
+  const targets = new Set<string>(['UTC', 'Europe/London', 'Asia/Tokyo'].filter((z) => z !== local));
+  targets.add(local === 'UTC' ? 'America/New_York' : local);
+
+  fromEl.innerHTML = ZONES.map((z) => `<option${z === local ? ' selected' : ''}>${z}</option>`).join('');
+
+  // Get the UTC instant for a wall-clock time interpreted in a given zone.
+  function zonedToUtc(y: number, mo: number, d: number, h: number, mi: number, zone: string): Date {
+    // Guess, then correct using the offset the zone reports at that guess.
+    const guess = Date.UTC(y, mo - 1, d, h, mi);
+    const offset = tzOffsetMs(new Date(guess), zone);
+    return new Date(guess - offset);
+  }
+  function tzOffsetMs(date: Date, zone: string): number {
+    const dtf = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone, hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    });
+    const parts = dtf.formatToParts(date);
+    const map: Record<string, number> = {};
+    for (const p of parts) if (p.type !== 'literal') map[p.type] = Number(p.value);
+    const asUtc = Date.UTC(map.year, map.month - 1, map.day, map.hour % 24, map.minute, map.second);
+    return asUtc - date.getTime();
+  }
+  function fmt(date: Date, zone: string): string {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: zone, weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
+      hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+    }).format(date);
+  }
+
+  function render() {
+    const v = dtEl.value;
+    if (!v) return;
+    const [datePart, timePart] = v.split('T');
+    const [y, mo, d] = datePart.split('-').map(Number);
+    const [h, mi] = timePart.split(':').map(Number);
+    const instant = zonedToUtc(y, mo, d, h, mi, fromEl.value);
+
+    list.innerHTML = '';
+    Array.from(targets).sort((a, b) => tzOffsetMs(instant, a) - tzOffsetMs(instant, b)).forEach((zone) => {
+      const row = document.createElement('div');
+      row.className = 'panel panel-lift flex items-center justify-between gap-3 p-3';
+      row.innerHTML = `
+        <div class="flex flex-col">
+          <span class="text-[13px] text-ink-subtle">${zone.replace(/_/g, ' ')}</span>
+          <span class="font-mono text-[15px] text-ink">${fmt(instant, zone)}</span>
+        </div>
+        <button type="button" class="btn btn-tertiary px-2 py-1 text-[13px]" aria-label="Remove">✕</button>`;
+      row.querySelector('button')!.addEventListener('click', () => { targets.delete(zone); render(); });
+      list.appendChild(row);
+    });
+  }
+
+  document.getElementById('tz-add')!.addEventListener('click', () => {
+    const avail = ZONES.filter((z) => !targets.has(z));
+    if (!avail.length) return;
+    const pick = prompt('Add time zone:\n\n' + avail.map((z, i) => `${i + 1}. ${z}`).join('\n') + '\n\nEnter a number:');
+    const idx = Number(pick) - 1;
+    if (avail[idx]) { targets.add(avail[idx]); render(); }
+  });
+
+  dtEl.addEventListener('input', render);
+  fromEl.addEventListener('change', render);
+
+  // init to now, rounded to the minute, in local zone
+  const now = new Date();
+  now.setSeconds(0, 0);
+  dtEl.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  render();
+</script>

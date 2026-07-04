@@ -1,0 +1,142 @@
+---
+// Reusable all-formats color converter: a picker plus editable HEX, RGB,
+// HSL, HSV and CMYK fields that stay in sync, and the nearest CSS color
+// name. Powers the hex-to-rgb, rgb-to-hex, rgb-to-hsl-hsv and cmyk pages.
+// `focus` orders/highlights the field most relevant to the page.
+export interface Props {
+  focus?: 'hex' | 'rgb' | 'hsl' | 'hsv' | 'cmyk';
+  initial?: string;
+}
+const { focus = 'hex', initial = '#5e6ad2' } = Astro.props;
+---
+
+<div id="cf-root" data-focus={focus} data-initial={initial} class="flex flex-col gap-5">
+  <div class="flex flex-col items-center gap-4 sm:flex-row">
+    <input id="cf-picker" type="color" value={initial} class="h-24 w-24 shrink-0 cursor-pointer rounded-[12px] border border-hairline bg-surface-1" aria-label="Color picker" />
+    <div id="cf-preview" class="panel flex h-24 flex-1 items-end justify-between rounded-[12px] p-3" style={`background:${initial}`}>
+      <span id="cf-name" class="status-badge"></span>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    {[
+      { id: 'hex', label: 'HEX' },
+      { id: 'rgb', label: 'RGB' },
+      { id: 'hsl', label: 'HSL' },
+      { id: 'hsv', label: 'HSV / HSB' },
+      { id: 'cmyk', label: 'CMYK' },
+      { id: 'name', label: 'CSS name (nearest)' },
+    ].map((f) => (
+      <label class="flex flex-col gap-1" data-field={f.id}>
+        <span class="text-[13px] text-ink-subtle">{f.label}</span>
+        <div class="flex gap-2">
+          <input id={`cf-${f.id}`} class="field font-mono" spellcheck="false" autocomplete="off" readonly={f.id === 'name'} />
+          <button class="btn btn-secondary cf-copy" data-target={`cf-${f.id}`} type="button">Copy</button>
+        </div>
+      </label>
+    ))}
+  </div>
+
+  <div>
+    <span class="text-[13px] text-ink-subtle">Tints &amp; shades</span>
+    <div id="cf-shades" class="mt-2 grid grid-cols-5 gap-2 sm:grid-cols-10"></div>
+  </div>
+</div>
+
+<script>
+  import {
+    hexToRgb, rgbToHex, rgbToHsl, hslToRgb, rgbToHsv, rgbToCmyk, cmykToRgb,
+    parseRgb, nearestColorName, CSS_COLORS, type RGB,
+  } from '../lib/colors';
+
+  const root = document.getElementById('cf-root') as HTMLElement;
+  const focus = root.dataset.focus || 'hex';
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const picker = $('cf-picker');
+  const preview = document.getElementById('cf-preview')!;
+  const nameBadge = document.getElementById('cf-name')!;
+  const shades = document.getElementById('cf-shades')!;
+  const hexIn = $('cf-hex'), rgbIn = $('cf-rgb'), hslIn = $('cf-hsl'),
+        hsvIn = $('cf-hsv'), cmykIn = $('cf-cmyk'), nameIn = $('cf-name');
+
+  // Move the focused field to the top for its target keyword.
+  const focusWrap = root.querySelector(`[data-field="${focus}"]`);
+  if (focusWrap && focusWrap.parentElement) {
+    focusWrap.parentElement.prepend(focusWrap);
+    focusWrap.querySelector('span')?.classList.add('text-primary-hover');
+  }
+
+  function render(rgb: RGB, from?: string) {
+    const hex = rgbToHex(rgb);
+    const hsl = rgbToHsl(rgb);
+    const hsv = rgbToHsv(rgb);
+    const cmyk = rgbToCmyk(rgb);
+    const near = nearestColorName(rgb);
+    if (from !== 'hex') hexIn.value = hex;
+    if (from !== 'rgb') rgbIn.value = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+    if (from !== 'hsl') hslIn.value = `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
+    if (from !== 'hsv') hsvIn.value = `hsv(${hsv.h}, ${hsv.s}%, ${hsv.v}%)`;
+    if (from !== 'cmyk') cmykIn.value = `cmyk(${cmyk.c}%, ${cmyk.m}%, ${cmyk.y}%, ${cmyk.k}%)`;
+    nameIn.value = near.exact ? near.name : `~ ${near.name}`;
+    nameBadge.textContent = near.exact ? near.name : `≈ ${near.name}`;
+    preview.style.background = hex;
+    picker.value = hex;
+    // Tints & shades: 10 steps of lightness holding hue & saturation.
+    shades.innerHTML = '';
+    for (let i = 0; i < 10; i++) {
+      const li = 8 + i * 9;
+      const div = document.createElement('div');
+      div.className = 'h-10 cursor-pointer rounded-[6px] border border-hairline';
+      const c = `hsl(${hsl.h}, ${hsl.s}%, ${li}%)`;
+      div.style.background = c;
+      div.title = c;
+      div.addEventListener('click', () => render(hslToRgb({ h: hsl.h, s: hsl.s, l: li })));
+      shades.appendChild(div);
+    }
+  }
+
+  picker.addEventListener('input', () => render(hexToRgb(picker.value)!));
+  hexIn.addEventListener('input', () => { const c = hexToRgb(hexIn.value); if (c) render(c, 'hex'); });
+  rgbIn.addEventListener('input', () => { const c = parseRgb(rgbIn.value); if (c) render(c, 'rgb'); });
+  hslIn.addEventListener('input', () => {
+    const m = hslIn.value.match(/(-?\d+)\D+(-?\d+)\D+(-?\d+)/);
+    if (m) render(hslToRgb({ h: +m[1], s: +m[2], l: +m[3] }), 'hsl');
+  });
+  hsvIn.addEventListener('input', () => {
+    const m = hsvIn.value.match(/(-?\d+)\D+(-?\d+)\D+(-?\d+)/);
+    if (m) { const { h, s, v } = { h: +m[1], s: +m[2], v: +m[3] };
+      // HSV -> RGB via HSL bridge is lossy; convert directly.
+      const rgb = hsvToRgb(h, s, v); render(rgb, 'hsv'); }
+  });
+  cmykIn.addEventListener('input', () => {
+    const m = cmykIn.value.match(/(-?\d+)\D+(-?\d+)\D+(-?\d+)\D+(-?\d+)/);
+    if (m) render(cmykToRgb({ c: +m[1], m: +m[2], y: +m[3], k: +m[4] }), 'cmyk');
+  });
+
+  function hsvToRgb(h: number, s: number, v: number): RGB {
+    s /= 100; v /= 100;
+    const c = v * s;
+    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+    const m = v - c;
+    let r = 0, g = 0, b = 0;
+    if (h < 60) [r, g, b] = [c, x, 0];
+    else if (h < 120) [r, g, b] = [x, c, 0];
+    else if (h < 180) [r, g, b] = [0, c, x];
+    else if (h < 240) [r, g, b] = [0, x, c];
+    else if (h < 300) [r, g, b] = [x, 0, c];
+    else [r, g, b] = [c, 0, x];
+    return { r: Math.round((r + m) * 255), g: Math.round((g + m) * 255), b: Math.round((b + m) * 255) };
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.cf-copy').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const t = $(btn.dataset.target!);
+      await navigator.clipboard.writeText(t.value.replace(/^~ /, ''));
+      const old = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => (btn.textContent = old), 1400);
+    });
+  });
+
+  render(hexToRgb(root.dataset.initial || '#5e6ad2')!);
+</script>

@@ -1,0 +1,101 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="unicode-converter">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Text / emoji
+      <textarea id="uni-text" class="field" rows="3" placeholder="Hello 😀 café" spellcheck="false"></textarea>
+    </label>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {[
+        { id: 'cp', label: 'Code points (U+)' },
+        { id: 'dec', label: 'Decimal (&#…;)' },
+        { id: 'hex', label: 'HTML hex (&#x…;)' },
+        { id: 'js', label: 'JS / JSON (\\u…)' },
+      ].map((f) => (
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          <span class="flex items-center justify-between">{f.label}<button class="uni-copy btn btn-secondary px-2 py-1 text-[13px]" data-t={`uni-${f.id}`} type="button">Copy</button></span>
+          <textarea id={`uni-${f.id}`} class="field font-mono text-[13px]" rows="2" readonly spellcheck="false"></textarea>
+        </label>
+      ))}
+    </div>
+
+    <div class="border-t border-hairline pt-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Decode — paste code points, \u escapes or &amp;#…; entities
+        <div class="flex gap-2">
+          <input id="uni-decode-in" class="field font-mono text-[13px]" placeholder="U+1F600 or é or &#128512;" spellcheck="false" autocomplete="off" />
+        </div>
+      </label>
+      <p class="mt-2 text-[13px]">Decoded: <span id="uni-decoded" class="font-mono text-ink"></span></p>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free Unicode and emoji converter shows the code points behind any
+      text or emoji, and encodes them as HTML entities (decimal and hex),
+      JavaScript <code>\u</code> escapes and <code>U+</code> notation. It handles
+      astral characters like emoji correctly using real code points, not just
+      UTF-16 halves. Paste escapes into the decoder to turn them back into
+      characters. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const textEl = document.getElementById('uni-text') as HTMLTextAreaElement;
+  const cp = document.getElementById('uni-cp') as HTMLTextAreaElement;
+  const dec = document.getElementById('uni-dec') as HTMLTextAreaElement;
+  const hex = document.getElementById('uni-hex') as HTMLTextAreaElement;
+  const js = document.getElementById('uni-js') as HTMLTextAreaElement;
+  const decodeIn = document.getElementById('uni-decode-in') as HTMLInputElement;
+  const decoded = document.getElementById('uni-decoded')!;
+
+  function encode() {
+    const chars = Array.from(textEl.value); // splits by code point, not UTF-16 unit
+    cp.value = chars.map((c) => 'U+' + c.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0')).join(' ');
+    dec.value = chars.map((c) => `&#${c.codePointAt(0)};`).join('');
+    hex.value = chars.map((c) => `&#x${c.codePointAt(0)!.toString(16).toUpperCase()};`).join('');
+    js.value = chars.map((c) => {
+      const n = c.codePointAt(0)!;
+      if (n > 0xffff) return `\\u{${n.toString(16).toUpperCase()}}`;
+      return `\\u${n.toString(16).toUpperCase().padStart(4, '0')}`;
+    }).join('');
+  }
+
+  function decode() {
+    const raw = decodeIn.value.trim();
+    if (!raw) { decoded.textContent = ''; return; }
+    const points: number[] = [];
+    // U+XXXX
+    const re = /U\+([0-9a-fA-F]+)|\\u\{([0-9a-fA-F]+)\}|\\u([0-9a-fA-F]{4})|&#x([0-9a-fA-F]+);|&#(\d+);|0x([0-9a-fA-F]+)/g;
+    let m: RegExpExecArray | null;
+    let matched = false;
+    while ((m = re.exec(raw))) {
+      matched = true;
+      const g = m[1] || m[2] || m[3] || m[4] || m[6];
+      if (g) points.push(parseInt(g, 16));
+      else if (m[5]) points.push(parseInt(m[5], 10));
+    }
+    try {
+      decoded.textContent = matched ? String.fromCodePoint(...points) : '(no code points found)';
+    } catch { decoded.textContent = '(invalid code point)'; }
+  }
+
+  textEl.addEventListener('input', encode);
+  decodeIn.addEventListener('input', decode);
+  document.querySelectorAll<HTMLButtonElement>('.uni-copy').forEach((b) => {
+    b.addEventListener('click', async () => {
+      const t = document.getElementById(b.dataset.t!) as HTMLTextAreaElement;
+      await navigator.clipboard.writeText(t.value);
+      b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
+    });
+  });
+
+  textEl.value = 'Hello 😀 café'; encode();
+  decodeIn.value = 'U+1F600'; decode();
+</script>

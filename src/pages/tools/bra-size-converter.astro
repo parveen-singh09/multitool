@@ -1,0 +1,95 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="bra-size-converter">
+  <div class="flex flex-col gap-5">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Your bra size
+        <input id="br-size" class="field font-mono" placeholder="34C" spellcheck="false" autocomplete="off" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        in region
+        <select id="br-region" class="field w-full sm:w-40">
+          <option value="US">US / CA</option>
+          <option value="UK">UK</option>
+          <option value="EU">EU</option>
+          <option value="FR">FR / ES</option>
+        </select>
+      </label>
+    </div>
+
+    <div>
+      <span class="text-[13px] text-ink-subtle">Equivalent sizes</span>
+      <div id="br-result" class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4"></div>
+    </div>
+    <p id="br-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <p class="text-[13px] text-ink-tertiary">Enter band and cup together, e.g. <span class="font-mono">34C</span>, <span class="font-mono">75C</span> or <span class="font-mono">90D</span>.</p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free bra size converter translates band and cup sizes between US, UK,
+      European and French/Spanish systems. Band numbers differ (a US 34 is an EU
+      75), and cup letters diverge above D, which this converter handles. Enter a
+      size you know and read the equivalents. Fit varies by brand, so use this as
+      a starting point. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  // Band: US inches -> EU/FR numbers. US 28..44 maps to EU 60..105 (+5 steps), FR = EU + 15.
+  const US_BANDS = [28, 30, 32, 34, 36, 38, 40, 42, 44];
+  const EU_BANDS = [60, 65, 70, 75, 80, 85, 90, 95, 100];
+  // Cup sequences by region (index aligned). US & UK differ from DD up.
+  const CUPS_US = ['AA', 'A', 'B', 'C', 'D', 'DD', 'DDD', 'G', 'H', 'I', 'J'];
+  const CUPS_UK = ['AA', 'A', 'B', 'C', 'D', 'DD', 'E', 'F', 'FF', 'G', 'GG'];
+  const CUPS_EU = ['AA', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+
+  const sizeEl = document.getElementById('br-size') as HTMLInputElement;
+  const regionEl = document.getElementById('br-region') as HTMLSelectElement;
+  const result = document.getElementById('br-result')!;
+  const err = document.getElementById('br-error')!;
+
+  function parse(raw: string): { band: number; cup: string } | null {
+    const m = raw.trim().toUpperCase().match(/^(\d{2,3})\s*([A-K]{1,3})$/);
+    if (!m) return null;
+    return { band: Number(m[1]), cup: m[2] };
+  }
+
+  function toIndex(region: string, band: number): number {
+    if (region === 'US' || region === 'UK') return US_BANDS.indexOf(band);
+    if (region === 'EU') return EU_BANDS.indexOf(band);
+    if (region === 'FR') return EU_BANDS.indexOf(band - 15);
+    return -1;
+  }
+  function cupIndex(region: string, cup: string): number {
+    const arr = region === 'UK' ? CUPS_UK : (region === 'EU' || region === 'FR') ? CUPS_EU : CUPS_US;
+    return arr.indexOf(cup);
+  }
+
+  function render() {
+    err.classList.add('hidden');
+    const p = parse(sizeEl.value);
+    if (!p) { result.innerHTML = ''; if (sizeEl.value.trim()) { err.textContent = 'Enter a size like 34C.'; err.classList.remove('hidden'); } return; }
+    const region = regionEl.value;
+    const bandIdx = toIndex(region, p.band);
+    const cupIdx = cupIndex(region, p.cup);
+    if (bandIdx < 0 || cupIdx < 0) { result.innerHTML = ''; err.textContent = 'That size is outside the supported range.'; err.classList.remove('hidden'); return; }
+
+    const out = {
+      'US / CA': `${US_BANDS[bandIdx]}${CUPS_US[cupIdx] ?? '—'}`,
+      'UK': `${US_BANDS[bandIdx]}${CUPS_UK[cupIdx] ?? '—'}`,
+      'EU': `${EU_BANDS[bandIdx]}${CUPS_EU[cupIdx] ?? '—'}`,
+      'FR / ES': `${EU_BANDS[bandIdx] + 15}${CUPS_EU[cupIdx] ?? '—'}`,
+    };
+    result.innerHTML = Object.entries(out).map(([k, v]) =>
+      `<div class="panel panel-lift p-3"><span class="text-[11px] uppercase tracking-wide text-ink-tertiary">${k}</span><div class="mt-1 font-mono text-lg text-ink">${v}</div></div>`).join('');
+  }
+
+  sizeEl.addEventListener('input', render);
+  regionEl.addEventListener('change', render);
+  sizeEl.value = '34C'; render();
+</script>
