@@ -25,8 +25,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </label>
     </div>
     <div class="flex flex-wrap items-end gap-3">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Key size
-        <select id="cs-bits" class="field w-36"><option value="2048" selected>RSA 2048</option><option value="3072">RSA 3072</option><option value="4096">RSA 4096</option></select>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Key type
+        <select id="cs-bits" class="field w-48"><option value="ed25519" selected>Ed25519 (recommended)</option><option value="2048">RSA 2048</option><option value="3072">RSA 3072</option><option value="4096">RSA 4096</option></select>
       </label>
       <label class="flex flex-1 flex-col gap-1 text-sm text-ink-subtle">Subject Alternative Names (comma-separated)
         <input id="cs-san" class="field font-mono text-[13px]" placeholder="www.example.com, api.example.com" />
@@ -40,7 +40,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </label>
     <button id="cs-csrcopy" type="button" class="btn btn-secondary w-fit">Copy CSR</button>
 
-    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Private key (PEM)
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle"><span id="cs-key-label">Private key (PKCS#8 PEM)</span>
       <textarea id="cs-key" class="field min-h-40 resize-y font-mono text-[12px]" readonly></textarea>
     </label>
     <button id="cs-keycopy" type="button" class="btn btn-secondary w-fit">Copy private key</button>
@@ -50,12 +50,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
       This free SSL CSR generator creates a certificate signing request and its
-      matching RSA private key for requesting an SSL/TLS certificate from a
+      matching private key for requesting an SSL/TLS certificate from a
       certificate authority. Fill in your domain and organization details, add any
-      Subject Alternative Names, and generate. The CSR is what you submit to your
-      CA; the private key stays with you. Both are generated locally in your
-      browser with an in-page crypto engine, so your private key never leaves your
-      device.
+      Subject Alternative Names, pick a key type, and generate. Ed25519 is the
+      recommended default — fast, compact, and secure; RSA (2048–4096 bit) is
+      offered for CAs or platforms that don't yet accept Ed25519. The CSR is what
+      you submit to your CA; the private key stays with you (PKCS#8 PEM for
+      Ed25519, PKCS#1 PEM for RSA). Both are generated locally in your browser with
+      an in-page crypto engine, so your private key never leaves your device.
     </p>
   </div>
 </ToolLayout>
@@ -65,22 +67,100 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const statusEl = $('cs-status')!;
   const csrEl = $('cs-csr') as HTMLTextAreaElement;
   const keyEl = $('cs-key') as HTMLTextAreaElement;
+  const keyLabelEl = $('cs-key-label')!;
   const v = (id: string) => ($(id) as HTMLInputElement).value.trim();
+
+  const OID_ED25519 = '1.3.101.112';
+  const OID_EXT_REQ = '1.2.840.113549.1.9.14';
+  const OID_SAN = '2.5.29.17';
+
+  // Hand-build an Ed25519 PKCS#10 CSR (RFC 8410): the CertificationRequestInfo
+  // is signed directly with Ed25519, and both the SubjectPublicKeyInfo and the
+  // signature algorithm use OID 1.3.101.112 with no parameters.
+  const buildEd25519Csr = (forge: any, subjectAttrs: any[], sans: string[], pub: any, priv: any) => {
+    const asn1 = forge.asn1;
+    const tmp = forge.pki.createCertificationRequest();
+    tmp.setSubject(subjectAttrs);
+    const subject = forge.pki.distinguishedNameToAsn1(tmp.subject);
+
+    const pubBin = forge.util.binary.raw.encode(pub);
+    const algId = asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [
+      asn1.create(asn1.Class.UNIVERSAL, asn1.Type.OID, false, asn1.oidToDer(OID_ED25519).getBytes()),
+    ]);
+    const spki = asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [
+      algId,
+      asn1.create(asn1.Class.UNIVERSAL, asn1.Type.BITSTRING, false, '\x00' + pubBin),
+    ]);
+
+    let attributes;
+    if (sans.length) {
+      const generalNames = asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true,
+        sans.map((d) => asn1.create(asn1.Class.CONTEXT_SPECIFIC, 2, false, d)));
+      const extnValue = asn1.toDer(generalNames).getBytes();
+      const extensions = asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [
+        asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [
+          asn1.create(asn1.Class.UNIVERSAL, asn1.Type.OID, false, asn1.oidToDer(OID_SAN).getBytes()),
+          asn1.create(asn1.Class.UNIVERSAL, asn1.Type.OCTETSTRING, false, extnValue),
+        ]),
+      ]);
+      attributes = asn1.create(asn1.Class.CONTEXT_SPECIFIC, 0, true, [
+        asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [
+          asn1.create(asn1.Class.UNIVERSAL, asn1.Type.OID, false, asn1.oidToDer(OID_EXT_REQ).getBytes()),
+          asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SET, true, [extensions]),
+        ]),
+      ]);
+    } else {
+      attributes = asn1.create(asn1.Class.CONTEXT_SPECIFIC, 0, true, []);
+    }
+
+    const cri = asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [
+      asn1.create(asn1.Class.UNIVERSAL, asn1.Type.INTEGER, false, asn1.integerToDer(0).getBytes()),
+      subject,
+      spki,
+      attributes,
+    ]);
+
+    const criDer = asn1.toDer(cri).getBytes();
+    const sig = forge.pki.ed25519.sign({ message: criDer, encoding: 'binary', privateKey: priv });
+    const sigBin = forge.util.binary.raw.encode(sig);
+
+    const csr = asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [
+      cri,
+      algId,
+      asn1.create(asn1.Class.UNIVERSAL, asn1.Type.BITSTRING, false, '\x00' + sigBin),
+    ]);
+    return forge.pem.encode({ type: 'CERTIFICATE REQUEST', body: asn1.toDer(csr).getBytes() });
+  };
+
+  // Unencrypted PKCS#8 (RFC 8410) PEM for an Ed25519 private key.
+  const ed25519PrivateKeyToPem = (forge: any, seed: Uint8Array) => {
+    const asn1 = forge.asn1;
+    // CurvePrivateKey ::= OCTET STRING wrapping the 32-byte seed
+    const inner = asn1.toDer(asn1.create(
+      asn1.Class.UNIVERSAL, asn1.Type.OCTETSTRING, false,
+      forge.util.binary.raw.encode(seed))).getBytes();
+    const pkcs8 = asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [
+      asn1.create(asn1.Class.UNIVERSAL, asn1.Type.INTEGER, false, asn1.integerToDer(0).getBytes()),
+      asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [
+        asn1.create(asn1.Class.UNIVERSAL, asn1.Type.OID, false, asn1.oidToDer(OID_ED25519).getBytes()),
+      ]),
+      asn1.create(asn1.Class.UNIVERSAL, asn1.Type.OCTETSTRING, false, inner),
+    ]);
+    return forge.pem.encode({ type: 'PRIVATE KEY', body: asn1.toDer(pkcs8).getBytes() });
+  };
 
   $('cs-gen').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    const bits = Number((($('cs-bits')) as HTMLSelectElement).value);
+    const type = (($('cs-bits')) as HTMLSelectElement).value;
+    const isRsa = type !== 'ed25519';
     btn.disabled = true;
-    statusEl.textContent = `Generating ${bits}-bit key and CSR… this can take a few seconds.`;
+    statusEl.textContent = isRsa
+      ? `Generating ${type}-bit key and CSR… this can take a few seconds.`
+      : 'Generating Ed25519 key and CSR…';
     csrEl.value = ''; keyEl.value = '';
     await new Promise((r) => setTimeout(r, 30));
     try {
       const forge = (await import('node-forge')).default;
-      const keys = await new Promise<any>((resolve, reject) => {
-        forge.pki.rsa.generateKeyPair({ bits, workers: -1 }, (err: any, kp: any) => (err ? reject(err) : resolve(kp)));
-      });
-      const csr = forge.pki.createCertificationRequest();
-      csr.publicKey = keys.publicKey;
       const attrs = [
         { name: 'commonName', value: v('cs-cn') },
         { name: 'organizationName', value: v('cs-o') },
@@ -89,19 +169,31 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         { shortName: 'ST', value: v('cs-st') },
         { name: 'countryName', value: v('cs-c') },
       ].filter((a) => a.value);
-      csr.setSubject(attrs);
-
       const sans = v('cs-san').split(',').map((s) => s.trim()).filter(Boolean);
-      if (sans.length) {
-        csr.setAttributes([{
-          name: 'extensionRequest',
-          extensions: [{ name: 'subjectAltName', altNames: sans.map((dns) => ({ type: 2, value: dns })) }],
-        }]);
-      }
 
-      csr.sign(keys.privateKey, forge.md.sha256.create());
-      csrEl.value = forge.pki.certificationRequestToPem(csr);
-      keyEl.value = forge.pki.privateKeyToPem(keys.privateKey);
+      if (isRsa) {
+        const keys = await new Promise<any>((resolve, reject) => {
+          forge.pki.rsa.generateKeyPair({ bits: Number(type), workers: -1 }, (err: any, kp: any) => (err ? reject(err) : resolve(kp)));
+        });
+        const csr = forge.pki.createCertificationRequest();
+        csr.publicKey = keys.publicKey;
+        csr.setSubject(attrs);
+        if (sans.length) {
+          csr.setAttributes([{
+            name: 'extensionRequest',
+            extensions: [{ name: 'subjectAltName', altNames: sans.map((dns) => ({ type: 2, value: dns })) }],
+          }]);
+        }
+        csr.sign(keys.privateKey, forge.md.sha256.create());
+        csrEl.value = forge.pki.certificationRequestToPem(csr);
+        keyEl.value = forge.pki.privateKeyToPem(keys.privateKey);
+      } else {
+        const kp = forge.pki.ed25519.generateKeyPair();
+        csrEl.value = buildEd25519Csr(forge, attrs, sans, kp.publicKey, kp.privateKey);
+        // The 32-byte seed is the first half of forge's 64-byte private key.
+        keyEl.value = ed25519PrivateKeyToPem(forge, Uint8Array.from(kp.privateKey as any).slice(0, 32));
+      }
+      keyLabelEl.textContent = isRsa ? 'Private key (PEM)' : 'Private key (PKCS#8 PEM)';
       statusEl.textContent = 'Done — CSR and private key generated locally.';
     } catch (err) {
       statusEl.textContent = 'CSR generation failed. Please check your inputs and try again.';

@@ -1946,9 +1946,9 @@ export const tools: Tool[] = [
     name: 'SSL CSR Generator',
     tagline: 'Certificate signing requests & private key.',
     description:
-      'Free online SSL CSR generator. Create a certificate signing request (CSR) and matching RSA private key from your domain and organization details, entirely in your browser. Your private key never leaves your device.',
+      'Free online SSL CSR generator. Create a certificate signing request (CSR) and matching Ed25519 or RSA private key from your domain and organization details, entirely in your browser. Your private key never leaves your device.',
     category: 'Security',
-    keywords: ['csr generator', 'ssl csr generator', 'certificate signing request generator', 'generate csr online', 'csr and private key generator'],
+    keywords: ['csr generator', 'ssl csr generator', 'certificate signing request generator', 'generate csr online', 'csr and private key generator', 'ed25519 csr generator'],
     icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM9 12l2 2 4-4',
   },
 
