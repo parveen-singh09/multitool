@@ -1934,11 +1934,11 @@ export const tools: Tool[] = [
   {
     slug: 'ssh-key-generator',
     name: 'SSH Key Generator',
-    tagline: 'RSA key pairs in OpenSSH & PEM format.',
+    tagline: 'Ed25519 & RSA key pairs in OpenSSH format.',
     description:
-      'Free online SSH key generator. Generate an RSA key pair in your browser and download the OpenSSH public key and PEM private key. Keys are created locally with a JS crypto engine and never leave your device.',
+      'Free online SSH key generator. Generate an Ed25519 or RSA key pair in your browser and download the OpenSSH public and private keys. Keys are created locally with a JS crypto engine and never leave your device.',
     category: 'Security',
-    keywords: ['ssh key generator', 'generate ssh key', 'rsa key generator', 'ssh keygen online', 'ssh key pair generator'],
+    keywords: ['ssh key generator', 'generate ssh key', 'ed25519 key generator', 'rsa key generator', 'ssh keygen online', 'ssh key pair generator'],
     icon: 'M14 7a5 5 0 1 0-4.9 6H12v3h3v3h4v-3l-1.1-1.1A5 5 0 0 0 14 7ZM7 12a1 1 0 1 0 0 .01',
   },
   {
