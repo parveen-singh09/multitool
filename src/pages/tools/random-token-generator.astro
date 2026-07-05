@@ -3,85 +3,107 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
 <ToolLayout slug="random-token-generator">
-  <div class="flex flex-col gap-4">
-    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Length (chars)
-        <input id="rt-len" type="number" min="8" max="256" value="32" class="field" />
+  <div class="flex flex-col gap-5">
+    <div class="panel panel-lift flex items-start gap-3 p-4">
+      <output
+        id="rt-output"
+        class="flex-1 select-all break-all font-mono text-lg leading-relaxed text-ink"
+      >click generate</output>
+      <div class="flex shrink-0 flex-col gap-2 sm:flex-row">
+        <button id="rt-copy" class="btn btn-secondary" aria-label="Copy token">Copy</button>
+        <button id="rt-refresh" class="btn btn-primary" aria-label="Generate new token">Generate</button>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <label for="rt-length" class="text-sm text-ink-muted">Length</label>
+        <span id="rt-length-val" class="font-mono text-sm text-ink">51</span>
+      </div>
+      <input id="rt-length" type="range" min="1" max="512" value="51" class="w-full accent-[#5e6ad2]" />
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <label class="panel flex cursor-pointer items-center gap-3 p-3 text-sm">
+        <input type="checkbox" id="rt-upper" checked class="accent-[#5e6ad2]" />
+        Uppercase (A–Z)
       </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Encoding
-        <select id="rt-enc" class="field">
-          <option value="hex">hex</option>
-          <option value="base62" selected>base62</option>
-          <option value="base64url">base64url</option>
-          <option value="custom">custom alphabet</option>
-        </select>
+      <label class="panel flex cursor-pointer items-center gap-3 p-3 text-sm">
+        <input type="checkbox" id="rt-lower" checked class="accent-[#5e6ad2]" />
+        Lowercase (a–z)
       </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
-        <input id="rt-count" type="number" min="1" max="500" value="5" class="field" />
+      <label class="panel flex cursor-pointer items-center gap-3 p-3 text-sm">
+        <input type="checkbox" id="rt-numbers" checked class="accent-[#5e6ad2]" />
+        Numbers (0–9)
       </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Custom alphabet
-        <input id="rt-alpha" class="field font-mono text-[13px]" value="ABCDEFGHJKLMNPQRSTUVWXYZ23456789" spellcheck="false" />
+      <label class="panel flex cursor-pointer items-center gap-3 p-3 text-sm">
+        <input type="checkbox" id="rt-symbols" class="accent-[#5e6ad2]" />
+        Symbols (!@#$…)
       </label>
     </div>
-    <div class="flex flex-wrap items-center gap-4">
-      <button id="rt-gen" class="btn btn-primary ml-auto">Generate</button>
-      <button id="rt-copy" class="btn btn-secondary">Copy all</button>
-    </div>
-    <textarea id="rt-out" class="field min-h-56 resize-y font-mono text-[13px]" readonly aria-label="Generated tokens"></textarea>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free random token generator creates secure random tokens at any length
-      and in several encodings — hex, base62, base64url, or your own custom
-      alphabet. Use them for CSRF tokens, session identifiers, reset links, access
-      tokens and unique references. When you pick an encoding the length is exact;
-      the custom alphabet mode draws each character uniformly from the set you
-      provide. All tokens use the Web Crypto API and stay in your browser.
+      This free random token generator creates secure random tokens of any length
+      from the character sets you choose — uppercase and lowercase letters, numbers,
+      and symbols. Drag the length slider and toggle each set on or off to build a
+      token that fits your needs. Use them for CSRF tokens, session identifiers,
+      reset links, access tokens and unique references. Every token is drawn
+      uniformly from your selected characters using the Web Crypto API and never
+      leaves your browser.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  import { randBytes, randString } from '../../lib/random';
-  import { toHex, toBase62, toBase64Url } from '../../lib/encoding';
+  const out = document.getElementById('rt-output')!;
+  const lengthEl = document.getElementById('rt-length') as HTMLInputElement;
+  const lengthVal = document.getElementById('rt-length-val')!;
+  const opts = {
+    upper: document.getElementById('rt-upper') as HTMLInputElement,
+    lower: document.getElementById('rt-lower') as HTMLInputElement,
+    numbers: document.getElementById('rt-numbers') as HTMLInputElement,
+    symbols: document.getElementById('rt-symbols') as HTMLInputElement,
+  };
 
-  const $ = (id: string) => document.getElementById(id)!;
-  const lenEl = $('rt-len') as HTMLInputElement;
-  const encEl = $('rt-enc') as HTMLSelectElement;
-  const countEl = $('rt-count') as HTMLInputElement;
-  const alphaEl = $('rt-alpha') as HTMLInputElement;
-  const out = $('rt-out') as HTMLTextAreaElement;
-
-  function token(len: number): string {
-    if (encEl.value === 'custom') {
-      const ab = alphaEl.value || 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      return randString(len, ab);
-    }
-    // Generate enough bytes then trim to the requested character length.
-    const bytes = randBytes(len);
-    let s = '';
-    if (encEl.value === 'hex') s = toHex(bytes);
-    else if (encEl.value === 'base64url') s = toBase64Url(bytes);
-    else s = toBase62(bytes);
-    return s.slice(0, len);
-  }
+  const SETS = {
+    upper: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+    lower: 'abcdefghijklmnopqrstuvwxyz',
+    numbers: '0123456789',
+    symbols: '!@#$%^&*()-_=+[]{};:,.<>?',
+  };
 
   function generate() {
-    const len = Math.max(8, Math.min(256, Number(lenEl.value) || 32));
-    const n = Math.max(1, Math.min(500, Number(countEl.value) || 1));
-    const list: string[] = [];
-    for (let i = 0; i < n; i++) list.push(token(len));
-    out.value = list.join('\n');
+    let pool = '';
+    (Object.keys(SETS) as (keyof typeof SETS)[]).forEach((k) => {
+      if (opts[k].checked) pool += SETS[k];
+    });
+    if (!pool) {
+      out.textContent = 'select at least one option';
+      return;
+    }
+    const len = Number(lengthEl.value);
+    // Cryptographically secure, uniform selection via Web Crypto.
+    const bytes = new Uint32Array(len);
+    crypto.getRandomValues(bytes);
+    let token = '';
+    for (let i = 0; i < len; i++) token += pool[bytes[i] % pool.length];
+    out.textContent = token;
   }
 
-  ['rt-len', 'rt-enc', 'rt-count', 'rt-alpha'].forEach((id) => $(id).addEventListener('input', generate));
-  $('rt-gen').addEventListener('click', generate);
-  $('rt-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(out.value);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  lengthEl.addEventListener('input', () => {
+    lengthVal.textContent = lengthEl.value;
+    generate();
   });
+  Object.values(opts).forEach((el) => el.addEventListener('change', generate));
+  document.getElementById('rt-refresh')!.addEventListener('click', generate);
+  document.getElementById('rt-copy')!.addEventListener('click', async () => {
+    const btn = document.getElementById('rt-copy')!;
+    await navigator.clipboard.writeText(out.textContent || '');
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+
   generate();
 </script>

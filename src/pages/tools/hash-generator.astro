@@ -1,7 +1,7 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 
-const algos = ['SHA-1', 'SHA-256', 'SHA-384', 'SHA-512'];
+const algos = ['MD5', 'SHA-1', 'SHA-256', 'SHA-384', 'SHA-512'];
 ---
 
 <ToolLayout slug="hash-generator">
@@ -12,6 +12,12 @@ const algos = ['SHA-1', 'SHA-256', 'SHA-384', 'SHA-512'];
       placeholder="Type or paste text to hash…"
       aria-label="Text to hash"
     ></textarea>
+
+    <div class="flex items-center justify-end">
+      <button id="hash-case" class="btn btn-secondary" aria-pressed="false">
+        Uppercase
+      </button>
+    </div>
 
     <div class="flex flex-col gap-3">
       {algos.map((algo) => (
@@ -30,12 +36,101 @@ const algos = ['SHA-1', 'SHA-256', 'SHA-384', 'SHA-512'];
 
 <script>
   const input = document.getElementById('hash-input') as HTMLTextAreaElement;
+  const caseBtn = document.getElementById('hash-case') as HTMLButtonElement;
   const outputs = document.querySelectorAll<HTMLOutputElement>('.hash-out');
+
+  let uppercase = false;
 
   function toHex(buffer: ArrayBuffer): string {
     return Array.from(new Uint8Array(buffer))
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('');
+  }
+
+  // MD5 — Web Crypto has no MD5, so compute it here.
+  // Compact implementation based on RFC 1321.
+  function md5(bytes: Uint8Array): string {
+    function rl(x: number, c: number) {
+      return (x << c) | (x >>> (32 - c));
+    }
+    function add(a: number, b: number) {
+      return (a + b) & 0xffffffff;
+    }
+
+    const s = [
+      7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
+      5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20,
+      4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
+      6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21,
+    ];
+    const K: number[] = [];
+    for (let i = 0; i < 64; i++) {
+      K[i] = Math.floor(Math.abs(Math.sin(i + 1)) * 4294967296) & 0xffffffff;
+    }
+
+    const origLen = bytes.length;
+    const bitLen = origLen * 8;
+    // Pad: append 0x80, then zeros, until length ≡ 56 (mod 64), then 64-bit length.
+    const padLen = ((origLen + 8) >> 6) * 64 + 64;
+    const msg = new Uint8Array(padLen);
+    msg.set(bytes);
+    msg[origLen] = 0x80;
+    const dv = new DataView(msg.buffer);
+    dv.setUint32(padLen - 8, bitLen >>> 0, true);
+    dv.setUint32(padLen - 4, Math.floor(bitLen / 4294967296), true);
+
+    let a0 = 0x67452301,
+      b0 = 0xefcdab89,
+      c0 = 0x98badcfe,
+      d0 = 0x10325476;
+
+    for (let off = 0; off < padLen; off += 64) {
+      const M: number[] = [];
+      for (let i = 0; i < 16; i++) M[i] = dv.getUint32(off + i * 4, true);
+
+      let A = a0,
+        B = b0,
+        C = c0,
+        D = d0;
+
+      for (let i = 0; i < 64; i++) {
+        let F: number, g: number;
+        if (i < 16) {
+          F = (B & C) | (~B & D);
+          g = i;
+        } else if (i < 32) {
+          F = (D & B) | (~D & C);
+          g = (5 * i + 1) % 16;
+        } else if (i < 48) {
+          F = B ^ C ^ D;
+          g = (3 * i + 5) % 16;
+        } else {
+          F = C ^ (B | ~D);
+          g = (7 * i) % 16;
+        }
+        F = add(add(add(F, A), K[i]), M[g]);
+        A = D;
+        D = C;
+        C = B;
+        B = add(B, rl(F, s[i]));
+      }
+
+      a0 = add(a0, A);
+      b0 = add(b0, B);
+      c0 = add(c0, C);
+      d0 = add(d0, D);
+    }
+
+    const out = new DataView(new ArrayBuffer(16));
+    out.setUint32(0, a0, true);
+    out.setUint32(4, b0, true);
+    out.setUint32(8, c0, true);
+    out.setUint32(12, d0, true);
+    return toHex(out.buffer);
+  }
+
+  function format(hex: string): string {
+    return uppercase ? hex.toUpperCase() : hex;
   }
 
   async function updateAll() {
@@ -47,8 +142,14 @@ const algos = ['SHA-1', 'SHA-256', 'SHA-384', 'SHA-512'];
         out.textContent = '—';
         continue;
       }
-      const digest = await crypto.subtle.digest(algo, data);
-      out.textContent = toHex(digest);
+      let hex: string;
+      if (algo === 'MD5') {
+        hex = md5(data);
+      } else {
+        const digest = await crypto.subtle.digest(algo, data);
+        hex = toHex(digest);
+      }
+      out.textContent = format(hex);
     }
   }
 
@@ -56,6 +157,13 @@ const algos = ['SHA-1', 'SHA-256', 'SHA-384', 'SHA-512'];
   input.addEventListener('input', () => {
     clearTimeout(timer);
     timer = window.setTimeout(updateAll, 120);
+  });
+
+  caseBtn.addEventListener('click', () => {
+    uppercase = !uppercase;
+    caseBtn.setAttribute('aria-pressed', String(uppercase));
+    caseBtn.textContent = uppercase ? 'Lowercase' : 'Uppercase';
+    updateAll();
   });
 
   document.querySelectorAll<HTMLButtonElement>('.hash-copy').forEach((btn) => {
