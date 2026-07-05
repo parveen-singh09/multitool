@@ -1,0 +1,272 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="internet-speed-test">
+  <div class="flex flex-col gap-6">
+    <!-- Speedometer gauge -->
+    <div class="panel panel-lift flex flex-col items-center gap-3 p-6">
+      <svg id="st-gauge" viewBox="0 0 300 180" class="w-full max-w-md" role="img" aria-label="Speed gauge">
+        <!-- track -->
+        <path id="st-track" fill="none" stroke="#23252a" stroke-width="14" stroke-linecap="round" />
+        <!-- active arc -->
+        <path id="st-arc" fill="none" stroke="#5e6ad2" stroke-width="14" stroke-linecap="round" />
+        <!-- tick labels are injected by script -->
+        <g id="st-ticks" font-size="10" fill="#62666d" font-family="var(--font-mono)"></g>
+        <!-- needle -->
+        <line id="st-needle" x1="150" y1="150" x2="150" y2="55" stroke="#f7f8f8" stroke-width="3" stroke-linecap="round" />
+        <circle cx="150" cy="150" r="6" fill="#f7f8f8" />
+      </svg>
+
+      <div class="text-center">
+        <div class="flex items-baseline justify-center gap-2">
+          <span id="st-readout" class="font-display text-4xl font-semibold tabular-nums text-ink">0.00</span>
+          <span class="font-mono text-sm text-ink-subtle">Mbps</span>
+        </div>
+        <div id="st-phase" class="mt-1 text-[13px] text-ink-subtle">Ready to test</div>
+      </div>
+
+      <button id="st-start" class="btn btn-primary mt-1">Start test</button>
+    </div>
+
+    <!-- Result tiles -->
+    <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
+      <div class="panel p-4">
+        <div id="st-down" class="font-mono text-lg text-ink">—</div>
+        <div class="mt-1 text-[13px] text-ink-subtle">Download<span class="text-ink-tertiary"> Mbps</span></div>
+      </div>
+      <div class="panel p-4">
+        <div id="st-up" class="font-mono text-lg text-ink">—</div>
+        <div class="mt-1 text-[13px] text-ink-subtle">Upload<span class="text-ink-tertiary"> Mbps</span></div>
+      </div>
+      <div class="panel p-4">
+        <div id="st-ping" class="font-mono text-lg text-ink">—</div>
+        <div class="mt-1 text-[13px] text-ink-subtle">Ping<span class="text-ink-tertiary"> ms</span></div>
+      </div>
+      <div class="panel p-4">
+        <div id="st-jitter" class="font-mono text-lg text-ink">—</div>
+        <div class="mt-1 text-[13px] text-ink-subtle">Jitter<span class="text-ink-tertiary"> ms</span></div>
+      </div>
+    </div>
+
+    <p id="st-error" class="hidden text-[13px] leading-relaxed text-[#e5484d]"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free internet speed test measures your connection’s download and
+      upload throughput in megabits per second (Mbps), along with ping latency
+      and jitter in milliseconds. Ping is the round-trip time to the server;
+      jitter is how much that time varies between samples — lower is better for
+      calls and gaming. Download and upload are measured by transferring
+      progressively larger payloads and taking the fastest sustained rate.
+    </p>
+    <p>
+      The test runs in your browser against Cloudflare’s edge network, so results
+      reflect the path between you and a nearby Cloudflare data center. Real-world
+      speeds vary with Wi-Fi signal, network congestion, and the server on the
+      other end. For the most accurate reading, close other bandwidth-heavy tabs
+      and apps, and run the test a few times.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const readout = $('st-readout');
+  const phaseEl = $('st-phase');
+  const startBtn = $('st-start') as HTMLButtonElement;
+  const arc = $('st-arc') as unknown as SVGPathElement;
+  const track = $('st-track') as unknown as SVGPathElement;
+  const needle = $('st-needle') as unknown as SVGLineElement;
+  const ticksEl = $('st-ticks');
+  const errEl = $('st-error');
+  const out = {
+    down: $('st-down'),
+    up: $('st-up'),
+    ping: $('st-ping'),
+    jitter: $('st-jitter'),
+  };
+
+  // ---- Gauge geometry: 240° arc from 150° (bottom-left) sweeping clockwise ----
+  const CX = 150, CY = 150, R = 95;
+  const START_ANGLE = 150; // degrees
+  const SWEEP = 240; // degrees total
+  // Non-linear scale so the common 0–100 Mbps range fills most of the dial.
+  const SCALE_STOPS = [0, 10, 25, 50, 100, 250, 500, 1000];
+
+  function polar(angleDeg: number, r = R) {
+    const a = (angleDeg * Math.PI) / 180;
+    return { x: CX + r * Math.cos(a), y: CY + r * Math.sin(a) };
+  }
+
+  function arcPath(fromDeg: number, toDeg: number, r = R) {
+    const s = polar(fromDeg, r);
+    const e = polar(toDeg, r);
+    const large = Math.abs(toDeg - fromDeg) > 180 ? 1 : 0;
+    return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 1 ${e.x} ${e.y}`;
+  }
+
+  // Map a speed value to a 0..1 fraction along the piecewise scale.
+  function speedToFrac(v: number) {
+    const stops = SCALE_STOPS;
+    const max = stops[stops.length - 1];
+    if (v <= 0) return 0;
+    if (v >= max) return 1;
+    for (let i = 1; i < stops.length; i++) {
+      if (v <= stops[i]) {
+        const seg = (i - 1 + (v - stops[i - 1]) / (stops[i] - stops[i - 1])) / (stops.length - 1);
+        return seg;
+      }
+    }
+    return 1;
+  }
+
+  function setGauge(v: number) {
+    const frac = speedToFrac(v);
+    const angle = START_ANGLE + SWEEP * frac;
+    arc.setAttribute('d', arcPath(START_ANGLE, Math.max(START_ANGLE + 0.01, angle)));
+    const tip = polar(angle, R - 10);
+    needle.setAttribute('x2', String(tip.x));
+    needle.setAttribute('y2', String(tip.y));
+  }
+
+  // Build static track + tick labels once.
+  track.setAttribute('d', arcPath(START_ANGLE, START_ANGLE + SWEEP));
+  SCALE_STOPS.forEach((stop, i) => {
+    const frac = i / (SCALE_STOPS.length - 1);
+    const angle = START_ANGLE + SWEEP * frac;
+    const p = polar(angle, R + 16);
+    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    t.setAttribute('x', String(p.x));
+    t.setAttribute('y', String(p.y));
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('dominant-baseline', 'middle');
+    t.textContent = String(stop);
+    ticksEl.appendChild(t);
+  });
+  setGauge(0);
+
+  // Smoothly animate the readout + gauge toward a target value.
+  let displayed = 0;
+  let raf = 0;
+  function animateTo(target: number) {
+    cancelAnimationFrame(raf);
+    const step = () => {
+      displayed += (target - displayed) * 0.15;
+      if (Math.abs(target - displayed) < 0.05) displayed = target;
+      readout.textContent = displayed.toFixed(2);
+      setGauge(displayed);
+      if (displayed !== target) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+  }
+
+  // ---- Cloudflare speed measurement ----
+  const DOWN = 'https://speed.cloudflare.com/__down?bytes=';
+  const UP = 'https://speed.cloudflare.com/__up';
+
+  function bitsPerSecToMbps(bits: number) {
+    return bits / 1_000_000;
+  }
+
+  async function measureLatency(samples = 8): Promise<{ ping: number; jitter: number }> {
+    const times: number[] = [];
+    for (let i = 0; i < samples; i++) {
+      const t0 = performance.now();
+      await fetch(DOWN + '0', { cache: 'no-store' });
+      times.push(performance.now() - t0);
+    }
+    times.sort((a, b) => a - b);
+    // Drop the slowest sample as an outlier.
+    const kept = times.slice(0, -1);
+    const ping = kept.reduce((s, t) => s + t, 0) / kept.length;
+    let jitter = 0;
+    for (let i = 1; i < kept.length; i++) jitter += Math.abs(kept[i] - kept[i - 1]);
+    jitter = kept.length > 1 ? jitter / (kept.length - 1) : 0;
+    return { ping, jitter };
+  }
+
+  async function measureDownload(): Promise<number> {
+    // Escalate payload sizes; keep the best sustained Mbps.
+    const sizes = [1_000_000, 10_000_000, 25_000_000];
+    let best = 0;
+    for (const size of sizes) {
+      const t0 = performance.now();
+      const res = await fetch(DOWN + size, { cache: 'no-store' });
+      const reader = res.body!.getReader();
+      let received = 0;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        received += value!.length;
+        const secs = (performance.now() - t0) / 1000;
+        if (secs > 0.15) {
+          const mbps = bitsPerSecToMbps((received * 8) / secs);
+          best = Math.max(best, mbps);
+          animateTo(mbps);
+        }
+      }
+      const secs = (performance.now() - t0) / 1000;
+      best = Math.max(best, bitsPerSecToMbps((received * 8) / secs));
+    }
+    return best;
+  }
+
+  async function measureUpload(): Promise<number> {
+    const sizes = [2_000_000, 8_000_000, 15_000_000];
+    let best = 0;
+    for (const size of sizes) {
+      const payload = new Uint8Array(size);
+      const t0 = performance.now();
+      await fetch(UP, { method: 'POST', body: payload, cache: 'no-store' });
+      const secs = (performance.now() - t0) / 1000;
+      const mbps = bitsPerSecToMbps((size * 8) / secs);
+      best = Math.max(best, mbps);
+      animateTo(mbps);
+    }
+    return best;
+  }
+
+  function setPhase(label: string) {
+    phaseEl.textContent = label;
+  }
+
+  async function runTest() {
+    errEl.classList.add('hidden');
+    startBtn.disabled = true;
+    startBtn.textContent = 'Testing…';
+    out.down.textContent = out.up.textContent = out.ping.textContent = out.jitter.textContent = '…';
+
+    try {
+      setPhase('Measuring latency…');
+      const { ping, jitter } = await measureLatency();
+      out.ping.textContent = ping.toFixed(0);
+      out.jitter.textContent = jitter.toFixed(0);
+
+      setPhase('Testing download…');
+      const down = await measureDownload();
+      animateTo(down);
+      out.down.textContent = down.toFixed(2);
+
+      setPhase('Testing upload…');
+      const up = await measureUpload();
+      animateTo(up);
+      out.up.textContent = up.toFixed(2);
+
+      setPhase('Test complete');
+    } catch (err) {
+      setPhase('Ready to test');
+      errEl.textContent =
+        'Could not reach the speed-test server. Check your connection or a blocker/extension, then try again.';
+      errEl.classList.remove('hidden');
+      out.down.textContent = out.up.textContent = out.ping.textContent = out.jitter.textContent = '—';
+    } finally {
+      startBtn.disabled = false;
+      startBtn.textContent = 'Test again';
+    }
+  }
+
+  startBtn.addEventListener('click', runTest);
+</script>

@@ -4,17 +4,36 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="receipt-generator">
   <div class="flex flex-col gap-5">
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Store / business
-        <textarea id="rc-from" class="field min-h-24 resize-y text-[13px]">Corner Store
-789 Market St
-Springfield, CA 90000
-(555) 010-2020</textarea>
-      </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Customer (optional)
-        <textarea id="rc-to" class="field min-h-24 resize-y text-[13px]">Walk-in customer</textarea>
+    <!-- Style toggle -->
+    <div class="flex flex-col gap-1 text-sm text-ink-subtle">Receipt style
+      <div class="inline-flex w-fit rounded-md border border-hairline bg-surface-1 p-0.5">
+        <button id="rc-style-thermal" type="button" class="rc-style rounded-[6px] px-4 py-1.5 text-[13px] font-medium">Thermal (POS)</button>
+        <button id="rc-style-standard" type="button" class="rc-style rounded-[6px] px-4 py-1.5 text-[13px] font-medium">Standard (A4)</button>
+      </div>
+    </div>
+
+    <!-- Logo -->
+    <div class="flex items-center gap-4">
+      <div id="rc-logo-preview" class="hidden h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-md border border-hairline bg-surface-1">
+        <img id="rc-logo-img" class="max-h-full max-w-full object-contain" alt="Logo preview" />
+      </div>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Logo (optional)
+        <div class="flex items-center gap-2">
+          <input id="rc-logo" type="file" accept="image/png,image/jpeg" class="field text-[13px] file:mr-3 file:rounded file:border-0 file:bg-surface-2 file:px-3 file:py-1 file:text-ink" />
+          <button id="rc-logo-clear" class="btn btn-secondary hidden px-3 py-1 text-[13px]" type="button">Remove</button>
+        </div>
       </label>
     </div>
+
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <div class="flex flex-col gap-2 text-sm text-ink-subtle">Store / business
+        <div id="rc-from"></div>
+      </div>
+      <div class="flex flex-col gap-2 text-sm text-ink-subtle">Customer (optional)
+        <div id="rc-to"></div>
+      </div>
+    </div>
+
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Receipt #
         <input id="rc-number" class="field" value="R-1001" />
@@ -22,12 +41,17 @@ Springfield, CA 90000
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Date
         <input id="rc-date" type="date" class="field" />
       </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Cashier (optional)
+        <input id="rc-cashier" class="field" placeholder="Alex" />
+      </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Currency
-        <select id="rc-currency" class="field"><option value="$">$ USD</option><option value="€">€ EUR</option><option value="£">£ GBP</option><option value="₹">₹ INR</option></select>
+        <select id="rc-currency" class="field"></select>
       </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Tax %
-        <input id="rc-tax" type="number" min="0" max="100" step="0.1" value="8.5" class="field" />
-      </label>
+    </div>
+
+    <!-- Accent color -->
+    <div class="flex flex-col gap-2 text-sm text-ink-subtle">Accent color
+      <div id="rc-accent" class="flex flex-wrap items-center gap-2"></div>
     </div>
 
     <div class="flex flex-col gap-2">
@@ -36,6 +60,49 @@ Springfield, CA 90000
         <button id="rc-add" class="btn btn-secondary py-1 text-[13px]">+ Add item</button>
       </div>
       <div id="rc-items" class="flex flex-col gap-2"></div>
+    </div>
+
+    <!-- Adjustments -->
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-4">
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">Tax
+        <div class="flex gap-2">
+          <select id="rc-tax-mode" class="field w-20"><option value="percent">%</option><option value="flat">Flat</option><option value="off">Off</option></select>
+          <input id="rc-tax" type="number" min="0" step="0.01" value="8.5" class="field flex-1" />
+        </div>
+      </div>
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">Discount
+        <div class="flex gap-2">
+          <select id="rc-disc-mode" class="field w-20"><option value="off">Off</option><option value="percent">%</option><option value="flat">Flat</option></select>
+          <input id="rc-disc" type="number" min="0" step="0.01" value="0" class="field flex-1" />
+        </div>
+      </div>
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">Tip
+        <div class="flex gap-2">
+          <select id="rc-tip-mode" class="field w-20"><option value="off">Off</option><option value="percent">%</option><option value="flat">Flat</option></select>
+          <input id="rc-tip" type="number" min="0" step="0.01" value="0" class="field flex-1" />
+        </div>
+      </div>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Shipping
+        <input id="rc-ship" type="number" min="0" step="0.01" value="0" class="field" />
+      </label>
+    </div>
+
+    <!-- Payment -->
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Payment method
+        <input id="rc-pay" class="field" placeholder="Cash" list="rc-pay-list" />
+        <datalist id="rc-pay-list">
+          <option value="Cash"></option><option value="Visa"></option><option value="Mastercard"></option>
+          <option value="Amex"></option><option value="Debit card"></option><option value="Apple Pay"></option>
+          <option value="Google Pay"></option><option value="PayPal"></option><option value="Gift card"></option>
+        </datalist>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Amount tendered
+        <input id="rc-paid" type="number" min="0" step="0.01" class="field" placeholder="0.00" />
+      </label>
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">Change due
+        <div id="rc-change" class="field flex items-center font-mono text-ink-subtle">—</div>
+      </div>
     </div>
 
     <div class="flex items-center justify-between border-t border-hairline pt-4">
@@ -47,21 +114,44 @@ Springfield, CA 90000
     </label>
 
     <button id="rc-dl" class="btn btn-primary w-fit">Download PDF</button>
+
+    <!-- Live preview -->
+    <div class="flex flex-col gap-2">
+      <span class="text-sm text-ink-subtle">Preview</span>
+      <div class="flex justify-center rounded-lg border border-hairline bg-surface-1 p-6">
+        <div id="rc-preview"></div>
+      </div>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free receipt generator creates clean, itemized sales receipts with your
-      store details, line items, tax and total, ready to download as a PDF. It's
-      handy for small businesses, market stalls and expense reimbursements. Totals
-      calculate automatically as you type. Everything is generated in your browser
-      and never uploaded.
+      This free receipt generator creates clean, itemized receipts in two styles:
+      a classic <strong class="text-ink-muted">thermal point-of-sale roll</strong> — the
+      narrow 80mm monospace slip you get at a register — and a
+      <strong class="text-ink-muted">standard A4 business receipt</strong> with your logo.
+      Add store and customer details, line items, tax, a discount, a tip and
+      shipping, then record the payment method and amount tendered so the change
+      due is calculated for you. Pick a brand accent color and any of the world's
+      currencies, and a live preview shows the finished receipt as you type.
+    </p>
+    <p>
+      It's handy for small businesses, market stalls, cafes, and expense
+      reimbursements. Everything is generated in your browser and never uploaded —
+      no account, no watermark, and no limit on how many receipts you make.
     </p>
   </div>
 </ToolLayout>
 
+<style>
+  .rc-style { color: var(--color-ink-subtle); transition: background-color 0.12s, color 0.12s; }
+  .rc-style[data-active='true'] { background-color: var(--color-surface-3); color: var(--color-ink); }
+</style>
+
 <script>
-  import { buildDocPdf, downloadPdf, subtotal, money, type LineItem } from '../../lib/pdfdoc';
+  import { buildReceiptPdf, downloadPdf, computeTotals, money, type LineItem, type ReceiptData } from '../../lib/pdfdoc';
+  import { CURRENCIES, symbolOf, pdfPrefixOf } from '../../lib/currencies';
+  import { renderParty, wireParty, collectParty } from '../../lib/partyblock';
 
   const $ = (id: string) => document.getElementById(id)!;
   const itemsWrap = $('rc-items')!;
@@ -69,52 +159,295 @@ Springfield, CA 90000
     { description: 'Coffee', qty: 2, price: 3.5 },
     { description: 'Sandwich', qty: 1, price: 7.25 },
   ];
+  let style: 'thermal' | 'standard' = 'thermal';
+  let logo: { bytes: Uint8Array; type: 'png' | 'jpg'; url: string } | null = null;
+
+  // The <select> value is the ISO code; symbolOf()/pdfPrefixOf() map it to the
+  // right prefix for the preview vs the PDF.
+  ($('rc-currency') as HTMLSelectElement).innerHTML = CURRENCIES
+    .map((c) => `<option value="${c.code}"${c.code === 'USD' ? ' selected' : ''}>${c.code} — ${c.name} (${c.symbol})</option>`)
+    .join('');
   ($('rc-date') as HTMLInputElement).value = new Date().toISOString().slice(0, 10);
+
+  // Structured store / customer blocks (Razorpay-style). They compose into the
+  // multi-line string[] the receipt builder consumes, so pdfdoc.ts is untouched.
+  renderParty($('rc-from'), {
+    prefix: 'rc-from',
+    companyPlaceholder: 'Store / business name',
+    taxLabel: 'GSTIN',
+    addressLabel: 'Store address',
+    addressPlaceholder: 'Store address',
+    contact: true,
+    contactPlaceholder: 'Phone / contact',
+    defaultCompany: 'Corner Store',
+    defaultAddress: '789 Market St',
+  });
+  renderParty($('rc-to'), {
+    prefix: 'rc-to',
+    companyPlaceholder: 'Customer name',
+    taxLabel: 'Customer GSTIN',
+    addressLabel: 'Customer address',
+    addressPlaceholder: 'Customer address',
+  });
+
+  // Accent swatches — the document brand color. Standard receipts tint the
+  // RECEIPT title and Total line; thermal stays monochrome (POS convention).
+  const ACCENTS = ['#5e6ad2', '#0f172a', '#0d9488', '#2563eb', '#dc2626', '#db2777', '#7c3aed', '#ea580c', '#16a34a', '#475569'];
+  let accent = ACCENTS[0];
+  const accentWrap = $('rc-accent');
+
+  // Build the swatch row once. Re-rendering on every color change would destroy
+  // the live <input type="color"> mid-drag, so we only restyle in place.
+  accentWrap.innerHTML = ACCENTS.map((c) =>
+    `<button type="button" class="rc-swatch h-7 w-7 rounded-full border-2 transition-transform" data-c="${c}" style="background:${c}" title="${c}"></button>`
+  ).join('') +
+    `<label class="ml-1 inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-hairline" title="Custom color">
+      <input id="rc-accent-custom" type="color" value="${accent}" class="h-5 w-5 cursor-pointer border-0 bg-transparent p-0" />
+    </label>`;
+
+  // Highlight whichever preset matches the active accent (none, if custom).
+  function paintSwatches() {
+    accentWrap.querySelectorAll<HTMLElement>('.rc-swatch').forEach((b) => {
+      const on = b.dataset.c === accent;
+      b.style.borderColor = on ? 'var(--color-ink)' : 'transparent';
+      b.style.transform = on ? 'scale(1.12)' : 'scale(1)';
+    });
+  }
+  accentWrap.querySelectorAll<HTMLElement>('.rc-swatch').forEach((b) =>
+    b.addEventListener('click', () => {
+      accent = b.dataset.c!;
+      ($('rc-accent-custom') as HTMLInputElement).value = accent;
+      paintSwatches(); update();
+    }));
+  $('rc-accent-custom').addEventListener('input', (e) => {
+    accent = (e.target as HTMLInputElement).value;
+    paintSwatches(); update();
+  });
+
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 
   function renderItems() {
     itemsWrap.innerHTML = items.map((it, i) => `
       <div class="flex gap-2" data-i="${i}">
-        <input class="rc-desc field flex-1 text-[13px]" placeholder="Item" value="${it.description.replace(/"/g, '&quot;')}" />
-        <input class="rc-qty field w-20 text-[13px]" type="number" min="0" value="${it.qty}" />
+        <input class="rc-desc field flex-1 text-[13px]" placeholder="Item" value="${esc(it.description)}" />
+        <input class="rc-qty field w-20 text-[13px]" type="number" min="0" step="1" value="${it.qty}" />
         <input class="rc-price field w-24 text-[13px]" type="number" min="0" step="0.01" value="${it.price}" />
-        <button class="rc-del btn btn-secondary px-3">×</button>
+        <button class="rc-del btn btn-secondary px-3" title="Remove">×</button>
       </div>`).join('');
     itemsWrap.querySelectorAll<HTMLElement>('[data-i]').forEach((row) => {
       const i = Number(row.dataset.i);
-      row.querySelector('.rc-desc')!.addEventListener('input', (e) => { items[i].description = (e.target as HTMLInputElement).value; });
-      row.querySelector('.rc-qty')!.addEventListener('input', (e) => { items[i].qty = Number((e.target as HTMLInputElement).value) || 0; total(); });
-      row.querySelector('.rc-price')!.addEventListener('input', (e) => { items[i].price = Number((e.target as HTMLInputElement).value) || 0; total(); });
-      row.querySelector('.rc-del')!.addEventListener('click', () => { items.splice(i, 1); renderItems(); total(); });
+      row.querySelector('.rc-desc')!.addEventListener('input', (e) => { items[i].description = (e.target as HTMLInputElement).value; update(); });
+      row.querySelector('.rc-qty')!.addEventListener('input', (e) => { items[i].qty = Number((e.target as HTMLInputElement).value) || 0; update(); });
+      row.querySelector('.rc-price')!.addEventListener('input', (e) => { items[i].price = Number((e.target as HTMLInputElement).value) || 0; update(); });
+      row.querySelector('.rc-del')!.addEventListener('click', () => { items.splice(i, 1); renderItems(); update(); });
     });
   }
 
-  function total() {
-    const cur = ($('rc-currency') as HTMLSelectElement).value;
-    const tax = Number(($('rc-tax') as HTMLInputElement).value) || 0;
-    const sub = subtotal(items);
-    $('rc-total').textContent = money(sub + sub * (tax / 100), cur);
+  // Build ReceiptData from the form. `withLogo` attaches bytes (PDF) vs URL (preview).
+  function getData(withLogo: boolean): ReceiptData {
+    const taxMode = ($('rc-tax-mode') as HTMLSelectElement).value;
+    const discMode = ($('rc-disc-mode') as HTMLSelectElement).value;
+    const tipMode = ($('rc-tip-mode') as HTMLSelectElement).value;
+    const paid = Number(($('rc-paid') as HTMLInputElement).value);
+    const code = ($('rc-currency') as HTMLSelectElement).value;
+    const d: ReceiptData = {
+      docType: 'RECEIPT',
+      style,
+      number: ($('rc-number') as HTMLInputElement).value,
+      date: ($('rc-date') as HTMLInputElement).value,
+      cashier: ($('rc-cashier') as HTMLInputElement).value,
+      fromLabel: 'Store', from: collectParty('rc-from'),
+      toLabel: 'Customer', to: collectParty('rc-to'),
+      items,
+      accent,
+      // Preview uses the pretty Unicode symbol; the PDF uses a WinAnsi-safe prefix.
+      currency: withLogo ? pdfPrefixOf(code) : symbolOf(code),
+      taxMode: taxMode === 'flat' ? 'flat' : 'percent',
+      taxRate: taxMode === 'off' ? 0 : (Number(($('rc-tax') as HTMLInputElement).value) || 0),
+      shipping: Number(($('rc-ship') as HTMLInputElement).value) || 0,
+      paymentMethod: ($('rc-pay') as HTMLInputElement).value,
+      amountPaid: paid > 0 ? paid : undefined,
+      notes: ($('rc-notes') as HTMLInputElement).value,
+    };
+    if (discMode !== 'off') d.discount = { mode: discMode === 'flat' ? 'flat' : 'percent', value: Number(($('rc-disc') as HTMLInputElement).value) || 0 };
+    if (tipMode !== 'off') d.tip = { mode: tipMode === 'flat' ? 'flat' : 'percent', value: Number(($('rc-tip') as HTMLInputElement).value) || 0 };
+    if (withLogo && logo) d.logo = { bytes: logo.bytes, type: logo.type };
+    return d;
   }
 
-  $('rc-add').addEventListener('click', () => { items.push({ description: '', qty: 1, price: 0 }); renderItems(); total(); });
-  ['rc-currency', 'rc-tax'].forEach((id) => $(id).addEventListener('input', total));
+  // --- Preview renderers -----------------------------------------------------
+
+  function totalLines(d: ReceiptData, t: ReturnType<typeof computeTotals>, cur: string) {
+    const lines: [string, string][] = [['Subtotal', money(t.subtotal, cur)]];
+    if (t.discount) lines.push([d.discount!.mode === 'percent' ? `Discount ${d.discount!.value}%` : 'Discount', `-${money(t.discount, cur)}`]);
+    if (t.tax) lines.push([d.taxMode === 'flat' ? 'Tax' : `Tax ${d.taxRate}%`, money(t.tax, cur)]);
+    if (t.shipping) lines.push(['Shipping', money(t.shipping, cur)]);
+    if (t.tip) lines.push([d.tip!.mode === 'percent' ? `Tip ${d.tip!.value}%` : 'Tip', money(t.tip, cur)]);
+    return lines;
+  }
+
+  function renderThermal(d: ReceiptData) {
+    const t = computeTotals(d);
+    const cur = d.currency;
+    const store = d.from.filter(Boolean);
+    const cust = d.to.filter(Boolean);
+    const rule = `<div style="border-top:1px dashed #999;margin:6px 0"></div>`;
+    const pair = (l: string, r: string, strong = false) =>
+      `<div style="display:flex;justify-content:space-between;gap:8px;${strong ? 'font-weight:700' : ''}"><span>${esc(l)}</span><span style="white-space:nowrap">${esc(r)}</span></div>`;
+    const items = d.items.filter((it) => it.description || it.qty || it.price).map((it) =>
+      `<div>${esc(it.description || 'Item')}</div>` +
+      pair(`  ${it.qty} x ${money(it.price, cur)}`, money(it.qty * it.price, cur))).join('');
+    const count = d.items.reduce((n, it) => n + (it.qty || 0), 0);
+    const payment = (d.paymentMethod || d.amountPaid) ? [
+      `<div style="height:6px"></div>`,
+      d.paymentMethod ? pair('Paid via', d.paymentMethod) : '',
+      d.amountPaid ? pair('Tendered', money(d.amountPaid, cur)) : '',
+      d.amountPaid ? pair('Change', money(Math.max(0, d.amountPaid - t.total), cur)) : '',
+    ].join('') : '';
+
+    $('rc-preview').innerHTML = `
+      <div style="width:280px;background:#fff;color:#111;padding:20px 18px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;line-height:1.5;box-shadow:0 1px 8px rgba(0,0,0,0.35)">
+        ${logo ? `<div style="text-align:center;margin-bottom:8px"><img src="${logo.url}" style="max-height:44px;max-width:100%" alt="" /></div>` : ''}
+        ${store.map((l, i) => `<div style="text-align:center;${i === 0 ? 'font-weight:700;font-size:14px' : ''}">${esc(l)}</div>`).join('')}
+        <div style="height:6px"></div>
+        ${rule}
+        <div>Receipt #${esc(d.number)}</div>
+        <div>Date: ${esc(d.date)}</div>
+        ${d.cashier ? `<div>Cashier: ${esc(d.cashier)}</div>` : ''}
+        ${cust.length ? cust.map((c, i) => `<div>${i === 0 ? 'Customer: ' : '          '}${esc(c)}</div>`).join('') : ''}
+        ${rule}
+        ${items}
+        ${rule}
+        ${totalLines(d, t, cur).map(([l, r]) => pair(l, r)).join('')}
+        ${rule}
+        ${pair('TOTAL', money(t.total, cur), true)}
+        ${payment}
+        <div style="height:6px"></div>
+        ${rule}
+        <div style="text-align:center">Items sold: ${count}</div>
+        ${d.notes ? `<div style="text-align:center;margin-top:6px">${esc(d.notes)}</div>` : ''}
+        <div style="text-align:center;margin-top:8px">* * *</div>
+      </div>`;
+  }
+
+  function renderStandard(d: ReceiptData) {
+    const t = computeTotals(d);
+    const cur = d.currency;
+    const meta = [
+      `<div style="font-weight:600">#${esc(d.number)}</div>`,
+      `<div>Date: ${esc(d.date)}</div>`,
+      d.cashier ? `<div>Cashier: ${esc(d.cashier)}</div>` : '',
+    ].join('');
+    const rows = d.items.filter((it) => it.description || it.qty || it.price).map((it) => `
+      <tr>
+        <td style="padding:4px 0">${esc(it.description || 'Item')}</td>
+        <td style="padding:4px 0;text-align:right">${it.qty}</td>
+        <td style="padding:4px 0;text-align:right">${esc(money(it.price, cur))}</td>
+        <td style="padding:4px 0;text-align:right">${esc(money(it.qty * it.price, cur))}</td>
+      </tr>`).join('');
+    const line = (l: string, r: string, strong = false) =>
+      `<div style="display:flex;justify-content:space-between;gap:24px;${strong ? `font-weight:700;color:${accent}` : ''}"><span>${esc(l)}</span><span>${esc(r)}</span></div>`;
+    const totals = totalLines(d, t, cur).map(([l, r]) => line(l, r)).join('') + line('Total', money(t.total, cur), true);
+    const payment = (d.paymentMethod || d.amountPaid) ? `
+      <div style="margin-top:12px;margin-left:auto;width:240px;display:flex;flex-direction:column;gap:4px;color:#4a4d55;font-size:11px">
+        ${d.paymentMethod ? line('Paid via', d.paymentMethod) : ''}
+        ${d.amountPaid ? line('Amount tendered', money(d.amountPaid, cur)) : ''}
+        ${d.amountPaid ? line('Change', money(Math.max(0, d.amountPaid - t.total), cur)) : ''}
+      </div>` : '';
+    const store = d.from.filter(Boolean);
+    const cust = d.to.filter(Boolean);
+
+    $('rc-preview').innerHTML = `
+      <div style="width:420px;background:#fff;color:#08090a;padding:32px;font-family:Inter,system-ui,sans-serif;font-size:13px;box-shadow:0 1px 8px rgba(0,0,0,0.35)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">
+          <div>
+            ${logo ? `<img src="${logo.url}" style="max-height:48px;max-width:120px;margin-bottom:8px" alt="" />` : ''}
+            <div style="font-size:24px;font-weight:700;color:${accent};letter-spacing:-0.5px">RECEIPT</div>
+          </div>
+          <div style="text-align:right;color:#4a4d55;font-size:12px">${meta}</div>
+        </div>
+        <div style="display:flex;gap:32px;margin-top:24px">
+          <div style="flex:1"><div style="font-size:11px;font-weight:700;color:#8a8f98;letter-spacing:0.4px">STORE</div>${store.map((l) => `<div>${esc(l)}</div>`).join('')}</div>
+          ${cust.length ? `<div style="flex:1"><div style="font-size:11px;font-weight:700;color:#8a8f98;letter-spacing:0.4px">CUSTOMER</div>${cust.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` : ''}
+        </div>
+        <table style="width:100%;margin-top:24px;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:#f2f2f4;color:#8a8f98;font-size:10px;letter-spacing:0.4px">
+            <th style="padding:6px 8px;text-align:left">DESCRIPTION</th><th style="padding:6px 8px;text-align:right">QTY</th><th style="padding:6px 8px;text-align:right">PRICE</th><th style="padding:6px 8px;text-align:right">AMOUNT</th>
+          </tr></thead><tbody>${rows}</tbody>
+        </table>
+        <div style="margin-top:16px;margin-left:auto;width:240px;display:flex;flex-direction:column;gap:4px;border-top:1px solid #ddd;padding-top:12px">${totals}</div>
+        ${payment}
+        ${d.notes ? `<div style="margin-top:24px"><div style="font-size:11px;font-weight:700;color:#8a8f98;letter-spacing:0.4px">NOTES</div><div style="color:#4a4d55">${esc(d.notes)}</div></div>` : ''}
+      </div>`;
+  }
+
+  function update() {
+    const d = getData(false);
+    const t = computeTotals(d);
+    $('rc-total').textContent = money(t.total, d.currency);
+    // Change due indicator on the form.
+    const changeEl = $('rc-change');
+    if (d.amountPaid) {
+      const change = d.amountPaid - t.total;
+      changeEl.textContent = change >= 0 ? money(change, d.currency) : `Short ${money(-change, d.currency)}`;
+      changeEl.style.color = change >= 0 ? 'var(--color-ink)' : 'var(--color-primary-hover)';
+    } else {
+      changeEl.textContent = '—';
+      changeEl.style.color = 'var(--color-ink-subtle)';
+    }
+    if (style === 'thermal') renderThermal(d); else renderStandard(d);
+  }
+
+  function setStyle(next: 'thermal' | 'standard') {
+    style = next;
+    ($('rc-style-thermal') as HTMLElement).dataset.active = String(next === 'thermal');
+    ($('rc-style-standard') as HTMLElement).dataset.active = String(next === 'standard');
+    update();
+  }
+
+  $('rc-style-thermal').addEventListener('click', () => setStyle('thermal'));
+  $('rc-style-standard').addEventListener('click', () => setStyle('standard'));
+  $('rc-add').addEventListener('click', () => { items.push({ description: '', qty: 1, price: 0 }); renderItems(); update(); });
+  ['rc-currency', 'rc-tax', 'rc-tax-mode', 'rc-disc', 'rc-disc-mode', 'rc-tip', 'rc-tip-mode', 'rc-ship',
+    'rc-number', 'rc-date', 'rc-cashier', 'rc-pay', 'rc-paid', 'rc-notes']
+    .forEach((id) => $(id).addEventListener('input', update));
+  wireParty('rc-from', update);
+  wireParty('rc-to', update);
+
+  // Logo upload.
+  $('rc-logo').addEventListener('change', async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    const buf = new Uint8Array(await file.arrayBuffer());
+    const type: 'png' | 'jpg' = file.type === 'image/png' ? 'png' : 'jpg';
+    if (logo) URL.revokeObjectURL(logo.url);
+    logo = { bytes: buf, type, url: URL.createObjectURL(new Blob([buf.slice()], { type: file.type })) };
+    ($('rc-logo-img') as HTMLImageElement).src = logo.url;
+    $('rc-logo-preview').classList.remove('hidden');
+    $('rc-logo-preview').classList.add('flex');
+    $('rc-logo-clear').classList.remove('hidden');
+    update();
+  });
+  $('rc-logo-clear').addEventListener('click', () => {
+    if (logo) URL.revokeObjectURL(logo.url);
+    logo = null;
+    ($('rc-logo') as HTMLInputElement).value = '';
+    $('rc-logo-preview').classList.add('hidden');
+    $('rc-logo-preview').classList.remove('flex');
+    $('rc-logo-clear').classList.add('hidden');
+    update();
+  });
 
   $('rc-dl').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
     btn.disabled = true; btn.textContent = 'Generating…';
     try {
-      const bytes = await buildDocPdf({
-        docType: 'RECEIPT',
-        number: ($('rc-number') as HTMLInputElement).value,
-        date: ($('rc-date') as HTMLInputElement).value,
-        fromLabel: 'Store', from: ($('rc-from') as HTMLTextAreaElement).value.split('\n'),
-        toLabel: 'Customer', to: ($('rc-to') as HTMLTextAreaElement).value.split('\n'),
-        items, currency: ($('rc-currency') as HTMLSelectElement).value,
-        taxRate: Number(($('rc-tax') as HTMLInputElement).value) || 0,
-        notes: ($('rc-notes') as HTMLInputElement).value,
-      });
+      const bytes = await buildReceiptPdf(getData(true));
       downloadPdf(bytes, `${($('rc-number') as HTMLInputElement).value || 'receipt'}.pdf`);
     } finally { btn.disabled = false; btn.textContent = 'Download PDF'; }
   });
 
-  renderItems(); total();
+  setStyle('thermal');
+  renderItems();
+  paintSwatches();
 </script>

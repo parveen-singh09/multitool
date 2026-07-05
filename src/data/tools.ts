@@ -2710,9 +2710,9 @@ export const tools: Tool[] = [
     name: 'Receipt Generator',
     tagline: 'Generate itemized receipts as PDF.',
     description:
-      'Free online receipt generator. Create itemized sales receipts with store details, line items, subtotal, tax and total, then download as a PDF. Great for small businesses and reimbursements. Runs in your browser.',
+      'Free online receipt generator with two styles: a classic thermal point-of-sale roll and a standard A4 business receipt. Add your logo, store and customer details, line items, tax, discount, tip and shipping, record the payment method and amount tendered for automatic change due, then download a PDF. A live preview updates as you type. Great for small businesses, cafes and reimbursements. Runs entirely in your browser — nothing uploaded.',
     category: 'PDF',
-    keywords: ['receipt generator', 'free receipt maker', 'create receipt online', 'receipt pdf generator', 'itemized receipt template'],
+    keywords: ['receipt generator', 'free receipt maker', 'create receipt online', 'receipt pdf generator', 'itemized receipt template', 'thermal receipt generator', 'pos receipt maker', 'cash receipt generator'],
     icon: 'M5 2h14v20l-2-1.5L15 22l-2-1.5L11 22l-2-1.5L7 22l-2-1.5zM9 8h6M9 12h6M9 16h4',
   },
   {
@@ -2724,16 +2724,6 @@ export const tools: Tool[] = [
     category: 'PDF',
     keywords: ['purchase order generator', 'po generator', 'create purchase order', 'purchase order template', 'purchase order pdf'],
     icon: 'M6 2h9l5 5v15H6zM14 2v6h6M9 12h6M9 16h6M9 8h2',
-  },
-  {
-    slug: 'resume-generator',
-    name: 'Resume Generator',
-    tagline: 'Build a clean resume and export to PDF.',
-    description:
-      'Free online resume generator. Enter your experience, education and skills into a clean template, preview it live, and export a print-ready PDF. Your data stays in your browser — nothing is uploaded.',
-    category: 'PDF',
-    keywords: ['resume generator', 'resume builder', 'cv maker', 'create resume online', 'resume pdf generator'],
-    icon: 'M6 2h12v20H6zM9 7h6M9 11h6M9 15h4M9 2v4',
   },
   {
     slug: 'cover-letter-generator',
@@ -3982,6 +3972,38 @@ export const tools: Tool[] = [
     category: 'Generators',
     keywords: ['kanoodle solver', 'kanoodle solutions', 'polyomino solver', 'kanoodle answers', 'puzzle solver'],
     icon: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
+  },
+  {
+    slug: 'internet-speed-test',
+    name: 'Internet Speed Test',
+    tagline: 'Measure download, upload, ping & jitter.',
+    description:
+      'Free internet speed test. Measure your download and upload speed in Mbps plus ping latency and jitter, shown live on an animated speedometer. Runs in your browser against Cloudflare’s global edge.',
+    category: 'Developer',
+    keywords: [
+      'internet speed test',
+      'bandwidth test',
+      'download speed test',
+      'upload speed test',
+      'ping test',
+    ],
+    icon: 'M4 15a8 8 0 0116 0M12 15l4.5-4.5',
+  },
+  {
+    slug: 'gps-speedometer',
+    name: 'GPS Speedometer',
+    tagline: 'Live speed from your device’s GPS.',
+    description:
+      'Free GPS speedometer. See your real-world speed in km/h or mph live from your device’s GPS, with current, average and top speed on an animated dial. Runs entirely in your browser — no location data is uploaded.',
+    category: 'Calculators',
+    keywords: [
+      'gps speedometer',
+      'speedometer online',
+      'digital speedometer',
+      'car speed tracker',
+      'speed tracker app',
+    ],
+    icon: 'M4 15a8 8 0 0116 0M12 15l5-3M12 21v-2',
   },
 ];
 

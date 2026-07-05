@@ -1,0 +1,193 @@
+// Full ISO 4217 currency list shared by the invoice / receipt / PO generators.
+//
+// Each entry carries the pretty Unicode `symbol` (used everywhere in the HTML
+// preview — browser fonts render every glyph) and, where the symbol is safe in
+// the WinAnsi encoding pdf-lib's standard fonts use, a `pdf` override. When a
+// currency's symbol can't be represented by the standard PDF fonts (₹, ₩, ฿, …)
+// we fall back to the unambiguous ISO code (e.g. "INR 1299.00") rather than a
+// lossy transliteration — see `pdfPrefixOf`.
+
+export interface Currency {
+  code: string;    // ISO 4217 alpha code
+  name: string;    // English name
+  symbol: string;  // display symbol for the HTML preview
+  pdf?: string;    // WinAnsi-safe prefix for the PDF; omit to use `${code} `
+}
+
+// WinAnsi (CP1252) contains only these currency glyphs: $ ¢ £ ¤ ¥ € — plus the
+// ASCII letters used in composite symbols (CA$, kr, zł→"zl" is NOT safe because
+// ł is outside CP1252). Anything else falls back to the ISO code in the PDF.
+export const CURRENCIES: Currency[] = [
+  { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ' },
+  { code: 'AFN', name: 'Afghan Afghani', symbol: '؋' },
+  { code: 'ALL', name: 'Albanian Lek', symbol: 'L', pdf: 'L' },
+  { code: 'AMD', name: 'Armenian Dram', symbol: '֏' },
+  { code: 'ANG', name: 'Netherlands Antillean Guilder', symbol: 'ƒ' },
+  { code: 'AOA', name: 'Angolan Kwanza', symbol: 'Kz', pdf: 'Kz' },
+  { code: 'ARS', name: 'Argentine Peso', symbol: '$', pdf: 'AR$' },
+  { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', pdf: 'A$' },
+  { code: 'AWG', name: 'Aruban Florin', symbol: 'ƒ' },
+  { code: 'AZN', name: 'Azerbaijani Manat', symbol: '₼' },
+  { code: 'BAM', name: 'Bosnia-Herzegovina Convertible Mark', symbol: 'KM', pdf: 'KM' },
+  { code: 'BBD', name: 'Barbadian Dollar', symbol: 'Bds$', pdf: 'Bds$' },
+  { code: 'BDT', name: 'Bangladeshi Taka', symbol: '৳' },
+  { code: 'BGN', name: 'Bulgarian Lev', symbol: 'лв' },
+  { code: 'BHD', name: 'Bahraini Dinar', symbol: '.د.ب' },
+  { code: 'BIF', name: 'Burundian Franc', symbol: 'FBu', pdf: 'FBu' },
+  { code: 'BMD', name: 'Bermudian Dollar', symbol: 'BD$', pdf: 'BD$' },
+  { code: 'BND', name: 'Brunei Dollar', symbol: 'B$', pdf: 'B$' },
+  { code: 'BOB', name: 'Bolivian Boliviano', symbol: 'Bs', pdf: 'Bs' },
+  { code: 'BRL', name: 'Brazilian Real', symbol: 'R$', pdf: 'R$' },
+  { code: 'BSD', name: 'Bahamian Dollar', symbol: 'B$', pdf: 'B$' },
+  { code: 'BTN', name: 'Bhutanese Ngultrum', symbol: 'Nu.', pdf: 'Nu.' },
+  { code: 'BWP', name: 'Botswanan Pula', symbol: 'P', pdf: 'P' },
+  { code: 'BYN', name: 'Belarusian Ruble', symbol: 'Br', pdf: 'Br' },
+  { code: 'BZD', name: 'Belize Dollar', symbol: 'BZ$', pdf: 'BZ$' },
+  { code: 'CAD', name: 'Canadian Dollar', symbol: 'CA$', pdf: 'CA$' },
+  { code: 'CDF', name: 'Congolese Franc', symbol: 'FC', pdf: 'FC' },
+  { code: 'CHF', name: 'Swiss Franc', symbol: 'CHF', pdf: 'CHF ' },
+  { code: 'CLP', name: 'Chilean Peso', symbol: '$', pdf: 'CL$' },
+  { code: 'CNY', name: 'Chinese Yuan', symbol: 'CN¥', pdf: 'CN¥' },
+  { code: 'COP', name: 'Colombian Peso', symbol: '$', pdf: 'CO$' },
+  { code: 'CRC', name: 'Costa Rican Colón', symbol: '₡' },
+  { code: 'CUP', name: 'Cuban Peso', symbol: '$', pdf: 'CU$' },
+  { code: 'CVE', name: 'Cape Verdean Escudo', symbol: '$', pdf: 'CV$' },
+  { code: 'CZK', name: 'Czech Koruna', symbol: 'Kč' },
+  { code: 'DJF', name: 'Djiboutian Franc', symbol: 'Fdj', pdf: 'Fdj' },
+  { code: 'DKK', name: 'Danish Krone', symbol: 'kr', pdf: 'kr ' },
+  { code: 'DOP', name: 'Dominican Peso', symbol: 'RD$', pdf: 'RD$' },
+  { code: 'DZD', name: 'Algerian Dinar', symbol: 'دج' },
+  { code: 'EGP', name: 'Egyptian Pound', symbol: 'E£', pdf: 'E£' },
+  { code: 'ERN', name: 'Eritrean Nakfa', symbol: 'Nfk', pdf: 'Nfk' },
+  { code: 'ETB', name: 'Ethiopian Birr', symbol: 'Br', pdf: 'Br' },
+  { code: 'EUR', name: 'Euro', symbol: '€', pdf: '€' },
+  { code: 'FJD', name: 'Fijian Dollar', symbol: 'FJ$', pdf: 'FJ$' },
+  { code: 'FKP', name: 'Falkland Islands Pound', symbol: '£', pdf: '£' },
+  { code: 'GBP', name: 'British Pound', symbol: '£', pdf: '£' },
+  { code: 'GEL', name: 'Georgian Lari', symbol: '₾' },
+  { code: 'GHS', name: 'Ghanaian Cedi', symbol: '₵' },
+  { code: 'GIP', name: 'Gibraltar Pound', symbol: '£', pdf: '£' },
+  { code: 'GMD', name: 'Gambian Dalasi', symbol: 'D', pdf: 'D' },
+  { code: 'GNF', name: 'Guinean Franc', symbol: 'FG', pdf: 'FG' },
+  { code: 'GTQ', name: 'Guatemalan Quetzal', symbol: 'Q', pdf: 'Q' },
+  { code: 'GYD', name: 'Guyanaese Dollar', symbol: 'G$', pdf: 'G$' },
+  { code: 'HKD', name: 'Hong Kong Dollar', symbol: 'HK$', pdf: 'HK$' },
+  { code: 'HNL', name: 'Honduran Lempira', symbol: 'L', pdf: 'L' },
+  { code: 'HRK', name: 'Croatian Kuna', symbol: 'kn', pdf: 'kn' },
+  { code: 'HTG', name: 'Haitian Gourde', symbol: 'G', pdf: 'G' },
+  { code: 'HUF', name: 'Hungarian Forint', symbol: 'Ft', pdf: 'Ft ' },
+  { code: 'IDR', name: 'Indonesian Rupiah', symbol: 'Rp', pdf: 'Rp ' },
+  { code: 'ILS', name: 'Israeli New Shekel', symbol: '₪' },
+  { code: 'INR', name: 'Indian Rupee', symbol: '₹' },
+  { code: 'IQD', name: 'Iraqi Dinar', symbol: 'ع.د' },
+  { code: 'IRR', name: 'Iranian Rial', symbol: '﷼' },
+  { code: 'ISK', name: 'Icelandic Króna', symbol: 'kr', pdf: 'kr ' },
+  { code: 'JMD', name: 'Jamaican Dollar', symbol: 'J$', pdf: 'J$' },
+  { code: 'JOD', name: 'Jordanian Dinar', symbol: 'د.ا' },
+  { code: 'JPY', name: 'Japanese Yen', symbol: '¥', pdf: '¥' },
+  { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh', pdf: 'KSh' },
+  { code: 'KGS', name: 'Kyrgystani Som', symbol: 'с', pdf: 'som ' },
+  { code: 'KHR', name: 'Cambodian Riel', symbol: '៛' },
+  { code: 'KMF', name: 'Comorian Franc', symbol: 'CF', pdf: 'CF' },
+  { code: 'KPW', name: 'North Korean Won', symbol: '₩' },
+  { code: 'KRW', name: 'South Korean Won', symbol: '₩' },
+  { code: 'KWD', name: 'Kuwaiti Dinar', symbol: 'د.ك' },
+  { code: 'KYD', name: 'Cayman Islands Dollar', symbol: 'CI$', pdf: 'CI$' },
+  { code: 'KZT', name: 'Kazakhstani Tenge', symbol: '₸' },
+  { code: 'LAK', name: 'Laotian Kip', symbol: '₭' },
+  { code: 'LBP', name: 'Lebanese Pound', symbol: 'L£', pdf: 'L£' },
+  { code: 'LKR', name: 'Sri Lankan Rupee', symbol: 'Rs', pdf: 'Rs ' },
+  { code: 'LRD', name: 'Liberian Dollar', symbol: 'L$', pdf: 'L$' },
+  { code: 'LSL', name: 'Lesotho Loti', symbol: 'L', pdf: 'L' },
+  { code: 'LYD', name: 'Libyan Dinar', symbol: 'ل.د' },
+  { code: 'MAD', name: 'Moroccan Dirham', symbol: 'د.م.' },
+  { code: 'MDL', name: 'Moldovan Leu', symbol: 'L', pdf: 'L' },
+  { code: 'MGA', name: 'Malagasy Ariary', symbol: 'Ar', pdf: 'Ar' },
+  { code: 'MKD', name: 'Macedonian Denar', symbol: 'ден' },
+  { code: 'MMK', name: 'Myanmar Kyat', symbol: 'K', pdf: 'K' },
+  { code: 'MNT', name: 'Mongolian Tugrik', symbol: '₮' },
+  { code: 'MOP', name: 'Macanese Pataca', symbol: 'MOP$', pdf: 'MOP$' },
+  { code: 'MRU', name: 'Mauritanian Ouguiya', symbol: 'UM', pdf: 'UM' },
+  { code: 'MUR', name: 'Mauritian Rupee', symbol: '₨', pdf: 'Rs ' },
+  { code: 'MVR', name: 'Maldivian Rufiyaa', symbol: 'Rf', pdf: 'Rf' },
+  { code: 'MWK', name: 'Malawian Kwacha', symbol: 'MK', pdf: 'MK' },
+  { code: 'MXN', name: 'Mexican Peso', symbol: 'MX$', pdf: 'MX$' },
+  { code: 'MYR', name: 'Malaysian Ringgit', symbol: 'RM', pdf: 'RM ' },
+  { code: 'MZN', name: 'Mozambican Metical', symbol: 'MT', pdf: 'MT' },
+  { code: 'NAD', name: 'Namibian Dollar', symbol: 'N$', pdf: 'N$' },
+  { code: 'NGN', name: 'Nigerian Naira', symbol: '₦' },
+  { code: 'NIO', name: 'Nicaraguan Córdoba', symbol: 'C$', pdf: 'C$' },
+  { code: 'NOK', name: 'Norwegian Krone', symbol: 'kr', pdf: 'kr ' },
+  { code: 'NPR', name: 'Nepalese Rupee', symbol: '₨', pdf: 'Rs ' },
+  { code: 'NZD', name: 'New Zealand Dollar', symbol: 'NZ$', pdf: 'NZ$' },
+  { code: 'OMR', name: 'Omani Rial', symbol: 'ر.ع.' },
+  { code: 'PAB', name: 'Panamanian Balboa', symbol: 'B/.', pdf: 'B/.' },
+  { code: 'PEN', name: 'Peruvian Sol', symbol: 'S/', pdf: 'S/ ' },
+  { code: 'PGK', name: 'Papua New Guinean Kina', symbol: 'K', pdf: 'K' },
+  { code: 'PHP', name: 'Philippine Peso', symbol: '₱' },
+  { code: 'PKR', name: 'Pakistani Rupee', symbol: '₨', pdf: 'Rs ' },
+  { code: 'PLN', name: 'Polish Złoty', symbol: 'zł', pdf: 'zl ' },
+  { code: 'PYG', name: 'Paraguayan Guarani', symbol: '₲' },
+  { code: 'QAR', name: 'Qatari Rial', symbol: 'ر.ق' },
+  { code: 'RON', name: 'Romanian Leu', symbol: 'lei', pdf: 'lei ' },
+  { code: 'RSD', name: 'Serbian Dinar', symbol: 'дин.' },
+  { code: 'RUB', name: 'Russian Ruble', symbol: '₽' },
+  { code: 'RWF', name: 'Rwandan Franc', symbol: 'FRw', pdf: 'FRw' },
+  { code: 'SAR', name: 'Saudi Riyal', symbol: '﷼' },
+  { code: 'SBD', name: 'Solomon Islands Dollar', symbol: 'SI$', pdf: 'SI$' },
+  { code: 'SCR', name: 'Seychellois Rupee', symbol: '₨', pdf: 'Rs ' },
+  { code: 'SDG', name: 'Sudanese Pound', symbol: 'ج.س.' },
+  { code: 'SEK', name: 'Swedish Krona', symbol: 'kr', pdf: 'kr ' },
+  { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$', pdf: 'S$' },
+  { code: 'SHP', name: 'Saint Helena Pound', symbol: '£', pdf: '£' },
+  { code: 'SLE', name: 'Sierra Leonean Leone', symbol: 'Le', pdf: 'Le' },
+  { code: 'SOS', name: 'Somali Shilling', symbol: 'Sh', pdf: 'Sh' },
+  { code: 'SRD', name: 'Surinamese Dollar', symbol: 'Sr$', pdf: 'Sr$' },
+  { code: 'SSP', name: 'South Sudanese Pound', symbol: '£', pdf: '£' },
+  { code: 'STN', name: 'São Tomé & Príncipe Dobra', symbol: 'Db', pdf: 'Db' },
+  { code: 'SYP', name: 'Syrian Pound', symbol: 'S£', pdf: 'S£' },
+  { code: 'SZL', name: 'Swazi Lilangeni', symbol: 'L', pdf: 'L' },
+  { code: 'THB', name: 'Thai Baht', symbol: '฿' },
+  { code: 'TJS', name: 'Tajikistani Somoni', symbol: 'ЅМ' },
+  { code: 'TMT', name: 'Turkmenistani Manat', symbol: 'm', pdf: 'm' },
+  { code: 'TND', name: 'Tunisian Dinar', symbol: 'د.ت' },
+  { code: 'TOP', name: 'Tongan Paʻanga', symbol: 'T$', pdf: 'T$' },
+  { code: 'TRY', name: 'Turkish Lira', symbol: '₺' },
+  { code: 'TTD', name: 'Trinidad & Tobago Dollar', symbol: 'TT$', pdf: 'TT$' },
+  { code: 'TWD', name: 'New Taiwan Dollar', symbol: 'NT$', pdf: 'NT$' },
+  { code: 'TZS', name: 'Tanzanian Shilling', symbol: 'TSh', pdf: 'TSh' },
+  { code: 'UAH', name: 'Ukrainian Hryvnia', symbol: '₴' },
+  { code: 'UGX', name: 'Ugandan Shilling', symbol: 'USh', pdf: 'USh' },
+  { code: 'USD', name: 'US Dollar', symbol: '$', pdf: '$' },
+  { code: 'UYU', name: 'Uruguayan Peso', symbol: '$U', pdf: '$U' },
+  { code: 'UZS', name: 'Uzbekistani Som', symbol: "so'm", pdf: "so'm " },
+  { code: 'VES', name: 'Venezuelan Bolívar', symbol: 'Bs.', pdf: 'Bs.' },
+  { code: 'VND', name: 'Vietnamese Dong', symbol: '₫' },
+  { code: 'VUV', name: 'Vanuatu Vatu', symbol: 'VT', pdf: 'VT' },
+  { code: 'WST', name: 'Samoan Tala', symbol: 'WS$', pdf: 'WS$' },
+  { code: 'XAF', name: 'Central African CFA Franc', symbol: 'FCFA', pdf: 'FCFA ' },
+  { code: 'XCD', name: 'East Caribbean Dollar', symbol: 'EC$', pdf: 'EC$' },
+  { code: 'XOF', name: 'West African CFA Franc', symbol: 'CFA', pdf: 'CFA ' },
+  { code: 'XPF', name: 'CFP Franc', symbol: '₣' },
+  { code: 'YER', name: 'Yemeni Rial', symbol: '﷼' },
+  { code: 'ZAR', name: 'South African Rand', symbol: 'R', pdf: 'R ' },
+  { code: 'ZMW', name: 'Zambian Kwacha', symbol: 'ZK', pdf: 'ZK' },
+  { code: 'ZWL', name: 'Zimbabwean Dollar', symbol: 'Z$', pdf: 'Z$' },
+];
+
+const BY_CODE = new Map(CURRENCIES.map((c) => [c.code, c]));
+
+/** Pretty Unicode symbol for the HTML preview (browser fonts render all). */
+export function symbolOf(code: string): string {
+  return BY_CODE.get(code)?.symbol ?? `${code} `;
+}
+
+/**
+ * WinAnsi-safe prefix for the PDF. Uses the currency's `pdf` override when the
+ * symbol is representable by pdf-lib's standard fonts, otherwise the ISO code
+ * followed by a space (e.g. "INR ") — always unambiguous, never a "?".
+ */
+export function pdfPrefixOf(code: string): string {
+  const c = BY_CODE.get(code);
+  return c?.pdf ?? `${code} `;
+}

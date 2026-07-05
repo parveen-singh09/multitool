@@ -1,0 +1,257 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="gps-speedometer">
+  <div class="flex flex-col gap-6">
+    <!-- Speedometer gauge -->
+    <div class="panel panel-lift flex flex-col items-center gap-3 p-6">
+      <svg id="sp-gauge" viewBox="0 0 300 180" class="w-full max-w-md" role="img" aria-label="Speed gauge">
+        <path id="sp-track" fill="none" stroke="#23252a" stroke-width="14" stroke-linecap="round" />
+        <path id="sp-arc" fill="none" stroke="#5e6ad2" stroke-width="14" stroke-linecap="round" />
+        <g id="sp-ticks" font-size="10" fill="#62666d" font-family="var(--font-mono)"></g>
+        <line id="sp-needle" x1="150" y1="150" x2="150" y2="55" stroke="#f7f8f8" stroke-width="3" stroke-linecap="round" />
+        <circle cx="150" cy="150" r="6" fill="#f7f8f8" />
+      </svg>
+
+      <div class="text-center">
+        <div class="flex items-baseline justify-center gap-2">
+          <span id="sp-readout" class="font-display text-4xl font-semibold tabular-nums text-ink">0</span>
+          <button id="sp-unit" class="font-mono text-sm text-primary-hover hover:text-primary" aria-label="Toggle speed unit">km/h</button>
+        </div>
+        <div id="sp-status" class="mt-1 text-[13px] text-ink-subtle">Tap start and allow location access</div>
+      </div>
+
+      <div class="mt-1 flex flex-wrap items-center justify-center gap-2">
+        <button id="sp-start" class="btn btn-primary">Start</button>
+        <button id="sp-stop" class="btn btn-secondary hidden">Stop</button>
+        <button id="sp-reset" class="btn btn-tertiary">Reset</button>
+      </div>
+    </div>
+
+    <!-- Stat tiles -->
+    <div class="grid grid-cols-3 gap-3 text-center">
+      <div class="panel p-4">
+        <div id="sp-avg" class="font-mono text-lg text-ink">0.0</div>
+        <div class="mt-1 text-[13px] text-ink-subtle">Average</div>
+      </div>
+      <div class="panel p-4">
+        <div id="sp-max" class="font-mono text-lg text-ink">0.0</div>
+        <div class="mt-1 text-[13px] text-ink-subtle">Top speed</div>
+      </div>
+      <div class="panel p-4">
+        <div id="sp-acc" class="font-mono text-lg text-ink">—</div>
+        <div class="mt-1 text-[13px] text-ink-subtle">GPS accuracy</div>
+      </div>
+    </div>
+
+    <p class="text-[13px] leading-relaxed text-ink-tertiary">
+      Your speed is read from your device’s GPS entirely in the browser. No
+      location data is uploaded or stored. Accuracy depends on your device and
+      GPS signal — for best results use a phone outdoors with a clear view of the
+      sky.
+    </p>
+    <p id="sp-error" class="hidden text-[13px] leading-relaxed text-[#e5484d]"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free GPS speedometer turns your phone, tablet, or laptop into a live
+      speed display. It reads your velocity directly from the device’s GPS sensor
+      and shows it on an animated dial in kilometers per hour or miles per hour,
+      alongside your average speed, top speed, and the current GPS accuracy in
+      meters. Tap the unit label to switch between km/h and mph at any time.
+    </p>
+    <p>
+      Everything runs locally in your browser — your location never leaves the
+      device and nothing is recorded. GPS speed is most reliable outdoors while
+      moving steadily; readings can jump or read zero at very low speeds or with a
+      weak signal. It’s handy for cycling, running, boating, or checking a
+      vehicle’s speedometer, but don’t rely on it as your only instrument while
+      driving.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const readout = $('sp-readout');
+  const unitBtn = $('sp-unit');
+  const statusEl = $('sp-status');
+  const errEl = $('sp-error');
+  const startBtn = $('sp-start') as HTMLButtonElement;
+  const stopBtn = $('sp-stop') as HTMLButtonElement;
+  const resetBtn = $('sp-reset') as HTMLButtonElement;
+  const arc = $('sp-arc') as unknown as SVGPathElement;
+  const track = $('sp-track') as unknown as SVGPathElement;
+  const needle = $('sp-needle') as unknown as SVGLineElement;
+  const ticksEl = $('sp-ticks');
+  const avgEl = $('sp-avg');
+  const maxEl = $('sp-max');
+  const accEl = $('sp-acc');
+
+  // ---- Gauge geometry (shared look with the internet speed test) ----
+  const CX = 150, CY = 150, R = 95;
+  const START_ANGLE = 150;
+  const SWEEP = 240;
+
+  let unit: 'kmh' | 'mph' = 'kmh';
+  const MAX = { kmh: 180, mph: 120 }; // dial full-scale per unit
+  const TICK_COUNT = 6;
+
+  function polar(angleDeg: number, r = R) {
+    const a = (angleDeg * Math.PI) / 180;
+    return { x: CX + r * Math.cos(a), y: CY + r * Math.sin(a) };
+  }
+  function arcPath(fromDeg: number, toDeg: number, r = R) {
+    const s = polar(fromDeg, r);
+    const e = polar(toDeg, r);
+    const large = Math.abs(toDeg - fromDeg) > 180 ? 1 : 0;
+    return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 1 ${e.x} ${e.y}`;
+  }
+  function setGauge(v: number) {
+    const frac = Math.max(0, Math.min(1, v / MAX[unit]));
+    const angle = START_ANGLE + SWEEP * frac;
+    arc.setAttribute('d', arcPath(START_ANGLE, Math.max(START_ANGLE + 0.01, angle)));
+    const tip = polar(angle, R - 10);
+    needle.setAttribute('x2', String(tip.x));
+    needle.setAttribute('y2', String(tip.y));
+  }
+
+  function buildTicks() {
+    ticksEl.replaceChildren();
+    for (let i = 0; i <= TICK_COUNT; i++) {
+      const frac = i / TICK_COUNT;
+      const angle = START_ANGLE + SWEEP * frac;
+      const p = polar(angle, R + 16);
+      const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      t.setAttribute('x', String(p.x));
+      t.setAttribute('y', String(p.y));
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('dominant-baseline', 'middle');
+      t.textContent = String(Math.round(MAX[unit] * frac));
+      ticksEl.appendChild(t);
+    }
+  }
+
+  track.setAttribute('d', arcPath(START_ANGLE, START_ANGLE + SWEEP));
+  buildTicks();
+  setGauge(0);
+
+  // ---- Smooth readout animation ----
+  let displayed = 0;
+  let raf = 0;
+  function animateTo(target: number) {
+    cancelAnimationFrame(raf);
+    const step = () => {
+      displayed += (target - displayed) * 0.2;
+      if (Math.abs(target - displayed) < 0.05) displayed = target;
+      readout.textContent = unit === 'kmh' ? Math.round(displayed).toString() : displayed.toFixed(0);
+      setGauge(displayed);
+      if (displayed !== target) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+  }
+
+  // ---- State ----
+  let watchId: number | null = null;
+  let maxSpeedKmh = 0;
+  let sumKmh = 0;
+  let count = 0;
+  let lastKmh = 0;
+
+  const toKmh = (mps: number) => mps * 3.6;
+  const fromKmh = (kmh: number) => (unit === 'kmh' ? kmh : kmh / 1.609344);
+
+  function render(kmh: number) {
+    animateTo(fromKmh(kmh));
+    avgEl.textContent = count ? fromKmh(sumKmh / count).toFixed(1) : '0.0';
+    maxEl.textContent = fromKmh(maxSpeedKmh).toFixed(1);
+  }
+
+  function onPosition(pos: GeolocationPosition) {
+    errEl.classList.add('hidden');
+    const { speed, accuracy } = pos.coords;
+    accEl.textContent = accuracy != null ? `${Math.round(accuracy)} m` : '—';
+    // speed is meters/sec, or null if the device can't derive it.
+    if (speed == null || Number.isNaN(speed) || speed < 0) {
+      statusEl.textContent = 'Waiting for movement…';
+      return;
+    }
+    const kmh = toKmh(speed);
+    lastKmh = kmh;
+    if (kmh > maxSpeedKmh) maxSpeedKmh = kmh;
+    // Only fold moving samples into the average so idle time doesn't drag it down.
+    if (kmh > 1) {
+      sumKmh += kmh;
+      count++;
+    }
+    statusEl.textContent = 'Tracking live speed';
+    render(kmh);
+  }
+
+  function onError(err: GeolocationPositionError) {
+    stop();
+    statusEl.textContent = 'Tap start and allow location access';
+    const msg =
+      err.code === err.PERMISSION_DENIED
+        ? 'Location permission was denied. Allow it in your browser’s site settings, then start again.'
+        : err.code === err.POSITION_UNAVAILABLE
+          ? 'Location is unavailable. Make sure GPS/location services are on.'
+          : 'Timed out getting your location. Try again with a clearer view of the sky.';
+    errEl.textContent = msg;
+    errEl.classList.remove('hidden');
+  }
+
+  function start() {
+    if (!('geolocation' in navigator)) {
+      errEl.textContent = 'This browser does not support geolocation.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+    errEl.classList.add('hidden');
+    statusEl.textContent = 'Getting GPS signal…';
+    startBtn.classList.add('hidden');
+    stopBtn.classList.remove('hidden');
+    watchId = navigator.geolocation.watchPosition(onPosition, onError, {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 15000,
+    });
+  }
+
+  function stop() {
+    if (watchId != null) {
+      navigator.geolocation.clearWatch(watchId);
+      watchId = null;
+    }
+    stopBtn.classList.add('hidden');
+    startBtn.classList.remove('hidden');
+    startBtn.textContent = 'Resume';
+    if (!errEl.textContent) statusEl.textContent = 'Stopped';
+  }
+
+  function reset() {
+    maxSpeedKmh = 0;
+    sumKmh = 0;
+    count = 0;
+    lastKmh = 0;
+    animateTo(0);
+    avgEl.textContent = '0.0';
+    maxEl.textContent = '0.0';
+    accEl.textContent = '—';
+  }
+
+  unitBtn.addEventListener('click', () => {
+    unit = unit === 'kmh' ? 'mph' : 'kmh';
+    unitBtn.textContent = unit === 'kmh' ? 'km/h' : 'mph';
+    buildTicks();
+    // Re-render everything in the newly selected unit.
+    displayed = fromKmh(lastKmh); // snap without a jarring sweep from 0
+    render(lastKmh);
+  });
+
+  startBtn.addEventListener('click', start);
+  stopBtn.addEventListener('click', stop);
+  resetBtn.addEventListener('click', reset);
+</script>
