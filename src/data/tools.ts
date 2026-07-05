@@ -2726,16 +2726,6 @@ export const tools: Tool[] = [
     icon: 'M6 2h9l5 5v15H6zM14 2v6h6M9 12h6M9 16h6M9 8h2',
   },
   {
-    slug: 'cover-letter-generator',
-    name: 'Cover Letter Generator',
-    tagline: 'Draft a cover letter from a template.',
-    description:
-      'Free online cover letter generator. Fill in your details and the job, pick a tone, and generate a polished cover letter you can edit, copy or print to PDF. Runs entirely in your browser — nothing uploaded.',
-    category: 'PDF',
-    keywords: ['cover letter generator', 'cover letter maker', 'cover letter template', 'write cover letter', 'job application letter generator'],
-    icon: 'M4 5h16v14H4zM4 7l8 6 8-6',
-  },
-  {
     slug: 'certificate-generator',
     name: 'Certificate Generator',
     tagline: 'Design award certificates & download.',
