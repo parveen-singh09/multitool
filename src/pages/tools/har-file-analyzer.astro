@@ -1,0 +1,225 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="har-file-analyzer">
+  <div class="flex flex-col gap-5">
+    <div id="ha-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-ink-subtle"><path d="M12 16V4m0 0L8 8m4-4 4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="text-sm text-ink">Drop a <span class="font-mono">.har</span> file here or click to choose</span>
+      <span class="text-[12px] text-ink-tertiary">Captured from your browser's Network tab · parsed locally</span>
+      <input id="ha-file" type="file" accept=".har,application/json" class="hidden" />
+    </div>
+
+    <div id="ha-report" class="hidden flex-col gap-5">
+      <div id="ha-summary" class="grid grid-cols-2 gap-3 sm:grid-cols-4"></div>
+
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div class="panel p-4">
+          <div class="eyebrow mb-3">By type</div>
+          <div id="ha-types" class="flex flex-col gap-2"></div>
+        </div>
+        <div class="panel p-4">
+          <div class="eyebrow mb-3">By domain</div>
+          <div id="ha-domains" class="flex flex-col gap-2"></div>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <div class="flex items-center gap-2">
+          <div class="eyebrow">Slowest & largest requests</div>
+          <select id="ha-sort" class="field ml-auto w-40 text-[13px]">
+            <option value="time">Sort by time</option>
+            <option value="size">Sort by size</option>
+          </select>
+        </div>
+        <div class="panel overflow-x-auto">
+          <table class="w-full text-left text-[13px]">
+            <thead class="text-ink-tertiary">
+              <tr class="border-b border-hairline">
+                <th class="p-2 font-medium">Status</th>
+                <th class="p-2 font-medium">Method</th>
+                <th class="p-2 font-medium">URL</th>
+                <th class="p-2 text-right font-medium">Size</th>
+                <th class="p-2 text-right font-medium">Time</th>
+              </tr>
+            </thead>
+            <tbody id="ha-rows" class="font-mono"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free HAR file analyzer breaks down a HTTP Archive (.har) capture from
+      your browser's Network tab. It summarizes the total requests, transfer size
+      and load time, groups traffic by content type and by domain, and lists the
+      slowest and largest requests so you can spot performance bottlenecks and
+      third-party bloat. To create a HAR: open DevTools → Network, reload the page,
+      then right-click and "Save all as HAR". Your file is parsed entirely in your
+      browser and never uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const drop = document.getElementById('ha-drop')!;
+  const fileInput = document.getElementById('ha-file') as HTMLInputElement;
+  const report = document.getElementById('ha-report')!;
+  const sortSel = document.getElementById('ha-sort') as HTMLSelectElement;
+
+  interface Entry { status: number; method: string; url: string; host: string; type: string; size: number; time: number; }
+  let entries: Entry[] = [];
+
+  function fmtBytes(n: number): string {
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / 1024 / 1024).toFixed(2)} MB`;
+  }
+  function fmtMs(n: number): string {
+    if (n < 1000) return `${Math.round(n)} ms`;
+    return `${(n / 1000).toFixed(2)} s`;
+  }
+
+  function categorize(mime: string, url: string): string {
+    const m = (mime || '').toLowerCase();
+    if (m.includes('html')) return 'Document';
+    if (m.includes('css')) return 'CSS';
+    if (m.includes('javascript') || m.includes('ecmascript') || /\.js(\?|$)/.test(url)) return 'JS';
+    if (m.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg|avif)(\?|$)/i.test(url)) return 'Image';
+    if (m.startsWith('font/') || m.includes('font') || /\.(woff2?|ttf|otf|eot)(\?|$)/i.test(url)) return 'Font';
+    if (m.includes('json') || m.includes('xml') || url.includes('/api/')) return 'XHR/Fetch';
+    if (m.startsWith('video/') || m.startsWith('audio/')) return 'Media';
+    return 'Other';
+  }
+
+  function statusColor(s: number): string {
+    if (s >= 500) return '#e08585';
+    if (s >= 400) return '#e0a085';
+    if (s >= 300) return '#e0c185';
+    if (s >= 200) return '#27a644';
+    return '#8a8f98';
+  }
+
+  function parse(har: any): Entry[] {
+    const log = har.log || har;
+    const es = (log.entries || []) as any[];
+    return es.map((e) => {
+      let host = '';
+      try { host = new URL(e.request.url).hostname; } catch { host = '(invalid)'; }
+      const size = Math.max(0, e.response?._transferSize ?? e.response?.content?.size ?? e.response?.bodySize ?? 0);
+      return {
+        status: e.response?.status ?? 0,
+        method: e.request?.method ?? 'GET',
+        url: e.request?.url ?? '',
+        host,
+        type: categorize(e.response?.content?.mimeType || '', e.request?.url || ''),
+        size,
+        time: Math.max(0, e.time ?? 0),
+      };
+    });
+  }
+
+  function statTile(label: string, value: string): string {
+    return `<div class="panel panel-lift flex flex-col gap-1 p-4">
+      <span class="text-[12px] text-ink-tertiary">${label}</span>
+      <span class="font-display text-2xl font-semibold text-ink">${value}</span>
+    </div>`;
+  }
+
+  function bar(label: string, count: number, size: number, max: number): string {
+    const pct = max > 0 ? Math.round((count / max) * 100) : 0;
+    return `<div class="flex flex-col gap-1">
+      <div class="flex items-baseline justify-between text-[13px]">
+        <span class="text-ink">${label}</span>
+        <span class="text-ink-tertiary">${count} · ${fmtBytes(size)}</span>
+      </div>
+      <div class="h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
+        <div class="h-full rounded-full" style="width:${pct}%;background:#5e6ad2"></div>
+      </div>
+    </div>`;
+  }
+
+  function render() {
+    if (!entries.length) return;
+    const total = entries.length;
+    const totalSize = entries.reduce((a, e) => a + e.size, 0);
+    const wallTime = entries.reduce((a, e) => a + e.time, 0);
+    const failures = entries.filter((e) => e.status >= 400 || e.status === 0).length;
+
+    document.getElementById('ha-summary')!.innerHTML =
+      statTile('Requests', String(total)) +
+      statTile('Transferred', fmtBytes(totalSize)) +
+      statTile('Total time', fmtMs(wallTime)) +
+      statTile('Errors (≥400)', String(failures));
+
+    // Group by type.
+    const groupBy = (key: (e: Entry) => string) => {
+      const map = new Map<string, { count: number; size: number }>();
+      for (const e of entries) {
+        const k = key(e);
+        const g = map.get(k) || { count: 0, size: 0 };
+        g.count++; g.size += e.size; map.set(k, g);
+      }
+      return [...map.entries()].sort((a, b) => b[1].count - a[1].count);
+    };
+
+    const types = groupBy((e) => e.type);
+    const maxType = Math.max(...types.map((t) => t[1].count), 1);
+    document.getElementById('ha-types')!.innerHTML = types.map(([k, g]) => bar(k, g.count, g.size, maxType)).join('');
+
+    const domains = groupBy((e) => e.host).slice(0, 8);
+    const maxDom = Math.max(...domains.map((d) => d[1].count), 1);
+    document.getElementById('ha-domains')!.innerHTML = domains.map(([k, g]) => bar(k, g.count, g.size, maxDom)).join('');
+
+    renderRows();
+    report.classList.remove('hidden');
+  }
+
+  function renderRows() {
+    const key = sortSel.value === 'size' ? (e: Entry) => e.size : (e: Entry) => e.time;
+    const rows = [...entries].sort((a, b) => key(b) - key(a)).slice(0, 20);
+    document.getElementById('ha-rows')!.innerHTML = rows
+      .map((e) => {
+        let path = e.url;
+        try { const u = new URL(e.url); path = u.hostname + u.pathname; } catch {}
+        return `<tr class="border-b border-hairline/50">
+          <td class="p-2"><span style="color:${statusColor(e.status)}">${e.status || '—'}</span></td>
+          <td class="p-2 text-ink-subtle">${e.method}</td>
+          <td class="p-2 max-w-[280px] truncate text-ink-muted" title="${e.url.replace(/"/g, '&quot;')}">${path}</td>
+          <td class="p-2 text-right text-ink-subtle">${fmtBytes(e.size)}</td>
+          <td class="p-2 text-right text-ink-subtle">${fmtMs(e.time)}</td>
+        </tr>`;
+      })
+      .join('');
+  }
+
+  function load(text: string) {
+    try {
+      const har = JSON.parse(text);
+      entries = parse(har);
+      if (!entries.length) { alert('No requests found in this HAR file.'); return; }
+      render();
+    } catch {
+      alert('Could not parse this file as a HAR (JSON) archive.');
+    }
+  }
+
+  function handleFile(file: File) {
+    const reader = new FileReader();
+    reader.onload = () => load(String(reader.result));
+    reader.readAsText(file);
+  }
+
+  drop.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) handleFile(fileInput.files[0]); });
+  drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('bg-surface-2'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('bg-surface-2'));
+  drop.addEventListener('drop', (e) => {
+    e.preventDefault(); drop.classList.remove('bg-surface-2');
+    const f = e.dataTransfer?.files?.[0]; if (f) handleFile(f);
+  });
+  sortSel.addEventListener('change', renderRows);
+</script>

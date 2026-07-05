@@ -1,0 +1,137 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="dpi-analyzer">
+  <div class="flex flex-col gap-5">
+    <div class="panel p-4 text-[13px] text-ink-subtle">
+      Move your mouse and watch the counters. To measure your real mouse DPI, set
+      a physical distance below, then swipe your mouse exactly that far across a
+      mousepad in one straight motion while holding inside the pad — the estimated
+      DPI appears when you release.
+    </div>
+
+    <div id="dp-pad" class="panel panel-lift relative flex h-64 cursor-crosshair select-none items-center justify-center overflow-hidden text-center">
+      <span id="dp-hint" class="pointer-events-none text-sm text-ink-tertiary">Press and drag here to measure</span>
+      <div id="dp-marker" class="pointer-events-none absolute hidden h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#5e6ad2]"></div>
+    </div>
+
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Distance moved
+        <input id="dp-dist" type="number" min="0.1" step="0.1" value="10" class="field w-28" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Unit
+        <select id="dp-unit" class="field w-32">
+          <option value="cm">cm</option>
+          <option value="in">inches</option>
+        </select>
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        Configured DPI
+        <input id="dp-set" type="number" min="1" step="1" value="800" class="field w-28" />
+      </label>
+    </div>
+
+    <div id="dp-stats" class="grid grid-cols-2 gap-3 sm:grid-cols-4"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free DPI analyzer measures your mouse's true DPI (dots per inch, really
+      counts per inch — CPI). Enter the physical distance you'll move the mouse,
+      then press and drag across the pad in one straight swipe. The tool records
+      how many pixels the pointer travelled and divides by your measured physical
+      distance to estimate the effective DPI, and compares it to the DPI you think
+      your mouse is set to. Because browsers report movement in CSS pixels,
+      accuracy depends on your display scaling — treat the result as a close
+      estimate. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const pad = document.getElementById('dp-pad')!;
+  const marker = document.getElementById('dp-marker')!;
+  const hint = document.getElementById('dp-hint')!;
+  const stats = document.getElementById('dp-stats')!;
+  const distEl = document.getElementById('dp-dist') as HTMLInputElement;
+  const unitEl = document.getElementById('dp-unit') as HTMLSelectElement;
+  const setEl = document.getElementById('dp-set') as HTMLInputElement;
+
+  let dragging = false;
+  let startX = 0, startY = 0;
+  let totalPx = 0;      // accumulated raw movement (uses movementX/Y)
+  let lastResult = 0;
+
+  function tile(label: string, value: string, accent = false): string {
+    return `<div class="panel panel-lift flex flex-col gap-1 p-4">
+      <span class="text-[12px] text-ink-tertiary">${label}</span>
+      <span class="font-display text-2xl font-semibold ${accent ? 'text-primary-hover' : 'text-ink'}">${value}</span>
+    </div>`;
+  }
+
+  function physicalInches(): number {
+    const d = parseFloat(distEl.value) || 0;
+    return unitEl.value === 'in' ? d : d / 2.54;
+  }
+
+  function render(measuredPx: number) {
+    const inches = physicalInches();
+    const dpi = inches > 0 ? Math.round(measuredPx / inches) : 0;
+    lastResult = dpi;
+    const setDpi = parseFloat(setEl.value) || 0;
+    const ratio = setDpi > 0 ? (dpi / setDpi) : 0;
+    stats.innerHTML =
+      tile('Pixels travelled', measuredPx.toLocaleString()) +
+      tile('Distance', `${(distEl.value || '0')} ${unitEl.value}`) +
+      tile('Estimated DPI', dpi ? dpi.toLocaleString() : '—', true) +
+      tile('vs configured', setDpi ? `${(ratio * 100).toFixed(0)}%` : '—');
+  }
+
+  function start(e: PointerEvent) {
+    dragging = true;
+    totalPx = 0;
+    startX = e.clientX; startY = e.clientY;
+    hint.classList.add('hidden');
+    marker.classList.remove('hidden');
+    pad.setPointerCapture(e.pointerId);
+    positionMarker(e);
+  }
+
+  function move(e: PointerEvent) {
+    if (!dragging) return;
+    // Accumulate raw movement — the most reliable pixel measure of pointer travel.
+    totalPx += Math.hypot(e.movementX || 0, e.movementY || 0);
+    positionMarker(e);
+  }
+
+  function positionMarker(e: PointerEvent) {
+    const rect = pad.getBoundingClientRect();
+    marker.style.left = `${e.clientX - rect.left}px`;
+    marker.style.top = `${e.clientY - rect.top}px`;
+  }
+
+  function end(e: PointerEvent) {
+    if (!dragging) return;
+    dragging = false;
+    // Fall back to straight-line distance if movement deltas were unavailable.
+    const straight = Math.hypot(e.clientX - startX, e.clientY - startY);
+    const measured = Math.round(Math.max(totalPx, straight));
+    render(measured);
+  }
+
+  pad.addEventListener('pointerdown', start);
+  pad.addEventListener('pointermove', move);
+  pad.addEventListener('pointerup', end);
+  pad.addEventListener('pointercancel', end);
+
+  [distEl, unitEl, setEl].forEach((el) => el.addEventListener('input', () => {
+    // Re-render using the last measured pixel count if we have one.
+    if (lastResult) {
+      const inches = physicalInches();
+      render(Math.round(lastResult * inches));
+    }
+  }));
+
+  render(0);
+</script>

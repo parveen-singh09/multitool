@@ -1,0 +1,160 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="typegrow-linkedin-formatter">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <button data-fmt="bold" class="btn btn-secondary" title="Bold (𝗕)"><span class="font-bold">B</span></button>
+      <button data-fmt="italic" class="btn btn-secondary" title="Italic (𝘐)"><span class="italic">I</span></button>
+      <button data-fmt="boldItalic" class="btn btn-secondary" title="Bold italic">BI</button>
+      <button data-fmt="script" class="btn btn-secondary" title="Cursive script">𝒮</button>
+      <button data-fmt="monospace" class="btn btn-secondary" title="Monospace">𝙼</button>
+      <button data-fmt="underline" class="btn btn-secondary" title="Underline">U̲</button>
+      <button data-fmt="strike" class="btn btn-secondary" title="Strikethrough">S̶</button>
+      <span class="mx-1 h-6 w-px bg-hairline"></span>
+      <button data-list="bullet" class="btn btn-secondary" title="Bullet list">• List</button>
+      <button data-list="number" class="btn btn-secondary" title="Numbered list">1. List</button>
+      <button data-list="arrow" class="btn btn-secondary" title="Arrow list">→ List</button>
+      <button id="tg-clear" class="btn btn-tertiary ml-auto" title="Strip formatting">Clear format</button>
+    </div>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Your post
+      <textarea id="tg-in" class="field min-h-56 resize-y text-[15px]" placeholder="Write your LinkedIn post here. Select text and tap a style above to make it bold, italic and more — the Unicode formatting survives copy-paste into LinkedIn.">Big news 🎉
+
+I'm thrilled to share that our team just shipped something we're really proud of.</textarea>
+    </label>
+
+    <div class="flex items-center gap-2">
+      <div class="eyebrow">Preview</div>
+      <span id="tg-count" class="status-badge ml-auto">0 characters</span>
+      <button id="tg-copy" class="btn btn-primary">Copy formatted</button>
+    </div>
+    <div id="tg-out" class="panel panel-lift min-h-24 whitespace-pre-wrap break-words p-4 text-[15px] leading-relaxed text-ink"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free LinkedIn text formatter (a Typegrow-style tool) adds <strong>bold</strong>,
+      <em>italic</em>, underline, strikethrough, cursive and monospace styling to your
+      LinkedIn posts, comments and headline. LinkedIn strips normal rich-text, so this
+      tool swaps your letters for their Unicode "mathematical alphanumeric" look-alikes,
+      which paste in and keep their styling anywhere Unicode is supported. It also builds
+      clean bullet, numbered and arrow lists. Select text, tap a style, then copy — nothing
+      is uploaded and everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('tg-in') as HTMLTextAreaElement;
+  const out = document.getElementById('tg-out')!;
+  const count = document.getElementById('tg-count')!;
+
+  // Offsets from ASCII code points into the Unicode "mathematical" ranges,
+  // built per style so we can map A–Z, a–z and 0–9 individually.
+  type Style = Record<string, string>;
+
+  function buildAlphabet(upperStart: number, lowerStart: number, digitStart?: number): Style {
+    const map: Style = {};
+    for (let i = 0; i < 26; i++) {
+      map[String.fromCharCode(65 + i)] = String.fromCodePoint(upperStart + i);
+      map[String.fromCharCode(97 + i)] = String.fromCodePoint(lowerStart + i);
+    }
+    if (digitStart !== undefined) {
+      for (let i = 0; i < 10; i++) map[String.fromCharCode(48 + i)] = String.fromCodePoint(digitStart + i);
+    }
+    return map;
+  }
+
+  // Sans-serif mathematical alphabets (render cleanly on LinkedIn).
+  const STYLES: Record<string, Style> = {
+    bold: buildAlphabet(0x1d5d4, 0x1d5ee, 0x1d7ec),
+    italic: buildAlphabet(0x1d608, 0x1d622),
+    boldItalic: buildAlphabet(0x1d63c, 0x1d656),
+    monospace: buildAlphabet(0x1d670, 0x1d68a, 0x1d7f6),
+  };
+  // Script (cursive) has irregular code points — patch the exceptions.
+  const script = buildAlphabet(0x1d4d0, 0x1d4ea);
+  STYLES.script = script;
+
+  const COMBINING: Record<string, string> = { underline: '̲', strike: '̶' };
+
+  function transform(text: string, style: string): string {
+    if (COMBINING[style]) {
+      // Add a combining mark after every visible character.
+      return [...text].map((ch) => (ch === '\n' ? ch : ch + COMBINING[style])).join('');
+    }
+    const map = STYLES[style];
+    if (!map) return text;
+    return [...text].map((ch) => map[ch] ?? ch).join('');
+  }
+
+  // Strip both mathematical alphabets and combining marks back to plain ASCII.
+  function toPlain(text: string): string {
+    let s = text.normalize('NFKD').replace(/[̀-ͯ]/g, '');
+    return s;
+  }
+
+  function applyToSelection(fn: (s: string) => string) {
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const value = input.value;
+    const selected = value.slice(start, end) || value; // whole text if nothing selected
+    const target = end > start ? { s: start, e: end } : { s: 0, e: value.length };
+    const replaced = fn(value.slice(target.s, target.e));
+    input.value = value.slice(0, target.s) + replaced + value.slice(target.e);
+    input.focus();
+    input.setSelectionRange(target.s, target.s + replaced.length);
+    render();
+  }
+
+  function applyList(kind: string) {
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const value = input.value;
+    const region = end > start ? value.slice(start, end) : value;
+    const lines = region.split('\n');
+    let n = 1;
+    const marked = lines
+      .map((line) => {
+        const t = line.replace(/^\s*([•\-→]|\d+\.)\s*/, '').trim();
+        if (!t) return line;
+        if (kind === 'bullet') return `• ${t}`;
+        if (kind === 'arrow') return `→ ${t}`;
+        return `${n++}. ${t}`;
+      })
+      .join('\n');
+    if (end > start) {
+      input.value = value.slice(0, start) + marked + value.slice(end);
+    } else {
+      input.value = marked;
+    }
+    input.focus();
+    render();
+  }
+
+  function render() {
+    out.textContent = input.value;
+    const len = [...input.value].length;
+    count.textContent = `${len.toLocaleString()} character${len === 1 ? '' : 's'}`;
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('[data-fmt]').forEach((btn) => {
+    btn.addEventListener('click', () => applyToSelection((s) => transform(s, btn.dataset.fmt!)));
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-list]').forEach((btn) => {
+    btn.addEventListener('click', () => applyList(btn.dataset.list!));
+  });
+  document.getElementById('tg-clear')!.addEventListener('click', () => applyToSelection(toPlain));
+
+  document.getElementById('tg-copy')!.addEventListener('click', async () => {
+    const btn = document.getElementById('tg-copy')!;
+    await navigator.clipboard.writeText(input.value);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy formatted'), 1500);
+  });
+
+  input.addEventListener('input', render);
+  render();
+</script>

@@ -1,0 +1,148 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="grams-to-cups-converter">
+  <div class="flex flex-col gap-5">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Amount
+        <input id="gc-amount" type="number" min="0" step="any" value="200" class="field w-32" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">From
+        <select id="gc-from" class="field w-40">
+          <option value="g">Grams (g)</option>
+          <option value="cup">Cups</option>
+          <option value="tbsp">Tablespoons</option>
+          <option value="tsp">Teaspoons</option>
+          <option value="oz">Ounces (oz)</option>
+          <option value="ml">Millilitres (ml)</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Ingredient
+        <select id="gc-ingredient" class="field w-56"></select>
+      </label>
+    </div>
+
+    <div id="gc-out" class="grid grid-cols-2 gap-3 sm:grid-cols-3"></div>
+
+    <p class="text-[13px] text-ink-tertiary">
+      Uses US cups (236.6 ml). Weights are approximate — pack, sift and humidity all
+      change ingredient density. For baking accuracy, weigh in grams where you can.
+    </p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free grams to cups converter turns baking weights into volume and back,
+      using per-ingredient densities — because a cup of flour and a cup of sugar
+      weigh very different amounts. Pick your ingredient (flour, sugar, butter,
+      cocoa, honey and more), enter grams, cups, tablespoons, teaspoons, ounces or
+      millilitres, and see every other unit at once. All conversions use the US cup
+      and run entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  // Grams per US cup for each ingredient. Water/liquids default near 236.6.
+  const INGREDIENTS: { name: string; gPerCup: number }[] = [
+    { name: 'Water', gPerCup: 236.6 },
+    { name: 'Milk', gPerCup: 244 },
+    { name: 'All-purpose flour', gPerCup: 125 },
+    { name: 'Bread flour', gPerCup: 127 },
+    { name: 'Cake flour', gPerCup: 114 },
+    { name: 'Whole wheat flour', gPerCup: 120 },
+    { name: 'Granulated sugar', gPerCup: 200 },
+    { name: 'Brown sugar (packed)', gPerCup: 220 },
+    { name: 'Powdered sugar', gPerCup: 120 },
+    { name: 'Butter', gPerCup: 227 },
+    { name: 'Vegetable oil', gPerCup: 218 },
+    { name: 'Honey', gPerCup: 340 },
+    { name: 'Maple syrup', gPerCup: 322 },
+    { name: 'Cocoa powder', gPerCup: 100 },
+    { name: 'Rolled oats', gPerCup: 90 },
+    { name: 'Rice (uncooked)', gPerCup: 185 },
+    { name: 'Cornstarch', gPerCup: 120 },
+    { name: 'Salt (table)', gPerCup: 288 },
+    { name: 'Chocolate chips', gPerCup: 170 },
+    { name: 'Chopped nuts', gPerCup: 120 },
+    { name: 'Grated parmesan', gPerCup: 100 },
+    { name: 'Yogurt', gPerCup: 245 },
+  ];
+
+  const CUP_ML = 236.588;
+  const TBSP_PER_CUP = 16;
+  const TSP_PER_CUP = 48;
+  const OZ_G = 28.3495;
+
+  const amountEl = document.getElementById('gc-amount') as HTMLInputElement;
+  const fromEl = document.getElementById('gc-from') as HTMLSelectElement;
+  const ingredientEl = document.getElementById('gc-ingredient') as HTMLSelectElement;
+  const out = document.getElementById('gc-out')!;
+
+  ingredientEl.innerHTML = INGREDIENTS.map((x, i) => `<option value="${i}">${x.name}</option>`).join('');
+  ingredientEl.value = '2'; // all-purpose flour
+
+  function fmt(n: number): string {
+    if (n === 0) return '0';
+    if (n < 0.01) return n.toExponential(2);
+    if (n < 10) return n.toFixed(2).replace(/\.?0+$/, '');
+    if (n < 100) return n.toFixed(1).replace(/\.0$/, '');
+    return Math.round(n).toLocaleString();
+  }
+
+  // Fraction rendering for cup values (common baking fractions).
+  function asFraction(cups: number): string {
+    const whole = Math.floor(cups);
+    const frac = cups - whole;
+    const table: [number, string][] = [
+      [0, ''], [1 / 8, '⅛'], [1 / 4, '¼'], [1 / 3, '⅓'], [3 / 8, '⅜'],
+      [1 / 2, '½'], [5 / 8, '⅝'], [2 / 3, '⅔'], [3 / 4, '¾'], [7 / 8, '⅞'], [1, ''],
+    ];
+    let best = table[0], bestD = Infinity;
+    for (const t of table) { const d = Math.abs(frac - t[0]); if (d < bestD) { bestD = d; best = t; } }
+    let w = whole;
+    let sym = best[1];
+    if (best[0] === 1) w += 1;
+    if (w === 0 && !sym) return '0';
+    if (!sym) return String(w);
+    return w ? `${w} ${sym}` : sym;
+  }
+
+  function compute() {
+    const amount = parseFloat(amountEl.value) || 0;
+    const ing = INGREDIENTS[Number(ingredientEl.value)];
+    const gPerCup = ing.gPerCup;
+
+    // Convert input to grams first.
+    let grams = 0;
+    switch (fromEl.value) {
+      case 'g': grams = amount; break;
+      case 'cup': grams = amount * gPerCup; break;
+      case 'tbsp': grams = (amount / TBSP_PER_CUP) * gPerCup; break;
+      case 'tsp': grams = (amount / TSP_PER_CUP) * gPerCup; break;
+      case 'oz': grams = amount * OZ_G; break;
+      case 'ml': grams = (amount / CUP_ML) * gPerCup; break;
+    }
+
+    const cups = grams / gPerCup;
+    const results: [string, string][] = [
+      ['Grams', `${fmt(grams)} g`],
+      ['Cups', asFraction(cups)],
+      ['Tablespoons', `${fmt(cups * TBSP_PER_CUP)}`],
+      ['Teaspoons', `${fmt(cups * TSP_PER_CUP)}`],
+      ['Ounces', `${fmt(grams / OZ_G)} oz`],
+      ['Millilitres', `${fmt(cups * CUP_ML)} ml`],
+    ];
+
+    out.innerHTML = results
+      .map(([label, val]) => `<div class="panel panel-lift flex flex-col gap-1 p-4">
+        <span class="text-[12px] text-ink-tertiary">${label}</span>
+        <span class="font-display text-xl font-semibold text-ink">${val}</span>
+      </div>`)
+      .join('');
+  }
+
+  [amountEl, fromEl, ingredientEl].forEach((el) => el.addEventListener('input', compute));
+  compute();
+</script>

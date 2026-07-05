@@ -1,0 +1,145 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="rust-formatter">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Indent
+        <select id="rf-indent" class="field w-28">
+          <option value="4">4 spaces</option>
+          <option value="2">2 spaces</option>
+          <option value="tab">Tab</option>
+        </select>
+      </label>
+      <button id="rf-format" type="button" class="btn btn-primary">Format</button>
+      <button id="rf-copy" type="button" class="btn btn-secondary">Copy</button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Rust input
+        <textarea id="rf-in" class="field font-mono text-[13px]" rows="16" spellcheck="false" placeholder="fn main(){let x=5;if x>3{println!(&quot;big&quot;);}}"></textarea>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Formatted
+        <textarea id="rf-out" class="field font-mono text-[13px]" rows="16" readonly spellcheck="false"></textarea>
+      </label>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free Rust formatter tidies Rust source with consistent brace-based
+      indentation, spacing around braces and after commas, and one statement per
+      line. It's a lightweight in-browser beautifier — it re-indents and spaces
+      your code so it's readable, but it isn't the full <code>rustfmt</code>
+      compiler, so it won't rewrap long expressions or enforce every style rule.
+      String literals, chars and comments are preserved untouched. Everything runs
+      in your browser — nothing is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('rf-in') as HTMLTextAreaElement;
+  const output = document.getElementById('rf-out') as HTMLTextAreaElement;
+  const indentSel = document.getElementById('rf-indent') as HTMLSelectElement;
+
+  function indentUnit(): string {
+    const v = indentSel.value;
+    return v === 'tab' ? '\t' : ' '.repeat(Number(v));
+  }
+
+  // Tokenize into a flat stream, protecting strings/chars/comments so structural
+  // rewriting never touches their contents.
+  function protect(src: string): { code: string; store: string[] } {
+    const store: string[] = [];
+    let out = '';
+    let i = 0;
+    const n = src.length;
+    const stash = (s: string) => { store.push(s); return `\x00${store.length - 1}\x00`; };
+    while (i < n) {
+      const ch = src[i];
+      const two = src.slice(i, i + 2);
+      if (two === '//') { const e = src.indexOf('\n', i); const end = e === -1 ? n : e; out += stash(src.slice(i, end)); i = end; continue; }
+      if (two === '/*') { const e = src.indexOf('*/', i + 2); const end = e === -1 ? n : e + 2; out += stash(src.slice(i, end)); i = end; continue; }
+      // raw string r"..." / r#"..."#
+      if (ch === 'r' && (src[i + 1] === '"' || src[i + 1] === '#')) {
+        let j = i + 1, hashes = 0;
+        while (src[j] === '#') { hashes++; j++; }
+        if (src[j] === '"') {
+          j++;
+          const close = '"' + '#'.repeat(hashes);
+          const e = src.indexOf(close, j);
+          const end = e === -1 ? n : e + close.length;
+          out += stash(src.slice(i, end)); i = end; continue;
+        }
+      }
+      if (ch === '"') {
+        let j = i + 1;
+        while (j < n) { if (src[j] === '\\') { j += 2; continue; } if (src[j] === '"') { j++; break; } j++; }
+        out += stash(src.slice(i, j)); i = j; continue;
+      }
+      // char literal 'a' or '\n' (avoid matching lifetimes like 'a where next isn't closing quote soon)
+      if (ch === "'") {
+        const m = /^'(\\.|[^'\\])'/.exec(src.slice(i));
+        if (m) { out += stash(m[0]); i += m[0].length; continue; }
+      }
+      out += ch; i++;
+    }
+    return { code: out, store };
+  }
+
+  function restore(code: string, store: string[]): string {
+    return code.replace(/\x00(\d+)\x00/g, (_, k) => store[Number(k)]);
+  }
+
+  function format(src: string): string {
+    const { code, store } = protect(src);
+    let s = code;
+
+    // Normalize whitespace runs (but keep it single-line for now).
+    s = s.replace(/[ \t]+/g, ' ');
+    // Break after ; and after { and before }.
+    s = s.replace(/\s*\{\s*/g, ' {\n');
+    s = s.replace(/\s*\}\s*/g, '\n}\n');
+    s = s.replace(/;\s*/g, ';\n');
+    // Space after commas.
+    s = s.replace(/\s*,\s*/g, ', ');
+    // Collapse blank lines.
+    const rawLines = s.split('\n').map((l) => l.trim());
+
+    const unit = indentUnit();
+    let depth = 0;
+    const outLines: string[] = [];
+    let blank = 0;
+    for (let line of rawLines) {
+      if (line === '') { if (outLines.length && blank === 0) { outLines.push(''); blank = 1; } continue; }
+      blank = 0;
+      // Dedent lines that begin with a closing brace.
+      if (/^\}/.test(line)) depth = Math.max(0, depth - 1);
+      outLines.push(unit.repeat(depth) + line);
+      // Indentation is driven by the braces we split on: a trailing { opens a block.
+      if (/\{$/.test(line)) depth++;
+    }
+    let result = outLines.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+    return restore(result, store);
+  }
+
+  function run() {
+    if (!input.value.trim()) { output.value = ''; return; }
+    try { output.value = format(input.value); }
+    catch { output.value = input.value; }
+  }
+
+  document.getElementById('rf-format')!.addEventListener('click', run);
+  input.addEventListener('input', run);
+  indentSel.addEventListener('change', run);
+  document.getElementById('rf-copy')!.addEventListener('click', async (e) => {
+    await navigator.clipboard.writeText(output.value);
+    const b = e.currentTarget as HTMLButtonElement;
+    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
+  });
+
+  input.value = 'use std::collections::HashMap;\nfn main(){let mut m=HashMap::new();m.insert("a",1);for(k,v)in &m{if *v>0{println!("{}={}",k,v);}}}';
+  run();
+</script>

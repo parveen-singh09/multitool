@@ -1,0 +1,198 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="structured-data-validator">
+  <div class="flex flex-col gap-4">
+    <div id="sd-status" class="hidden rounded-[8px] border px-3 py-2 text-sm" role="status"></div>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Paste JSON-LD or a full HTML page
+      <textarea id="sd-in" class="field min-h-56 resize-y font-mono text-[13px]" placeholder='Paste JSON-LD, e.g. {"@context":"https://schema.org","@type":"Product","name":"Shoe"} — or paste a whole HTML page and it will extract every <script type="application/ld+json"> block.' spellcheck="false"></textarea>
+    </label>
+
+    <div id="sd-results" class="hidden flex-col gap-4"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free structured data validator checks schema.org JSON-LD markup for
+      Google rich results. Paste raw JSON-LD or an entire HTML page — the tool
+      extracts every <code>&lt;script type="application/ld+json"&gt;</code> block,
+      confirms the JSON parses, verifies each item declares an
+      <code>@context</code> and <code>@type</code>, and checks the required and
+      recommended properties for common types (Product, Article, Recipe,
+      Organization, LocalBusiness, Event, FAQPage, BreadcrumbList and more).
+      Everything runs in your browser — nothing is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('sd-in') as HTMLTextAreaElement;
+  const status = document.getElementById('sd-status')!;
+  const results = document.getElementById('sd-results')!;
+
+  // Required + recommended props per common schema.org type (Google's guidance, simplified).
+  const SPECS: Record<string, { required: string[]; recommended: string[] }> = {
+    Product: { required: ['name'], recommended: ['image', 'description', 'offers', 'aggregateRating', 'review', 'brand', 'sku'] },
+    Offer: { required: ['price', 'priceCurrency'], recommended: ['availability', 'url', 'priceValidUntil'] },
+    Article: { required: ['headline'], recommended: ['image', 'datePublished', 'dateModified', 'author'] },
+    NewsArticle: { required: ['headline'], recommended: ['image', 'datePublished', 'dateModified', 'author'] },
+    BlogPosting: { required: ['headline'], recommended: ['image', 'datePublished', 'author'] },
+    Recipe: { required: ['name'], recommended: ['image', 'recipeIngredient', 'recipeInstructions', 'author', 'aggregateRating'] },
+    Organization: { required: ['name'], recommended: ['url', 'logo', 'sameAs', 'contactPoint'] },
+    LocalBusiness: { required: ['name', 'address'], recommended: ['telephone', 'openingHours', 'geo', 'priceRange', 'image'] },
+    Event: { required: ['name', 'startDate'], recommended: ['location', 'endDate', 'image', 'offers', 'performer'] },
+    Person: { required: ['name'], recommended: ['url', 'jobTitle', 'image', 'sameAs'] },
+    FAQPage: { required: ['mainEntity'], recommended: [] },
+    Question: { required: ['name', 'acceptedAnswer'], recommended: [] },
+    BreadcrumbList: { required: ['itemListElement'], recommended: [] },
+    Review: { required: ['reviewRating', 'author'], recommended: ['itemReviewed', 'reviewBody', 'datePublished'] },
+    AggregateRating: { required: ['ratingValue'], recommended: ['reviewCount', 'ratingCount', 'bestRating'] },
+    VideoObject: { required: ['name', 'thumbnailUrl', 'uploadDate'], recommended: ['description', 'contentUrl', 'duration'] },
+    JobPosting: { required: ['title', 'description', 'datePosted', 'hiringOrganization'], recommended: ['jobLocation', 'baseSalary', 'employmentType'] },
+    SoftwareApplication: { required: ['name'], recommended: ['applicationCategory', 'operatingSystem', 'offers', 'aggregateRating'] },
+    WebSite: { required: ['name', 'url'], recommended: ['potentialAction'] },
+  };
+
+  function showStatus(msg: string, ok: boolean) {
+    status.textContent = msg;
+    status.classList.remove('hidden');
+    status.style.borderColor = ok ? '#27a644' : '#d14d4d';
+    status.style.color = ok ? '#27a644' : '#e08585';
+  }
+
+  function extractBlocks(text: string): string[] {
+    const t = text.trim();
+    if (!t) return [];
+    // If it looks like raw JSON, use as-is.
+    if (t.startsWith('{') || t.startsWith('[')) return [t];
+    // Otherwise pull ld+json script blocks from HTML.
+    const blocks: string[] = [];
+    const re = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+    let m;
+    while ((m = re.exec(text)) !== null) blocks.push(m[1].trim());
+    return blocks;
+  }
+
+  // Flatten @graph and arrays into a list of typed items.
+  function collectItems(parsed: any): any[] {
+    const items: any[] = [];
+    const walk = (node: any) => {
+      if (Array.isArray(node)) { node.forEach(walk); return; }
+      if (node && typeof node === 'object') {
+        if (Array.isArray(node['@graph'])) node['@graph'].forEach(walk);
+        if (node['@type']) items.push(node);
+      }
+    };
+    walk(parsed);
+    return items;
+  }
+
+  function typeName(item: any): string {
+    const t = item['@type'];
+    return Array.isArray(t) ? t.join(', ') : String(t ?? '(none)');
+  }
+
+  function hasProp(item: any, prop: string): boolean {
+    const v = item[prop];
+    return v !== undefined && v !== null && !(typeof v === 'string' && v.trim() === '') && !(Array.isArray(v) && v.length === 0);
+  }
+
+  function validate() {
+    results.classList.add('hidden');
+    results.innerHTML = '';
+    const text = input.value;
+    if (!text.trim()) { status.classList.add('hidden'); return; }
+
+    const blocks = extractBlocks(text);
+    if (blocks.length === 0) {
+      showStatus('No JSON-LD found. Paste JSON, or HTML containing a <script type="application/ld+json"> block.', false);
+      return;
+    }
+
+    const cards: string[] = [];
+    let totalItems = 0, totalErrors = 0, totalWarnings = 0;
+
+    blocks.forEach((block, bi) => {
+      let parsed: any;
+      try {
+        parsed = JSON.parse(block);
+      } catch (e) {
+        totalErrors++;
+        cards.push(card(`Block ${bi + 1}`, '(invalid JSON)', [
+          { level: 'error', msg: `JSON did not parse: ${(e as Error).message}` },
+        ]));
+        return;
+      }
+      const items = collectItems(parsed);
+      if (items.length === 0) {
+        totalWarnings++;
+        cards.push(card(`Block ${bi + 1}`, '(no @type)', [
+          { level: 'warning', msg: 'No item with an @type was found in this block.' },
+        ]));
+        return;
+      }
+      const ctx = parsed['@context'] || (items[0] && items[0]['@context']);
+      items.forEach((item) => {
+        totalItems++;
+        const issues: { level: string; msg: string }[] = [];
+        const itemCtx = item['@context'] || ctx;
+        if (!itemCtx) { issues.push({ level: 'error', msg: 'Missing @context (expected "https://schema.org").' }); }
+        else if (!String(itemCtx).includes('schema.org')) { issues.push({ level: 'warning', msg: `@context is "${itemCtx}" — expected to reference schema.org.` }); }
+
+        const types = Array.isArray(item['@type']) ? item['@type'] : [item['@type']];
+        let matched = false;
+        for (const ty of types) {
+          const spec = SPECS[ty];
+          if (!spec) continue;
+          matched = true;
+          for (const req of spec.required) {
+            if (!hasProp(item, req)) issues.push({ level: 'error', msg: `Missing required property "${req}" for ${ty}.` });
+          }
+          for (const rec of spec.recommended) {
+            if (!hasProp(item, rec)) issues.push({ level: 'warning', msg: `Missing recommended property "${rec}" for ${ty}.` });
+          }
+        }
+        if (!matched) issues.push({ level: 'warning', msg: `No property rules known for "${typeName(item)}" — checked structure only.` });
+
+        totalErrors += issues.filter((x) => x.level === 'error').length;
+        totalWarnings += issues.filter((x) => x.level === 'warning').length;
+        cards.push(card(typeName(item), item.name ? String(item.name).slice(0, 60) : '', issues.length ? issues : [{ level: 'ok', msg: 'All required and recommended properties present.' }]));
+      });
+    });
+
+    if (totalErrors === 0) {
+      showStatus(`Valid ✓ — ${totalItems} item${totalItems === 1 ? '' : 's'}, ${totalErrors} error${totalErrors === 1 ? '' : 's'}, ${totalWarnings} warning${totalWarnings === 1 ? '' : 's'}.`, true);
+    } else {
+      showStatus(`${totalErrors} error${totalErrors === 1 ? '' : 's'} across ${totalItems} item${totalItems === 1 ? '' : 's'}.`, false);
+    }
+    results.classList.remove('hidden');
+    results.innerHTML = cards.join('');
+  }
+
+  function card(type: string, name: string, issues: { level: string; msg: string }[]): string {
+    const rows = issues
+      .map((x) => {
+        const color = x.level === 'error' ? '#e08585' : x.level === 'warning' ? '#e0c185' : '#27a644';
+        const label = x.level === 'error' ? 'Error' : x.level === 'warning' ? 'Warn' : 'OK';
+        return `<li class="flex items-start gap-2 text-[13px]">
+          <span class="mt-0.5 shrink-0 rounded-[4px] px-1.5 py-0.5 text-[11px] font-medium" style="color:${color};border:1px solid ${color}55">${label}</span>
+          <span class="text-ink-muted">${x.msg}</span>
+        </li>`;
+      })
+      .join('');
+    return `<div class="panel panel-lift flex flex-col gap-3 p-4">
+      <div class="flex items-baseline gap-2">
+        <span class="font-display text-[15px] font-medium text-ink">${type}</span>
+        ${name ? `<span class="truncate text-[13px] text-ink-tertiary">${name}</span>` : ''}
+      </div>
+      <ul class="flex flex-col gap-1.5">${rows}</ul>
+    </div>`;
+  }
+
+  input.addEventListener('input', validate);
+  input.value = '{\n  "@context": "https://schema.org",\n  "@type": "Product",\n  "name": "Trail Runner Shoe",\n  "image": "https://example.com/shoe.jpg"\n}';
+  validate();
+</script>

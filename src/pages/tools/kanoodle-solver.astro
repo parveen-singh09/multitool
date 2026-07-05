@@ -1,0 +1,192 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="kanoodle-solver">
+  <div class="flex flex-col gap-5">
+    <p class="text-[13px] text-ink-subtle">
+      Click cells to mark the pieces already placed on your board (the puzzle's
+      starting clues) as <span class="text-ink">blocked</span>. Then hit Solve and
+      the remaining pieces will be fitted into the empty squares.
+    </p>
+
+    <div class="flex justify-center">
+      <div id="kn-board" class="inline-grid gap-1 rounded-[12px] border border-hairline bg-surface-1 p-2"></div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="kn-solve" class="btn btn-primary">Solve</button>
+      <button id="kn-clear" class="btn btn-secondary">Clear board</button>
+      <span id="kn-status" class="text-[13px] text-ink-subtle"></span>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free Kanoodle solver completes the flat 5×11 Kanoodle board. Tap the
+      cells that your puzzle already fills in to mark them blocked, then let the
+      solver place the remaining polyomino pieces to cover every empty square using
+      each colored piece at most once — the exact-cover backtracking search that
+      Kanoodle challenges are built on. Each piece in the solution is shown in its
+      own color. If no arrangement can fill the empty cells with the available
+      pieces, it tells you. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const COLS = 11, ROWS = 5;
+
+  // The 12 Kanoodle pieces as base cell coordinates [row, col]. Cell counts sum to 55.
+  const PIECES: { id: string; color: string; cells: [number, number][] }[] = [
+    { id: 'A', color: '#e94f8a', cells: [[0, 0], [0, 1], [1, 0], [1, 1]] },            // pink square (4)
+    { id: 'B', color: '#f04e4e', cells: [[0, 0], [1, 0], [1, 1], [1, 2], [2, 2]] },    // red Z/S (5)
+    { id: 'C', color: '#ff8c42', cells: [[0, 0], [0, 1], [0, 2], [0, 3], [1, 0]] },    // orange L (5)
+    { id: 'D', color: '#f5c542', cells: [[0, 0], [0, 1], [0, 2], [1, 1], [1, 2]] },    // yellow P (5)
+    { id: 'E', color: '#8ac926', cells: [[0, 0], [0, 1], [1, 1]] },                    // lime elbow (3)
+    { id: 'F', color: '#2fbf71', cells: [[0, 0], [0, 1], [0, 2], [0, 3], [1, 3]] },    // green J (5)
+    { id: 'G', color: '#2ec4b6', cells: [[0, 1], [1, 0], [1, 1], [1, 2], [2, 1]] },    // teal plus (5)
+    { id: 'H', color: '#4d96ff', cells: [[0, 0], [0, 1], [0, 2], [1, 0], [1, 2]] },    // blue U (5)
+    { id: 'I', color: '#5e6ad2', cells: [[0, 0], [1, 0], [1, 1], [2, 1]] },            // indigo S (4)
+    { id: 'J', color: '#9b5de5', cells: [[0, 0], [0, 1], [0, 2], [0, 3]] },            // purple I (4)
+    { id: 'K', color: '#c77dff', cells: [[0, 2], [1, 0], [1, 1], [1, 2], [1, 3]] },    // violet Y (5)
+    { id: 'L', color: '#f7f8f8', cells: [[0, 0], [0, 1], [0, 2], [1, 2], [2, 2]] },    // white L-big (5)
+  ];
+
+  const board = document.getElementById('kn-board')!;
+  board.style.gridTemplateColumns = `repeat(${COLS}, 30px)`;
+
+  // grid[r][c]: '' empty, '#' blocked, or a piece id (in a solution).
+  let grid: string[][] = Array.from({ length: ROWS }, () => Array(COLS).fill(''));
+
+  function renderBoard() {
+    board.innerHTML = '';
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const v = grid[r][c];
+        const cell = document.createElement('button');
+        cell.className = 'h-[30px] w-[30px] rounded-[5px] border border-hairline transition-colors';
+        if (v === '#') { cell.style.background = '#34343a'; }
+        else if (v && v !== '') {
+          const p = PIECES.find((x) => x.id === v);
+          cell.style.background = p ? p.color : '#5e6ad2';
+        } else { cell.style.background = '#0f1011'; }
+        cell.dataset.r = String(r); cell.dataset.c = String(c);
+        cell.addEventListener('click', () => toggle(r, c));
+        board.appendChild(cell);
+      }
+    }
+  }
+
+  function toggle(r: number, c: number) {
+    // Clicking clears any solution first.
+    clearSolution();
+    grid[r][c] = grid[r][c] === '#' ? '' : '#';
+    renderBoard();
+  }
+
+  function clearSolution() {
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (grid[r][c] !== '#' && grid[r][c] !== '') grid[r][c] = '';
+  }
+
+  // Generate all unique orientations (4 rotations × 2 reflections) of a piece,
+  // normalized so the top-left of the bounding box is at (0,0).
+  function orientations(cells: [number, number][]): [number, number][][] {
+    const norm = (pts: [number, number][]): [number, number][] => {
+      const minR = Math.min(...pts.map((p) => p[0]));
+      const minC = Math.min(...pts.map((p) => p[1]));
+      return pts.map(([r, c]) => [r - minR, c - minC] as [number, number]).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    };
+    const key = (pts: [number, number][]) => pts.map((p) => p.join(',')).join(';');
+    const seen = new Set<string>();
+    const out: [number, number][][] = [];
+    let cur = cells.map((p) => [p[0], p[1]] as [number, number]);
+    for (let refl = 0; refl < 2; refl++) {
+      for (let rot = 0; rot < 4; rot++) {
+        const n = norm(cur);
+        const k = key(n);
+        if (!seen.has(k)) { seen.add(k); out.push(n); }
+        cur = cur.map(([r, c]) => [c, -r] as [number, number]); // rotate 90°
+      }
+      cur = cur.map(([r, c]) => [r, -c] as [number, number]); // reflect
+    }
+    return out;
+  }
+
+  // Precompute orientations per piece.
+  const PIECE_ORIENTS = PIECES.map((p) => ({ ...p, orients: orientations(p.cells) }));
+
+  function firstEmpty(g: string[][]): [number, number] | null {
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (g[r][c] === '') return [r, c];
+    return null;
+  }
+
+  let nodes = 0;
+  const NODE_LIMIT = 4_000_000;
+
+  function solveRec(g: string[][], used: Set<string>): boolean {
+    if (++nodes > NODE_LIMIT) return false;
+    const spot = firstEmpty(g);
+    if (!spot) return true; // all filled
+    const [r, c] = spot;
+
+    for (const p of PIECE_ORIENTS) {
+      if (used.has(p.id)) continue;
+      for (const orient of p.orients) {
+        // Anchor the piece so one of its cells lands on (r,c); use its first cell as anchor.
+        // Try every cell of the orientation as the one covering (r,c) to be thorough,
+        // but since we always fill the first-empty cell, anchoring on the piece's
+        // top-most-left cell (0,0 after norm) covering (r,c) is sufficient for coverage.
+        const [ar, ac] = orient[0];
+        const placed: [number, number][] = [];
+        let ok = true;
+        for (const [pr, pc] of orient) {
+          const gr = r + (pr - ar), gc = c + (pc - ac);
+          if (gr < 0 || gr >= ROWS || gc < 0 || gc >= COLS || g[gr][gc] !== '') { ok = false; break; }
+          placed.push([gr, gc]);
+        }
+        if (!ok) continue;
+        for (const [gr, gc] of placed) g[gr][gc] = p.id;
+        used.add(p.id);
+        if (solveRec(g, used)) return true;
+        for (const [gr, gc] of placed) g[gr][gc] = '';
+        used.delete(p.id);
+      }
+    }
+    return false;
+  }
+
+  function solve() {
+    clearSolution();
+    const status = document.getElementById('kn-status')!;
+    const empties = grid.flat().filter((v) => v === '').length;
+    if (empties === 0) { status.textContent = 'No empty cells to fill.'; return; }
+    status.textContent = 'Solving…';
+
+    // Defer to let the UI paint.
+    setTimeout(() => {
+      nodes = 0;
+      const g = grid.map((row) => row.slice());
+      const used = new Set<string>();
+      const found = solveRec(g, used);
+      if (found) {
+        grid = g;
+        renderBoard();
+        status.textContent = `Solved — placed ${used.size} piece${used.size === 1 ? '' : 's'}.`;
+      } else {
+        status.textContent = nodes > NODE_LIMIT
+          ? 'Search limit reached — no solution found (try blocking a few more cells).'
+          : 'No arrangement of the remaining pieces fills these cells.';
+      }
+    }, 30);
+  }
+
+  document.getElementById('kn-solve')!.addEventListener('click', solve);
+  document.getElementById('kn-clear')!.addEventListener('click', () => {
+    grid = Array.from({ length: ROWS }, () => Array(COLS).fill(''));
+    document.getElementById('kn-status')!.textContent = '';
+    renderBoard();
+  });
+
+  renderBoard();
+</script>

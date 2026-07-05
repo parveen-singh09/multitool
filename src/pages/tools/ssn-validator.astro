@@ -1,0 +1,115 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="ssn-validator">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Social Security Number
+      <input id="sn-in" class="field text-lg font-mono tracking-wider" value="123-45-6789" placeholder="123-45-6789" spellcheck="false" autocomplete="off" inputmode="numeric" />
+    </label>
+
+    <div id="sn-status" class="rounded-[8px] border px-3 py-2 text-sm" role="status"></div>
+
+    <div id="sn-detail" class="hidden grid grid-cols-1 gap-3 sm:grid-cols-3"></div>
+
+    <details class="panel p-4 text-[13px] text-ink-subtle">
+      <summary class="cursor-pointer text-ink">What makes an SSN structurally invalid?</summary>
+      <ul class="mt-3 flex list-disc flex-col gap-1.5 pl-5">
+        <li>Area number (first 3 digits) of <span class="font-mono">000</span>, <span class="font-mono">666</span>, or <span class="font-mono">900–999</span>.</li>
+        <li>Group number (middle 2 digits) of <span class="font-mono">00</span>.</li>
+        <li>Serial number (last 4 digits) of <span class="font-mono">0000</span>.</li>
+        <li>Well-known invalid numbers like <span class="font-mono">078-05-1120</span> (the 1938 wallet-card SSN) and <span class="font-mono">219-09-9999</span>.</li>
+      </ul>
+    </details>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free SSN validator checks whether a US Social Security Number is
+      <em>structurally</em> valid according to the Social Security
+      Administration's format rules. It confirms the nine-digit shape and rejects
+      numbers with an invalid area, group or serial block, plus known-invalid
+      numbers that were never issued. It does <strong>not</strong> and cannot tell
+      you whether a number was actually assigned to a real person — no such lookup
+      is publicly available, and this tool is intended for form validation and test
+      data only. Everything runs in your browser; nothing is uploaded or stored.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('sn-in') as HTMLInputElement;
+  const status = document.getElementById('sn-status')!;
+  const detail = document.getElementById('sn-detail')!;
+
+  // Known invalid / reserved SSNs that were never validly issued.
+  const KNOWN_INVALID = new Set([
+    '078051120', // Woolworth wallet-card SSN
+    '219099999', // advertisement SSN
+    '457555462',
+  ]);
+
+  function setStatus(msg: string, ok: boolean | null) {
+    status.textContent = msg;
+    if (ok === null) {
+      status.style.borderColor = '#34343a';
+      status.style.color = '#8a8f98';
+    } else {
+      status.style.borderColor = ok ? '#27a644' : '#d14d4d';
+      status.style.color = ok ? '#27a644' : '#e08585';
+    }
+  }
+
+  function block(label: string, value: string, note: string, ok: boolean): string {
+    const color = ok ? '#27a644' : '#e08585';
+    return `<div class="panel panel-lift flex flex-col gap-1 p-4">
+      <span class="text-[12px] text-ink-tertiary">${label}</span>
+      <span class="font-mono text-2xl font-semibold" style="color:${color}">${value}</span>
+      <span class="text-[12px] text-ink-tertiary">${note}</span>
+    </div>`;
+  }
+
+  function validate() {
+    detail.classList.add('hidden');
+    const raw = input.value.trim();
+    const digits = raw.replace(/\D/g, '');
+
+    if (!digits) { setStatus('Enter a 9-digit SSN.', null); return; }
+    if (digits.length !== 9) {
+      setStatus(`Not 9 digits — got ${digits.length}. An SSN has the form AAA-GG-SSSS.`, false);
+      return;
+    }
+
+    const area = digits.slice(0, 3);
+    const group = digits.slice(3, 5);
+    const serial = digits.slice(5);
+    const areaN = Number(area);
+
+    const areaOk = areaN !== 0 && areaN !== 666 && areaN < 900;
+    const groupOk = group !== '00';
+    const serialOk = serial !== '0000';
+
+    const reasons: string[] = [];
+    if (!areaOk) reasons.push(areaN === 0 ? 'area 000' : areaN === 666 ? 'area 666' : 'area in 900–999');
+    if (!groupOk) reasons.push('group 00');
+    if (!serialOk) reasons.push('serial 0000');
+    if (KNOWN_INVALID.has(digits)) reasons.push('known never-issued number');
+
+    const valid = areaOk && groupOk && serialOk && !KNOWN_INVALID.has(digits);
+
+    if (valid) {
+      setStatus(`Structurally valid ✓  (${area}-${group}-${serial})`, true);
+    } else {
+      setStatus(`Invalid — ${reasons.join(', ')}.`, false);
+    }
+
+    detail.classList.remove('hidden');
+    detail.innerHTML =
+      block('Area', area, areaOk ? 'Valid range' : 'Out of range', areaOk && !(KNOWN_INVALID.has(digits))) +
+      block('Group', group, groupOk ? 'Valid' : 'Cannot be 00', groupOk) +
+      block('Serial', serial, serialOk ? 'Valid' : 'Cannot be 0000', serialOk);
+  }
+
+  input.addEventListener('input', validate);
+  validate();
+</script>

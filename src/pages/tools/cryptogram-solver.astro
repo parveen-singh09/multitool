@@ -1,0 +1,229 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="cryptogram-solver">
+  <div class="flex flex-col gap-5">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Cryptogram (substitution cipher text)
+      <textarea id="cg-in" class="field min-h-24 resize-y font-mono text-[14px] tracking-wide" placeholder="Paste an encrypted quote. Each letter maps to one other letter consistently." spellcheck="false"></textarea>
+    </label>
+
+    <div class="flex flex-wrap gap-2">
+      <button id="cg-auto" class="btn btn-primary">Auto-solve</button>
+      <button id="cg-freq" class="btn btn-secondary">Guess by frequency</button>
+      <button id="cg-clear" class="btn btn-tertiary">Clear mapping</button>
+    </div>
+
+    <div class="panel panel-lift p-4">
+      <div class="eyebrow mb-2">Decoded preview</div>
+      <div id="cg-out" class="whitespace-pre-wrap break-words font-mono text-[15px] leading-relaxed text-ink"></div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <div class="eyebrow">Substitution key — cipher letter → your guess</div>
+      <div id="cg-key" class="grid grid-cols-[repeat(auto-fill,minmax(46px,1fr))] gap-1.5"></div>
+    </div>
+
+    <details class="panel p-4 text-[13px] text-ink-subtle">
+      <summary class="cursor-pointer text-ink">Cipher letter frequencies</summary>
+      <div id="cg-freqtable" class="mt-3 flex flex-wrap gap-1.5 font-mono"></div>
+    </details>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free cryptogram solver cracks substitution-cipher puzzles — the kind
+      where every letter is consistently swapped for another. Paste the encrypted
+      text and hit Auto-solve: it runs a hill-climbing search scored against
+      English letter and trigram frequencies to recover the most likely mapping.
+      You can also fill the key manually — type a guess under any cipher letter and
+      the whole puzzle updates live — or seed it with a frequency-based first guess.
+      Longer cryptograms (a full sentence or more) solve most reliably. Everything
+      runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('cg-in') as HTMLTextAreaElement;
+  const out = document.getElementById('cg-out')!;
+  const keyEl = document.getElementById('cg-key')!;
+  const freqTable = document.getElementById('cg-freqtable')!;
+
+  const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  // English letter frequency order (most→least common).
+  const ENG_ORDER = 'ETAOINSHRDLCUMWFGYPBVKJXQZ'.split('');
+
+  // mapping[cipherLetter] = plainGuess (uppercase) or ''.
+  let mapping: Record<string, string> = {};
+
+  function cipherLetters(): string[] {
+    const text = input.value.toUpperCase();
+    const seen = new Set<string>();
+    for (const ch of text) if (ch >= 'A' && ch <= 'Z') seen.add(ch);
+    return [...seen].sort();
+  }
+
+  function decode(): string {
+    const text = input.value;
+    let result = '';
+    for (const ch of text) {
+      const up = ch.toUpperCase();
+      if (up >= 'A' && up <= 'Z') {
+        const g = mapping[up];
+        if (!g) result += ch === up ? '·' : '·';
+        else result += ch === up ? g : g.toLowerCase();
+      } else result += ch;
+    }
+    return result;
+  }
+
+  function renderOut() {
+    out.textContent = decode();
+  }
+
+  function renderKey() {
+    const letters = cipherLetters();
+    if (!letters.length) { keyEl.innerHTML = '<span class="text-[13px] text-ink-tertiary">Enter a cryptogram above.</span>'; return; }
+    keyEl.innerHTML = letters
+      .map((c) => `<div class="flex flex-col items-center gap-1 rounded-[6px] border border-hairline bg-surface-2 p-1.5">
+        <span class="font-mono text-[13px] text-ink-tertiary">${c}</span>
+        <input data-cipher="${c}" maxlength="1" value="${mapping[c] || ''}" class="w-8 rounded-[4px] border border-hairline bg-surface-1 text-center font-mono text-[15px] uppercase text-ink focus:border-hairline-strong focus:outline-none" />
+      </div>`)
+      .join('');
+    keyEl.querySelectorAll<HTMLInputElement>('input[data-cipher]').forEach((el) => {
+      el.addEventListener('input', () => {
+        const c = el.dataset.cipher!;
+        const v = el.value.toUpperCase().replace(/[^A-Z]/g, '');
+        mapping[c] = v;
+        renderOut();
+      });
+    });
+  }
+
+  function renderFreq() {
+    const text = input.value.toUpperCase();
+    const counts: Record<string, number> = {};
+    let total = 0;
+    for (const ch of text) if (ch >= 'A' && ch <= 'Z') { counts[ch] = (counts[ch] || 0) + 1; total++; }
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    freqTable.innerHTML = sorted.length
+      ? sorted.map(([c, n]) => `<span class="rounded-[4px] bg-surface-2 px-1.5 py-0.5 text-ink">${c}=${n} (${((n / total) * 100).toFixed(1)}%)</span>`).join('')
+      : '<span class="text-ink-tertiary">No letters.</span>';
+  }
+
+  // --- Frequency first-guess: map most common cipher letter to E, etc. ---
+  function guessByFrequency() {
+    const text = input.value.toUpperCase();
+    const counts: Record<string, number> = {};
+    for (const ch of text) if (ch >= 'A' && ch <= 'Z') counts[ch] = (counts[ch] || 0) + 1;
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).map((x) => x[0]);
+    mapping = {};
+    sorted.forEach((c, i) => { if (i < ENG_ORDER.length) mapping[c] = ENG_ORDER[i]; });
+    renderKey(); renderOut();
+  }
+
+  // --- Auto-solve via hill climbing scored by English trigram log-frequencies ---
+  // Compact top-English-trigram scores (log-ish weights). Others default low.
+  const TRIGRAMS: Record<string, number> = {
+    THE: 10, AND: 8, ING: 8, ENT: 6, ION: 6, HER: 6, FOR: 6, THA: 6, NTH: 6, INT: 5,
+    ERE: 5, TIO: 5, TER: 5, EST: 5, ERS: 5, ATI: 5, HAT: 5, ATE: 5, ALL: 5, VER: 4,
+    HIS: 4, THI: 4, ARE: 4, NOT: 4, YOU: 4, ITH: 4, OUL: 3, WAS: 4, HAS: 4, OUR: 4,
+    WIT: 4, ONE: 4, RES: 4, WHI: 3, CON: 4, MEN: 3, OME: 3, ETH: 3, OUT: 4, ORE: 4,
+    RTH: 3, EVE: 3, STA: 3, ILL: 4, THO: 3, HES: 3, WHE: 3, ECT: 3, LLY: 3, PRO: 3,
+  };
+  const BIGRAMS: Record<string, number> = {
+    TH: 6, HE: 6, IN: 5, ER: 5, AN: 5, RE: 4, ON: 4, AT: 4, EN: 4, ND: 4, TI: 4,
+    ES: 4, OR: 4, TE: 4, OF: 4, ED: 4, IS: 4, IT: 4, AL: 4, AR: 4, ST: 4, TO: 4,
+    NT: 4, NG: 4, SE: 3, HA: 3, AS: 3, OU: 3, IO: 3, LE: 3, VE: 3, CO: 3, ME: 3,
+    DE: 3, HI: 3, RI: 3, RO: 3, IC: 3, NE: 3, EA: 3, RA: 3, CE: 3, LI: 3, CH: 3,
+  };
+
+  const ENG_FREQ: Record<string, number> = {
+    E: 12.7, T: 9.1, A: 8.2, O: 7.5, I: 7.0, N: 6.7, S: 6.3, H: 6.1, R: 6.0, D: 4.3,
+    L: 4.0, C: 2.8, U: 2.8, M: 2.4, W: 2.4, F: 2.2, G: 2.0, Y: 2.0, P: 1.9, B: 1.5,
+    V: 1.0, K: 0.8, J: 0.15, X: 0.15, Q: 0.1, Z: 0.07,
+  };
+
+  function scoreText(text: string): number {
+    let score = 0;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (c < 'A' || c > 'Z') continue;
+      score += (ENG_FREQ[c] || 0) * 0.1;
+      if (i >= 1 && text[i - 1] >= 'A' && text[i - 1] <= 'Z') score += BIGRAMS[text.slice(i - 1, i + 1)] || 0;
+      if (i >= 2 && text[i - 2] >= 'A' && text[i - 2] <= 'Z' && text[i - 1] >= 'A' && text[i - 1] <= 'Z') score += (TRIGRAMS[text.slice(i - 2, i + 1)] || 0) * 1.5;
+    }
+    return score;
+  }
+
+  function applyKey(cipher: string, key: string[]): string {
+    // key is an array of 26 plain letters indexed by A..Z cipher position.
+    let out = '';
+    for (const ch of cipher) {
+      if (ch >= 'A' && ch <= 'Z') out += key[ch.charCodeAt(0) - 65];
+      else out += ch;
+    }
+    return out;
+  }
+
+  function randInt(max: number): number {
+    const b = new Uint32Array(1); crypto.getRandomValues(b);
+    return b[0] % max;
+  }
+
+  function autoSolve() {
+    const cipher = input.value.toUpperCase().replace(/[^A-Z\s]/g, ' ');
+    if (cipher.replace(/\s/g, '').length < 12) {
+      // Too short for statistical solving — fall back to frequency seed.
+      guessByFrequency();
+      return;
+    }
+    // Seed from frequency analysis.
+    const counts: Record<string, number> = {};
+    for (const ch of cipher) if (ch >= 'A' && ch <= 'Z') counts[ch] = (counts[ch] || 0) + 1;
+    const byFreq = LETTERS.slice().sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
+    let best = new Array(26).fill('');
+    byFreq.forEach((c, i) => { best[c.charCodeAt(0) - 65] = ENG_ORDER[i]; });
+
+    let bestScore = scoreText(applyKey(cipher, best));
+
+    // Hill climb: swap two plain-letter assignments, keep if better. Restart a few times.
+    const RESTARTS = 6, ITERS = 3000;
+    let globalBest = best.slice(), globalScore = bestScore;
+    for (let r = 0; r < RESTARTS; r++) {
+      let key = best.slice();
+      // Shuffle a little on restarts after the first.
+      if (r > 0) for (let s = 0; s < 6; s++) { const i = randInt(26), j = randInt(26); [key[i], key[j]] = [key[j], key[i]]; }
+      let curScore = scoreText(applyKey(cipher, key));
+      let noImprove = 0;
+      for (let it = 0; it < ITERS && noImprove < 800; it++) {
+        const i = randInt(26), j = randInt(26);
+        if (i === j) continue;
+        [key[i], key[j]] = [key[j], key[i]];
+        const s = scoreText(applyKey(cipher, key));
+        if (s > curScore) { curScore = s; noImprove = 0; }
+        else { [key[i], key[j]] = [key[j], key[i]]; noImprove++; }
+      }
+      if (curScore > globalScore) { globalScore = curScore; globalBest = key.slice(); }
+    }
+
+    // Build mapping only for letters actually present.
+    mapping = {};
+    for (const c of cipherLetters()) mapping[c] = globalBest[c.charCodeAt(0) - 65];
+    renderKey(); renderOut();
+  }
+
+  function refreshAll() {
+    renderKey(); renderOut(); renderFreq();
+  }
+
+  input.addEventListener('input', () => { refreshAll(); });
+  document.getElementById('cg-auto')!.addEventListener('click', autoSolve);
+  document.getElementById('cg-freq')!.addEventListener('click', guessByFrequency);
+  document.getElementById('cg-clear')!.addEventListener('click', () => { mapping = {}; renderKey(); renderOut(); });
+
+  // Example: "THE ONLY WAY TO DO GREAT WORK IS TO LOVE WHAT YOU DO" with a simple shift.
+  input.value = 'YMJ TSQD BFD YT IT LWJFY BTWP NX YT QTAJ BMFY DTZ IT';
+  refreshAll();
+</script>

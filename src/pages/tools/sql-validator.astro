@@ -1,0 +1,190 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="sql-validator">
+  <div class="flex flex-col gap-4">
+    <div id="sv-status" class="hidden rounded-[8px] border px-3 py-2 text-sm" role="status"></div>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">SQL to validate
+      <textarea id="sv-in" class="field min-h-56 resize-y font-mono text-[13px]" placeholder="Paste SQL here, e.g. SELECT id, name FROM users WHERE age > 21;" spellcheck="false"></textarea>
+    </label>
+
+    <ul id="sv-issues" class="hidden flex-col gap-2"></ul>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free SQL validator checks a query for common structural and syntax
+      problems without running it against a database: unbalanced parentheses,
+      unterminated string and identifier quotes, trailing commas in select and
+      value lists, a SELECT with no FROM, misplaced clause ordering (e.g. WHERE
+      after GROUP BY), and unclosed block comments. It's a linter, not a full
+      SQL engine, so it flags well-formedness issues rather than validating table
+      or column names. Everything runs in your browser — nothing is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('sv-in') as HTMLTextAreaElement;
+  const status = document.getElementById('sv-status')!;
+  const issuesEl = document.getElementById('sv-issues')!;
+
+  interface Issue { level: 'error' | 'warning'; msg: string; }
+
+  function showStatus(msg: string, ok: boolean) {
+    status.textContent = msg;
+    status.classList.remove('hidden');
+    status.style.borderColor = ok ? '#27a644' : '#d14d4d';
+    status.style.color = ok ? '#27a644' : '#e08585';
+  }
+
+  // Strip string literals, quoted identifiers and comments, tracking whether
+  // any were left unterminated. Returns the "code" skeleton for structural checks.
+  function scan(sql: string): { code: string; issues: Issue[] } {
+    const issues: Issue[] = [];
+    let code = '';
+    let i = 0;
+    const n = sql.length;
+    while (i < n) {
+      const ch = sql[i];
+      const two = sql.slice(i, i + 2);
+      // line comment
+      if (two === '--') {
+        const end = sql.indexOf('\n', i);
+        i = end === -1 ? n : end;
+        continue;
+      }
+      // block comment
+      if (two === '/*') {
+        const end = sql.indexOf('*/', i + 2);
+        if (end === -1) { issues.push({ level: 'error', msg: 'Unclosed block comment ( /* … ).' }); break; }
+        i = end + 2;
+        continue;
+      }
+      // single-quoted string
+      if (ch === "'") {
+        i++;
+        let closed = false;
+        while (i < n) {
+          if (sql[i] === "'" && sql[i + 1] === "'") { i += 2; continue; }
+          if (sql[i] === "'") { i++; closed = true; break; }
+          i++;
+        }
+        if (!closed) { issues.push({ level: 'error', msg: "Unterminated string literal — a single quote (') is not closed." }); }
+        code += ' ';
+        continue;
+      }
+      // double-quoted identifier
+      if (ch === '"') {
+        i++;
+        let closed = false;
+        while (i < n) {
+          if (sql[i] === '"') { i++; closed = true; break; }
+          i++;
+        }
+        if (!closed) { issues.push({ level: 'error', msg: 'Unterminated quoted identifier — a double quote (") is not closed.' }); }
+        code += ' ';
+        continue;
+      }
+      // backtick identifier (MySQL)
+      if (ch === '`') {
+        i++;
+        let closed = false;
+        while (i < n) { if (sql[i] === '`') { i++; closed = true; break; } i++; }
+        if (!closed) { issues.push({ level: 'error', msg: 'Unterminated backtick identifier (`).' }); }
+        code += ' ';
+        continue;
+      }
+      code += ch;
+      i++;
+    }
+    return { code, issues };
+  }
+
+  function balanceCheck(code: string): Issue[] {
+    const issues: Issue[] = [];
+    let depth = 0;
+    for (const ch of code) {
+      if (ch === '(') depth++;
+      else if (ch === ')') { depth--; if (depth < 0) { issues.push({ level: 'error', msg: 'Unbalanced parentheses — a closing ) has no matching (.' }); depth = 0; } }
+    }
+    if (depth > 0) issues.push({ level: 'error', msg: `Unbalanced parentheses — ${depth} opening ( ${depth === 1 ? 'is' : 'are'} never closed.` });
+    return issues;
+  }
+
+  function structureCheck(code: string): Issue[] {
+    const issues: Issue[] = [];
+    // Split on ; into statements (ignoring empties).
+    const statements = code.split(';').map((s) => s.trim()).filter(Boolean);
+    for (const stmt of statements) {
+      const upper = ' ' + stmt.toUpperCase().replace(/\s+/g, ' ') + ' ';
+
+      // Trailing comma before a clause keyword or closing paren.
+      if (/,\s*(FROM|WHERE|GROUP BY|ORDER BY|HAVING|LIMIT|\))/i.test(stmt)) {
+        issues.push({ level: 'error', msg: 'Trailing comma — a comma directly precedes a clause keyword or closing parenthesis.' });
+      }
+      // Empty parentheses in an IN / VALUES.
+      if (/\bIN\s*\(\s*\)/i.test(stmt)) {
+        issues.push({ level: 'warning', msg: 'Empty IN ( ) list.' });
+      }
+      // SELECT without FROM (allowed for expressions like SELECT 1, but common mistake — warn only if it references a table-like pattern).
+      if (/^\s*SELECT\b/i.test(stmt) && !/\bFROM\b/i.test(upper)) {
+        // Allow bare-value selects (SELECT 1, SELECT NOW()). Warn if it looks like columns were meant.
+        issues.push({ level: 'warning', msg: 'SELECT has no FROM clause — fine for constant expressions, but check if a table was intended.' });
+      }
+      // Clause ordering: WHERE must come before GROUP BY / ORDER BY / HAVING.
+      const order = ['SELECT', 'FROM', 'WHERE', 'GROUP BY', 'HAVING', 'ORDER BY', 'LIMIT'];
+      const positions = order.map((k) => ({ k, pos: upper.indexOf(' ' + k + ' ') }));
+      const present = positions.filter((p) => p.pos !== -1);
+      for (let j = 1; j < present.length; j++) {
+        if (present[j].pos < present[j - 1].pos) {
+          issues.push({ level: 'error', msg: `Clause order looks wrong — ${present[j].k} appears before ${present[j - 1].k}.` });
+          break;
+        }
+      }
+    }
+    // Missing statement terminator is not an error, but flag stray commas at end.
+    if (/,\s*$/.test(code.trim())) issues.push({ level: 'error', msg: 'Query ends with a trailing comma.' });
+    return issues;
+  }
+
+  function validate() {
+    issuesEl.classList.add('hidden');
+    issuesEl.innerHTML = '';
+    const text = input.value;
+    if (!text.trim()) { status.classList.add('hidden'); return; }
+
+    const { code, issues } = scan(text);
+    issues.push(...balanceCheck(code));
+    issues.push(...structureCheck(code));
+
+    const errors = issues.filter((x) => x.level === 'error');
+    if (errors.length === 0 && issues.length === 0) {
+      showStatus('No syntax problems found ✓', true);
+      return;
+    }
+    if (errors.length === 0) {
+      showStatus(`Looks well-formed — ${issues.length} note${issues.length === 1 ? '' : 's'} below.`, true);
+    } else {
+      showStatus(`${errors.length} problem${errors.length === 1 ? '' : 's'} found.`, false);
+    }
+
+    issuesEl.classList.remove('hidden');
+    issuesEl.innerHTML = issues
+      .map((x) => {
+        const color = x.level === 'error' ? '#e08585' : '#e0c185';
+        const label = x.level === 'error' ? 'Error' : 'Note';
+        return `<li class="panel flex items-start gap-3 p-3 text-[13px]">
+          <span class="mt-0.5 shrink-0 rounded-[4px] px-1.5 py-0.5 text-[11px] font-medium" style="color:${color};border:1px solid ${color}55">${label}</span>
+          <span class="text-ink-muted">${x.msg}</span>
+        </li>`;
+      })
+      .join('');
+  }
+
+  input.addEventListener('input', validate);
+  input.value = 'SELECT id, name, FROM users WHERE age > 21';
+  validate();
+</script>

@@ -1,0 +1,166 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pride-pfp-maker">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-3">
+      <div id="pp-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-6 text-center transition-colors hover:bg-surface-2">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-ink-subtle"><path d="M4 16l4-4 4 4 4-6 4 6M4 20h16M6 8a2 2 0 1 0 0-.01" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="text-sm text-ink">Upload your photo</span>
+        <span class="text-[12px] text-ink-tertiary">JPG or PNG · processed locally</span>
+        <input id="pp-file" type="file" accept="image/*" class="hidden" />
+      </div>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Flag
+        <select id="pp-flag" class="field"></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Style
+        <select id="pp-style" class="field">
+          <option value="ring">Ring around edge</option>
+          <option value="overlay">Full overlay (tinted)</option>
+          <option value="corner">Corner banner</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Ring / overlay strength <span id="pp-strength-val" class="text-ink-tertiary">18%</span>
+        <input id="pp-strength" type="range" min="6" max="40" value="18" class="accent-[#5e6ad2]" />
+      </label>
+    </div>
+
+    <div class="flex flex-col items-center gap-4">
+      <canvas id="pp-canvas" width="512" height="512" class="h-56 w-56 rounded-full bg-surface-2"></canvas>
+      <button id="pp-dl" class="btn btn-primary">Download PNG</button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free Pride PFP maker adds a Pride flag to your profile picture. Upload a
+      photo, choose from the classic six-color Rainbow, Progress, Trans, Bisexual,
+      Pansexual, Lesbian, Nonbinary, Asexual and other flags, then pick a ring, a
+      tinted full overlay or a corner banner. Everything is drawn on a canvas in
+      your browser — your photo is never uploaded — and downloads as a square PNG
+      ready for any social profile.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  // Pride flag stripe palettes (top to bottom).
+  const FLAGS: { name: string; colors: string[] }[] = [
+    { name: 'Rainbow (6-color)', colors: ['#e40303', '#ff8c00', '#ffed00', '#008026', '#004dff', '#750787'] },
+    { name: 'Progress', colors: ['#e40303', '#ff8c00', '#ffed00', '#008026', '#004dff', '#750787', '#ffffff', '#ffafc7', '#74d7ee', '#613915', '#000000'] },
+    { name: 'Transgender', colors: ['#5bcefa', '#f5a9b8', '#ffffff', '#f5a9b8', '#5bcefa'] },
+    { name: 'Bisexual', colors: ['#d60270', '#d60270', '#9b4f96', '#0038a8', '#0038a8'] },
+    { name: 'Pansexual', colors: ['#ff218c', '#ffd800', '#21b1ff'] },
+    { name: 'Lesbian', colors: ['#d52d00', '#ff9a56', '#ffffff', '#d362a4', '#a30262'] },
+    { name: 'Nonbinary', colors: ['#fcf434', '#ffffff', '#9c59d1', '#2c2c2c'] },
+    { name: 'Asexual', colors: ['#000000', '#a3a3a3', '#ffffff', '#800080'] },
+    { name: 'Genderfluid', colors: ['#ff75a2', '#ffffff', '#be18d6', '#000000', '#333ebd'] },
+    { name: 'Gay men (mlm)', colors: ['#078d70', '#98e8c1', '#ffffff', '#7bade2', '#3d1a78'] },
+    { name: 'Aromantic', colors: ['#3da542', '#a7d379', '#ffffff', '#a9a9a9', '#000000'] },
+    { name: 'Intersex', colors: ['#ffd800'] },
+  ];
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const canvas = $('pp-canvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+  const flagSel = $('pp-flag') as HTMLSelectElement;
+  const styleSel = $('pp-style') as HTMLSelectElement;
+  const strength = $('pp-strength') as HTMLInputElement;
+  const strengthVal = $('pp-strength-val');
+
+  flagSel.innerHTML = FLAGS.map((f, i) => `<option value="${i}">${f.name}</option>`).join('');
+
+  let img: HTMLImageElement | null = null;
+  const SIZE = 512;
+
+  function drawPlaceholder() {
+    ctx.fillStyle = '#141516';
+    ctx.fillRect(0, 0, SIZE, SIZE);
+    ctx.fillStyle = '#62666d';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '500 22px Inter, system-ui, sans-serif';
+    ctx.fillText('Upload a photo', SIZE / 2, SIZE / 2);
+  }
+
+  function draw() {
+    const flag = FLAGS[Number(flagSel.value)];
+    const style = styleSel.value;
+    const s = Number(strength.value) / 100;
+
+    ctx.clearRect(0, 0, SIZE, SIZE);
+
+    // Base photo (cover-fit).
+    if (img) {
+      const scale = Math.max(SIZE / img.width, SIZE / img.height);
+      const w = img.width * scale, h = img.height * scale;
+      ctx.drawImage(img, (SIZE - w) / 2, (SIZE - h) / 2, w, h);
+    } else {
+      drawPlaceholder();
+    }
+
+    const stripes = flag.colors;
+    if (style === 'ring') {
+      const ringW = SIZE * s;
+      // Draw concentric arcs as a ring of stripes.
+      const outer = SIZE / 2;
+      const inner = outer - ringW;
+      const per = ringW / stripes.length;
+      stripes.forEach((c, i) => {
+        ctx.beginPath();
+        ctx.arc(SIZE / 2, SIZE / 2, outer - i * per, 0, Math.PI * 2);
+        ctx.arc(SIZE / 2, SIZE / 2, outer - (i + 1) * per, 0, Math.PI * 2, true);
+        ctx.fillStyle = c;
+        ctx.fill('evenodd');
+      });
+      void inner;
+    } else if (style === 'overlay') {
+      const per = SIZE / stripes.length;
+      ctx.globalAlpha = s * 2.2;
+      stripes.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(0, i * per, SIZE, per + 1); });
+      ctx.globalAlpha = 1;
+    } else { // corner banner — diagonal stripes across the top-right corner
+      const band = SIZE * s * 1.6;
+      const per = band / stripes.length;
+      ctx.save();
+      ctx.translate(SIZE * 0.5, -SIZE * 0.5);
+      ctx.rotate(Math.PI / 4);
+      stripes.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(0, SIZE * 0.9 + i * per, SIZE * 1.5, per + 1); });
+      ctx.restore();
+    }
+  }
+
+  function handleFile(file: File) {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => { img = image; draw(); URL.revokeObjectURL(url); };
+    image.src = url;
+  }
+
+  $('pp-drop').addEventListener('click', () => ($('pp-file') as HTMLInputElement).click());
+  ($('pp-file') as HTMLInputElement).addEventListener('change', (e) => {
+    const f = (e.target as HTMLInputElement).files?.[0]; if (f) handleFile(f);
+  });
+  $('pp-drop').addEventListener('dragover', (e) => { e.preventDefault(); $('pp-drop').classList.add('bg-surface-2'); });
+  $('pp-drop').addEventListener('dragleave', () => $('pp-drop').classList.remove('bg-surface-2'));
+  $('pp-drop').addEventListener('drop', (e) => {
+    e.preventDefault(); $('pp-drop').classList.remove('bg-surface-2');
+    const f = e.dataTransfer?.files?.[0]; if (f) handleFile(f);
+  });
+
+  flagSel.addEventListener('change', draw);
+  styleSel.addEventListener('change', draw);
+  strength.addEventListener('input', () => { strengthVal.textContent = `${strength.value}%`; draw(); });
+
+  $('pp-dl').addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = 'pride-pfp.png';
+    a.click();
+  });
+
+  drawPlaceholder();
+</script>

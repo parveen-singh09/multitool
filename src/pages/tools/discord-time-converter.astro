@@ -1,0 +1,124 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="discord-time-converter">
+  <div class="flex flex-col gap-5">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Date
+        <input id="dt-date" type="date" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Time
+        <input id="dt-time" type="time" step="1" class="field" />
+      </label>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2 text-[13px] text-ink-subtle">
+      <span>Unix timestamp:</span>
+      <input id="dt-unix" class="field w-40 font-mono" spellcheck="false" inputmode="numeric" />
+      <button id="dt-now" class="btn btn-secondary">Set to now</button>
+    </div>
+
+    <div id="dt-out" class="flex flex-col gap-2"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free Discord timestamp converter turns any date and time into
+      Discord's <code>&lt;t:UNIX:STYLE&gt;</code> markup. Paste the generated code
+      into a message and Discord renders it in each viewer's own timezone — great
+      for scheduling events, raids and streams across regions. All seven styles are
+      shown (short/long time, short/long date, full date-time, and the "in 3 hours"
+      relative style) with a live preview and one-tap copy. Pick a date or type a
+      raw Unix timestamp. Everything runs in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const dateEl = document.getElementById('dt-date') as HTMLInputElement;
+  const timeEl = document.getElementById('dt-time') as HTMLInputElement;
+  const unixEl = document.getElementById('dt-unix') as HTMLInputElement;
+  const out = document.getElementById('dt-out')!;
+
+  const STYLES: { code: string; name: string; render: (d: Date) => string }[] = [
+    { code: 't', name: 'Short time', render: (d) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) },
+    { code: 'T', name: 'Long time', render: (d) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' }) },
+    { code: 'd', name: 'Short date', render: (d) => d.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' }) },
+    { code: 'D', name: 'Long date', render: (d) => d.toLocaleDateString([], { day: 'numeric', month: 'long', year: 'numeric' }) },
+    { code: 'f', name: 'Date & time (default)', render: (d) => d.toLocaleString([], { day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit' }) },
+    { code: 'F', name: 'Day, date & time', render: (d) => d.toLocaleString([], { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit' }) },
+    { code: 'R', name: 'Relative', render: (d) => relative(d) },
+  ];
+
+  function relative(d: Date): string {
+    const diff = d.getTime() - Date.now();
+    const abs = Math.abs(diff);
+    const rtf = new Intl.RelativeTimeFormat([], { numeric: 'auto' });
+    const units: [Intl.RelativeTimeFormatUnit, number][] = [
+      ['year', 31536000000], ['month', 2592000000], ['day', 86400000],
+      ['hour', 3600000], ['minute', 60000], ['second', 1000],
+    ];
+    for (const [unit, ms] of units) {
+      if (abs >= ms || unit === 'second') return rtf.format(Math.round(diff / ms), unit);
+    }
+    return 'now';
+  }
+
+  let unix = Math.floor(Date.now() / 1000);
+
+  function syncFromUnix() {
+    const d = new Date(unix * 1000);
+    // Populate the date/time fields in local time.
+    const pad = (n: number) => String(n).padStart(2, '0');
+    dateEl.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    timeEl.value = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    unixEl.value = String(unix);
+    render();
+  }
+
+  function syncFromFields() {
+    if (!dateEl.value) return;
+    const [y, mo, da] = dateEl.value.split('-').map(Number);
+    const t = timeEl.value || '00:00:00';
+    const [h, mi, s] = t.split(':').map(Number);
+    const d = new Date(y, mo - 1, da, h || 0, mi || 0, s || 0);
+    unix = Math.floor(d.getTime() / 1000);
+    unixEl.value = String(unix);
+    render();
+  }
+
+  function render() {
+    const d = new Date(unix * 1000);
+    out.innerHTML = STYLES.map((st) => {
+      const code = `<t:${unix}:${st.code}>`;
+      return `<div class="panel panel-lift flex flex-wrap items-center gap-3 p-3">
+        <span class="w-40 shrink-0 text-[12px] text-ink-tertiary">${st.name}</span>
+        <code class="rounded-[4px] bg-surface-2 px-2 py-1 font-mono text-[13px] text-ink">${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code>
+        <span class="text-[13px] text-ink-muted">${st.render(d)}</span>
+        <button class="btn btn-secondary ml-auto" data-copy="${code.replace(/"/g, '&quot;')}">Copy</button>
+      </div>`;
+    }).join('');
+    out.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        await navigator.clipboard.writeText(btn.dataset.copy!);
+        btn.textContent = 'Copied!';
+        setTimeout(() => (btn.textContent = 'Copy'), 1400);
+      });
+    });
+  }
+
+  dateEl.addEventListener('input', syncFromFields);
+  timeEl.addEventListener('input', syncFromFields);
+  unixEl.addEventListener('input', () => {
+    const v = parseInt(unixEl.value, 10);
+    if (!Number.isNaN(v)) { unix = v; const d = new Date(unix * 1000); const pad = (n: number) => String(n).padStart(2, '0');
+      dateEl.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      timeEl.value = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+      render();
+    }
+  });
+  document.getElementById('dt-now')!.addEventListener('click', () => { unix = Math.floor(Date.now() / 1000); syncFromUnix(); });
+
+  syncFromUnix();
+</script>

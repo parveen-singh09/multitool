@@ -1,0 +1,178 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="bpm-analyzer">
+  <div class="flex flex-col gap-6">
+    <!-- Tap tempo -->
+    <div class="flex flex-col gap-3">
+      <div class="eyebrow">Tap tempo</div>
+      <button id="bp-tap" class="panel panel-lift flex h-40 items-center justify-center text-center transition-colors hover:bg-surface-2 active:bg-surface-3">
+        <span class="flex flex-col gap-1">
+          <span id="bp-bpm" class="font-display text-5xl font-semibold text-primary-hover">—</span>
+          <span class="text-sm text-ink-subtle">Tap here (or press Space) to the beat</span>
+        </span>
+      </button>
+      <div class="flex items-center gap-4 text-[13px] text-ink-subtle">
+        <span id="bp-taps">0 taps</span>
+        <span id="bp-conf"></span>
+        <button id="bp-reset" class="btn btn-secondary ml-auto">Reset</button>
+      </div>
+    </div>
+
+    <div class="border-t border-hairline"></div>
+
+    <!-- Audio file -->
+    <div class="flex flex-col gap-3">
+      <div class="eyebrow">Detect from audio file</div>
+      <div id="bp-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-6 text-center transition-colors hover:bg-surface-2">
+        <span class="text-sm text-ink">Drop an audio file or click to choose</span>
+        <span class="text-[12px] text-ink-tertiary">MP3, WAV, M4A · analyzed locally</span>
+        <input id="bp-file" type="file" accept="audio/*" class="hidden" />
+      </div>
+      <div id="bp-audio-out" class="hidden grid grid-cols-2 gap-3 sm:grid-cols-3"></div>
+      <div id="bp-progress" class="hidden text-[13px] text-ink-subtle">Analyzing…</div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free BPM analyzer finds the tempo of any track two ways. Tap along to
+      the beat and it averages your taps into a live beats-per-minute reading with
+      a confidence estimate — the more you tap, the steadier it gets. Or drop an
+      audio file and it decodes the waveform, runs energy-based beat detection
+      across a range of candidate tempos, and reports the most likely BPM. Great
+      for DJing, running playlists, and music production. Everything is processed
+      in your browser — your audio is never uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  // ---- Tap tempo ----
+  const tapBtn = document.getElementById('bp-tap')!;
+  const bpmEl = document.getElementById('bp-bpm')!;
+  const tapsEl = document.getElementById('bp-taps')!;
+  const confEl = document.getElementById('bp-conf')!;
+  let taps: number[] = [];
+  let resetTimer: number | undefined;
+
+  function tap() {
+    const now = performance.now();
+    // Reset if it's been more than 2s since the last tap.
+    if (taps.length && now - taps[taps.length - 1] > 2000) taps = [];
+    taps.push(now);
+    clearTimeout(resetTimer);
+    resetTimer = window.setTimeout(() => { /* keep displayed value */ }, 3000);
+
+    if (taps.length >= 2) {
+      const intervals: number[] = [];
+      for (let i = 1; i < taps.length; i++) intervals.push(taps[i] - taps[i - 1]);
+      const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+      const bpm = 60000 / avg;
+      bpmEl.textContent = bpm.toFixed(1);
+      // Confidence from interval consistency (coefficient of variation).
+      const mean = avg;
+      const variance = intervals.reduce((a, b) => a + (b - mean) ** 2, 0) / intervals.length;
+      const cv = Math.sqrt(variance) / mean;
+      const conf = Math.max(0, Math.min(100, 100 - cv * 200));
+      confEl.textContent = `${conf.toFixed(0)}% steady`;
+    }
+    tapsEl.textContent = `${taps.length} tap${taps.length === 1 ? '' : 's'}`;
+  }
+
+  tapBtn.addEventListener('click', tap);
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && document.activeElement !== document.getElementById('bp-file')) {
+      e.preventDefault(); tap();
+    }
+  });
+  document.getElementById('bp-reset')!.addEventListener('click', () => {
+    taps = []; bpmEl.textContent = '—'; tapsEl.textContent = '0 taps'; confEl.textContent = '';
+  });
+
+  // ---- Audio file BPM detection ----
+  const drop = document.getElementById('bp-drop')!;
+  const fileInput = document.getElementById('bp-file') as HTMLInputElement;
+  const audioOut = document.getElementById('bp-audio-out')!;
+  const progress = document.getElementById('bp-progress')!;
+
+  function tile(label: string, value: string): string {
+    return `<div class="panel panel-lift flex flex-col gap-1 p-4">
+      <span class="text-[12px] text-ink-tertiary">${label}</span>
+      <span class="font-display text-2xl font-semibold text-ink">${value}</span>
+    </div>`;
+  }
+
+  // Energy-based tempo detection over a low-passed mono signal.
+  function detectBPM(buffer: AudioBuffer): { bpm: number; alt: number } {
+    const sr = buffer.sampleRate;
+    const data = buffer.getChannelData(0);
+    // Downsample to an envelope: window RMS at ~200 Hz frame rate.
+    const frameSize = Math.floor(sr / 200);
+    const frames = Math.floor(data.length / frameSize);
+    const env = new Float32Array(frames);
+    for (let i = 0; i < frames; i++) {
+      let sum = 0;
+      for (let j = 0; j < frameSize; j++) { const s = data[i * frameSize + j]; sum += s * s; }
+      env[i] = Math.sqrt(sum / frameSize);
+    }
+    // Onset novelty = positive difference of the envelope.
+    const nov = new Float32Array(frames);
+    for (let i = 1; i < frames; i++) nov[i] = Math.max(0, env[i] - env[i - 1]);
+
+    const frameRate = sr / frameSize; // frames per second
+    // Test candidate BPMs via autocorrelation of novelty.
+    let best = 0, bestScore = -1;
+    const scores: { bpm: number; score: number }[] = [];
+    for (let bpm = 60; bpm <= 200; bpm += 0.5) {
+      const lagSec = 60 / bpm;
+      const lag = Math.round(lagSec * frameRate);
+      if (lag < 1 || lag >= frames) continue;
+      let score = 0;
+      for (let i = lag; i < frames; i++) score += nov[i] * nov[i - lag];
+      scores.push({ bpm, score });
+      if (score > bestScore) { bestScore = score; best = bpm; }
+    }
+    // Alternate = half/double of best, whichever scored next-highest nearby.
+    const half = best / 2, dbl = best * 2;
+    const near = (t: number) => scores.filter((s) => Math.abs(s.bpm - t) < 2).sort((a, b) => b.score - a.score)[0]?.score ?? 0;
+    const alt = near(dbl) > near(half) ? dbl : half;
+    return { bpm: best, alt: Math.round(alt) };
+  }
+
+  async function analyze(file: File) {
+    audioOut.classList.add('hidden');
+    progress.classList.remove('hidden');
+    progress.textContent = 'Decoding audio…';
+    try {
+      const arrayBuf = await file.arrayBuffer();
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const ctx = new AudioCtx();
+      const buffer = await ctx.decodeAudioData(arrayBuf);
+      progress.textContent = 'Detecting tempo…';
+      // Give the UI a tick to paint before the heavy loop.
+      await new Promise((r) => setTimeout(r, 20));
+      const { bpm, alt } = detectBPM(buffer);
+      ctx.close();
+      audioOut.innerHTML =
+        tile('Estimated BPM', bpm.toFixed(1)) +
+        tile('Alternate', String(alt)) +
+        tile('Duration', `${Math.floor(buffer.duration / 60)}:${String(Math.round(buffer.duration % 60)).padStart(2, '0')}`);
+      audioOut.classList.remove('hidden');
+    } catch {
+      progress.textContent = 'Could not decode this audio file.';
+      return;
+    }
+    progress.classList.add('hidden');
+  }
+
+  drop.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) analyze(fileInput.files[0]); });
+  drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('bg-surface-2'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('bg-surface-2'));
+  drop.addEventListener('drop', (e) => {
+    e.preventDefault(); drop.classList.remove('bg-surface-2');
+    const f = e.dataTransfer?.files?.[0]; if (f) analyze(f);
+  });
+</script>

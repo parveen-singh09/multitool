@@ -3773,6 +3773,216 @@ export const tools: Tool[] = [
     keywords: ['vcard downloader', 'vcf file generator', 'create vcard', 'contact card generator', 'vcf download'],
     icon: 'M4 5h16v14H4zM9 10a2 2 0 1 0 0-.01M6 16a3 3 0 0 1 6 0M14 9h4M14 13h4',
   },
+  {
+    slug: 'typegrow-linkedin-formatter',
+    name: 'LinkedIn Text Formatter',
+    tagline: 'Bold, italic & styled text for LinkedIn posts.',
+    description:
+      'Free LinkedIn text formatter (Typegrow-style). Add bold, italic, underline, strikethrough and bullet lists to LinkedIn posts using Unicode that survives copy-paste. Runs in your browser.',
+    category: 'Text',
+    keywords: ['linkedin text formatter', 'typegrow', 'bold text for linkedin', 'linkedin bold generator', 'linkedin post formatter'],
+    icon: 'M4 7V5h16v2M9 5v14M7 19h4M14 12h6M14 16h6',
+  },
+  {
+    slug: 'small-text-generator',
+    name: 'Small Text Generator',
+    tagline: 'Tiny superscript, subscript & small-caps text.',
+    description:
+      'Free small text generator. Convert normal text into tiny Unicode superscript, subscript and small caps that paste into Instagram, X, Discord and bios. Runs entirely in your browser.',
+    category: 'Text',
+    keywords: ['small text generator', 'tiny text', 'superscript generator', 'small caps generator', 'subscript text'],
+    icon: 'M4 7V5h10v2M9 5v10M7 15h4M16 9h4v2h-4zM16 13h4',
+  },
+  {
+    slug: 'sql-validator',
+    name: 'SQL Validator',
+    tagline: 'Check SQL syntax & structure for errors.',
+    description:
+      'Free SQL validator. Check SQL queries for unbalanced parentheses, unterminated strings, trailing commas, misplaced clauses and other syntax problems. Runs in your browser — nothing uploaded.',
+    category: 'Developer',
+    keywords: ['sql validator', 'sql syntax checker', 'validate sql', 'sql linter', 'check sql online'],
+    icon: 'M4 6c0-1.1 3.6-2 8-2s8 .9 8 2-3.6 2-8 2-8-.9-8-2zM4 6v12c0 1.1 3.6 2 8 2s8-.9 8-2V6M4 12c0 1.1 3.6 2 8 2s8-.9 8-2',
+  },
+  {
+    slug: 'structured-data-validator',
+    name: 'Structured Data Validator',
+    tagline: 'Validate schema.org JSON-LD for rich results.',
+    description:
+      'Free structured data validator. Check schema.org JSON-LD markup for Google rich results — extracts blocks from HTML and verifies required and recommended properties per type. Runs in your browser.',
+    category: 'Developer',
+    keywords: ['structured data validator', 'schema markup validator', 'json-ld validator', 'rich results test', 'schema.org checker'],
+    icon: 'M4 5h16v14H4zM4 9h16M9 5v14M13 12l2 2 3-3',
+  },
+  {
+    slug: 'rust-formatter',
+    name: 'Rust Formatter',
+    tagline: 'Beautify & indent Rust source code.',
+    description:
+      'Free Rust formatter. Tidy Rust source with consistent brace-based indentation and spacing, right in your browser. A lightweight in-browser beautifier — no uploads, no account.',
+    category: 'Developer',
+    keywords: ['rust formatter', 'rust beautifier', 'format rust code', 'rustfmt online', 'rust code formatter'],
+    icon: 'M8 6l-4 6 4 6M16 6l4 6-4 6M13 4l-2 16',
+  },
+  {
+    slug: 'har-file-analyzer',
+    name: 'HAR File Analyzer',
+    tagline: 'Break down a browser HAR network capture.',
+    description:
+      'Free HAR file analyzer. Summarize a HTTP Archive capture — total requests, size and time, breakdown by type and domain, and the slowest and largest requests. Parsed locally, nothing uploaded.',
+    category: 'Developer',
+    keywords: ['har file analyzer', 'har viewer', 'analyze har', 'har file reader', 'network waterfall analyzer'],
+    icon: 'M4 5h16v14H4zM4 9h16M8 13h8M8 16h5',
+  },
+  {
+    slug: 'ssn-validator',
+    name: 'SSN Validator',
+    tagline: 'Check a US Social Security Number format.',
+    description:
+      'Free SSN validator. Check whether a US Social Security Number is structurally valid per SSA rules — area, group and serial checks plus known-invalid numbers. For form validation and test data only. Runs in your browser.',
+    category: 'Developer',
+    keywords: ['ssn validator', 'social security number validator', 'validate ssn', 'ssn format checker', 'ssn checker'],
+    icon: 'M4 5h16v14H4zM7 9h6M7 12h10M7 15h4M15 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
+  },
+  {
+    slug: 'discord-time-converter',
+    name: 'Discord Time Converter',
+    tagline: 'Generate Discord timestamp markup.',
+    description:
+      'Free Discord timestamp converter. Turn any date and time into Discord <t:UNIX:STYLE> markup that renders in each viewer’s timezone. All seven styles with live preview and copy. Runs in your browser.',
+    category: 'Converters',
+    keywords: ['discord time converter', 'discord timestamp', 'discord timestamp generator', 'unix to discord', 'discord time format'],
+    icon: 'M12 8v4l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z',
+  },
+  {
+    slug: 'grams-to-cups-converter',
+    name: 'Grams to Cups Converter',
+    tagline: 'Convert baking weights to cups by ingredient.',
+    description:
+      'Free grams to cups converter. Convert flour, sugar, butter and more between grams, cups, tablespoons, teaspoons, ounces and millilitres using per-ingredient densities. Runs in your browser.',
+    category: 'Converters',
+    keywords: ['grams to cups', 'grams to cups converter', 'cups to grams', 'baking conversion', 'flour grams to cups'],
+    icon: 'M6 8h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2zM6 8V5h12v3M9 3v2M15 3v2',
+  },
+  {
+    slug: 'ebay-fee-calculator',
+    name: 'eBay Fee Calculator',
+    tagline: 'Estimate eBay fees & net profit on a sale.',
+    description:
+      'Free eBay fee calculator. Estimate final value fees, fixed per-order fees and optional surcharges, then subtract item cost to see net profit and margin. Based on eBay US defaults. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['ebay fee calculator', 'ebay profit calculator', 'ebay final value fee', 'ebay seller fees', 'ebay fees'],
+    icon: 'M4 7h16l-1.5 10.5A2 2 0 0 1 16.5 19h-9a2 2 0 0 1-2-1.5zM9 7V5a3 3 0 0 1 6 0v2M12 11v4',
+  },
+  {
+    slug: 'pride-pfp-maker',
+    name: 'Pride PFP Maker',
+    tagline: 'Add a Pride flag to your profile picture.',
+    description:
+      'Free Pride PFP maker. Add a Pride flag ring, overlay or corner banner to your profile picture — Rainbow, Progress, Trans, Bi, Pan, Lesbian and more. Drawn locally, your photo is never uploaded.',
+    category: 'Image',
+    keywords: ['pride pfp maker', 'pride flag profile picture', 'pride filter', 'rainbow profile picture', 'lgbt pfp maker'],
+    icon: 'M12 12m-9 0a9 9 0 1 0 18 0 9 9 0 1 0-18 0M3 10h18M3 14h18M9 3v18',
+  },
+  {
+    slug: 'dpi-analyzer',
+    name: 'DPI Analyzer',
+    tagline: 'Measure your mouse DPI by dragging.',
+    description:
+      'Free DPI analyzer. Measure your mouse’s real DPI/CPI by dragging a set physical distance across a pad and comparing to your configured setting. Runs entirely in your browser.',
+    category: 'Developer',
+    keywords: ['dpi analyzer', 'mouse dpi checker', 'dpi calculator', 'measure mouse dpi', 'cpi analyzer'],
+    icon: 'M6 3l4 18 3-7 7-3zM6 3l7 7',
+  },
+  {
+    slug: 'picrew-oc-maker',
+    name: 'Picrew OC Maker',
+    tagline: 'Build a cute cartoon avatar for your OC.',
+    description:
+      'Free Picrew-style OC maker. Build a cute cartoon avatar from layered parts — face, skin, hair, eyes and background — then download a PNG. Original art, drawn in your browser.',
+    category: 'Generators',
+    keywords: ['picrew oc maker', 'oc maker', 'anime avatar maker', 'character avatar creator', 'picrew style maker'],
+    icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM5 20a7 7 0 0 1 14 0',
+  },
+  {
+    slug: 'character-creator',
+    name: 'Character Creator',
+    tagline: 'Roll an RPG character with stats & backstory.',
+    description:
+      'Free character creator. Roll a complete tabletop character — name, race, class, six ability scores, a trait, ideal, flaw and backstory hook — for D&D, writing and RPGs. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['character creator', 'rpg character generator', 'dnd character generator', 'random character maker', 'character sheet generator'],
+    icon: 'M12 3l2.5 5 5.5.8-4 3.9.9 5.5L12 16l-4.9 2.6.9-5.5-4-3.9 5.5-.8z',
+  },
+  {
+    slug: 'oligo-analyzer',
+    name: 'Oligo Analyzer',
+    tagline: 'DNA/RNA oligo Tm, GC%, MW & rev-comp.',
+    description:
+      'Free oligo analyzer. Compute DNA/RNA oligonucleotide length, GC content, melting temperature, molecular weight, extinction coefficient and reverse complement for PCR primer design. Runs in your browser.',
+    category: 'Calculators',
+    keywords: ['oligo analyzer', 'oligo calculator', 'primer tm calculator', 'dna melting temperature', 'gc content calculator'],
+    icon: 'M6 3c6 3 6 15 12 18M18 3c-6 3-6 15-12 18M7 7h10M7 12h10M7 17h10',
+  },
+  {
+    slug: 'bpm-analyzer',
+    name: 'BPM Analyzer',
+    tagline: 'Find a song’s tempo by tap or audio file.',
+    description:
+      'Free BPM analyzer. Find any track’s tempo by tapping to the beat, or drop an audio file for automatic beat detection. Great for DJing and production. Processed locally, nothing uploaded.',
+    category: 'Audio & Video',
+    keywords: ['bpm analyzer', 'bpm counter', 'tap tempo', 'song bpm finder', 'tempo detector'],
+    icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+  },
+  {
+    slug: 'aisong-analyzer',
+    name: 'AI Song Analyzer',
+    tagline: 'Analyze lyrics structure, rhyme & style.',
+    description:
+      'Free AI song analyzer. Break down lyrics for Suno and Udio — map [Verse]/[Chorus] structure, count lines and syllables, detect rhyme scheme and suggest style tags. Runs in your browser.',
+    category: 'Text',
+    keywords: ['ai song analyzer', 'suno lyrics analyzer', 'song structure analyzer', 'rhyme scheme detector', 'udio lyrics'],
+    icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+  },
+  {
+    slug: 'pokemon-team-builder',
+    name: 'Pokémon Team Builder',
+    tagline: 'Build a team & analyze type coverage.',
+    description:
+      'Free Pokémon team builder. Assemble a team of up to six Kanto Pokémon and instantly analyze type weaknesses, resistances and coverage. Type badges in official colors. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['pokemon team builder', 'pokemon type coverage', 'team weakness calculator', 'pokemon team planner', 'kanto team builder'],
+    icon: 'M3 12h6a3 3 0 0 1 6 0h6M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
+  },
+  {
+    slug: 'cryptogram-solver',
+    name: 'Cryptogram Solver',
+    tagline: 'Crack substitution ciphers automatically.',
+    description:
+      'Free cryptogram solver. Crack substitution-cipher puzzles with a hill-climbing auto-solver scored on English letter and trigram frequencies, or solve manually with a live substitution key. Runs in your browser.',
+    category: 'Text',
+    keywords: ['cryptogram solver', 'substitution cipher solver', 'cryptoquote solver', 'cipher decoder', 'crack cryptogram'],
+    icon: 'M7 11V7a5 5 0 0 1 10 0v4M5 11h14v10H5zM12 15v3',
+  },
+  {
+    slug: 'squardle-solver',
+    name: 'Squardle Solver',
+    tagline: 'Find 5-letter words from green/yellow clues.',
+    description:
+      'Free Squardle solver. Find every valid 5-letter word from your green, yellow and gray clues, ranked by letter commonness — the same logic as Squardle and Wordle. Runs in your browser.',
+    category: 'Text',
+    keywords: ['squardle solver', 'wordle solver', 'word finder', '5 letter word solver', 'squardle helper'],
+    icon: 'M4 4h16v16H4zM4 9h16M4 14h16M9 4v16M14 4v16',
+  },
+  {
+    slug: 'kanoodle-solver',
+    name: 'Kanoodle Solver',
+    tagline: 'Solve the 5×11 Kanoodle puzzle board.',
+    description:
+      'Free Kanoodle solver. Mark the pieces already on your 5×11 board and let a backtracking exact-cover solver fit the remaining polyomino pieces to fill every empty square. Runs in your browser.',
+    category: 'Generators',
+    keywords: ['kanoodle solver', 'kanoodle solutions', 'polyomino solver', 'kanoodle answers', 'puzzle solver'],
+    icon: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
+  },
 ];
 
 export const categories: ToolCategory[] = [
