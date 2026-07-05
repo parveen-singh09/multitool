@@ -14,8 +14,42 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div id="gm-panel" class="hidden flex-col gap-4">
       <div class="flex flex-wrap items-center gap-3">
         <span id="gm-fname" class="text-[13px] text-ink-subtle"></span>
+      </div>
+
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Quality
+          <select id="gm-crf" class="field w-44">
+            <option value="18">High (larger)</option>
+            <option value="23" selected>Balanced</option>
+            <option value="28">Small</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Frame rate
+          <select id="gm-fps" class="field w-36">
+            <option value="0" selected>Keep original</option>
+            <option value="30">30 fps</option>
+            <option value="25">25 fps</option>
+            <option value="15">15 fps</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Repeat
+          <select id="gm-loop" class="field w-32">
+            <option value="1" selected>Once</option>
+            <option value="2">2 times</option>
+            <option value="3">3 times</option>
+            <option value="5">5 times</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Background
+          <input id="gm-bg" type="color" value="#ffffff" class="field h-10 w-16 cursor-pointer p-1" />
+        </label>
+      </div>
+      <p class="text-[12px] text-ink-tertiary">MP4 has no transparency — transparent areas are filled with the background color. MP4 also has no loop flag, so repeats are baked into the clip.</p>
+
+      <div class="flex flex-wrap items-center gap-3">
         <button id="gm-go" class="btn btn-primary">Convert to MP4</button>
       </div>
+
       <div id="gm-progwrap" class="hidden flex-col gap-1">
         <div class="h-1.5 w-full overflow-hidden rounded-full bg-surface-3"><div id="gm-bar" class="h-full w-0 rounded-full transition-all" style="background:var(--color-primary)"></div></div>
         <span id="gm-status" class="text-[13px] text-ink-subtle"></span>
@@ -35,9 +69,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p>
       This free GIF to MP4 converter turns animated GIFs into MP4 video, which is
       typically a fraction of the size for the same animation — ideal for
-      websites and messaging. The output uses H.264 with a compatibility tweak so
-      it plays on all devices. Everything runs in your browser with an in-page
-      media engine, so your GIF is never uploaded to a server.
+      websites and messaging. Choose the quality, set a frame rate, repeat the
+      animation a few times and pick a background color for any transparent
+      areas. The output uses H.264 with a compatibility tweak so it plays on all
+      devices. Everything runs in your browser with an in-page media engine, so
+      your GIF is never uploaded to a server.
     </p>
   </div>
 </ToolLayout>
@@ -49,18 +85,19 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 <script>
   import { getFFmpeg, fetchFile } from '../../lib/ffmpeg';
 
-  const fileInput = document.getElementById('gm-file') as HTMLInputElement;
-  const drop = document.getElementById('gm-drop')!;
-  const panel = document.getElementById('gm-panel')!;
-  const fname = document.getElementById('gm-fname')!;
-  const goBtn = document.getElementById('gm-go') as HTMLButtonElement;
-  const progWrap = document.getElementById('gm-progwrap')!;
-  const bar = document.getElementById('gm-bar') as HTMLElement;
-  const statusEl = document.getElementById('gm-status')!;
-  const result = document.getElementById('gm-result')!;
-  const info = document.getElementById('gm-info')!;
-  const preview = document.getElementById('gm-preview') as HTMLVideoElement;
-  const err = document.getElementById('gm-error')!;
+  const $ = (id: string) => document.getElementById(id)!;
+  const fileInput = $('gm-file') as HTMLInputElement;
+  const drop = $('gm-drop');
+  const panel = $('gm-panel');
+  const fname = $('gm-fname');
+  const goBtn = $('gm-go') as HTMLButtonElement;
+  const progWrap = $('gm-progwrap');
+  const bar = $('gm-bar');
+  const statusEl = $('gm-status');
+  const result = $('gm-result');
+  const info = $('gm-info');
+  const preview = $('gm-preview') as HTMLVideoElement;
+  const err = $('gm-error');
 
   let file: File | null = null;
   let outUrl = '';
@@ -73,6 +110,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (!file) return;
     setErr(''); goBtn.disabled = true;
     progWrap.classList.remove('hidden'); progWrap.classList.add('flex'); result.classList.add('hidden'); bar.style.width = '0%';
+    const crf = ($('gm-crf') as HTMLSelectElement).value;
+    const fps = Number(($('gm-fps') as HTMLSelectElement).value);
+    const loop = Number(($('gm-loop') as HTMLSelectElement).value) || 1;
+    const bg = ($('gm-bg') as HTMLInputElement).value.replace('#', '0x');
     try {
       const ff = await getFFmpeg({
         onProgress: (r) => { bar.style.width = Math.min(100, Math.round(r * 100)) + '%'; },
@@ -80,10 +121,21 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       });
       statusEl.textContent = 'Converting…';
       await ff.writeFile('in.gif', await fetchFile(file));
-      // pad to even dimensions (H.264 requires it) and add yuv420p for compatibility
-      await ff.exec(['-i', 'in.gif', '-movflags', 'faststart', '-pix_fmt', 'yuv420p', '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2', 'out.mp4']);
+      // Flatten any transparency onto a background of the chosen color: build a
+      // color source, size it to the GIF with scale2ref, overlay, then force
+      // even dimensions + yuv420p for broad H.264 compatibility.
+      const pre = fps ? `fps=${fps},` : '';
+      const complex =
+        `color=c=${bg}[bg];` +
+        `[bg][0:v]scale2ref[bg][v];` +
+        `[bg][v]overlay=shortest=1,${pre}scale=trunc(iw/2)*2:trunc(ih/2)*2,format=yuv420p`;
+      // -stream_loop repeats the decoded input (loop-1 extra plays) to bake in repeats.
+      const args = ['-stream_loop', String(loop - 1), '-i', 'in.gif',
+        '-filter_complex', complex, '-c:v', 'libx264', '-crf', crf, '-preset', 'veryfast',
+        '-movflags', '+faststart', 'out.mp4'];
+      await ff.exec(args);
       const data = await ff.readFile('out.mp4');
-      const blob = new Blob([data as Uint8Array], { type: 'video/mp4' });
+      const blob = new Blob([data as BlobPart], { type: 'video/mp4' });
       if (outUrl) URL.revokeObjectURL(outUrl);
       outUrl = URL.createObjectURL(blob);
       try { await ff.deleteFile('in.gif'); await ff.deleteFile('out.mp4'); } catch {}
@@ -95,7 +147,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     finally { goBtn.disabled = false; }
   }
 
-  document.getElementById('gm-download')!.addEventListener('click', () => {
+  $('gm-download').addEventListener('click', () => {
     if (!outUrl || !file) return;
     const a = document.createElement('a'); a.href = outUrl; a.download = file.name.replace(/\.[^.]+$/, '') + '.mp4'; a.click();
   });

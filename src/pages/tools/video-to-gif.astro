@@ -12,20 +12,50 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </label>
 
     <div id="vg-panel" class="hidden flex-col gap-4">
+      <!-- Video preview + scrubber -->
+      <div class="panel flex flex-col gap-3 p-3">
+        <video id="vg-video" controls class="max-h-80 w-full rounded-[8px] bg-black"></video>
+        <div class="flex flex-col gap-2">
+          <div class="relative h-8">
+            <input id="vg-range-start" type="range" min="0" max="100" value="0" step="0.1" class="vg-range absolute inset-x-0" aria-label="Clip start" />
+            <input id="vg-range-end" type="range" min="0" max="100" value="30" step="0.1" class="vg-range absolute inset-x-0" aria-label="Clip end" />
+          </div>
+          <div class="flex flex-wrap items-center gap-2 text-[13px] text-ink-subtle">
+            <button id="vg-set-start" class="btn btn-tertiary" style="min-height:28px;padding:2px 10px;font-size:12px">Set start to playhead</button>
+            <button id="vg-set-end" class="btn btn-tertiary" style="min-height:28px;padding:2px 10px;font-size:12px">Set end to playhead</button>
+            <span id="vg-clip" class="ml-auto font-mono text-ink"></span>
+          </div>
+        </div>
+      </div>
+
       <div class="flex flex-wrap items-end gap-3">
-        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Start (s)
-          <input id="vg-start" type="number" class="field w-24" value="0" min="0" step="0.5" />
-        </label>
-        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Duration (s)
-          <input id="vg-dur" type="number" class="field w-24" value="3" min="0.5" max="30" step="0.5" />
-        </label>
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">Width (px)
           <input id="vg-width" type="number" class="field w-24" value="480" min="80" max="1280" step="20" />
         </label>
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">FPS
-          <select id="vg-fps" class="field w-24"><option>10</option><option selected>15</option><option>20</option><option>25</option></select>
+          <select id="vg-fps" class="field w-24"><option>10</option><option selected>15</option><option>20</option><option>25</option><option>30</option></select>
         </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Colors
+          <select id="vg-colors" class="field w-28"><option value="256" selected>256 (best)</option><option value="128">128</option><option value="64">64 (small)</option><option value="32">32 (tiny)</option></select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Smoothing
+          <select id="vg-dither" class="field w-36">
+            <option value="sierra2_4a" selected>Sierra (default)</option>
+            <option value="floyd_steinberg">Floyd–Steinberg</option>
+            <option value="bayer">Bayer (patterned)</option>
+            <option value="none">None (flat)</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Loop
+          <select id="vg-loop" class="field w-32"><option value="0" selected>Forever</option><option value="1">Once</option><option value="3">3 times</option></select>
+        </label>
+        <label class="flex items-center gap-2 pb-2.5 text-sm text-ink-subtle"><input id="vg-reverse" type="checkbox" class="accent-[#5e6ad2]" /> Reverse</label>
+        <label class="flex items-center gap-2 pb-2.5 text-sm text-ink-subtle" title="Play forward then backward"><input id="vg-boomerang" type="checkbox" class="accent-[#5e6ad2]" /> Boomerang</label>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3">
         <button id="vg-go" class="btn btn-primary">Make GIF</button>
+        <span id="vg-estimate" class="text-[13px] text-ink-subtle"></span>
       </div>
 
       <div id="vg-progwrap" class="hidden flex-col gap-1">
@@ -47,48 +77,113 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
       This free video to GIF converter turns a clip from any video into an
-      animated GIF. Choose the start time, duration, width and frame rate, then
-      generate — a two-pass palette is used for clean colors. Keep clips short
-      and the width modest for a reasonable file size. Everything is rendered in
-      your browser with an in-page media engine, so your video is never uploaded.
+      animated GIF. Scrub the video and drag the two handles to pick the exact
+      start and end, then set the width, frame rate, color count and smoothing.
+      Reverse the clip or make a boomerang that plays forward then back, choose
+      how many times it loops, and see an estimated file size before you render.
+      A two-pass palette keeps colors clean. Everything runs in your browser with
+      an in-page media engine, so your video is never uploaded.
     </p>
   </div>
 </ToolLayout>
 
 <style>
   .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+  /* Dual-handle range: two stacked sliders, transparent tracks so both thumbs show. */
+  .vg-range { -webkit-appearance:none; appearance:none; width:100%; height:100%; background:transparent; pointer-events:none; margin:0; }
+  .vg-range::-webkit-slider-thumb { -webkit-appearance:none; pointer-events:auto; width:16px; height:16px; border-radius:9999px; background:var(--color-primary); border:2px solid var(--color-ink); cursor:pointer; }
+  .vg-range::-moz-range-thumb { pointer-events:auto; width:16px; height:16px; border-radius:9999px; background:var(--color-primary); border:2px solid var(--color-ink); cursor:pointer; }
+  .vg-range::-webkit-slider-runnable-track { height:4px; border-radius:9999px; }
+  .vg-range::-moz-range-track { height:4px; border-radius:9999px; background:var(--color-surface-3); }
 </style>
 
 <script>
   import { getFFmpeg, fetchFile } from '../../lib/ffmpeg';
 
-  const fileInput = document.getElementById('vg-file') as HTMLInputElement;
-  const drop = document.getElementById('vg-drop')!;
-  const panel = document.getElementById('vg-panel')!;
-  const goBtn = document.getElementById('vg-go') as HTMLButtonElement;
-  const progWrap = document.getElementById('vg-progwrap')!;
-  const bar = document.getElementById('vg-bar') as HTMLElement;
-  const statusEl = document.getElementById('vg-status')!;
-  const result = document.getElementById('vg-result')!;
-  const info = document.getElementById('vg-info')!;
-  const preview = document.getElementById('vg-preview') as HTMLImageElement;
-  const err = document.getElementById('vg-error')!;
+  const $ = (id: string) => document.getElementById(id)!;
+  const fileInput = $('vg-file') as HTMLInputElement;
+  const drop = $('vg-drop');
+  const panel = $('vg-panel');
+  const video = $('vg-video') as HTMLVideoElement;
+  const rStart = $('vg-range-start') as HTMLInputElement;
+  const rEnd = $('vg-range-end') as HTMLInputElement;
+  const clipEl = $('vg-clip');
+  const goBtn = $('vg-go') as HTMLButtonElement;
+  const progWrap = $('vg-progwrap');
+  const bar = $('vg-bar');
+  const statusEl = $('vg-status');
+  const result = $('vg-result');
+  const info = $('vg-info');
+  const estimate = $('vg-estimate');
+  const preview = $('vg-preview') as HTMLImageElement;
+  const err = $('vg-error');
 
   let file: File | null = null;
+  let duration = 0;
   let outUrl = '';
+  let videoUrl = '';
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
   const fmtSize = (n: number) => n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(2)} MB`;
+  const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}.${String(Math.floor((s % 1) * 10))}`;
 
-  function pick(f: File) { file = f; panel.classList.remove('hidden'); panel.classList.add('flex'); result.classList.add('hidden'); setErr(''); }
+  const startSec = () => (Number(rStart.value) / 100) * duration;
+  const endSec = () => (Number(rEnd.value) / 100) * duration;
+
+  function refreshClip() {
+    // Keep start below end with a small minimum gap.
+    if (Number(rStart.value) > Number(rEnd.value) - 1) rStart.value = String(Math.max(0, Number(rEnd.value) - 1));
+    const s = startSec(), e = endSec();
+    clipEl.textContent = `${fmtTime(s)} → ${fmtTime(e)}  (${(e - s).toFixed(1)}s)`;
+    updateEstimate();
+  }
+  function updateEstimate() {
+    const dur = Math.max(0, endSec() - startSec());
+    const fps = Number(($('vg-fps') as HTMLSelectElement).value) || 15;
+    const width = Number(($('vg-width') as HTMLInputElement).value) || 480;
+    const colors = Number(($('vg-colors') as HTMLSelectElement).value) || 256;
+    const boomerang = ($('vg-boomerang') as HTMLInputElement).checked;
+    const frames = Math.max(1, Math.round(dur * fps)) * (boomerang ? 2 : 1);
+    const height = width * 0.56; // assume ~16:9 for the estimate
+    // Rough GIF bytes: frames × pixels × bits-per-pixel(from palette)/8 × LZW factor.
+    const bpp = Math.log2(colors) / 8;
+    const bytes = frames * width * height * bpp * 0.5;
+    estimate.textContent = dur > 0 ? `~${frames} frames · est. ${fmtSize(bytes)}` : '';
+  }
+
+  rStart.addEventListener('input', () => { refreshClip(); video.currentTime = startSec(); });
+  rEnd.addEventListener('input', () => { refreshClip(); video.currentTime = endSec(); });
+  $('vg-set-start').addEventListener('click', () => { rStart.value = String((video.currentTime / duration) * 100); refreshClip(); });
+  $('vg-set-end').addEventListener('click', () => { rEnd.value = String((video.currentTime / duration) * 100); refreshClip(); });
+  ['vg-width', 'vg-fps', 'vg-colors', 'vg-boomerang'].forEach((id) => $(id).addEventListener('input', updateEstimate));
+
+  function pick(f: File) {
+    file = f; setErr('');
+    if (videoUrl) URL.revokeObjectURL(videoUrl);
+    videoUrl = URL.createObjectURL(f);
+    video.src = videoUrl;
+    video.onloadedmetadata = () => {
+      duration = isFinite(video.duration) ? video.duration : 0;
+      rStart.value = '0';
+      rEnd.value = String(Math.min(100, (Math.min(duration, 5) / duration) * 100));
+      refreshClip();
+    };
+    panel.classList.remove('hidden'); panel.classList.add('flex');
+    result.classList.add('hidden');
+  }
 
   async function make() {
     if (!file) return;
     setErr(''); goBtn.disabled = true;
     progWrap.classList.remove('hidden'); progWrap.classList.add('flex'); result.classList.add('hidden'); bar.style.width = '0%';
-    const start = Number((document.getElementById('vg-start') as HTMLInputElement).value) || 0;
-    const dur = Number((document.getElementById('vg-dur') as HTMLInputElement).value) || 3;
-    const width = Number((document.getElementById('vg-width') as HTMLInputElement).value) || 480;
-    const fps = Number((document.getElementById('vg-fps') as HTMLSelectElement).value) || 15;
+    const start = startSec();
+    const dur = Math.max(0.2, endSec() - startSec());
+    const width = Number(($('vg-width') as HTMLInputElement).value) || 480;
+    const fps = Number(($('vg-fps') as HTMLSelectElement).value) || 15;
+    const colors = Number(($('vg-colors') as HTMLSelectElement).value) || 256;
+    const dither = ($('vg-dither') as HTMLSelectElement).value;
+    const loop = ($('vg-loop') as HTMLSelectElement).value;
+    const reverse = ($('vg-reverse') as HTMLInputElement).checked;
+    const boomerang = ($('vg-boomerang') as HTMLInputElement).checked;
     try {
       const ff = await getFFmpeg({
         onProgress: (r) => { bar.style.width = Math.min(100, Math.round(r * 100)) + '%'; },
@@ -97,14 +192,18 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       statusEl.textContent = 'Generating palette…';
       const inName = 'in.' + (file.name.split('.').pop() || 'mp4');
       await ff.writeFile(inName, await fetchFile(file));
-      const vf = `fps=${fps},scale=${width}:-1:flags=lanczos`;
-      // pass 1: palette
-      await ff.exec(['-ss', String(start), '-t', String(dur), '-i', inName, '-vf', `${vf},palettegen`, 'palette.png']);
+      // Build the frame-processing filter: fps + scale, plus reverse/boomerang.
+      let chain = `fps=${fps},scale=${width}:-1:flags=lanczos`;
+      if (boomerang) chain += `,split[a][b];[b]reverse[r];[a][r]concat`;
+      else if (reverse) chain += `,reverse`;
+      // pass 1: palette (from the same processed frames)
+      await ff.exec(['-ss', String(start), '-t', String(dur), '-i', inName, '-vf', `${chain},palettegen=max_colors=${colors}`, 'palette.png']);
       statusEl.textContent = 'Encoding GIF…';
-      // pass 2: use palette
-      await ff.exec(['-ss', String(start), '-t', String(dur), '-i', inName, '-i', 'palette.png', '-lavfi', `${vf} [x]; [x][1:v] paletteuse`, 'out.gif']);
+      // pass 2: apply palette with the chosen dithering
+      await ff.exec(['-ss', String(start), '-t', String(dur), '-i', inName, '-i', 'palette.png',
+        '-lavfi', `${chain} [x]; [x][1:v] paletteuse=dither=${dither}`, '-loop', loop, 'out.gif']);
       const data = await ff.readFile('out.gif');
-      const blob = new Blob([data as Uint8Array], { type: 'image/gif' });
+      const blob = new Blob([data as BlobPart], { type: 'image/gif' });
       if (outUrl) URL.revokeObjectURL(outUrl);
       outUrl = URL.createObjectURL(blob);
       try { await ff.deleteFile(inName); await ff.deleteFile('palette.png'); await ff.deleteFile('out.gif'); } catch {}
@@ -116,7 +215,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     finally { goBtn.disabled = false; }
   }
 
-  document.getElementById('vg-download')!.addEventListener('click', () => {
+  $('vg-download').addEventListener('click', () => {
     if (!outUrl || !file) return;
     const a = document.createElement('a'); a.href = outUrl; a.download = file.name.replace(/\.[^.]+$/, '') + '.gif'; a.click();
   });

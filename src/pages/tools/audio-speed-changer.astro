@@ -12,21 +12,45 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </label>
 
     <div id="as-panel" class="hidden flex-col gap-4">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-        Speed: <span id="as-speed-val" class="text-ink">1.00×</span>
-        <input id="as-speed" type="range" min="0.5" max="2" step="0.05" value="1" class="w-full accent-[#5e6ad2]" />
-      </label>
+      <audio id="as-original" controls class="w-full"></audio>
+
+      <div class="flex flex-col gap-1">
+        <div class="flex items-center justify-between text-sm text-ink-subtle">
+          <span>Speed</span>
+          <span><span id="as-speed-val" class="text-ink">1.00×</span> · <span id="as-speed-pct" class="text-ink-tertiary">100%</span></span>
+        </div>
+        <input id="as-speed" type="range" min="0.25" max="4" step="0.05" value="1" class="w-full accent-[#5e6ad2]" />
+        <div class="mt-1 flex flex-wrap gap-2">
+          <button class="as-preset btn btn-secondary" data-s="0.5">0.5×</button>
+          <button class="as-preset btn btn-secondary" data-s="0.75">0.75×</button>
+          <button class="as-preset btn btn-secondary" data-s="1">1×</button>
+          <button class="as-preset btn btn-secondary" data-s="1.25">1.25×</button>
+          <button class="as-preset btn btn-secondary" data-s="1.5">1.5×</button>
+          <button class="as-preset btn btn-secondary" data-s="2">2×</button>
+          <label class="ml-auto flex items-center gap-1 text-[13px] text-ink-subtle">Exact
+            <input id="as-speed-num" type="number" min="0.25" max="4" step="0.01" value="1" class="field w-20" />
+          </label>
+        </div>
+      </div>
+
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Pitch: <span id="as-pitch-val" class="text-ink">0 semitones</span>
         <input id="as-pitch" type="range" min="-12" max="12" step="1" value="0" class="w-full accent-[#5e6ad2]" />
       </label>
-      <label class="flex items-center gap-2 text-sm text-ink-subtle">
-        <input id="as-link" type="checkbox" class="accent-[#5e6ad2]" />
-        Link speed &amp; pitch (like a record/tape — faster is higher-pitched)
-      </label>
+
+      <div class="flex flex-col gap-2">
+        <label class="flex items-center gap-2 text-sm text-ink-subtle">
+          <input id="as-link" type="checkbox" class="accent-[#5e6ad2]" />
+          Link speed &amp; pitch — tape/record effect (faster is higher-pitched)
+        </label>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle">
+          <input id="as-reverse" type="checkbox" class="accent-[#5e6ad2]" /> Reverse audio
+        </label>
+      </div>
 
       <div class="flex flex-wrap items-center gap-3">
         <button id="as-go" class="btn btn-primary">Apply</button>
+        <button id="as-reset" class="btn btn-secondary">Reset</button>
         <span id="as-note" class="text-[13px] text-ink-tertiary"></span>
       </div>
 
@@ -49,8 +73,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
       This free audio speed and pitch changer lets you slow down or speed up
-      audio and shift its pitch up or down in semitones — independently, or
-      linked together like an old record or tape. It's great for music practice,
+      audio from a quarter speed to 4× — with one-click presets, an exact numeric
+      entry, and speed shown as both a multiplier and a percentage. By default the
+      pitch is preserved as you change speed, so slowed-down music still sounds in
+      tune; shift the pitch separately in semitones, link the two for an old
+      record/tape effect, or reverse the whole track. Great for music practice,
       transcription, backing tracks and voice effects. Everything is processed in
       your browser with an in-page audio engine, so your file is never uploaded.
     </p>
@@ -64,44 +91,69 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 <script>
   import { getFFmpeg, fetchFile } from '../../lib/ffmpeg';
 
-  const fileInput = document.getElementById('as-file') as HTMLInputElement;
-  const drop = document.getElementById('as-drop')!;
-  const panel = document.getElementById('as-panel')!;
-  const speed = document.getElementById('as-speed') as HTMLInputElement;
-  const pitch = document.getElementById('as-pitch') as HTMLInputElement;
-  const speedVal = document.getElementById('as-speed-val')!;
-  const pitchVal = document.getElementById('as-pitch-val')!;
-  const link = document.getElementById('as-link') as HTMLInputElement;
-  const goBtn = document.getElementById('as-go') as HTMLButtonElement;
-  const note = document.getElementById('as-note')!;
-  const progWrap = document.getElementById('as-progwrap')!;
-  const bar = document.getElementById('as-bar') as HTMLElement;
-  const statusEl = document.getElementById('as-status')!;
-  const result = document.getElementById('as-result')!;
-  const info = document.getElementById('as-info')!;
-  const preview = document.getElementById('as-preview') as HTMLAudioElement;
-  const err = document.getElementById('as-error')!;
+  const $ = (id: string) => document.getElementById(id)!;
+  const fileInput = $('as-file') as HTMLInputElement;
+  const drop = $('as-drop');
+  const panel = $('as-panel');
+  const original = $('as-original') as HTMLAudioElement;
+  const speed = $('as-speed') as HTMLInputElement;
+  const speedNum = $('as-speed-num') as HTMLInputElement;
+  const pitch = $('as-pitch') as HTMLInputElement;
+  const speedVal = $('as-speed-val');
+  const speedPct = $('as-speed-pct');
+  const pitchVal = $('as-pitch-val');
+  const link = $('as-link') as HTMLInputElement;
+  const reverse = $('as-reverse') as HTMLInputElement;
+  const goBtn = $('as-go') as HTMLButtonElement;
+  const note = $('as-note');
+  const progWrap = $('as-progwrap');
+  const bar = $('as-bar');
+  const statusEl = $('as-status');
+  const result = $('as-result');
+  const info = $('as-info');
+  const preview = $('as-preview') as HTMLAudioElement;
+  const err = $('as-error');
 
   let file: File | null = null;
   let outUrl = '';
+  let origUrl = '';
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
 
   function refreshLabels() {
-    speedVal.textContent = Number(speed.value).toFixed(2) + '×';
+    const s = Number(speed.value);
+    speedVal.textContent = s.toFixed(2) + '×';
+    speedPct.textContent = Math.round(s * 100) + '%';
+    speedNum.value = s.toFixed(2);
     const p = Number(pitch.value);
     pitchVal.textContent = (p > 0 ? '+' : '') + p + ' semitone' + (Math.abs(p) === 1 ? '' : 's');
     pitch.disabled = link.checked;
-    if (link.checked) note.textContent = 'Linked: pitch follows speed.';
-    else note.textContent = 'Independent: speed and pitch set separately.';
+    note.textContent = link.checked
+      ? 'Linked: pitch follows speed (tape effect).'
+      : 'Independent: speed keeps the original pitch.';
   }
   speed.addEventListener('input', refreshLabels);
+  speedNum.addEventListener('input', () => {
+    const v = Math.max(0.25, Math.min(4, Number(speedNum.value) || 1));
+    speed.value = String(v); refreshLabels();
+  });
   pitch.addEventListener('input', refreshLabels);
   link.addEventListener('change', refreshLabels);
+  document.querySelectorAll<HTMLButtonElement>('.as-preset').forEach((b) =>
+    b.addEventListener('click', () => { speed.value = b.dataset.s!; refreshLabels(); }));
+  $('as-reset').addEventListener('click', () => {
+    speed.value = '1'; pitch.value = '0'; link.checked = false; reverse.checked = false; refreshLabels();
+  });
 
-  function pick(f: File) { file = f; panel.classList.remove('hidden'); panel.classList.add('flex'); result.classList.add('hidden'); setErr(''); refreshLabels(); }
+  function pick(f: File) {
+    file = f;
+    if (origUrl) URL.revokeObjectURL(origUrl);
+    origUrl = URL.createObjectURL(f);
+    original.src = origUrl;
+    panel.classList.remove('hidden'); panel.classList.add('flex');
+    result.classList.add('hidden'); setErr(''); refreshLabels();
+  }
 
-  // Build an ffmpeg audio filter chain for speed/pitch.
-  // atempo handles tempo without pitch change (chain to cover <0.5 or >2).
+  // Chain atempo stages so any factor outside [0.5,2] is reached in steps.
   function atempoChain(factor: number): string {
     const parts: number[] = [];
     let f = factor;
@@ -113,20 +165,19 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   function buildFilter(): string {
     const s = Number(speed.value);
-    if (link.checked) {
-      // record/tape effect: resample rate scales both tempo and pitch together
-      return `asetrate=44100*${s.toFixed(4)},aresample=44100`;
-    }
-    const semi = Number(pitch.value);
-    const pitchFactor = Math.pow(2, semi / 12);
     const chain: string[] = [];
-    if (semi !== 0) {
-      // shift pitch via asetrate (changes tempo too), then correct tempo back
-      chain.push(`asetrate=44100*${pitchFactor.toFixed(4)}`);
-      chain.push('aresample=44100');
-      chain.push(atempoChain(1 / pitchFactor)); // undo tempo change from pitch shift
+    if (reverse.checked) chain.push('areverse');
+    if (link.checked) {
+      // Tape effect: resample rate scales both tempo and pitch together.
+      chain.push(`asetrate=44100*${s.toFixed(4)}`, 'aresample=44100');
+    } else {
+      const semi = Number(pitch.value);
+      if (semi !== 0) {
+        const pf = Math.pow(2, semi / 12);
+        chain.push(`asetrate=44100*${pf.toFixed(4)}`, 'aresample=44100', atempoChain(1 / pf));
+      }
+      if (s !== 1) chain.push(atempoChain(s)); // tempo change, pitch preserved
     }
-    if (s !== 1) chain.push(atempoChain(s));
     return chain.length ? chain.join(',') : 'anull';
   }
 
@@ -144,7 +195,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       await ff.writeFile(inName, await fetchFile(file));
       await ff.exec(['-i', inName, '-af', buildFilter(), '-c:a', 'libmp3lame', '-q:a', '2', 'out.mp3']);
       const data = await ff.readFile('out.mp3');
-      const blob = new Blob([data as Uint8Array], { type: 'audio/mpeg' });
+      const blob = new Blob([data as BlobPart], { type: 'audio/mpeg' });
       if (outUrl) URL.revokeObjectURL(outUrl);
       outUrl = URL.createObjectURL(blob);
       try { await ff.deleteFile(inName); await ff.deleteFile('out.mp3'); } catch {}
@@ -156,7 +207,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     finally { goBtn.disabled = false; }
   }
 
-  document.getElementById('as-download')!.addEventListener('click', () => {
+  $('as-download').addEventListener('click', () => {
     if (!outUrl || !file) return;
     const a = document.createElement('a'); a.href = outUrl; a.download = file.name.replace(/\.[^.]+$/, '') + '-modified.mp3'; a.click();
   });

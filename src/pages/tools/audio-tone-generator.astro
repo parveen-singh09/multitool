@@ -4,21 +4,89 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="audio-tone-generator">
   <div class="flex flex-col gap-4">
+    <!-- Mode toggle -->
+    <div class="flex flex-wrap gap-1 rounded-full bg-surface-1 p-1 w-fit border border-hairline">
+      <button data-mode="tone" class="at-tab rounded-full px-4 py-1.5 text-[13px] font-medium">Single tone</button>
+      <button data-mode="sweep" class="at-tab rounded-full px-4 py-1.5 text-[13px] font-medium">Sweep</button>
+      <button data-mode="binaural" class="at-tab rounded-full px-4 py-1.5 text-[13px] font-medium">Binaural</button>
+    </div>
+
+    <!-- Single tone -->
+    <div id="at-pane-tone" class="flex flex-col gap-4">
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Frequency (Hz)
+          <input id="at-freq" type="number" min="1" max="24000" step="0.01" value="440" class="field" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Note
+          <span id="at-note" class="field flex items-center text-ink">A4</span>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Waveform
+          <select id="at-wave" class="field"><option value="sine">Sine</option><option value="square">Square</option><option value="triangle">Triangle</option><option value="sawtooth">Sawtooth</option></select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Channel
+          <select id="at-channel" class="field"><option value="both" selected>Both</option><option value="left">Left</option><option value="right">Right</option></select>
+        </label>
+      </div>
+      <input id="at-slider" type="range" min="20" max="4000" value="440" class="w-full accent-[#5e6ad2]" aria-label="Frequency slider" />
+      <div class="flex flex-wrap gap-2">
+        <button id="at-oct-down" class="btn btn-secondary" title="Down one octave">÷2</button>
+        <button id="at-oct-up" class="btn btn-secondary" title="Up one octave">×2</button>
+        <span class="grow"></span>
+        <button id="at-a432" class="btn btn-tertiary">432 Hz</button>
+        <button id="at-a440" class="btn btn-tertiary">440 Hz</button>
+      </div>
+    </div>
+
+    <!-- Sweep -->
+    <div id="at-pane-sweep" class="hidden flex-col gap-4">
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Start (Hz)
+          <input id="at-sw-start" type="number" min="1" max="24000" value="200" class="field" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">End (Hz)
+          <input id="at-sw-end" type="number" min="1" max="24000" value="2000" class="field" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Duration (s)
+          <input id="at-sw-dur" type="number" min="1" max="120" value="5" class="field" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Curve
+          <select id="at-sw-curve" class="field"><option value="log" selected>Logarithmic</option><option value="lin">Linear</option></select>
+        </label>
+      </div>
+    </div>
+
+    <!-- Binaural -->
+    <div id="at-pane-binaural" class="hidden flex-col gap-4">
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Left ear (Hz)
+          <input id="at-bi-left" type="number" min="1" max="24000" value="200" class="field" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Right ear (Hz)
+          <input id="at-bi-right" type="number" min="1" max="24000" value="210" class="field" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Beat
+          <span id="at-bi-beat" class="field flex items-center text-ink">10 Hz</span>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Duration (s)
+          <input id="at-bi-dur" type="number" min="1" max="600" value="30" class="field" />
+        </label>
+      </div>
+      <p class="text-[12px] text-ink-tertiary">Binaural beats need headphones — each ear hears a slightly different frequency and your brain perceives the difference as a pulse.</p>
+    </div>
+
+    <!-- Shared controls -->
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Frequency (Hz)
-        <input id="at-freq" type="number" min="20" max="20000" value="440" class="field" />
-      </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Waveform
-        <select id="at-wave" class="field"><option value="sine">Sine</option><option value="square">Square</option><option value="triangle">Triangle</option><option value="sawtooth">Sawtooth</option></select>
-      </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Volume: <span id="at-vv" class="text-ink">50%</span>
         <input id="at-vol" type="range" min="0" max="100" value="50" class="w-full accent-[#5e6ad2]" />
       </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Duration (s, for download)
-        <input id="at-dur" type="number" min="1" max="60" value="5" class="field" />
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Fade (s)
+        <input id="at-fade" type="number" min="0" max="5" step="0.1" value="0.02" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Download length (s)
+        <input id="at-dur" type="number" min="1" max="600" value="5" class="field" />
       </label>
     </div>
-    <input id="at-slider" type="range" min="20" max="4000" value="440" class="w-full accent-[#5e6ad2]" aria-label="Frequency slider" />
+
     <div class="flex flex-wrap gap-2">
       <button id="at-play" class="btn btn-primary">Play</button>
       <button id="at-stop" class="btn btn-secondary">Stop</button>
@@ -29,14 +97,22 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free audio tone generator plays pure tones at any frequency from 20 Hz
-      to 20 kHz in four classic waveforms — sine, square, triangle and sawtooth.
-      Use it to test speakers and headphones, match tinnitus frequencies, tune
-      instruments, or study how waveforms sound. You can also download the tone as
-      a WAV file. Everything is synthesized with the Web Audio API in your browser.
+      This free audio tone generator does three things in one place: play a pure
+      single tone at any frequency in sine, square, triangle or sawtooth — with
+      the matching musical note shown and left/right channel selection — sweep
+      smoothly between two frequencies (linear or logarithmic), or generate
+      binaural beats with an independent frequency in each ear. Use it to test
+      speakers and headphones, match tinnitus, tune instruments, or explore
+      beats. Add a fade to avoid clicks and download any of them as a WAV.
+      Everything is synthesized with the Web Audio API in your browser.
     </p>
   </div>
 </ToolLayout>
+
+<style>
+  .at-tab { color: var(--color-ink-subtle); transition: background-color .15s, color .15s; }
+  .at-tab[data-active] { background-color: var(--color-surface-3); color: var(--color-ink); }
+</style>
 
 <script>
   const $ = (id: string) => document.getElementById(id)!;
@@ -44,67 +120,186 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const sliderEl = $('at-slider') as HTMLInputElement;
   const waveEl = $('at-wave') as HTMLSelectElement;
   const volEl = $('at-vol') as HTMLInputElement;
+  const noteEl = $('at-note');
+  let mode: 'tone' | 'sweep' | 'binaural' = 'tone';
 
   let ctx: AudioContext | null = null;
-  let osc: OscillatorNode | null = null;
+  let nodes: AudioScheduledSourceNode[] = [];
   let gain: GainNode | null = null;
 
-  function type(): OscillatorType { return waveEl.value as OscillatorType; }
-  function freq(): number { return Math.max(20, Math.min(20000, Number(freqEl.value) || 440)); }
-  function vol(): number { return Number(volEl.value) / 100; }
+  const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  function freqToNote(f: number): string {
+    if (f <= 0) return '—';
+    const n = Math.round(12 * Math.log2(f / 440)); // semitones from A4
+    const name = NOTES[((n + 9) % 12 + 12) % 12];
+    const octave = 4 + Math.floor((n + 9) / 12);
+    const exact = 440 * Math.pow(2, n / 12);
+    const cents = Math.round(1200 * Math.log2(f / exact));
+    return `${name}${octave}${cents ? ` ${cents > 0 ? '+' : ''}${cents}¢` : ''}`;
+  }
+
+  const type = (): OscillatorType => waveEl.value as OscillatorType;
+  const freq = () => Math.max(1, Math.min(24000, Number(freqEl.value) || 440));
+  const vol = () => Number(volEl.value) / 100 * 0.3;
+  const fadeT = () => Math.max(0, Number(($('at-fade') as HTMLInputElement).value) || 0);
+
+  function setMode(m: 'tone' | 'sweep' | 'binaural') {
+    mode = m; stop();
+    document.querySelectorAll<HTMLButtonElement>('.at-tab').forEach((b) => b.toggleAttribute('data-active', b.dataset.mode === m));
+    (['tone', 'sweep', 'binaural'] as const).forEach((k) => {
+      const pane = $(`at-pane-${k}`);
+      pane.classList.toggle('hidden', k !== m);
+      pane.classList.toggle('flex', k === m);
+    });
+  }
+  document.querySelectorAll<HTMLButtonElement>('.at-tab').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode as any)));
+
+  function ensureCtx() { ctx = ctx || new (window.AudioContext || (window as any).webkitAudioContext)(); return ctx!; }
+
+  // Route a source to left, right, or both channels.
+  function pan(node: AudioNode, channel: string, g: GainNode) {
+    if (channel === 'both') { node.connect(g); return; }
+    const p = ctx!.createStereoPanner();
+    p.pan.value = channel === 'left' ? -1 : 1;
+    node.connect(p); p.connect(g);
+  }
 
   function play() {
     stop();
-    ctx = ctx || new (window.AudioContext || (window as any).webkitAudioContext)();
-    osc = ctx.createOscillator();
-    gain = ctx.createGain();
-    osc.type = type();
-    osc.frequency.value = freq();
-    gain.gain.value = vol() * 0.3;
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start();
+    const ac = ensureCtx();
+    ac.resume();
+    gain = ac.createGain();
+    gain.gain.setValueAtTime(0, ac.currentTime);
+    gain.gain.linearRampToValueAtTime(vol(), ac.currentTime + Math.max(0.005, fadeT()));
+    gain.connect(ac.destination);
+
+    if (mode === 'tone') {
+      const o = ac.createOscillator();
+      o.type = type(); o.frequency.value = freq();
+      pan(o, ($('at-channel') as HTMLSelectElement).value, gain);
+      o.start(); nodes.push(o);
+    } else if (mode === 'sweep') {
+      const o = ac.createOscillator();
+      o.type = type();
+      const s = Number(($('at-sw-start') as HTMLInputElement).value) || 200;
+      const e = Number(($('at-sw-end') as HTMLInputElement).value) || 2000;
+      const d = Math.max(0.1, Number(($('at-sw-dur') as HTMLInputElement).value) || 5);
+      const curve = ($('at-sw-curve') as HTMLSelectElement).value;
+      o.frequency.setValueAtTime(s, ac.currentTime);
+      if (curve === 'log' && s > 0 && e > 0) o.frequency.exponentialRampToValueAtTime(e, ac.currentTime + d);
+      else o.frequency.linearRampToValueAtTime(e, ac.currentTime + d);
+      o.connect(gain); o.start(); o.stop(ac.currentTime + d); nodes.push(o);
+    } else {
+      const l = ac.createOscillator(), r = ac.createOscillator();
+      l.type = r.type = type();
+      l.frequency.value = Number(($('at-bi-left') as HTMLInputElement).value) || 200;
+      r.frequency.value = Number(($('at-bi-right') as HTMLInputElement).value) || 210;
+      pan(l, 'left', gain); pan(r, 'right', gain);
+      l.start(); r.start(); nodes.push(l, r);
+    }
   }
 
   function stop() {
-    if (osc) { try { osc.stop(); } catch {} osc.disconnect(); osc = null; }
+    if (gain && ctx) {
+      const g = gain;
+      g.gain.cancelScheduledValues(ctx.currentTime);
+      g.gain.setValueAtTime(g.gain.value, ctx.currentTime);
+      g.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.03);
+    }
+    const dead = nodes; nodes = [];
+    setTimeout(() => dead.forEach((n) => { try { n.stop(); } catch {} n.disconnect(); }), 40);
   }
 
-  freqEl.addEventListener('input', () => { sliderEl.value = String(Math.min(4000, freq())); if (osc) osc.frequency.value = freq(); });
-  sliderEl.addEventListener('input', () => { freqEl.value = sliderEl.value; if (osc) osc.frequency.value = freq(); });
-  waveEl.addEventListener('input', () => { if (osc) osc.type = type(); });
-  volEl.addEventListener('input', () => { $('at-vv').textContent = volEl.value + '%'; if (gain) gain.gain.value = vol() * 0.3; });
+  // ---- Live updates for the tone pane ----
+  freqEl.addEventListener('input', () => {
+    sliderEl.value = String(Math.min(4000, freq()));
+    noteEl.textContent = freqToNote(freq());
+    if (mode === 'tone' && nodes[0] instanceof OscillatorNode) (nodes[0] as OscillatorNode).frequency.value = freq();
+  });
+  sliderEl.addEventListener('input', () => { freqEl.value = sliderEl.value; freqEl.dispatchEvent(new Event('input')); });
+  waveEl.addEventListener('input', () => nodes.forEach((n) => { if (n instanceof OscillatorNode) n.type = type(); }));
+  volEl.addEventListener('input', () => { $('at-vv').textContent = volEl.value + '%'; if (gain && ctx) gain.gain.setValueAtTime(vol(), ctx.currentTime); });
+  $('at-oct-up').addEventListener('click', () => { freqEl.value = String(Math.min(24000, freq() * 2)); freqEl.dispatchEvent(new Event('input')); });
+  $('at-oct-down').addEventListener('click', () => { freqEl.value = String(freq() / 2); freqEl.dispatchEvent(new Event('input')); });
+  $('at-a440').addEventListener('click', () => { freqEl.value = '440'; freqEl.dispatchEvent(new Event('input')); });
+  $('at-a432').addEventListener('click', () => { freqEl.value = '432'; freqEl.dispatchEvent(new Event('input')); });
+
+  // Binaural beat readout
+  const updBeat = () => {
+    const l = Number(($('at-bi-left') as HTMLInputElement).value) || 0;
+    const r = Number(($('at-bi-right') as HTMLInputElement).value) || 0;
+    $('at-bi-beat').textContent = `${Math.abs(r - l).toFixed(1)} Hz`;
+  };
+  $('at-bi-left').addEventListener('input', updBeat);
+  $('at-bi-right').addEventListener('input', updBeat);
 
   $('at-play').addEventListener('click', play);
   $('at-stop').addEventListener('click', stop);
 
-  // Render an offline buffer and encode WAV for download.
+  // ---- Offline render → WAV ----
   $('at-dl').addEventListener('click', async () => {
-    const dur = Math.max(1, Math.min(60, Number(($('at-dur') as HTMLInputElement).value) || 5));
+    let dur = Math.max(1, Math.min(600, Number(($('at-dur') as HTMLInputElement).value) || 5));
+    if (mode === 'sweep') dur = Math.max(0.1, Number(($('at-sw-dur') as HTMLInputElement).value) || 5);
+    if (mode === 'binaural') dur = Math.max(1, Number(($('at-bi-dur') as HTMLInputElement).value) || 30);
     const sr = 44100;
-    const oac = new OfflineAudioContext(1, sr * dur, sr);
-    const o = oac.createOscillator(), g = oac.createGain();
-    o.type = type(); o.frequency.value = freq(); g.gain.value = vol() * 0.3;
-    o.connect(g); g.connect(oac.destination);
-    o.start(); o.stop(dur);
+    const oac = new OfflineAudioContext(2, Math.ceil(sr * dur), sr);
+    const g = oac.createGain();
+    const v = vol(), f = Math.max(0.005, fadeT());
+    g.gain.setValueAtTime(0, 0);
+    g.gain.linearRampToValueAtTime(v, f);
+    g.gain.setValueAtTime(v, Math.max(f, dur - f));
+    g.gain.linearRampToValueAtTime(0, dur);
+    g.connect(oac.destination);
+
+    const panTo = (node: AudioNode, ch: string) => {
+      if (ch === 'both') { node.connect(g); return; }
+      const p = oac.createStereoPanner(); p.pan.value = ch === 'left' ? -1 : 1; node.connect(p); p.connect(g);
+    };
+
+    if (mode === 'tone') {
+      const o = oac.createOscillator(); o.type = type(); o.frequency.value = freq();
+      panTo(o, ($('at-channel') as HTMLSelectElement).value); o.start(); o.stop(dur);
+    } else if (mode === 'sweep') {
+      const o = oac.createOscillator(); o.type = type();
+      const s = Number(($('at-sw-start') as HTMLInputElement).value) || 200;
+      const e = Number(($('at-sw-end') as HTMLInputElement).value) || 2000;
+      const curve = ($('at-sw-curve') as HTMLSelectElement).value;
+      o.frequency.setValueAtTime(s, 0);
+      if (curve === 'log' && s > 0 && e > 0) o.frequency.exponentialRampToValueAtTime(e, dur);
+      else o.frequency.linearRampToValueAtTime(e, dur);
+      o.connect(g); o.start(); o.stop(dur);
+    } else {
+      const l = oac.createOscillator(), r = oac.createOscillator(); l.type = r.type = type();
+      l.frequency.value = Number(($('at-bi-left') as HTMLInputElement).value) || 200;
+      r.frequency.value = Number(($('at-bi-right') as HTMLInputElement).value) || 210;
+      panTo(l, 'left'); panTo(r, 'right'); l.start(); r.start(); l.stop(dur); r.stop(dur);
+    }
+
     const buffer = await oac.startRendering();
     const wav = encodeWav(buffer);
     const url = URL.createObjectURL(new Blob([wav], { type: 'audio/wav' }));
-    const a = document.createElement('a'); a.href = url; a.download = `tone-${freq()}hz.wav`; a.click();
+    const label = mode === 'binaural' ? 'binaural' : mode === 'sweep' ? 'sweep' : `${Math.round(freq())}hz`;
+    const a = document.createElement('a'); a.href = url; a.download = `tone-${label}.wav`; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
 
   function encodeWav(buffer: AudioBuffer): ArrayBuffer {
-    const data = buffer.getChannelData(0);
-    const sr = buffer.sampleRate;
-    const out = new ArrayBuffer(44 + data.length * 2);
+    const ch = buffer.numberOfChannels, len = buffer.length, sr = buffer.sampleRate;
+    const out = new ArrayBuffer(44 + len * ch * 2);
     const dv = new DataView(out);
     const wr = (off: number, s: string) => { for (let i = 0; i < s.length; i++) dv.setUint8(off + i, s.charCodeAt(i)); };
-    wr(0, 'RIFF'); dv.setUint32(4, 36 + data.length * 2, true); wr(8, 'WAVE');
-    wr(12, 'fmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
-    dv.setUint32(24, sr, true); dv.setUint32(28, sr * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true);
-    wr(36, 'data'); dv.setUint32(40, data.length * 2, true);
+    wr(0, 'RIFF'); dv.setUint32(4, 36 + len * ch * 2, true); wr(8, 'WAVE');
+    wr(12, 'fmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, ch, true);
+    dv.setUint32(24, sr, true); dv.setUint32(28, sr * ch * 2, true); dv.setUint16(32, ch * 2, true); dv.setUint16(34, 16, true);
+    wr(36, 'data'); dv.setUint32(40, len * ch * 2, true);
     let off = 44;
-    for (let i = 0; i < data.length; i++) { const s = Math.max(-1, Math.min(1, data[i])); dv.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7fff, true); off += 2; }
+    const chans = Array.from({ length: ch }, (_, c) => buffer.getChannelData(c));
+    for (let i = 0; i < len; i++) {
+      for (let c = 0; c < ch; c++) { const s = Math.max(-1, Math.min(1, chans[c][i])); dv.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7fff, true); off += 2; }
+    }
     return out;
   }
+
+  setMode('tone');
+  noteEl.textContent = freqToNote(freq());
 </script>
