@@ -3924,16 +3924,6 @@ export const tools: Tool[] = [
     icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
   },
   {
-    slug: 'aisong-analyzer',
-    name: 'Song Analyzer',
-    tagline: 'Analyze lyrics structure, rhyme & style.',
-    description:
-      'Free song analyzer. Break down lyrics for Suno and Udio — map [Verse]/[Chorus] structure, count lines and syllables, detect rhyme scheme and suggest style tags. Runs in your browser.',
-    category: 'Text',
-    keywords: ['song analyzer', 'suno lyrics analyzer', 'song structure analyzer', 'rhyme scheme detector', 'udio lyrics'],
-    icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
-  },
-  {
     slug: 'pokemon-team-builder',
     name: 'Pokémon Team Builder',
     tagline: 'Build a team & analyze type coverage.',
