@@ -41,6 +41,20 @@ All commands are run from the root of the project, from a terminal:
 | `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
 | `npm run astro -- --help` | Get help using the Astro CLI                     |
 
+## 🎧 Music Analyzer
+
+The **Music Analyzer** tool (`/tools/music-analyzer`) analyzes real audio entirely
+in the browser: tempo (BPM), key + Camelot, LUFS loudness, HPCP chroma, mood/energy,
+and genre via a self-hosted ONNX neural network (MSD-MusiCNN). File and microphone
+inputs are supported; nothing is uploaded. The genre model + ONNX runtime are staged
+into `public/onnx` by `scripts/setup-onnx.mjs` (runs automatically on predev/prebuild)
+and lazy-loaded only when the user requests genre detection.
+
+A server-side YouTube-URL input was prototyped but is **not enabled** — it requires a
+real Node runtime (not a static host or Cloudflare Workers). The endpoint code is kept
+in `disabled-server/youtube-audio.ts` with instructions for re-enabling it on an
+`@astrojs/node` deploy.
+
 ## 👀 Want to learn more?
 
 Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).

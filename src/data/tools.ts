@@ -1715,6 +1715,16 @@ export const tools: Tool[] = [
     keywords: ['audio speed changer', 'change audio pitch', 'slow down audio', 'pitch shifter', 'speed up audio'],
     icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM12 7v5l4 2',
   },
+  {
+    slug: 'music-analyzer',
+    name: 'Music Analyzer',
+    tagline: 'Detect BPM, key, Camelot, genre, mood & loudness.',
+    description:
+      'Free online music analyzer. Detect the tempo (BPM), musical key and Camelot code, genre and mood, energy and danceability, plus LUFS loudness and the HPCP chroma of any song. Analyze a file or microphone entirely in your browser — never uploaded.',
+    category: 'Audio & Video',
+    keywords: ['music analyzer', 'bpm detector', 'song key finder', 'camelot wheel', 'lufs meter', 'genre finder', 'key and bpm analyzer'],
+    icon: 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z',
+  },
 
   // ================= Generators mega-expansion =================
 
@@ -3208,16 +3218,6 @@ export const tools: Tool[] = [
     icon: 'M4 6h16M4 12h10M4 18h7M18 14v6m3-3h-6',
   },
   {
-    slug: 'keyword-density-analyzer',
-    name: 'Keyword Density Analyzer',
-    tagline: 'Find keyword frequency and density.',
-    description:
-      'Free keyword density analyzer. Paste content to see the most frequent words and phrases with counts and density percentages, ideal for SEO checks. Runs entirely in your browser.',
-    category: 'Text',
-    keywords: ['keyword density analyzer', 'keyword density checker', 'seo keyword tool', 'word frequency counter', 'keyword frequency'],
-    icon: 'M10 4a6 6 0 1 0 0 12 6 6 0 0 0 0-12zM20 20l-5.5-5.5',
-  },
-  {
     slug: 'password-analyzer',
     name: 'Password Analyzer',
     tagline: 'Estimate password strength and entropy.',
@@ -3338,6 +3338,16 @@ export const tools: Tool[] = [
     category: 'Text',
     keywords: ['anagram checker', 'is it an anagram', 'anagram test', 'check anagram', 'anagram solver'],
     icon: 'M7 8h10M7 12h10M7 16h6M4 4l1 16m14-16l-1 16',
+  },
+  {
+    slug: 'squaredle-solver',
+    name: 'Squaredle Solver',
+    tagline: 'Find every word in the daily letter grid.',
+    description:
+      'Free Squaredle solver and answer finder. Type any Squaredle grid (4×4 and other sizes) and instantly get every valid word, grouped by length, with the path traced on the board. Handles blocked cells and a 361,000-word dictionary. Runs entirely in your browser.',
+    category: 'Text',
+    keywords: ['squaredle solver', 'squaredle answers', 'squaredle cheat', 'squaredle helper', 'squaredle today', 'word grid solver', 'squaredle word finder'],
+    icon: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   },
 
   // ─── Testers ──────────────────────────────────────────────────
@@ -3915,12 +3925,12 @@ export const tools: Tool[] = [
   },
   {
     slug: 'aisong-analyzer',
-    name: 'AI Song Analyzer',
+    name: 'Song Analyzer',
     tagline: 'Analyze lyrics structure, rhyme & style.',
     description:
-      'Free AI song analyzer. Break down lyrics for Suno and Udio — map [Verse]/[Chorus] structure, count lines and syllables, detect rhyme scheme and suggest style tags. Runs in your browser.',
+      'Free song analyzer. Break down lyrics for Suno and Udio — map [Verse]/[Chorus] structure, count lines and syllables, detect rhyme scheme and suggest style tags. Runs in your browser.',
     category: 'Text',
-    keywords: ['ai song analyzer', 'suno lyrics analyzer', 'song structure analyzer', 'rhyme scheme detector', 'udio lyrics'],
+    keywords: ['song analyzer', 'suno lyrics analyzer', 'song structure analyzer', 'rhyme scheme detector', 'udio lyrics'],
     icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
   },
   {

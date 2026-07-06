@@ -119,7 +119,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       if (freqScale() === 'log') { const min = Math.log(20), max = Math.log(nyquist); frac = (Math.log(Math.max(20, f)) - min) / (max - min); }
       else frac = f / nyquist;
       const y = p.y + p.h - frac * p.h;
-      ctx.fillText(f >= 1000 ? `${f / 1000}k` : `${f}`, p.l - 6, y);
+      ctx.fillText(f >= 1000 ? `${f / 1000}k` : `${f}`, p.x - 6, y);
       ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.moveTo(p.x, y); ctx.lineTo(p.x + p.w, y); ctx.stroke();
     }
     ctx.save(); ctx.translate(12, p.y + p.h / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.fillText('Frequency (Hz)', 0, 0); ctx.restore();
@@ -142,15 +142,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     ctx.fillStyle = '#8a8f98'; ctx.textAlign = 'left';
     ctx.fillText('0 dB', lx + lw + 4, p.y + 4);
     ctx.fillText(`${floorDb()}`, lx + lw + 4, p.y + p.h - 4);
-  }
-
-  function yForBin(bin: number, bins: number, sr: number, h: number, y0: number): number {
-    const nyquist = sr / 2;
-    const freq = (bin / bins) * nyquist;
-    let frac: number;
-    if (freqScale() === 'log') { const min = Math.log(20), max = Math.log(nyquist); frac = (Math.log(Math.max(20, freq)) - min) / (max - min); }
-    else frac = bin / bins;
-    return y0 + h - frac * h;
   }
 
   // ---- Offline full-file render ----
