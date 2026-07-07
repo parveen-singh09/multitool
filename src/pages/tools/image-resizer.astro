@@ -15,11 +15,26 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div class="flex flex-wrap items-end gap-3">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">Width (px)<input id="ir-w" type="number" min="1" class="field w-28" /></label>
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">Height (px)<input id="ir-h" type="number" min="1" class="field w-28" /></label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Scale (%)<input id="ir-pct" type="number" min="1" step="1" class="field w-24" /></label>
         <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="ir-lock" type="checkbox" checked class="accent-[#5e6ad2]" /> Lock ratio</label>
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">Format
           <select id="ir-fmt" class="field w-32"><option value="image/png">PNG</option><option value="image/jpeg">JPEG</option><option value="image/webp">WebP</option></select>
         </label>
         <button id="ir-download" class="btn btn-primary ml-auto">Download</button>
+      </div>
+      <div class="flex flex-col gap-3">
+        <label class="flex items-center gap-3 text-sm text-ink-subtle">
+          <span class="w-14 shrink-0">Width</span>
+          <input id="ir-ws" type="range" min="1" class="ir-range flex-1" />
+        </label>
+        <label class="flex items-center gap-3 text-sm text-ink-subtle">
+          <span class="w-14 shrink-0">Height</span>
+          <input id="ir-hs" type="range" min="1" class="ir-range flex-1" />
+        </label>
+        <label class="flex items-center gap-3 text-sm text-ink-subtle">
+          <span class="w-14 shrink-0">Scale</span>
+          <input id="ir-ps" type="range" min="1" max="200" value="100" class="ir-range flex-1" />
+        </label>
       </div>
       <div class="flex flex-wrap items-center gap-4 text-[13px] text-ink-subtle">
         <span>Original: <span id="ir-orig" class="text-ink">—</span></span>
@@ -41,6 +56,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <style>
   .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+  .ir-range { -webkit-appearance:none; appearance:none; height:4px; border-radius:9999px; background:#23252a; cursor:pointer; }
+  .ir-range::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:16px; height:16px; border-radius:9999px; background:#5e6ad2; border:none; cursor:pointer; }
+  .ir-range::-moz-range-thumb { width:16px; height:16px; border-radius:9999px; background:#5e6ad2; border:none; cursor:pointer; }
+  .ir-range:focus-visible { outline:2px solid rgba(94,105,209,0.5); outline-offset:2px; }
 </style>
 
 <script>
@@ -49,6 +68,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const panel = document.getElementById('ir-panel')!;
   const wEl = document.getElementById('ir-w') as HTMLInputElement;
   const hEl = document.getElementById('ir-h') as HTMLInputElement;
+  const wSlider = document.getElementById('ir-ws') as HTMLInputElement;
+  const hSlider = document.getElementById('ir-hs') as HTMLInputElement;
+  const pctEl = document.getElementById('ir-pct') as HTMLInputElement;
+  const pctSlider = document.getElementById('ir-ps') as HTMLInputElement;
   const lock = document.getElementById('ir-lock') as HTMLInputElement;
   const fmt = document.getElementById('ir-fmt') as HTMLSelectElement;
   const canvas = document.getElementById('ir-canvas') as HTMLCanvasElement;
@@ -63,7 +86,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       img = new Image();
       img.onload = () => {
         natW = img.naturalWidth; natH = img.naturalHeight; ratio = natW / natH;
+        const wMax = Math.max(natW * 2, natW), hMax = Math.max(natH * 2, natH);
+        wSlider.max = String(wMax); hSlider.max = String(hMax);
         wEl.value = String(natW); hEl.value = String(natH);
+        wSlider.value = String(natW); hSlider.value = String(natH);
+        pctEl.value = '100'; pctSlider.value = '100';
         orig.textContent = `${natW} × ${natH}px`;
         panel.classList.remove('hidden');
         panel.classList.add('flex');
@@ -83,8 +110,53 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     ctx.drawImage(img, 0, 0, w, h);
   }
 
-  wEl.addEventListener('input', () => { if (lock.checked) hEl.value = String(Math.round(Number(wEl.value) / ratio)); redraw(); });
-  hEl.addEventListener('input', () => { if (lock.checked) wEl.value = String(Math.round(Number(hEl.value) * ratio)); redraw(); });
+  function syncPct() {
+    if (!natW) return;
+    const p = Math.round((Number(wEl.value) / natW) * 100);
+    pctEl.value = String(p);
+    pctSlider.value = String(Math.min(Number(pctSlider.max), Math.max(Number(pctSlider.min), p)));
+  }
+
+  function setWidth(w: number) {
+    w = Math.max(1, Math.round(w));
+    wEl.value = String(w); wSlider.value = String(w);
+    if (lock.checked) {
+      const h = Math.max(1, Math.round(w / ratio));
+      hEl.value = String(h); hSlider.value = String(h);
+    }
+    syncPct();
+    redraw();
+  }
+
+  function setHeight(h: number) {
+    h = Math.max(1, Math.round(h));
+    hEl.value = String(h); hSlider.value = String(h);
+    if (lock.checked) {
+      const w = Math.max(1, Math.round(h * ratio));
+      wEl.value = String(w); wSlider.value = String(w);
+    }
+    syncPct();
+    redraw();
+  }
+
+  function setPercent(p: number) {
+    if (!natW) return;
+    p = Math.max(1, p);
+    pctEl.value = String(p);
+    pctSlider.value = String(Math.min(Number(pctSlider.max), Math.max(Number(pctSlider.min), p)));
+    const w = Math.max(1, Math.round((natW * p) / 100));
+    const h = Math.max(1, Math.round((natH * p) / 100));
+    wEl.value = String(w); wSlider.value = String(w);
+    hEl.value = String(h); hSlider.value = String(h);
+    redraw();
+  }
+
+  wEl.addEventListener('input', () => setWidth(Number(wEl.value)));
+  hEl.addEventListener('input', () => setHeight(Number(hEl.value)));
+  wSlider.addEventListener('input', () => setWidth(Number(wSlider.value)));
+  hSlider.addEventListener('input', () => setHeight(Number(hSlider.value)));
+  pctEl.addEventListener('input', () => setPercent(Number(pctEl.value)));
+  pctSlider.addEventListener('input', () => setPercent(Number(pctSlider.value)));
   fmt.addEventListener('change', redraw);
 
   fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) loadFile(fileInput.files[0]); });

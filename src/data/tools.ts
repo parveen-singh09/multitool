@@ -345,7 +345,7 @@ export const tools: Tool[] = [
   {
     slug: 'image-resizer',
     name: 'Image Resizer',
-    tagline: 'Resize images by pixels or percent, no upload.',
+    tagline: 'Resize images by pixels or percent.',
     description:
       'Free online image resizer. Resize JPG, PNG and WebP images by dimensions or percentage and download instantly. Processed in your browser — images never leave your device.',
     category: 'Image',

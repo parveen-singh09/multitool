@@ -12,9 +12,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </label>
 
     <div id="cp-panel" class="hidden flex-col gap-4">
-      <p class="text-[13px] text-ink-subtle">Click or hover anywhere on the image to sample a pixel.</p>
+      <p class="text-[13px] text-ink-subtle">Move over the image to zoom in on the pixels, then click to lock a color.</p>
       <div class="panel flex justify-center overflow-auto p-4">
         <canvas id="cp-canvas" class="max-w-full cursor-crosshair rounded-[8px]"></canvas>
+      </div>
+
+      <div id="cp-loupe" class="pointer-events-none fixed z-50 hidden overflow-hidden rounded-[14px] border border-hairline bg-surface-1 shadow-[0_8px_28px_rgba(0,0,0,0.45)]">
+        <canvas id="cp-zoom" class="block"></canvas>
+        <div id="cp-loupe-hex" class="border-t border-hairline px-2 py-1 text-center font-mono text-[11px] text-ink"></div>
       </div>
 
       <div class="flex flex-wrap items-center gap-4">
@@ -28,7 +33,19 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
             <input id="cp-rgb" class="field w-40 font-mono" readonly />
             <button data-copy="cp-rgb" class="cp-copy btn btn-secondary">Copy</button>
           </label>
+          <label class="flex items-center gap-2 text-sm text-ink-subtle">HSL
+            <input id="cp-hsl" class="field w-40 font-mono" readonly />
+            <button data-copy="cp-hsl" class="cp-copy btn btn-secondary">Copy</button>
+          </label>
         </div>
+      </div>
+
+      <div id="cp-saved-wrap" class="hidden flex-col gap-2">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-medium text-ink">Picked colors</h2>
+          <button id="cp-clear" class="btn btn-secondary text-[13px]">Clear all</button>
+        </div>
+        <ul id="cp-saved" class="flex flex-col gap-2"></ul>
       </div>
     </div>
   </div>
@@ -57,7 +74,23 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const swatch = document.getElementById('cp-swatch')!;
   const hexEl = document.getElementById('cp-hex') as HTMLInputElement;
   const rgbEl = document.getElementById('cp-rgb') as HTMLInputElement;
+  const hslEl = document.getElementById('cp-hsl') as HTMLInputElement;
+  const savedWrap = document.getElementById('cp-saved-wrap')!;
+  const savedList = document.getElementById('cp-saved')!;
+  const clearBtn = document.getElementById('cp-clear')!;
+  const loupe = document.getElementById('cp-loupe')!;
+  const loupeHex = document.getElementById('cp-loupe-hex')!;
+  const zoom = document.getElementById('cp-zoom') as HTMLCanvasElement;
+  const zctx = zoom.getContext('2d')!;
   let locked = false;
+
+  // Loupe geometry: an ODD grid of source pixels, each drawn as a CELL×CELL block.
+  const GRID = 11;            // source pixels shown across (odd, so there's a center)
+  const CELL = 14;            // on-screen size of each source pixel
+  const SIZE = GRID * CELL;   // loupe canvas edge in px
+  zoom.width = SIZE;
+  zoom.height = SIZE;
+  zctx.imageSmoothingEnabled = false;
 
   function loadFile(file: File) {
     const reader = new FileReader();
@@ -80,21 +113,115 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   const toHex = (n: number) => n.toString(16).padStart(2, '0');
 
+  function rgbToHsl(r: number, g: number, b: number) {
+    const rn = r / 255, gn = g / 255, bn = b / 255;
+    const max = Math.max(rn, gn, bn), min = Math.min(rn, gn, bn);
+    const l = (max + min) / 2;
+    let h = 0, s = 0;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      if (max === rn) h = (gn - bn) / d + (gn < bn ? 6 : 0);
+      else if (max === gn) h = (bn - rn) / d + 2;
+      else h = (rn - gn) / d + 4;
+      h /= 6;
+    }
+    return `hsl(${Math.round(h * 360)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`;
+  }
+
+  function drawLoupe(e: MouseEvent, cx: number, cy: number, hex: string) {
+    const half = (GRID - 1) / 2;
+    // Pull the GRID×GRID block centered on the cursor, then blow it up with no smoothing.
+    const src = ctx.getImageData(cx - half, cy - half, GRID, GRID);
+    const tmp = document.createElement('canvas');
+    tmp.width = GRID;
+    tmp.height = GRID;
+    tmp.getContext('2d')!.putImageData(src, 0, 0);
+
+    zctx.clearRect(0, 0, SIZE, SIZE);
+    zctx.drawImage(tmp, 0, 0, GRID, GRID, 0, 0, SIZE, SIZE);
+
+    // Highlight the exact center pixel.
+    const c = half * CELL;
+    zctx.strokeStyle = '#ff3b30';
+    zctx.lineWidth = 2;
+    zctx.strokeRect(c + 1, c + 1, CELL - 2, CELL - 2);
+
+    loupeHex.textContent = hex;
+    loupe.classList.remove('hidden');
+    // Offset from the cursor so the pointer doesn't cover the target; flip near edges.
+    const pad = 18;
+    const w = loupe.offsetWidth || SIZE;
+    const h = loupe.offsetHeight || SIZE + 24;
+    let lx = e.clientX + pad;
+    let ly = e.clientY + pad;
+    if (lx + w > window.innerWidth) lx = e.clientX - pad - w;
+    if (ly + h > window.innerHeight) ly = e.clientY - pad - h;
+    loupe.style.left = `${lx}px`;
+    loupe.style.top = `${ly}px`;
+  }
+
   function sample(e: MouseEvent) {
-    if (locked) return;
     const rect = canvas.getBoundingClientRect();
     const x = Math.floor((e.clientX - rect.left) * (canvas.width / rect.width));
     const y = Math.floor((e.clientY - rect.top) * (canvas.height / rect.height));
     if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) return;
     const [r, g, b] = ctx.getImageData(x, y, 1, 1).data;
     const hex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-    hexEl.value = hex;
-    rgbEl.value = `rgb(${r}, ${g}, ${b})`;
-    swatch.style.background = hex;
+    if (!locked) {
+      hexEl.value = hex;
+      rgbEl.value = `rgb(${r}, ${g}, ${b})`;
+      hslEl.value = rgbToHsl(r, g, b);
+      swatch.style.background = hex;
+    }
+    drawLoupe(e, x, y, hex);
+    return { hex, rgb: `rgb(${r}, ${g}, ${b})`, hsl: rgbToHsl(r, g, b) };
+  }
+
+  async function copyText(btn: HTMLButtonElement, text: string) {
+    if (!text) return;
+    await navigator.clipboard.writeText(text);
+    const prev = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = prev), 1200);
+  }
+
+  function addSwatch(hex: string, rgb: string, hsl: string) {
+    savedWrap.classList.remove('hidden');
+    savedWrap.classList.add('flex');
+    const li = document.createElement('li');
+    li.className = 'panel flex items-center gap-3 p-2';
+    li.innerHTML = `
+      <span class="h-9 w-9 shrink-0 rounded-[6px] border border-hairline" style="background:${hex}"></span>
+      <div class="flex flex-1 flex-wrap gap-x-4 gap-y-0.5 font-mono text-[13px] text-ink-subtle">
+        <button class="cp-chip hover:text-ink" data-val="${hex}" title="Copy HEX">${hex}</button>
+        <button class="cp-chip hover:text-ink" data-val="${rgb}" title="Copy RGB">${rgb}</button>
+        <button class="cp-chip hover:text-ink" data-val="${hsl}" title="Copy HSL">${hsl}</button>
+      </div>
+      <button class="cp-remove btn btn-secondary text-[13px]" title="Remove">Remove</button>`;
+    li.querySelectorAll<HTMLButtonElement>('.cp-chip').forEach((chip) =>
+      chip.addEventListener('click', () => copyText(chip, chip.dataset.val!)));
+    li.querySelector('.cp-remove')!.addEventListener('click', () => {
+      li.remove();
+      if (!savedList.children.length) { savedWrap.classList.add('hidden'); savedWrap.classList.remove('flex'); }
+    });
+    savedList.prepend(li);
   }
 
   canvas.addEventListener('mousemove', sample);
-  canvas.addEventListener('click', (e) => { locked = false; sample(e); locked = true; });
+  canvas.addEventListener('mouseleave', () => loupe.classList.add('hidden'));
+  canvas.addEventListener('click', (e) => {
+    locked = false;
+    const c = sample(e);
+    locked = true;
+    if (c) addSwatch(c.hex, c.rgb, c.hsl);
+  });
+
+  clearBtn.addEventListener('click', () => {
+    savedList.innerHTML = '';
+    savedWrap.classList.add('hidden');
+    savedWrap.classList.remove('flex');
+  });
 
   fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) loadFile(fileInput.files[0]); });
   ['dragover', 'dragenter'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('bg-surface-2'); }));

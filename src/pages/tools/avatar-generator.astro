@@ -3,92 +3,452 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
 <ToolLayout slug="avatar-generator">
-  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+  <!-- Mode toggle -->
+  <div class="mb-6 flex gap-1 rounded-lg border border-hairline bg-surface-1 p-1">
+    <button id="mode-char-btn" type="button" class="mode-tab flex-1 rounded-md px-3 py-2 text-sm font-medium">Character</button>
+    <button id="mode-init-btn" type="button" class="mode-tab flex-1 rounded-md px-3 py-2 text-sm font-medium">Initials &amp; identicon</button>
+  </div>
+
+  <!-- ===== Character builder ===== -->
+  <div id="mode-character" class="grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr]">
+    <!-- Preview + actions -->
+    <div class="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
+      <div class="panel panel-lift flex aspect-square items-center justify-center overflow-hidden p-3">
+        <div id="av-preview" class="h-full w-full [&>svg]:h-full [&>svg]:w-full"></div>
+      </div>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Seed
+        <div class="flex gap-2">
+          <input id="av-seed" class="field flex-1" value="Ada Lovelace" spellcheck="false" />
+          <button id="av-random" class="btn btn-secondary shrink-0" title="Randomize everything">🎲</button>
+        </div>
+      </label>
+
+      <div class="flex flex-col gap-2">
+        <div class="flex gap-2">
+          <select id="av-size" class="field flex-1">
+            <option value="256">256 px</option>
+            <option value="512" selected>512 px</option>
+            <option value="1024">1024 px</option>
+          </select>
+          <button id="av-png" class="btn btn-primary flex-1">PNG</button>
+        </div>
+        <div class="flex gap-2">
+          <button id="av-svg" class="btn btn-secondary flex-1">SVG</button>
+          <button id="av-copy" class="btn btn-secondary flex-1">Copy</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div id="av-controls" class="flex flex-col gap-3"></div>
+  </div>
+
+  <!-- ===== Initials & identicon (original) ===== -->
+  <div id="mode-initials" class="hidden grid-cols-1 gap-6 md:grid-cols-2">
     <div class="flex flex-col gap-3">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Name or seed
-        <input id="av-seed" class="field" value="Ada Lovelace" spellcheck="false" />
+        <input id="in-seed" class="field" value="Ada Lovelace" spellcheck="false" />
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Style
-        <select id="av-style" class="field"><option value="initials">Initials</option><option value="identicon">Geometric identicon</option></select>
+        <select id="in-style" class="field"><option value="initials">Initials</option><option value="identicon">Geometric identicon</option></select>
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Shape
-        <select id="av-shape" class="field"><option value="circle">Circle</option><option value="rounded">Rounded square</option><option value="square">Square</option></select>
+        <select id="in-shape" class="field"><option value="circle">Circle</option><option value="rounded">Rounded square</option><option value="square">Square</option></select>
       </label>
       <div class="flex items-center gap-3">
-        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="av-auto" type="checkbox" class="accent-[#5e6ad2]" checked /> Auto color from seed</label>
-        <input id="av-color" type="color" value="#5e6ad2" class="field h-10 w-16 cursor-pointer p-1" />
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="in-auto" type="checkbox" class="accent-[#5e6ad2]" checked /> Auto color from seed</label>
+        <input id="in-color" type="color" value="#5e6ad2" class="field h-10 w-16 cursor-pointer p-1" />
       </div>
     </div>
 
     <div class="flex flex-col items-center gap-4">
-      <canvas id="av-canvas" width="256" height="256" class="h-48 w-48"></canvas>
+      <canvas id="in-canvas" width="256" height="256" class="h-48 w-48"></canvas>
       <div class="flex flex-wrap justify-center gap-2">
-        <button id="av-shuffle" class="btn btn-secondary">Shuffle seed</button>
-        <button id="av-dl" class="btn btn-primary">Download PNG</button>
+        <button id="in-shuffle" class="btn btn-secondary">Shuffle seed</button>
+        <button id="in-dl" class="btn btn-primary">Download PNG</button>
       </div>
     </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free avatar generator makes clean profile placeholders in two styles:
-      an initials avatar that pulls the first letters from a name, or a unique
-      geometric identicon deterministically derived from any seed — the same seed
-      always produces the same pattern. Colors can be auto-derived from the seed or
-      set manually. Download a transparent-friendly PNG. Everything runs in your
-      browser.
+      Two avatar makers in one tool. <strong class="text-ink-muted">Character</strong> is a full
+      builder in the spirit of Avataaars: mix and match 34 hair styles, hats, hijabs and
+      turbans, 13 eyebrows, 12 eye and 12 mouth expressions, glasses and sunglasses, beards
+      and moustaches, nine outfits with ten graphic-tee prints, plus skin, hair, clothing and
+      background colors. Every option shows a live preview thumbnail so you can see the change
+      before you make it. Set a background as solid, gradient, or transparent, choose a circle,
+      rounded, or square frame, then export a crisp SVG or a PNG at up to 1024&nbsp;px.
+    </p>
+    <p>
+      <strong class="text-ink-muted">Initials &amp; identicon</strong> makes clean profile
+      placeholders: an initials avatar that pulls the first letters from a name, or a unique
+      geometric identicon deterministically derived from any seed — the same seed always
+      produces the same pattern. Colors can be auto-derived from the seed or set manually.
+      Everything runs in your browser — nothing is uploaded.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  const $ = (id: string) => document.getElementById(id)!;
-  const canvas = $('av-canvas') as HTMLCanvasElement;
+  import { createAvatar } from '@dicebear/core';
+  import { avataaars } from '@dicebear/collection';
 
-  // Simple deterministic string hash.
-  function hash(s: string): number {
+  type Dict = Record<string, any>;
+
+  // ---- Option data (mirrors the Avataaars schema) ----
+  const HATS = new Set(['hat', 'hijab', 'turban', 'winterHat1', 'winterHat02', 'winterHat03', 'winterHat04']);
+  const TOPS = ['none', 'shortFlat', 'shortRound', 'shortWaved', 'shortCurly', 'theCaesar', 'theCaesarAndSidePart', 'sides', 'shaggy', 'shaggyMullet', 'frizzle', 'dreads01', 'dreads02', 'bob', 'bun', 'curly', 'curvy', 'dreads', 'frida', 'fro', 'froBand', 'longButNotTooLong', 'miaWallace', 'shavedSides', 'straight01', 'straight02', 'straightAndStrand', 'bigHair', 'hat', 'hijab', 'turban', 'winterHat1', 'winterHat02', 'winterHat03', 'winterHat04'];
+  const EYEBROWS = ['default', 'defaultNatural', 'flatNatural', 'raisedExcited', 'raisedExcitedNatural', 'upDown', 'upDownNatural', 'angry', 'angryNatural', 'frownNatural', 'sadConcerned', 'sadConcernedNatural', 'unibrowNatural'];
+  const EYES = ['default', 'happy', 'squint', 'wink', 'winkWacky', 'surprised', 'hearts', 'side', 'eyeRoll', 'closed', 'cry', 'xDizzy'];
+  const MOUTHS = ['default', 'smile', 'twinkle', 'tongue', 'serious', 'eating', 'grimace', 'disbelief', 'concerned', 'sad', 'screamOpen', 'vomit'];
+  const CLOTHING = ['shirtCrewNeck', 'shirtScoopNeck', 'shirtVNeck', 'graphicShirt', 'hoodie', 'collarAndSweater', 'blazerAndSweater', 'blazerAndShirt', 'overall'];
+  const GRAPHICS = ['bat', 'bear', 'cumbia', 'deer', 'diamond', 'hola', 'pizza', 'resist', 'skull', 'skullOutline'];
+  const ACCESSORIES = ['none', 'prescription01', 'prescription02', 'round', 'wayfarers', 'sunglasses', 'kurt', 'eyepatch'];
+  const FACIAL_HAIR = ['none', 'beardLight', 'beardMedium', 'beardMajestic', 'moustacheFancy', 'moustacheMagnum'];
+
+  const SKIN = ['ffdbb4', 'edb98a', 'fd9841', 'fdb469', 'd08b5b', 'ae5d29', '614335', 'f8d25c'];
+  const HAIR = ['2c1b18', '4a312c', '724133', 'a55728', 'b58143', 'd6b370', 'ecdcbf', 'c93305', 'f59797', 'e8e1e1', 'ffffff'];
+  const CLOTHES = ['262e33', '3c4f5c', '5199e4', '25557c', '65c9ff', '929598', 'e6e6e6', 'b1e2ff', 'a7ffc4', 'ffafb9', 'ff488e', 'ff5c5c', 'ffffb1', 'ffffff'];
+  const BG = ['b6e3f4', 'c0aede', 'd1d4f9', 'ffd5dc', 'ffdfbf', '65c9ff', 'a7ffc4', 'ffafb9', 'ff5c5c', 'ffffb1', 'e6e6e6', '262e33'];
+
+  // ---- State ----
+  const state: Dict = {
+    top: 'shortFlat', hairColor: '2c1b18', hatColor: '262e33',
+    accessories: 'none', accessoriesColor: '262e33',
+    facialHair: 'none', facialHairColor: '2c1b18',
+    clothing: 'shirtCrewNeck', clothesColor: '5199e4', clothingGraphic: 'bat',
+    eyes: 'default', eyebrows: 'default', mouth: 'default',
+    skinColor: 'edb98a',
+    bgType: 'solid', bgColor: 'b6e3f4',
+    shape: 'circle',
+  };
+
+  const RADIUS: Dict = { circle: 50, rounded: 18, square: 0 };
+  const isHat = (t: string) => HATS.has(t);
+
+  function lighten(hex: string, amt: number): string {
+    const n = parseInt(hex, 16);
+    const r = Math.round(((n >> 16) & 255) + (255 - ((n >> 16) & 255)) * amt);
+    const g = Math.round(((n >> 8) & 255) + (255 - ((n >> 8) & 255)) * amt);
+    const b = Math.round((n & 255) + (255 - (n & 255)) * amt);
+    return ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+  }
+
+  // Turn our flat state into DiceBear options.
+  function toOpts(s: Dict): Dict {
+    const o: Dict = {
+      eyes: [s.eyes], eyebrows: [s.eyebrows], mouth: [s.mouth],
+      skinColor: [s.skinColor],
+      clothing: [s.clothing], clothesColor: [s.clothesColor], clothingGraphic: [s.clothingGraphic],
+      radius: RADIUS[s.shape],
+    };
+    // Top / bald
+    if (s.top === 'none') { o.topProbability = 0; }
+    else { o.top = [s.top]; o.topProbability = 100; if (isHat(s.top)) o.hatColor = [s.hatColor]; else o.hairColor = [s.hairColor]; }
+    // Accessories
+    if (s.accessories === 'none') { o.accessoriesProbability = 0; }
+    else { o.accessories = [s.accessories]; o.accessoriesProbability = 100; o.accessoriesColor = [s.accessoriesColor]; }
+    // Facial hair
+    if (s.facialHair === 'none') { o.facialHairProbability = 0; }
+    else { o.facialHair = [s.facialHair]; o.facialHairProbability = 100; o.facialHairColor = [s.facialHairColor]; }
+    // Background
+    if (s.bgType === 'transparent') { o.backgroundColor = ['transparent']; }
+    else if (s.bgType === 'gradient') { o.backgroundColor = [s.bgColor, lighten(s.bgColor, 0.45)]; o.backgroundType = ['gradientLinear']; }
+    else { o.backgroundColor = [s.bgColor]; o.backgroundType = ['solid']; }
+    return o;
+  }
+
+  function svgFor(s: Dict, size?: number): string {
+    return createAvatar(avataaars, size ? { ...toOpts(s), size } : toOpts(s)).toString();
+  }
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const preview = $('av-preview');
+
+  function renderMain() { preview.innerHTML = svgFor(state); }
+
+  function humanize(v: string): string {
+    if (v === 'none') return 'None';
+    return v.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([a-zA-Z])(\d)/g, '$1 $2')
+      .replace(/^./, (c) => c.toUpperCase());
+  }
+
+  // ---- Picker groups ----
+  interface StyleGroup { kind: 'style'; key: string; label: string; opts: string[]; visible?: () => boolean; }
+  interface ColorGroup { kind: 'color'; key: string; label: string; opts: string[]; visible?: () => boolean; }
+  type Group = StyleGroup | ColorGroup;
+
+  const GROUPS: Group[] = [
+    { kind: 'style', key: 'top', label: 'Top & hair', opts: TOPS },
+    { kind: 'color', key: 'hairColor', label: 'Hair color', opts: HAIR, visible: () => state.top !== 'none' && !isHat(state.top) },
+    { kind: 'color', key: 'hatColor', label: 'Hat color', opts: CLOTHES, visible: () => isHat(state.top) },
+    { kind: 'style', key: 'accessories', label: 'Glasses', opts: ACCESSORIES },
+    { kind: 'color', key: 'accessoriesColor', label: 'Glasses color', opts: CLOTHES, visible: () => state.accessories !== 'none' },
+    { kind: 'style', key: 'facialHair', label: 'Facial hair', opts: FACIAL_HAIR },
+    { kind: 'color', key: 'facialHairColor', label: 'Facial hair color', opts: HAIR, visible: () => state.facialHair !== 'none' },
+    { kind: 'style', key: 'eyes', label: 'Eyes', opts: EYES },
+    { kind: 'style', key: 'eyebrows', label: 'Eyebrows', opts: EYEBROWS },
+    { kind: 'style', key: 'mouth', label: 'Mouth', opts: MOUTHS },
+    { kind: 'style', key: 'clothing', label: 'Clothes', opts: CLOTHING },
+    { kind: 'style', key: 'clothingGraphic', label: 'Shirt graphic', opts: GRAPHICS, visible: () => state.clothing === 'graphicShirt' },
+    { kind: 'color', key: 'clothesColor', label: 'Clothes color', opts: CLOTHES },
+    { kind: 'color', key: 'skinColor', label: 'Skin tone', opts: SKIN },
+    { kind: 'color', key: 'bgColor', label: 'Background', opts: BG },
+  ];
+
+  const controls = $('av-controls');
+  // Map of key -> {details, grid} for updates
+  const built: Dict = {};
+
+  function thumbSvg(g: Group, value: string): string {
+    // Render a mini avatar forcing this one attribute; for the clothingGraphic
+    // group, also force graphicShirt so the print is visible.
+    const s = { ...state, [g.key]: value };
+    if (g.key === 'clothingGraphic') s.clothing = 'graphicShirt';
+    return svgFor(s);
+  }
+
+  function buildGroup(g: Group) {
+    const details = document.createElement('details');
+    details.className = 'panel overflow-hidden';
+    const openByDefault = ['top', 'eyes', 'mouth', 'clothing'].includes(g.key);
+    if (openByDefault) details.open = true;
+
+    const summary = document.createElement('summary');
+    summary.className = 'flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-ink select-none marker:hidden';
+    const cap = document.createElement('span');
+    summary.append(cap, Object.assign(document.createElement('span'), { className: 'text-ink-subtle text-xs', textContent: '▾' }));
+    details.append(summary);
+
+    const grid = document.createElement('div');
+    grid.className = g.kind === 'color'
+      ? 'flex flex-wrap gap-2 border-t border-hairline p-3'
+      : 'grid grid-cols-4 gap-2 border-t border-hairline p-3 sm:grid-cols-6';
+    details.append(grid);
+
+    controls.append(details);
+    built[g.key] = { details, grid, cap, group: g };
+    fillGroup(g);
+  }
+
+  function fillGroup(g: Group) {
+    const { grid, cap } = built[g.key];
+    cap.textContent = `${g.label} · ${humanize(state[g.key])}`;
+    grid.innerHTML = '';
+    for (const value of g.opts) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      const selected = state[g.key] === value;
+      if (g.kind === 'color') {
+        btn.className = 'h-8 w-8 rounded-full border transition ' +
+          (selected ? 'border-white ring-2 ring-[#5e6ad2]' : 'border-hairline hover:border-hairline-strong');
+        btn.style.background = '#' + value;
+        btn.title = '#' + value;
+      } else {
+        btn.className = 'flex aspect-square items-center justify-center overflow-hidden rounded-md border bg-surface-2 transition [&>svg]:h-full [&>svg]:w-full ' +
+          (selected ? 'border-[#5e6ad2] ring-2 ring-[#5e6ad2]' : 'border-hairline hover:border-hairline-strong');
+        btn.title = humanize(value);
+        btn.innerHTML = thumbSvg(g, value);
+      }
+      btn.addEventListener('click', () => select(g, value));
+      grid.append(btn);
+    }
+  }
+
+  function updateVisibility() {
+    for (const g of GROUPS) {
+      if (!g.visible) continue;
+      built[g.key].details.style.display = g.visible() ? '' : 'none';
+    }
+  }
+
+  // Re-render all style thumbnails (used after a color/skin change).
+  function refreshThumbs() {
+    for (const g of GROUPS) if (g.kind === 'style') fillGroup(g);
+  }
+
+  function select(g: Group, value: string) {
+    state[g.key] = value;
+    renderMain();
+    fillGroup(g);          // update selection highlight + caption within this group
+    if (g.kind === 'color' || g.key === 'skinColor' || g.key === 'clothing') refreshThumbs();
+    if (g.key === 'top' || g.key === 'accessories' || g.key === 'facialHair' || g.key === 'clothing') updateVisibility();
+  }
+
+  // ---- Background type + shape (compact segmented controls at top) ----
+  function buildSegments() {
+    const wrap = document.createElement('div');
+    wrap.className = 'grid grid-cols-2 gap-3';
+
+    const seg = (label: string, key: string, opts: string[]) => {
+      const box = document.createElement('div');
+      box.className = 'panel flex flex-col gap-2 p-3';
+      box.append(Object.assign(document.createElement('span'), { className: 'text-xs text-ink-subtle', textContent: label }));
+      const row = document.createElement('div');
+      row.className = 'flex gap-1';
+      opts.forEach((o) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = humanize(o);
+        const set = () => {
+          [...row.children].forEach((c) => (c as HTMLElement).className = pillClass(false));
+          b.className = pillClass(true);
+        };
+        b.className = pillClass(state[key] === o);
+        b.addEventListener('click', () => {
+          state[key] = o; set(); renderMain();
+          if (key === 'bgType') { built.bgColor.details.style.display = o === 'transparent' ? 'none' : ''; }
+        });
+        row.append(b);
+      });
+      box.append(row);
+      return box;
+    };
+
+    wrap.append(seg('Background', 'bgType', ['solid', 'gradient', 'transparent']));
+    wrap.append(seg('Frame', 'shape', ['circle', 'rounded', 'square']));
+    controls.prepend(wrap);
+  }
+
+  const pillClass = (on: boolean) =>
+    'flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition ' +
+    (on ? 'bg-[#5e6ad2] text-white' : 'bg-surface-2 text-ink-subtle hover:text-ink');
+
+  // ---- Build UI ----
+  GROUPS.forEach(buildGroup);
+  buildSegments();
+  updateVisibility();
+  renderMain();
+
+  // ---- Randomize ----
+  function pick<T>(a: T[]): T { return a[Math.floor(Math.random() * a.length)]; }
+  function randomize() {
+    state.top = pick(TOPS.slice(1));
+    state.hairColor = pick(HAIR); state.hatColor = pick(CLOTHES);
+    state.accessories = Math.random() < 0.35 ? pick(ACCESSORIES.slice(1)) : 'none';
+    state.accessoriesColor = pick(CLOTHES);
+    state.facialHair = Math.random() < 0.3 ? pick(FACIAL_HAIR.slice(1)) : 'none';
+    state.facialHairColor = pick(HAIR);
+    state.clothing = pick(CLOTHING); state.clothesColor = pick(CLOTHES); state.clothingGraphic = pick(GRAPHICS);
+    state.eyes = pick(EYES); state.eyebrows = pick(EYEBROWS); state.mouth = pick(MOUTHS);
+    state.skinColor = pick(SKIN); state.bgColor = pick(BG);
+    ($('av-seed') as HTMLInputElement).value = Math.random().toString(36).slice(2, 10);
+    renderMain();
+    GROUPS.forEach((g) => fillGroup(g));
+    updateVisibility();
+  }
+  $('av-random').addEventListener('click', randomize);
+
+  // ---- Export ----
+  function download(href: string, name: string) {
+    const a = document.createElement('a'); a.href = href; a.download = name; a.click();
+  }
+  $('av-svg').addEventListener('click', () => {
+    const blob = new Blob([svgFor(state)], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    download(url, 'avatar.svg');
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  $('av-png').addEventListener('click', async () => {
+    const size = parseInt(($('av-size') as HTMLSelectElement).value, 10);
+    const dataUrl = await svgToPng(svgFor(state, size), size);
+    download(dataUrl, `avatar-${size}.png`);
+  });
+  $('av-copy').addEventListener('click', async () => {
+    const btn = $('av-copy');
+    try {
+      const size = parseInt(($('av-size') as HTMLSelectElement).value, 10);
+      const dataUrl = await svgToPng(svgFor(state, size), size);
+      const blob = await (await fetch(dataUrl)).blob();
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      btn.textContent = 'Copied';
+    } catch {
+      await navigator.clipboard.writeText(svgFor(state));
+      btn.textContent = 'Copied SVG';
+    }
+    setTimeout(() => (btn.textContent = 'Copy'), 1400);
+  });
+
+  function svgToPng(svgStr: string, size: number): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = c.height = size;
+        const ctx = c.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, size, size);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/png'));
+      };
+      img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+      img.src = url;
+    });
+  }
+
+  // ===== Mode toggle =====
+  const modeChar = $('mode-character');
+  const modeInit = $('mode-initials');
+  const btnChar = $('mode-char-btn');
+  const btnInit = $('mode-init-btn');
+  const ACTIVE = 'bg-[#5e6ad2] text-white';
+  const INACTIVE = 'text-ink-subtle hover:text-ink';
+
+  function setMode(mode: 'character' | 'initials') {
+    const isChar = mode === 'character';
+    modeChar.style.display = isChar ? '' : 'none';
+    modeInit.style.display = isChar ? 'none' : 'grid';
+    btnChar.className = 'mode-tab flex-1 rounded-md px-3 py-2 text-sm font-medium transition ' + (isChar ? ACTIVE : INACTIVE);
+    btnInit.className = 'mode-tab flex-1 rounded-md px-3 py-2 text-sm font-medium transition ' + (isChar ? INACTIVE : ACTIVE);
+    if (!isChar) drawInitials();
+  }
+  btnChar.addEventListener('click', () => setMode('character'));
+  btnInit.addEventListener('click', () => setMode('initials'));
+
+  // ===== Initials & identicon (original generator) =====
+  const inCanvas = $('in-canvas') as HTMLCanvasElement;
+
+  function inHash(s: string): number {
     let h = 2166136261;
     for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
     return h >>> 0;
   }
-
-  function initials(name: string): string {
+  function inInitials(name: string): string {
     const parts = name.trim().split(/\s+/).filter(Boolean);
     if (!parts.length) return '?';
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
-
-  function clip(ctx: CanvasRenderingContext2D, size: number, shape: string) {
+  function inClip(ctx: CanvasRenderingContext2D, size: number, shape: string) {
     ctx.beginPath();
     if (shape === 'circle') ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
     else if (shape === 'rounded') ctx.roundRect(0, 0, size, size, size * 0.22);
     else ctx.rect(0, 0, size, size);
     ctx.clip();
   }
-
-  function draw() {
-    const seed = ($('av-seed') as HTMLInputElement).value || 'seed';
-    const style = ($('av-style') as HTMLSelectElement).value;
-    const shape = ($('av-shape') as HTMLSelectElement).value;
-    const auto = ($('av-auto') as HTMLInputElement).checked;
-    const h = hash(seed);
+  function drawInitials() {
+    const seed = ($('in-seed') as HTMLInputElement).value || 'seed';
+    const style = ($('in-style') as HTMLSelectElement).value;
+    const shape = ($('in-shape') as HTMLSelectElement).value;
+    const auto = ($('in-auto') as HTMLInputElement).checked;
+    const h = inHash(seed);
     const hue = h % 360;
-    const bg = auto ? `hsl(${hue}, 65%, 55%)` : ($('av-color') as HTMLInputElement).value;
+    const bg = auto ? `hsl(${hue}, 65%, 55%)` : ($('in-color') as HTMLInputElement).value;
     const size = 256;
-    const ctx = canvas.getContext('2d')!;
+    const ctx = inCanvas.getContext('2d')!;
     ctx.clearRect(0, 0, size, size);
     ctx.save();
-    clip(ctx, size, shape);
-
+    inClip(ctx, size, shape);
     if (style === 'initials') {
       ctx.fillStyle = bg; ctx.fillRect(0, 0, size, size);
       ctx.fillStyle = '#fff';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.font = `600 ${size * 0.42}px Inter, system-ui, sans-serif`;
-      ctx.fillText(initials(seed), size / 2, size / 2 + size * 0.03);
+      ctx.fillText(inInitials(seed), size / 2, size / 2 + size * 0.03);
     } else {
-      // 5x5 symmetric identicon.
       ctx.fillStyle = auto ? `hsl(${hue}, 25%, 92%)` : '#f0f1f2';
       ctx.fillRect(0, 0, size, size);
       ctx.fillStyle = bg;
@@ -104,14 +464,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }
     ctx.restore();
   }
+  ['in-seed', 'in-style', 'in-shape', 'in-auto', 'in-color'].forEach((id) => $(id).addEventListener('input', drawInitials));
+  $('in-shuffle').addEventListener('click', () => {
+    ($('in-seed') as HTMLInputElement).value = Math.random().toString(36).slice(2, 10);
+    drawInitials();
+  });
+  $('in-dl').addEventListener('click', () => {
+    const a = document.createElement('a'); a.href = inCanvas.toDataURL('image/png'); a.download = 'avatar.png'; a.click();
+  });
 
-  ['av-seed', 'av-style', 'av-shape', 'av-auto', 'av-color'].forEach((id) => $(id).addEventListener('input', draw));
-  $('av-shuffle').addEventListener('click', () => {
-    ($('av-seed') as HTMLInputElement).value = Math.random().toString(36).slice(2, 10);
-    draw();
-  });
-  $('av-dl').addEventListener('click', () => {
-    const a = document.createElement('a'); a.href = canvas.toDataURL('image/png'); a.download = 'avatar.png'; a.click();
-  });
-  draw();
+  // Start in Character mode.
+  setMode('character');
 </script>
