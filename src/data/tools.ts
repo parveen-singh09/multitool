@@ -2240,11 +2240,11 @@ export const tools: Tool[] = [
   {
     slug: 'meme-generator',
     name: 'Meme Generator',
-    tagline: 'Top/bottom text captions on your image.',
+    tagline: 'Templates, draggable text boxes, stickers, and captions.',
     description:
-      'Free online meme generator. Upload an image, add classic top and bottom captions with the bold outlined meme font, adjust size, and download the result. Your image stays in your browser — never uploaded.',
+      'Free online meme generator with a full canvas editor. Start from a popular template or upload your own image, then add unlimited draggable, resizable text boxes — each with its own font, size, color, outline, alignment, and opacity. Drop in emoji and image stickers, rotate or flip the picture, add caption space, undo/redo, and download a full-resolution, watermark-free meme. Your image, text, and stickers are composited in your browser and never uploaded.',
     category: 'Image',
-    keywords: ['meme generator', 'meme maker', 'caption image', 'top bottom text meme', 'make a meme online'],
+    keywords: ['meme generator', 'meme maker', 'meme templates', 'caption image', 'top bottom text meme', 'add text to photo', 'meme editor', 'make a meme online'],
     icon: 'M4 5h16v14H4zM8 10a1 1 0 1 0 0 .01M16 10a1 1 0 1 0 0 .01M8 15c1 1.5 2.5 2 4 2s3-.5 4-2',
   },
   {
@@ -2260,22 +2260,12 @@ export const tools: Tool[] = [
   {
     slug: 'watermark-generator',
     name: 'Watermark Generator',
-    tagline: 'Tile text watermark over your image.',
+    tagline: 'Add a text or logo watermark to your photos in batch.',
     description:
-      'Free online watermark generator. Add a tiled or single text watermark to your photo with adjustable opacity, size, angle and color, then download. Your image is processed in your browser — never uploaded.',
+      'Free online watermark generator. Add a text or logo watermark to one photo or a whole batch — single or tiled (straight/diagonal), with adjustable opacity, size, rotation, color, drag-to-position and reusable templates. Export to PNG, JPEG or WEBP, or download all as a ZIP. Processed in your browser — never uploaded.',
     category: 'Image',
-    keywords: ['watermark generator', 'add watermark to image', 'photo watermark maker', 'text watermark online', 'watermark photos free'],
+    keywords: ['watermark generator', 'add watermark to image', 'photo watermark maker', 'text watermark online', 'logo watermark', 'batch watermark', 'tile watermark', 'watermark photos free'],
     icon: 'M4 5h16v14H4zM7 16l3-3 2 2 3-4 2 3M8 9a1 1 0 1 0 0 .01',
-  },
-  {
-    slug: 'thumbnail-generator',
-    name: 'Thumbnail Generator',
-    tagline: 'Crop & resize images to thumbnail sizes.',
-    description:
-      'Free online thumbnail generator. Crop and resize any image to common thumbnail sizes or a custom square, with cover or contain fit, and download as PNG or JPG. Processed in your browser — never uploaded.',
-    category: 'Image',
-    keywords: ['thumbnail generator', 'thumbnail maker', 'create thumbnail', 'resize to thumbnail', 'image thumbnail generator'],
-    icon: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   },
   {
     slug: 'signature-generator',
@@ -2290,11 +2280,11 @@ export const tools: Tool[] = [
   {
     slug: 'business-card-generator',
     name: 'Business Card Generator',
-    tagline: 'Design a business card & download it.',
+    tagline: 'Design a business card from 12 templates.',
     description:
-      'Free online business card generator. Enter your name, title, company and contact details, pick a color theme, preview a standard 3.5×2 inch card, and download it as a high-resolution PNG. Runs in your browser.',
+      'Free online business card generator with 12 designed templates, front & back sides, logo and background upload, custom accent color and fonts, and a scannable vCard QR code. Preview live and download 300-DPI PNGs or a print-ready PDF. Runs in your browser.',
     category: 'Image',
-    keywords: ['business card generator', 'business card maker', 'create business card', 'digital business card', 'business card design online'],
+    keywords: ['business card generator', 'business card maker', 'create business card', 'business card templates', 'digital business card', 'business card design online', 'double sided business card', 'business card with qr code'],
     icon: 'M3 6h18v12H3zM7 10a2 2 0 1 1 0 .01M12 10h5M12 14h5M6 14h3',
   },
 

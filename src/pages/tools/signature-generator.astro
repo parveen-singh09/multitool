@@ -3,115 +3,609 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
 <ToolLayout slug="signature-generator">
-  <div class="flex flex-col gap-4">
-    <div class="flex gap-2">
-      <button id="sg-tab-draw" class="btn btn-primary">Draw</button>
-      <button id="sg-tab-type" class="btn btn-secondary">Type</button>
+  <div class="flex flex-col gap-5">
+    <!-- Mode tabs -->
+    <div role="tablist" aria-label="Signature mode" class="sig-tabs">
+      <button id="sg-tab-draw" role="tab" aria-selected="true" class="sig-tab is-active">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        Draw
+      </button>
+      <button id="sg-tab-type" role="tab" aria-selected="false" class="sig-tab">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5h16v2M9 5v14M9 19h6"/></svg>
+        Type
+      </button>
+      <button id="sg-tab-upload" role="tab" aria-selected="false" class="sig-tab">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0L8 8m4-4 4 4M4 20h16"/></svg>
+        Upload
+      </button>
     </div>
 
-    <div id="sg-type-ctrls" class="hidden flex-col gap-3">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Your name
-        <input id="sg-name" class="field" value="Jane Doe" />
+    <!-- Contextual controls -->
+    <div class="flex flex-wrap items-end gap-4">
+      <!-- Ink color: presets + custom (draw & type) -->
+      <div id="sg-color-ctrls" class="flex flex-col gap-1.5">
+        <span class="text-sm text-ink-subtle">Ink color</span>
+        <div class="flex items-center gap-2">
+          <button class="sg-swatch is-active" data-color="#0b1324" style="--sw:#0b1324" aria-label="Black ink"></button>
+          <button class="sg-swatch" data-color="#1d4ed8" style="--sw:#1d4ed8" aria-label="Blue ink"></button>
+          <button class="sg-swatch" data-color="#b91c1c" style="--sw:#b91c1c" aria-label="Red ink"></button>
+          <label class="sg-swatch sg-swatch-custom" aria-label="Custom ink color">
+            <input id="sg-color" type="color" value="#0b1324" />
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          </label>
+        </div>
+      </div>
+
+      <!-- Pen width (draw only) -->
+      <label id="sg-pen-wrap" class="flex flex-col gap-1.5 text-sm text-ink-subtle">
+        <span>Pen weight · <span id="sg-pv" class="text-ink">3 px</span></span>
+        <input id="sg-pen" type="range" min="1" max="12" step="0.5" value="3" class="sg-range" />
       </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Style
+
+      <!-- Type controls -->
+      <label id="sg-name-wrap" class="hidden flex-col gap-1.5 text-sm text-ink-subtle">
+        Your name
+        <input id="sg-name" class="field" value="Jane Doe" autocomplete="off" />
+      </label>
+      <label id="sg-font-wrap" class="hidden flex-col gap-1.5 text-sm text-ink-subtle">
+        Handwriting style
         <select id="sg-font" class="field">
-          <option value="cursive">Cursive</option>
-          <option value="'Brush Script MT', cursive">Brush script</option>
-          <option value="'Segoe Script', cursive">Handwriting</option>
+          <option value='"Segoe Script","Bradley Hand","Snell Roundhand",cursive'>Casual script</option>
+          <option value='"Brush Script MT","Snell Roundhand",cursive'>Brush script</option>
+          <option value='"Lucida Handwriting","Apple Chancery",cursive'>Formal cursive</option>
+          <option value='"Snell Roundhand","Zapfino",cursive'>Elegant roundhand</option>
+          <option value='"Ink Free","Bradley Hand",cursive'>Marker</option>
+          <option value='cursive'>System cursive</option>
         </select>
       </label>
+
+      <!-- Upload controls -->
+      <label id="sg-file-wrap" class="hidden flex-col gap-1.5 text-sm text-ink-subtle">
+        Signature image
+        <input id="sg-file" type="file" accept="image/png,image/jpeg,image/webp" class="sg-file" />
+      </label>
+      <label id="sg-bg-wrap" class="hidden items-center gap-2 pb-2.5 text-sm text-ink-subtle">
+        <input id="sg-bg-remove" type="checkbox" checked class="sg-check" />
+        Remove white background
+      </label>
+
+      <!-- Undo / Clear -->
+      <div class="ml-auto flex gap-2">
+        <button id="sg-undo" class="btn btn-secondary" title="Undo last stroke">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg>
+          Undo
+        </button>
+        <button id="sg-clear" class="btn btn-secondary">Clear</button>
+      </div>
     </div>
 
-    <div class="flex flex-wrap items-end gap-3">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Ink color
-        <input id="sg-color" type="color" value="#010102" class="field h-10 w-16 cursor-pointer p-1" />
-      </label>
-      <label id="sg-pen-wrap" class="flex flex-col gap-1 text-sm text-ink-subtle">Pen: <span id="sg-pv" class="text-ink">3px</span>
-        <input id="sg-pen" type="range" min="1" max="10" value="3" class="w-40 accent-[#5e6ad2]" />
-      </label>
-      <button id="sg-clear" class="btn btn-secondary ml-auto">Clear</button>
+    <!-- Signing stage -->
+    <div class="sig-stage panel panel-lift">
+      <canvas id="sg-canvas" class="sig-canvas" aria-label="Signature drawing area"></canvas>
+      <div class="sig-guide" aria-hidden="true">
+        <span class="sig-x">✕</span>
+        <span class="sig-line"></span>
+      </div>
+      <span id="sg-placeholder" class="sig-placeholder">Sign here — draw with your mouse, trackpad or finger</span>
     </div>
 
-    <div class="rounded-[12px] border border-hairline bg-white">
-      <canvas id="sg-canvas" width="700" height="250" class="w-full touch-none rounded-[12px]"></canvas>
+    <!-- Downloads -->
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="sg-dl-png" class="btn btn-primary">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>
+        Download PNG
+      </button>
+      <button id="sg-dl-white" class="btn btn-secondary">PNG · white background</button>
+      <button id="sg-dl-svg" class="btn btn-secondary">Download SVG</button>
+      <span class="ml-1 text-[13px] text-ink-tertiary">Transparent background · exported at high resolution</span>
     </div>
-    <button id="sg-dl" class="btn btn-primary w-fit">Download transparent PNG</button>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free signature generator lets you draw your signature with a mouse,
-      trackpad or finger, or type your name in a handwriting-style font. Pick the
-      ink color and pen thickness, then download a transparent PNG you can drop
-      into documents, contracts and email signatures. Nothing is uploaded — the
-      signature is created entirely in your browser.
+      This free online signature generator lets you <strong class="text-ink-muted">draw</strong>
+      your signature with a mouse, trackpad or finger, <strong class="text-ink-muted">type</strong>
+      your name in a handwriting-style font, or <strong class="text-ink-muted">upload</strong> a photo
+      of a signature and knock out its white background. Strokes are smoothed in real time for a natural,
+      pen-on-paper look, and everything is rendered crisply for high-resolution devices.
+    </p>
+    <p>
+      Pick an ink colour, adjust the pen weight, then download a
+      <strong class="text-ink-muted">transparent PNG</strong> to drop straight into contracts, PDFs and
+      email signatures — or export a resolution-independent <strong class="text-ink-muted">SVG</strong>.
+      Nothing is uploaded: your signature is created entirely in your browser and never leaves your device.
     </p>
   </div>
 </ToolLayout>
 
+<style>
+  .sig-tabs {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    background-color: var(--color-surface-1);
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-lg);
+  }
+  .sig-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 16px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-ink-subtle);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  .sig-tab:hover { color: var(--color-ink); }
+  .sig-tab.is-active {
+    color: var(--color-ink);
+    background-color: var(--color-surface-3);
+    box-shadow: inset 0 0 0 1px var(--color-hairline-strong);
+  }
+
+  /* Colour swatches */
+  .sg-swatch {
+    width: 30px;
+    height: 30px;
+    border-radius: 9999px;
+    background-color: var(--sw, transparent);
+    border: 2px solid var(--color-hairline-strong);
+    cursor: pointer;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .sg-swatch:hover { transform: scale(1.08); }
+  .sg-swatch.is-active {
+    box-shadow: 0 0 0 2px var(--color-canvas), 0 0 0 4px var(--color-primary);
+    border-color: transparent;
+  }
+  .sg-swatch-custom {
+    background-color: var(--color-surface-2);
+    color: var(--color-ink-subtle);
+    position: relative;
+    overflow: hidden;
+  }
+  .sg-swatch-custom input[type='color'] {
+    position: absolute;
+    inset: -4px;
+    width: calc(100% + 8px);
+    height: calc(100% + 8px);
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  /* Range slider */
+  .sg-range { width: 170px; accent-color: var(--color-primary); cursor: pointer; }
+
+  /* File input */
+  .sg-file {
+    font-size: 0.875rem;
+    color: var(--color-ink-subtle);
+    max-width: 260px;
+  }
+  .sg-file::file-selector-button {
+    margin-right: 10px;
+    padding: 8px 12px;
+    font-family: inherit;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-ink);
+    background-color: var(--color-surface-2);
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+  }
+  .sg-file::file-selector-button:hover { background-color: var(--color-surface-3); }
+  .sg-check { width: 16px; height: 16px; accent-color: var(--color-primary); cursor: pointer; }
+
+  /* Signing stage — a white "paper" that stays white in both themes */
+  .sig-stage {
+    position: relative;
+    background-color: #ffffff;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    aspect-ratio: 5 / 2;
+    min-height: 220px;
+  }
+  .sig-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    cursor: crosshair;
+  }
+  .sig-guide {
+    position: absolute;
+    left: 6%;
+    right: 6%;
+    bottom: 24%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    pointer-events: none;
+  }
+  .sig-x { color: #9aa3b2; font-size: 20px; line-height: 1; }
+  .sig-line { flex: 1; height: 0; border-top: 1.5px dashed #c7cdd8; }
+  .sig-placeholder {
+    position: absolute;
+    left: 50%;
+    top: 42%;
+    transform: translate(-50%, -50%);
+    color: #b3bac6;
+    font-size: 0.95rem;
+    pointer-events: none;
+    text-align: center;
+    padding: 0 16px;
+    transition: opacity 0.2s ease;
+  }
+  .sig-stage.is-dirty .sig-placeholder { opacity: 0; }
+</style>
+
 <script>
-  const $ = (id: string) => document.getElementById(id)!;
+  type Pt = { x: number; y: number };
+  type Stroke = { color: string; width: number; pts: Pt[] };
+  type Mode = 'draw' | 'type' | 'upload';
+
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) =>
+    document.getElementById(id) as T;
+
+  const stage = document.querySelector('.sig-stage') as HTMLElement;
   const canvas = $('sg-canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
-  let mode: 'draw' | 'type' = 'draw';
+  const placeholder = $('sg-placeholder');
+
+  let mode: Mode = 'draw';
+  let inkColor = '#0b1324';
+  let penWidth = 3;
+
+  // Drawn strokes stored in NORMALISED coords ([0..1] of canvas box) so they
+  // survive resize and export cleanly. Pen width is stored relative to a
+  // 700px-wide reference box, then rescaled per render/export.
+  const REF_W = 700;
+  let strokes: Stroke[] = [];
+  let current: Stroke | null = null;
   let drawing = false;
 
-  function clear() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+  // Uploaded-image state (upload mode).
+  let uploadImg: HTMLCanvasElement | null = null;
 
-  function pos(e: PointerEvent): [number, number] {
+  let cssW = 0;
+  let cssH = 0;
+
+  /* ---------- sizing (HiDPI crisp) ---------- */
+  function sizeCanvas() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const rect = stage.getBoundingClientRect();
+    cssW = rect.width;
+    cssH = rect.height;
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    render();
+  }
+
+  /* ---------- rendering ---------- */
+  function drawStroke(c: CanvasRenderingContext2D, s: Stroke, w: number, h: number, scale: number) {
+    const p = s.pts;
+    if (!p.length) return;
+    c.strokeStyle = s.color;
+    c.lineWidth = s.width * scale;
+    c.lineCap = 'round';
+    c.lineJoin = 'round';
+    c.beginPath();
+    if (p.length < 3) {
+      const a = p[0];
+      c.moveTo(a.x * w, a.y * h);
+      const b = p[p.length - 1];
+      c.lineTo(b.x * w, b.y * h);
+      if (p.length === 1) {
+        // a dot
+        c.arc(a.x * w, a.y * h, (s.width * scale) / 2, 0, Math.PI * 2);
+        c.fillStyle = s.color;
+        c.fill();
+      }
+      c.stroke();
+      return;
+    }
+    // Quadratic smoothing through midpoints for a natural pen line.
+    c.moveTo(p[0].x * w, p[0].y * h);
+    for (let i = 1; i < p.length - 1; i++) {
+      const mx = ((p[i].x + p[i + 1].x) / 2) * w;
+      const my = ((p[i].y + p[i + 1].y) / 2) * h;
+      c.quadraticCurveTo(p[i].x * w, p[i].y * h, mx, my);
+    }
+    const last = p[p.length - 1];
+    c.lineTo(last.x * w, last.y * h);
+    c.stroke();
+  }
+
+  function renderTyped(c: CanvasRenderingContext2D, w: number, h: number) {
+    const name = ($('sg-name') as HTMLInputElement).value || 'Signature';
+    const font = ($('sg-font') as HTMLSelectElement).value;
+    c.fillStyle = inkColor;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    let fs = h * 0.42;
+    c.font = `${fs}px ${font}`;
+    while (c.measureText(name).width > w - w * 0.12 && fs > 12) {
+      fs -= 2;
+      c.font = `${fs}px ${font}`;
+    }
+    c.fillText(name, w / 2, h * 0.46);
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, cssW, cssH);
+    const scale = cssW / REF_W;
+    if (mode === 'draw') {
+      for (const s of strokes) drawStroke(ctx, s, cssW, cssH, scale);
+      if (current) drawStroke(ctx, current, cssW, cssH, scale);
+      setDirty(strokes.length > 0 || !!current);
+    } else if (mode === 'type') {
+      renderTyped(ctx, cssW, cssH);
+      setDirty(true);
+    } else if (mode === 'upload') {
+      if (uploadImg) {
+        const r = Math.min((cssW * 0.9) / uploadImg.width, (cssH * 0.8) / uploadImg.height);
+        const w = uploadImg.width * r;
+        const h = uploadImg.height * r;
+        ctx.drawImage(uploadImg, (cssW - w) / 2, (cssH - h) / 2, w, h);
+      }
+      setDirty(!!uploadImg);
+    }
+  }
+
+  function setDirty(d: boolean) {
+    stage.classList.toggle('is-dirty', d);
+    if (mode === 'upload' && !uploadImg) {
+      placeholder.textContent = 'Upload a photo or scan of your signature';
+    } else if (mode === 'draw') {
+      placeholder.textContent = 'Sign here — draw with your mouse, trackpad or finger';
+    }
+  }
+
+  /* ---------- drawing input ---------- */
+  function pos(e: PointerEvent): Pt {
     const r = canvas.getBoundingClientRect();
-    return [(e.clientX - r.left) * (canvas.width / r.width), (e.clientY - r.top) * (canvas.height / r.height)];
+    return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height };
   }
 
   canvas.addEventListener('pointerdown', (e) => {
     if (mode !== 'draw') return;
     drawing = true;
-    const [x, y] = pos(e);
-    ctx.beginPath(); ctx.moveTo(x, y);
+    current = { color: inkColor, width: penWidth, pts: [pos(e)] };
     canvas.setPointerCapture(e.pointerId);
+    render();
   });
   canvas.addEventListener('pointermove', (e) => {
-    if (!drawing) return;
-    const [x, y] = pos(e);
-    ctx.strokeStyle = ($('sg-color') as HTMLInputElement).value;
-    ctx.lineWidth = Number(($('sg-pen') as HTMLInputElement).value);
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.lineTo(x, y); ctx.stroke();
+    if (!drawing || !current) return;
+    current.pts.push(pos(e));
+    render();
   });
-  canvas.addEventListener('pointerup', () => (drawing = false));
-
-  function renderTyped() {
-    clear();
-    const name = ($('sg-name') as HTMLInputElement).value || 'Signature';
-    ctx.fillStyle = ($('sg-color') as HTMLInputElement).value;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    let fs = 90;
-    ctx.font = `${fs}px ${($('sg-font') as HTMLSelectElement).value}`;
-    while (ctx.measureText(name).width > canvas.width - 60 && fs > 20) {
-      fs -= 4; ctx.font = `${fs}px ${($('sg-font') as HTMLSelectElement).value}`;
-    }
-    ctx.fillText(name, canvas.width / 2, canvas.height / 2);
+  function endStroke() {
+    if (!drawing || !current) return;
+    drawing = false;
+    if (current.pts.length) strokes.push(current);
+    current = null;
+    render();
   }
+  canvas.addEventListener('pointerup', endStroke);
+  canvas.addEventListener('pointercancel', endStroke);
+  canvas.addEventListener('pointerleave', endStroke);
 
-  function setMode(m: 'draw' | 'type') {
+  /* ---------- mode switching ---------- */
+  const tabs: Record<Mode, string> = { draw: 'sg-tab-draw', type: 'sg-tab-type', upload: 'sg-tab-upload' };
+  function setMode(m: Mode) {
     mode = m;
-    $('sg-type-ctrls').classList.toggle('hidden', m !== 'type');
-    $('sg-type-ctrls').classList.toggle('flex', m === 'type');
-    $('sg-pen-wrap').classList.toggle('hidden', m !== 'draw');
-    ($('sg-tab-draw') as HTMLElement).className = `btn ${m === 'draw' ? 'btn-primary' : 'btn-secondary'}`;
-    ($('sg-tab-type') as HTMLElement).className = `btn ${m === 'type' ? 'btn-primary' : 'btn-secondary'}`;
-    clear();
-    if (m === 'type') renderTyped();
+    (Object.keys(tabs) as Mode[]).forEach((k) => {
+      const el = $(tabs[k]);
+      el.classList.toggle('is-active', k === m);
+      el.setAttribute('aria-selected', String(k === m));
+    });
+    const show = (id: string, on: boolean, disp = 'flex') => {
+      const el = $(id);
+      el.classList.toggle('hidden', !on);
+      el.classList.toggle(disp, on);
+    };
+    show('sg-color-ctrls', m !== 'upload');
+    show('sg-pen-wrap', m === 'draw');
+    show('sg-name-wrap', m === 'type');
+    show('sg-font-wrap', m === 'type');
+    show('sg-file-wrap', m === 'upload');
+    show('sg-bg-wrap', m === 'upload', 'flex');
+    $('sg-undo').classList.toggle('hidden', m !== 'draw');
+    render();
   }
 
-  ['sg-name', 'sg-font', 'sg-color'].forEach((id) => $(id).addEventListener('input', () => { if (mode === 'type') renderTyped(); }));
-  $('sg-pen').addEventListener('input', () => { $('sg-pv').textContent = ($('sg-pen') as HTMLInputElement).value + 'px'; });
+  /* ---------- upload + background removal ---------- */
+  function loadFile(file: File) {
+    const img = new Image();
+    img.onload = () => {
+      const off = document.createElement('canvas');
+      off.width = img.naturalWidth;
+      off.height = img.naturalHeight;
+      const oc = off.getContext('2d')!;
+      oc.drawImage(img, 0, 0);
+      if (($('sg-bg-remove') as HTMLInputElement).checked) removeWhite(oc, off.width, off.height);
+      uploadImg = off;
+      URL.revokeObjectURL(img.src);
+      render();
+    };
+    img.src = URL.createObjectURL(file);
+  }
+
+  // Knock out near-white pixels → transparent; softens the edge by alpha.
+  function removeWhite(c: CanvasRenderingContext2D, w: number, h: number) {
+    const data = c.getImageData(0, 0, w, h);
+    const d = data.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const lum = (d[i] + d[i + 1] + d[i + 2]) / 3;
+      if (lum > 235) d[i + 3] = 0;
+      else if (lum > 180) d[i + 3] = Math.round(d[i + 3] * (1 - (lum - 180) / 55));
+    }
+    c.putImageData(data, 0, 0);
+  }
+
+  /* ---------- export ---------- */
+  function hasContent() {
+    return (mode === 'draw' && strokes.length) || mode === 'type' || (mode === 'upload' && uploadImg);
+  }
+
+  function exportCanvas(white: boolean): HTMLCanvasElement {
+    const scaleUp = 3;
+    const w = Math.round(cssW * scaleUp);
+    const h = Math.round(cssH * scaleUp);
+    const off = document.createElement('canvas');
+    off.width = w;
+    off.height = h;
+    const c = off.getContext('2d')!;
+    if (white) {
+      c.fillStyle = '#ffffff';
+      c.fillRect(0, 0, w, h);
+    }
+    if (mode === 'draw') {
+      const s = w / REF_W;
+      for (const st of strokes) drawStroke(c, st, w, h, s);
+    } else if (mode === 'type') {
+      renderTyped(c, w, h);
+    } else if (mode === 'upload' && uploadImg) {
+      const r = Math.min((w * 0.9) / uploadImg.width, (h * 0.8) / uploadImg.height);
+      const iw = uploadImg.width * r;
+      const ih = uploadImg.height * r;
+      c.drawImage(uploadImg, (w - iw) / 2, (h - ih) / 2, iw, ih);
+    }
+    return off;
+  }
+
+  function download(href: string, name: string) {
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = name;
+    a.click();
+  }
+
+  function downloadPng(white: boolean) {
+    if (!hasContent()) return;
+    download(exportCanvas(white).toDataURL('image/png'), white ? 'signature-white.png' : 'signature.png');
+  }
+
+  function svgPath(s: Stroke): string {
+    const p = s.pts;
+    if (!p.length) return '';
+    const X = (v: number) => (v * REF_W).toFixed(1);
+    const Y = (v: number) => (v * REF_W * (cssH / cssW)).toFixed(1);
+    if (p.length < 3) {
+      const parts = p.map((pt, i) => `${i ? 'L' : 'M'}${X(pt.x)} ${Y(pt.y)}`);
+      if (p.length === 1) parts.push(`L${X(p[0].x + 0.001)} ${Y(p[0].y)}`);
+      return parts.join(' ');
+    }
+    let d = `M${X(p[0].x)} ${Y(p[0].y)}`;
+    for (let i = 1; i < p.length - 1; i++) {
+      const mx = (p[i].x + p[i + 1].x) / 2;
+      const my = (p[i].y + p[i + 1].y) / 2;
+      d += ` Q${X(p[i].x)} ${Y(p[i].y)} ${X(mx)} ${Y(my)}`;
+    }
+    d += ` L${X(p[p.length - 1].x)} ${Y(p[p.length - 1].y)}`;
+    return d;
+  }
+
+  function downloadSvg() {
+    if (!hasContent() || mode === 'upload') return;
+    const vh = Math.round(REF_W * (cssH / cssW));
+    let body = '';
+    if (mode === 'draw') {
+      body = strokes
+        .map(
+          (s) =>
+            `<path d="${svgPath(s)}" fill="none" stroke="${s.color}" stroke-width="${s.width}" stroke-linecap="round" stroke-linejoin="round"/>`
+        )
+        .join('');
+    } else {
+      const name = (($('sg-name') as HTMLInputElement).value || 'Signature')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      const font = ($('sg-font') as HTMLSelectElement).value.replace(/"/g, "'");
+      body = `<text x="${REF_W / 2}" y="${vh * 0.55}" text-anchor="middle" font-size="${vh * 0.42}" font-family="${font}" fill="${inkColor}">${name}</text>`;
+    }
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${REF_W} ${vh}" width="${REF_W}" height="${vh}">${body}</svg>`;
+    const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+    download(url, 'signature.svg');
+    URL.revokeObjectURL(url);
+  }
+
+  /* ---------- wire up ---------- */
+  // Apply the active ink color to the whole signature and refresh the preview.
+  // Like pen weight, drawn strokes recolor live as the color changes.
+  function applyColor(c: string) {
+    inkColor = c;
+    for (const s of strokes) s.color = c;
+    if (current) current.color = c;
+    if (mode === 'draw' || mode === 'type') render();
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.sg-swatch[data-color]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      ($('sg-color') as HTMLInputElement).value = btn.dataset.color!;
+      document.querySelectorAll('.sg-swatch').forEach((s) => s.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      applyColor(btn.dataset.color!);
+    });
+  });
+  ($('sg-color') as HTMLInputElement).addEventListener('input', (e) => {
+    document.querySelectorAll('.sg-swatch').forEach((s) => s.classList.remove('is-active'));
+    (e.target as HTMLInputElement).closest('.sg-swatch')!.classList.add('is-active');
+    applyColor((e.target as HTMLInputElement).value);
+  });
+
+  ($('sg-pen') as HTMLInputElement).addEventListener('input', (e) => {
+    penWidth = Number((e.target as HTMLInputElement).value);
+    $('sg-pv').textContent = `${penWidth} px`;
+    // Live-sync: apply the new weight to every existing stroke (and the one
+    // in progress) so the preview updates as the slider moves.
+    for (const s of strokes) s.width = penWidth;
+    if (current) current.width = penWidth;
+    if (mode === 'draw') render();
+  });
+
+  ['sg-name', 'sg-font'].forEach((id) =>
+    $(id).addEventListener('input', () => { if (mode === 'type') render(); })
+  );
+
+  ($('sg-file') as HTMLInputElement).addEventListener('change', (e) => {
+    const f = (e.target as HTMLInputElement).files?.[0];
+    if (f) loadFile(f);
+  });
+  ($('sg-bg-remove') as HTMLInputElement).addEventListener('change', () => {
+    const f = ($('sg-file') as HTMLInputElement).files?.[0];
+    if (f) loadFile(f);
+  });
+
   $('sg-tab-draw').addEventListener('click', () => setMode('draw'));
   $('sg-tab-type').addEventListener('click', () => setMode('type'));
-  $('sg-clear').addEventListener('click', () => { clear(); if (mode === 'type') renderTyped(); });
-  $('sg-dl').addEventListener('click', () => {
-    const a = document.createElement('a'); a.href = canvas.toDataURL('image/png'); a.download = 'signature.png'; a.click();
+  $('sg-tab-upload').addEventListener('click', () => setMode('upload'));
+
+  $('sg-undo').addEventListener('click', () => { strokes.pop(); render(); });
+  $('sg-clear').addEventListener('click', () => {
+    if (mode === 'draw') strokes = [];
+    else if (mode === 'upload') { uploadImg = null; ($('sg-file') as HTMLInputElement).value = ''; }
+    render();
   });
 
+  $('sg-dl-png').addEventListener('click', () => downloadPng(false));
+  $('sg-dl-white').addEventListener('click', () => downloadPng(true));
+  $('sg-dl-svg').addEventListener('click', downloadSvg);
+
+  window.addEventListener('resize', sizeCanvas);
+  sizeCanvas();
   setMode('draw');
 </script>

@@ -3,112 +3,590 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
 <ToolLayout slug="watermark-generator">
-  <div class="flex flex-col gap-4">
+  <div id="wm-root" class="flex flex-col gap-4">
+    <!-- Drop zone (batch) -->
     <label id="wm-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-      <span class="text-sm text-ink">Choose an image or drop it here</span>
-      <span class="text-[13px] text-ink-tertiary">Watermarked in your browser — never uploaded</span>
-      <input id="wm-file" type="file" accept="image/*" class="sr-only" />
+      <span class="text-sm text-ink">Choose images or drop them here</span>
+      <span class="text-[13px] text-ink-tertiary">Batch supported · watermarked in your browser — never uploaded</span>
+      <input id="wm-file" type="file" accept="image/*" multiple class="sr-only" />
     </label>
 
     <div id="wm-panel" class="hidden flex-col gap-4">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Watermark text
-        <input id="wm-text" class="field" value="© ToolCities" />
-      </label>
-      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Opacity: <span id="wm-ov" class="text-ink">30%</span>
-          <input id="wm-opacity" type="range" min="5" max="100" value="30" class="w-full accent-[#5e6ad2]" />
-        </label>
-        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Size: <span id="wm-sv" class="text-ink">32px</span>
-          <input id="wm-size" type="range" min="10" max="120" value="32" class="w-full accent-[#5e6ad2]" />
-        </label>
-        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Angle: <span id="wm-av" class="text-ink">-30°</span>
-          <input id="wm-angle" type="range" min="-90" max="90" value="-30" class="w-full accent-[#5e6ad2]" />
-        </label>
-        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Color
-          <input id="wm-color" type="color" value="#ffffff" class="field h-10 cursor-pointer p-1" />
-        </label>
+      <!-- Thumbnail strip -->
+      <div id="wm-strip" class="hidden items-center gap-2 overflow-x-auto pb-1"></div>
+
+      <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <!-- Preview -->
+        <div class="flex flex-col gap-2">
+          <div id="wm-stage" class="relative flex select-none justify-center overflow-hidden rounded-[12px] border border-hairline bg-surface-2 p-4" style="min-height:240px;background-image:linear-gradient(45deg,#1a1b1c 25%,transparent 25%),linear-gradient(-45deg,#1a1b1c 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#1a1b1c 75%),linear-gradient(-45deg,transparent 75%,#1a1b1c 75%);background-size:20px 20px;background-position:0 0,0 10px,10px -10px,-10px 0">
+            <canvas id="wm-canvas" class="max-w-full touch-none" style="max-height:60vh"></canvas>
+          </div>
+          <p id="wm-hint" class="hidden text-center text-[12px] text-ink-tertiary">Drag the watermark on the preview to reposition it</p>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex flex-col gap-4">
+          <!-- Type toggle -->
+          <div class="flex rounded-[8px] border border-hairline p-0.5 text-sm">
+            <button data-type="text" class="wm-typebtn flex-1 rounded-[6px] px-3 py-1.5 text-ink transition-colors">Text</button>
+            <button data-type="logo" class="wm-typebtn flex-1 rounded-[6px] px-3 py-1.5 text-ink-subtle transition-colors">Logo</button>
+          </div>
+
+          <!-- TEXT controls -->
+          <div id="wm-text-controls" class="flex flex-col gap-3">
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">Watermark text
+              <input id="wm-text" class="field" value="© ToolCities" />
+            </label>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="flex flex-col gap-1 text-sm text-ink-subtle">Font
+                <select id="wm-font" class="field cursor-pointer"></select>
+              </label>
+              <label class="flex flex-col gap-1 text-sm text-ink-subtle">Weight
+                <select id="wm-weight" class="field cursor-pointer">
+                  <option value="400">Regular</option>
+                  <option value="600" selected>Semibold</option>
+                  <option value="800">Bold</option>
+                </select>
+              </label>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="flex flex-col gap-1 text-sm text-ink-subtle">Color
+                <input id="wm-color" type="color" value="#ffffff" class="field h-10 cursor-pointer p-1" />
+              </label>
+              <label class="flex items-end gap-2 pb-2 text-sm text-ink-subtle">
+                <input id="wm-shadow" type="checkbox" class="accent-[#5e6ad2]" checked /> Shadow / outline
+              </label>
+            </div>
+          </div>
+
+          <!-- LOGO controls -->
+          <div id="wm-logo-controls" class="hidden flex-col gap-3">
+            <label id="wm-logo-drop" class="panel flex cursor-pointer flex-col items-center gap-1 border-dashed p-4 text-center text-[13px] text-ink-subtle transition-colors hover:bg-surface-2">
+              <span id="wm-logo-label">Upload a logo (PNG works best)</span>
+              <input id="wm-logo-file" type="file" accept="image/*" class="sr-only" />
+            </label>
+          </div>
+
+          <!-- Shared sliders -->
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle">Opacity: <span id="wm-ov" class="text-ink">35%</span>
+            <input id="wm-opacity" type="range" min="2" max="100" value="35" class="w-full accent-[#5e6ad2]" />
+          </label>
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle">Size: <span id="wm-sv" class="text-ink">6%</span>
+            <input id="wm-size" type="range" min="1" max="40" value="6" class="w-full accent-[#5e6ad2]" />
+          </label>
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle">Rotation: <span id="wm-av" class="text-ink">-30°</span>
+            <input id="wm-angle" type="range" min="-90" max="90" value="-30" class="w-full accent-[#5e6ad2]" />
+          </label>
+
+          <!-- Layout -->
+          <div class="flex flex-col gap-2">
+            <span class="text-sm text-ink-subtle">Layout</span>
+            <div class="flex rounded-[8px] border border-hairline p-0.5 text-sm">
+              <button data-layout="single" class="wm-laybtn flex-1 rounded-[6px] px-3 py-1.5 text-ink transition-colors">Single</button>
+              <button data-layout="tile" class="wm-laybtn flex-1 rounded-[6px] px-3 py-1.5 text-ink-subtle transition-colors">Tile</button>
+            </div>
+          </div>
+
+          <!-- Single: 9-point position grid -->
+          <div id="wm-single-controls" class="flex flex-col gap-2">
+            <span class="text-sm text-ink-subtle">Position</span>
+            <div class="grid grid-cols-3 gap-1" style="max-width:120px">
+              <button data-pos="0.08,0.1" class="wm-pos aspect-square rounded-[6px] border border-hairline"></button>
+              <button data-pos="0.5,0.1" class="wm-pos aspect-square rounded-[6px] border border-hairline"></button>
+              <button data-pos="0.92,0.1" class="wm-pos aspect-square rounded-[6px] border border-hairline"></button>
+              <button data-pos="0.08,0.5" class="wm-pos aspect-square rounded-[6px] border border-hairline"></button>
+              <button data-pos="0.5,0.5" class="wm-pos aspect-square rounded-[6px] border border-hairline"></button>
+              <button data-pos="0.92,0.5" class="wm-pos aspect-square rounded-[6px] border border-hairline"></button>
+              <button data-pos="0.08,0.9" class="wm-pos aspect-square rounded-[6px] border border-hairline"></button>
+              <button data-pos="0.5,0.9" class="wm-pos aspect-square rounded-[6px] border border-hairline"></button>
+              <button data-pos="0.92,0.9" class="wm-pos aspect-square rounded-[6px] border border-hairline"></button>
+            </div>
+          </div>
+
+          <!-- Tile controls -->
+          <div id="wm-tile-controls" class="hidden flex-col gap-3">
+            <div class="flex rounded-[8px] border border-hairline p-0.5 text-sm">
+              <button data-tilemode="straight" class="wm-tilebtn flex-1 rounded-[6px] px-3 py-1.5 text-ink transition-colors">Straight</button>
+              <button data-tilemode="diagonal" class="wm-tilebtn flex-1 rounded-[6px] px-3 py-1.5 text-ink-subtle transition-colors">Diagonal</button>
+            </div>
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">Spacing: <span id="wm-spv" class="text-ink">100%</span>
+              <input id="wm-span" type="range" min="20" max="300" value="100" class="w-full accent-[#5e6ad2]" />
+            </label>
+          </div>
+        </div>
       </div>
-      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="wm-tile" type="checkbox" class="accent-[#5e6ad2]" checked /> Tile across whole image (unchecked = single, centered)</label>
-      <div class="flex justify-center overflow-auto rounded-[12px] border border-hairline bg-surface-2 p-4">
-        <canvas id="wm-canvas" class="max-w-full"></canvas>
+
+      <!-- Templates -->
+      <div class="flex flex-col gap-2 border-t border-hairline pt-4">
+        <div class="flex items-center justify-between">
+          <span class="text-sm text-ink-subtle">Templates</span>
+          <button id="wm-save-tpl" class="text-[13px] text-primary-hover hover:underline">Save current</button>
+        </div>
+        <div id="wm-templates" class="flex flex-wrap gap-2">
+          <span class="text-[13px] text-ink-tertiary">No saved templates yet.</span>
+        </div>
       </div>
-      <button id="wm-dl" class="btn btn-primary w-fit">Download</button>
+
+      <!-- Output + actions -->
+      <div class="flex flex-col gap-3 border-t border-hairline pt-4">
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle">Format
+            <select id="wm-format" class="field cursor-pointer">
+              <option value="image/png">PNG (lossless)</option>
+              <option value="image/jpeg">JPEG</option>
+              <option value="image/webp">WEBP</option>
+            </select>
+          </label>
+          <label id="wm-quality-wrap" class="hidden flex-col gap-1 text-sm text-ink-subtle">Quality: <span id="wm-qv" class="text-ink">92%</span>
+            <input id="wm-quality" type="range" min="10" max="100" value="92" class="w-full accent-[#5e6ad2]" />
+          </label>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <button id="wm-dl" class="btn btn-primary">Download</button>
+          <button id="wm-dl-all" class="hidden btn" style="background:var(--surface-3,#18191a);border:1px solid var(--hairline,#23252a);color:#f7f8f8">Download all (ZIP)</button>
+          <button id="wm-add" class="text-[13px] text-primary-hover hover:underline">+ Add more images</button>
+          <span id="wm-info" class="text-[13px] text-ink-subtle"></span>
+        </div>
+      </div>
     </div>
+
+    <p id="wm-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free watermark generator overlays a text watermark on your photo — tiled
-      across the whole image or as a single centered mark — with adjustable
-      opacity, size, angle and color. It's ideal for protecting proofs, previews
-      and shared images. Your photo is processed on a canvas in your browser and
-      is never uploaded to a server.
+      This free watermark generator adds a <strong class="text-ink">text or logo watermark</strong> to
+      your photos — a single positioned mark or a repeating tile across the whole
+      image — with adjustable opacity, size, rotation and color. Drop in one image
+      or a whole batch: your settings apply to every photo at once, and you can
+      download them individually or as a single ZIP.
+    </p>
+    <p>
+      Drag the watermark directly on the preview to place it, choose a straight or
+      diagonal tile with adjustable spacing, and export to PNG, JPEG or WEBP at the
+      quality you need. Save your favourite setups as reusable templates. Everything
+      is composited on a canvas <strong class="text-ink">in your browser</strong> — your images are never uploaded to a server.
     </p>
   </div>
 </ToolLayout>
 
 <style>
   .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+  .wm-typebtn[aria-pressed="true"], .wm-laybtn[aria-pressed="true"], .wm-tilebtn[aria-pressed="true"] { background:#5e6ad2; color:#fff; }
+  .wm-pos { background:#141516; transition:background .12s,border-color .12s; }
+  .wm-pos:hover { border-color:#34343a; }
+  .wm-pos[aria-pressed="true"] { background:#5e6ad2; border-color:#5e6ad2; }
+  .wm-thumb { position:relative; flex:0 0 auto; width:56px; height:56px; border-radius:8px; overflow:hidden; border:2px solid transparent; cursor:pointer; }
+  .wm-thumb[aria-pressed="true"] { border-color:#5e6ad2; }
+  .wm-thumb img { width:100%; height:100%; object-fit:cover; }
+  .wm-thumb .wm-thumb-x { position:absolute; top:1px; right:1px; width:16px; height:16px; line-height:14px; text-align:center; border-radius:9999px; background:rgba(0,0,0,.65); color:#fff; font-size:11px; }
 </style>
 
 <script>
-  const $ = (id: string) => document.getElementById(id)!;
-  const fileInput = $('wm-file') as HTMLInputElement;
-  const drop = $('wm-drop')!;
-  const panel = $('wm-panel')!;
-  const canvas = $('wm-canvas') as HTMLCanvasElement;
-  let img: HTMLImageElement | null = null;
+  import { makeZip } from '../../lib/zip';
 
-  function render() {
-    if (!img) return;
-    const ctx = canvas.getContext('2d')!;
-    canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
-    ctx.drawImage(img, 0, 0);
-    const text = ($('wm-text') as HTMLInputElement).value || '©';
-    const opacity = Number(($('wm-opacity') as HTMLInputElement).value) / 100;
-    const size = Number(($('wm-size') as HTMLInputElement).value) * (canvas.width / 600);
-    const angle = Number(($('wm-angle') as HTMLInputElement).value) * Math.PI / 180;
-    const color = ($('wm-color') as HTMLInputElement).value;
-    const tile = ($('wm-tile') as HTMLInputElement).checked;
+  type Layout = 'single' | 'tile';
+  type WType = 'text' | 'logo';
+  type TileMode = 'straight' | 'diagonal';
+
+  interface Settings {
+    type: WType;
+    text: string;
+    font: string;
+    weight: string;
+    color: string;
+    shadow: boolean;
+    opacity: number;   // 0..1
+    size: number;      // percent of min(image w,h)
+    angle: number;     // degrees
+    layout: Layout;
+    posX: number;      // 0..1 (single)
+    posY: number;      // 0..1 (single)
+    tileMode: TileMode;
+    span: number;      // percent spacing multiplier
+    format: string;
+    quality: number;   // 0..1
+  }
+
+  const FONTS = [
+    'Inter', 'Arial', 'Helvetica', 'Georgia', 'Times New Roman',
+    'Courier New', 'Verdana', 'Trebuchet MS', 'Impact', 'Comic Sans MS',
+    'Palatino Linotype', 'Garamond',
+  ];
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const root = $('wm-root');
+  const fileInput = $('wm-file') as HTMLInputElement;
+  const drop = $('wm-drop');
+  const panel = $('wm-panel');
+  const strip = $('wm-strip');
+  const canvas = $('wm-canvas') as HTMLCanvasElement;
+  const stage = $('wm-stage');
+  const hint = $('wm-hint');
+  const err = $('wm-error');
+
+  interface Item { img: HTMLImageElement; name: string; }
+  const items: Item[] = [];
+  let active = 0;
+  let logoImg: HTMLImageElement | null = null;
+
+  const s: Settings = {
+    type: 'text', text: '© ToolCities', font: 'Inter', weight: '600',
+    color: '#ffffff', shadow: true, opacity: 0.35, size: 6, angle: -30,
+    layout: 'single', posX: 0.5, posY: 0.5, tileMode: 'diagonal', span: 100,
+    format: 'image/png', quality: 0.92,
+  };
+
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+  const fmtSize = (n: number) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`;
+
+  // ---- Core render: draws image + watermark into given ctx at natural size ----
+  function draw(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
+    const W = img.naturalWidth, H = img.naturalHeight;
+    ctx.canvas.width = W; ctx.canvas.height = H;
+    ctx.clearRect(0, 0, W, H);
+    ctx.drawImage(img, 0, 0, W, H);
+
+    const base = Math.min(W, H);
+    const unit = base * (s.size / 100);   // nominal watermark size in px
+    const angle = s.angle * Math.PI / 180;
+
     ctx.save();
-    ctx.globalAlpha = opacity;
-    ctx.fillStyle = color;
-    ctx.font = `600 ${size}px Inter, system-ui, sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    if (tile) {
-      const step = ctx.measureText(text).width + size * 3;
-      ctx.rotate(angle);
-      const diag = Math.hypot(canvas.width, canvas.height);
-      for (let y = -diag; y < diag; y += size * 3) {
-        for (let x = -diag; x < diag; x += step) ctx.fillText(text, x, y);
+    ctx.globalAlpha = s.opacity;
+
+    if (s.type === 'text') {
+      const fontPx = unit;
+      ctx.font = `${s.weight} ${fontPx}px "${s.font}", system-ui, sans-serif`;
+      ctx.fillStyle = s.color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      if (s.shadow) {
+        ctx.shadowColor = 'rgba(0,0,0,0.55)';
+        ctx.shadowBlur = fontPx * 0.08;
+        ctx.shadowOffsetX = fontPx * 0.03;
+        ctx.shadowOffsetY = fontPx * 0.03;
       }
-    } else {
-      ctx.translate(canvas.width / 2, canvas.height / 2);
-      ctx.rotate(angle);
-      ctx.fillText(text, 0, 0);
+      const text = s.text || '©';
+      const tw = ctx.measureText(text).width;
+      if (s.layout === 'tile') {
+        drawTile(ctx, W, H, angle, tw + unit, unit * 2, (x, y) => ctx.fillText(text, x, y));
+      } else {
+        ctx.translate(W * s.posX, H * s.posY);
+        ctx.rotate(angle);
+        ctx.fillText(text, 0, 0);
+      }
+    } else if (logoImg) {
+      // scale logo so its longest side == unit * 6 (logos read larger than text)
+      const target = unit * 6;
+      const lw = logoImg.naturalWidth, lh = logoImg.naturalHeight;
+      const scale = target / Math.max(lw, lh);
+      const dw = lw * scale, dh = lh * scale;
+      const drawLogo = (x: number, y: number) => ctx.drawImage(logoImg!, x - dw / 2, y - dh / 2, dw, dh);
+      if (s.layout === 'tile') {
+        drawTile(ctx, W, H, angle, dw + unit * 2, dh + unit * 2, drawLogo);
+      } else {
+        ctx.translate(W * s.posX, H * s.posY);
+        ctx.rotate(angle);
+        drawLogo(0, 0);
+      }
     }
     ctx.restore();
   }
 
-  function load(file: File) {
-    const url = URL.createObjectURL(file);
-    const im = new Image();
-    im.onload = () => { img = im; panel.classList.remove('hidden'); panel.classList.add('flex'); render(); URL.revokeObjectURL(url); };
-    im.src = url;
+  function drawTile(
+    ctx: CanvasRenderingContext2D, W: number, H: number, angle: number,
+    stepXBase: number, stepYBase: number, paint: (x: number, y: number) => void,
+  ) {
+    const mult = s.span / 100;
+    const stepX = Math.max(24, stepXBase * mult);
+    const stepY = Math.max(24, stepYBase * mult);
+    const diag = Math.hypot(W, H);
+    ctx.translate(W / 2, H / 2);
+    ctx.rotate(angle);
+    let row = 0;
+    for (let y = -diag; y < diag; y += stepY, row++) {
+      const offset = s.tileMode === 'diagonal' && row % 2 ? stepX / 2 : 0;
+      for (let x = -diag; x < diag; x += stepX) paint(x + offset, y);
+    }
   }
 
-  fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) load(fileInput.files[0]); });
-  ['wm-text', 'wm-opacity', 'wm-size', 'wm-angle', 'wm-color', 'wm-tile'].forEach((id) => $(id).addEventListener('input', () => {
-    $('wm-ov').textContent = ($('wm-opacity') as HTMLInputElement).value + '%';
-    $('wm-sv').textContent = ($('wm-size') as HTMLInputElement).value + 'px';
-    $('wm-av').textContent = ($('wm-angle') as HTMLInputElement).value + '°';
-    render();
-  }));
+  // ---- Preview ----
+  function render() {
+    if (!items[active]) return;
+    const ctx = canvas.getContext('2d')!;
+    draw(ctx, items[active].img);
+  }
+
+  // ---- Export a single item to a blob ----
+  function exportItem(item: Item): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      const c = document.createElement('canvas');
+      const ctx = c.getContext('2d')!;
+      if (s.format === 'image/jpeg') { // flatten transparency onto white
+        c.width = item.img.naturalWidth; c.height = item.img.naturalHeight;
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height);
+      }
+      draw(ctx, item.img);
+      c.toBlob((b) => b ? resolve(b) : reject(new Error('encode failed')),
+        s.format, s.format === 'image/png' ? undefined : s.quality);
+    });
+  }
+
+  const extFor = () => s.format === 'image/jpeg' ? 'jpg' : s.format === 'image/webp' ? 'webp' : 'png';
+  const baseName = (n: string) => n.replace(/\.[^.]+$/, '');
+
+  // ---- Thumbnails ----
+  function buildStrip() {
+    strip.innerHTML = '';
+    strip.classList.toggle('hidden', items.length < 2);
+    items.forEach((it, i) => {
+      const b = document.createElement('button');
+      b.className = 'wm-thumb';
+      b.setAttribute('aria-pressed', String(i === active));
+      b.innerHTML = `<img src="${it.img.src}" alt="${it.name}" /><span class="wm-thumb-x" title="Remove">×</span>`;
+      b.addEventListener('click', (e) => {
+        if ((e.target as HTMLElement).classList.contains('wm-thumb-x')) { removeItem(i); return; }
+        active = i; buildStrip(); render();
+      });
+      strip.appendChild(b);
+    });
+    $('wm-dl-all').classList.toggle('hidden', items.length < 2);
+  }
+
+  function removeItem(i: number) {
+    items.splice(i, 1);
+    if (items.length === 0) { location.reload(); return; }
+    if (active >= items.length) active = items.length - 1;
+    buildStrip(); render(); updateInfo();
+  }
+
+  function updateInfo() {
+    const it = items[active];
+    if (!it) { $('wm-info').textContent = ''; return; }
+    const count = items.length > 1 ? ` · ${items.length} images` : '';
+    $('wm-info').textContent = `${it.img.naturalWidth}×${it.img.naturalHeight}${count}`;
+  }
+
+  // ---- Load files ----
+  function addFiles(files: FileList | File[]) {
+    setErr('');
+    const list = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    if (!list.length) { setErr('Please choose image files.'); return; }
+    let pending = list.length;
+    list.forEach((f) => {
+      const url = URL.createObjectURL(f);
+      const im = new Image();
+      im.onload = () => {
+        items.push({ img: im, name: f.name });
+        if (--pending === 0) firstReady();
+      };
+      im.onerror = () => { if (--pending === 0) firstReady(); setErr('One or more files could not be read.'); };
+      im.src = url;
+    });
+  }
+
+  function firstReady() {
+    if (!items.length) return;
+    panel.classList.remove('hidden'); panel.classList.add('flex');
+    buildStrip(); render(); updateInfo();
+  }
+
+  // ---- Wire up ----
+  function initFontSelect() {
+    const sel = $('wm-font') as HTMLSelectElement;
+    FONTS.forEach((f) => {
+      const o = document.createElement('option');
+      o.value = f; o.textContent = f; o.style.fontFamily = f;
+      if (f === s.font) o.selected = true;
+      sel.appendChild(o);
+    });
+  }
+
+  function setPressed(cls: string, attr: string, val: string) {
+    root.querySelectorAll<HTMLElement>('.' + cls).forEach((b) => {
+      b.setAttribute('aria-pressed', String(b.dataset[attr] === val));
+    });
+  }
+
+  function syncLabels() {
+    $('wm-ov').textContent = Math.round(s.opacity * 100) + '%';
+    $('wm-sv').textContent = s.size + '%';
+    $('wm-av').textContent = s.angle + '°';
+    $('wm-spv').textContent = s.span + '%';
+    $('wm-qv').textContent = Math.round(s.quality * 100) + '%';
+  }
+
+  function applyVisibility() {
+    $('wm-text-controls').classList.toggle('hidden', s.type !== 'text');
+    $('wm-logo-controls').classList.toggle('hidden', s.type !== 'logo');
+    $('wm-logo-controls').classList.toggle('flex', s.type === 'logo');
+    $('wm-single-controls').classList.toggle('hidden', s.layout !== 'single');
+    $('wm-tile-controls').classList.toggle('hidden', s.layout !== 'tile');
+    $('wm-tile-controls').classList.toggle('flex', s.layout === 'tile');
+    hint.classList.toggle('hidden', s.layout !== 'single');
+    const isJpegOrWebp = s.format !== 'image/png';
+    $('wm-quality-wrap').classList.toggle('hidden', !isJpegOrWebp);
+    $('wm-quality-wrap').classList.toggle('flex', isJpegOrWebp);
+  }
+
+  // File inputs / drop
+  fileInput.addEventListener('change', () => { if (fileInput.files?.length) addFiles(fileInput.files); });
+  $('wm-add').addEventListener('click', () => fileInput.click());
   ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
   ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
-  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) load(f); });
-  $('wm-dl').addEventListener('click', () => {
-    const a = document.createElement('a'); a.href = canvas.toDataURL('image/png'); a.download = 'watermarked.png'; a.click();
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files; if (f?.length) addFiles(f); });
+
+  // Logo upload
+  const logoFile = $('wm-logo-file') as HTMLInputElement;
+  $('wm-logo-drop').addEventListener('click', () => logoFile.click());
+  logoFile.addEventListener('change', () => {
+    const f = logoFile.files?.[0]; if (!f) return;
+    const im = new Image();
+    im.onload = () => { logoImg = im; $('wm-logo-label').textContent = f.name; render(); };
+    im.onerror = () => setErr('Could not read that logo image.');
+    im.src = URL.createObjectURL(f);
   });
+
+  // Type / layout / tile toggles
+  root.querySelectorAll<HTMLElement>('.wm-typebtn').forEach((b) => b.addEventListener('click', () => {
+    s.type = b.dataset.type as WType; setPressed('wm-typebtn', 'type', s.type); applyVisibility(); render();
+  }));
+  root.querySelectorAll<HTMLElement>('.wm-laybtn').forEach((b) => b.addEventListener('click', () => {
+    s.layout = b.dataset.layout as Layout; setPressed('wm-laybtn', 'layout', s.layout); applyVisibility(); render();
+  }));
+  root.querySelectorAll<HTMLElement>('.wm-tilebtn').forEach((b) => b.addEventListener('click', () => {
+    s.tileMode = b.dataset.tilemode as TileMode; setPressed('wm-tilebtn', 'tilemode', s.tileMode); render();
+  }));
+  root.querySelectorAll<HTMLElement>('.wm-pos').forEach((b) => b.addEventListener('click', () => {
+    const [x, y] = b.dataset.pos!.split(',').map(Number);
+    s.posX = x; s.posY = y; setPressed('wm-pos', 'pos', b.dataset.pos!); render();
+  }));
+
+  // Text inputs
+  ($('wm-text') as HTMLInputElement).addEventListener('input', (e) => { s.text = (e.target as HTMLInputElement).value; render(); });
+  ($('wm-font') as HTMLSelectElement).addEventListener('change', (e) => { s.font = (e.target as HTMLSelectElement).value; render(); });
+  ($('wm-weight') as HTMLSelectElement).addEventListener('change', (e) => { s.weight = (e.target as HTMLSelectElement).value; render(); });
+  ($('wm-color') as HTMLInputElement).addEventListener('input', (e) => { s.color = (e.target as HTMLInputElement).value; render(); });
+  ($('wm-shadow') as HTMLInputElement).addEventListener('change', (e) => { s.shadow = (e.target as HTMLInputElement).checked; render(); });
+
+  // Sliders
+  ($('wm-opacity') as HTMLInputElement).addEventListener('input', (e) => { s.opacity = Number((e.target as HTMLInputElement).value) / 100; syncLabels(); render(); });
+  ($('wm-size') as HTMLInputElement).addEventListener('input', (e) => { s.size = Number((e.target as HTMLInputElement).value); syncLabels(); render(); });
+  ($('wm-angle') as HTMLInputElement).addEventListener('input', (e) => { s.angle = Number((e.target as HTMLInputElement).value); syncLabels(); render(); });
+  ($('wm-span') as HTMLInputElement).addEventListener('input', (e) => { s.span = Number((e.target as HTMLInputElement).value); syncLabels(); render(); });
+
+  // Output
+  ($('wm-format') as HTMLSelectElement).addEventListener('change', (e) => { s.format = (e.target as HTMLSelectElement).value; applyVisibility(); });
+  ($('wm-quality') as HTMLInputElement).addEventListener('input', (e) => { s.quality = Number((e.target as HTMLInputElement).value) / 100; syncLabels(); });
+
+  // Drag-to-reposition on the canvas (single mode)
+  let dragging = false;
+  function pointerToPos(ev: PointerEvent) {
+    const rect = canvas.getBoundingClientRect();
+    s.posX = Math.min(1, Math.max(0, (ev.clientX - rect.left) / rect.width));
+    s.posY = Math.min(1, Math.max(0, (ev.clientY - rect.top) / rect.height));
+    setPressed('wm-pos', 'pos', '');
+    render();
+  }
+  canvas.addEventListener('pointerdown', (ev) => { if (s.layout !== 'single') return; dragging = true; canvas.setPointerCapture(ev.pointerId); pointerToPos(ev); });
+  canvas.addEventListener('pointermove', (ev) => { if (dragging) pointerToPos(ev); });
+  canvas.addEventListener('pointerup', () => { dragging = false; });
+  stage.style.cursor = 'default';
+
+  // Download active
+  $('wm-dl').addEventListener('click', async () => {
+    if (!items[active]) return;
+    try {
+      const blob = await exportItem(items[active]);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${baseName(items[active].name)}-watermarked.${extFor()}`;
+      a.click();
+    } catch { setErr('Your browser could not encode that format.'); }
+  });
+
+  // Download all as ZIP
+  $('wm-dl-all').addEventListener('click', async () => {
+    if (items.length < 2) return;
+    const btn = $('wm-dl-all') as HTMLButtonElement;
+    btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Processing…';
+    try {
+      const files: { name: string; data: Uint8Array }[] = [];
+      const seen: Record<string, number> = {};
+      for (const it of items) {
+        const blob = await exportItem(it);
+        let name = `${baseName(it.name)}-watermarked.${extFor()}`;
+        if (seen[name] != null) { const n = ++seen[name]; name = `${baseName(it.name)}-watermarked-${n}.${extFor()}`; }
+        else seen[name] = 0;
+        files.push({ name, data: new Uint8Array(await blob.arrayBuffer()) });
+      }
+      const zip = makeZip(files);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(zip);
+      a.download = 'watermarked-images.zip';
+      a.click();
+    } catch { setErr('Something went wrong while building the ZIP.'); }
+    finally { btn.disabled = false; btn.textContent = orig; }
+  });
+
+  // ---- Templates (localStorage) ----
+  const TPL_KEY = 'wm-templates-v1';
+  type Tpl = Omit<Settings, 'format' | 'quality'> & { label: string };
+  const loadTpls = (): Tpl[] => { try { return JSON.parse(localStorage.getItem(TPL_KEY) || '[]'); } catch { return []; } };
+  const saveTpls = (t: Tpl[]) => localStorage.setItem(TPL_KEY, JSON.stringify(t.slice(-10)));
+
+  function renderTpls() {
+    const wrap = $('wm-templates');
+    const tpls = loadTpls();
+    wrap.innerHTML = '';
+    if (!tpls.length) { wrap.innerHTML = '<span class="text-[13px] text-ink-tertiary">No saved templates yet.</span>'; return; }
+    tpls.forEach((t, i) => {
+      const chip = document.createElement('button');
+      chip.className = 'flex items-center gap-1.5 rounded-[8px] border border-hairline bg-surface-2 px-2.5 py-1 text-[13px] text-ink hover:border-hairline-strong';
+      chip.innerHTML = `<span>${t.label}</span><span class="text-ink-tertiary" title="Delete">×</span>`;
+      chip.addEventListener('click', (e) => {
+        if ((e.target as HTMLElement).title === 'Delete') {
+          const all = loadTpls(); all.splice(i, 1); saveTpls(all); renderTpls(); return;
+        }
+        applyTpl(t);
+      });
+      wrap.appendChild(chip);
+    });
+  }
+
+  function applyTpl(t: Tpl) {
+    Object.assign(s, { ...t });
+    // reflect into controls
+    ($('wm-text') as HTMLInputElement).value = s.text;
+    ($('wm-font') as HTMLSelectElement).value = s.font;
+    ($('wm-weight') as HTMLSelectElement).value = s.weight;
+    ($('wm-color') as HTMLInputElement).value = s.color;
+    ($('wm-shadow') as HTMLInputElement).checked = s.shadow;
+    ($('wm-opacity') as HTMLInputElement).value = String(Math.round(s.opacity * 100));
+    ($('wm-size') as HTMLInputElement).value = String(s.size);
+    ($('wm-angle') as HTMLInputElement).value = String(s.angle);
+    ($('wm-span') as HTMLInputElement).value = String(s.span);
+    setPressed('wm-typebtn', 'type', s.type);
+    setPressed('wm-laybtn', 'layout', s.layout);
+    setPressed('wm-tilebtn', 'tilemode', s.tileMode);
+    setPressed('wm-pos', 'pos', `${s.posX},${s.posY}`);
+    syncLabels(); applyVisibility(); render();
+  }
+
+  $('wm-save-tpl').addEventListener('click', () => {
+    const label = (s.type === 'text' ? (s.text || 'Text') : 'Logo').slice(0, 18);
+    const { format, quality, ...rest } = s;
+    const all = loadTpls();
+    all.push({ ...rest, label });
+    saveTpls(all); renderTpls();
+  });
+
+  // ---- Init ----
+  initFontSelect();
+  setPressed('wm-typebtn', 'type', s.type);
+  setPressed('wm-laybtn', 'layout', s.layout);
+  setPressed('wm-tilebtn', 'tilemode', s.tileMode);
+  setPressed('wm-pos', 'pos', `${s.posX},${s.posY}`);
+  syncLabels(); applyVisibility(); renderTpls();
 </script>
