@@ -2800,11 +2800,11 @@ export const tools: Tool[] = [
   {
     slug: 'gif-maker',
     name: 'GIF Maker',
-    tagline: 'Turn images or a video into an animated GIF.',
+    tagline: 'Make an animated GIF with captions, stickers and templates.',
     description:
-      'Free online GIF maker. Combine images or split a short video into frames and export an animated GIF with custom frame delay, size and looping. Encoded entirely in your browser — nothing is uploaded.',
+      'Free online GIF maker. Build frames from images (drag to reorder), a short video clip, or hundreds of popular templates, then add text captions and stickers with per-frame control, preview the animation, reverse or boomerang it, and export a looping GIF. Composited and encoded entirely in your browser — nothing is uploaded.',
     category: 'Image',
-    keywords: ['gif maker', 'animated gif creator', 'images to gif', 'video to gif', 'make a gif online'],
+    keywords: ['gif maker', 'animated gif creator', 'gif caption maker', 'images to gif', 'video to gif', 'make a gif online'],
     icon: 'M3 5h18v14H3zM7 9v6M7 9h2M7 12h1.5M12 9v6M16 9h1.5M16 9v6M16 12h1',
   },
   {
