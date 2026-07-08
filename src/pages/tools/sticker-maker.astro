@@ -3,65 +3,223 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
 <ToolLayout slug="sticker-maker">
-  <div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-5">
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">
       Image
       <input id="stm-file" type="file" accept="image/*" class="field" />
     </label>
 
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="stm-remove" class="btn btn-primary" disabled>Remove background</button>
+      <button id="stm-keepbg" class="btn" disabled>Keep background</button>
+    </div>
+
+    <style>
+      .stm-spinner {
+        display: inline-block;
+        width: 1em;
+        height: 1em;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: stm-spin 0.6s linear infinite;
+        vertical-align: -0.15em;
+      }
+      @keyframes stm-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-        Border thickness (px)
-        <input id="stm-border" type="number" min="0" max="120" step="1" value="24" class="field" />
+        Outline thickness
+        <input id="stm-border" type="range" min="0" max="80" step="1" value="24" />
+        <span id="stm-border-val" class="text-[12px] text-ink-faint">24 px</span>
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-        Corner radius (px)
-        <input id="stm-radius" type="number" min="0" max="300" step="1" value="48" class="field" />
-      </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-        Border color
+        Outline color
         <input id="stm-color" type="color" value="#ffffff" class="field h-10 cursor-pointer p-1" />
       </label>
-      <label class="flex items-center gap-2 text-sm text-ink-subtle sm:mt-6">
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Corner radius (Square shape)
+        <input id="stm-radius" type="range" min="0" max="50" step="1" value="18" />
+        <span id="stm-radius-val" class="text-[12px] text-ink-faint">18%</span>
+      </label>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Shape
+        <select id="stm-shape" class="field">
+          <option value="contour">Die-cut (follows subject)</option>
+          <option value="circle">Circle</option>
+          <option value="square">Square / rounded</option>
+          <option value="star">Star</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Background fill
+        <select id="stm-fill" class="field">
+          <option value="none">None (transparent)</option>
+          <option value="solid">Solid color</option>
+          <option value="gradient">Gradient</option>
+        </select>
+      </label>
+
+      <label id="stm-fill1-wrap" class="hidden flex-col gap-1 text-sm text-ink-subtle">
+        Fill color
+        <input id="stm-fill1" type="color" value="#5e6ad2" class="field h-10 cursor-pointer p-1" />
+      </label>
+      <label id="stm-fill2-wrap" class="hidden flex-col gap-1 text-sm text-ink-subtle">
+        Gradient second color
+        <input id="stm-fill2" type="color" value="#8b93e8" class="field h-10 cursor-pointer p-1" />
+      </label>
+
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
         <input id="stm-shadow" type="checkbox" checked class="h-4 w-4" />
         Drop shadow
       </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="stm-glow" type="checkbox" class="h-4 w-4" />
+        Glow (uses outline color)
+      </label>
     </div>
+
+    <details class="panel p-4">
+      <summary class="cursor-pointer text-sm text-ink">Add text</summary>
+      <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle sm:col-span-2">
+          Text
+          <input id="stm-text" type="text" placeholder="e.g. AWESOME" class="field" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Font
+          <select id="stm-font" class="field">
+            <option value="Inter, sans-serif">Inter</option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="'Comic Sans MS', cursive">Comic Sans</option>
+            <option value="Impact, sans-serif">Impact</option>
+            <option value="'Courier New', monospace">Courier</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Text color
+          <input id="stm-tcolor" type="color" value="#ffffff" class="field h-10 cursor-pointer p-1" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Size
+          <input id="stm-tsize" type="range" min="12" max="200" step="1" value="72" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Position
+          <select id="stm-tpos" class="field">
+            <option value="bottom">Bottom</option>
+            <option value="top">Top</option>
+            <option value="center">Center</option>
+            <option value="arc-top">Arc (top)</option>
+            <option value="arc-bottom">Arc (bottom)</option>
+          </select>
+        </label>
+      </div>
+    </details>
 
     <p id="stm-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
 
-    <div class="panel p-4">
+    <div class="panel flex items-center justify-center p-4" style="background-image:repeating-conic-gradient(#1a1a1f 0% 25%, #101014 0% 50%);background-size:24px 24px;">
       <canvas id="stm-canvas" class="max-w-full h-auto rounded-[8px]" aria-label="Sticker preview"></canvas>
     </div>
 
-    <div class="flex gap-2">
-      <button id="stm-download" class="btn btn-primary">Download PNG</button>
+    <div class="flex flex-wrap gap-2">
+      <button id="stm-download" class="btn btn-primary">Download sticker PNG</button>
     </div>
+
+    <details class="panel p-4">
+      <summary class="cursor-pointer text-sm text-ink">Make a print sheet</summary>
+      <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Sheet size
+          <select id="stm-sheet" class="field">
+            <option value="2550x3300">US Letter (300 dpi)</option>
+            <option value="2480x3508">A4 (300 dpi)</option>
+            <option value="1200x1200">Square 1200</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Columns
+          <input id="stm-cols" type="number" min="1" max="12" step="1" value="3" class="field" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Rows
+          <input id="stm-rows" type="number" min="1" max="12" step="1" value="4" class="field" />
+        </label>
+      </div>
+      <button id="stm-sheet-dl" class="btn mt-3">Download sheet PNG</button>
+    </details>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free sticker maker gives any image the die-cut sticker look. Drop in a
-      picture and add an adjustable white (or colored) border, rounded corners and
-      an optional drop shadow, then download a transparent PNG ready for chats,
-      prints or product mockups. Works best with images that already have a
-      transparent background. Everything is composed locally in your browser and is
-      never uploaded to a server.
+      This free sticker maker turns any photo into a die-cut sticker. Drop in a
+      picture and it automatically removes the background right in your browser,
+      then wraps your subject in a crisp white (or colored) outline that follows
+      its real silhouette — the classic die-cut look. Adjust the outline, add a
+      drop shadow or glow, choose a circle, square or star shape, overlay text,
+      and download a transparent PNG. You can also tile copies onto a print sheet
+      for cutting at home.
+    </p>
+    <p>
+      Everything happens locally: the background-removal model (RMBG-1.4) runs
+      on your device with onnxruntime-web and downloads once on first use. Your
+      images are never uploaded to a server.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  const fileEl = document.getElementById('stm-file') as HTMLInputElement;
-  const borderEl = document.getElementById('stm-border') as HTMLInputElement;
-  const radiusEl = document.getElementById('stm-radius') as HTMLInputElement;
-  const colorEl = document.getElementById('stm-color') as HTMLInputElement;
-  const shadowEl = document.getElementById('stm-shadow') as HTMLInputElement;
-  const canvas = document.getElementById('stm-canvas') as HTMLCanvasElement;
-  const err = document.getElementById('stm-error')!;
-  const ctx = canvas.getContext('2d')!;
+  import { removeBackground } from '../../lib/bgremove';
+  import { buildDieCut } from '../../lib/diecut';
 
-  let image: HTMLImageElement | null = null;
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const fileEl = $<HTMLInputElement>('stm-file');
+  const removeBtn = $<HTMLButtonElement>('stm-remove');
+  const keepBtn = $<HTMLButtonElement>('stm-keepbg');
+  const borderEl = $<HTMLInputElement>('stm-border');
+  const borderVal = $('stm-border-val');
+  const colorEl = $<HTMLInputElement>('stm-color');
+  const radiusEl = $<HTMLInputElement>('stm-radius');
+  const radiusVal = $('stm-radius-val');
+  const shapeEl = $<HTMLSelectElement>('stm-shape');
+  const fillEl = $<HTMLSelectElement>('stm-fill');
+  const fill1 = $<HTMLInputElement>('stm-fill1');
+  const fill2 = $<HTMLInputElement>('stm-fill2');
+  const fill1Wrap = $('stm-fill1-wrap');
+  const fill2Wrap = $('stm-fill2-wrap');
+  const shadowEl = $<HTMLInputElement>('stm-shadow');
+  const glowEl = $<HTMLInputElement>('stm-glow');
+  const textEl = $<HTMLInputElement>('stm-text');
+  const fontEl = $<HTMLSelectElement>('stm-font');
+  const tcolorEl = $<HTMLInputElement>('stm-tcolor');
+  const tsizeEl = $<HTMLInputElement>('stm-tsize');
+  const tposEl = $<HTMLSelectElement>('stm-tpos');
+  const canvas = $<HTMLCanvasElement>('stm-canvas');
+  const ctx = canvas.getContext('2d')!;
+  const err = $('stm-error');
+
+  let original: HTMLImageElement | null = null; // as uploaded
+  let subject: HTMLCanvasElement | HTMLImageElement | null = null; // after (optional) bg removal
+  // Custom text position as a normalized offset (0..1 of canvas), survives
+  // resizes. null = follow the preset dropdown. Set by dragging the text.
+  let textPos: { x: number; y: number } | null = null;
+  let dragging = false;
+
+  function showErr(msg: string) {
+    err.textContent = msg;
+    err.classList.remove('hidden');
+  }
+  function clearErr() {
+    err.classList.add('hidden');
+  }
 
   function loadFile(file: File): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
@@ -77,93 +235,332 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     });
   }
 
-  function roundedRect(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-    const rr = Math.max(0, Math.min(r, w / 2, h / 2));
+  // Trace a shape path on ctx within (x,y,w,h). Star draws a 5-point star.
+  function shapePath(c: CanvasRenderingContext2D, shape: string, x: number, y: number, w: number, h: number) {
     c.beginPath();
-    c.moveTo(x + rr, y);
-    c.arcTo(x + w, y, x + w, y + h, rr);
-    c.arcTo(x + w, y + h, x, y + h, rr);
-    c.arcTo(x, y + h, x, y, rr);
-    c.arcTo(x, y, x + w, y, rr);
-    c.closePath();
+    if (shape === 'circle') {
+      c.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
+    } else if (shape === 'square') {
+      // Radius slider rounds the corners: 0% = sharp square, higher = rounded.
+      const r = Math.min(w, h) * (Number(radiusEl.value) / 100);
+      c.moveTo(x + r, y);
+      c.arcTo(x + w, y, x + w, y + h, r);
+      c.arcTo(x + w, y + h, x, y + h, r);
+      c.arcTo(x, y + h, x, y, r);
+      c.arcTo(x, y, x + w, y, r);
+      c.closePath();
+    } else if (shape === 'star') {
+      const cx = x + w / 2;
+      const cy = y + h / 2;
+      const outer = Math.min(w, h) / 2;
+      const inner = outer * 0.42;
+      for (let i = 0; i < 10; i++) {
+        const rad = i % 2 === 0 ? outer : inner;
+        const ang = (Math.PI / 5) * i - Math.PI / 2;
+        const px = cx + Math.cos(ang) * rad;
+        const py = cy + Math.sin(ang) * rad;
+        i === 0 ? c.moveTo(px, py) : c.lineTo(px, py);
+      }
+      c.closePath();
+    } else {
+      // square
+      c.rect(x, y, w, h);
+    }
   }
 
-  function render() {
-    err.classList.add('hidden');
-    if (!image) {
+  // Produce the base subject canvas honoring shape + fill. For 'contour' the
+  // alpha is the subject's own silhouette; other shapes mask to that geometry.
+  function buildBase(): HTMLCanvasElement | null {
+    if (!subject) return null;
+    const sw = (subject as HTMLImageElement).naturalWidth || subject.width;
+    const sh = (subject as HTMLImageElement).naturalHeight || subject.height;
+    const shape = shapeEl.value;
+
+    const base = document.createElement('canvas');
+    base.width = sw;
+    base.height = sh;
+    const bc = base.getContext('2d')!;
+
+    // Fill background inside the shape (or the subject silhouette for contour).
+    const fill = fillEl.value;
+    if (fill !== 'none') {
+      let style: string | CanvasGradient = fill1.value;
+      if (fill === 'gradient') {
+        const g = bc.createLinearGradient(0, 0, sw, sh);
+        g.addColorStop(0, fill1.value);
+        g.addColorStop(1, fill2.value);
+        style = g;
+      }
+      bc.fillStyle = style;
+      if (shape === 'contour') {
+        // Fill only where the subject is opaque: draw fill, mask by subject.
+        bc.fillRect(0, 0, sw, sh);
+        bc.globalCompositeOperation = 'destination-in';
+        bc.drawImage(subject, 0, 0, sw, sh);
+        bc.globalCompositeOperation = 'source-over';
+      } else {
+        shapePath(bc, shape, 0, 0, sw, sh);
+        bc.fill();
+      }
+    }
+
+    // Draw the subject on top (clipped to shape for non-contour).
+    if (shape === 'contour') {
+      bc.drawImage(subject, 0, 0, sw, sh);
+    } else {
+      bc.save();
+      shapePath(bc, shape, 0, 0, sw, sh);
+      bc.clip();
+      bc.drawImage(subject, 0, 0, sw, sh);
+      bc.restore();
+    }
+    return base;
+  }
+
+  // Bounding box of the last-drawn text, in canvas px, for drag hit-testing.
+  let textBox: { x: number; y: number; w: number; h: number } | null = null;
+
+  function drawText(c: CanvasRenderingContext2D, cw: number, ch: number) {
+    textBox = null;
+    const text = textEl.value.trim();
+    if (!text) return;
+    const size = Number(tsizeEl.value);
+    const pos = tposEl.value;
+    c.save();
+    c.font = `bold ${size}px ${fontEl.value}`;
+    c.fillStyle = tcolorEl.value;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.lineWidth = Math.max(2, size * 0.08);
+    c.strokeStyle = 'rgba(0,0,0,0.55)';
+
+    // Anchor (center of the text): custom drag position wins over the preset.
+    const cx = textPos ? textPos.x * cw : cw / 2;
+    let cy: number;
+    if (textPos) cy = textPos.y * ch;
+    else if (pos === 'top' || pos === 'arc-top') cy = size * 0.7;
+    else if (pos === 'center') cy = ch / 2;
+    else cy = ch - size * 0.7; // bottom / arc-bottom
+    // Arc curves around this anchor point.
+    const arcCy = textPos ? textPos.y * ch : ch / 2;
+
+    if (pos.startsWith('arc')) {
+      const top = pos === 'arc-top';
+      const radius = Math.min(cw, ch) * 0.42;
+      const chars = [...text];
+      const arc = Math.min(Math.PI, (size * chars.length) / radius);
+      const step = chars.length > 1 ? arc / (chars.length - 1) : 0;
+      const start = top ? -Math.PI / 2 - arc / 2 : Math.PI / 2 + arc / 2;
+      chars.forEach((ch2, i) => {
+        const ang = top ? start + step * i : start - step * i;
+        c.save();
+        c.translate(cx + Math.cos(ang) * radius, arcCy + Math.sin(ang) * radius);
+        c.rotate(top ? ang + Math.PI / 2 : ang - Math.PI / 2);
+        c.strokeText(ch2, 0, 0);
+        c.fillText(ch2, 0, 0);
+        c.restore();
+      });
+      textBox = { x: cx - radius, y: arcCy - radius, w: radius * 2, h: radius * 2 };
+    } else {
+      c.strokeText(text, cx, cy);
+      c.fillText(text, cx, cy);
+      const w = c.measureText(text).width;
+      textBox = { x: cx - w / 2, y: cy - size / 2, w, h: size };
+    }
+    c.restore();
+  }
+
+  // Full render into the visible canvas. Returns the sticker canvas for reuse.
+  function render(): HTMLCanvasElement | null {
+    clearErr();
+    if (!subject) {
       canvas.width = 1;
       canvas.height = 1;
-      return;
+      return null;
     }
+    const base = buildBase()!;
+    const border = Number(borderEl.value);
+    const sticker = buildDieCut(base, { border, borderColor: colorEl.value });
 
-    const border = Math.max(0, Number(borderEl.value) || 0);
-    const radius = Math.max(0, Number(radiusEl.value) || 0);
     const shadow = shadowEl.checked;
-    const margin = shadow ? Math.round(border + 24) : Math.round(border * 0.5) + 2;
+    const glow = glowEl.checked;
+    const pad = shadow || glow ? Math.round(border + 32) : 4;
 
-    const iw = image.width;
-    const ih = image.height;
-    const stickerW = iw + border * 2;
-    const stickerH = ih + border * 2;
-
-    canvas.width = stickerW + margin * 2;
-    canvas.height = stickerH + margin * 2;
+    canvas.width = sticker.width + pad * 2;
+    canvas.height = sticker.height + pad * 2;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const sx = margin;
-    const sy = margin;
-
-    // White die-cut border shape with optional shadow.
     ctx.save();
-    if (shadow) {
-      ctx.shadowColor = 'rgba(0,0,0,0.35)';
-      ctx.shadowBlur = 20;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 8;
+    if (glow) {
+      ctx.shadowColor = colorEl.value;
+      ctx.shadowBlur = 28;
+    } else if (shadow) {
+      ctx.shadowColor = 'rgba(0,0,0,0.4)';
+      ctx.shadowBlur = 24;
+      ctx.shadowOffsetY = 10;
     }
-    ctx.fillStyle = colorEl.value;
-    roundedRect(ctx, sx, sy, stickerW, stickerH, radius);
-    ctx.fill();
+    ctx.drawImage(sticker, pad, pad);
     ctx.restore();
 
-    // Clip the image to the inner rounded rectangle.
-    const innerRadius = Math.max(0, radius - border);
-    ctx.save();
-    roundedRect(ctx, sx + border, sy + border, iw, ih, innerRadius);
-    ctx.clip();
-    ctx.drawImage(image, sx + border, sy + border, iw, ih);
-    ctx.restore();
+    drawText(ctx, canvas.width, canvas.height);
+    return canvas;
+  }
+
+  // Run an async task while showing a spinner in `btn`; both buttons disabled.
+  async function withSpinner(btn: HTMLButtonElement, label: string, fn: () => Promise<void>) {
+    const prev = btn.innerHTML;
+    removeBtn.disabled = true;
+    keepBtn.disabled = true;
+    btn.innerHTML = `<span class="stm-spinner"></span> ${label}`;
+    try {
+      await fn();
+    } catch (e) {
+      showErr((e as Error).message || 'Something went wrong.');
+    } finally {
+      btn.innerHTML = prev;
+      removeBtn.disabled = false;
+      keepBtn.disabled = false;
+    }
+  }
+
+  async function doRemove() {
+    if (!original) return;
+    await withSpinner(removeBtn, 'Removing…', async () => {
+      subject = await removeBackground(original!);
+      render();
+    });
   }
 
   fileEl.addEventListener('change', async () => {
     const file = fileEl.files && fileEl.files[0];
     if (!file) return;
     try {
-      image = await loadFile(file);
+      original = await loadFile(file);
+      subject = original; // preview raw until the user removes the bg
+      removeBtn.disabled = false;
+      keepBtn.disabled = false;
       render();
     } catch (e) {
-      err.textContent = (e as Error).message;
-      err.classList.remove('hidden');
+      showErr((e as Error).message);
     }
   });
 
-  [borderEl, radiusEl, colorEl, shadowEl].forEach((el) => el.addEventListener('input', render));
+  removeBtn.addEventListener('click', doRemove);
+  keepBtn.addEventListener('click', () => {
+    if (original) {
+      subject = original;
+      render();
+    }
+  });
 
-  document.getElementById('stm-download')!.addEventListener('click', () => {
-    if (!image) {
-      err.textContent = 'Add an image first.';
-      err.classList.remove('hidden');
+  // Drag the text around the canvas. The canvas is CSS-scaled, so map client
+  // coords back to canvas px via the bounding rect.
+  function toCanvas(e: PointerEvent) {
+    const r = canvas.getBoundingClientRect();
+    return {
+      x: ((e.clientX - r.left) / r.width) * canvas.width,
+      y: ((e.clientY - r.top) / r.height) * canvas.height,
+    };
+  }
+  canvas.addEventListener('pointerdown', (e) => {
+    if (!textBox || !textEl.value.trim()) return;
+    const p = toCanvas(e);
+    if (p.x >= textBox.x && p.x <= textBox.x + textBox.w && p.y >= textBox.y && p.y <= textBox.y + textBox.h) {
+      dragging = true;
+      canvas.setPointerCapture(e.pointerId);
+      canvas.style.cursor = 'grabbing';
+    }
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!dragging) {
+      // Show a grab cursor when hovering over the text.
+      const p = toCanvas(e);
+      const over = textBox && textEl.value.trim() && p.x >= textBox.x && p.x <= textBox.x + textBox.w && p.y >= textBox.y && p.y <= textBox.y + textBox.h;
+      canvas.style.cursor = over ? 'grab' : 'default';
       return;
     }
-    canvas.toBlob((blob) => {
+    const p = toCanvas(e);
+    textPos = { x: p.x / canvas.width, y: p.y / canvas.height };
+    render();
+  });
+  const endDrag = (e: PointerEvent) => {
+    if (dragging) {
+      dragging = false;
+      canvas.style.cursor = 'grab';
+      try { canvas.releasePointerCapture(e.pointerId); } catch {}
+    }
+  };
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
+
+  borderEl.addEventListener('input', () => {
+    borderVal.textContent = `${borderEl.value} px`;
+    render();
+  });
+  radiusEl.addEventListener('input', () => {
+    radiusVal.textContent = `${radiusEl.value}%`;
+    render();
+  });
+  fillEl.addEventListener('change', () => {
+    const f = fillEl.value;
+    fill1Wrap.classList.toggle('hidden', f === 'none');
+    fill1Wrap.classList.toggle('flex', f !== 'none');
+    fill2Wrap.classList.toggle('hidden', f !== 'gradient');
+    fill2Wrap.classList.toggle('flex', f === 'gradient');
+    render();
+  });
+  [colorEl, shapeEl, fill1, fill2, shadowEl, glowEl, textEl, fontEl, tcolorEl, tsizeEl].forEach((el) =>
+    el.addEventListener('input', render),
+  );
+  // Choosing a preset position snaps back to it, discarding any drag offset.
+  tposEl.addEventListener('change', () => {
+    textPos = null;
+    render();
+  });
+
+  function downloadCanvas(cv: HTMLCanvasElement, name: string) {
+    cv.toBlob((blob) => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.download = 'toolcities-sticker.png';
+      link.download = name;
       link.href = url;
       link.click();
       URL.revokeObjectURL(url);
     }, 'image/png');
+  }
+
+  $('stm-download').addEventListener('click', () => {
+    const cv = render();
+    if (!cv) return showErr('Add an image first.');
+    downloadCanvas(cv, 'toolcities-sticker.png');
+  });
+
+  $('stm-sheet-dl').addEventListener('click', () => {
+    const sticker = render();
+    if (!sticker) return showErr('Add an image first.');
+    const [sw, sh] = ($<HTMLSelectElement>('stm-sheet').value).split('x').map(Number);
+    const cols = Math.max(1, Number($<HTMLInputElement>('stm-cols').value));
+    const rows = Math.max(1, Number($<HTMLInputElement>('stm-rows').value));
+
+    const sheet = document.createElement('canvas');
+    sheet.width = sw;
+    sheet.height = sh;
+    const sc = sheet.getContext('2d')!;
+    const gap = Math.round(Math.min(sw, sh) * 0.02);
+    const cellW = (sw - gap * (cols + 1)) / cols;
+    const cellH = (sh - gap * (rows + 1)) / rows;
+    const scale = Math.min(cellW / sticker.width, cellH / sticker.height);
+    const dw = sticker.width * scale;
+    const dh = sticker.height * scale;
+    for (let r = 0; r < rows; r++) {
+      for (let cIdx = 0; cIdx < cols; cIdx++) {
+        const x = gap + cIdx * (cellW + gap) + (cellW - dw) / 2;
+        const y = gap + r * (cellH + gap) + (cellH - dh) / 2;
+        sc.drawImage(sticker, x, y, dw, dh);
+      }
+    }
+    downloadCanvas(sheet, 'toolcities-sticker-sheet.png');
   });
 
   render();

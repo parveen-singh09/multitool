@@ -3632,11 +3632,11 @@ export const tools: Tool[] = [
   {
     slug: 'sticker-maker',
     name: 'Sticker Maker',
-    tagline: 'Add a die-cut outline to any image.',
+    tagline: 'Auto-remove backgrounds and add a die-cut outline.',
     description:
-      'Free sticker maker. Drop an image to add a white die-cut border and rounded corners for a sticker look, then download the PNG. Everything is composed locally in your browser.',
+      'Free sticker maker. Drop any photo — it auto-removes the background and wraps your subject in a die-cut outline. Add text, pick a shape, drop shadows, and lay out a print sheet. Everything runs locally in your browser, nothing is uploaded.',
     category: 'Image',
-    keywords: ['sticker maker', 'sticker creator', 'make stickers online', 'die cut sticker', 'sticker outline generator'],
+    keywords: ['sticker maker', 'sticker creator', 'make stickers online', 'die cut sticker', 'sticker outline generator', 'background remover', 'remove background from image', 'custom sticker', 'sticker sheet maker', 'text sticker'],
     icon: 'M5 5h10l4 4v10H5zM15 5v4h4',
   },
 
