@@ -1,439 +1,365 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 
-const faqs = [
-  {
-    q: 'What is a square face generator?',
-    a: 'It is a photo tool that recreates the viral "square head" meme by warping a face toward a blocky, squared-off shape. You position a box over the face, dial in how square you want it, and download the result.',
-  },
-  {
-    q: 'Do you upload my photo anywhere?',
-    a: 'No. Your image is loaded and warped entirely inside your browser using the HTML canvas. Nothing is ever sent to a server, so it works offline and your photo stays private.',
-  },
-  {
-    q: 'Does it detect the face automatically?',
-    a: 'On browsers that support the native FaceDetector API (Chrome and Edge on most devices), the box is placed over the largest detected face automatically. On other browsers you position the box manually — just drag it over the face.',
-  },
-  {
-    q: 'What image formats can I download?',
-    a: 'You can download the squared result as a PNG (lossless, keeps transparency) or a JPG (smaller file). You can also copy it straight to your clipboard to paste into a chat or post.',
-  },
-  {
-    q: 'Can I control how strong the effect is?',
-    a: 'Yes. Squareness sets how hard the face is pulled toward a square, Effect size sets how far the warp reaches, and Sharpen corners makes the corners crisper. Presets give you Subtle, Strong and Full Cube in one tap.',
-  },
+// Shape categories: each has variants (cycled with ‹ ›) and its own color.
+const categories = [
+  { key: 'eyes', label: 'Eyes' },
+  { key: 'brows', label: 'Eyebrows' },
+  { key: 'nose', label: 'Nose' },
+  { key: 'mouth', label: 'Mouth' },
+  { key: 'hair', label: 'Hair' },
+  { key: 'bangs', label: 'Bangs' },
+  { key: 'sidehair', label: 'Side hair' },
+  { key: 'beard', label: 'Facial hair' },
+  { key: 'cheeks', label: 'Cheeks' },
+  { key: 'accessory', label: 'Accessory' },
 ];
-
-const faqJsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: faqs.map((f) => ({
-    '@type': 'Question',
-    name: f.q,
-    acceptedAnswer: { '@type': 'Answer', text: f.a },
-  })),
-};
+// Color-only parts: no shapes, just a color picker.
+const colorParts = [
+  { key: 'skin', label: 'Skin' },
+];
 ---
 
 <ToolLayout slug="square-face-generator">
-  <div class="grid grid-cols-1 gap-6 md:grid-cols-[1fr_1.2fr]">
-    <div class="flex flex-col gap-4">
-      <!-- Upload / drop zone -->
-      <div id="sf-drop" class="panel flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-hairline-strong px-4 py-6 text-center transition-colors">
-        <p class="text-sm text-ink-subtle">Drop a photo here, paste from clipboard, or</p>
-        <label class="btn btn-secondary cursor-pointer">
-          Choose photo
-          <input id="sf-file" type="file" accept="image/*" class="hidden" />
-        </label>
-        <button id="sf-example" class="text-[13px] text-primary-hover underline underline-offset-2">Try an example</button>
-      </div>
-
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Squareness
-        <input id="sf-strength" type="range" min="0" max="100" value="70" class="mt-2 w-full accent-primary" />
-      </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Effect size
-        <input id="sf-radius" type="range" min="20" max="95" value="60" class="mt-2 w-full accent-primary" />
-      </label>
-
-      <!-- Presets -->
-      <div class="flex flex-wrap gap-2">
-        <span class="self-center text-[13px] text-ink-tertiary">Presets:</span>
-        <button class="btn btn-secondary sf-preset" data-s="35" data-r="45" data-sharp="0">Subtle</button>
-        <button class="btn btn-secondary sf-preset" data-s="70" data-r="60" data-sharp="1">Strong</button>
-        <button class="btn btn-secondary sf-preset" data-s="100" data-r="85" data-sharp="1">Full Cube</button>
-      </div>
-
-      <p class="text-[13px] leading-relaxed text-ink-tertiary">
-        Drag the box on the preview over the face (it auto-detects where supported), then push
-        <span class="text-ink-subtle">Squareness</span> up. The region inside the box gets pulled toward a square.
-      </p>
-
-      <div class="flex flex-wrap items-center gap-4">
-        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="sf-corners" type="checkbox" class="accent-primary" checked /> Sharpen corners</label>
-        <button id="sf-reset" class="btn btn-secondary ml-auto">Reset box</button>
-      </div>
-    </div>
-
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-[1fr_1fr]">
+    <!-- Preview -->
     <div class="flex flex-col items-center gap-4">
-      <div id="sf-wrap" class="relative w-full touch-none select-none">
-        <canvas id="sf-canvas" class="w-full rounded-xl border border-hairline" style="max-height:440px;object-fit:contain"></canvas>
-        <div id="sf-box" class="pointer-events-none absolute rounded-sm border-2 border-primary" style="display:none">
-          <span class="absolute -right-1 -bottom-1 h-3 w-3 rounded-sm bg-primary"></span>
-        </div>
-      </div>
+      <div id="sf-preview" class="w-full max-w-[380px]"></div>
       <div class="flex flex-wrap items-center justify-center gap-2">
-        <button id="sf-compare" class="btn btn-secondary" disabled>Hold to compare</button>
-        <button id="sf-copy" class="btn btn-secondary" disabled>Copy</button>
-        <button id="sf-dl-jpg" class="btn btn-secondary" disabled>Download JPG</button>
-        <button id="sf-dl" class="btn btn-primary" disabled>Download PNG</button>
+        <button id="sf-random" class="btn btn-primary">Randomize</button>
+        <button id="sf-copy" class="btn btn-secondary">Copy</button>
+        <div class="flex overflow-hidden rounded-lg border border-hairline-strong focus-within:[outline:2px_solid_color-mix(in_srgb,var(--color-primary-focus)_60%,transparent)] focus-within:outline-offset-2">
+          <button id="sf-dl" class="btn btn-secondary rounded-none border-0 focus-visible:outline-none">Download</button>
+          <select id="sf-fmt" class="border-0 border-l border-hairline-strong bg-surface-2 px-2 text-[13px] text-ink-subtle focus-visible:outline-none" aria-label="Download format">
+            <option value="png">PNG</option>
+            <option value="svg">SVG</option>
+            <option value="jpg">JPG</option>
+          </select>
+        </div>
       </div>
       <p id="sf-status" class="text-[13px] text-ink-tertiary" aria-live="polite"></p>
     </div>
-  </div>
 
-  <div slot="about" class="flex flex-col gap-6 text-[15px] leading-relaxed text-ink-subtle">
-    <p>
-      This free square face generator recreates the viral "square head" meme: upload a
-      photo and it warps the face toward a blocky, squared-off shape. On supported browsers
-      the face is detected automatically; otherwise just drag the box over it. Then dial in
-      how square you want it, how far the effect reaches, and how sharp the corners are.
-      Unlike a one-tap filter, you stay in control, so you can go from a subtle chin-square
-      to a full cartoon cube. Download the result as a PNG or JPG, or copy it to your
-      clipboard. Your photo is warped entirely in your browser and never uploaded.
-    </p>
+    <!-- Controls -->
+    <div class="flex flex-col gap-3">
+      {categories.map((c) => (
+        <div class="flex items-center justify-between gap-3 rounded-lg border border-hairline px-3 py-2">
+          <span class="text-sm text-ink-subtle">{c.label}</span>
+          <div class="flex items-center gap-2">
+            <button class="btn btn-secondary sf-step" data-cat={c.key} data-dir="-1" aria-label={`Previous ${c.label}`}>‹</button>
+            <span class="sf-name w-20 text-center text-[13px] text-ink-tertiary" data-cat={c.key}></span>
+            <button class="btn btn-secondary sf-step" data-cat={c.key} data-dir="1" aria-label={`Next ${c.label}`}>›</button>
+            <input type="color" class="sf-color h-7 w-9 cursor-pointer rounded border border-hairline-strong bg-transparent p-0.5" data-cat={c.key} aria-label={`${c.label} color`} />
+          </div>
+        </div>
+      ))}
 
-    <div class="flex flex-col gap-4">
-      <h2 class="font-display text-lg font-semibold text-ink">Frequently asked questions</h2>
-      {faqs.map((f) => (
-        <div class="flex flex-col gap-1">
-          <h3 class="font-medium text-ink">{f.q}</h3>
-          <p class="text-ink-subtle">{f.a}</p>
+      {colorParts.map((c) => (
+        <div class="flex items-center justify-between gap-3 rounded-lg border border-hairline px-3 py-2">
+          <span class="text-sm text-ink-subtle">{c.label}</span>
+          <input type="color" class="sf-color h-7 w-9 cursor-pointer rounded border border-hairline-strong bg-transparent p-0.5" data-cat={c.key} aria-label={`${c.label} color`} />
         </div>
       ))}
     </div>
   </div>
 
-  <script type="application/ld+json" set:html={JSON.stringify(faqJsonLd)} is:inline />
+  <div slot="about" class="flex flex-col gap-6 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free square face generator builds a blocky, square-headed character from parts.
+      Cycle through eyes, eyebrows, nose, mouth, hair, bangs, side hair, facial hair,
+      cheeks and accessories, and pick a custom color for every part with its own color
+      picker — or press Randomize to roll a whole new face in one tap. When you like it, download it as an SVG, PNG or JPG, or copy it
+      to your clipboard. Everything is drawn in your browser, so nothing is uploaded and it
+      works offline.
+    </p>
+  </div>
 </ToolLayout>
 
 <script>
   const $ = (id: string) => document.getElementById(id)!;
-  const canvas = $('sf-canvas') as HTMLCanvasElement;
-  const ctx = canvas.getContext('2d')!;
-  const boxEl = $('sf-box') as HTMLElement;
-  const wrap = $('sf-wrap') as HTMLElement;
-  const drop = $('sf-drop') as HTMLElement;
-  const status = $('sf-status') as HTMLElement;
 
-  let srcCanvas: HTMLCanvasElement | null = null; // undistorted image at canvas resolution
-  let box = { x: 0, y: 0, w: 0, h: 0 }; // face box in canvas pixel coords
+  // Feature libraries. Each entry is { name, svg }. svg is drawn on a 240×240 viewBox and uses
+  // {{C}} as a placeholder for that part's chosen color. Face box: x 44→196, y 52→204.
+  // Eyes cy≈120 (cx 96/144). Nose cy≈148. Mouth cy≈172. Brows cy≈100. Beard = lower jaw.
+  const eyes = [
+    { name: 'Dots', svg: `<circle cx="96" cy="120" r="7" fill="{{C}}"/><circle cx="144" cy="120" r="7" fill="{{C}}"/>` },
+    { name: 'Round', svg: `<circle cx="96" cy="120" r="13" fill="#fff" stroke="{{C}}" stroke-width="3"/><circle cx="144" cy="120" r="13" fill="#fff" stroke="{{C}}" stroke-width="3"/><circle cx="98" cy="122" r="6" fill="{{C}}"/><circle cx="146" cy="122" r="6" fill="{{C}}"/>` },
+    { name: 'Happy', svg: `<path d="M84 124 q12 -16 24 0" fill="none" stroke="{{C}}" stroke-width="5" stroke-linecap="round"/><path d="M132 124 q12 -16 24 0" fill="none" stroke="{{C}}" stroke-width="5" stroke-linecap="round"/>` },
+    { name: 'Sleepy', svg: `<line x1="84" y1="120" x2="108" y2="120" stroke="{{C}}" stroke-width="5" stroke-linecap="round"/><line x1="132" y1="120" x2="156" y2="120" stroke="{{C}}" stroke-width="5" stroke-linecap="round"/>` },
+    { name: 'Wink', svg: `<circle cx="96" cy="120" r="7" fill="{{C}}"/><path d="M132 120 q12 -10 24 0" fill="none" stroke="{{C}}" stroke-width="5" stroke-linecap="round"/>` },
+    { name: 'Wide', svg: `<ellipse cx="96" cy="120" rx="10" ry="15" fill="#fff" stroke="{{C}}" stroke-width="3"/><ellipse cx="144" cy="120" rx="10" ry="15" fill="#fff" stroke="{{C}}" stroke-width="3"/><circle cx="96" cy="124" r="6" fill="{{C}}"/><circle cx="144" cy="124" r="6" fill="{{C}}"/>` },
+    { name: 'Cute', svg: `<circle cx="96" cy="120" r="11" fill="{{C}}"/><circle cx="144" cy="120" r="11" fill="{{C}}"/><circle cx="100" cy="116" r="3.5" fill="#fff"/><circle cx="148" cy="116" r="3.5" fill="#fff"/>` },
+    { name: 'Angry', svg: `<path d="M84 114 l24 8" stroke="{{C}}" stroke-width="4" stroke-linecap="round"/><path d="M156 114 l-24 8" stroke="{{C}}" stroke-width="4" stroke-linecap="round"/><circle cx="98" cy="122" r="6" fill="{{C}}"/><circle cx="142" cy="122" r="6" fill="{{C}}"/>` },
+    { name: 'Sad', svg: `<path d="M84 116 q12 8 24 0" fill="none" stroke="{{C}}" stroke-width="4" stroke-linecap="round"/><path d="M132 116 q12 8 24 0" fill="none" stroke="{{C}}" stroke-width="4" stroke-linecap="round"/><circle cx="96" cy="122" r="5" fill="{{C}}"/><circle cx="144" cy="122" r="5" fill="{{C}}"/>` },
+    { name: 'Star', svg: `<path d="M96 110 l3 8 8 0 -6 6 2 8 -7 -5 -7 5 2 -8 -6 -6 8 0 z" fill="{{C}}"/><path d="M144 110 l3 8 8 0 -6 6 2 8 -7 -5 -7 5 2 -8 -6 -6 8 0 z" fill="{{C}}"/>` },
+    { name: 'Heart', svg: `<path d="M96 128 q-10 -12 -2 -18 q6 -4 2 4 q-4 -8 2 -4 q8 6 -2 18 z" fill="{{C}}"/><path d="M144 128 q-10 -12 -2 -18 q6 -4 2 4 q-4 -8 2 -4 q8 6 -2 18 z" fill="{{C}}"/>` },
+    { name: 'Squint', svg: `<path d="M84 122 q12 -8 24 0" fill="none" stroke="{{C}}" stroke-width="5" stroke-linecap="round"/><path d="M132 122 q12 -8 24 0" fill="none" stroke="{{C}}" stroke-width="5" stroke-linecap="round"/>` },
+    { name: 'Dizzy', svg: `<path d="M89 113 l14 14 M103 113 l-14 14" stroke="{{C}}" stroke-width="4" stroke-linecap="round"/><path d="M137 113 l14 14 M151 113 l-14 14" stroke="{{C}}" stroke-width="4" stroke-linecap="round"/>` },
+    { name: 'Glancing', svg: `<circle cx="96" cy="120" r="12" fill="#fff" stroke="{{C}}" stroke-width="3"/><circle cx="144" cy="120" r="12" fill="#fff" stroke="{{C}}" stroke-width="3"/><circle cx="103" cy="120" r="5" fill="{{C}}"/><circle cx="151" cy="120" r="5" fill="{{C}}"/>` },
+  ];
 
-  const val = (id: string) => Number(($(id) as HTMLInputElement).value);
-  const checked = (id: string) => ($(id) as HTMLInputElement).checked;
-  const outputButtons = ['sf-dl', 'sf-dl-jpg', 'sf-copy', 'sf-compare'];
-  const setReady = (ready: boolean) =>
-    outputButtons.forEach((id) => (($(id) as HTMLButtonElement).disabled = !ready));
+  const brows = [
+    { name: 'None', svg: `` },
+    { name: 'Flat', svg: `<line x1="82" y1="100" x2="110" y2="100" stroke="{{C}}" stroke-width="5" stroke-linecap="round"/><line x1="130" y1="100" x2="158" y2="100" stroke="{{C}}" stroke-width="5" stroke-linecap="round"/>` },
+    { name: 'Raised', svg: `<path d="M82 100 q14 -8 28 -2" fill="none" stroke="{{C}}" stroke-width="5" stroke-linecap="round"/><path d="M130 98 q14 -6 28 2" fill="none" stroke="{{C}}" stroke-width="5" stroke-linecap="round"/>` },
+    { name: 'Angry', svg: `<line x1="82" y1="98" x2="108" y2="106" stroke="{{C}}" stroke-width="5" stroke-linecap="round"/><line x1="132" y1="106" x2="158" y2="98" stroke="{{C}}" stroke-width="5" stroke-linecap="round"/>` },
+    { name: 'Worried', svg: `<path d="M82 104 q14 6 28 -2" fill="none" stroke="{{C}}" stroke-width="5" stroke-linecap="round"/><path d="M130 102 q14 8 28 2" fill="none" stroke="{{C}}" stroke-width="5" stroke-linecap="round"/>` },
+    { name: 'Thick', svg: `<rect x="82" y="96" width="28" height="7" rx="3.5" fill="{{C}}"/><rect x="130" y="96" width="28" height="7" rx="3.5" fill="{{C}}"/>` },
+    { name: 'Rounded', svg: `<path d="M82 102 q14 -12 28 0" fill="none" stroke="{{C}}" stroke-width="6" stroke-linecap="round"/><path d="M130 102 q14 -12 28 0" fill="none" stroke="{{C}}" stroke-width="6" stroke-linecap="round"/>` },
+    { name: 'Sharp', svg: `<path d="M82 104 l14 -8 14 4" fill="none" stroke="{{C}}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M130 100 l14 -4 14 8" fill="none" stroke="{{C}}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>` },
+    { name: 'Unibrow', svg: `<path d="M82 100 q38 -10 76 0" fill="none" stroke="{{C}}" stroke-width="6" stroke-linecap="round"/>` },
+    { name: 'Tapered', svg: `<path d="M82 101 q14 -7 28 -1 l-2 4 q-13 -5 -26 1 z" fill="{{C}}"/><path d="M158 101 q-14 -7 -28 -1 l2 4 q13 -5 26 1 z" fill="{{C}}"/>` },
+  ];
 
-  function setStatus(msg: string) { status.textContent = msg; }
+  const nose = [
+    { name: 'None', svg: `` },
+    { name: 'Dot', svg: `<circle cx="120" cy="148" r="4" fill="{{C}}"/>` },
+    { name: 'Line', svg: `<line x1="120" y1="136" x2="120" y2="152" stroke="{{C}}" stroke-width="4" stroke-linecap="round"/>` },
+    { name: 'Button', svg: `<ellipse cx="120" cy="148" rx="8" ry="6" fill="{{C}}"/>` },
+    { name: 'Hook', svg: `<path d="M120 134 v14 q0 6 8 6" fill="none" stroke="{{C}}" stroke-width="4" stroke-linecap="round"/>` },
+    { name: 'Triangle', svg: `<path d="M120 134 l-9 18 h18 z" fill="{{C}}"/>` },
+    { name: 'Wide', svg: `<path d="M108 148 q12 8 24 0" fill="none" stroke="{{C}}" stroke-width="4" stroke-linecap="round"/><circle cx="110" cy="147" r="3" fill="{{C}}"/><circle cx="130" cy="147" r="3" fill="{{C}}"/>` },
+    { name: 'Nostrils', svg: `<ellipse cx="113" cy="149" rx="3" ry="4" fill="{{C}}"/><ellipse cx="127" cy="149" rx="3" ry="4" fill="{{C}}"/>` },
+    { name: 'Snout', svg: `<ellipse cx="120" cy="150" rx="12" ry="9" fill="{{C}}"/><ellipse cx="115" cy="150" rx="2.5" ry="3.5" fill="#00000055"/><ellipse cx="125" cy="150" rx="2.5" ry="3.5" fill="#00000055"/>` },
+    { name: 'Long', svg: `<path d="M120 132 v18 q0 6 6 8" fill="none" stroke="{{C}}" stroke-width="4" stroke-linecap="round"/>` },
+  ];
 
-  // Prepare canvases from a loaded image (or image-like canvas element).
-  function setSource(source: CanvasImageSource, w: number, h: number) {
-    const maxW = 1000;
-    const scale = Math.min(1, maxW / w);
-    canvas.width = Math.round(w * scale);
-    canvas.height = Math.round(h * scale);
-    srcCanvas = document.createElement('canvas');
-    srcCanvas.width = canvas.width;
-    srcCanvas.height = canvas.height;
-    srcCanvas.getContext('2d')!.drawImage(source, 0, 0, canvas.width, canvas.height);
-    // Default box: centered square ~55% of the shorter side.
-    const s = Math.min(canvas.width, canvas.height) * 0.55;
-    box = { x: (canvas.width - s) / 2, y: (canvas.height - s) / 2, w: s, h: s };
-    setReady(true);
-    render();
-    detectFace();
-  }
+  const mouth = [
+    { name: 'Smile', svg: `<path d="M100 168 q20 22 40 0" fill="none" stroke="{{C}}" stroke-width="5" stroke-linecap="round"/>` },
+    { name: 'Flat', svg: `<line x1="104" y1="174" x2="136" y2="174" stroke="{{C}}" stroke-width="5" stroke-linecap="round"/>` },
+    { name: 'Grin', svg: `<path d="M100 166 q20 26 40 0 z" fill="{{C}}"/>` },
+    { name: 'Open', svg: `<ellipse cx="120" cy="176" rx="16" ry="12" fill="{{C}}"/>` },
+    { name: 'Frown', svg: `<path d="M100 182 q20 -22 40 0" fill="none" stroke="{{C}}" stroke-width="5" stroke-linecap="round"/>` },
+    { name: 'Cat', svg: `<path d="M104 172 q8 10 16 0 q8 10 16 0" fill="none" stroke="{{C}}" stroke-width="4" stroke-linecap="round"/>` },
+    { name: 'Tongue', svg: `<path d="M100 166 q20 24 40 0 z" fill="{{C}}"/><path d="M114 178 q6 10 12 0 z" fill="#ef6f6f"/>` },
+    { name: 'Smirk', svg: `<path d="M104 174 q24 12 34 -4" fill="none" stroke="{{C}}" stroke-width="5" stroke-linecap="round"/>` },
+    { name: 'Teeth', svg: `<path d="M102 168 q18 20 36 0 z" fill="{{C}}"/><rect x="106" y="168" width="28" height="6" fill="#fff"/>` },
+    { name: 'Kiss', svg: `<path d="M114 168 q6 -6 12 0 q-2 8 -6 10 q-4 -2 -6 -10 z" fill="{{C}}"/>` },
+    { name: 'Surprised', svg: `<circle cx="120" cy="176" r="10" fill="{{C}}"/>` },
+    { name: 'Wavy', svg: `<path d="M102 174 q8 -8 16 0 q8 8 16 0 q4 -4 4 0" fill="none" stroke="{{C}}" stroke-width="4" stroke-linecap="round"/>` },
+    { name: 'Fangs', svg: `<path d="M102 168 q18 18 36 0 z" fill="{{C}}"/><path d="M110 172 l3 6 3 -6 z" fill="#fff"/><path d="M124 172 l3 6 3 -6 z" fill="#fff"/>` },
+    { name: 'Pucker', svg: `<ellipse cx="120" cy="174" rx="8" ry="7" fill="none" stroke="{{C}}" stroke-width="4"/>` },
+  ];
 
-  // Auto-detect the largest face where the browser supports it (Chrome/Edge).
-  async function detectFace() {
-    const FD = (window as any).FaceDetector;
-    if (!FD || !srcCanvas) { setStatus('Drag the box over the face, then set Squareness.'); return; }
-    try {
-      const det = new FD({ fastMode: true, maxDetectedFaces: 1 });
-      const faces = await det.detect(srcCanvas);
-      if (faces && faces.length) {
-        const b = faces[0].boundingBox;
-        // Square the detection and pad slightly so it wraps the whole head.
-        const s = Math.max(b.width, b.height) * 1.15;
-        const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
-        box = {
-          x: Math.max(0, Math.min(canvas.width - s, cx - s / 2)),
-          y: Math.max(0, Math.min(canvas.height - s, cy - s / 2)),
-          w: Math.min(s, canvas.width),
-          h: Math.min(s, canvas.height),
-        };
-        setStatus('Face detected — fine-tune the box if needed.');
-        render();
-        return;
-      }
-      setStatus('No face detected — drag the box over the face.');
-    } catch {
-      setStatus('Drag the box over the face, then set Squareness.');
-    }
-  }
+  const hair = [
+    { name: 'None', svg: `` },
+    { name: 'Spikes', svg: `<path d="M44 62 l14 -22 12 20 12 -24 12 22 12 -22 12 22 12 -24 12 22 14 -18 v10 H44 z" fill="{{C}}"/>` },
+    { name: 'Flat top', svg: `<rect x="44" y="44" width="152" height="26" rx="12" fill="{{C}}"/>` },
+    { name: 'Side part', svg: `<path d="M44 70 q0 -28 76 -28 q76 0 76 28 q-40 -12 -86 -4 q-30 6 -66 4 z" fill="{{C}}"/>` },
+    { name: 'Curly', svg: `<g fill="{{C}}"><circle cx="60" cy="56" r="16"/><circle cx="88" cy="48" r="18"/><circle cx="120" cy="46" r="18"/><circle cx="152" cy="48" r="18"/><circle cx="180" cy="56" r="16"/></g>` },
+    { name: 'Tuft', svg: `<path d="M120 46 q-6 -22 10 -26 q-2 12 6 16 q-8 2 -6 12 z" fill="{{C}}"/>` },
+    { name: 'Buzz', svg: `<path d="M50 66 q0 -22 70 -22 q70 0 70 22 q-70 -10 -140 0 z" fill="{{C}}"/>` },
+    { name: 'Bowl', svg: `<path d="M46 76 q0 -34 74 -34 q74 0 74 34 v2 q-16 -8 -20 4 q-4 -12 -18 -8 q0 -14 -18 -14 q-18 0 -18 14 q-14 -4 -18 8 q-4 -12 -20 -4 z" fill="{{C}}"/>` },
+    { name: 'Afro', svg: `<g fill="{{C}}"><circle cx="60" cy="60" r="22"/><circle cx="90" cy="46" r="24"/><circle cx="120" cy="42" r="26"/><circle cx="150" cy="46" r="24"/><circle cx="180" cy="60" r="22"/><circle cx="72" cy="80" r="18"/><circle cx="168" cy="80" r="18"/></g>` },
+    { name: 'Mohawk', svg: `<path d="M104 46 q16 -30 32 0 v22 h-32 z" fill="{{C}}"/>` },
+    { name: 'Pompadour', svg: `<path d="M46 72 q-4 -40 40 -40 q10 -12 34 -12 q24 0 34 12 q44 0 40 40 q-16 -18 -74 -18 q-58 0 -74 18 z" fill="{{C}}"/>` },
+    { name: 'Bun', svg: `<circle cx="120" cy="34" r="14" fill="{{C}}"/><path d="M50 68 q0 -24 70 -24 q70 0 70 24 q-70 -12 -140 0 z" fill="{{C}}"/>` },
+    { name: 'Ponytail', svg: `<path d="M50 68 q0 -26 70 -26 q70 0 70 26 q-70 -12 -140 0 z" fill="{{C}}"/><path d="M184 60 q26 6 22 60 q-4 30 -18 34 q10 -40 -12 -86 z" fill="{{C}}"/>` },
+    { name: 'Waves', svg: `<path d="M46 74 q0 -32 74 -32 q74 0 74 32 q-12 -14 -24 -2 q-12 -14 -24 -2 q-12 -14 -26 -2 q-12 -14 -24 -2 q-12 -12 -26 10 z" fill="{{C}}"/>` },
+    { name: 'Long straight', svg: `<path d="M44 70 q0 -30 76 -30 q76 0 76 30 v96 q-6 -70 -18 -96 q-58 -14 -116 0 q-12 26 -18 96 z" fill="{{C}}"/>` },
+    { name: 'Undercut', svg: `<path d="M62 66 q6 -28 58 -28 q52 0 58 28 q-58 -14 -116 0 z" fill="{{C}}"/>` },
+    { name: 'Fauxhawk', svg: `<path d="M110 40 q10 -18 20 0 q6 8 4 26 h-28 q-2 -18 4 -26 z" fill="{{C}}"/><path d="M60 68 q6 -18 30 -20 q-4 8 -2 20 z" fill="{{C}}"/><path d="M180 68 q-6 -18 -30 -20 q4 8 2 20 z" fill="{{C}}"/>` },
+  ];
 
-  // Backward map for the squarify warp. For a destination point (nx,ny) in the
-  // effect square (chebyshev metric), return the SOURCE point to sample so the
-  // source's circular content is stretched to fill the square. The square corner
-  // (√2 out) pulls from the circle edge (r=1) → contraction, factor ≤ 1.
-  function squarify(nx: number, ny: number, strength: number): [number, number] {
-    const r = Math.hypot(nx, ny);
-    const cheb = Math.max(Math.abs(nx), Math.abs(ny)); // distance to square edge along this ray
-    if (r < 1e-4 || cheb < 1e-4) return [nx, ny];
-    const squareScale = cheb / r; // ≤ 1: pulls the sample inward toward the circle
-    const scale = 1 + strength * (squareScale - 1);
-    return [nx * scale, ny * scale];
+  const bangs = [
+    { name: 'None', svg: `` },
+    { name: 'Straight', svg: `<path d="M44 70 h152 v14 q-38 -6 -76 -6 q-38 0 -76 6 z" fill="{{C}}"/>` },
+    { name: 'Fringe', svg: `<path d="M44 68 q10 22 20 0 q10 22 20 0 q10 22 20 0 q10 22 20 0 q10 22 20 0 q10 22 20 0 q10 22 12 0 v-12 H44 z" fill="{{C}}"/>` },
+    { name: 'Swept', svg: `<path d="M44 70 q40 -4 152 6 q-30 4 -60 2 q-46 -4 -92 6 z" fill="{{C}}"/>` },
+    { name: 'Middle', svg: `<path d="M44 70 q34 4 72 6 q-6 -8 -6 -14 h12 q0 6 -6 14 q38 -2 72 -6 q-20 12 -76 12 q-56 0 -76 -12 z" fill="{{C}}"/>` },
+    { name: 'Side swept', svg: `<path d="M44 70 h152 v10 q-60 14 -152 -2 z" fill="{{C}}"/>` },
+    { name: 'Baby', svg: `<path d="M44 70 h152 v8 q-38 -4 -76 -4 q-38 0 -76 4 z" fill="{{C}}"/>` },
+    { name: 'Wispy', svg: `<path d="M44 70 h152 v10 q-8 4 -16 -2 q-8 8 -16 -2 q-8 8 -16 -2 q-8 8 -16 -2 q-8 8 -16 -2 q-8 8 -16 -2 q-8 8 -16 -2 q-4 4 -8 -2 z" fill="{{C}}"/>` },
+    { name: 'Curtain', svg: `<path d="M44 70 h152 v20 q-30 -12 -56 -2 q-4 -6 -16 -6 q-12 0 -16 6 q-26 -10 -48 2 z" fill="{{C}}"/>` },
+  ];
+
+  const sidehair = [
+    { name: 'None', svg: `` },
+    { name: 'Short', svg: `<path d="M44 70 v58 q0 -40 12 -58 z" fill="{{C}}"/><path d="M196 70 v58 q0 -40 -12 -58 z" fill="{{C}}"/>` },
+    { name: 'Long', svg: `<path d="M44 70 v120 q0 -70 14 -120 z" fill="{{C}}"/><path d="M196 70 v120 q0 -70 -14 -120 z" fill="{{C}}"/>` },
+    { name: 'Sideburns', svg: `<path d="M46 106 h8 v40 h-8 z" fill="{{C}}"/><path d="M186 106 h8 v40 h-8 z" fill="{{C}}"/>` },
+    { name: 'Curls', svg: `<g fill="{{C}}"><circle cx="50" cy="90" r="10"/><circle cx="50" cy="110" r="10"/><circle cx="50" cy="130" r="10"/><circle cx="190" cy="90" r="10"/><circle cx="190" cy="110" r="10"/><circle cx="190" cy="130" r="10"/></g>` },
+    { name: 'Braids', svg: `<path d="M46 74 v110 q10 -6 8 -18 q8 -6 6 -18 q8 -6 6 -18 q8 -6 6 -18 q6 -18 -32 -20 z" fill="{{C}}"/><path d="M194 74 v110 q-10 -6 -8 -18 q-8 -6 -6 -18 q-8 -6 -6 -18 q-8 -6 -6 -18 q-6 -18 32 -20 z" fill="{{C}}"/>` },
+    { name: 'Tucked', svg: `<path d="M46 74 v44 q0 -30 14 -44 z" fill="{{C}}"/><path d="M194 74 v44 q0 -30 -14 -44 z" fill="{{C}}"/>` },
+  ];
+
+  const beard = [
+    { name: 'None', svg: `` },
+    { name: 'Stubble', svg: `<g fill="{{C}}"><circle cx="96" cy="188" r="2"/><circle cx="108" cy="194" r="2"/><circle cx="120" cy="196" r="2"/><circle cx="132" cy="194" r="2"/><circle cx="144" cy="188" r="2"/><circle cx="102" cy="182" r="2"/><circle cx="138" cy="182" r="2"/><circle cx="120" cy="188" r="2"/></g>` },
+    { name: 'Goatee', svg: `<path d="M108 182 q12 18 24 0 q0 18 -12 22 q-12 -4 -12 -22 z" fill="{{C}}"/>` },
+    { name: 'Mustache', svg: `<path d="M104 160 q16 10 32 0 q-4 8 -16 8 q-12 0 -16 -8 z" fill="{{C}}"/>` },
+    { name: 'Full', svg: `<path d="M76 150 q6 44 44 50 q38 -6 44 -50 q-10 22 -44 22 q-34 0 -44 -22 z" fill="{{C}}"/>` },
+    { name: 'Soul patch', svg: `<path d="M114 184 h12 v10 q-6 4 -12 0 z" fill="{{C}}"/>` },
+    { name: 'Chin strap', svg: `<path d="M56 130 q4 60 64 70 q60 -10 64 -70 q-6 8 -10 4 q-6 46 -54 52 q-48 -6 -54 -52 q-4 4 -10 -4 z" fill="{{C}}"/>` },
+    { name: 'Handlebar', svg: `<path d="M120 162 q-18 6 -32 -2 q-6 12 8 12 q14 0 24 -6 q10 6 24 6 q14 0 8 -12 q-14 8 -32 2 z" fill="{{C}}"/>` },
+    { name: 'Long beard', svg: `<path d="M78 152 q4 60 42 78 q38 -18 42 -78 q-10 20 -42 20 q-32 0 -42 -20 z" fill="{{C}}"/>` },
+    { name: 'Van dyke', svg: `<path d="M104 160 q16 8 32 0 q-4 6 -16 6 q-12 0 -16 -6 z" fill="{{C}}"/><path d="M108 182 q12 16 24 0 q0 20 -12 24 q-12 -4 -12 -24 z" fill="{{C}}"/>` },
+    { name: 'Muttonchops', svg: `<path d="M56 120 q-2 40 20 52 q10 -4 12 -20 q-20 -8 -20 -32 z" fill="{{C}}"/><path d="M184 120 q2 40 -20 52 q-10 -4 -12 -20 q20 -8 20 -32 z" fill="{{C}}"/>` },
+  ];
+
+  const cheeks = [
+    { name: 'None', svg: `` },
+    { name: 'Blush', svg: `<ellipse cx="82" cy="150" rx="10" ry="6" fill="{{C}}" opacity="0.5"/><ellipse cx="158" cy="150" rx="10" ry="6" fill="{{C}}" opacity="0.5"/>` },
+    { name: 'Wrinkles', svg: `<path d="M78 140 q-6 8 0 16" fill="none" stroke="{{C}}" stroke-width="2.5" stroke-linecap="round"/><path d="M84 140 q-6 8 0 16" fill="none" stroke="{{C}}" stroke-width="2.5" stroke-linecap="round"/><path d="M162 140 q6 8 0 16" fill="none" stroke="{{C}}" stroke-width="2.5" stroke-linecap="round"/><path d="M156 140 q6 8 0 16" fill="none" stroke="{{C}}" stroke-width="2.5" stroke-linecap="round"/>` },
+    { name: 'Freckles', svg: `<g fill="{{C}}"><circle cx="80" cy="148" r="2"/><circle cx="88" cy="152" r="2"/><circle cx="84" cy="156" r="2"/><circle cx="160" cy="148" r="2"/><circle cx="152" cy="152" r="2"/><circle cx="156" cy="156" r="2"/></g>` },
+    { name: 'Smile lines', svg: `<path d="M86 156 q6 10 12 4" fill="none" stroke="{{C}}" stroke-width="2.5" stroke-linecap="round"/><path d="M154 156 q-6 10 -12 4" fill="none" stroke="{{C}}" stroke-width="2.5" stroke-linecap="round"/>` },
+    { name: 'Rosy', svg: `<circle cx="82" cy="150" r="9" fill="{{C}}" opacity="0.45"/><circle cx="158" cy="150" r="9" fill="{{C}}" opacity="0.45"/>` },
+    { name: 'Scar', svg: `<path d="M156 138 v20" stroke="{{C}}" stroke-width="2.5" stroke-linecap="round"/><path d="M150 144 h12 M150 152 h12" stroke="{{C}}" stroke-width="2" stroke-linecap="round"/>` },
+    { name: 'Whiskers', svg: `<g stroke="{{C}}" stroke-width="2" stroke-linecap="round"><path d="M78 146 h-20 M78 152 h-22 M78 158 h-20"/><path d="M162 146 h20 M162 152 h22 M162 158 h20"/></g>` },
+    { name: 'Tears', svg: `<path d="M96 128 q-4 10 0 16 q4 -6 0 -16 z" fill="{{C}}" opacity="0.7"/><path d="M144 128 q-4 10 0 16 q4 -6 0 -16 z" fill="{{C}}" opacity="0.7"/>` },
+    { name: 'Dimples', svg: `<circle cx="88" cy="164" r="2.5" fill="{{C}}" opacity="0.5"/><circle cx="152" cy="164" r="2.5" fill="{{C}}" opacity="0.5"/>` },
+  ];
+
+  const accessory = [
+    { name: 'None', svg: `` },
+    { name: 'Glasses', svg: `<circle cx="96" cy="120" r="16" fill="none" stroke="{{C}}" stroke-width="4"/><circle cx="144" cy="120" r="16" fill="none" stroke="{{C}}" stroke-width="4"/><line x1="112" y1="118" x2="128" y2="118" stroke="{{C}}" stroke-width="4"/>` },
+    { name: 'Shades', svg: `<rect x="80" y="110" width="32" height="20" rx="6" fill="{{C}}"/><rect x="128" y="110" width="32" height="20" rx="6" fill="{{C}}"/><line x1="112" y1="116" x2="128" y2="116" stroke="{{C}}" stroke-width="4"/>` },
+    { name: 'Nerd', svg: `<rect x="80" y="108" width="32" height="26" rx="4" fill="none" stroke="{{C}}" stroke-width="4"/><rect x="128" y="108" width="32" height="26" rx="4" fill="none" stroke="{{C}}" stroke-width="4"/><line x1="112" y1="118" x2="128" y2="118" stroke="{{C}}" stroke-width="4"/>` },
+    { name: 'Earrings', svg: `<circle cx="52" cy="150" r="5" fill="{{C}}"/><circle cx="188" cy="150" r="5" fill="{{C}}"/>` },
+    { name: 'Round glasses', svg: `<circle cx="96" cy="120" r="17" fill="none" stroke="{{C}}" stroke-width="3"/><circle cx="144" cy="120" r="17" fill="none" stroke="{{C}}" stroke-width="3"/><path d="M113 118 q7 -4 14 0" fill="none" stroke="{{C}}" stroke-width="3"/><path d="M79 116 l-16 -4 M161 116 l16 -4" stroke="{{C}}" stroke-width="3" stroke-linecap="round"/>` },
+    { name: 'Eyepatch', svg: `<path d="M78 108 h36 v24 h-36 z" fill="{{C}}"/><path d="M62 100 l100 20" stroke="{{C}}" stroke-width="3"/>` },
+    { name: 'Monocle', svg: `<circle cx="144" cy="120" r="16" fill="none" stroke="{{C}}" stroke-width="3"/><path d="M144 136 v18" stroke="{{C}}" stroke-width="2"/>` },
+    { name: 'Headband', svg: `<rect x="44" y="86" width="152" height="12" fill="{{C}}"/>` },
+    { name: 'Mask', svg: `<path d="M70 108 q50 -14 100 0 v18 q-50 12 -100 0 z" fill="{{C}}" opacity="0.85"/><circle cx="96" cy="120" r="6" fill="#fff"/><circle cx="144" cy="120" r="6" fill="#fff"/>` },
+    { name: 'Beanie', svg: `<path d="M50 66 q0 -34 70 -34 q70 0 70 34 z" fill="{{C}}"/><rect x="50" y="60" width="140" height="12" rx="6" fill="{{C}}"/>` },
+    { name: 'Bandana', svg: `<path d="M44 66 q76 -20 152 0 v10 H44 z" fill="{{C}}"/><g fill="#ffffff55"><circle cx="72" cy="60" r="3"/><circle cx="120" cy="54" r="3"/><circle cx="168" cy="60" r="3"/></g>` },
+    { name: 'Face paint', svg: `<path d="M88 108 l16 24 -16 4 z" fill="{{C}}" opacity="0.7"/><path d="M152 108 l-16 24 16 4 z" fill="{{C}}" opacity="0.7"/>` },
+  ];
+
+  const libs: Record<string, { name: string; svg: string }[]> = { eyes, brows, nose, mouth, hair, bangs, sidehair, beard, cheeks, accessory };
+  // Layering order back-to-front (accessory on top).
+  const ORDER = ['hair', 'sidehair', 'bangs', 'brows', 'eyes', 'nose', 'cheeks', 'mouth', 'beard', 'accessory'];
+
+  const state: {
+    variant: Record<string, number>;
+    color: Record<string, string>;
+  } = {
+    variant: { eyes: 0, brows: 0, nose: 1, mouth: 0, hair: 1, bangs: 0, sidehair: 0, beard: 0, cheeks: 0, accessory: 0 },
+    color: {
+      eyes: '#1f1f27', brows: '#1f1f27', nose: '#c98d6b', mouth: '#1f1f27',
+      hair: '#5b3d2e', bangs: '#5b3d2e', sidehair: '#5b3d2e',
+      beard: '#5b3d2e', cheeks: '#e78f8f', accessory: '#1f1f27',
+      skin: '#f2c9a0',
+    },
+  };
+
+  const DARK = '#1f1f27';
+  // Palettes used only by Randomize for the "colorful" parts.
+  const skins = ['#f2c9a0', '#e8b98c', '#d19a6a', '#a9714b', '#8d5524', '#f7d7c4', '#c7f0c2', '#bcd4ff'];
+  const hairColors = ['#3a2b22', '#5b3d2e', '#8a5a2b', '#d6a94b', '#c0392b', '#2c2c34', '#7d5fff', '#e0e0e6'];
+  const cheekColors = ['#e78f8f', '#f0a6a6', '#d98b6b', '#b5651d', '#8a5a2b'];
+
+  // Build the full SVG markup for the current state.
+  function buildSvg(): string {
+    const parts = ORDER
+      .map((cat) => libs[cat][state.variant[cat]].svg.replaceAll('{{C}}', state.color[cat]))
+      .join('\n          ');
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="100%" role="img" aria-label="Square face avatar">
+      <defs><clipPath id="sf-clip"><rect x="6" y="6" width="228" height="228" rx="28"/></clipPath></defs>
+      <g clip-path="url(#sf-clip)">
+        <rect x="6" y="6" width="228" height="228" fill="${state.color.skin}"/>
+        <g transform="translate(-60,-72) scale(1.5)">
+          ${parts}
+        </g>
+      </g>
+    </svg>`;
   }
 
   function render() {
-    if (!srcCanvas) { drawPlaceholder(); return; }
-    const strength = val('sf-strength') / 100;
-    const radiusF = val('sf-radius') / 100;
-    const sharpen = checked('sf-corners');
-    const W = canvas.width, H = canvas.height;
-
-    // Start from the clean source; outside the effect region stays untouched.
-    ctx.clearRect(0, 0, W, H);
-    ctx.drawImage(srcCanvas, 0, 0);
-    if (strength <= 0.001) { drawBox(); return; }
-
-    const cx = box.x + box.w / 2;
-    const cy = box.y + box.h / 2;
-    const rx = (box.w / 2) * (0.6 + radiusF);
-    const ry = (box.h / 2) * (0.6 + radiusF);
-
-    // Only process the region the effect actually touches — keeps big photos smooth.
-    const x0 = Math.max(0, Math.floor(cx - rx));
-    const y0 = Math.max(0, Math.floor(cy - ry));
-    const x1 = Math.min(W, Math.ceil(cx + rx));
-    const y1 = Math.min(H, Math.ceil(cy + ry));
-    const rw = x1 - x0, rh = y1 - y0;
-    if (rw <= 0 || rh <= 0) { drawBox(); return; }
-
-    const sctx = srcCanvas.getContext('2d')!;
-    const src = sctx.getImageData(x0, y0, rw, rh);
-    const dst = ctx.createImageData(rw, rh);
-    const sd = src.data, dd = dst.data;
-
-    // Bilinear sample of the source region at region-local float coords.
-    const sample = (fx: number, fy: number, di: number) => {
-      if (fx < 0) fx = 0; else if (fx > rw - 1) fx = rw - 1;
-      if (fy < 0) fy = 0; else if (fy > rh - 1) fy = rh - 1;
-      const ix = Math.floor(fx), iy = Math.floor(fy);
-      const ax = fx - ix, ay = fy - iy;
-      const ix1 = ix < rw - 1 ? ix + 1 : ix;
-      const iy1 = iy < rh - 1 ? iy + 1 : iy;
-      const i00 = (iy * rw + ix) * 4, i10 = (iy * rw + ix1) * 4;
-      const i01 = (iy1 * rw + ix) * 4, i11 = (iy1 * rw + ix1) * 4;
-      for (let c = 0; c < 4; c++) {
-        const top = sd[i00 + c] * (1 - ax) + sd[i10 + c] * ax;
-        const bot = sd[i01 + c] * (1 - ax) + sd[i11 + c] * ax;
-        dd[di + c] = top * (1 - ay) + bot * ay;
-      }
-    };
-
-    for (let y = 0; y < rh; y++) {
-      for (let x = 0; x < rw; x++) {
-        const di = (y * rw + x) * 4;
-        const px = x0 + x, py = y0 + y;
-        const nx = (px - cx) / rx;
-        const ny = (py - cy) / ry;
-        const cheb = Math.max(Math.abs(nx), Math.abs(ny));
-        if (cheb >= 1) {
-          // Outside the effect square — copy straight through.
-          dd[di] = sd[di]; dd[di + 1] = sd[di + 1]; dd[di + 2] = sd[di + 2]; dd[di + 3] = sd[di + 3];
-          continue;
-        }
-        // Falloff so the warp eases to zero at the square's edge.
-        const fall = sharpen ? 1 - Math.pow(cheb, 3) : 1 - cheb * cheb;
-        const localStrength = strength * fall;
-        const [sxn, syn] = squarify(nx, ny, localStrength);
-        // Back to region-local float source coords, then bilinear sample.
-        sample(cx + sxn * rx - x0, cy + syn * ry - y0, di);
-      }
+    $('sf-preview').innerHTML = buildSvg();
+    for (const cat of Object.keys(libs)) {
+      const el = document.querySelector(`.sf-name[data-cat="${cat}"]`);
+      if (el) el.textContent = libs[cat][state.variant[cat]].name;
     }
-    ctx.putImageData(dst, x0, y0);
-    drawBox();
+    document.querySelectorAll<HTMLInputElement>('.sf-color').forEach((inp) => {
+      inp.value = state.color[inp.dataset.cat!];
+    });
   }
 
-  function drawPlaceholder() {
-    canvas.width = 960; canvas.height = 600;
-    const g = ctx.createLinearGradient(0, 0, 960, 600);
-    g.addColorStop(0, '#26272b'); g.addColorStop(1, '#141516');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, 960, 600);
-    ctx.fillStyle = '#8a8f98';
-    ctx.font = '600 26px Inter, system-ui, sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('Upload a photo to squarify a face', 480, 300);
-    ctx.textAlign = 'start';
-    boxEl.style.display = 'none';
-  }
-
-  // Position the on-screen box overlay to match canvas pixel coords.
-  function drawBox() {
-    if (!srcCanvas) { boxEl.style.display = 'none'; return; }
-    const rect = canvas.getBoundingClientRect();
-    const sx = rect.width / canvas.width;
-    const sy = rect.height / canvas.height;
-    boxEl.style.display = 'block';
-    boxEl.style.left = `${box.x * sx}px`;
-    boxEl.style.top = `${box.y * sy}px`;
-    boxEl.style.width = `${box.w * sx}px`;
-    boxEl.style.height = `${box.h * sy}px`;
-  }
-
-  // --- Box dragging / resizing ---
-  let mode: 'none' | 'move' | 'resize' = 'none';
-  let start = { mx: 0, my: 0, bx: 0, by: 0, bw: 0, bh: 0 };
-
-  function toCanvasPt(e: PointerEvent) {
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: ((e.clientX - rect.left) / rect.width) * canvas.width,
-      y: ((e.clientY - rect.top) / rect.height) * canvas.height,
-    };
-  }
-
-  wrap.addEventListener('pointerdown', (e) => {
-    if (!srcCanvas) return;
-    const p = toCanvasPt(e);
-    const nearHandle = Math.abs(p.x - (box.x + box.w)) < box.w * 0.2 && Math.abs(p.y - (box.y + box.h)) < box.h * 0.2;
-    const inside = p.x >= box.x && p.x <= box.x + box.w && p.y >= box.y && p.y <= box.y + box.h;
-    mode = nearHandle ? 'resize' : inside ? 'move' : 'none';
-    if (mode === 'none') return;
-    start = { mx: p.x, my: p.y, bx: box.x, by: box.y, bw: box.w, bh: box.h };
-    wrap.setPointerCapture(e.pointerId);
-  });
-
-  wrap.addEventListener('pointermove', (e) => {
-    if (mode === 'none' || !srcCanvas) return;
-    const p = toCanvasPt(e);
-    const dx = p.x - start.mx, dy = p.y - start.my;
-    if (mode === 'move') {
-      box.x = Math.max(0, Math.min(canvas.width - box.w, start.bx + dx));
-      box.y = Math.max(0, Math.min(canvas.height - box.h, start.by + dy));
-    } else {
-      const s = Math.max(40, Math.min(start.bw + dx, start.bh + dy));
-      box.w = Math.min(s, canvas.width - box.x);
-      box.h = Math.min(s, canvas.height - box.y);
-    }
-    drawBox();
-  });
-
-  const endDrag = () => { if (mode !== 'none') { mode = 'none'; render(); } };
-  wrap.addEventListener('pointerup', endDrag);
-  wrap.addEventListener('pointercancel', endDrag);
-
-  // --- Loading images from file / drop / paste / example ---
-  function loadFile(file: File) {
-    if (!file || !file.type.startsWith('image/')) { setStatus('That file is not an image.'); return; }
-    const url = URL.createObjectURL(file);
-    const im = new Image();
-    im.onload = () => { URL.revokeObjectURL(url); setSource(im, im.naturalWidth, im.naturalHeight); };
-    im.onerror = () => { URL.revokeObjectURL(url); setStatus('Could not load that image.'); };
-    im.src = url;
-  }
-
-  $('sf-file').addEventListener('change', (e) => {
-    const file = (e.target as HTMLInputElement).files?.[0];
-    if (file) loadFile(file);
-  });
-
-  // Drag & drop.
-  ['dragenter', 'dragover'].forEach((ev) =>
-    drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('border-primary'); }));
-  ['dragleave', 'drop'].forEach((ev) =>
-    drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('border-primary'); }));
-  drop.addEventListener('drop', (e) => {
-    const file = (e as DragEvent).dataTransfer?.files?.[0];
-    if (file) loadFile(file);
-  });
-
-  // Clipboard paste.
-  window.addEventListener('paste', (e) => {
-    const items = (e as ClipboardEvent).clipboardData?.items;
-    if (!items) return;
-    for (const it of items) {
-      if (it.type.startsWith('image/')) { const f = it.getAsFile(); if (f) { loadFile(f); break; } }
-    }
-  });
-
-  // Synthetic example face so people can try it with no photo.
-  $('sf-example').addEventListener('click', () => {
-    const c = document.createElement('canvas');
-    c.width = 800; c.height = 800;
-    const g = c.getContext('2d')!;
-    g.fillStyle = '#dfe7f5'; g.fillRect(0, 0, 800, 800);
-    // Head
-    g.fillStyle = '#f2c9a0';
-    g.beginPath(); g.ellipse(400, 400, 240, 300, 0, 0, Math.PI * 2); g.fill();
-    // Hair
-    g.fillStyle = '#5b3d2e';
-    g.beginPath(); g.ellipse(400, 220, 250, 140, 0, Math.PI, 0); g.fill();
-    // Eyes
-    g.fillStyle = '#2b2b2b';
-    g.beginPath(); g.arc(320, 380, 26, 0, Math.PI * 2); g.fill();
-    g.beginPath(); g.arc(480, 380, 26, 0, Math.PI * 2); g.fill();
-    // Nose
-    g.strokeStyle = '#c99b73'; g.lineWidth = 10; g.beginPath();
-    g.moveTo(400, 400); g.lineTo(390, 470); g.lineTo(415, 475); g.stroke();
-    // Mouth
-    g.strokeStyle = '#b3574f'; g.lineWidth = 14; g.beginPath();
-    g.arc(400, 520, 80, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke();
-    setSource(c, 800, 800);
-  });
-
-  // Presets.
-  document.querySelectorAll('.sf-preset').forEach((btn) =>
+  // Category steppers (‹ ›).
+  document.querySelectorAll('.sf-step').forEach((btn) =>
     btn.addEventListener('click', () => {
       const el = btn as HTMLElement;
-      ($('sf-strength') as HTMLInputElement).value = el.dataset.s!;
-      ($('sf-radius') as HTMLInputElement).value = el.dataset.r!;
-      ($('sf-corners') as HTMLInputElement).checked = el.dataset.sharp === '1';
+      const cat = el.dataset.cat!;
+      const n = libs[cat].length;
+      state.variant[cat] = (state.variant[cat] + Number(el.dataset.dir) + n) % n;
       render();
     }));
 
-  ['sf-strength', 'sf-radius', 'sf-corners'].forEach((id) => $(id).addEventListener('input', render));
-  $('sf-reset').addEventListener('click', () => { if (srcCanvas) { setSource(srcCanvas, srcCanvas.width, srcCanvas.height); } });
-  window.addEventListener('resize', () => drawBox());
+  // Per-part color pickers.
+  document.querySelectorAll<HTMLInputElement>('.sf-color').forEach((inp) =>
+    inp.addEventListener('input', () => {
+      state.color[inp.dataset.cat!] = inp.value;
+      render();
+    }));
 
-  // Hold to compare — show the clean original while pressed.
-  const cmp = $('sf-compare') as HTMLButtonElement;
-  const showOriginal = () => { if (srcCanvas) { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(srcCanvas, 0, 0); boxEl.style.display = 'none'; } };
-  cmp.addEventListener('pointerdown', showOriginal);
-  cmp.addEventListener('pointerup', render);
-  cmp.addEventListener('pointerleave', () => { if (mode === 'none') render(); });
+  // Randomize everything: shapes for all parts, palette colors for the visible ones.
+  const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
+  const rand = (n: number) => Math.floor(Math.random() * n);
+  $('sf-random').addEventListener('click', () => {
+    for (const cat of Object.keys(libs)) state.variant[cat] = rand(libs[cat].length);
+    const hairCol = pick(hairColors);
+    state.color.skin = pick(skins);
+    state.color.hair = hairCol;
+    state.color.bangs = hairCol;
+    state.color.sidehair = hairCol;
+    state.color.beard = hairCol;
+    state.color.brows = hairCol;
+    state.color.nose = state.color.skin;
+    state.color.cheeks = pick(cheekColors);
+    state.color.eyes = DARK;
+    state.color.mouth = DARK;
+    state.color.accessory = DARK;
+    render();
+  });
 
-  // Downloads + copy. The box is a DOM overlay, so it never appears on the canvas bitmap.
-  const emitBlob = (cb: (blob: Blob) => void, type: string, quality?: number) =>
-    canvas.toBlob((b) => { if (b) cb(b); }, type, quality);
-  const saveBlob = (b: Blob, name: string) => {
-    const url = URL.createObjectURL(b);
+  // Rasterize the current SVG to a raster blob (JPG gets a white matte for its corners).
+  function toRaster(size: number, type: 'image/png' | 'image/jpeg'): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(new Blob([buildSvg()], { type: 'image/svg+xml' }));
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = c.height = size;
+        const g = c.getContext('2d')!;
+        if (type === 'image/jpeg') { g.fillStyle = '#fff'; g.fillRect(0, 0, size, size); }
+        g.drawImage(img, 0, 0, size, size);
+        URL.revokeObjectURL(url);
+        c.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob failed'))), type, 0.92);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('load failed')); };
+      img.src = url;
+    });
+  }
+  const toPng = () => toRaster(1024, 'image/png');
+
+  const save = (blob: Blob, name: string) => {
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = name; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
-  $('sf-dl').addEventListener('click', () => emitBlob((b) => saveBlob(b, 'square-face.png'), 'image/png'));
-  $('sf-dl-jpg').addEventListener('click', () => emitBlob((b) => saveBlob(b, 'square-face.jpg'), 'image/jpeg', 0.92));
-  $('sf-copy').addEventListener('click', () => {
-    if (!('clipboard' in navigator) || !(window as any).ClipboardItem) { setStatus('Clipboard copy is not supported here — use Download.'); return; }
-    emitBlob(async (b) => {
-      try {
-        await (navigator.clipboard as any).write([new (window as any).ClipboardItem({ 'image/png': b })]);
-        setStatus('Copied to clipboard.');
-      } catch { setStatus('Copy failed — use Download instead.'); }
-    }, 'image/png');
+
+  $('sf-dl').addEventListener('click', async () => {
+    const fmt = ($('sf-fmt') as HTMLSelectElement).value;
+    try {
+      if (fmt === 'svg') return save(new Blob([buildSvg()], { type: 'image/svg+xml' }), 'square-face.svg');
+      const type = fmt === 'jpg' ? 'image/jpeg' : 'image/png';
+      save(await toRaster(1024, type), `square-face.${fmt}`);
+    } catch { $('sf-status').textContent = 'Export failed — try a different format.'; }
   });
 
-  drawPlaceholder();
+  $('sf-copy').addEventListener('click', async () => {
+    if (!('clipboard' in navigator) || !(window as any).ClipboardItem) {
+      $('sf-status').textContent = 'Clipboard copy is not supported here — use Download.';
+      return;
+    }
+    try {
+      const blob = await toPng();
+      await (navigator.clipboard as any).write([new (window as any).ClipboardItem({ 'image/png': blob })]);
+      $('sf-status').textContent = 'Copied to clipboard.';
+    } catch { $('sf-status').textContent = 'Copy failed — use Download instead.'; }
+  });
+
+  render();
 </script>

@@ -2910,11 +2910,11 @@ export const tools: Tool[] = [
   {
     slug: 'square-face-generator',
     name: 'Square Face Generator',
-    tagline: 'Warp a photo into the classic square-face meme.',
+    tagline: 'Build a blocky square-head character from parts.',
     description:
-      'Free square face generator. Upload a photo and squish the face into the classic square-head meme with adjustable strength, then download the PNG. Warped entirely in your browser — nothing is uploaded.',
+      'Free square face generator. Mix and match eyes, mouth, eyebrows, hair and accessories, pick skin, hair and background colors, then download your square face as an SVG or PNG. Drawn entirely in your browser — nothing is uploaded.',
     category: 'Image',
-    keywords: ['square face generator', 'square head meme', 'square face meme maker', 'squish face photo', 'square face filter'],
+    keywords: ['square face generator', 'square head avatar maker', 'square face avatar', 'blocky face creator', 'square character generator'],
     icon: 'M5 5h14v14H5zM9 10h.01M15 10h.01M9 15h6',
   },
 
