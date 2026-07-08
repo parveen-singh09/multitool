@@ -3,32 +3,34 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 // Shape categories: each has variants (cycled with ‹ ›) and its own color.
 const categories = [
-  { key: 'eyes', label: 'Eyes' },
-  { key: 'brows', label: 'Eyebrows' },
-  { key: 'nose', label: 'Nose' },
-  { key: 'mouth', label: 'Mouth' },
-  { key: 'hair', label: 'Hair' },
-  { key: 'bangs', label: 'Bangs' },
-  { key: 'sidehair', label: 'Side hair' },
-  { key: 'beard', label: 'Facial hair' },
-  { key: 'cheeks', label: 'Cheeks' },
-  { key: 'accessory', label: 'Accessory' },
+  { key: 'eyes', label: 'Eyes', icon: '👀' },
+  { key: 'brows', label: 'Eyebrows', icon: '🤨' },
+  { key: 'nose', label: 'Nose', icon: '👃' },
+  { key: 'mouth', label: 'Mouth', icon: '👄' },
+  { key: 'hair', label: 'Hair', icon: '💇' },
+  { key: 'bangs', label: 'Bangs', icon: '✂️' },
+  { key: 'sidehair', label: 'Side hair', icon: '💇‍♂️' },
+  { key: 'beard', label: 'Facial hair', icon: '🧔' },
+  { key: 'cheeks', label: 'Cheeks', icon: '😊' },
+  { key: 'hat', label: 'Hat', icon: '🎩' },
+  { key: 'clothes', label: 'Clothes', icon: '👕' },
+  { key: 'accessory', label: 'Accessory', icon: '👓' },
 ];
 // Color-only parts: no shapes, just a color picker.
 const colorParts = [
-  { key: 'skin', label: 'Skin' },
+  { key: 'skin', label: 'Skin', icon: '✋' },
 ];
 ---
 
 <ToolLayout slug="square-face-generator">
-  <div class="grid grid-cols-1 gap-6 md:grid-cols-[1fr_1fr]">
-    <!-- Preview -->
-    <div class="flex flex-col items-center gap-4">
-      <div id="sf-preview" class="w-full max-w-[380px]"></div>
-      <div class="flex flex-wrap items-center justify-center gap-2">
-        <button id="sf-random" class="btn btn-primary">Randomize</button>
+  <div class="grid grid-cols-1 items-start gap-6 md:grid-cols-[minmax(0,1fr)_340px]">
+    <!-- Preview (right, sticky so it stays in view) -->
+    <div class="order-1 flex flex-col items-center gap-4 md:order-2 md:sticky md:top-6">
+      <div id="sf-preview" class="w-full max-w-[340px]"></div>
+      <div class="flex items-center justify-center gap-2">
+        <button id="sf-random" class="btn btn-primary text-lg leading-none" aria-label="Randomize" title="Randomize">🎲</button>
         <button id="sf-copy" class="btn btn-secondary">Copy</button>
-        <div class="flex overflow-hidden rounded-lg border border-hairline-strong focus-within:[outline:2px_solid_color-mix(in_srgb,var(--color-primary-focus)_60%,transparent)] focus-within:outline-offset-2">
+        <div class="flex overflow-hidden rounded-lg border border-hairline-strong">
           <button id="sf-dl" class="btn btn-secondary rounded-none border-0 focus-visible:outline-none">Download</button>
           <select id="sf-fmt" class="border-0 border-l border-hairline-strong bg-surface-2 px-2 text-[13px] text-ink-subtle focus-visible:outline-none" aria-label="Download format">
             <option value="png">PNG</option>
@@ -40,24 +42,24 @@ const colorParts = [
       <p id="sf-status" class="text-[13px] text-ink-tertiary" aria-live="polite"></p>
     </div>
 
-    <!-- Controls -->
-    <div class="flex flex-col gap-3">
+    <!-- Controls (left, two-column grid to reduce scrolling) -->
+    <div class="order-2 grid grid-cols-1 gap-2 sm:grid-cols-2 md:order-1">
       {categories.map((c) => (
-        <div class="flex items-center justify-between gap-3 rounded-lg border border-hairline px-3 py-2">
-          <span class="text-sm text-ink-subtle">{c.label}</span>
-          <div class="flex items-center gap-2">
+        <div class="flex items-center justify-between gap-2 rounded-lg border border-hairline px-2.5 py-1.5">
+          <span class="flex items-center gap-1.5 text-sm text-ink-subtle">{c.label}<span class="text-base leading-none" aria-hidden="true">{c.icon}</span></span>
+          <div class="flex items-center gap-1.5">
             <button class="btn btn-secondary sf-step" data-cat={c.key} data-dir="-1" aria-label={`Previous ${c.label}`}>‹</button>
-            <span class="sf-name w-20 text-center text-[13px] text-ink-tertiary" data-cat={c.key}></span>
+            <span class="sf-name w-16 text-center text-[13px] text-ink-tertiary" data-cat={c.key}></span>
             <button class="btn btn-secondary sf-step" data-cat={c.key} data-dir="1" aria-label={`Next ${c.label}`}>›</button>
-            <input type="color" class="sf-color h-7 w-9 cursor-pointer rounded border border-hairline-strong bg-transparent p-0.5" data-cat={c.key} aria-label={`${c.label} color`} />
+            <input type="color" class="sf-color h-7 w-8 cursor-pointer rounded border border-hairline-strong bg-transparent p-0.5" data-cat={c.key} aria-label={`${c.label} color`} />
           </div>
         </div>
       ))}
 
       {colorParts.map((c) => (
-        <div class="flex items-center justify-between gap-3 rounded-lg border border-hairline px-3 py-2">
-          <span class="text-sm text-ink-subtle">{c.label}</span>
-          <input type="color" class="sf-color h-7 w-9 cursor-pointer rounded border border-hairline-strong bg-transparent p-0.5" data-cat={c.key} aria-label={`${c.label} color`} />
+        <div class="flex items-center justify-between gap-2 rounded-lg border border-hairline px-2.5 py-1.5">
+          <span class="flex items-center gap-1.5 text-sm text-ink-subtle">{c.label}<span class="text-base leading-none" aria-hidden="true">{c.icon}</span></span>
+          <input type="color" class="sf-color h-7 w-8 cursor-pointer rounded border border-hairline-strong bg-transparent p-0.5" data-cat={c.key} aria-label={`${c.label} color`} />
         </div>
       ))}
     </div>
@@ -67,8 +69,8 @@ const colorParts = [
     <p>
       This free square face generator builds a blocky, square-headed character from parts.
       Cycle through eyes, eyebrows, nose, mouth, hair, bangs, side hair, facial hair,
-      cheeks and accessories, and pick a custom color for every part with its own color
-      picker — or press Randomize to roll a whole new face in one tap. When you like it, download it as an SVG, PNG or JPG, or copy it
+      cheeks, hats, clothes and accessories, and pick a custom color for every part with
+      its own color picker — or press Randomize to roll a whole new face in one tap. When you like it, download it as an SVG, PNG or JPG, or copy it
       to your clipboard. Everything is drawn in your browser, so nothing is uploaded and it
       works offline.
     </p>
@@ -226,20 +228,50 @@ const colorParts = [
     { name: 'Face paint', svg: `<path d="M88 108 l16 24 -16 4 z" fill="{{C}}" opacity="0.7"/><path d="M152 108 l-16 24 16 4 z" fill="{{C}}" opacity="0.7"/>` },
   ];
 
-  const libs: Record<string, { name: string; svg: string }[]> = { eyes, brows, nose, mouth, hair, bangs, sidehair, beard, cheeks, accessory };
-  // Layering order back-to-front (accessory on top).
-  const ORDER = ['hair', 'sidehair', 'bangs', 'brows', 'eyes', 'nose', 'cheeks', 'mouth', 'beard', 'accessory'];
+  // Hats sit in the top band. Local y<52 is clipped off (transform translate(-60,-72) scale(1.5)),
+  // so everything here stays within local y 52→95.
+  const hat = [
+    { name: 'None', svg: `` },
+    { name: 'Cap', svg: `<path d="M52 74 q0 -22 68 -22 q68 0 68 22 z" fill="{{C}}"/><path d="M118 72 h60 q8 0 6 8 q-30 5 -64 2 z" fill="{{C}}"/>` },
+    { name: 'Beanie', svg: `<path d="M54 76 q0 -24 66 -24 q66 0 66 24 z" fill="{{C}}"/><rect x="54" y="70" width="132" height="12" rx="6" fill="{{C}}"/>` },
+    { name: 'Top hat', svg: `<rect x="74" y="52" width="92" height="22" rx="3" fill="{{C}}"/><rect x="46" y="70" width="148" height="12" rx="6" fill="{{C}}"/>` },
+    { name: 'Cowboy', svg: `<path d="M80 72 q0 -20 40 -20 q40 0 40 20 z" fill="{{C}}"/><path d="M36 76 q84 -20 168 0 q-84 20 -168 0 z" fill="{{C}}"/>` },
+    { name: 'Crown', svg: `<path d="M64 74 v-16 l18 10 18 -18 20 18 20 -18 20 18 18 -10 v16 z" fill="{{C}}"/>` },
+    { name: 'Party', svg: `<path d="M120 52 l28 34 h-56 z" fill="{{C}}"/><circle cx="120" cy="54" r="6" fill="#fff"/>` },
+    { name: 'Wizard', svg: `<path d="M120 52 q22 32 34 44 q-34 -8 -68 0 q12 -12 34 -44 z" fill="{{C}}"/>` },
+    { name: 'Bow', svg: `<path d="M120 66 l-30 -12 q-6 12 0 24 z" fill="{{C}}"/><path d="M120 66 l30 -12 q6 12 0 24 z" fill="{{C}}"/><circle cx="120" cy="66" r="7" fill="{{C}}"/>` },
+    { name: 'Headphones', svg: `<path d="M56 120 q0 -68 64 -68 q64 0 64 68" fill="none" stroke="{{C}}" stroke-width="8"/><rect x="48" y="112" width="18" height="32" rx="8" fill="{{C}}"/><rect x="174" y="112" width="18" height="32" rx="8" fill="{{C}}"/>` },
+    { name: 'Halo', svg: `<ellipse cx="120" cy="60" rx="34" ry="9" fill="none" stroke="{{C}}" stroke-width="6"/>` },
+  ];
+
+  // Clothes fill the bottom band (neck/shoulders y≈188→210), inside the square clip.
+  const clothes = [
+    { name: 'None', svg: `` },
+    { name: 'Crew', svg: `<path d="M44 210 v-16 q0 -12 24 -14 q14 12 52 12 q38 0 52 -12 q24 2 24 14 v16 z" fill="{{C}}"/>` },
+    { name: 'Hoodie', svg: `<path d="M44 210 v-18 q0 -16 30 -18 q10 14 46 14 q36 0 46 -14 q30 2 30 18 v18 z" fill="{{C}}"/><path d="M74 176 q46 20 92 0 q-6 20 -46 20 q-40 0 -46 -20 z" fill="#00000022"/>` },
+    { name: 'Collar', svg: `<path d="M44 210 v-16 q0 -12 24 -14 q14 12 52 12 q38 0 52 -12 q24 2 24 14 v16 z" fill="{{C}}"/><path d="M96 182 l24 18 -14 6 -14 -14 z" fill="#ffffffcc"/><path d="M144 182 l-24 18 14 6 14 -14 z" fill="#ffffffcc"/>` },
+    { name: 'Suit', svg: `<path d="M44 210 v-16 q0 -12 24 -14 q14 12 52 12 q38 0 52 -12 q24 2 24 14 v16 z" fill="{{C}}"/><path d="M100 184 l20 14 20 -14 -8 26 h-24 z" fill="#fff"/><path d="M118 192 l4 6 -2 16 -4 0 -2 -16 z" fill="#c0392b"/>` },
+    { name: 'Turtleneck', svg: `<path d="M44 210 v-20 q0 -14 28 -16 q12 10 48 10 q36 0 48 -10 q28 2 28 16 v20 z" fill="{{C}}"/><path d="M86 182 q34 14 68 0 v10 q-34 12 -68 0 z" fill="#ffffff22"/>` },
+    { name: 'Tank', svg: `<path d="M44 210 v-12 q0 -8 20 -10 l14 -14 q20 12 84 0 l14 14 q20 2 20 10 v12 z" fill="{{C}}"/>` },
+    { name: 'Scarf', svg: `<path d="M78 182 q42 22 84 0 q6 16 -8 22 q-34 12 -68 0 q-14 -6 -8 -22 z" fill="{{C}}"/><path d="M120 200 l-10 10 h20 z" fill="{{C}}"/>` },
+    { name: 'Overalls', svg: `<path d="M44 210 v-16 q0 -12 24 -14 q14 12 52 12 q38 0 52 -12 q24 2 24 14 v16 z" fill="{{C}}"/><rect x="94" y="182" width="8" height="26" fill="#00000033"/><rect x="138" y="182" width="8" height="26" fill="#00000033"/>` },
+    { name: 'Stripes', svg: `<path d="M44 210 v-16 q0 -12 24 -14 q14 12 52 12 q38 0 52 -12 q24 2 24 14 v16 z" fill="{{C}}"/><path d="M44 194 h152 M44 202 h152" stroke="#ffffff55" stroke-width="4"/>` },
+  ];
+
+  const libs: Record<string, { name: string; svg: string }[]> = { eyes, brows, nose, mouth, hair, bangs, sidehair, beard, cheeks, hat, clothes, accessory };
+  // Layering order back-to-front (accessory on top). Clothes behind the face band, hat over the hair.
+  const ORDER = ['clothes', 'hair', 'sidehair', 'bangs', 'brows', 'eyes', 'nose', 'cheeks', 'mouth', 'beard', 'hat', 'accessory'];
 
   const state: {
     variant: Record<string, number>;
     color: Record<string, string>;
   } = {
-    variant: { eyes: 0, brows: 0, nose: 1, mouth: 0, hair: 1, bangs: 0, sidehair: 0, beard: 0, cheeks: 0, accessory: 0 },
+    variant: { eyes: 0, brows: 0, nose: 1, mouth: 0, hair: 1, bangs: 0, sidehair: 0, beard: 0, cheeks: 0, hat: 0, clothes: 0, accessory: 0 },
     color: {
       eyes: '#1f1f27', brows: '#1f1f27', nose: '#c98d6b', mouth: '#1f1f27',
       hair: '#5b3d2e', bangs: '#5b3d2e', sidehair: '#5b3d2e',
       beard: '#5b3d2e', cheeks: '#e78f8f', accessory: '#1f1f27',
-      skin: '#f2c9a0',
+      hat: '#c0392b', clothes: '#5e6ad2', skin: '#f2c9a0',
     },
   };
 
@@ -248,6 +280,7 @@ const colorParts = [
   const skins = ['#f2c9a0', '#e8b98c', '#d19a6a', '#a9714b', '#8d5524', '#f7d7c4', '#c7f0c2', '#bcd4ff'];
   const hairColors = ['#3a2b22', '#5b3d2e', '#8a5a2b', '#d6a94b', '#c0392b', '#2c2c34', '#7d5fff', '#e0e0e6'];
   const cheekColors = ['#e78f8f', '#f0a6a6', '#d98b6b', '#b5651d', '#8a5a2b'];
+  const clothesColors = ['#5e6ad2', '#c0392b', '#2c7a4b', '#d6a94b', '#2c2c34', '#7d5fff', '#e0e0e6', '#e07b39'];
 
   // Build the full SVG markup for the current state.
   function buildSvg(): string {
@@ -310,6 +343,8 @@ const colorParts = [
     state.color.eyes = DARK;
     state.color.mouth = DARK;
     state.color.accessory = DARK;
+    state.color.hat = pick(clothesColors);
+    state.color.clothes = pick(clothesColors);
     render();
   });
 
@@ -349,7 +384,9 @@ const colorParts = [
     } catch { $('sf-status').textContent = 'Export failed — try a different format.'; }
   });
 
+  let copyTimer: number | undefined;
   $('sf-copy').addEventListener('click', async () => {
+    const btn = $('sf-copy');
     if (!('clipboard' in navigator) || !(window as any).ClipboardItem) {
       $('sf-status').textContent = 'Clipboard copy is not supported here — use Download.';
       return;
@@ -357,7 +394,9 @@ const colorParts = [
     try {
       const blob = await toPng();
       await (navigator.clipboard as any).write([new (window as any).ClipboardItem({ 'image/png': blob })]);
-      $('sf-status').textContent = 'Copied to clipboard.';
+      clearTimeout(copyTimer);
+      btn.textContent = 'Copied';
+      copyTimer = window.setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
     } catch { $('sf-status').textContent = 'Copy failed — use Download instead.'; }
   });
 
