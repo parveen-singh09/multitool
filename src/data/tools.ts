@@ -3240,11 +3240,11 @@ export const tools: Tool[] = [
   {
     slug: 'image-metadata-analyzer',
     name: 'Image Metadata Analyzer',
-    tagline: 'Read image dimensions, type and EXIF.',
+    tagline: 'Read full EXIF, GPS, IPTC & XMP — and strip it.',
     description:
-      'Free image metadata analyzer. Drop an image to read its dimensions, format, file size and available EXIF details. Everything is read locally — your image is never uploaded.',
+      'Free image metadata analyzer. Drop a photo to read its dimensions, format and full metadata — EXIF camera settings, capture date, GPS location with a map link, plus IPTC and XMP. Remove all metadata and download a clean copy. Everything runs locally — your image is never uploaded.',
     category: 'Image',
-    keywords: ['image metadata analyzer', 'exif viewer', 'image info tool', 'read image metadata', 'photo exif reader'],
+    keywords: ['image metadata analyzer', 'exif viewer', 'exif remover', 'remove exif', 'gps photo location', 'image info tool', 'read image metadata', 'photo exif reader', 'iptc xmp viewer'],
     icon: 'M4 5h16v14H4zM4 15l4-4 3 3 4-4 5 5M9 9h.01',
   },
   {
@@ -3374,7 +3374,7 @@ export const tools: Tool[] = [
   {
     slug: 'screen-tester',
     name: 'Screen Tester',
-    tagline: 'Find dead pixels with solid colors.',
+    tagline: 'Test any display end to end, right in your browser.',
     description:
       'Free screen tester. Cycle full-screen solid colors and gradients to spot dead or stuck pixels and check backlight uniformity on any display. Runs entirely in your browser.',
     category: 'Image',
