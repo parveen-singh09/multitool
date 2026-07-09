@@ -3666,10 +3666,10 @@ export const tools: Tool[] = [
     name: 'Timeline Creator',
     tagline: 'Make a visual event timeline.',
     description:
-      'Free timeline creator. Add dated events to build a clean horizontal or vertical timeline, then download it as a PNG. Everything is composed locally in your browser.',
+      'Free timeline maker with vertical, horizontal and alternating infographic layouts. Add point events or date ranges, auto-sort by date (even BC dates), start from ready-made templates, or auto-fill from Wikipedia history and public holidays. Import and export TimelineJS JSON, and download as PNG, SVG or PDF. Everything runs locally in your browser.',
     category: 'Image',
-    keywords: ['timeline creator', 'timeline maker', 'create a timeline', 'timeline generator', 'event timeline maker'],
-    icon: 'M4 12h16M7 12v-4m0 4v4m5-4v-6m0 6v6m5-6v-3m0 3v3',
+    keywords: ['timeline creator', 'timeline maker', 'create a timeline', 'timeline generator', 'event timeline maker', 'timeline infographic', 'timeline template', 'history timeline', 'timelinejs', 'roadmap timeline'],
+    icon: 'M4 12h16M8 12a2 2 0 1 0 4 0 2 2 0 0 0-4 0M8 12V7M16 12a2 2 0 1 0 0-.01M16 12v5',
   },
   {
     slug: 'gantt-chart-creator',

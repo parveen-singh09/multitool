@@ -3,8 +3,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
 <ToolLayout slug="word-cloud-maker">
-  <div class="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
-    <!-- Preview (left / top) -->
+  <div class="flex flex-col gap-4">
+    <!-- Preview (top) -->
     <div class="flex flex-col gap-3">
       <div class="panel flex items-center justify-center p-4" style="min-height:320px">
         <canvas
@@ -22,8 +22,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Controls (right / bottom) -->
-    <div class="flex flex-col gap-4">
+    <!-- Controls (bottom) -->
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
       <!-- Text -->
       <div class="panel flex flex-col gap-3 p-4">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">
@@ -45,10 +45,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
             <input id="wcm-minlen" type="number" min="1" max="12" value="2" class="field w-16 py-1" />
           </label>
         </div>
-        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">
-          <span>Max words: <span id="wcm-maxout">100</span></span>
-          <input id="wcm-max" type="range" min="10" max="300" step="10" value="100" class="w-full" />
-        </label>
       </div>
 
       <!-- Word list editor -->
@@ -93,6 +89,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
             <option value="triangle">Triangle</option>
             <option value="pentagon">Pentagon</option>
             <option value="star">Star</option>
+            <option value="symbol">Symbol / emoji…</option>
+            <option value="draw">Draw shape…</option>
             <option value="image">Custom image…</option>
           </select>
         </label>
@@ -125,6 +123,32 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           Mask image (dark areas get filled)
           <input id="wcm-imagefile" type="file" accept="image/*" class="field py-1 text-[12px]" />
         </label>
+
+        <!-- Symbol / emoji picker -->
+        <div id="wcm-symbol-wrap" class="col-span-2 hidden flex-col gap-2 text-[13px] text-ink-subtle">
+          <div class="flex items-center gap-2">
+            <span>Type any emoji or character</span>
+            <input id="wcm-symbol-input" type="text" value="❤" maxlength="8"
+              class="field w-16 py-1 text-center text-[16px]" aria-label="Symbol" />
+          </div>
+          <div id="wcm-symbol-grid"
+            class="grid max-h-40 grid-cols-8 gap-1 overflow-y-auto rounded-md border border-hairline p-1"></div>
+        </div>
+
+        <!-- Draw-your-own shape -->
+        <div id="wcm-draw-wrap" class="col-span-2 hidden flex-col gap-2 text-[13px] text-ink-subtle">
+          <span>Draw a shape — words fill what you paint</span>
+          <canvas id="wcm-draw-canvas" width="320" height="200"
+            class="w-full cursor-crosshair rounded-md border border-hairline bg-surface-2 touch-none"
+            aria-label="Draw shape"></canvas>
+          <div class="flex flex-wrap items-center gap-3">
+            <label class="flex items-center gap-2">
+              Brush
+              <input id="wcm-brush" type="range" min="8" max="64" step="2" value="28" class="w-28" />
+            </label>
+            <button id="wcm-draw-clear" class="btn btn-tertiary text-[12px]">Clear</button>
+          </div>
+        </div>
       </div>
 
       <!-- Layout -->
@@ -160,8 +184,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       frequent words appear largest. Paste text or load a <code>.txt</code> file,
       then fine-tune every word in the editable list: change its weight, toggle
       it off, or add your own. Pick from built-in shapes — circle, heart, star,
-      diamond, and more — or upload your own image to use its silhouette as a
-      mask, so the words fill any shape you like.
+      diamond, and more — type any emoji or character to use as a silhouette,
+      draw your own shape freehand, or upload an image as a mask, so the words
+      fill any shape you like.
     </p>
     <p>
       Choose from 20 fonts, five color themes plus random and single-color
@@ -195,10 +220,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const imageWrap = $<HTMLElement>('wcm-image-wrap');
   const imageFileEl = $<HTMLInputElement>('wcm-imagefile');
 
+  const symbolWrap = $<HTMLElement>('wcm-symbol-wrap');
+  const symbolInput = $<HTMLInputElement>('wcm-symbol-input');
+  const symbolGrid = $<HTMLElement>('wcm-symbol-grid');
+  const drawWrap = $<HTMLElement>('wcm-draw-wrap');
+  const drawCanvas = $<HTMLCanvasElement>('wcm-draw-canvas');
+  const brushEl = $<HTMLInputElement>('wcm-brush');
+
   const stopEl = $<HTMLInputElement>('wcm-stop');
   const minlenEl = $<HTMLInputElement>('wcm-minlen');
-  const maxEl = $<HTMLInputElement>('wcm-max');
-  const maxOut = $<HTMLElement>('wcm-maxout');
 
   const orientEl = $<HTMLSelectElement>('wcm-orient');
   const scaleEl = $<HTMLInputElement>('wcm-scale');
@@ -226,6 +256,18 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     forest: ['#2e7d32', '#558b2f', '#00695c', '#33691e', '#1b5e20'],
     mono: ['#2a2a30', '#45454f', '#5f5f6b', '#7a7a86', '#33333a'],
   };
+
+  // Any emoji/character renders as a silhouette mask via the system emoji font,
+  // so this grid is just quick picks — the input accepts anything.
+  const SYMBOLS = (
+    '❤ ⭐ ★ ✿ ❄ ☁ ☀ ☂ ⚡ ✔ ✚ ● ▲ ■ ♦ ♠ ♣ ♥ ' +
+    '🐱 🐶 🦋 🐝 🐟 🦄 🐘 🦖 🌵 🌲 🌳 🍀 🌺 🌻 🌸 🍁 ' +
+    '🍎 🍌 🍕 🍺 ☕ 🎂 🍩 🎈 🎃 🎄 ⛄ 🎁 👑 💎 💡 🔑 ' +
+    '🚗 ✈ 🚀 ⚓ ⛵ 🏠 🗽 🗺 ⚽ 🏀 🎵 🎸 📷 💻 📱 ⌚ ' +
+    '👍 👀 🧠 🦴 🖐 💀 👻 🤖 😀 🙂 🐾 🌍 🌙 🔥 💧 ⚙'
+  )
+    .split(' ')
+    .filter(Boolean);
 
   interface Entry {
     word: string;
@@ -256,10 +298,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       if (skip && STOPWORDS.has(t)) continue;
       freq.set(t, (freq.get(t) || 0) + 1);
     }
-    const max = parseInt(maxEl.value) || 100;
+    // No cap — wordcloud2 (drawOutOfBound:false, shrinkToFit:true) lays down as
+    // many words as the shape/layout has room for and stops when it runs out.
     return [...freq.entries()]
       .sort((a, b) => b[1] - a[1])
-      .slice(0, max)
       .map(([word, weight]) => ({ word, weight, on: true }));
   }
 
@@ -317,51 +359,121 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   // scale weights so the largest word is a sensible size regardless of raw counts
   function weightFactor(): (w: number) => number {
-    const maxW = Math.max(1, ...entries.filter((e) => e.on).map((e) => e.weight));
+    const active = entries.filter((e) => e.on);
+    const maxW = Math.max(1, ...active.map((e) => e.weight));
     const scale = parseFloat(scaleEl.value) || 1;
-    const base = H / 5; // largest word ≈ 1/5 of canvas height at scale 1
-    return (w: number) => Math.max(8, Math.pow(w / maxW, 0.55) * base * scale);
+    // Shrink the largest word as the list grows so more words fit before
+    // wordcloud2 (drawOutOfBound:false) runs out of room and drops the rest.
+    const base = Math.min(H / 5, (H * 1.6) / Math.sqrt(active.length + 3));
+    return (w: number) => Math.max(6, Math.pow(w / maxW, 0.7) * base * scale);
   }
 
   function bgColor(): string {
     return transEl.checked ? 'rgba(255,255,255,0)' : bgEl.value;
   }
 
-  // Paint the mask image onto `cvs` so wordcloud2 (clearCanvas:false) reads it:
-  // dark/opaque pixels become "available" (== bgPixel), light/transparent become
-  // "blocked". Mirrors the wordcloud2.js reference recipe.
-  function paintMask(cvs: HTMLCanvasElement, img: HTMLImageElement, bg: string) {
+  const MASK_SHAPES = new Set(['symbol', 'draw', 'image']);
+  const isMaskShape = () => MASK_SHAPES.has(shapeEl.value);
+
+  // True if any pixel is at least partly opaque. A fully-transparent mask has
+  // no fillable area, which makes wordcloud2 spiral forever and freeze the tab.
+  function hasOpaque(c: HTMLCanvasElement): boolean {
+    const d = c.getContext('2d')!.getImageData(0, 0, W, H).data;
+    for (let i = 3; i < d.length; i += 4) if (d[i] >= 128) return true;
+    return false;
+  }
+
+  // Fraction of the canvas the mask can be filled with (0–1). Used to size the
+  // word list: a thin icon has little fillable area, so it needs far fewer
+  // copies — feeding it hundreds froze the tab as overflow words spiral-search.
+  function opaqueFraction(c: HTMLCanvasElement): number {
+    const d = c.getContext('2d')!.getImageData(0, 0, W, H).data;
+    let n = 0;
+    for (let i = 3; i < d.length; i += 4) if (d[i] >= 128) n++;
+    return n / (W * H);
+  }
+
+  // Build a W×H silhouette canvas where OPAQUE pixels mark the fillable shape.
+  // Each source (typed symbol/emoji, hand-drawn strokes, or uploaded image)
+  // reduces to the same alpha convention the mask painter below consumes.
+  function silhouette(): HTMLCanvasElement | null {
+    const c = document.createElement('canvas');
+    c.width = W;
+    c.height = H;
+    const ctx = c.getContext('2d')!;
+
+    if (shapeEl.value === 'symbol') {
+      const ch = symbolInput.value.trim() || '❤';
+      const family =
+        '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Segoe UI Symbol",sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      let size = H * 0.92;
+      ctx.font = `${size}px ${family}`;
+      const w = ctx.measureText(ch).width || size;
+      if (w > W * 0.92) {
+        size *= (W * 0.92) / w;
+        ctx.font = `${size}px ${family}`;
+      }
+      ctx.fillText(ch, W / 2, H / 2);
+      // unsupported glyph renders to nothing → same hang risk as an empty draw
+      return hasOpaque(c) ? c : null;
+    }
+
+    if (shapeEl.value === 'draw') {
+      // scale the small paint canvas up to full resolution
+      ctx.drawImage(drawCanvas, 0, 0, W, H);
+      // nothing painted → no fillable area; a fully-blocked mask makes
+      // wordcloud2 spiral fruitlessly and hang the tab, so bail early.
+      return hasOpaque(c) ? c : null;
+    }
+
+    if (shapeEl.value === 'image') {
+      if (!maskImg) return null;
+      const r = Math.min(W / maskImg.width, H / maskImg.height);
+      const dw = maskImg.width * r;
+      const dh = maskImg.height * r;
+      ctx.drawImage(maskImg, (W - dw) / 2, (H - dh) / 2, dw, dh);
+      // uploaded images use the dark-on-light convention → convert dark&opaque
+      // to opaque, everything else to transparent, so alpha alone marks shape.
+      const id = ctx.getImageData(0, 0, W, H);
+      const d = id.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const dark = d[i] + d[i + 1] + d[i + 2] <= 128 * 3 && d[i + 3] >= 128;
+        d[i + 3] = dark ? 255 : 0;
+      }
+      ctx.putImageData(id, 0, 0);
+      return c;
+    }
+    return null;
+  }
+
+  // Paint a silhouette onto `cvs` so wordcloud2 (clearCanvas:false) reads it:
+  // opaque pixels become "available" (== bgPixel), the rest "blocked".
+  // Mirrors the wordcloud2.js reference recipe.
+  function paintMask(cvs: HTMLCanvasElement, sil: HTMLCanvasElement, bg: string) {
     const ctx = cvs.getContext('2d')!;
-    // background pixel wordcloud2 will compare against
     const bctx = document.createElement('canvas').getContext('2d')!;
     bctx.fillStyle = bg;
     bctx.fillRect(0, 0, 1, 1);
     const bgP = bctx.getImageData(0, 0, 1, 1).data;
 
-    // draw image scaled to fit (contain) and centered
-    ctx.clearRect(0, 0, W, H);
-    const r = Math.min(W / img.width, H / img.height);
-    const dw = img.width * r;
-    const dh = img.height * r;
-    ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
-
-    const id = ctx.getImageData(0, 0, W, H);
+    const id = sil.getContext('2d')!.getImageData(0, 0, W, H);
     const d = id.data;
     for (let i = 0; i < d.length; i += 4) {
-      const tone = d[i] + d[i + 1] + d[i + 2];
-      const alpha = d[i + 3];
-      const drawable = alpha >= 128 && tone <= 128 * 3; // dark & opaque
+      const drawable = d[i + 3] >= 128; // opaque part of the silhouette
       if (drawable) {
+        // exactly bgPixel → wordcloud2 treats the cell as available
         d[i] = bgP[0];
         d[i + 1] = bgP[1];
         d[i + 2] = bgP[2];
         d[i + 3] = bgP[3];
       } else {
-        // must differ from bgPixel so wordcloud2 marks it blocked
-        d[i] = bgP[0];
-        d[i + 1] = bgP[1];
-        d[i + 2] = bgP[2];
-        d[i + 3] = bgP[3] > 0 ? bgP[3] - 1 : 1;
+        // blocked: transparent black. A maximal difference from an (always
+        // opaque) bgPixel that can't round back to bg on GPU-canvas readback,
+        // which a 1-step alpha nudge could — that made the mask read as all
+        // fillable and words fell back to the default circle.
+        d[i] = d[i + 1] = d[i + 2] = d[i + 3] = 0;
       }
     }
     ctx.putImageData(id, 0, 0);
@@ -372,10 +484,41 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return fontEl.selectedOptions[0]?.dataset.family || 'Inter, system-ui, sans-serif';
   }
 
+  // Repeat the word list as scale shrinks so smaller words still fill the
+  // canvas instead of leaving gaps. Capacity grows ~1/scale²; extra copies
+  // beyond what fits are dropped by drawOutOfBound:false. Capped so a tiny
+  // scale + long list can't hand wordcloud2 a huge list and stall.
+  function scaledList(): [string, number][] {
+    const base = activeList();
+    if (!base.length) return base;
+    const scale = parseFloat(scaleEl.value) || 1;
+    // Words needed to fill grows as they shrink (~1/scale²). Masks size to their
+    // actual fillable area (maskFill), so a thin icon gets few copies while a
+    // solid shape gets many — feeding a thin mask hundreds of copies froze the
+    // tab as overflow words spiral-searched synchronously. Free layouts repeat
+    // only once words are small. Overflow is dropped by drawOutOfBound:false.
+    const target = isMaskShape()
+      ? Math.round((500 * maskFill) / (scale * scale))
+      : Math.round(base.length / (scale * scale));
+    // wordcloud2 is synchronous and its per-word spiral search explodes with
+    // TINY words on a mask, so the safe word count scales with word size, not a
+    // flat number: big words (high scale) are cheap and fill better with more of
+    // them; tiny words (low scale) are the case that froze, so allow far fewer.
+    // Hence cap ∝ scale. ponytail: linear cap; offload to a worker if a fully
+    // packed high-scale mask still janks.
+    const cap = isMaskShape()
+      ? Math.max(60, Math.round(400 * scale))
+      : 300;
+    const total = Math.min(cap, Math.max(base.length, target));
+    if (total <= base.length) return base;
+    const copies = Math.ceil(total / base.length);
+    return Array.from({ length: copies }, () => base).flat().slice(0, total);
+  }
+
   function baseOptions(): any {
     const family = selectedFamily();
     return {
-      list: activeList(),
+      list: scaledList(),
       fontFamily: `${family}, Inter, system-ui, sans-serif`,
       fontWeight: '700',
       color: colorValue(),
@@ -390,7 +533,19 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     };
   }
 
-  async function render() {
+  // wordcloud2 renders synchronously on the main thread, so a slider drag
+  // firing render() per pixel stacks up heavy layouts and freezes the tab.
+  // Coalesce bursts into one render on a short trailing timer.
+  let renderTimer = 0;
+  // Fillable fraction of the current mask (1 = whole canvas / no mask). Set from
+  // the silhouette each render so scaledList sizes the word count to real area.
+  let maskFill = 1;
+  function render() {
+    clearTimeout(renderTimer);
+    renderTimer = window.setTimeout(renderNow, 120);
+  }
+
+  async function renderNow() {
     clearError();
     canvas.width = W;
     canvas.height = H;
@@ -407,15 +562,34 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }
 
     await ensureFont(selectedFamily());
-    const opts = baseOptions();
 
-    if (shapeEl.value === 'image') {
-      if (!maskImg) {
-        setError('Upload a mask image, or pick a built-in shape.');
+    // Build the mask first so scaledList (via baseOptions) can size the word
+    // count to the fillable area. A thin icon gets few copies; feeding it
+    // hundreds froze the tab as overflow words spiral-searched synchronously.
+    let sil: HTMLCanvasElement | null = null;
+    if (isMaskShape()) {
+      sil = silhouette();
+      if (!sil) {
+        maskFill = 1;
+        setError(
+          shapeEl.value === 'image'
+            ? 'Upload a mask image, or pick a built-in shape.'
+            : shapeEl.value === 'draw'
+              ? 'Draw a shape above, or pick a built-in shape.'
+              : 'Type a symbol, or pick a built-in shape.'
+        );
         return;
       }
+      maskFill = opaqueFraction(sil);
+    } else {
+      maskFill = 1;
+    }
+
+    const opts = baseOptions();
+
+    if (sil) {
       // pre-paint the mask; wordcloud2 reads existing pixels
-      paintMask(canvas, maskImg, transEl.checked ? '#ffffff' : bgEl.value);
+      paintMask(canvas, sil, transEl.checked ? '#ffffff' : bgEl.value);
       opts.clearCanvas = false;
       opts.backgroundColor = transEl.checked ? '#ffffff' : bgEl.value;
     } else {
@@ -434,7 +608,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       setError('Add some text first.');
       return;
     }
-    if (shapeEl.value === 'image') {
+    if (isMaskShape()) {
       // fallback: wrap the raster canvas in an SVG <image>
       const png = canvas.toDataURL('image/png');
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><image href="${png}" width="${W}" height="${H}"/></svg>`;
@@ -460,14 +634,19 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           const left = parseFloat(s.left) || 0;
           const top = parseFloat(s.top) || 0;
           const fh = parseFloat(s.height) || 0;
+          // s.font is a shorthand like "700 48px Anton, Inter, …" — pull size &
+          // family out; parseFloat(s.font) would return the 700 weight instead.
+          const sizeM = s.font.match(/(\d+(?:\.\d+)?)px/);
+          const size = sizeM ? parseFloat(sizeM[1]) : fh;
+          const family = sizeM ? s.font.slice(s.font.indexOf(sizeM[0]) + sizeM[0].length).trim() : 'sans-serif';
           // approximate the DOM box → baseline for <text> (y at ~0.78 of box)
           const x = left;
           const y = top + fh * 0.78;
           const rot = (s.transform.match(/rotate\(([-\d.]+)deg\)/) || [])[1] || '0';
           const t = `translate(${x} ${y}) rotate(${rot})`;
           body +=
-            `<text transform="${t}" font-family=${JSON.stringify(s.font.replace(/^\d+\s*/, '') || 'sans-serif')}` +
-            ` font-size="${parseFloat(s.font) || fh}" font-weight="700" fill="${s.color || '#000'}"` +
+            `<text transform="${t}" font-family=${JSON.stringify(family || 'sans-serif')}` +
+            ` font-size="${size}" font-weight="700" fill="${s.color || '#000'}"` +
             ` xml:space="preserve">${escapeHtml(span.textContent || '')}</text>`;
         });
         const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${body}</svg>`;
@@ -587,10 +766,77 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     recount();
   });
 
-  // mask image
+  // show the control panel matching the chosen shape
+  function togglePanel(el: HTMLElement, on: boolean) {
+    el.classList.toggle('hidden', !on);
+    el.classList.toggle('flex', on);
+  }
   shapeEl.addEventListener('change', () => {
-    imageWrap.classList.toggle('hidden', shapeEl.value !== 'image');
-    imageWrap.classList.toggle('flex', shapeEl.value === 'image');
+    togglePanel(imageWrap, shapeEl.value === 'image');
+    togglePanel(symbolWrap, shapeEl.value === 'symbol');
+    togglePanel(drawWrap, shapeEl.value === 'draw');
+    render();
+  });
+
+  // symbol grid: quick picks; the input accepts any character/emoji
+  for (const s of SYMBOLS) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = s;
+    b.className =
+      'aspect-square rounded text-[18px] leading-none hover:bg-surface-3 focus:bg-surface-3';
+    b.addEventListener('click', () => {
+      symbolInput.value = s;
+      render();
+    });
+    symbolGrid.appendChild(b);
+  }
+  symbolInput.addEventListener('input', render);
+
+  // draw canvas: paint filled strokes; silhouette() scales it to full res
+  const dctx = drawCanvas.getContext('2d')!;
+  dctx.fillStyle = '#fff';
+  dctx.strokeStyle = '#fff';
+  dctx.lineCap = 'round';
+  dctx.lineJoin = 'round';
+  let drawing = false;
+  let last: { x: number; y: number } | null = null;
+  const drawPos = (e: PointerEvent) => {
+    const r = drawCanvas.getBoundingClientRect();
+    return {
+      x: ((e.clientX - r.left) / r.width) * drawCanvas.width,
+      y: ((e.clientY - r.top) / r.height) * drawCanvas.height,
+    };
+  };
+  drawCanvas.addEventListener('pointerdown', (e) => {
+    drawing = true;
+    last = drawPos(e);
+    dctx.lineWidth = parseInt(brushEl.value) || 28;
+    dctx.beginPath();
+    dctx.arc(last.x, last.y, dctx.lineWidth / 2, 0, Math.PI * 2);
+    dctx.fill();
+    drawCanvas.setPointerCapture(e.pointerId);
+  });
+  drawCanvas.addEventListener('pointermove', (e) => {
+    if (!drawing || !last) return;
+    const p = drawPos(e);
+    dctx.lineWidth = parseInt(brushEl.value) || 28;
+    dctx.beginPath();
+    dctx.moveTo(last.x, last.y);
+    dctx.lineTo(p.x, p.y);
+    dctx.stroke();
+    last = p;
+  });
+  const endDraw = () => {
+    if (!drawing) return;
+    drawing = false;
+    last = null;
+    render();
+  };
+  drawCanvas.addEventListener('pointerup', endDraw);
+  drawCanvas.addEventListener('pointercancel', endDraw);
+  $('wcm-draw-clear').addEventListener('click', () => {
+    dctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
     render();
   });
   imageFileEl.addEventListener('change', (e) => {
@@ -620,11 +866,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       render();
     });
   };
-  bind(maxEl, maxOut, (v) => v);
   bind(scaleEl, scaleOut, (v) => parseFloat(v).toFixed(1));
   bind(gridEl, gridOut, (v) => v);
   bind(rotEl, rotOut, (v) => v);
-  maxEl.addEventListener('change', recount); // max words affects the counted set
 
   // re-render on the rest
   [fontEl, singleEl, bgEl, transEl, orientEl].forEach((el) =>
