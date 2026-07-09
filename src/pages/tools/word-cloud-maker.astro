@@ -3,72 +3,219 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
 <ToolLayout slug="word-cloud-maker">
-  <div class="flex flex-col gap-4">
-    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-      Text
-      <textarea id="wcm-text" class="field min-h-32 resize-y font-mono text-[13px]" spellcheck="false" placeholder="Paste your text here…">Words words words. Great ideas need great words, and the best words repeat until they become memorable. Repeat the words, shape the ideas, and let the cloud show which words matter most.</textarea>
-    </label>
-
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-        Color scheme
-        <select id="wcm-scheme" class="field">
-          <option value="lavender">Lavender</option>
-          <option value="ocean">Ocean</option>
-          <option value="sunset">Sunset</option>
-          <option value="forest">Forest</option>
-          <option value="mono">Monochrome</option>
-        </select>
-      </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-        Background
-        <input id="wcm-bg" type="color" value="#ffffff" class="field h-10 cursor-pointer p-1" />
-      </label>
+  <div class="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
+    <!-- Preview (left / top) -->
+    <div class="flex flex-col gap-3">
+      <div class="panel flex items-center justify-center p-4" style="min-height:320px">
+        <canvas
+          id="wcm-canvas"
+          class="max-w-full h-auto rounded-md"
+          aria-label="Word cloud preview"></canvas>
+      </div>
+      <p id="wcm-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+      <div class="flex flex-wrap gap-2">
+        <button id="wcm-render" class="btn btn-secondary">Regenerate</button>
+        <button id="wcm-png" class="btn btn-primary">PNG</button>
+        <button id="wcm-jpg" class="btn btn-secondary">JPG</button>
+        <button id="wcm-svg" class="btn btn-secondary">SVG</button>
+        <button id="wcm-csv" class="btn btn-secondary">CSV</button>
+      </div>
     </div>
 
-    <label class="flex items-center gap-2 text-sm text-ink-subtle">
-      <input id="wcm-stop" type="checkbox" checked class="h-4 w-4" />
-      Ignore common stopwords (the, and, of…)
-    </label>
+    <!-- Controls (right / bottom) -->
+    <div class="flex flex-col gap-4">
+      <!-- Text -->
+      <div class="panel flex flex-col gap-3 p-4">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Text
+          <textarea id="wcm-text" class="field min-h-28 resize-y font-mono text-[13px]" spellcheck="false" placeholder="Paste your text here…">Words words words. Great ideas need great words, and the best words repeat until they become memorable. Repeat the words, shape the ideas, and let the cloud show which words matter most.</textarea>
+        </label>
+        <div class="flex flex-wrap items-center gap-3">
+          <button id="wcm-loadtxt" class="btn btn-secondary text-[13px]">Load .txt file</button>
+          <input id="wcm-txtfile" type="file" accept=".txt,text/plain" class="hidden" />
+          <button id="wcm-recount" class="btn btn-tertiary text-[13px]">Recount from text</button>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="flex items-center gap-2 text-[13px] text-ink-subtle">
+            <input id="wcm-stop" type="checkbox" checked class="h-4 w-4" />
+            Skip stopwords
+          </label>
+          <label class="flex items-center gap-2 text-[13px] text-ink-subtle">
+            Min length
+            <input id="wcm-minlen" type="number" min="1" max="12" value="2" class="field w-16 py-1" />
+          </label>
+        </div>
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">
+          <span>Max words: <span id="wcm-maxout">100</span></span>
+          <input id="wcm-max" type="range" min="10" max="300" step="10" value="100" class="w-full" />
+        </label>
+      </div>
 
-    <p id="wcm-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+      <!-- Word list editor -->
+      <div class="panel flex flex-col gap-2 p-4">
+        <div class="flex items-center justify-between">
+          <span class="text-sm text-ink">Word list</span>
+          <span id="wcm-count" class="text-[12px] text-ink-tertiary">0 words</span>
+        </div>
+        <div class="max-h-52 overflow-y-auto rounded-md border border-hairline">
+          <table class="w-full text-[13px]">
+            <thead class="sticky top-0 bg-surface-2 text-ink-subtle">
+              <tr>
+                <th class="px-2 py-1 text-left font-medium">Word</th>
+                <th class="px-2 py-1 text-right font-medium">Weight</th>
+                <th class="px-2 py-1 text-center font-medium">On</th>
+                <th class="px-1 py-1"></th>
+              </tr>
+            </thead>
+            <tbody id="wcm-rows"></tbody>
+          </table>
+        </div>
+        <div class="flex gap-2">
+          <input id="wcm-addword" type="text" placeholder="Add word…" class="field flex-1 py-1 text-[13px]" />
+          <input id="wcm-addweight" type="number" min="1" value="10" class="field w-20 py-1 text-[13px]" />
+          <button id="wcm-add" class="btn btn-secondary text-[13px]">Add</button>
+        </div>
+      </div>
 
-    <div class="panel p-4">
-      <canvas id="wcm-canvas" class="max-w-full h-auto rounded-md" aria-label="Word cloud preview"></canvas>
-    </div>
+      <!-- Style -->
+      <div class="panel grid grid-cols-2 gap-3 p-4">
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">
+          Font
+          <select id="wcm-font" class="field py-1"></select>
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">
+          Shape
+          <select id="wcm-shape" class="field py-1">
+            <option value="circle">Circle</option>
+            <option value="cardioid">Heart</option>
+            <option value="diamond">Diamond</option>
+            <option value="square">Square</option>
+            <option value="triangle">Triangle</option>
+            <option value="pentagon">Pentagon</option>
+            <option value="star">Star</option>
+            <option value="image">Custom image…</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">
+          Color theme
+          <select id="wcm-scheme" class="field py-1">
+            <option value="lavender">Lavender</option>
+            <option value="ocean">Ocean</option>
+            <option value="sunset">Sunset</option>
+            <option value="forest">Forest</option>
+            <option value="mono">Monochrome</option>
+            <option value="random-dark">Random (dark)</option>
+            <option value="random-light">Random (light)</option>
+            <option value="single">Single color</option>
+          </select>
+        </label>
+        <label id="wcm-single-wrap" class="hidden flex-col gap-1 text-[13px] text-ink-subtle">
+          Word color
+          <input id="wcm-single" type="color" value="#5e6ad2" class="field h-8 cursor-pointer p-1" />
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">
+          Background
+          <input id="wcm-bg" type="color" value="#ffffff" class="field h-8 cursor-pointer p-1" />
+        </label>
+        <label class="flex items-end gap-2 pb-1 text-[13px] text-ink-subtle">
+          <input id="wcm-transparent" type="checkbox" class="h-4 w-4" />
+          Transparent bg
+        </label>
+        <label id="wcm-image-wrap" class="col-span-2 hidden flex-col gap-1 text-[13px] text-ink-subtle">
+          Mask image (dark areas get filled)
+          <input id="wcm-imagefile" type="file" accept="image/*" class="field py-1 text-[12px]" />
+        </label>
+      </div>
 
-    <div class="flex gap-2">
-      <button id="wcm-render" class="btn btn-secondary">Regenerate</button>
-      <button id="wcm-download" class="btn btn-primary">Download PNG</button>
+      <!-- Layout -->
+      <div class="panel grid grid-cols-1 gap-3 p-4">
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">
+          Orientation
+          <select id="wcm-orient" class="field py-1">
+            <option value="h">Horizontal only</option>
+            <option value="mixed" selected>Mostly horizontal</option>
+            <option value="any">Any angle</option>
+            <option value="v">Horizontal &amp; vertical</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">
+          <span>Word scale: <span id="wcm-scaleout">1.0</span>&times;</span>
+          <input id="wcm-scale" type="range" min="0.4" max="2.5" step="0.1" value="1" class="w-full" />
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">
+          <span>Spacing: <span id="wcm-gridout">8</span></span>
+          <input id="wcm-grid" type="range" min="2" max="24" step="1" value="8" class="w-full" />
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">
+          <span>Rotated words: <span id="wcm-rotout">10</span>%</span>
+          <input id="wcm-rot" type="range" min="0" max="100" step="5" value="10" class="w-full" />
+        </label>
+      </div>
     </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free word cloud maker turns any block of text into a cloud where the
-      most frequent words appear largest. It counts word frequency, optionally
-      skips common stopwords, and places the top words with a spiral layout that
-      avoids overlaps. Pick a color scheme and background, then download the
-      result as a PNG. All text is processed locally in your browser and is never
-      uploaded to a server.
+      This free word cloud maker turns any text into a cloud where the most
+      frequent words appear largest. Paste text or load a <code>.txt</code> file,
+      then fine-tune every word in the editable list: change its weight, toggle
+      it off, or add your own. Pick from built-in shapes — circle, heart, star,
+      diamond, and more — or upload your own image to use its silhouette as a
+      mask, so the words fill any shape you like.
+    </p>
+    <p>
+      Choose from 20 fonts, five color themes plus random and single-color
+      modes, a custom background (or transparent), and control word rotation,
+      scale, and spacing. Export the result as a PNG or JPG image, a scalable
+      SVG vector, or the raw word-and-weight table as CSV. Everything runs
+      locally in your browser — no text or images are ever uploaded to a server.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  const textEl = document.getElementById('wcm-text') as HTMLTextAreaElement;
-  const schemeEl = document.getElementById('wcm-scheme') as HTMLSelectElement;
-  const bgEl = document.getElementById('wcm-bg') as HTMLInputElement;
-  const stopEl = document.getElementById('wcm-stop') as HTMLInputElement;
-  const canvas = document.getElementById('wcm-canvas') as HTMLCanvasElement;
-  const err = document.getElementById('wcm-error')!;
-  const ctx = canvas.getContext('2d')!;
+  import WordCloud from 'wordcloud';
+  import { FONTS, ensureFont } from '../../lib/collage/fonts';
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  const textEl = $<HTMLTextAreaElement>('wcm-text');
+  const canvas = $<HTMLCanvasElement>('wcm-canvas');
+  const err = $<HTMLElement>('wcm-error');
+  const rowsEl = $<HTMLTableSectionElement>('wcm-rows');
+  const countEl = $<HTMLElement>('wcm-count');
+
+  const fontEl = $<HTMLSelectElement>('wcm-font');
+  const shapeEl = $<HTMLSelectElement>('wcm-shape');
+  const schemeEl = $<HTMLSelectElement>('wcm-scheme');
+  const singleWrap = $<HTMLElement>('wcm-single-wrap');
+  const singleEl = $<HTMLInputElement>('wcm-single');
+  const bgEl = $<HTMLInputElement>('wcm-bg');
+  const transEl = $<HTMLInputElement>('wcm-transparent');
+  const imageWrap = $<HTMLElement>('wcm-image-wrap');
+  const imageFileEl = $<HTMLInputElement>('wcm-imagefile');
+
+  const stopEl = $<HTMLInputElement>('wcm-stop');
+  const minlenEl = $<HTMLInputElement>('wcm-minlen');
+  const maxEl = $<HTMLInputElement>('wcm-max');
+  const maxOut = $<HTMLElement>('wcm-maxout');
+
+  const orientEl = $<HTMLSelectElement>('wcm-orient');
+  const scaleEl = $<HTMLInputElement>('wcm-scale');
+  const scaleOut = $<HTMLElement>('wcm-scaleout');
+  const gridEl = $<HTMLInputElement>('wcm-grid');
+  const gridOut = $<HTMLElement>('wcm-gridout');
+  const rotEl = $<HTMLInputElement>('wcm-rot');
+  const rotOut = $<HTMLElement>('wcm-rotout');
+
+  const W = 1600;
+  const H = 1000;
 
   const STOPWORDS = new Set(
     (
       'a an and are as at be but by for from has have he her him his i in is it its ' +
       'me my no not of on or our so that the their them they this to us was we were ' +
-      'what when where which who will with you your yours it\'s'
+      'what when where which who will with you your yours its'
     ).split(' ')
   );
 
@@ -80,122 +227,417 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     mono: ['#2a2a30', '#45454f', '#5f5f6b', '#7a7a86', '#33333a'],
   };
 
-  interface WordBox {
+  interface Entry {
     word: string;
-    size: number;
-    color: string;
-    x: number;
-    y: number;
-    w: number;
-    h: number;
+    weight: number;
+    on: boolean;
   }
 
-  function countWords(): [string, number][] {
+  // The live word list. Rebuilt from text on "recount"; edited in place otherwise.
+  let entries: Entry[] = [];
+  // Loaded mask image, if the user picked a custom shape.
+  let maskImg: HTMLImageElement | null = null;
+
+  function setError(msg: string) {
+    err.textContent = msg;
+    err.classList.remove('hidden');
+  }
+  function clearError() {
+    err.classList.add('hidden');
+  }
+
+  function countWords(): Entry[] {
     const skip = stopEl.checked;
+    const minLen = Math.max(1, parseInt(minlenEl.value) || 2);
     const freq = new Map<string, number>();
-    const tokens = textEl.value.toLowerCase().match(/[a-z0-9']+/g) || [];
+    const tokens = textEl.value.toLowerCase().match(/[\p{L}\p{N}']+/gu) || [];
     for (const t of tokens) {
-      if (t.length < 2) continue;
+      if (t.length < minLen) continue;
       if (skip && STOPWORDS.has(t)) continue;
       freq.set(t, (freq.get(t) || 0) + 1);
     }
-    return [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 40);
+    const max = parseInt(maxEl.value) || 100;
+    return [...freq.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, max)
+      .map(([word, weight]) => ({ word, weight, on: true }));
   }
 
-  function overlaps(a: WordBox, boxes: WordBox[]): boolean {
-    for (const b of boxes) {
-      if (
-        a.x < b.x + b.w &&
-        a.x + a.w > b.x &&
-        a.y < b.y + b.h &&
-        a.y + a.h > b.y
-      ) {
-        return true;
+  function renderTable() {
+    rowsEl.innerHTML = '';
+    entries.forEach((e, i) => {
+      const tr = document.createElement('tr');
+      tr.className = 'border-t border-hairline';
+      tr.innerHTML =
+        `<td class="px-2 py-1 text-ink">${escapeHtml(e.word)}</td>` +
+        `<td class="px-2 py-1 text-right"><input type="number" min="1" value="${e.weight}" data-i="${i}" data-k="w" class="field w-16 py-0.5 text-right text-[12px]" /></td>` +
+        `<td class="px-2 py-1 text-center"><input type="checkbox" ${e.on ? 'checked' : ''} data-i="${i}" data-k="on" class="h-4 w-4" /></td>` +
+        `<td class="px-1 py-1 text-center"><button data-i="${i}" data-k="del" class="text-ink-tertiary hover:text-ink" title="Remove" aria-label="Remove word">&times;</button></td>`;
+      rowsEl.appendChild(tr);
+    });
+    const active = entries.filter((e) => e.on).length;
+    countEl.textContent = `${active} of ${entries.length} words`;
+  }
+
+  function escapeHtml(s: string): string {
+    return s.replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string)
+    );
+  }
+
+  // rotation config from the orientation preset
+  function rotationOpts() {
+    switch (orientEl.value) {
+      case 'h':
+        return { minRotation: 0, maxRotation: 0, rotationSteps: 1 };
+      case 'v':
+        return { minRotation: -Math.PI / 2, maxRotation: -Math.PI / 2, rotationSteps: 1 };
+      case 'any':
+        return { minRotation: -Math.PI / 2, maxRotation: Math.PI / 2, rotationSteps: 0 };
+      case 'mixed':
+      default:
+        return { minRotation: -Math.PI / 2, maxRotation: Math.PI / 2, rotationSteps: 2 };
+    }
+  }
+
+  // Returns a wordcloud2 `color` value: a palette-cycling function, one of the
+  // built-in random strings, or a single fixed color.
+  function colorValue(): string | ((word: string, weight: number) => string) {
+    const s = schemeEl.value;
+    if (s === 'random-dark' || s === 'random-light') return s;
+    if (s === 'single') return singleEl.value;
+    const palette = SCHEMES[s] || SCHEMES.lavender;
+    let n = 0;
+    return () => palette[n++ % palette.length];
+  }
+
+  function activeList(): [string, number][] {
+    return entries.filter((e) => e.on && e.weight > 0).map((e) => [e.word, e.weight]);
+  }
+
+  // scale weights so the largest word is a sensible size regardless of raw counts
+  function weightFactor(): (w: number) => number {
+    const maxW = Math.max(1, ...entries.filter((e) => e.on).map((e) => e.weight));
+    const scale = parseFloat(scaleEl.value) || 1;
+    const base = H / 5; // largest word ≈ 1/5 of canvas height at scale 1
+    return (w: number) => Math.max(8, Math.pow(w / maxW, 0.55) * base * scale);
+  }
+
+  function bgColor(): string {
+    return transEl.checked ? 'rgba(255,255,255,0)' : bgEl.value;
+  }
+
+  // Paint the mask image onto `cvs` so wordcloud2 (clearCanvas:false) reads it:
+  // dark/opaque pixels become "available" (== bgPixel), light/transparent become
+  // "blocked". Mirrors the wordcloud2.js reference recipe.
+  function paintMask(cvs: HTMLCanvasElement, img: HTMLImageElement, bg: string) {
+    const ctx = cvs.getContext('2d')!;
+    // background pixel wordcloud2 will compare against
+    const bctx = document.createElement('canvas').getContext('2d')!;
+    bctx.fillStyle = bg;
+    bctx.fillRect(0, 0, 1, 1);
+    const bgP = bctx.getImageData(0, 0, 1, 1).data;
+
+    // draw image scaled to fit (contain) and centered
+    ctx.clearRect(0, 0, W, H);
+    const r = Math.min(W / img.width, H / img.height);
+    const dw = img.width * r;
+    const dh = img.height * r;
+    ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
+
+    const id = ctx.getImageData(0, 0, W, H);
+    const d = id.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const tone = d[i] + d[i + 1] + d[i + 2];
+      const alpha = d[i + 3];
+      const drawable = alpha >= 128 && tone <= 128 * 3; // dark & opaque
+      if (drawable) {
+        d[i] = bgP[0];
+        d[i + 1] = bgP[1];
+        d[i + 2] = bgP[2];
+        d[i + 3] = bgP[3];
+      } else {
+        // must differ from bgPixel so wordcloud2 marks it blocked
+        d[i] = bgP[0];
+        d[i + 1] = bgP[1];
+        d[i + 2] = bgP[2];
+        d[i + 3] = bgP[3] > 0 ? bgP[3] - 1 : 1;
       }
     }
-    return false;
+    ctx.putImageData(id, 0, 0);
   }
 
-  function render() {
-    err.classList.add('hidden');
-    const words = countWords();
-    const W = 900;
-    const H = 560;
+  // full CSS family (with fallbacks) for the selected font
+  function selectedFamily(): string {
+    return fontEl.selectedOptions[0]?.dataset.family || 'Inter, system-ui, sans-serif';
+  }
+
+  function baseOptions(): any {
+    const family = selectedFamily();
+    return {
+      list: activeList(),
+      fontFamily: `${family}, Inter, system-ui, sans-serif`,
+      fontWeight: '700',
+      color: colorValue(),
+      backgroundColor: bgColor(),
+      weightFactor: weightFactor(),
+      gridSize: parseInt(gridEl.value) || 8,
+      rotateRatio: (parseInt(rotEl.value) || 0) / 100,
+      shuffle: true,
+      drawOutOfBound: false,
+      shrinkToFit: true,
+      ...rotationOpts(),
+    };
+  }
+
+  async function render() {
+    clearError();
     canvas.width = W;
     canvas.height = H;
-    ctx.fillStyle = bgEl.value;
-    ctx.fillRect(0, 0, W, H);
 
-    if (!words.length) {
+    if (!activeList().length) {
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = transEl.checked ? '#0f1011' : bgEl.value;
+      ctx.fillRect(0, 0, W, H);
       ctx.fillStyle = '#888';
-      ctx.font = '15px Inter, system-ui, sans-serif';
+      ctx.font = '32px Inter, system-ui, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Enter some text to build a word cloud.', W / 2, H / 2);
+      ctx.fillText('Add some text or words to build a cloud.', W / 2, H / 2);
       return;
     }
 
-    const maxF = words[0][1];
-    const minF = words[words.length - 1][1];
-    const fSpan = maxF - minF || 1;
-    const palette = SCHEMES[schemeEl.value] || SCHEMES.lavender;
-    const placed: WordBox[] = [];
-    const cx = W / 2;
-    const cy = H / 2;
+    await ensureFont(selectedFamily());
+    const opts = baseOptions();
 
-    ctx.textBaseline = 'top';
-    ctx.textAlign = 'left';
-
-    words.forEach(([word, f], i) => {
-      const size = 16 + Math.round(((f - minF) / fSpan) * 72);
-      ctx.font = `700 ${size}px Inter, system-ui, sans-serif`;
-      const w = ctx.measureText(word).width;
-      const h = size * 1.15;
-      const color = palette[i % palette.length];
-
-      let angle = 0;
-      let radius = 0;
-      let x = cx - w / 2;
-      let y = cy - h / 2;
-      let box: WordBox = { word, size, color, x, y, w, h };
-      let tries = 0;
-      while (overlaps(box, placed) && tries < 600) {
-        angle += 0.35;
-        radius += 1.4;
-        x = cx - w / 2 + Math.cos(angle) * radius;
-        y = cy - h / 2 + Math.sin(angle) * radius;
-        box = { word, size, color, x, y, w, h };
-        tries++;
+    if (shapeEl.value === 'image') {
+      if (!maskImg) {
+        setError('Upload a mask image, or pick a built-in shape.');
+        return;
       }
-      if (x < 4 || y < 4 || x + w > W - 4 || y + h > H - 4) return;
-      placed.push(box);
-    });
+      // pre-paint the mask; wordcloud2 reads existing pixels
+      paintMask(canvas, maskImg, transEl.checked ? '#ffffff' : bgEl.value);
+      opts.clearCanvas = false;
+      opts.backgroundColor = transEl.checked ? '#ffffff' : bgEl.value;
+    } else {
+      opts.shape = shapeEl.value;
+    }
 
-    placed.forEach((b) => {
-      ctx.font = `700 ${b.size}px Inter, system-ui, sans-serif`;
-      ctx.fillStyle = b.color;
-      ctx.fillText(b.word, b.x, b.y);
-    });
+    WordCloud(canvas, opts);
   }
 
-  [textEl, schemeEl, bgEl, stopEl].forEach((el) => el.addEventListener('input', render));
-  document.getElementById('wcm-render')!.addEventListener('click', render);
-
-  document.getElementById('wcm-download')!.addEventListener('click', () => {
-    if (!countWords().length) {
-      err.textContent = 'Add some text first.';
-      err.classList.remove('hidden');
+  // ---- SVG export -------------------------------------------------------
+  // Re-render in element mode into a hidden div; wordcloud2 emits positioned
+  // <span>s we serialize to <text> nodes. Element mode can't do image masks
+  // (clearCanvas:false needs a canvas), so those fall back to an embedded PNG.
+  function exportSVG() {
+    if (!activeList().length) {
+      setError('Add some text first.');
       return;
     }
-    canvas.toBlob((blob) => {
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.download = 'toolcities-word-cloud.png';
-      link.href = url;
-      link.click();
-      URL.revokeObjectURL(url);
-    }, 'image/png');
+    if (shapeEl.value === 'image') {
+      // fallback: wrap the raster canvas in an SVG <image>
+      const png = canvas.toDataURL('image/png');
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><image href="${png}" width="${W}" height="${H}"/></svg>`;
+      downloadBlob(new Blob([svg], { type: 'image/svg+xml' }), 'word-cloud.svg');
+      return;
+    }
+
+    const holder = document.createElement('div');
+    holder.style.cssText = `position:absolute;left:-99999px;top:0;width:${W}px;height:${H}px;`;
+    document.body.appendChild(holder);
+
+    const opts = baseOptions();
+    opts.shape = shapeEl.value;
+
+    holder.addEventListener(
+      'wordcloudstop',
+      () => {
+        const bg = transEl.checked ? 'none' : bgEl.value;
+        let body = '';
+        if (bg !== 'none') body += `<rect width="${W}" height="${H}" fill="${bg}"/>`;
+        holder.querySelectorAll('span').forEach((span) => {
+          const s = span.style;
+          const left = parseFloat(s.left) || 0;
+          const top = parseFloat(s.top) || 0;
+          const fh = parseFloat(s.height) || 0;
+          // approximate the DOM box → baseline for <text> (y at ~0.78 of box)
+          const x = left;
+          const y = top + fh * 0.78;
+          const rot = (s.transform.match(/rotate\(([-\d.]+)deg\)/) || [])[1] || '0';
+          const t = `translate(${x} ${y}) rotate(${rot})`;
+          body +=
+            `<text transform="${t}" font-family=${JSON.stringify(s.font.replace(/^\d+\s*/, '') || 'sans-serif')}` +
+            ` font-size="${parseFloat(s.font) || fh}" font-weight="700" fill="${s.color || '#000'}"` +
+            ` xml:space="preserve">${escapeHtml(span.textContent || '')}</text>`;
+        });
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${body}</svg>`;
+        downloadBlob(new Blob([svg], { type: 'image/svg+xml' }), 'word-cloud.svg');
+        holder.remove();
+      },
+      { once: true }
+    );
+
+    WordCloud(holder, opts);
+  }
+
+  function downloadBlob(blob: Blob, name: string) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.download = name;
+    a.href = url;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportRaster(type: 'image/png' | 'image/jpeg', name: string) {
+    if (!activeList().length) {
+      setError('Add some text first.');
+      return;
+    }
+    if (type === 'image/jpeg' && transEl.checked) {
+      // JPEG has no alpha; flatten onto white so transparent doesn't go black
+      const flat = document.createElement('canvas');
+      flat.width = W;
+      flat.height = H;
+      const fctx = flat.getContext('2d')!;
+      fctx.fillStyle = '#ffffff';
+      fctx.fillRect(0, 0, W, H);
+      fctx.drawImage(canvas, 0, 0);
+      flat.toBlob((b) => b && downloadBlob(b, name), type, 0.92);
+      return;
+    }
+    canvas.toBlob((b) => b && downloadBlob(b, name), type, 0.92);
+  }
+
+  function exportCSV() {
+    const rows = entries.filter((e) => e.on && e.weight > 0);
+    if (!rows.length) {
+      setError('Add some text first.');
+      return;
+    }
+    const csv =
+      'word,weight\n' +
+      rows.map((e) => `"${e.word.replace(/"/g, '""')}",${e.weight}`).join('\n');
+    downloadBlob(new Blob([csv], { type: 'text/csv' }), 'word-cloud.csv');
+  }
+
+  // ---- wiring -----------------------------------------------------------
+  // populate fonts
+  for (const f of FONTS) {
+    const o = document.createElement('option');
+    o.value = f.family.split(',')[0].replace(/['"]/g, '').trim();
+    o.textContent = f.label;
+    // store the full family (with fallbacks) for the loader
+    o.dataset.family = f.family;
+    fontEl.appendChild(o);
+  }
+  // default to Anton (bold display face reads well in clouds) if present
+  const antonOpt = [...fontEl.options].find((o) => o.textContent === 'Anton');
+  if (antonOpt) fontEl.value = antonOpt.value;
+
+  // table edits (event delegation)
+  rowsEl.addEventListener('input', (e) => {
+    const t = e.target as HTMLInputElement;
+    const i = parseInt(t.dataset.i || '-1');
+    if (i < 0 || !entries[i]) return;
+    if (t.dataset.k === 'w') entries[i].weight = Math.max(0, parseInt(t.value) || 0);
+    if (t.dataset.k === 'on') entries[i].on = t.checked;
+    render();
+    countEl.textContent = `${entries.filter((x) => x.on).length} of ${entries.length} words`;
+  });
+  rowsEl.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement;
+    if (t.dataset.k !== 'del') return;
+    const i = parseInt(t.dataset.i || '-1');
+    if (i >= 0) {
+      entries.splice(i, 1);
+      renderTable();
+      render();
+    }
   });
 
-  render();
+  function recount() {
+    entries = countWords();
+    renderTable();
+    render();
+  }
+
+  $('wcm-recount').addEventListener('click', recount);
+  $('wcm-render').addEventListener('click', render);
+
+  // add word
+  $('wcm-add').addEventListener('click', () => {
+    const w = ($('wcm-addword') as HTMLInputElement).value.trim().toLowerCase();
+    const wt = parseInt(($('wcm-addweight') as HTMLInputElement).value) || 10;
+    if (!w) return;
+    const existing = entries.find((e) => e.word === w);
+    if (existing) existing.weight = wt;
+    else entries.unshift({ word: w, weight: wt, on: true });
+    ($('wcm-addword') as HTMLInputElement).value = '';
+    renderTable();
+    render();
+  });
+
+  // load .txt
+  $('wcm-loadtxt').addEventListener('click', () => $('wcm-txtfile').click());
+  ($('wcm-txtfile') as HTMLInputElement).addEventListener('change', async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    textEl.value = await file.text();
+    recount();
+  });
+
+  // mask image
+  shapeEl.addEventListener('change', () => {
+    imageWrap.classList.toggle('hidden', shapeEl.value !== 'image');
+    imageWrap.classList.toggle('flex', shapeEl.value === 'image');
+    render();
+  });
+  imageFileEl.addEventListener('change', (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    const img = new Image();
+    img.onload = () => {
+      maskImg = img;
+      render();
+    };
+    img.onerror = () => setError('Could not load that image.');
+    img.src = URL.createObjectURL(file);
+  });
+
+  // single-color visibility
+  schemeEl.addEventListener('change', () => {
+    const single = schemeEl.value === 'single';
+    singleWrap.classList.toggle('hidden', !single);
+    singleWrap.classList.toggle('flex', single);
+    render();
+  });
+
+  // live-updating slider labels
+  const bind = (el: HTMLInputElement, out: HTMLElement, fmt: (v: string) => string) => {
+    el.addEventListener('input', () => {
+      out.textContent = fmt(el.value);
+      render();
+    });
+  };
+  bind(maxEl, maxOut, (v) => v);
+  bind(scaleEl, scaleOut, (v) => parseFloat(v).toFixed(1));
+  bind(gridEl, gridOut, (v) => v);
+  bind(rotEl, rotOut, (v) => v);
+  maxEl.addEventListener('change', recount); // max words affects the counted set
+
+  // re-render on the rest
+  [fontEl, singleEl, bgEl, transEl, orientEl].forEach((el) =>
+    el.addEventListener('input', render)
+  );
+  [stopEl, minlenEl].forEach((el) => el.addEventListener('change', recount));
+
+  // exports
+  $('wcm-png').addEventListener('click', () => exportRaster('image/png', 'word-cloud.png'));
+  $('wcm-jpg').addEventListener('click', () => exportRaster('image/jpeg', 'word-cloud.jpg'));
+  $('wcm-svg').addEventListener('click', exportSVG);
+  $('wcm-csv').addEventListener('click', exportCSV);
+
+  // init
+  recount();
 </script>

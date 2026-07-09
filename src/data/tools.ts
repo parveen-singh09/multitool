@@ -3602,11 +3602,11 @@ export const tools: Tool[] = [
   {
     slug: 'chart-maker',
     name: 'Chart Maker',
-    tagline: 'Bar, line and pie charts from data.',
+    tagline: '24 chart types from spreadsheet data.',
     description:
-      'Free chart maker. Paste or type data to draw bar, line or pie charts with custom colors and labels, then download as PNG. Charts are rendered locally in your browser.',
+      'Free online chart maker with 24 chart types: bar, column, horizontal, stacked and 100% stacked bar, line, smooth line, area and stacked area, pie, doughnut, half-doughnut, gauge, polar area, radar, scatter, bubble, box plot, funnel, pyramid, treemap, heatmap, candlestick, and dual-axis bar-plus-line. Paste CSV straight from a spreadsheet, set a title, colors and legend, then download a high-resolution PNG. Charts are rendered locally in your browser and never uploaded.',
     category: 'Image',
-    keywords: ['chart maker', 'graph maker', 'create charts online', 'bar chart maker', 'pie chart generator'],
+    keywords: ['chart maker', 'graph maker', 'create charts online', 'bar chart maker', 'pie chart generator', 'line graph maker', 'scatter plot maker', 'radar chart maker', 'doughnut chart', 'area chart maker', 'bubble chart', 'box plot maker', 'treemap maker', 'heatmap generator', 'candlestick chart maker', 'histogram maker', 'funnel chart', 'gauge chart', 'stacked bar chart'],
     icon: 'M4 19V5m0 14h16M8 17V9m4 8V6m4 11v-4',
   },
   {
