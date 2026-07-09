@@ -3592,11 +3592,11 @@ export const tools: Tool[] = [
   {
     slug: 'collage-maker',
     name: 'Collage Maker',
-    tagline: 'Combine photos into a grid collage.',
+    tagline: 'Full collage editor: layouts, text, stickers, shapes and more.',
     description:
-      'Free collage maker. Drop several photos into a grid layout, adjust spacing and background, then download the collage as a PNG. Everything is composed locally — nothing is uploaded.',
+      'Free collage maker and photo editor. Choose grid or freeform layouts, set the canvas size, add text with custom fonts, stickers, shapes and doodles, and style the background with colors, gradients or a photo. Drag, resize, rotate and layer everything on an interactive canvas, save reusable templates, then export a high-resolution PNG or JPEG. Your photos are edited locally and never uploaded; optional stock photo search uses Pexels.',
     category: 'Image',
-    keywords: ['collage maker', 'photo collage maker', 'picture collage', 'make a collage', 'image collage tool'],
+    keywords: ['collage maker', 'photo collage maker', 'picture collage', 'make a collage', 'image collage tool', 'photo editor', 'collage templates', 'add text to photo', 'photo stickers', 'collage layouts'],
     icon: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   },
   {
