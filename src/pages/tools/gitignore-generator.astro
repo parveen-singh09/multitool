@@ -1,29 +1,58 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
+import { TEMPLATES } from '../../lib/gitignore';
+
+const GROUPS = ['Languages', 'Frameworks', 'Tools', 'Editors', 'OS'] as const;
+const DEFAULTS = new Set(['node', 'macos', 'env']);
+const byGroup = GROUPS.map((g) => ({ g, items: TEMPLATES.filter((t) => t.group === g) }));
 ---
 
 <ToolLayout slug="gitignore-generator">
   <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <!-- Picker -->
     <div class="flex flex-col gap-3">
-      <fieldset class="grid grid-cols-2 gap-x-4 gap-y-2">
-        <legend class="w-full text-xs uppercase tracking-wide text-ink-tertiary">Languages, frameworks & tools</legend>
-        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input class="gi-r accent-[#5e6ad2]" type="checkbox" value="node" checked /> Node</label>
-        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input class="gi-r accent-[#5e6ad2]" type="checkbox" value="python" /> Python</label>
-        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input class="gi-r accent-[#5e6ad2]" type="checkbox" value="java" /> Java</label>
-        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input class="gi-r accent-[#5e6ad2]" type="checkbox" value="macos" checked /> macOS</label>
-        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input class="gi-r accent-[#5e6ad2]" type="checkbox" value="windows" /> Windows</label>
-        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input class="gi-r accent-[#5e6ad2]" type="checkbox" value="vscode" /> VS Code</label>
-        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input class="gi-r accent-[#5e6ad2]" type="checkbox" value="jetbrains" /> JetBrains</label>
-        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input class="gi-r accent-[#5e6ad2]" type="checkbox" value="env" checked /> Env files</label>
-      </fieldset>
+      <input
+        id="gi-search"
+        type="search"
+        class="field"
+        placeholder={`Search ${TEMPLATES.length} templates — node, react, python…`}
+        aria-label="Search templates"
+        autocomplete="off"
+        spellcheck="false"
+      />
+
+      <!-- Selected chips -->
+      <div id="gi-chips" class="flex flex-wrap gap-1.5 empty:hidden"></div>
+
+      <div class="hl-block field max-h-[26rem] overflow-auto" style="padding:0.75rem">
+        {byGroup.map(({ g, items }) => (
+          <fieldset class="gi-group mb-3 last:mb-0" data-group={g}>
+            <legend class="w-full pb-1 text-xs uppercase tracking-wide text-ink-tertiary">{g}</legend>
+            <div class="grid grid-cols-1 gap-1 sm:grid-cols-2">
+              {items.map((t) => (
+                <label class="gi-item flex items-center gap-2 text-sm text-ink-subtle" data-name={t.name.toLowerCase()} data-id={t.id}>
+                  <input class="gi-r accent-[#5e6ad2]" type="checkbox" value={t.id} checked={DEFAULTS.has(t.id)} />
+                  {t.name}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        ))}
+        <p id="gi-empty" class="hidden py-6 text-center text-sm text-ink-tertiary">No templates match.</p>
+      </div>
     </div>
 
+    <!-- Output -->
     <div class="flex flex-col gap-2">
-      <label class="text-sm text-ink-subtle">.gitignore</label>
-      <pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto"><code id="gi-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+      <div class="flex items-center justify-between">
+        <label class="text-sm text-ink-subtle">.gitignore</label>
+        <span id="gi-stat" class="text-xs text-ink-tertiary"></span>
+      </div>
+      <pre class="hl-block field min-h-72 flex-1" style="resize:vertical;overflow:auto"><code id="gi-out" class="hljs" style="background:transparent;padding:0"></code></pre>
       <div class="flex gap-2">
         <button id="gi-copy" class="btn btn-secondary">Copy</button>
         <button id="gi-dl" class="btn btn-secondary">Download</button>
+        <button id="gi-clear" class="btn btn-tertiary ml-auto">Clear all</button>
       </div>
     </div>
   </div>
@@ -32,49 +61,95 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p>
       This free .gitignore generator builds a combined
       <code class="font-mono text-ink">.gitignore</code> from the languages,
-      frameworks and tools you select — Node, Python, Java, macOS, Windows, VS
-      Code, JetBrains and environment files. It keeps build artifacts, dependency
-      folders, OS clutter and secrets out of your repository. Copy or download the
-      result. Generated in your browser.
+      frameworks, build tools, editors and operating systems you select. Search
+      across every template, tick the ones your project uses, and copy or
+      download the result. Everything runs in your browser — nothing is uploaded.
+    </p>
+    <p>
+      Unlike most generators, overlapping stacks are de-duplicated: pick Node,
+      React and Next.js together and shared patterns like
+      <code class="font-mono text-ink">node_modules/</code> appear once, not three
+      times. The result stays clean no matter how many templates you combine.
     </p>
   </div>
 </ToolLayout>
 
 <script>
   import { hl } from '../../lib/highlight';
+  import { build } from '../../lib/gitignore';
 
   const $ = (id: string) => document.getElementById(id)!;
   const out = $('gi-out') as HTMLElement;
+  const search = $('gi-search') as HTMLInputElement;
+  const chips = $('gi-chips') as HTMLElement;
+  const stat = $('gi-stat') as HTMLElement;
+  const empty = $('gi-empty') as HTMLElement;
+  const boxes = () => [...document.querySelectorAll<HTMLInputElement>('.gi-r')];
+  const labelFor = (id: string) =>
+    document.querySelector<HTMLElement>(`.gi-item[data-id="${id}"]`)?.textContent?.trim() ?? id;
   let rawOutput = '';
 
-  const BLOCKS: Record<string, { title: string; body: string }> = {
-    node: { title: 'Node', body: 'node_modules/\nnpm-debug.log*\nyarn-error.log*\ndist/\n.cache/\ncoverage/' },
-    python: { title: 'Python', body: '__pycache__/\n*.py[cod]\n.venv/\nvenv/\n*.egg-info/\n.pytest_cache/\n.mypy_cache/' },
-    java: { title: 'Java', body: '*.class\ntarget/\n*.jar\n*.war\n.gradle/\nbuild/' },
-    macos: { title: 'macOS', body: '.DS_Store\n.AppleDouble\n.LSOverride\n._*' },
-    windows: { title: 'Windows', body: 'Thumbs.db\nehthumbs.db\nDesktop.ini\n$RECYCLE.BIN/' },
-    vscode: { title: 'VS Code', body: '.vscode/*\n!.vscode/settings.json\n!.vscode/extensions.json' },
-    jetbrains: { title: 'JetBrains', body: '.idea/\n*.iml\n*.iws\nout/' },
-    env: { title: 'Environment', body: '.env\n.env.local\n.env.*.local\n*.pem' },
-  };
-
-  function build() {
-    const checked = [...document.querySelectorAll<HTMLInputElement>('.gi-r:checked')].map((el) => el.value);
-    rawOutput = checked.map((k) => `# ${BLOCKS[k].title}\n${BLOCKS[k].body}`).join('\n\n');
-    hl(out, rawOutput, 'plaintext');
+  function renderChips(ids: string[]) {
+    chips.innerHTML = '';
+    for (const id of ids) {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className =
+        'inline-flex items-center gap-1 rounded-full border border-hairline bg-surface-1 px-2.5 py-0.5 text-xs text-ink hover:border-hairline-strong';
+      chip.innerHTML = `${labelFor(id)}<span aria-hidden="true" class="text-ink-tertiary">×</span>`;
+      chip.setAttribute('aria-label', `Remove ${labelFor(id)}`);
+      chip.addEventListener('click', () => {
+        const box = boxes().find((b) => b.value === id);
+        if (box) { box.checked = false; build_(); }
+      });
+      chips.appendChild(chip);
+    }
   }
 
-  document.querySelectorAll('.gi-r').forEach((el) => el.addEventListener('change', build));
+  function build_() {
+    const ids = boxes().filter((b) => b.checked).map((b) => b.value);
+    rawOutput = build(ids);
+    hl(out, rawOutput || '# Select templates to build a .gitignore', 'plaintext');
+    renderChips(ids);
+    const lines = rawOutput ? rawOutput.split('\n').filter((l) => l.trim() && !l.startsWith('#')).length : 0;
+    stat.textContent = ids.length ? `${ids.length} selected · ${lines} patterns` : '';
+  }
+
+  function filter() {
+    const q = search.value.trim().toLowerCase();
+    let anyVisible = false;
+    document.querySelectorAll<HTMLElement>('.gi-item').forEach((el) => {
+      const match = !q || (el.dataset.name ?? '').includes(q);
+      el.classList.toggle('hidden', !match);
+      if (match) anyVisible = true;
+    });
+    // Hide a group heading when all its items are filtered out.
+    document.querySelectorAll<HTMLElement>('.gi-group').forEach((g) => {
+      const visible = g.querySelector('.gi-item:not(.hidden)');
+      g.classList.toggle('hidden', !visible);
+    });
+    empty.classList.toggle('hidden', anyVisible);
+  }
+
+  boxes().forEach((b) => b.addEventListener('change', build_));
+  search.addEventListener('input', filter);
   $('gi-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
+    if (!rawOutput) return;
     await navigator.clipboard.writeText(rawOutput);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy'), 1500);
   });
   $('gi-dl').addEventListener('click', () => {
+    if (!rawOutput) return;
     const url = URL.createObjectURL(new Blob([rawOutput], { type: 'text/plain' }));
     const a = document.createElement('a'); a.href = url; a.download = '.gitignore'; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
-  build();
+  $('gi-clear').addEventListener('click', () => {
+    boxes().forEach((b) => (b.checked = false));
+    build_();
+  });
+
+  build_();
 </script>

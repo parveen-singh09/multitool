@@ -9,28 +9,40 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <option value="">Custom</option>
         <option value="* * * * *">Every minute</option>
         <option value="*/5 * * * *">Every 5 minutes</option>
+        <option value="*/15 * * * *">Every 15 minutes</option>
+        <option value="*/30 * * * *">Every 30 minutes</option>
         <option value="0 * * * *">Every hour</option>
+        <option value="0 */2 * * *">Every 2 hours</option>
         <option value="0 0 * * *">Every day at midnight</option>
+        <option value="0 9 * * *">Every day at 9am</option>
         <option value="0 9 * * 1-5">Weekdays at 9am</option>
-        <option value="0 0 * * 0">Every Sunday</option>
+        <option value="0 0 * * 0">Every Sunday at midnight</option>
+        <option value="0 0 * * 6,0">Every weekend</option>
         <option value="0 0 1 * *">First of every month</option>
+        <option value="0 0 1 1 *">Every January 1st</option>
+        <option value="*/15 9-17 * * 1-5">Every 15 min, business hours, weekdays</option>
       </select>
     </label>
     <div class="grid grid-cols-5 gap-2">
       <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Minute
         <input id="cr-min" class="field font-mono" value="0" spellcheck="false" />
+        <span class="text-[11px] text-ink-tertiary">0–59</span>
       </label>
       <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Hour
         <input id="cr-hour" class="field font-mono" value="9" spellcheck="false" />
+        <span class="text-[11px] text-ink-tertiary">0–23</span>
       </label>
       <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Day (month)
         <input id="cr-dom" class="field font-mono" value="*" spellcheck="false" />
+        <span class="text-[11px] text-ink-tertiary">1–31</span>
       </label>
       <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Month
         <input id="cr-mon" class="field font-mono" value="*" spellcheck="false" />
+        <span class="text-[11px] text-ink-tertiary">1–12</span>
       </label>
       <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Day (week)
         <input id="cr-dow" class="field font-mono" value="1-5" spellcheck="false" />
+        <span class="text-[11px] text-ink-tertiary">0–6 (Sun–Sat)</span>
       </label>
     </div>
 
@@ -40,6 +52,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <button id="cr-copy" class="btn btn-secondary">Copy</button>
       </div>
       <p id="cr-human" class="text-sm text-ink-subtle"></p>
+      <p id="cr-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    </div>
+
+    <div id="cr-next-panel" class="panel p-4">
+      <div class="mb-2 text-sm text-ink-subtle">Next 5 run times (local time)</div>
+      <div id="cr-next" class="flex flex-col gap-2"></div>
     </div>
   </div>
 
@@ -49,54 +67,65 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       schedules — the five-field syntax used by crontab, CI pipelines and
       schedulers. Start from a preset or edit each field (minute, hour, day of
       month, month, day of week), and the tool explains the schedule in plain
-      English so you can be sure it fires when you expect. Runs in your browser.
+      English and previews the next five run times in your local time so you can
+      be sure it fires when you expect. Steps like <code>*/5</code>, ranges like
+      <code>9-17</code> and lists like <code>1,15</code> all work, and each field
+      is validated as you type. Runs in your browser.
     </p>
   </div>
 </ToolLayout>
 
 <script>
   import { hl } from '../../lib/highlight';
+  import { describe, nextRuns, fmtDate } from '../../lib/cron';
 
   const $ = (id: string) => document.getElementById(id)!;
   const fields = ['cr-min', 'cr-hour', 'cr-dom', 'cr-mon', 'cr-dow'];
   const exprEl = $('cr-expr') as HTMLElement;
   const humanEl = $('cr-human')!;
+  const errEl = $('cr-error')!;
+  const nextEl = $('cr-next')!;
   let rawOutput = '';
 
-  const DOW = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const MON = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-
-  function describeField(v: string, unit: string, names?: string[]): string {
-    if (v === '*') return `every ${unit}`;
-    if (v.startsWith('*/')) return `every ${v.slice(2)} ${unit}s`;
-    if (v.includes('-')) {
-      const [a, b] = v.split('-');
-      const na = names ? names[+a] : a, nb = names ? names[+b] : b;
-      return `${unit} ${na} through ${nb}`;
+  function renderNext(vals: string[]) {
+    const runs = nextRuns(vals, 5);
+    nextEl.textContent = '';
+    if (!runs.length) {
+      const p = document.createElement('div');
+      p.className = 'font-mono text-[13px] text-ink-muted';
+      p.textContent = 'No upcoming run times found (impossible date combination, e.g. Feb 30).';
+      nextEl.append(p);
+      return;
     }
-    if (v.includes(',')) return `${unit}s ${v}`;
-    return names ? names[+v] ?? v : `${unit} ${v}`;
-  }
-
-  function human(min: string, hour: string, dom: string, mon: string, dow: string): string {
-    const parts: string[] = [];
-    // Time.
-    if (min === '*' && hour === '*') parts.push('Every minute');
-    else if (hour === '*') parts.push(`At ${describeField(min, 'minute')}`);
-    else if (min.match(/^\d+$/) && hour.match(/^\d+$/)) parts.push(`At ${hour.padStart(2, '0')}:${min.padStart(2, '0')}`);
-    else parts.push(`At ${describeField(min, 'minute')} past ${describeField(hour, 'hour')}`);
-    // Day of week / month.
-    if (dow !== '*') parts.push(`on ${describeField(dow, 'day', DOW)}`);
-    if (dom !== '*') parts.push(`on day-of-month ${dom}`);
-    if (mon !== '*') parts.push(`in ${describeField(mon, 'month', MON)}`);
-    return parts.join(', ') + '.';
+    runs.forEach((r, i) => {
+      const row = document.createElement('div');
+      row.className = 'flex items-baseline gap-3 border-t border-white/5 pt-2 first:border-0 first:pt-0';
+      const n = document.createElement('span');
+      n.className = 'font-mono text-[13px] text-ink-muted';
+      n.textContent = String(i + 1) + '.';
+      const t = document.createElement('span');
+      t.className = 'font-mono text-[13px] text-ink';
+      t.textContent = fmtDate(r);
+      row.append(n, t);
+      nextEl.append(row);
+    });
   }
 
   function build() {
     const vals = fields.map((id) => ($(id) as HTMLInputElement).value.trim() || '*');
     rawOutput = vals.join(' ');
     hl(exprEl, rawOutput, 'plaintext');
-    humanEl.textContent = human(vals[0], vals[1], vals[2], vals[3], vals[4]);
+
+    try {
+      humanEl.textContent = describe(vals) + '.';
+      errEl.classList.add('hidden');
+      renderNext(vals);
+    } catch (e) {
+      humanEl.textContent = '';
+      errEl.textContent = (e as Error).message;
+      errEl.classList.remove('hidden');
+      nextEl.textContent = '';
+    }
   }
 
   $('cr-preset').addEventListener('change', () => {

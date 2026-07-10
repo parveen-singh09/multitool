@@ -4,104 +4,303 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="regex-generator">
   <div class="flex flex-col gap-4">
-    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Common pattern
-      <select id="rg-preset" class="field">
-        <option value="">Custom</option>
-        <option value="^[\\w.+-]+@[\\w-]+\\.[\\w.-]+$">Email address</option>
-        <option value="^https?:\\/\\/[^\\s/$.?#].[^\\s]*$">URL (http/https)</option>
-        <option value="^\\+?[1-9]\\d{1,14}$">Phone (E.164)</option>
-        <option value="^\\d{4}-\\d{2}-\\d{2}$">Date (YYYY-MM-DD)</option>
-        <option value="^(25[0-5]|2[0-4]\\d|1?\\d?\\d)(\\.(25[0-5]|2[0-4]\\d|1?\\d?\\d)){3}$">IPv4 address</option>
-        <option value="^#?([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$">Hex color</option>
-        <option value="^[a-z0-9]+(?:-[a-z0-9]+)*$">Slug (kebab-case)</option>
-        <option value="^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}$">Strong password</option>
-        <option value="^\\d{5}(-\\d{4})?$">US ZIP code</option>
-      </select>
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Example text
+      <textarea id="rg-sample" class="field min-h-24 resize-y font-mono text-[13px]" spellcheck="false" autocomplete="off" placeholder="Paste a line you want to match…">2020-03-12T13:34:56.123Z INFO  [org.example.Class]: This is a #simple #logline containing a 'value'.</textarea>
     </label>
-    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Pattern
+
+    <div class="panel flex flex-col gap-3 p-4">
+      <div class="flex items-center justify-between gap-2">
+        <p class="text-sm text-ink-subtle">Click a highlighted part to change how it matches. Grey parts match literally.</p>
+        <div class="flex gap-2">
+          <button id="rg-all-literal" class="btn btn-tertiary text-[13px]">All literal</button>
+          <button id="rg-all-match" class="btn btn-tertiary text-[13px]">Auto-match</button>
+        </div>
+      </div>
+      <div id="rg-tokens" class="font-mono text-[13px] leading-loose break-words"></div>
+    </div>
+
+    <div class="flex flex-wrap gap-4">
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="rg-groups" type="checkbox" class="accent-primary" /> Named capture groups
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="rg-anchor" type="checkbox" class="accent-primary" /> Anchor (^…$)
+      </label>
+    </div>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Regex
       <div class="flex items-center gap-2">
         <span class="font-mono text-ink-tertiary">/</span>
         <input id="rg-pattern" class="field font-mono text-[13px]" spellcheck="false" autocomplete="off" />
         <span class="font-mono text-ink-tertiary">/</span>
-        <input id="rg-flags" class="field w-20 font-mono text-[13px]" value="" placeholder="gim" spellcheck="false" />
+        <input id="rg-flags" class="field w-20 font-mono text-[13px]" value="gm" placeholder="gim" spellcheck="false" />
       </div>
     </label>
+
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">Test string
-      <textarea id="rg-test" class="field min-h-28 resize-y font-mono text-[13px]" placeholder="Type text to test your pattern against…">test@example.com
-not-an-email
-hello@toolcities.com</textarea>
+      <textarea id="rg-test" class="field min-h-24 resize-y font-mono text-[13px]" spellcheck="false" placeholder="Text to test the regex against…"></textarea>
     </label>
+
     <div class="panel flex flex-col gap-2 p-4">
       <p id="rg-status" class="text-sm"></p>
       <div id="rg-matches" class="flex flex-wrap gap-2"></div>
     </div>
-    <button id="rg-copy" class="btn btn-secondary w-fit">Copy regex</button>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="rg-copy" class="btn btn-secondary w-fit">Copy regex</button>
+      <select id="rg-lang" class="field w-fit text-[13px]">
+        <option value="js">JavaScript</option>
+        <option value="py">Python</option>
+        <option value="php">PHP</option>
+        <option value="java">Java</option>
+        <option value="go">Go</option>
+        <option value="cs">C#</option>
+      </select>
+      <button id="rg-copy-code" class="btn btn-tertiary w-fit">Copy code</button>
+    </div>
+    <pre id="rg-code" class="panel overflow-x-auto p-4 font-mono text-[13px] text-ink-muted"></pre>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free regex generator gives you ready-made regular expressions for the
-      things people match most — emails, URLs, phone numbers, dates, IP addresses,
-      hex colors, slugs and strong passwords — with no need to remember the syntax.
-      Pick a pattern or write your own, add flags, and test it live against your
-      own text with matches highlighted. Runs entirely in your browser.
+      This free regex generator builds a regular expression from your own example
+      text — no syntax to memorize. Paste a sample line and it auto-recognizes the
+      dates, times, IP addresses, emails, URLs, UUIDs, numbers and words inside it.
+      Click any highlighted part to switch how it matches or lock it as literal
+      text, and the pattern assembles live. Turn on named capture groups, anchor
+      the match, test it against your own text, and copy ready-to-run code for
+      JavaScript, Python, PHP, Java, Go or C#. Everything runs in your browser.
     </p>
   </div>
 </ToolLayout>
 
 <script>
+  type Recognizer = { id: string; label: string; source: string; group: string };
+
+  // Order matters: more specific patterns first so the longest/best match wins.
+  const RECOGNIZERS: Recognizer[] = [
+    { id: 'isodt',   label: 'ISO date-time', group: 'datetime', source: String.raw`\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?` },
+    { id: 'date',    label: 'Date',          group: 'date',     source: String.raw`\d{4}-\d{2}-\d{2}` },
+    { id: 'time',    label: 'Time',          group: 'time',     source: String.raw`\d{2}:\d{2}:\d{2}(?:\.\d+)?` },
+    { id: 'ipv4',    label: 'IPv4',          group: 'ip',       source: String.raw`(?:\d{1,3}\.){3}\d{1,3}` },
+    { id: 'uuid',    label: 'UUID',          group: 'uuid',     source: String.raw`[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}` },
+    { id: 'email',   label: 'Email',         group: 'email',    source: String.raw`[\w.+-]+@[\w-]+\.[\w.-]+` },
+    { id: 'url',     label: 'URL',           group: 'url',      source: String.raw`https?:\/\/[^\s]+` },
+    { id: 'hex',     label: 'Hex color',     group: 'color',    source: String.raw`#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b` },
+    { id: 'dqstr',   label: 'Quoted "…"',    group: 'quoted',   source: String.raw`"[^"]*"` },
+    { id: 'sqstr',   label: "Quoted '…'",    group: 'quoted',   source: String.raw`'[^']*'` },
+    { id: 'decimal', label: 'Decimal',       group: 'number',   source: String.raw`-?\d+\.\d+` },
+    { id: 'int',     label: 'Integer',       group: 'number',   source: String.raw`-?\d+` },
+    { id: 'word',    label: 'Word',          group: 'word',     source: String.raw`\w+` },
+    { id: 'ws',      label: 'Whitespace',    group: 'ws',       source: String.raw`\s+` },
+  ];
+  const STICKY = RECOGNIZERS.map((r) => ({ ...r, re: new RegExp(r.source, 'y') }));
+
+  type Option = Recognizer | null; // null = match literally
+  type Token = { start: number; end: number; text: string; options: Option[]; sel: number };
+
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  /** Tokenize sample: recognized spans (with all recognizers matching that exact span) + coalesced literals. */
+  function tokenize(text: string): Token[] {
+    const tokens: Token[] = [];
+    let litStart = -1;
+    const flushLit = (end: number) => {
+      if (litStart < 0) return;
+      const t = text.slice(litStart, end);
+      tokens.push({ start: litStart, end, text: t, options: [null], sel: 0 });
+      litStart = -1;
+    };
+    let i = 0;
+    while (i < text.length) {
+      // Find every recognizer matching at exactly i, and the longest match length.
+      const hits: { r: Recognizer; len: number }[] = [];
+      let maxLen = 0;
+      for (const r of STICKY) {
+        r.re.lastIndex = i;
+        const m = r.re.exec(text);
+        if (m && m.index === i && m[0].length > 0) {
+          hits.push({ r, len: m[0].length });
+          if (m[0].length > maxLen) maxLen = m[0].length;
+        }
+      }
+      // Options = recognizers matching the longest span, plus a literal fallback.
+      const opts = hits.filter((h) => h.len === maxLen).map((h) => h.r as Option);
+      if (opts.length) {
+        flushLit(i);
+        opts.push(null);
+        tokens.push({ start: i, end: i + maxLen, text: text.slice(i, i + maxLen), options: opts, sel: 0 });
+        i += maxLen;
+      } else {
+        if (litStart < 0) litStart = i;
+        i += 1;
+      }
+    }
+    flushLit(text.length);
+    return tokens;
+  }
+
+  /** Build the regex source from token selections. */
+  function build(tokens: Token[], named: boolean, anchor: boolean): string {
+    const used = new Map<string, number>();
+    let out = '';
+    for (const tk of tokens) {
+      const opt = tk.options[tk.sel];
+      if (!opt) { out += esc(tk.text); continue; }
+      if (named) {
+        let name = opt.group;
+        const n = (used.get(name) || 0) + 1;
+        used.set(name, n);
+        if (n > 1) name += n;
+        out += `(?<${name}>${opt.source})`;
+      } else {
+        out += opt.source;
+      }
+    }
+    return anchor ? `^${out}$` : out;
+  }
+
   const $ = (id: string) => document.getElementById(id)!;
+  const sampleEl = $('rg-sample') as HTMLTextAreaElement;
+  const tokensEl = $('rg-tokens');
   const patternEl = $('rg-pattern') as HTMLInputElement;
   const flagsEl = $('rg-flags') as HTMLInputElement;
   const testEl = $('rg-test') as HTMLTextAreaElement;
-  const statusEl = $('rg-status')!;
-  const matchesEl = $('rg-matches')!;
+  const statusEl = $('rg-status');
+  const matchesEl = $('rg-matches');
+  const groupsEl = $('rg-groups') as HTMLInputElement;
+  const anchorEl = $('rg-anchor') as HTMLInputElement;
+  const codeEl = $('rg-code');
+  const langEl = $('rg-lang') as HTMLSelectElement;
 
-  $('rg-preset').addEventListener('change', () => {
-    const v = ($('rg-preset') as HTMLSelectElement).value;
-    if (v) patternEl.value = v;
+  let tokens: Token[] = [];
+  let patternDirty = false; // user hand-edited the pattern; stop overwriting it
+
+  function renderTokens() {
+    tokensEl.innerHTML = '';
+    tokens.forEach((tk, idx) => {
+      const opt = tk.options[tk.sel];
+      const span = document.createElement(opt ? 'button' : 'span');
+      span.textContent = tk.text.replace(/\n/g, '↵').replace(/ /g, '·');
+      if (opt) {
+        (span as HTMLButtonElement).type = 'button';
+        span.className = 'rounded px-0.5 transition-colors';
+        span.style.cssText = 'background:color-mix(in srgb,var(--color-primary) 22%,transparent);color:var(--color-ink);cursor:pointer;';
+        span.title = `${opt.label} — click to change`;
+        span.addEventListener('click', () => {
+          tk.sel = (tk.sel + 1) % tk.options.length;
+          renderTokens();
+          syncFromTokens();
+        });
+      } else {
+        span.className = 'text-ink-tertiary';
+        span.title = 'literal text';
+      }
+      tokensEl.appendChild(span);
+    });
+  }
+
+  function retokenize() {
+    tokens = tokenize(sampleEl.value);
+    patternDirty = false;
+    renderTokens();
+    syncFromTokens();
+  }
+
+  function syncFromTokens() {
+    if (patternDirty) { run(); return; }
+    patternEl.value = build(tokens, groupsEl.checked, anchorEl.checked);
     run();
-  });
+  }
 
+  // ---- Live tester ----
   function run() {
     matchesEl.innerHTML = '';
-    if (!patternEl.value) { statusEl.textContent = 'Enter or pick a pattern.'; statusEl.style.color = ''; return; }
+    const source = patternEl.value;
+    if (!source) { statusEl.textContent = 'Build or enter a pattern.'; statusEl.style.color = ''; codeEl.textContent = ''; return; }
     let re: RegExp;
     try {
-      re = new RegExp(patternEl.value, flagsEl.value);
+      re = new RegExp(source, flagsEl.value);
     } catch (e) {
       statusEl.textContent = 'Invalid regex: ' + (e as Error).message;
       statusEl.style.color = '#e5484d';
+      codeEl.textContent = '';
       return;
     }
-    const lines = testEl.value.split('\n');
-    let total = 0;
-    for (const line of lines) {
-      const global = re.flags.includes('g') ? re : new RegExp(re.source, re.flags + 'g');
-      const found = line.match(global);
-      if (found) {
-        total += found.length;
-        found.forEach((m) => {
-          const chip = document.createElement('span');
-          chip.className = 'status-badge';
-          chip.style.color = '#27a644';
-          chip.textContent = m || '(empty)';
-          matchesEl.appendChild(chip);
-        });
-      }
+    const target = testEl.value || sampleEl.value;
+    const global = re.flags.includes('g') ? re : new RegExp(re.source, re.flags + 'g');
+    let total = 0, m: RegExpExecArray | null;
+    while ((m = global.exec(target)) !== null) {
+      total++;
+      const chip = document.createElement('span');
+      chip.className = 'status-badge';
+      chip.style.color = '#27a644';
+      chip.textContent = m[0] || '(empty)';
+      matchesEl.appendChild(chip);
+      if (m.index === global.lastIndex) global.lastIndex++; // avoid zero-length loop
+      if (total > 200) break;
     }
     statusEl.style.color = total ? '#27a644' : '#8a8f98';
-    statusEl.textContent = total ? `✓ ${total} match${total === 1 ? '' : 'es'} found.` : 'No matches.';
+    const scope = testEl.value ? 'test string' : 'example above';
+    statusEl.textContent = total ? `✓ ${total} match${total === 1 ? '' : 'es'} in ${scope}.` : `No matches in ${scope}.`;
+    renderCode(source);
   }
 
-  [patternEl, flagsEl, testEl].forEach((el) => el.addEventListener('input', run));
+  // ---- Code generation ----
+  function renderCode(source: string) {
+    const flags = flagsEl.value;
+    const jsFlags = flags || '';
+    const py = (flags.includes('i') ? 're.IGNORECASE' : '') + (flags.includes('m') ? (flags.includes('i') ? ' | re.MULTILINE' : 're.MULTILINE') : '');
+    const jesc = source.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    const templates: Record<string, string> = {
+      js: `const re = /${source}/${jsFlags};\nconst matches = str.match(re);`,
+      py: `import re\npattern = re.compile(r"""${source}"""${py ? ', ' + py : ''})\nmatches = pattern.findall(text)`,
+      php: `$re = '/' . '${source.replace(/'/g, "\\'")}' . '/${flags.replace(/[gm]/g, (c) => (c === 'm' ? 'm' : ''))}';\npreg_match_all($re, $text, $matches);`,
+      java: `Pattern p = Pattern.compile("${jesc}"${flags.includes('i') ? ', Pattern.CASE_INSENSITIVE' : ''});\nMatcher m = p.matcher(text);`,
+      go: `re := regexp.MustCompile(\`${flags.includes('i') ? '(?i)' : ''}${source}\`)\nmatches := re.FindAllString(text, -1)`,
+      cs: `var re = new Regex(@"${source.replace(/"/g, '""')}"${flags.includes('i') ? ', RegexOptions.IgnoreCase' : ''});\nvar matches = re.Matches(text);`,
+    };
+    codeEl.textContent = templates[langEl.value];
+  }
+
+  // ---- Wiring ----
+  sampleEl.addEventListener('input', retokenize);
+  groupsEl.addEventListener('change', () => { patternDirty = false; syncFromTokens(); });
+  anchorEl.addEventListener('change', () => { patternDirty = false; syncFromTokens(); });
+  patternEl.addEventListener('input', () => { patternDirty = true; run(); });
+  flagsEl.addEventListener('input', run);
+  testEl.addEventListener('input', run);
+  langEl.addEventListener('change', () => renderCode(patternEl.value));
+
+  $('rg-all-literal').addEventListener('click', () => {
+    tokens.forEach((tk) => (tk.sel = tk.options.length - 1)); // last option is the literal fallback
+    patternDirty = false; renderTokens(); syncFromTokens();
+  });
+  $('rg-all-match').addEventListener('click', () => {
+    tokens.forEach((tk) => (tk.sel = 0));
+    patternDirty = false; renderTokens(); syncFromTokens();
+  });
+
   $('rg-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
     await navigator.clipboard.writeText(`/${patternEl.value}/${flagsEl.value}`);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy regex'), 1500);
   });
+  $('rg-copy-code').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(codeEl.textContent || '');
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy code'), 1500);
+  });
 
-  patternEl.value = '^[\\w.+-]+@[\\w-]+\\.[\\w.-]+$';
-  run();
+  retokenize();
+
+  // ponytail: dev-only self-check on the tokenizer — the one non-trivial piece.
+  if (import.meta.env.DEV) {
+    const t = tokenize("2020-03-12 #ab");
+    console.assert(t[0].options[0]?.id === 'isodt', 'expected ISO date-time first token');
+    console.assert(t.some((x) => x.options[0] === null && x.text.includes('#')), 'expected # as literal');
+    console.assert(build(tokenize('abc'), false, true) === '^\\w+$', 'anchor+word build failed');
+  }
 </script>

@@ -1,116 +1,282 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 
-const keyframeLib = `fade|0%{opacity:0}100%{opacity:1}
-slide-up|0%{transform:translateY(30px);opacity:0}100%{transform:translateY(0);opacity:1}
-slide-left|0%{transform:translateX(30px);opacity:0}100%{transform:translateX(0);opacity:1}
-bounce|0%,100%{transform:translateY(0)}50%{transform:translateY(-30px)}
-pulse|0%,100%{transform:scale(1)}50%{transform:scale(1.15)}
-spin|0%{transform:rotate(0)}100%{transform:rotate(360deg)}
-shake|0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}
-flip|0%{transform:perspective(400px) rotateY(0)}100%{transform:perspective(400px) rotateY(360deg)}`;
+// Keyframe library grouped by category. Each entry: id, label, keyframe body.
+// `bg:true` marks effects that need a gradient surface to be visible.
+const CATS: Record<string, { id: string; label: string; body: string; bg?: boolean }[]> = {
+  Basic: [
+    { id: 'fade', label: 'Fade', body: '0%{opacity:0}100%{opacity:1}' },
+    { id: 'slide-up', label: 'Slide up', body: '0%{transform:translateY(30px);opacity:0}100%{transform:translateY(0);opacity:1}' },
+    { id: 'slide-down', label: 'Slide down', body: '0%{transform:translateY(-30px);opacity:0}100%{transform:translateY(0);opacity:1}' },
+    { id: 'slide-left', label: 'Slide left', body: '0%{transform:translateX(30px);opacity:0}100%{transform:translateX(0);opacity:1}' },
+    { id: 'slide-right', label: 'Slide right', body: '0%{transform:translateX(-30px);opacity:0}100%{transform:translateX(0);opacity:1}' },
+    { id: 'spin', label: 'Spin', body: '0%{transform:rotate(0)}100%{transform:rotate(360deg)}' },
+    { id: 'scale-up', label: 'Scale up', body: '0%{transform:scale(0)}100%{transform:scale(1)}' },
+    { id: 'scale-down', label: 'Scale down', body: '0%{transform:scale(1.4)}100%{transform:scale(1)}' },
+  ],
+  Entrance: [
+    { id: 'fade-in', label: 'Fade in', body: '0%{opacity:0}100%{opacity:1}' },
+    { id: 'fade-in-up', label: 'Fade in up', body: '0%{opacity:0;transform:translateY(40px)}100%{opacity:1;transform:translateY(0)}' },
+    { id: 'fade-in-down', label: 'Fade in down', body: '0%{opacity:0;transform:translateY(-40px)}100%{opacity:1;transform:translateY(0)}' },
+    { id: 'zoom-in', label: 'Zoom in', body: '0%{opacity:0;transform:scale(.3)}100%{opacity:1;transform:scale(1)}' },
+    { id: 'bounce-in', label: 'Bounce in', body: '0%{opacity:0;transform:scale(.3)}50%{opacity:1;transform:scale(1.05)}70%{transform:scale(.9)}100%{transform:scale(1)}' },
+    { id: 'flip-in-x', label: 'Flip in X', body: '0%{opacity:0;transform:perspective(400px) rotateX(90deg)}100%{opacity:1;transform:perspective(400px) rotateX(0)}' },
+    { id: 'rotate-in', label: 'Rotate in', body: '0%{opacity:0;transform:rotate(-200deg)}100%{opacity:1;transform:rotate(0)}' },
+  ],
+  Exit: [
+    { id: 'fade-out', label: 'Fade out', body: '0%{opacity:1}100%{opacity:0}' },
+    { id: 'fade-out-up', label: 'Fade out up', body: '0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-40px)}' },
+    { id: 'zoom-out', label: 'Zoom out', body: '0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.3)}' },
+    { id: 'bounce-out', label: 'Bounce out', body: '0%{transform:scale(1)}20%{transform:scale(.9)}50%{opacity:1;transform:scale(1.1)}100%{opacity:0;transform:scale(.3)}' },
+    { id: 'flip-out-x', label: 'Flip out X', body: '0%{opacity:1;transform:perspective(400px) rotateX(0)}100%{opacity:0;transform:perspective(400px) rotateX(90deg)}' },
+  ],
+  Attention: [
+    { id: 'bounce', label: 'Bounce', body: '0%,20%,53%,100%{transform:translateY(0)}40%,43%{transform:translateY(-30px)}70%{transform:translateY(-15px)}90%{transform:translateY(-4px)}' },
+    { id: 'shake', label: 'Shake', body: '0%,100%{transform:translateX(0)}10%,30%,50%,70%,90%{transform:translateX(-10px)}20%,40%,60%,80%{transform:translateX(10px)}' },
+    { id: 'wobble', label: 'Wobble', body: '0%,100%{transform:none}15%{transform:translateX(-25%) rotate(-5deg)}30%{transform:translateX(20%) rotate(3deg)}45%{transform:translateX(-15%) rotate(-3deg)}60%{transform:translateX(10%) rotate(2deg)}75%{transform:translateX(-5%) rotate(-1deg)}' },
+    { id: 'swing', label: 'Swing', body: '20%{transform:rotate(15deg)}40%{transform:rotate(-10deg)}60%{transform:rotate(5deg)}80%{transform:rotate(-5deg)}100%{transform:rotate(0)}' },
+    { id: 'tada', label: 'Tada', body: '0%{transform:scale(1)}10%,20%{transform:scale(.9) rotate(-3deg)}30%,50%,70%,90%{transform:scale(1.1) rotate(3deg)}40%,60%,80%{transform:scale(1.1) rotate(-3deg)}100%{transform:scale(1) rotate(0)}' },
+    { id: 'flash', label: 'Flash', body: '0%,50%,100%{opacity:1}25%,75%{opacity:0}' },
+    { id: 'pulse', label: 'Pulse', body: '0%,100%{transform:scale(1)}50%{transform:scale(1.15)}' },
+    { id: 'heartbeat', label: 'Heartbeat', body: '0%{transform:scale(1)}14%{transform:scale(1.3)}28%{transform:scale(1)}42%{transform:scale(1.3)}70%{transform:scale(1)}' },
+    { id: 'jello', label: 'Jello', body: '0%,11.1%,100%{transform:none}22.2%{transform:skewX(-12deg) skewY(-12deg)}33.3%{transform:skewX(6deg) skewY(6deg)}44.4%{transform:skewX(-3deg) skewY(-3deg)}55.5%{transform:skewX(1.5deg) skewY(1.5deg)}' },
+    { id: 'rubber-band', label: 'Rubber band', body: '0%{transform:scale(1)}30%{transform:scaleX(1.25) scaleY(.75)}40%{transform:scaleX(.75) scaleY(1.25)}60%{transform:scaleX(1.15) scaleY(.85)}100%{transform:scale(1)}' },
+  ],
+  Background: [
+    { id: 'bg-pan', label: 'Background pan', bg: true, body: '0%{background-position:0% 50%}100%{background-position:100% 50%}' },
+    { id: 'gradient-shift', label: 'Gradient shift', bg: true, body: '0%,100%{background-position:0% 50%}50%{background-position:100% 50%}' },
+    { id: 'hue-rotate', label: 'Hue rotate', bg: true, body: '0%{filter:hue-rotate(0)}100%{filter:hue-rotate(360deg)}' },
+  ],
+};
 ---
 
 <ToolLayout slug="css-animation-generator">
   <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
     <div class="flex flex-col gap-3">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Effect
-        <select id="an-effect" class="field">
-          <option value="fade">Fade in</option>
-          <option value="slide-up">Slide up</option>
-          <option value="slide-left">Slide left</option>
-          <option value="bounce">Bounce</option>
-          <option value="pulse">Pulse</option>
-          <option value="spin">Spin</option>
-          <option value="shake">Shake</option>
-          <option value="flip">Flip</option>
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">Category
+        <div id="an-tabs" class="flex flex-wrap gap-1">
+          {Object.keys(CATS).map((c, i) => (
+            <button type="button" data-cat={c} class:list={["tab", { 'tab-active': i === 0 }]}>{c}</button>
+          ))}
+        </div>
+      </div>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Animation
+        <select id="an-effect" class="field"></select>
+      </label>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Name (animation-name)
+        <input id="an-name" type="text" class="field" placeholder="fade" />
+      </label>
+
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Duration (s)
+          <input id="an-dur" type="number" min="0" step="0.1" value="1" class="field" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Delay (s)
+          <input id="an-delay" type="number" min="0" step="0.1" value="0" class="field" />
+        </label>
+      </div>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Timing function
+        <select id="an-timing" class="field">
+          <option>ease</option><option>ease-in</option><option>ease-out</option>
+          <option>ease-in-out</option><option>linear</option>
+          <option>step-start</option><option>step-end</option>
+          <option value="steps(4, jump-end)">steps(4)</option>
+          <option value="steps(4, jump-none)">steps(4, jump-none)</option>
+          <option value="cubic-bezier(.68,-.55,.27,1.55)">cubic-bezier — back</option>
+          <option value="cubic-bezier(.25,.46,.45,.94)">cubic-bezier — ease-out-quad</option>
         </select>
       </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Duration: <span id="an-dv" class="text-ink">1s</span>
-        <input id="an-dur" type="range" min="100" max="4000" step="100" value="1000" class="w-full accent-[#5e6ad2]" />
-      </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Delay: <span id="an-delayv" class="text-ink">0s</span>
-        <input id="an-delay" type="range" min="0" max="3000" step="100" value="0" class="w-full accent-[#5e6ad2]" />
-      </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Timing function
-        <select id="an-timing" class="field"><option>ease</option><option>ease-in</option><option>ease-out</option><option>ease-in-out</option><option>linear</option><option value="cubic-bezier(.68,-.55,.27,1.55)">bounce (cubic-bezier)</option></select>
-      </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Iterations
-        <select id="an-iter" class="field"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="infinite" selected>infinite</option></select>
-      </label>
-      <button id="an-replay" class="btn btn-secondary w-fit">Replay</button>
+
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Iterations
+          <input id="an-iter" type="text" class="field" placeholder="infinite" value="infinite" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Direction
+          <select id="an-dir" class="field">
+            <option>normal</option><option>reverse</option>
+            <option>alternate</option><option>alternate-reverse</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Fill mode
+          <select id="an-fill" class="field">
+            <option>none</option><option>forwards</option>
+            <option>backwards</option><option>both</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Play state
+          <select id="an-play" class="field">
+            <option value="running">running</option>
+            <option value="paused">paused</option>
+          </select>
+        </label>
+      </div>
+
+      <p class="text-xs text-ink-subtle">Leave iterations empty or type <code class="font-mono text-ink">infinite</code> to loop forever.</p>
     </div>
 
     <div class="flex flex-col gap-4">
       <div class="flex min-h-56 items-center justify-center overflow-hidden rounded-lg border border-hairline bg-surface-2 p-8">
         <div id="an-box" class="flex h-24 w-24 items-center justify-center rounded-lg bg-[#5e6ad2] text-sm font-medium text-white">Demo</div>
       </div>
-      <div class="flex items-start gap-2">
-        <pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto"><code id="an-css" class="hljs" style="background:transparent;padding:0"></code></pre>
-        <button id="an-copy" class="btn btn-secondary whitespace-nowrap">Copy</button>
+      <div class="flex gap-2">
+        <button id="an-replay" class="btn btn-secondary">Replay</button>
+        <button id="an-toggle" class="btn btn-secondary">Pause</button>
+        <button id="an-copy" class="btn btn-secondary ml-auto">Copy</button>
+        <button id="an-dl" class="btn btn-secondary">Download</button>
       </div>
+      <pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto"><code id="an-css" class="hljs" style="background:transparent;padding:0"></code></pre>
     </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free CSS animation generator turns common motion effects — fade, slide,
-      bounce, pulse, spin, shake and flip — into ready-to-use
-      <code class="font-mono text-ink">@keyframes</code> and the
-      <code class="font-mono text-ink">animation</code> shorthand. Adjust
-      duration, delay, timing function and iteration count and watch the preview
-      update live. Copy the CSS straight into your stylesheet. Runs in your browser.
+      This free CSS animation generator turns 30+ ready-made motion effects —
+      grouped into Basic, Entrance, Exit, Attention and Background categories —
+      into copy-ready <code class="font-mono text-ink">@keyframes</code> and the
+      <code class="font-mono text-ink">animation</code> shorthand. Rename the
+      animation and tune every sub-property: duration, delay, timing function
+      (including <code class="font-mono text-ink">steps()</code> and
+      <code class="font-mono text-ink">cubic-bezier()</code>), iteration count,
+      direction, fill mode and play state. The preview updates live — pause,
+      replay, then copy or download the CSS. Everything runs in your browser;
+      nothing is uploaded.
     </p>
   </div>
 </ToolLayout>
 
-<script is:inline define:vars={{ keyframeLib }}>
-  window.__kf = Object.fromEntries(keyframeLib.split('\n').map((l) => {
-    const [name, body] = l.split('|');
-    return [name, body];
-  }));
+<style>
+  .tab {
+    padding: 0.3rem 0.7rem;
+    border-radius: 0.4rem;
+    font-size: 0.8rem;
+    border: 1px solid var(--hairline, #26262b);
+    color: var(--ink-subtle, #9c9ca6);
+    background: transparent;
+    cursor: pointer;
+  }
+  .tab:hover { color: var(--ink, #e8e8ea); }
+  .tab-active {
+    background: #5e6ad2;
+    border-color: #5e6ad2;
+    color: #fff;
+  }
+</style>
+
+<script is:inline define:vars={{ CATS }}>
+  window.__anCats = CATS;
 </script>
 
 <script>
   import { hl } from '../../lib/highlight';
+  type Effect = { id: string; label: string; body: string; bg?: boolean };
+  const CATS = (window as any).__anCats as Record<string, Effect[]>;
+
   const $ = (id: string) => document.getElementById(id)!;
   const box = $('an-box') as HTMLElement;
   const cssEl = $('an-css')!;
+  const effectSel = $('an-effect') as HTMLSelectElement;
+  const nameIn = $('an-name') as HTMLInputElement;
   let rawOutput = '';
-  const kf = (window as any).__kf as Record<string, string>;
-  const ids = ['an-effect', 'an-dur', 'an-delay', 'an-timing', 'an-iter'];
-
+  let nameEdited = false; // once the user renames, stop auto-syncing name to effect id
   let styleTag: HTMLStyleElement;
 
+  function currentEffect(): Effect {
+    for (const list of Object.values(CATS)) {
+      const hit = list.find((e) => e.id === effectSel.value);
+      if (hit) return hit;
+    }
+    return CATS.Basic[0];
+  }
+
+  function fillEffects(cat: string) {
+    effectSel.innerHTML = CATS[cat]
+      .map((e) => `<option value="${e.id}">${e.label}</option>`)
+      .join('');
+    nameEdited = false;
+  }
+
   function update() {
-    const effect = ($('an-effect') as HTMLSelectElement).value;
-    const dur = Number(($('an-dur') as HTMLInputElement).value) / 1000;
-    const delay = Number(($('an-delay') as HTMLInputElement).value) / 1000;
+    const eff = currentEffect();
+    if (!nameEdited) nameIn.value = eff.id;
+    const name = (nameIn.value.trim() || eff.id).replace(/\s+/g, '-');
+
+    const dur = (($('an-dur') as HTMLInputElement).value || '1');
+    const delay = (($('an-delay') as HTMLInputElement).value || '0');
     const timing = ($('an-timing') as HTMLSelectElement).value;
-    const iter = ($('an-iter') as HTMLSelectElement).value;
-    $('an-dv').textContent = `${dur}s`; $('an-delayv').textContent = `${delay}s`;
+    const iterRaw = ($('an-iter') as HTMLInputElement).value.trim();
+    const iter = iterRaw === '' ? 'infinite' : iterRaw;
+    const dir = ($('an-dir') as HTMLSelectElement).value;
+    const fill = ($('an-fill') as HTMLSelectElement).value;
+    const play = ($('an-play') as HTMLSelectElement).value;
 
-    const kfBody = kf[effect];
-    const keyframes = `@keyframes ${effect} {\n  ${kfBody.replace(/}/g, '}\n  ').trim()}\n}`;
-    const anim = `animation: ${effect} ${dur}s ${timing} ${delay}s ${iter};`;
+    const keyframes = `@keyframes ${name} {\n  ${eff.body.replace(/}/g, '}\n  ').trim()}\n}`;
+    const shorthand = `animation: ${name} ${dur}s ${timing} ${delay}s ${iter} ${dir} ${fill};`;
 
+    // Live preview
     if (!styleTag) { styleTag = document.createElement('style'); document.head.appendChild(styleTag); }
     styleTag.textContent = keyframes;
+    if (eff.bg) {
+      box.style.background = 'linear-gradient(90deg,#5e6ad2,#d25e9e,#5ec9d2,#5e6ad2)';
+      box.style.backgroundSize = '300% 300%';
+    } else {
+      box.style.background = '#5e6ad2';
+      box.style.backgroundSize = '';
+    }
     box.style.animation = 'none';
     void box.offsetWidth; // reflow to restart
-    box.style.animation = `${effect} ${dur}s ${timing} ${delay}s ${iter}`;
+    box.style.animation = `${name} ${dur}s ${timing} ${delay}s ${iter} ${dir} ${fill}`;
+    box.style.animationPlayState = play;
 
-    rawOutput = `${keyframes}\n\n.element {\n  ${anim}\n}`;
+    rawOutput = `${keyframes}\n\n.element {\n  ${shorthand}\n  animation-play-state: ${play};\n}`;
     hl(cssEl, rawOutput, 'css');
   }
 
-  ids.forEach((id) => $(id).addEventListener('input', update));
+  // Category tabs
+  const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('#an-tabs .tab'));
+  tabs.forEach((t) => t.addEventListener('click', () => {
+    tabs.forEach((x) => x.classList.remove('tab-active'));
+    t.classList.add('tab-active');
+    fillEffects(t.dataset.cat!);
+    update();
+  }));
+
+  effectSel.addEventListener('change', update);
+  nameIn.addEventListener('input', () => { nameEdited = true; update(); });
+  ['an-dur', 'an-delay', 'an-timing', 'an-iter', 'an-dir', 'an-fill', 'an-play']
+    .forEach((id) => $(id).addEventListener('input', update));
+
   $('an-replay').addEventListener('click', update);
+
+  const toggleBtn = $('an-toggle') as HTMLButtonElement;
+  toggleBtn.addEventListener('click', () => {
+    const sel = $('an-play') as HTMLSelectElement;
+    sel.value = sel.value === 'paused' ? 'running' : 'paused';
+    toggleBtn.textContent = sel.value === 'paused' ? 'Play' : 'Pause';
+    update();
+  });
+
   $('an-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
     await navigator.clipboard.writeText(rawOutput);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy'), 1500);
   });
+
+  $('an-dl').addEventListener('click', () => {
+    const blob = new Blob([rawOutput], { type: 'text/css' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${(nameIn.value.trim() || 'animation').replace(/\s+/g, '-')}.css`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  fillEffects('Basic');
   update();
 </script>

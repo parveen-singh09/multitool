@@ -5,35 +5,52 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 <ToolLayout slug="robots-txt-generator">
   <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
     <div class="flex flex-col gap-3">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Default policy
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Default — all robots are
         <select id="rb-policy" class="field">
-          <option value="allow">Allow all robots</option>
-          <option value="disallow">Block all robots</option>
-          <option value="custom">Custom rules</option>
+          <option value="allow">Allowed</option>
+          <option value="disallow">Refused</option>
         </select>
       </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">User-agent
-        <input id="rb-agent" class="field font-mono" value="*" spellcheck="false" />
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Crawl-delay
+        <select id="rb-delay" class="field">
+          <option value="">No delay</option>
+          <option value="5">5 seconds</option>
+          <option value="10">10 seconds</option>
+          <option value="20">20 seconds</option>
+          <option value="60">60 seconds</option>
+          <option value="120">120 seconds</option>
+        </select>
       </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Disallow paths (one per line)
-        <textarea id="rb-disallow" class="field min-h-24 resize-y font-mono text-[13px]" placeholder="/admin/&#10;/private/"></textarea>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Sitemap URL <span class="text-ink-faint">(leave blank if none)</span>
+        <input id="rb-sitemap" class="field text-[13px]" placeholder="https://site.com/sitemap.xml" spellcheck="false" />
       </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Allow paths (one per line)
-        <textarea id="rb-allow" class="field min-h-16 resize-y font-mono text-[13px]" placeholder="/public/"></textarea>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Restricted directories — disallow (one per line)
+        <textarea id="rb-disallow" class="field min-h-20 resize-y font-mono text-[13px]" placeholder="/admin/&#10;/private/&#10;/cgi-bin/"></textarea>
       </label>
-      <div class="grid grid-cols-2 gap-3">
-        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Crawl-delay (s)
-          <input id="rb-delay" type="number" min="0" class="field" placeholder="(none)" />
-        </label>
-        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Sitemap URL
-          <input id="rb-sitemap" class="field text-[13px]" placeholder="https://site.com/sitemap.xml" spellcheck="false" />
-        </label>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Allow paths — override (one per line)
+        <textarea id="rb-allow" class="field min-h-14 resize-y font-mono text-[13px]" placeholder="/public/"></textarea>
+      </label>
+
+      <div class="flex flex-wrap gap-2">
+        <button id="rb-preset-wp" class="btn btn-secondary text-xs" type="button">WordPress preset</button>
+        <button id="rb-preset-ai" class="btn btn-secondary text-xs" type="button">Block AI crawlers</button>
+        <button id="rb-reset" class="btn btn-secondary text-xs" type="button">Reset bots</button>
       </div>
+
+      <fieldset class="flex flex-col gap-2 rounded-lg border border-line p-3">
+        <legend class="px-1 text-sm text-ink-subtle">Specific robots</legend>
+        <div id="rb-bots" class="grid grid-cols-1 gap-1.5"></div>
+      </fieldset>
     </div>
 
     <div class="flex flex-col gap-2">
       <label class="text-sm text-ink-subtle">robots.txt</label>
       <pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto"><code id="rb-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+      <p id="rb-warn" class="hidden text-[13px] text-amber-400"></p>
       <div class="flex gap-2">
         <button id="rb-copy" class="btn btn-secondary">Copy</button>
         <button id="rb-dl" class="btn btn-secondary">Download</button>
@@ -45,9 +62,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p>
       This free robots.txt generator builds a valid robots.txt file that tells
       search-engine crawlers which parts of your site they may or may not access.
-      Choose a default allow or block policy, add per-path disallow and allow
-      rules, an optional crawl delay and a sitemap reference. Place the result at
-      the root of your domain. Generated in your browser.
+      Set a default allow or refuse policy, a crawl delay and a sitemap, then
+      restrict directories or tune individual search robots — Google, Bing, Yahoo,
+      Baidu, Yandex and more — each to allowed, refused or same-as-default.
+    </p>
+    <p>
+      Beyond the basics, one click blocks the major AI training crawlers (GPTBot,
+      ClaudeBot, CCBot, Google-Extended and others) or drops in a battle-tested
+      WordPress ruleset. The preview updates live with inline validation, and
+      everything runs in your browser — nothing is uploaded. Place the result at
+      the root of your domain, e.g. <code>https://example.com/robots.txt</code>.
     </p>
   </div>
 </ToolLayout>
@@ -55,31 +79,127 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 <script>
   import { hl } from '../../lib/highlight';
 
+  type Mode = 'default' | 'allow' | 'block';
+  const BOTS: { ua: string; label: string; ai?: boolean }[] = [
+    { ua: 'Googlebot', label: 'Google' },
+    { ua: 'Googlebot-Image', label: 'Google Image' },
+    { ua: 'Googlebot-News', label: 'Google News' },
+    { ua: 'Bingbot', label: 'Bing / MSN' },
+    { ua: 'Slurp', label: 'Yahoo' },
+    { ua: 'DuckDuckBot', label: 'DuckDuckGo' },
+    { ua: 'Baiduspider', label: 'Baidu' },
+    { ua: 'YandexBot', label: 'Yandex' },
+    { ua: 'Yeti', label: 'Naver' },
+    { ua: 'Applebot', label: 'Apple' },
+    { ua: 'facebookexternalhit', label: 'Facebook' },
+    { ua: 'GPTBot', label: 'OpenAI GPTBot', ai: true },
+    { ua: 'ChatGPT-User', label: 'ChatGPT-User', ai: true },
+    { ua: 'OAI-SearchBot', label: 'OpenAI Search', ai: true },
+    { ua: 'ClaudeBot', label: 'Anthropic ClaudeBot', ai: true },
+    { ua: 'Claude-Web', label: 'Claude-Web', ai: true },
+    { ua: 'CCBot', label: 'Common Crawl', ai: true },
+    { ua: 'Google-Extended', label: 'Google-Extended (Gemini)', ai: true },
+    { ua: 'PerplexityBot', label: 'Perplexity', ai: true },
+    { ua: 'Bytespider', label: 'ByteDance', ai: true },
+    { ua: 'Amazonbot', label: 'Amazon', ai: true },
+    { ua: 'meta-externalagent', label: 'Meta AI', ai: true },
+  ];
+
   const $ = (id: string) => document.getElementById(id)!;
   const out = $('rb-out') as HTMLElement;
+  const warn = $('rb-warn') as HTMLElement;
   let rawOutput = '';
-  const lines = (id: string) => ($(id) as HTMLTextAreaElement).value.split('\n').map((l) => l.trim()).filter(Boolean);
+  const lines = (id: string) =>
+    ($(id) as HTMLTextAreaElement).value.split('\n').map((l) => l.trim()).filter(Boolean);
+
+  // Build bot rows in JS to keep the markup lean.
+  const botSel: Record<string, HTMLSelectElement> = {};
+  const botBox = $('rb-bots');
+  for (const b of BOTS) {
+    const row = document.createElement('label');
+    row.className = 'flex items-center justify-between gap-2 text-[13px] text-ink-subtle';
+    const name = document.createElement('span');
+    name.textContent = b.label + (b.ai ? ' ✨' : '');
+    name.className = 'font-mono truncate';
+    const sel = document.createElement('select');
+    sel.className = 'field w-28 shrink-0 py-1 text-xs';
+    sel.innerHTML =
+      '<option value="default">Default</option><option value="allow">Allowed</option><option value="block">Refused</option>';
+    botSel[b.ua] = sel;
+    sel.addEventListener('change', build);
+    row.append(name, sel);
+    botBox.append(row);
+  }
+
+  function normalizePath(p: string) {
+    if (!p) return p;
+    return p.startsWith('/') ? p : '/' + p;
+  }
 
   function build() {
     const policy = ($('rb-policy') as HTMLSelectElement).value;
-    const agent = ($('rb-agent') as HTMLInputElement).value.trim() || '*';
-    const delay = ($('rb-delay') as HTMLInputElement).value;
+    const delay = ($('rb-delay') as HTMLSelectElement).value;
     const sitemap = ($('rb-sitemap') as HTMLInputElement).value.trim();
-    const result: string[] = [`User-agent: ${agent}`];
-    if (policy === 'disallow') result.push('Disallow: /');
-    else if (policy === 'allow') result.push('Disallow:');
+    const disallow = lines('rb-disallow').map(normalizePath);
+    const allow = lines('rb-allow').map(normalizePath);
+    const warnings: string[] = [];
+
+    const block: string[] = [`User-agent: *`];
+    if (policy === 'disallow') block.push('Disallow: /');
     else {
-      lines('rb-disallow').forEach((p) => result.push(`Disallow: ${p}`));
-      lines('rb-allow').forEach((p) => result.push(`Allow: ${p}`));
-      if (result.length === 1) result.push('Disallow:');
+      disallow.forEach((p) => block.push(`Disallow: ${p}`));
+      allow.forEach((p) => block.push(`Allow: ${p}`));
+      if (block.length === 1) block.push('Disallow:');
     }
-    if (delay) result.push(`Crawl-delay: ${delay}`);
-    if (sitemap) { result.push(''); result.push(`Sitemap: ${sitemap}`); }
+    if (delay) block.push(`Crawl-delay: ${delay}`);
+
+    const result: string[] = [block.join('\n')];
+
+    for (const b of BOTS) {
+      const mode = botSel[b.ua].value as Mode;
+      if (mode === 'default') continue;
+      result.push(`\nUser-agent: ${b.ua}\n${mode === 'block' ? 'Disallow: /' : 'Disallow:'}`);
+    }
+
+    if (sitemap) {
+      if (!/^https?:\/\//i.test(sitemap)) warnings.push('Sitemap should be an absolute URL (start with http:// or https://).');
+      result.push(`\nSitemap: ${sitemap}`);
+    }
+
     rawOutput = result.join('\n');
     hl(out, rawOutput, 'plaintext');
+
+    if (warnings.length) {
+      warn.textContent = warnings.join(' ');
+      warn.classList.remove('hidden');
+    } else {
+      warn.classList.add('hidden');
+    }
   }
 
-  ['rb-policy', 'rb-agent', 'rb-disallow', 'rb-allow', 'rb-delay', 'rb-sitemap'].forEach((id) => $(id).addEventListener('input', build));
+  function setBots(uas: string[], mode: Mode) {
+    for (const ua of Object.keys(botSel)) botSel[ua].value = uas.includes(ua) ? mode : botSel[ua].value;
+    build();
+  }
+
+  $('rb-preset-ai').addEventListener('click', () =>
+    setBots(BOTS.filter((b) => b.ai).map((b) => b.ua), 'block'),
+  );
+  $('rb-preset-wp').addEventListener('click', () => {
+    ($('rb-policy') as HTMLSelectElement).value = 'allow';
+    ($('rb-disallow') as HTMLTextAreaElement).value = '/wp-admin/\n/wp-includes/\n/xmlrpc.php';
+    ($('rb-allow') as HTMLTextAreaElement).value = '/wp-admin/admin-ajax.php';
+    build();
+  });
+  $('rb-reset').addEventListener('click', () => {
+    for (const ua of Object.keys(botSel)) botSel[ua].value = 'default';
+    build();
+  });
+
+  ['rb-policy', 'rb-delay', 'rb-sitemap', 'rb-disallow', 'rb-allow'].forEach((id) =>
+    $(id).addEventListener('input', build),
+  );
+
   $('rb-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
     await navigator.clipboard.writeText(rawOutput);
@@ -88,7 +208,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   });
   $('rb-dl').addEventListener('click', () => {
     const url = URL.createObjectURL(new Blob([rawOutput], { type: 'text/plain' }));
-    const a = document.createElement('a'); a.href = url; a.download = 'robots.txt'; a.click();
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'robots.txt';
+    a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
   build();

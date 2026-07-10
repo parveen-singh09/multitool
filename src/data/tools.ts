@@ -2327,11 +2327,11 @@ export const tools: Tool[] = [
   {
     slug: 'sitemap-generator',
     name: 'sitemap.xml Generator',
-    tagline: 'Turn a list of URLs into a sitemap.xml.',
+    tagline: 'Crawl a website and generate its sitemap.xml.',
     description:
-      'Free online sitemap.xml generator. Paste your page URLs and set change frequency and priority to generate a valid XML sitemap for search engines, then copy or download it. Runs in your browser.',
+      'Free online sitemap.xml generator. Enter a website URL and it crawls your pages by following internal links, then builds a valid XML sitemap with automatic depth-based priority, change frequency and lastmod. Or paste your own URL list. Copy or download the file. Runs entirely in your browser.',
     category: 'Developer',
-    keywords: ['sitemap generator', 'sitemap.xml generator', 'xml sitemap generator', 'create sitemap', 'seo sitemap generator'],
+    keywords: ['sitemap generator', 'sitemap.xml generator', 'xml sitemap generator', 'website crawler sitemap', 'create sitemap', 'seo sitemap generator'],
     icon: 'M12 3v4M6 21v-4M18 21v-4M4 17h4v4H4zM10 3h4v4h-4zM16 17h4v4h-4zM12 7v6M6 17v-2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2',
   },
   {
@@ -2367,21 +2367,21 @@ export const tools: Tool[] = [
   {
     slug: 'regex-generator',
     name: 'Regex Generator',
-    tagline: 'Build regex from common patterns, no syntax.',
+    tagline: 'Build regex from example text, no syntax.',
     description:
-      'Free online regex generator. Build regular expressions for emails, URLs, phone numbers, dates, IPs and more from a menu of common patterns, then test them live and copy. No regex syntax required. Runs in your browser.',
+      'Free online regex generator. Paste example text and it auto-recognizes dates, times, IPs, emails, URLs, UUIDs and numbers — click any part to change how it matches. Add named capture groups, test live, and copy ready-to-run code for JavaScript, Python, PHP, Java, Go or C#. No regex syntax required. Runs in your browser.',
     category: 'Developer',
-    keywords: ['regex generator', 'regular expression generator', 'regex pattern generator', 'build regex online', 'regex maker'],
+    keywords: ['regex generator', 'regular expression generator', 'regex from example', 'regex pattern generator', 'build regex online', 'regex maker'],
     icon: 'M4 17l6-6-6-6M12 19h8',
   },
   {
     slug: 'html-table-generator',
     name: 'HTML Table Generator',
-    tagline: 'Build an HTML table and copy the markup.',
+    tagline: 'Build, style, and merge cells, then export HTML, Markdown, or CSV.',
     description:
-      'Free online HTML table generator. Set the rows and columns, edit cell text in a live grid, toggle a header row and border styling, and copy clean HTML table markup. Runs entirely in your browser.',
+      'Free online HTML table generator. Edit cells in a live grid, paste from Excel or Google Sheets, upload a CSV, style header/body colors, striped rows, borders, padding, and a caption, merge cells with colspan/rowspan, and export clean HTML with scoped CSS, Markdown, or CSV. Runs entirely in your browser.',
     category: 'Developer',
-    keywords: ['html table generator', 'table html generator', 'create html table', 'html table maker', 'generate table html'],
+    keywords: ['html table generator', 'table html generator', 'create html table', 'html table maker', 'generate table html', 'csv to html table', 'merge table cells', 'table markdown generator'],
     icon: 'M4 4h16v16H4zM4 9h16M4 14h16M9 4v16M15 4v16',
   },
   {

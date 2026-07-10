@@ -3,41 +3,72 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
 <ToolLayout slug="sitemap-generator">
-  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-    <div class="flex flex-col gap-3">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Page URLs (one per line)
-        <textarea id="sm-urls" class="field min-h-48 resize-y font-mono text-[13px]" spellcheck="false">https://example.com/
-https://example.com/about
-https://example.com/contact</textarea>
-      </label>
-      <div class="grid grid-cols-2 gap-3">
-        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Change frequency
-          <select id="sm-freq" class="field"><option value="">(none)</option><option>always</option><option>hourly</option><option selected>daily</option><option>weekly</option><option>monthly</option><option>yearly</option><option>never</option></select>
+  <div class="flex flex-col gap-6">
+    <!-- Crawl row -->
+    <div class="panel p-4 flex flex-col gap-3">
+      <label class="text-sm text-ink-subtle">Crawl a website — enter a URL and follow internal links</label>
+      <div class="flex flex-wrap gap-3">
+        <input id="sm-site" type="url" placeholder="https://example.com" class="field flex-1 min-w-56 font-mono text-[13px]" />
+        <label class="flex flex-col gap-1 text-xs text-ink-tertiary">Max pages
+          <input id="sm-max" type="number" min="1" max="500" value="100" class="field w-24" />
         </label>
-        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Priority
-          <select id="sm-priority" class="field"><option value="">(none)</option><option>1.0</option><option selected>0.8</option><option>0.5</option><option>0.3</option></select>
-        </label>
+        <div class="flex items-end gap-2">
+          <button id="sm-crawl" class="btn btn-primary">Crawl</button>
+          <button id="sm-stop" class="btn btn-secondary hidden">Stop</button>
+        </div>
       </div>
-      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="sm-lastmod" type="checkbox" class="accent-[#5e6ad2]" checked /> Include today's lastmod</label>
+      <p id="sm-status" class="text-[13px] text-ink-tertiary min-h-[1.2em]"></p>
     </div>
 
-    <div class="flex flex-col gap-2">
-      <label class="text-sm text-ink-subtle">sitemap.xml</label>
-      <pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto"><code id="sm-out" class="hljs" style="background:transparent;padding:0"></code></pre>
-      <div class="flex gap-2">
-        <button id="sm-copy" class="btn btn-secondary">Copy</button>
-        <button id="sm-dl" class="btn btn-secondary">Download</button>
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+      <div class="flex flex-col gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Page URLs (one per line — edit before generating)
+          <textarea id="sm-urls" class="field min-h-48 resize-y font-mono text-[13px]" spellcheck="false">https://example.com/
+https://example.com/about
+https://example.com/contact</textarea>
+        </label>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle">Change frequency
+            <select id="sm-freq" class="field"><option value="">(none)</option><option>always</option><option>hourly</option><option selected>daily</option><option>weekly</option><option>monthly</option><option>yearly</option><option>never</option></select>
+          </label>
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle">Priority
+            <select id="sm-priority" class="field"><option value="auto" selected>Auto (by depth)</option><option value="">(none)</option><option>1.0</option><option>0.8</option><option>0.5</option><option>0.3</option></select>
+          </label>
+        </div>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="sm-lastmod" type="checkbox" class="accent-[#5e6ad2]" checked /> Include today's lastmod</label>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <label class="text-sm text-ink-subtle">sitemap.xml <span id="sm-count" class="text-ink-tertiary"></span></label>
+        <pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto"><code id="sm-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+        <div class="flex gap-2">
+          <button id="sm-copy" class="btn btn-secondary">Copy</button>
+          <button id="sm-dl" class="btn btn-secondary">Download</button>
+        </div>
       </div>
     </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free sitemap.xml generator turns a plain list of page URLs into a valid
-      XML sitemap that search engines use to discover and prioritize your pages.
-      Set an optional change frequency, priority and a lastmod date, then copy or
-      download the file and reference it from your robots.txt. Generated entirely
-      in your browser.
+      This free sitemap.xml generator crawls your website the way a search engine
+      does: enter a URL and it fetches the page, follows every internal link, and
+      keeps going breadth-first until it has discovered your pages (up to the page
+      limit you set). The discovered URLs land in an editable list, so you can trim
+      or add pages before generating.
+    </p>
+    <p>
+      It then builds a valid XML sitemap with an optional change frequency, today's
+      lastmod, and priority. Choose <strong>Auto (by depth)</strong> and each URL
+      gets a priority based on how deep it sits in your site — the homepage at 1.0,
+      top-level pages at 0.8, and so on — which most generators don't do. You can
+      also skip the crawl entirely and paste your own URL list.
+    </p>
+    <p>
+      Crawling runs in your browser; page HTML is retrieved through a public CORS
+      proxy so cross-origin requests work, which means the site you crawl is visible
+      to that proxy service. Nothing else leaves your browser, and the sitemap is
+      built locally.
     </p>
   </div>
 </ToolLayout>
@@ -47,26 +78,41 @@ https://example.com/contact</textarea>
 
   const $ = (id: string) => document.getElementById(id)!;
   const out = $('sm-out') as HTMLElement;
+  const urlsEl = $('sm-urls') as HTMLTextAreaElement;
+  const statusEl = $('sm-status');
   let rawOutput = '';
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+  // Priority derived from URL path depth: / → 1.0, /a → 0.8, /a/b → 0.6, min 0.2
+  function autoPriority(u: string): string {
+    try {
+      const segs = new URL(u).pathname.split('/').filter(Boolean).length;
+      return Math.max(0.2, 1 - segs * 0.2).toFixed(1);
+    } catch {
+      return '0.5';
+    }
+  }
+
   function build() {
-    const urls = ($('sm-urls') as HTMLTextAreaElement).value.split('\n').map((l) => l.trim()).filter(Boolean);
+    const urls = urlsEl.value.split('\n').map((l) => l.trim()).filter(Boolean);
     const freq = ($('sm-freq') as HTMLSelectElement).value;
-    const priority = ($('sm-priority') as HTMLSelectElement).value;
+    const priMode = ($('sm-priority') as HTMLSelectElement).value;
     const lastmod = ($('sm-lastmod') as HTMLInputElement).checked ? new Date().toISOString().slice(0, 10) : '';
     const body = urls.map((u) => {
       const parts = [`    <loc>${esc(u)}</loc>`];
       if (lastmod) parts.push(`    <lastmod>${lastmod}</lastmod>`);
       if (freq) parts.push(`    <changefreq>${freq}</changefreq>`);
-      if (priority) parts.push(`    <priority>${priority}</priority>`);
+      const pri = priMode === 'auto' ? autoPriority(u) : priMode;
+      if (pri) parts.push(`    <priority>${pri}</priority>`);
       return `  <url>\n${parts.join('\n')}\n  </url>`;
     }).join('\n');
     rawOutput = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>`;
     hl(out, rawOutput, 'xml');
+    $('sm-count').textContent = urls.length ? `— ${urls.length} URL${urls.length === 1 ? '' : 's'}` : '';
   }
 
   ['sm-urls', 'sm-freq', 'sm-priority', 'sm-lastmod'].forEach((id) => $(id).addEventListener('input', build));
+
   $('sm-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
     await navigator.clipboard.writeText(rawOutput);
@@ -78,5 +124,99 @@ https://example.com/contact</textarea>
     const a = document.createElement('a'); a.href = url; a.download = 'sitemap.xml'; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
+
+  // ── Crawler (browser-side, via public CORS proxy) ──────────────────────
+  // ponytail: allorigins proxy + BFS, low concurrency to respect proxy limits.
+  //           Swap for own /api crawl route if privacy/uptime/scale matters.
+  const CONCURRENCY = 4;
+  // Skip links that clearly aren't crawlable HTML pages.
+  const SKIP_EXT = /\.(?:jpe?g|png|gif|svg|webp|ico|bmp|css|js|mjs|json|xml|pdf|zip|gz|rar|7z|mp[34]|wav|ogg|webm|mov|avi|woff2?|ttf|eot|dmg|exe|csv|txt|rss)(?:$|[?#])/i;
+
+  const proxied = (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`;
+  async function proxyText(u: string): Promise<string> {
+    const res = await fetch(proxied(u));
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.text();
+  }
+  // Dedupe key: drop hash and trailing slash so / and /index resolve together.
+  const norm = (u: string) => u.replace(/#.*$/, '').replace(/\/$/, '') || u;
+
+  let stop = false;
+
+  async function crawl() {
+    const raw = ($('sm-site') as HTMLInputElement).value.trim();
+    if (!raw) return;
+    let start: URL;
+    try {
+      start = new URL(raw);
+    } catch {
+      statusEl.textContent = 'Enter a valid URL, including https://';
+      return;
+    }
+    const maxPages = Math.min(500, Math.max(1, Number(($('sm-max') as HTMLInputElement).value) || 100));
+
+    stop = false;
+    const crawlBtn = $('sm-crawl') as HTMLButtonElement;
+    const stopBtn = $('sm-stop') as HTMLButtonElement;
+    crawlBtn.disabled = true;
+    stopBtn.classList.remove('hidden');
+
+    const seen = new Set<string>([norm(start.href)]);
+    const queue: string[] = [start.href];
+    const found: string[] = [];
+
+    try {
+      while (queue.length && found.length < maxPages && !stop) {
+        const batch = queue.splice(0, CONCURRENCY);
+        await Promise.all(batch.map(async (u) => {
+          if (found.length >= maxPages || stop) return;
+          found.push(u);
+          statusEl.textContent = `Crawling… ${found.length} found, ${queue.length} queued`;
+          let html: string;
+          try {
+            html = await proxyText(u);
+          } catch {
+            return; // skip pages the proxy can't fetch
+          }
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+          doc.querySelectorAll('a[href]').forEach((a) => {
+            const href = a.getAttribute('href') || '';
+            if (/^(?:mailto:|tel:|javascript:|#)/i.test(href)) return;
+            let link: URL;
+            try {
+              link = new URL(href, u);
+            } catch {
+              return;
+            }
+            if (link.origin !== start.origin) return; // same-site only
+            if (SKIP_EXT.test(link.pathname + link.search)) return;
+            const key = norm(link.href);
+            if (!seen.has(key)) {
+              seen.add(key);
+              queue.push(link.href);
+            }
+          });
+        }));
+      }
+      const list = found.slice(0, maxPages).sort();
+      urlsEl.value = list.join('\n');
+      build();
+      statusEl.textContent = stop
+        ? `Stopped — ${list.length} page${list.length === 1 ? '' : 's'} found.`
+        : `Done — crawled ${list.length} page${list.length === 1 ? '' : 's'}.`;
+    } catch {
+      statusEl.textContent = 'Crawl failed. Check the URL or try a smaller page limit.';
+    } finally {
+      crawlBtn.disabled = false;
+      stopBtn.classList.add('hidden');
+    }
+  }
+
+  $('sm-crawl').addEventListener('click', crawl);
+  $('sm-stop').addEventListener('click', () => { stop = true; });
+  ($('sm-site') as HTMLInputElement).addEventListener('keydown', (e) => {
+    if ((e as KeyboardEvent).key === 'Enter') crawl();
+  });
+
   build();
 </script>

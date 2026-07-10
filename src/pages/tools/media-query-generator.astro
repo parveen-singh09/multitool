@@ -3,34 +3,99 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
 <ToolLayout slug="media-query-generator">
-  <div class="flex flex-col gap-4">
-    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Device preset
-      <select id="mq-preset" class="field">
-        <option value="">Custom</option>
-        <option value="320,480">Mobile (320–480px)</option>
-        <option value="481,768">Tablet (481–768px)</option>
-        <option value="769,1024">Small laptop (769–1024px)</option>
-        <option value="1025,1200">Desktop (1025–1200px)</option>
-        <option value="1201,">Large desktop (1201px+)</option>
-      </select>
-    </label>
+  <div class="flex flex-col gap-5">
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Min width (px)
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Logic
+        <select id="mq-token" class="field">
+          <option value="">(none)</option>
+          <option value="only">only</option>
+          <option value="not">not</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Media type
+        <select id="mq-type" class="field">
+          <option value="all">all</option>
+          <option value="screen" selected>screen</option>
+          <option value="print">print</option>
+          <option value="speech">speech</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Device preset
+        <select id="mq-preset" class="field">
+          <option value="">Custom</option>
+          <option value="320,480">Mobile (320–480px)</option>
+          <option value="481,768">Tablet (481–768px)</option>
+          <option value="769,1024">Small laptop (769–1024px)</option>
+          <option value="1025,1200">Desktop (1025–1200px)</option>
+          <option value="1201,">Large desktop (1201px+)</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Units
+        <select id="mq-unit" class="field">
+          <option value="px">px</option>
+          <option value="em">em</option>
+          <option value="rem">rem</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Min width
         <input id="mq-min" type="number" min="0" value="768" class="field" />
       </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Max width (px)
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Max width
         <input id="mq-max" type="number" min="0" placeholder="(none)" class="field" />
       </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Min height
+        <input id="mq-minh" type="number" min="0" placeholder="(none)" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Max height
+        <input id="mq-maxh" type="number" min="0" placeholder="(none)" class="field" />
+      </label>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Orientation
         <select id="mq-orient" class="field"><option value="">Any</option><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select>
       </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Scheme
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Color scheme
         <select id="mq-scheme" class="field"><option value="">Any</option><option value="dark">Dark</option><option value="light">Light</option></select>
       </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Aspect ratio
+        <select id="mq-aspect" class="field"><option value="">Any</option><option value="16/9">16 / 9</option><option value="4/3">4 / 3</option><option value="1/1">1 / 1</option><option value="9/16">9 / 16</option></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Min resolution
+        <select id="mq-dpr" class="field"><option value="">Any</option><option value="1.5">1.5× (150dpi)</option><option value="2">2× Retina</option><option value="3">3×</option></select>
+      </label>
     </div>
-    <div class="flex items-start gap-2">
-      <pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto"><code id="mq-css" class="hljs" style="background:transparent;padding:0"></code></pre>
-      <button id="mq-copy" class="btn btn-secondary whitespace-nowrap">Copy</button>
+
+    <div class="relative">
+      <pre class="hl-block field min-h-24" style="overflow:auto"><code id="mq-css" class="hljs" style="background:transparent;padding:0"></code></pre>
+      <button id="mq-copy" title="Copy" aria-label="Copy" class="absolute bottom-3 right-3 rounded-md border border-hairline bg-surface-2 p-2 text-ink-subtle transition-colors hover:text-ink">
+        <svg id="mq-copy-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      </button>
+    </div>
+
+    <div id="mq-live" class="flex items-center gap-3 rounded-lg border border-hairline bg-surface-2 px-4 py-3 text-sm">
+      <span id="mq-dot" class="inline-block h-3 w-3 shrink-0 rounded-full bg-ink-subtle/40"></span>
+      <span id="mq-status" class="text-ink-subtle">Resize your window — this box turns green when the query is active.</span>
+    </div>
+
+    <div class="flex flex-col gap-2 border-t border-hairline pt-4">
+      <span class="text-sm text-ink-subtle">px ↔ em converter</span>
+      <div class="flex items-end gap-2">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">px
+          <input id="mq-px" type="number" value="768" class="field w-24" />
+        </label>
+        <span class="pb-2.5 text-ink-subtle">÷</span>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">base (px)
+          <input id="mq-base" type="number" value="16" class="field w-24" />
+        </label>
+        <span class="pb-2.5 text-ink-subtle">→</span>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">em
+          <input id="mq-em" type="number" step="0.001" value="48" class="field w-24" />
+        </label>
+      </div>
     </div>
   </div>
 
@@ -38,10 +103,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p>
       This free media query generator builds responsive CSS
       <code class="font-mono text-ink">@media</code> rules from device presets or
-      your own min/max widths, with optional orientation and dark/light color
-      scheme conditions. Copy the query and drop your styles inside it. It's the
-      quick way to target phones, tablets and desktops without memorizing the
-      syntax. Runs in your browser.
+      your own conditions — media type, <code class="font-mono text-ink">only</code>/<code class="font-mono text-ink">not</code>
+      logic, min/max width and height, orientation, dark/light color scheme,
+      aspect ratio and retina resolution — in px, em or rem. A live indicator turns
+      green when the query matches your current window, and a built-in px↔em
+      converter keeps proportional breakpoints exact. Copy the query and drop your
+      styles inside. Runs entirely in your browser.
     </p>
   </div>
 </ToolLayout>
@@ -49,38 +116,96 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 <script>
   import { hl } from '../../lib/highlight';
   const $ = (id: string) => document.getElementById(id)!;
-  const presetEl = $('mq-preset') as HTMLSelectElement;
-  const minEl = $('mq-min') as HTMLInputElement;
-  const maxEl = $('mq-max') as HTMLInputElement;
-  const orientEl = $('mq-orient') as HTMLSelectElement;
-  const schemeEl = $('mq-scheme') as HTMLSelectElement;
+  const el = (id: string) => $(id) as HTMLInputElement & HTMLSelectElement;
   const cssEl = $('mq-css')!;
+  const dot = $('mq-dot');
+  const status = $('mq-status');
   let rawOutput = '';
+  let mql: MediaQueryList | null = null;
 
-  presetEl.addEventListener('change', () => {
-    if (!presetEl.value) return;
-    const [min, max] = presetEl.value.split(',');
-    minEl.value = min; maxEl.value = max;
+  el('mq-preset').addEventListener('change', () => {
+    if (!el('mq-preset').value) return;
+    const [min, max] = el('mq-preset').value.split(',');
+    el('mq-min').value = min;
+    el('mq-max').value = max;
     update();
   });
 
-  function update() {
-    const conds: string[] = [];
-    if (minEl.value) conds.push(`(min-width: ${minEl.value}px)`);
-    if (maxEl.value) conds.push(`(max-width: ${maxEl.value}px)`);
-    if (orientEl.value) conds.push(`(orientation: ${orientEl.value})`);
-    if (schemeEl.value) conds.push(`(prefers-color-scheme: ${schemeEl.value})`);
-    const query = conds.length ? conds.join(' and ') : 'all';
-    rawOutput = `@media ${query} {\n  /* your styles */\n}`;
-    hl(cssEl, rawOutput, 'css');
+  function len(v: string): string {
+    const u = el('mq-unit').value;
+    if (u === 'px' || !v) return v ? `${v}px` : v;
+    const n = Number(v) / 16; // px → em/rem at 16px base
+    return `${+n.toFixed(4)}${u}`;
   }
 
-  [minEl, maxEl, orientEl, schemeEl].forEach((el) => el.addEventListener('input', update));
-  $('mq-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
+  function buildQuery(): string {
+    const conds: string[] = [];
+    if (el('mq-min').value) conds.push(`(min-width: ${len(el('mq-min').value)})`);
+    if (el('mq-max').value) conds.push(`(max-width: ${len(el('mq-max').value)})`);
+    if (el('mq-minh').value) conds.push(`(min-height: ${len(el('mq-minh').value)})`);
+    if (el('mq-maxh').value) conds.push(`(max-height: ${len(el('mq-maxh').value)})`);
+    if (el('mq-orient').value) conds.push(`(orientation: ${el('mq-orient').value})`);
+    if (el('mq-scheme').value) conds.push(`(prefers-color-scheme: ${el('mq-scheme').value})`);
+    if (el('mq-aspect').value) conds.push(`(aspect-ratio: ${el('mq-aspect').value})`);
+    if (el('mq-dpr').value) conds.push(`(min-resolution: ${el('mq-dpr').value}dppx)`);
+
+    const token = el('mq-token').value;
+    const type = el('mq-type').value;
+    // Drop a bare `screen`/`all` when real conditions carry the query; keep the
+    // type only when a token needs it or there are no conditions to stand on.
+    const parts: string[] = [];
+    if (token) parts.push(token);
+    if (token || type !== 'screen' || !conds.length) parts.push(type);
+    const prefix = parts.join(' ');
+    // Type and every feature are joined by `and` in a media query.
+    return (prefix ? [prefix, ...conds] : conds).join(' and ') || 'all';
+  }
+
+  function update() {
+    const query = buildQuery();
+    rawOutput = `@media ${query} {\n  /* your styles */\n}`;
+    hl(cssEl, rawOutput, 'css');
+
+    // Live test: match the generated query against the actual window.
+    if (mql) mql.onchange = null;
+    try {
+      mql = window.matchMedia(query);
+      mql.onchange = paintLive;
+      paintLive();
+    } catch {
+      mql = null;
+      dot.style.background = '';
+      status.textContent = 'Query not testable in this browser.';
+    }
+  }
+
+  function paintLive() {
+    const active = mql?.matches;
+    dot.style.background = active ? '#22c55e' : '';
+    dot.className = `inline-block h-3 w-3 shrink-0 rounded-full ${active ? '' : 'bg-ink-subtle/40'}`;
+    status.textContent = active
+      ? 'Active — this query matches your current window.'
+      : 'Inactive — resize your window to see it turn green.';
+  }
+
+  ['mq-token', 'mq-type', 'mq-unit', 'mq-min', 'mq-max', 'mq-minh', 'mq-maxh', 'mq-orient', 'mq-scheme', 'mq-aspect', 'mq-dpr']
+    .forEach((id) => $(id).addEventListener('input', update));
+
+  // px ↔ em converter (independent helper).
+  const pxEl = el('mq-px'), baseEl = el('mq-base'), emEl = el('mq-em');
+  const toEm = () => { emEl.value = String(+(Number(pxEl.value) / Number(baseEl.value)).toFixed(4)); };
+  const toPx = () => { pxEl.value = String(+(Number(emEl.value) * Number(baseEl.value)).toFixed(2)); };
+  pxEl.addEventListener('input', toEm);
+  baseEl.addEventListener('input', toEm);
+  emEl.addEventListener('input', toPx);
+
+  const copyIcon = '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>';
+  const checkIcon = '<path d="M20 6 9 17l-5-5"/>';
+  $('mq-copy').addEventListener('click', async () => {
     await navigator.clipboard.writeText(rawOutput);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+    const icon = $('mq-copy-icon');
+    icon.innerHTML = checkIcon;
+    setTimeout(() => (icon.innerHTML = copyIcon), 1500);
   });
   update();
 </script>
