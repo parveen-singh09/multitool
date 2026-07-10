@@ -4,24 +4,60 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="json-converter">
   <div class="flex flex-col gap-4">
-    <div class="flex flex-wrap items-center gap-2">
-      <span class="text-[13px] text-ink-subtle">Convert JSON to</span>
-      <div class="flex flex-wrap gap-2" role="tablist" aria-label="Output format">
-        <button data-fmt="xml" class="jc-tab btn btn-primary" aria-selected="true">XML</button>
-        <button data-fmt="yaml" class="jc-tab btn btn-secondary" aria-selected="false">YAML</button>
-        <button data-fmt="csv" class="jc-tab btn btn-secondary" aria-selected="false">CSV</button>
-      </div>
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        From
+        <select id="jc-from" class="field w-auto py-1">
+          <option value="json" selected>JSON</option>
+          <option value="yaml">YAML</option>
+          <option value="xml">XML</option>
+          <option value="csv">CSV</option>
+          <option value="tsv">TSV</option>
+        </select>
+      </label>
+      <span class="pb-2 text-ink-subtle" aria-hidden="true">→</span>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        To
+        <select id="jc-to" class="field w-auto py-1">
+          <option value="xml" selected>XML</option>
+          <option value="yaml">YAML</option>
+          <option value="csv">CSV</option>
+          <option value="tsv">TSV</option>
+          <option value="json">JSON</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Indent
+        <select id="jc-indent" class="field w-auto py-1">
+          <option value="2" selected>2 spaces</option>
+          <option value="4">4 spaces</option>
+          <option value="tab">Tab</option>
+        </select>
+      </label>
+      <button id="jc-swap" type="button" class="btn btn-tertiary" title="Swap From/To">⇄ Swap</button>
     </div>
 
     <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-        JSON input
-        <textarea id="jc-in" class="field font-mono text-[13px]" rows="12" spellcheck="false" placeholder={'{\n  "name": "Ada",\n  "age": 36\n}'}></textarea>
-      </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-        <span class="flex items-center justify-between">Output <button id="jc-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button></span>
-        <textarea id="jc-out" class="field font-mono text-[13px]" rows="12" readonly spellcheck="false"></textarea>
-      </label>
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        <span class="flex items-center justify-between">
+          <span id="jc-in-label">JSON input</span>
+          <button id="jc-clear" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Clear</button>
+        </span>
+        <div class="jc-edit-wrap field p-0" style="height:22rem;overflow:hidden">
+          <pre class="jc-hl hl-block" aria-hidden="true"><code id="jc-in-hl" class="hljs" style="background:transparent"></code></pre>
+          <textarea id="jc-in" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
+        </div>
+      </div>
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        <span class="flex items-center justify-between">
+          <span id="jc-out-label">XML output</span>
+          <span class="flex gap-2">
+            <button id="jc-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button>
+            <button id="jc-download" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Download</button>
+          </span>
+        </span>
+        <pre class="jc-out-pre field hl-block" style="height:22rem;margin:0;overflow:auto;white-space:pre"><code id="jc-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+      </div>
     </div>
 
     <p id="jc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
@@ -29,114 +65,236 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free JSON converter transforms JSON into XML, YAML or CSV. Paste your
-      JSON, pick a target format, and copy the result. CSV works best on an array
-      of flat objects (it builds a header row from the keys); XML and YAML handle
-      nested structures. Your data is parsed and converted entirely in your
-      browser — nothing is uploaded to a server.
+      This free data converter transforms between JSON, YAML, XML, CSV and TSV in
+      any direction. Pick a source and target format, paste your data, then copy
+      or download the result. CSV and TSV work best on an array of flat objects
+      (a header row is built from the keys); XML and YAML handle nested
+      structures. Everything is parsed and converted entirely in your browser —
+      nothing is uploaded to a server.
     </p>
   </div>
 </ToolLayout>
 
 <script>
+  import { parseYaml, jsonToYaml, jsonToXml, jsonToCsv, csvToJson, type Json } from '../../lib/dataformats';
+
   const input = document.getElementById('jc-in') as HTMLTextAreaElement;
-  const output = document.getElementById('jc-out') as HTMLTextAreaElement;
+  const inHl = document.getElementById('jc-in-hl')!;
+  const output = document.getElementById('jc-out')!;
   const err = document.getElementById('jc-error')!;
-  let fmt = 'xml';
+  const fromSel = document.getElementById('jc-from') as HTMLSelectElement;
+  const toSel = document.getElementById('jc-to') as HTMLSelectElement;
+  const indentSel = document.getElementById('jc-indent') as HTMLSelectElement;
+  const inLabel = document.getElementById('jc-in-label')!;
+  const outLabel = document.getElementById('jc-out-label')!;
+  let rawOutput = '';
 
-  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const EXT: Record<string, string> = { json: 'json', yaml: 'yaml', xml: 'xml', csv: 'csv', tsv: 'tsv' };
+  // Format value → highlight.js language id. csv/tsv have no grammar, so plaintext.
+  const HL_LANG: Record<string, string> = { json: 'json', yaml: 'yaml', xml: 'xml', csv: 'plaintext', tsv: 'plaintext' };
 
-  function toXml(obj: any, indent = 0): string {
-    const pad = '  '.repeat(indent);
-    if (obj === null) return '';
-    if (Array.isArray(obj)) return obj.map((v) => `${pad}<item>\n${toXml(v, indent + 1)}${pad}</item>\n`).join('');
-    if (typeof obj === 'object') {
-      return Object.entries(obj).map(([k, v]) => {
-        const tag = k.replace(/[^a-zA-Z0-9_.-]/g, '_');
-        if (v !== null && typeof v === 'object') return `${pad}<${tag}>\n${toXml(v, indent + 1)}${pad}</${tag}>\n`;
-        return `${pad}<${tag}>${esc(String(v))}</${tag}>\n`;
-      }).join('');
+  // Lazy-load highlight.js once; the full build registers json/yaml/xml.
+  let hljs: any = null;
+  let hlLoading: Promise<void> | null = null;
+  function loadHl(): Promise<void> {
+    if (hljs) return Promise.resolve();
+    if (!hlLoading) hlLoading = import('highlight.js').then((h) => { hljs = (h as any).default ?? h; });
+    return hlLoading;
+  }
+  function highlight(el: HTMLElement, code: string, fmt: string) {
+    const id = HL_LANG[fmt] ?? 'plaintext';
+    const lang = hljs?.getLanguage(id) ? id : 'plaintext';
+    if (hljs) el.innerHTML = hljs.highlight(code, { language: lang, ignoreIllegal: true }).value;
+    else el.textContent = code;
+  }
+
+  // Mirror the input into an underlaid <pre> so the transparent textarea keeps a native caret.
+  function highlightInput() {
+    highlight(inHl, input.value, fromSel.value);
+    if (input.value.endsWith('\n')) inHl.innerHTML += '\n';
+    inHl.parentElement!.scrollTop = input.scrollTop;
+    inHl.parentElement!.scrollLeft = input.scrollLeft;
+  }
+  input.addEventListener('scroll', () => {
+    inHl.parentElement!.scrollTop = input.scrollTop;
+    inHl.parentElement!.scrollLeft = input.scrollLeft;
+  });
+
+  function getIndent(): string | number {
+    const v = indentSel.value;
+    return v === 'tab' ? '\t' : Number(v);
+  }
+
+  // XML → JSON via the browser DOMParser (DOM-only, so it lives here not in the lib).
+  function xmlToJson(text: string): Json {
+    const doc = new DOMParser().parseFromString(text, 'application/xml');
+    const pe = doc.querySelector('parsererror');
+    if (pe) throw new Error(pe.textContent?.replace(/\s+/g, ' ').trim() || 'invalid XML');
+    const root = doc.documentElement;
+    if (!root) throw new Error('no root element');
+    return { [root.nodeName]: elementToJson(root) };
+  }
+  function elementToJson(el: Element): Json {
+    const obj: { [k: string]: Json } = {};
+    if (el.attributes.length) {
+      const attrs: { [k: string]: string } = {};
+      for (const a of Array.from(el.attributes)) attrs[a.name] = a.value;
+      obj['@attributes'] = attrs;
     }
-    return `${pad}${esc(String(obj))}\n`;
+    const children = Array.from(el.childNodes).filter((n) => n.nodeType === Node.ELEMENT_NODE) as Element[];
+    let text = '';
+    el.childNodes.forEach((n) => {
+      if (n.nodeType === Node.TEXT_NODE || n.nodeType === Node.CDATA_SECTION_NODE) text += n.nodeValue ?? '';
+    });
+    text = text.trim();
+    if (!children.length) {
+      if (!Object.keys(obj).length) return text;
+      if (text !== '') obj['#text'] = text;
+      return obj;
+    }
+    for (const child of children) {
+      const key = child.nodeName;
+      const value = elementToJson(child);
+      if (key in obj) {
+        const existing = obj[key];
+        if (Array.isArray(existing)) existing.push(value);
+        else obj[key] = [existing, value];
+      } else obj[key] = value;
+    }
+    if (text !== '') obj['#text'] = text;
+    return obj;
   }
 
-  function toYaml(obj: any, indent = 0): string {
-    const pad = '  '.repeat(indent);
-    if (Array.isArray(obj)) {
-      if (!obj.length) return `${pad}[]\n`;
-      return obj.map((v) => {
-        if (v !== null && typeof v === 'object') return `${pad}-\n${toYaml(v, indent + 1)}`;
-        return `${pad}- ${fmtScalar(v)}\n`;
-      }).join('');
+  function parseSource(fmt: string, raw: string): Json {
+    switch (fmt) {
+      case 'json': return JSON.parse(raw);
+      case 'yaml': return parseYaml(raw);
+      case 'xml': return xmlToJson(raw);
+      case 'csv': return csvToJson(raw, ',', true);
+      case 'tsv': return csvToJson(raw, '\t', true);
+      default: throw new Error('unknown source format');
     }
-    if (obj !== null && typeof obj === 'object') {
-      const keys = Object.keys(obj);
-      if (!keys.length) return `${pad}{}\n`;
-      return keys.map((k) => {
-        const v = obj[k];
-        if (v !== null && typeof v === 'object' && Object.keys(v).length)
-          return `${pad}${k}:\n${toYaml(v, indent + 1)}`;
-        if (v !== null && typeof v === 'object')
-          return `${pad}${k}: ${Array.isArray(v) ? '[]' : '{}'}\n`;
-        return `${pad}${k}: ${fmtScalar(v)}\n`;
-      }).join('');
-    }
-    return `${pad}${fmtScalar(obj)}\n`;
-  }
-  function fmtScalar(v: any): string {
-    if (v === null) return 'null';
-    if (typeof v === 'string') return /[:#\-{}[\],&*!|>'"%@` ]|^$/.test(v) ? JSON.stringify(v) : v;
-    return String(v);
   }
 
-  function toCsv(obj: any): string {
-    const rows = Array.isArray(obj) ? obj : [obj];
-    const headers = Array.from(new Set(rows.flatMap((r) => (r && typeof r === 'object' ? Object.keys(r) : []))));
-    if (!headers.length) return rows.map((r) => cell(r)).join('\n');
-    const cell2 = (v: any) => {
-      const s = v === undefined || v === null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
-      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-    };
-    const head = headers.map(cell2).join(',');
-    const body = rows.map((r) => headers.map((h) => cell2(r?.[h])).join(',')).join('\n');
-    return head + '\n' + body;
+  function serialize(fmt: string, data: Json): string {
+    switch (fmt) {
+      case 'json': return JSON.stringify(data, null, getIndent());
+      case 'yaml': return jsonToYaml(data).trimEnd();
+      case 'xml': return jsonToXml(data);
+      case 'csv': return jsonToCsv(data, ',');
+      case 'tsv': return jsonToCsv(data, '\t');
+      default: throw new Error('unknown target format');
+    }
   }
-  const cell = (v: any) => {
-    const s = v === null ? '' : String(v);
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
+
+  function syncUI() {
+    const from = fromSel.value, to = toSel.value;
+    inLabel.textContent = `${from.toUpperCase()} input`;
+    outLabel.textContent = `${to.toUpperCase()} output`;
+    // Indent only affects JSON/YAML output.
+    indentSel.parentElement!.style.display = (to === 'json' || to === 'yaml') ? '' : 'none';
+  }
 
   function convert() {
+    syncUI();
+    highlightInput();
     err.classList.add('hidden');
     const raw = input.value.trim();
-    if (!raw) { output.value = ''; return; }
-    let data: any;
-    try { data = JSON.parse(raw); }
-    catch (e) { output.value = ''; err.textContent = 'Invalid JSON: ' + (e as Error).message; err.classList.remove('hidden'); return; }
-    if (fmt === 'xml') output.value = '<?xml version="1.0" encoding="UTF-8"?>\n<root>\n' + toXml(data, 1) + '</root>';
-    else if (fmt === 'yaml') output.value = toYaml(data).trimEnd();
-    else output.value = toCsv(data);
+    if (!raw) { rawOutput = ''; output.textContent = ''; return; }
+    try {
+      const data = parseSource(fromSel.value, raw);
+      rawOutput = serialize(toSel.value, data);
+      highlight(output, rawOutput, toSel.value);
+    } catch (e) {
+      rawOutput = ''; output.textContent = '';
+      err.textContent = `${fromSel.value.toUpperCase()} → ${toSel.value.toUpperCase()} failed: ${(e as Error).message}`;
+      err.classList.remove('hidden');
+    }
   }
 
-  document.querySelectorAll<HTMLButtonElement>('.jc-tab').forEach((tab) => {
-    tab.addEventListener('click', () => {
-      fmt = tab.dataset.fmt!;
-      document.querySelectorAll('.jc-tab').forEach((t) => {
-        const active = t === tab;
-        t.setAttribute('aria-selected', String(active));
-        t.classList.toggle('btn-primary', active);
-        t.classList.toggle('btn-secondary', !active);
-      });
-      convert();
-    });
-  });
+  fromSel.addEventListener('change', convert);
+  toSel.addEventListener('change', convert);
+  indentSel.addEventListener('change', () => { if (rawOutput) convert(); });
   input.addEventListener('input', convert);
+
+  document.getElementById('jc-swap')!.addEventListener('click', () => {
+    const f = fromSel.value, t = toSel.value;
+    // Swap directions; move the converted output back into the input.
+    fromSel.value = t; toSel.value = f;
+    if (rawOutput) input.value = rawOutput;
+    convert();
+  });
+
+  document.getElementById('jc-clear')!.addEventListener('click', () => {
+    input.value = ''; rawOutput = ''; output.textContent = ''; err.classList.add('hidden');
+    highlightInput();
+  });
+
   document.getElementById('jc-copy')!.addEventListener('click', async (e) => {
-    await navigator.clipboard.writeText(output.value);
+    if (!rawOutput) return;
+    await navigator.clipboard.writeText(rawOutput);
     const b = e.currentTarget as HTMLButtonElement;
     b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
   });
 
+  document.getElementById('jc-download')!.addEventListener('click', () => {
+    if (!rawOutput) return;
+    const blob = new Blob([rawOutput], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `converted.${EXT[toSel.value]}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
   input.value = '[\n  { "name": "Ada", "age": 36 },\n  { "name": "Alan", "age": 41 }\n]';
+  // Highlight uses the lazy hljs build; re-run once it's ready.
+  loadHl().then(convert);
   convert();
 </script>
+
+<style is:global>
+  /* Highlighted input: transparent textarea layered over a mirrored <pre>. */
+  .jc-edit-wrap {
+    position: relative;
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 13px;
+    line-height: 1.55;
+    tab-size: 2;
+  }
+  .jc-edit-wrap > .jc-hl,
+  .jc-edit-wrap > textarea {
+    margin: 0;
+    padding: 0.75rem;
+    border: 0;
+    font: inherit;
+    tab-size: inherit;
+    white-space: pre;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+  .jc-edit-wrap > .jc-hl {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    background: transparent;
+  }
+  .jc-edit-wrap > .jc-hl code { background: transparent; padding: 0; }
+  .jc-edit-wrap > textarea {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    resize: none;
+    overflow: auto;
+    background: transparent;
+    color: transparent;
+    caret-color: var(--color-ink);
+    outline: none;
+  }
+  .jc-edit-wrap > textarea::selection { background: color-mix(in srgb, var(--color-primary) 35%, transparent); }
+  .jc-out-pre { font-family: var(--font-mono, ui-monospace, monospace); font-size: 13px; line-height: 1.55; }
+
+  /* .hl-block token palette now lives in global.css (shared across tools). */
+</style>

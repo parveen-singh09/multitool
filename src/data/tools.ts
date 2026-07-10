@@ -281,7 +281,7 @@ export const tools: Tool[] = [
     name: 'Timestamp Converter',
     tagline: 'Convert Unix timestamps to dates and back.',
     description:
-      'Free online Unix timestamp converter. Convert epoch timestamps (seconds or milliseconds) to human-readable dates and back instantly. Runs in your browser.',
+      'Free online Unix timestamp converter. Convert epoch timestamps (seconds, milliseconds, microseconds or nanoseconds) to human-readable dates in any timezone — with ISO 8601, RFC 2822, GMT, relative time and a custom format. Runs in your browser.',
     category: 'Developer',
     keywords: [
       'unix timestamp converter',
@@ -289,6 +289,11 @@ export const tools: Tool[] = [
       'timestamp to date',
       'date to timestamp',
       'unix time converter',
+      'epoch time now',
+      'milliseconds to date',
+      'gmt to local time',
+      'timezone converter',
+      'iso 8601 converter',
     ],
     icon: 'M12 8v4l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z',
   },

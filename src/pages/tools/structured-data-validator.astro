@@ -8,7 +8,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">
       Paste JSON-LD or a full HTML page
-      <textarea id="sd-in" class="field min-h-56 resize-y font-mono text-[13px]" placeholder='Paste JSON-LD, e.g. {"@context":"https://schema.org","@type":"Product","name":"Shoe"} — or paste a whole HTML page and it will extract every <script type="application/ld+json"> block.' spellcheck="false"></textarea>
+      <div class="hl-edit field p-0" style="height:24rem;resize:vertical;overflow:hidden">
+        <pre class="hl-block" aria-hidden="true"><code id="sd-in-hl" class="hljs" style="background:transparent"></code></pre>
+        <textarea id="sd-in" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder='Paste JSON-LD, e.g. {"@context":"https://schema.org","@type":"Product","name":"Shoe"} — or paste a whole HTML page and it will extract every <script type="application/ld+json"> block.'></textarea>
+      </div>
     </label>
 
     <div id="sd-results" class="hidden flex-col gap-4"></div>
@@ -29,7 +32,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { wireInput } from '../../lib/highlight';
+
   const input = document.getElementById('sd-in') as HTMLTextAreaElement;
+  const inHl = document.getElementById('sd-in-hl')!;
   const status = document.getElementById('sd-status')!;
   const results = document.getElementById('sd-results')!;
 
@@ -192,7 +198,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </div>`;
   }
 
-  input.addEventListener('input', validate);
+  const refresh = wireInput(input, inHl, () => 'json', () => validate());
   input.value = '{\n  "@context": "https://schema.org",\n  "@type": "Product",\n  "name": "Trail Runner Shoe",\n  "image": "https://example.com/shoe.jpg"\n}';
+  refresh();
   validate();
 </script>

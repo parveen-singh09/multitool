@@ -20,13 +20,18 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div id="yf-status" class="hidden rounded-md border px-3 py-2 text-sm" role="status"></div>
 
-    <textarea
-      id="yf-input"
-      class="field min-h-72 resize-y font-mono text-[13px]"
-      placeholder="Paste YAML here, e.g.&#10;name: example&#10;items:&#10;  - one&#10;  - two"
-      spellcheck="false"
-      aria-label="YAML input"
-    ></textarea>
+    <div class="hl-edit field p-0" style="height:18rem;resize:vertical;overflow:hidden">
+      <pre class="hl-block" aria-hidden="true"><code id="yf-input-hl" class="hljs" style="background:transparent"></code></pre>
+      <textarea
+        id="yf-input"
+        spellcheck="false"
+        autocapitalize="off"
+        autocomplete="off"
+        autocorrect="off"
+        placeholder="Paste YAML here, e.g.&#10;name: example&#10;items:&#10;  - one&#10;  - two"
+        aria-label="YAML input"
+      ></textarea>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -42,9 +47,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { wireInput } from '../../lib/highlight';
+
   const input = document.getElementById('yf-input') as HTMLTextAreaElement;
+  const inHl = document.getElementById('yf-input-hl')!;
   const status = document.getElementById('yf-status')!;
   const indentSel = document.getElementById('yf-indent') as HTMLSelectElement;
+
+  const refresh = wireInput(input, inHl, () => 'yaml');
 
   function getIndentSize(): number {
     return Number(indentSel.value);
@@ -132,6 +142,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const result = reformat(input.value, getIndentSize());
     if (result !== null) {
       input.value = result;
+      refresh();
       showStatus('Reformatted ✓', true);
     }
   });
@@ -146,6 +157,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   document.getElementById('yf-clear')!.addEventListener('click', () => {
     input.value = '';
+    refresh();
     status.classList.add('hidden');
   });
   document.getElementById('yf-copy')!.addEventListener('click', async () => {

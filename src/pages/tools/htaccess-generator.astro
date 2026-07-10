@@ -19,7 +19,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div class="flex flex-col gap-2">
       <label class="text-sm text-ink-subtle">.htaccess</label>
-      <textarea id="ha-out" class="field min-h-72 resize-y font-mono text-xs" readonly></textarea>
+      <pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto"><code id="ha-out" class="hljs" style="background:transparent;padding:0"></code></pre>
       <div class="flex gap-2">
         <button id="ha-copy" class="btn btn-secondary">Copy</button>
         <button id="ha-dl" class="btn btn-secondary">Download</button>
@@ -40,8 +40,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { hl } from '../../lib/highlight';
+
   const $ = (id: string) => document.getElementById(id)!;
-  const out = $('ha-out') as HTMLTextAreaElement;
+  const out = $('ha-out') as HTMLElement;
+  let rawOutput = '';
 
   const BLOCKS: Record<string, string> = {
     https: `# Force HTTPS\n<IfModule mod_rewrite.c>\n  RewriteEngine On\n  RewriteCond %{HTTPS} off\n  RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]\n</IfModule>`,
@@ -55,18 +58,19 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   function build() {
     const checked = [...document.querySelectorAll<HTMLInputElement>('.ha-r:checked')].map((el) => el.value);
-    out.value = checked.map((k) => BLOCKS[k]).join('\n\n');
+    rawOutput = checked.map((k) => BLOCKS[k]).join('\n\n');
+    hl(out, rawOutput, 'plaintext');
   }
 
   document.querySelectorAll('.ha-r').forEach((el) => el.addEventListener('change', build));
   $('ha-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(out.value);
+    await navigator.clipboard.writeText(rawOutput);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy'), 1500);
   });
   $('ha-dl').addEventListener('click', () => {
-    const url = URL.createObjectURL(new Blob([out.value], { type: 'text/plain' }));
+    const url = URL.createObjectURL(new Blob([rawOutput], { type: 'text/plain' }));
     const a = document.createElement('a'); a.href = url; a.download = '.htaccess'; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });

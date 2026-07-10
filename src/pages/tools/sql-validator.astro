@@ -7,7 +7,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div id="sv-status" class="hidden rounded-md border px-3 py-2 text-sm" role="status"></div>
 
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">SQL to validate
-      <textarea id="sv-in" class="field min-h-56 resize-y font-mono text-[13px]" placeholder="Paste SQL here, e.g. SELECT id, name FROM users WHERE age > 21;" spellcheck="false"></textarea>
+      <div class="hl-edit field p-0" style="height:24rem;resize:vertical;overflow:hidden">
+        <pre class="hl-block" aria-hidden="true"><code id="sv-in-hl" class="hljs" style="background:transparent"></code></pre>
+        <textarea id="sv-in" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Paste SQL here, e.g. SELECT id, name FROM users WHERE age > 21;"></textarea>
+      </div>
     </label>
 
     <ul id="sv-issues" class="hidden flex-col gap-2"></ul>
@@ -27,7 +30,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { wireInput } from '../../lib/highlight';
+
   const input = document.getElementById('sv-in') as HTMLTextAreaElement;
+  const inHl = document.getElementById('sv-in-hl')!;
   const status = document.getElementById('sv-status')!;
   const issuesEl = document.getElementById('sv-issues')!;
 
@@ -184,7 +190,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       .join('');
   }
 
-  input.addEventListener('input', validate);
+  const refresh = wireInput(input, inHl, () => 'sql', () => validate());
   input.value = 'SELECT id, name, FROM users WHERE age > 21';
+  refresh();
   validate();
 </script>

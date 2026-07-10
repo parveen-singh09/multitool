@@ -21,13 +21,18 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div id="hf-status" class="hidden rounded-md border px-3 py-2 text-sm" role="status"></div>
 
-    <textarea
-      id="hf-input"
-      class="field min-h-72 resize-y font-mono text-[13px]"
-      placeholder="Paste HTML here, e.g. <ul><li>one</li><li>two</li></ul>"
-      spellcheck="false"
-      aria-label="HTML input"
-    ></textarea>
+    <div class="hl-edit field p-0" style="height:18rem;resize:vertical;overflow:hidden">
+      <pre class="hl-block" aria-hidden="true"><code id="hf-input-hl" class="hljs" style="background:transparent"></code></pre>
+      <textarea
+        id="hf-input"
+        spellcheck="false"
+        autocapitalize="off"
+        autocomplete="off"
+        autocorrect="off"
+        placeholder="Paste HTML here, e.g. <ul><li>one</li><li>two</li></ul>"
+        aria-label="HTML input"
+      ></textarea>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -43,9 +48,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { wireInput } from '../../lib/highlight';
+
   const input = document.getElementById('hf-input') as HTMLTextAreaElement;
+  const inHl = document.getElementById('hf-input-hl')!;
   const status = document.getElementById('hf-status')!;
   const indentSel = document.getElementById('hf-indent') as HTMLSelectElement;
+
+  const refresh = wireInput(input, inHl, () => 'html');
 
   const VOID = new Set([
     'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
@@ -122,6 +132,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const src = input.value.trim();
     if (!src) return;
     input.value = doMinify ? minify(src) : beautify(src, getIndent());
+    refresh();
     showStatus(doMinify ? 'Minified ✓' : 'Formatted ✓', true);
   }
 
@@ -129,6 +140,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   document.getElementById('hf-minify')!.addEventListener('click', () => process(true));
   document.getElementById('hf-clear')!.addEventListener('click', () => {
     input.value = '';
+    refresh();
     status.classList.add('hidden');
   });
   document.getElementById('hf-copy')!.addEventListener('click', async () => {

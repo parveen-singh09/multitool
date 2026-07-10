@@ -21,13 +21,18 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div id="jsf-status" class="hidden rounded-md border px-3 py-2 text-sm" role="status"></div>
 
-    <textarea
-      id="jsf-input"
-      class="field min-h-72 resize-y font-mono text-[13px]"
-      placeholder="Paste JavaScript here, e.g. function add(a,b){return a+b}"
-      spellcheck="false"
-      aria-label="JavaScript input"
-    ></textarea>
+    <div class="hl-edit field p-0" style="height:18rem;resize:vertical;overflow:hidden">
+      <pre class="hl-block" aria-hidden="true"><code id="jsf-input-hl" class="hljs" style="background:transparent"></code></pre>
+      <textarea
+        id="jsf-input"
+        spellcheck="false"
+        autocapitalize="off"
+        autocomplete="off"
+        autocorrect="off"
+        placeholder="Paste JavaScript here, e.g. function add(a,b){return a+b}"
+        aria-label="JavaScript input"
+      ></textarea>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -44,9 +49,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { wireInput } from '../../lib/highlight';
+
   const input = document.getElementById('jsf-input') as HTMLTextAreaElement;
+  const inHl = document.getElementById('jsf-input-hl')!;
   const status = document.getElementById('jsf-status')!;
   const indentSel = document.getElementById('jsf-indent') as HTMLSelectElement;
+
+  const refresh = wireInput(input, inHl, () => 'javascript');
 
   function getIndent(): string {
     const v = indentSel.value;
@@ -234,6 +244,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const src = input.value.trim();
     if (!src) return;
     input.value = doMinify ? minify(src) : beautify(src, getIndent());
+    refresh();
     showStatus(doMinify ? 'Minified ✓' : 'Formatted ✓', true);
   }
 
@@ -241,6 +252,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   document.getElementById('jsf-minify')!.addEventListener('click', () => process(true));
   document.getElementById('jsf-clear')!.addEventListener('click', () => {
     input.value = '';
+    refresh();
     status.classList.add('hidden');
   });
   document.getElementById('jsf-copy')!.addEventListener('click', async () => {

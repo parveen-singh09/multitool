@@ -24,14 +24,19 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">
       CSV
-      <textarea
-        id="csvp-in"
-        class="field min-h-32 resize-y font-mono text-[13px]"
-        placeholder="name,age,city&#10;Ada,36,&quot;London, UK&quot;&#10;Alan,41,Manchester"
-        spellcheck="false"
-      >name,age,city
+      <div class="hl-edit field p-0" style="height:8rem;resize:vertical;overflow:hidden">
+        <pre class="hl-block" aria-hidden="true"><code id="csvp-in-hl" class="hljs" style="background:transparent"></code></pre>
+        <textarea
+          id="csvp-in"
+          placeholder="name,age,city&#10;Ada,36,&quot;London, UK&quot;&#10;Alan,41,Manchester"
+          spellcheck="false"
+          autocapitalize="off"
+          autocomplete="off"
+          autocorrect="off"
+        >name,age,city
 Ada,36,"London, UK"
 Alan,41,Manchester</textarea>
+      </div>
     </label>
 
     <p id="csvp-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
@@ -46,7 +51,7 @@ Alan,41,Manchester</textarea>
         JSON
         <button id="csvp-copy" class="btn btn-tertiary ml-auto">Copy JSON</button>
       </div>
-      <textarea id="csvp-json" class="field min-h-32 resize-y font-mono text-[13px]" readonly spellcheck="false"></textarea>
+      <pre class="hl-block field" style="height:8rem;overflow:auto"><code id="csvp-json" class="hljs" style="background:transparent;padding:0"></code></pre>
     </div>
   </div>
 
@@ -63,14 +68,18 @@ Alan,41,Manchester</textarea>
 </ToolLayout>
 
 <script>
+  import { hl, wireInput } from '../../lib/highlight';
+
   const input = document.getElementById('csvp-in') as HTMLTextAreaElement;
+  const inHl = document.getElementById('csvp-in-hl') as HTMLElement;
   const delimSel = document.getElementById('csvp-delim') as HTMLSelectElement;
   const headerChk = document.getElementById('csvp-header') as HTMLInputElement;
   const detected = document.getElementById('csvp-detected')!;
   const err = document.getElementById('csvp-error')!;
   const tableWrap = document.getElementById('csvp-table-wrap')!;
   const table = document.getElementById('csvp-table') as HTMLTableElement;
-  const jsonOut = document.getElementById('csvp-json') as HTMLTextAreaElement;
+  const jsonOut = document.getElementById('csvp-json') as HTMLElement;
+  let rawOutput = '';
 
   function detectDelimiter(text: string): string {
     const firstLine = text.split(/\r?\n/)[0] || '';
@@ -131,7 +140,7 @@ Alan,41,Manchester</textarea>
     const text = input.value.replace(/\n+$/, '');
     if (!text.trim()) {
       table.textContent = '';
-      jsonOut.value = '';
+      rawOutput = ''; hl(jsonOut, '', 'json');
       detected.textContent = '';
       tableWrap.classList.add('hidden');
       return;
@@ -155,7 +164,7 @@ Alan,41,Manchester</textarea>
       return;
     }
 
-    if (!rows.length) { tableWrap.classList.add('hidden'); jsonOut.value = ''; return; }
+    if (!rows.length) { tableWrap.classList.add('hidden'); rawOutput = ''; hl(jsonOut, '', 'json'); return; }
     tableWrap.classList.remove('hidden');
 
     const hasHeader = headerChk.checked;
@@ -199,17 +208,18 @@ Alan,41,Manchester</textarea>
     } else {
       json = bodyRows;
     }
-    jsonOut.value = JSON.stringify(json, null, 2);
+    rawOutput = JSON.stringify(json, null, 2);
+    hl(jsonOut, rawOutput, 'json');
   }
 
   document.getElementById('csvp-copy')!.addEventListener('click', async () => {
     const btn = document.getElementById('csvp-copy')!;
-    await navigator.clipboard.writeText(jsonOut.value);
+    await navigator.clipboard.writeText(rawOutput);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy JSON'), 1500);
   });
 
-  input.addEventListener('input', render);
+  wireInput(input, inHl, () => 'plaintext', () => render());
   delimSel.addEventListener('change', render);
   headerChk.addEventListener('change', render);
   render();

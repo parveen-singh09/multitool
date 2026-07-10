@@ -4,86 +4,447 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="timestamp-converter">
   <div class="flex flex-col gap-6">
-    <div class="panel panel-lift flex flex-col gap-2 p-5">
-      <span class="text-[13px] text-ink-subtle">Current Unix time</span>
-      <div class="flex flex-wrap items-baseline gap-3">
-        <span id="ts-now" class="font-mono text-2xl text-ink">0</span>
-        <span class="text-[13px] text-ink-tertiary">seconds since 1 Jan 1970 UTC</span>
+    <!-- Live current Unix time -->
+    <div class="panel panel-lift flex flex-wrap items-center justify-between gap-4 p-5">
+      <div class="flex flex-col gap-2">
+        <span class="text-[13px] text-ink-subtle">Current Unix time</span>
+        <div class="flex flex-wrap items-baseline gap-3">
+          <span id="ts-now" class="font-mono text-2xl text-ink">0</span>
+          <span class="text-[13px] text-ink-tertiary">seconds since 1 Jan 1970 UTC</span>
+        </div>
+        <span id="ts-now-ms" class="font-mono text-[13px] text-ink-tertiary">0 ms</span>
+      </div>
+      <div class="flex gap-2">
+        <button id="ts-now-copy" type="button" class="btn btn-secondary">Copy</button>
+        <button id="ts-now-use" type="button" class="btn btn-secondary">Use now</button>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-      <div class="flex flex-col gap-2">
-        <label class="text-sm text-ink-subtle" for="ts-epoch">Timestamp → Date</label>
-        <div class="flex gap-2">
-          <input id="ts-epoch" type="text" class="field font-mono" placeholder="1700000000" autocomplete="off" />
-          <select id="ts-unit" class="field w-24">
-            <option value="s">sec</option>
-            <option value="ms">ms</option>
-          </select>
+    <!-- Smart input + timezone -->
+    <div class="flex flex-col gap-3">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto]">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Enter a Unix timestamp or a date
+          <input
+            id="ts-in"
+            class="field font-mono"
+            placeholder="1700000000  ·  2026-07-04 14:30  ·  Jul 4 2026"
+            spellcheck="false"
+            autocomplete="off"
+          />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Timezone
+          <select id="ts-tz" class="field w-full sm:w-64"></select>
+        </label>
+        <div class="flex items-end">
+          <button id="ts-now-btn" type="button" class="btn btn-secondary w-full sm:w-auto">Now</button>
         </div>
-        <div id="ts-date-out" class="panel mt-1 flex flex-col gap-1 p-4 text-[13px]"></div>
       </div>
+      <p id="ts-parsed" class="text-[13px] text-ink-tertiary"></p>
+      <p id="ts-error" class="hidden text-[13px]" style="color:#e5484d" role="alert">
+        Could not understand that. Try a timestamp like 1700000000, or a date like
+        2026-07-04, Jul 4 2026, or 07/04/2026.
+      </p>
+    </div>
 
-      <div class="flex flex-col gap-2">
-        <label class="text-sm text-ink-subtle" for="ts-date">Date → Timestamp</label>
-        <input id="ts-date" type="datetime-local" class="field" />
-        <div id="ts-epoch-out" class="panel mt-1 flex flex-col gap-1 p-4 text-[13px]"></div>
-      </div>
+    <!-- Output table -->
+    <div id="ts-out" class="overflow-hidden rounded-md border border-hairline"></div>
+
+    <!-- Custom format -->
+    <div class="flex flex-col gap-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle" for="ts-fmt">
+        Custom format
+        <input id="ts-fmt" class="field font-mono" value="YYYY-MM-DD HH:mm:ss" spellcheck="false" autocomplete="off" />
+      </label>
+      <div
+        id="ts-fmt-out"
+        class="ts-copy panel flex cursor-pointer items-center justify-between gap-3 p-4 font-mono text-[13px] text-ink transition-colors hover:bg-surface-2"
+        role="button"
+        tabindex="0"
+      ></div>
+      <span class="text-[12px] text-ink-tertiary">
+        Tokens: YYYY YY · MM M MMMM MMM · DD D · dddd ddd · HH H · hh h · mm m · ss s · SSS · A a
+      </span>
+    </div>
+
+    <!-- Multi-timezone strip -->
+    <div class="flex flex-col gap-2">
+      <span class="text-sm text-ink-subtle">Around the world</span>
+      <div id="ts-world" class="grid grid-cols-1 gap-2 sm:grid-cols-2"></div>
     </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free Unix timestamp converter turns epoch timestamps into
-      human-readable dates and back again. It handles both seconds and
-      milliseconds and shows the result in your local time and UTC. A live clock
-      shows the current Unix time. Everything is calculated in your browser.
+      This free Unix timestamp converter turns epoch timestamps into human-readable
+      dates and back again — in any timezone. Paste a timestamp in seconds,
+      milliseconds, microseconds or nanoseconds and it detects the unit
+      automatically, or type a date in almost any common format. Results are shown
+      in your selected timezone alongside UTC/GMT, ISO 8601, RFC 2822, relative
+      time, the raw Unix value, the ISO week, quarter and day of year, plus a
+      fully customisable format string. A live clock shows the current Unix time,
+      the same moment is displayed across major world timezones, and any converted
+      moment is linkable via the URL. Click any row to copy it. Everything is
+      calculated in your browser — nothing is uploaded.
     </p>
   </div>
 </ToolLayout>
 
 <script>
   const nowEl = document.getElementById('ts-now')!;
-  const epochIn = document.getElementById('ts-epoch') as HTMLInputElement;
-  const unitEl = document.getElementById('ts-unit') as HTMLSelectElement;
-  const dateOut = document.getElementById('ts-date-out')!;
-  const dateIn = document.getElementById('ts-date') as HTMLInputElement;
-  const epochOut = document.getElementById('ts-epoch-out')!;
+  const nowMsEl = document.getElementById('ts-now-ms')!;
+  const input = document.getElementById('ts-in') as HTMLInputElement;
+  const tzSel = document.getElementById('ts-tz') as HTMLSelectElement;
+  const parsed = document.getElementById('ts-parsed')!;
+  const err = document.getElementById('ts-error')!;
+  const out = document.getElementById('ts-out')!;
+  const fmtIn = document.getElementById('ts-fmt') as HTMLInputElement;
+  const fmtOut = document.getElementById('ts-fmt-out')!;
+  const world = document.getElementById('ts-world')!;
 
-  setInterval(() => { nowEl.textContent = Math.floor(Date.now() / 1000).toString(); }, 1000);
-  nowEl.textContent = Math.floor(Date.now() / 1000).toString();
+  const p2 = (n: number) => String(n).padStart(2, '0');
+  const p3 = (n: number) => String(n).padStart(3, '0');
 
-  function row(label: string, value: string) {
-    return `<div><span class="text-ink-tertiary">${label}:</span> <span class="text-ink">${value}</span></div>`;
+  // ---- Timezone list ----
+  function zoneList(): string[] {
+    try {
+      // @ts-ignore - supportedValuesOf is newer than some lib.dom versions
+      const all = Intl.supportedValuesOf?.('timeZone') as string[] | undefined;
+      if (all && all.length) return all;
+    } catch { /* fall through */ }
+    return [
+      'UTC', 'America/New_York', 'America/Chicago', 'America/Denver',
+      'America/Los_Angeles', 'America/Sao_Paulo', 'Europe/London', 'Europe/Paris',
+      'Europe/Berlin', 'Europe/Moscow', 'Asia/Dubai', 'Asia/Kolkata',
+      'Asia/Shanghai', 'Asia/Tokyo', 'Australia/Sydney', 'Pacific/Auckland',
+    ];
   }
 
-  function epochToDate() {
-    const raw = epochIn.value.trim();
-    if (!raw || isNaN(Number(raw))) { dateOut.innerHTML = '<span class="text-ink-tertiary">Enter a numeric timestamp.</span>'; return; }
-    let ms = Number(raw);
-    if (unitEl.value === 's') ms *= 1000;
-    const d = new Date(ms);
-    if (isNaN(d.getTime())) { dateOut.innerHTML = '<span style="color:#e5484d">Out of range.</span>'; return; }
-    dateOut.innerHTML = row('Local', d.toLocaleString()) + row('UTC', d.toUTCString()) + row('ISO 8601', d.toISOString());
+  const localZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+  // ---- Parsing ----
+  type Parse = { date: Date; source: string } | null;
+
+  function detectUnit(digits: string): { ms: number; unit: string } {
+    const len = digits.length;
+    const n = Number(digits);
+    if (len <= 11) return { ms: n * 1000, unit: 'Unix seconds' };
+    if (len <= 14) return { ms: n, unit: 'Unix milliseconds' };
+    if (len <= 17) return { ms: Math.floor(n / 1e3), unit: 'Unix microseconds' };
+    return { ms: Math.floor(n / 1e6), unit: 'Unix nanoseconds' };
   }
 
-  function dateToEpoch() {
-    if (!dateIn.value) { epochOut.innerHTML = '<span class="text-ink-tertiary">Pick a date and time.</span>'; return; }
-    const d = new Date(dateIn.value);
-    const s = Math.floor(d.getTime() / 1000);
-    epochOut.innerHTML = row('Seconds', String(s)) + row('Milliseconds', String(d.getTime())) + row('ISO 8601', d.toISOString());
+  function parseInput(raw: string): Parse {
+    const v = raw.trim();
+    if (!v) return null;
+    // Pure integer (optionally signed) => Unix timestamp with unit detection.
+    if (/^-?\d+$/.test(v)) {
+      const neg = v.startsWith('-');
+      const digits = v.replace('-', '');
+      const { ms, unit } = detectUnit(digits);
+      const signed = neg ? -ms : ms;
+      const d = new Date(signed);
+      if (isNaN(d.getTime())) return null;
+      return { date: d, source: `Parsed as ${unit}` };
+    }
+    // Otherwise a date string.
+    const d = new Date(v);
+    if (!isNaN(d.getTime())) return { date: d, source: 'Parsed as a date' };
+    // DD/MM/YYYY fallback (Date() assumes US MM/DD) — swap when day > 12.
+    const m = v.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})/);
+    if (m && Number(m[1]) > 12) {
+      const d2 = new Date(`${m[2]}/${m[1]}/${m[3]}`);
+      if (!isNaN(d2.getTime())) return { date: d2, source: 'Parsed as a date (DD/MM/YYYY)' };
+    }
+    return null;
   }
 
-  epochIn.addEventListener('input', epochToDate);
-  unitEl.addEventListener('change', epochToDate);
-  dateIn.addEventListener('input', dateToEpoch);
+  // ---- Timezone-aware wall-clock parts ----
+  type Parts = {
+    year: number; month: number; day: number;
+    hour: number; minute: number; second: number;
+    ms: number; weekday: number; // 0=Sun
+    monthName: string; monthShort: string; weekdayName: string; weekdayShort: string;
+    offset: string;
+  };
 
-  // Seed the date input with now (local).
-  const n = new Date();
-  n.setMinutes(n.getMinutes() - n.getTimezoneOffset());
-  dateIn.value = n.toISOString().slice(0, 16);
-  epochIn.value = Math.floor(Date.now() / 1000).toString();
-  epochToDate();
-  dateToEpoch();
+  const WDAY = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+  function partsInZone(date: Date, tz: string): Parts {
+    const dtf = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, hourCycle: 'h23',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      weekday: 'short', timeZoneName: 'shortOffset',
+    });
+    const map: Record<string, string> = {};
+    for (const part of dtf.formatToParts(date)) map[part.type] = part.value;
+    const year = Number(map.year);
+    const month = Number(map.month);
+    const day = Number(map.day);
+    // 'shortOffset' renders e.g. "GMT+5:30"; normalise to +HH:MM.
+    let offset = map.timeZoneName || 'UTC';
+    const om = offset.match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/);
+    if (om) offset = `${om[1]}${p2(Number(om[2]))}:${om[3] ?? '00'}`;
+    else if (/GMT/.test(offset)) offset = '+00:00';
+    const weekday = WDAY.findIndex((w) => w.startsWith(map.weekday));
+    return {
+      year, month, day,
+      hour: Number(map.hour) % 24, minute: Number(map.minute), second: Number(map.second),
+      ms: date.getMilliseconds(), weekday: weekday < 0 ? 0 : weekday,
+      monthName: MON[month - 1], monthShort: MON[month - 1].slice(0, 3),
+      weekdayName: WDAY[weekday < 0 ? 0 : weekday], weekdayShort: WDAY[weekday < 0 ? 0 : weekday].slice(0, 3),
+      offset,
+    };
+  }
+
+  // ---- Custom format tokens ----
+  function formatTokens(p: Parts, template: string): string {
+    const h12 = ((p.hour + 11) % 12) + 1;
+    const ap = p.hour < 12 ? 'AM' : 'PM';
+    // Longest tokens first so MMMM matches before MM, dddd before ddd, etc.
+    const table: [RegExp, string][] = [
+      [/YYYY/g, String(p.year)],
+      [/YY/g, p2(p.year % 100)],
+      [/MMMM/g, p.monthName],
+      [/MMM/g, p.monthShort],
+      [/MM/g, p2(p.month)],
+      [/dddd/g, p.weekdayName],
+      [/ddd/g, p.weekdayShort],
+      [/DD/g, p2(p.day)],
+      [/HH/g, p2(p.hour)],
+      [/hh/g, p2(h12)],
+      [/mm/g, p2(p.minute)],
+      [/ss/g, p2(p.second)],
+      [/SSS/g, p3(p.ms)],
+      [/\bA\b/g, ap],
+      [/\ba\b/g, ap.toLowerCase()],
+      // single-letter tokens last, and only when standalone to avoid clobbering words
+      [/\bM\b/g, String(p.month)],
+      [/\bD\b/g, String(p.day)],
+      [/\bH\b/g, String(p.hour)],
+      [/\bh\b/g, String(h12)],
+      [/\bm\b/g, String(p.minute)],
+      [/\bs\b/g, String(p.second)],
+    ];
+    let s = template;
+    for (const [re, val] of table) s = s.replace(re, val);
+    return s;
+  }
+
+  // ---- Derived date facts ----
+  function isoWeek(d: Date): { week: number; year: number } {
+    const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    const day = (t.getUTCDay() + 6) % 7; // Mon=0
+    t.setUTCDate(t.getUTCDate() - day + 3); // nearest Thursday
+    const firstThu = new Date(Date.UTC(t.getUTCFullYear(), 0, 4));
+    const firstDay = (firstThu.getUTCDay() + 6) % 7;
+    firstThu.setUTCDate(firstThu.getUTCDate() - firstDay + 3);
+    const week = 1 + Math.round((t.getTime() - firstThu.getTime()) / 604800000);
+    return { week, year: t.getUTCFullYear() };
+  }
+
+  function dayOfYear(p: Parts): number {
+    const start = Date.UTC(p.year, 0, 0);
+    const cur = Date.UTC(p.year, p.month - 1, p.day);
+    return Math.floor((cur - start) / 86400000);
+  }
+
+  function rfc2822(p: Parts): string {
+    return `${p.weekdayShort}, ${p2(p.day)} ${p.monthShort} ${p.year} ${p2(p.hour)}:${p2(p.minute)}:${p2(p.second)} ${p.offset.replace(':', '')}`;
+  }
+
+  function relative(date: Date): string {
+    const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+    const diff = date.getTime() - Date.now();
+    const abs = Math.abs(diff);
+    const units: [Intl.RelativeTimeFormatUnit, number][] = [
+      ['year', 31536000000], ['month', 2592000000], ['week', 604800000],
+      ['day', 86400000], ['hour', 3600000], ['minute', 60000], ['second', 1000],
+    ];
+    for (const [unit, ms] of units) {
+      if (abs >= ms || unit === 'second') {
+        return rtf.format(Math.round(diff / ms), unit);
+      }
+    }
+    return 'now';
+  }
+
+  // ---- State ----
+  let current: Date | null = null;
+
+  function selectedZone(): string {
+    return tzSel.value || localZone;
+  }
+
+  function row(label: string, value: string): string {
+    return `<tr class="ts-row cursor-pointer border-t border-hairline transition-colors hover:bg-surface-2" data-copy="${value.replace(/"/g, '&quot;')}">
+      <td class="px-3 py-2 text-ink-subtle whitespace-nowrap">${label}</td>
+      <td class="px-3 py-2 text-right font-mono text-ink break-all">${value}</td>
+    </tr>`;
+  }
+
+  function render() {
+    const res = parseInput(input.value);
+    if (!res) {
+      current = null;
+      out.innerHTML = '';
+      fmtOut.textContent = '';
+      world.innerHTML = '';
+      parsed.textContent = '';
+      err.classList.toggle('hidden', !input.value.trim());
+      syncUrl();
+      return;
+    }
+    err.classList.add('hidden');
+    current = res.date;
+    const tz = selectedZone();
+    const p = partsInZone(res.date, tz);
+    parsed.textContent = `${res.source} · ${tz} (UTC${p.offset})`;
+
+    const secs = Math.floor(res.date.getTime() / 1000);
+    const wk = isoWeek(res.date);
+    const q = Math.floor((p.month - 1) / 3) + 1;
+    const zoneLabel = `${tz} (UTC${p.offset})`;
+
+    out.innerHTML = `<table class="w-full text-[13px]">
+      ${row(zoneLabel, `${p.weekdayName}, ${p.monthName} ${p.day}, ${p.year} ${p2(p.hour)}:${p2(p.minute)}:${p2(p.second)}`)}
+      ${row('UTC / GMT', res.date.toUTCString())}
+      ${row('ISO 8601', res.date.toISOString())}
+      ${row('RFC 2822', rfc2822(p))}
+      ${row('Relative', relative(res.date))}
+      ${row('Unix seconds', String(secs))}
+      ${row('Unix milliseconds', String(res.date.getTime()))}
+      ${row('Day of week', p.weekdayName)}
+      ${row('Day of year', String(dayOfYear(p)))}
+      ${row('ISO week', `${wk.year}-W${p2(wk.week)}`)}
+      ${row('Quarter', `Q${q} ${p.year}`)}
+    </table>`;
+    bindCopy(out);
+
+    renderFmt(p);
+    renderWorld(res.date);
+    syncUrl();
+  }
+
+  function renderFmt(p: Parts) {
+    fmtOut.textContent = formatTokens(p, fmtIn.value);
+    (fmtOut as HTMLElement).dataset.copy = fmtOut.textContent || '';
+  }
+
+  function renderWorld(date: Date) {
+    const zones = Array.from(new Set(['UTC', 'America/New_York', 'Europe/London', 'Asia/Tokyo', localZone]));
+    world.innerHTML = zones.map((z) => {
+      const p = partsInZone(date, z);
+      const val = `${p.weekdayShort} ${p.monthShort} ${p.day}, ${p2(p.hour)}:${p2(p.minute)}`;
+      return `<div class="ts-row flex cursor-pointer items-center justify-between gap-3 rounded-md border border-hairline bg-surface-1 px-3 py-2 transition-colors hover:bg-surface-2" data-copy="${val}">
+        <span class="text-[13px] text-ink-subtle">${z} <span class="text-ink-tertiary">UTC${p.offset}</span></span>
+        <span class="font-mono text-[13px] text-ink">${val}</span>
+      </div>`;
+    }).join('');
+    bindCopy(world);
+  }
+
+  async function copyText(el: HTMLElement, text: string, feedbackTarget?: HTMLElement) {
+    try {
+      await navigator.clipboard.writeText(text);
+      const tgt = feedbackTarget ?? el;
+      const old = tgt.textContent;
+      tgt.textContent = 'Copied!';
+      setTimeout(() => { tgt.textContent = old; }, 1000);
+    } catch { /* clipboard blocked — ignore */ }
+  }
+
+  function bindCopy(container: HTMLElement) {
+    container.querySelectorAll<HTMLElement>('.ts-row').forEach((el) => {
+      el.addEventListener('click', () => {
+        const val = el.dataset.copy!;
+        const valueCell = el.querySelector('td:last-child') as HTMLElement | null;
+        copyText(el, val, valueCell ?? undefined);
+      });
+    });
+  }
+
+  // ---- URL sync ----
+  function syncUrl() {
+    const url = new URL(window.location.href);
+    if (current) url.searchParams.set('t', String(current.getTime()));
+    else url.searchParams.delete('t');
+    url.searchParams.set('tz', selectedZone());
+    history.replaceState(null, '', url);
+  }
+
+  // ---- Live clock + relative refresh ----
+  function tickClock() {
+    const now = Date.now();
+    nowEl.textContent = Math.floor(now / 1000).toString();
+    nowMsEl.textContent = `${now} ms`;
+  }
+  setInterval(tickClock, 1000);
+  tickClock();
+
+  // Refresh the relative-time row every 30s without disturbing focus/typing.
+  setInterval(() => {
+    if (!current) return;
+    const rows = out.querySelectorAll<HTMLElement>('.ts-row');
+    rows.forEach((r) => {
+      const label = r.querySelector('td')?.textContent;
+      if (label === 'Relative') {
+        const v = relative(current!);
+        r.dataset.copy = v;
+        (r.querySelector('td:last-child') as HTMLElement).textContent = v;
+      }
+    });
+  }, 30000);
+
+  // ---- Populate timezone dropdown ----
+  const zones = zoneList();
+  if (!zones.includes(localZone)) zones.unshift(localZone); // ensure local is selectable
+  for (const z of zones) {
+    const opt = document.createElement('option');
+    opt.value = z;
+    opt.textContent = z;
+    tzSel.appendChild(opt);
+  }
+
+  // ---- Wire events ----
+  input.addEventListener('input', render);
+  tzSel.addEventListener('change', render);
+  fmtIn.addEventListener('input', () => {
+    if (current) renderFmt(partsInZone(current, selectedZone()));
+  });
+  fmtOut.addEventListener('click', () => {
+    if (fmtOut.textContent) copyText(fmtOut as HTMLElement, fmtOut.textContent);
+  });
+  fmtOut.addEventListener('keydown', (e) => {
+    if ((e as KeyboardEvent).key === 'Enter' || (e as KeyboardEvent).key === ' ') {
+      e.preventDefault();
+      if (fmtOut.textContent) copyText(fmtOut as HTMLElement, fmtOut.textContent);
+    }
+  });
+
+  function setNow() {
+    input.value = String(Math.floor(Date.now() / 1000));
+    render();
+  }
+  document.getElementById('ts-now-btn')!.addEventListener('click', setNow);
+  document.getElementById('ts-now-use')!.addEventListener('click', setNow);
+  document.getElementById('ts-now-copy')!.addEventListener('click', (e) => {
+    copyText(e.currentTarget as HTMLElement, nowEl.textContent!);
+  });
+
+  // ---- Hydrate from URL / defaults ----
+  const params = new URLSearchParams(window.location.search);
+  const tzParam = params.get('tz');
+  tzSel.value = tzParam && zones.includes(tzParam) ? tzParam : localZone;
+
+  const tParam = params.get('t');
+  if (tParam && /^-?\d+$/.test(tParam)) {
+    input.value = tParam; // ms epoch from a shared link
+  } else {
+    input.value = String(Math.floor(Date.now() / 1000));
+  }
+  render();
 </script>

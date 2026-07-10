@@ -21,7 +21,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div class="flex flex-col gap-2">
       <label class="text-sm text-ink-subtle">JSON-LD (paste into a &lt;script&gt; tag)</label>
-      <textarea id="sc-out" class="field min-h-72 resize-y font-mono text-xs" readonly></textarea>
+      <pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto"><code id="sc-out" class="hljs" style="background:transparent;padding:0"></code></pre>
       <button id="sc-copy" class="btn btn-secondary w-fit">Copy script tag</button>
     </div>
   </div>
@@ -40,10 +40,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { hl } from '../../lib/highlight';
+
   const $ = (id: string) => document.getElementById(id)!;
   const typeEl = $('sc-type') as HTMLSelectElement;
   const fieldsEl = $('sc-fields')!;
-  const out = $('sc-out') as HTMLTextAreaElement;
+  const out = $('sc-out') as HTMLElement;
+  let rawOutput = '';
 
   // Field definitions per type: [key, label, default].
   const SCHEMAS: Record<string, [string, string, string][]> = {
@@ -80,13 +83,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     ];
     else if (type === 'Event') Object.assign(obj, { name: get('name'), startDate: get('startDate'), location: { '@type': 'Place', name: get('location') }, description: get('description') });
 
-    out.value = `<script type="application/ld+json">\n${JSON.stringify(obj, null, 2)}\n<\/script>`;
+    rawOutput = `<script type="application/ld+json">\n${JSON.stringify(obj, null, 2)}\n<\/script>`;
+    hl(out, rawOutput, 'json');
   }
 
   typeEl.addEventListener('change', () => { renderFields(); build(); });
   $('sc-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(out.value);
+    await navigator.clipboard.writeText(rawOutput);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy script tag'), 1500);
   });

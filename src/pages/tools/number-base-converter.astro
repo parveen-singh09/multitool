@@ -1,76 +1,132 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
+
+// 2–36, with the common ones labelled.
+const names: Record<number, string> = { 2: 'binary', 8: 'octal', 10: 'decimal', 16: 'hex' };
+const baseOptions = Array.from({ length: 35 }, (_, i) => {
+  const b = i + 2;
+  return { value: b, label: names[b] ? `${b} (${names[b]})` : String(b) };
+});
 ---
 
 <ToolLayout slug="number-base-converter">
-  <div class="flex flex-col gap-4">
-    <p class="text-[13px] text-ink-subtle">Type in any field — the others update instantly.</p>
+  <div class="panel flex flex-col gap-4 p-5">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Enter number
+      <input id="nb-in" type="text" class="field font-mono" placeholder="10" spellcheck="false" autocomplete="off" autocapitalize="off" />
+    </label>
 
-    {[
-      { id: 'bin', label: 'Binary (base 2)', ph: '1010' },
-      { id: 'oct', label: 'Octal (base 8)', ph: '12' },
-      { id: 'dec', label: 'Decimal (base 10)', ph: '10' },
-      { id: 'hex', label: 'Hexadecimal (base 16)', ph: 'a' },
-    ].map((f) => (
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-        {f.label}
-        <input id={`nb-${f.id}`} type="text" class="field font-mono" placeholder={f.ph} spellcheck="false" autocomplete="off" />
+        From base
+        <select id="nb-from" class="field">
+          {baseOptions.map((o) => <option value={o.value} selected={o.value === 10}>{o.label}</option>)}
+        </select>
       </label>
-    ))}
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        To base
+        <select id="nb-to" class="field">
+          {baseOptions.map((o) => <option value={o.value} selected={o.value === 16}>{o.label}</option>)}
+        </select>
+      </label>
+    </div>
+
+    <div class="flex flex-wrap gap-3">
+      <button id="nb-convert" type="button" class="btn btn-primary">Convert</button>
+      <button id="nb-reset" type="button" class="btn btn-secondary">Reset</button>
+      <button id="nb-swap" type="button" class="btn btn-secondary">⇅ Swap</button>
+    </div>
 
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-      Custom base (2–36)
-      <div class="flex gap-2">
-        <input id="nb-custom-base" type="number" min="2" max="36" value="36" class="field w-24" />
-        <input id="nb-custom" type="text" class="field font-mono" placeholder="value" spellcheck="false" autocomplete="off" />
-      </div>
+      Result number
+      <textarea id="nb-out" class="field min-h-24 resize-y font-mono break-all" readonly aria-label="Result number"></textarea>
     </label>
+
+    <div>
+      <button id="nb-copy" type="button" class="btn btn-secondary">Copy</button>
+    </div>
 
     <p id="nb-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free number base converter translates numbers between binary, octal,
-      decimal and hexadecimal — plus any custom base from 2 to 36. Type into any
-      field and the rest update live. It is a handy companion for programming,
-      networking and low-level debugging. All conversion runs in your browser.
+      This free number base converter translates a number from any base to any
+      other base, from binary and octal through decimal, hexadecimal and every
+      base in between (2–36). Pick a “from” and “to” base, hit Convert, and copy
+      the result — or use Swap to reverse the direction instantly.
+    </p>
+    <p>
+      Unlike most online converters, this one uses arbitrary-precision integers,
+      so numbers far larger than 2<sup>53</sup> convert exactly instead of silently
+      rounding. Negative values and leading zeros are supported too, and every
+      conversion runs entirely in your browser.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  const bases: Record<string, number> = { bin: 2, oct: 8, dec: 10, hex: 16 };
-  const els: Record<string, HTMLInputElement> = {};
-  for (const id of Object.keys(bases)) els[id] = document.getElementById(`nb-${id}`) as HTMLInputElement;
-  const customBase = document.getElementById('nb-custom-base') as HTMLInputElement;
-  const customEl = document.getElementById('nb-custom') as HTMLInputElement;
+  const input = document.getElementById('nb-in') as HTMLInputElement;
+  const from = document.getElementById('nb-from') as HTMLSelectElement;
+  const to = document.getElementById('nb-to') as HTMLSelectElement;
+  const out = document.getElementById('nb-out') as HTMLTextAreaElement;
   const err = document.getElementById('nb-error')!;
 
-  function updateFrom(sourceId: string, base: number, raw: string) {
+  // Arbitrary-precision parse: BigInt has no radix parser, so build it digit by digit.
+  function parseBig(raw: string, base: number): bigint | null {
+    let s = raw.trim().toLowerCase();
+    let neg = false;
+    if (s[0] === '+' || s[0] === '-') { neg = s[0] === '-'; s = s.slice(1); }
+    if (!s) return null;
+    const B = BigInt(base);
+    let n = 0n;
+    for (const ch of s) {
+      const d = parseInt(ch, 36); // 0–35, NaN for non-alphanumerics
+      if (isNaN(d) || d >= base) return null;
+      n = n * B + BigInt(d);
+    }
+    return neg ? -n : n;
+  }
+
+  function convert() {
     err.classList.add('hidden');
-    const v = raw.trim();
-    if (!v) { for (const k of Object.keys(els)) if (k !== sourceId) els[k].value = ''; if (sourceId !== 'custom') customEl.value = ''; return; }
-    const valid = new RegExp(`^[0-9a-z]+$`, 'i').test(v);
-    const n = parseInt(v, base);
-    if (!valid || isNaN(n) || n.toString(base) !== v.toLowerCase().replace(/^0+(?=.)/, '')) {
-      err.textContent = `“${v}” is not a valid base-${base} number.`;
+    const raw = input.value.trim();
+    if (!raw) { out.value = ''; return; }
+    const n = parseBig(raw, Number(from.value));
+    if (n === null) {
+      out.value = '';
+      err.textContent = `“${raw}” is not a valid base-${from.value} number.`;
       err.classList.remove('hidden');
       return;
     }
-    for (const [k, b] of Object.entries(bases)) if (k !== sourceId) els[k].value = n.toString(b);
-    const cb = Math.min(36, Math.max(2, Number(customBase.value) || 36));
-    if (sourceId !== 'custom') customEl.value = n.toString(cb);
-    if (sourceId !== 'dec') els.dec.value = n.toString(10);
+    out.value = n.toString(Number(to.value));
   }
 
-  for (const [id, base] of Object.entries(bases)) {
-    els[id].addEventListener('input', () => updateFrom(id, base, els[id].value));
-  }
-  customEl.addEventListener('input', () =>
-    updateFrom('custom', Math.min(36, Math.max(2, Number(customBase.value) || 36)), customEl.value),
-  );
-  customBase.addEventListener('input', () => {
-    if (els.dec.value) updateFrom('dec', 10, els.dec.value);
+  input.addEventListener('input', convert);
+  from.addEventListener('change', convert);
+  to.addEventListener('change', convert);
+  document.getElementById('nb-convert')!.addEventListener('click', convert);
+
+  document.getElementById('nb-reset')!.addEventListener('click', () => {
+    input.value = '';
+    out.value = '';
+    from.value = '10';
+    to.value = '16';
+    err.classList.add('hidden');
+    input.focus();
+  });
+
+  document.getElementById('nb-swap')!.addEventListener('click', () => {
+    [from.value, to.value] = [to.value, from.value];
+    if (out.value) input.value = out.value; // carry the result back as the new input
+    convert();
+  });
+
+  const copyBtn = document.getElementById('nb-copy') as HTMLButtonElement;
+  copyBtn.addEventListener('click', async () => {
+    if (!out.value) return;
+    await navigator.clipboard.writeText(out.value);
+    copyBtn.textContent = 'Copied!';
+    setTimeout(() => (copyBtn.textContent = 'Copy'), 1200);
   });
 </script>

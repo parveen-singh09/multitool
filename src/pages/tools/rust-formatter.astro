@@ -18,10 +18,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Rust input
-        <textarea id="rf-in" class="field font-mono text-[13px]" rows="16" spellcheck="false" placeholder="fn main(){let x=5;if x>3{println!(&quot;big&quot;);}}"></textarea>
+        <div class="hl-edit field p-0" style="height:24rem;resize:vertical;overflow:hidden">
+          <pre class="hl-block" aria-hidden="true"><code id="rf-in-hl" class="hljs" style="background:transparent"></code></pre>
+          <textarea id="rf-in" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="fn main(){let x=5;if x>3{println!(&quot;big&quot;);}}"></textarea>
+        </div>
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Formatted
-        <textarea id="rf-out" class="field font-mono text-[13px]" rows="16" readonly spellcheck="false"></textarea>
+        <pre class="hl-block field" style="height:24rem;overflow:auto"><code id="rf-out" class="hljs" style="background:transparent;padding:0"></code></pre>
       </label>
     </div>
   </div>
@@ -40,8 +43,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { hl, wireInput } from '../../lib/highlight';
+
   const input = document.getElementById('rf-in') as HTMLTextAreaElement;
-  const output = document.getElementById('rf-out') as HTMLTextAreaElement;
+  const inHl = document.getElementById('rf-in-hl') as HTMLElement;
+  const output = document.getElementById('rf-out') as HTMLElement;
   const indentSel = document.getElementById('rf-indent') as HTMLSelectElement;
 
   function indentUnit(): string {
@@ -125,21 +131,24 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return restore(result, store);
   }
 
+  let rawOutput = '';
   function run() {
-    if (!input.value.trim()) { output.value = ''; return; }
-    try { output.value = format(input.value); }
-    catch { output.value = input.value; }
+    if (!input.value.trim()) { rawOutput = ''; hl(output, '', 'rust'); return; }
+    try { rawOutput = format(input.value); }
+    catch { rawOutput = input.value; }
+    hl(output, rawOutput, 'rust');
   }
 
   document.getElementById('rf-format')!.addEventListener('click', run);
-  input.addEventListener('input', run);
+  const refresh = wireInput(input, inHl, () => 'rust', () => run());
   indentSel.addEventListener('change', run);
   document.getElementById('rf-copy')!.addEventListener('click', async (e) => {
-    await navigator.clipboard.writeText(output.value);
+    await navigator.clipboard.writeText(rawOutput);
     const b = e.currentTarget as HTMLButtonElement;
     b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
   });
 
   input.value = 'use std::collections::HashMap;\nfn main(){let mut m=HashMap::new();m.insert("a",1);for(k,v)in &m{if *v>0{println!("{}={}",k,v);}}}';
+  refresh();
   run();
 </script>

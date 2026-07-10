@@ -8,7 +8,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">
       XML to validate
-      <textarea id="xv-in" class="field min-h-72 resize-y font-mono text-[13px]" placeholder="Paste XML here, e.g. <root><item>value</item></root>" spellcheck="false"></textarea>
+      <div class="hl-edit field p-0" style="height:24rem;resize:vertical;overflow:hidden">
+        <pre class="hl-block" aria-hidden="true"><code id="xv-in-hl" class="hljs" style="background:transparent"></code></pre>
+        <textarea id="xv-in" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Paste XML here, e.g. <root><item>value</item></root>"></textarea>
+      </div>
     </label>
 
     <div id="xv-preview-wrap" class="hidden">
@@ -16,7 +19,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <div class="eyebrow">Formatted view</div>
         <button id="xv-copy" class="btn btn-secondary ml-auto">Copy</button>
       </div>
-      <pre id="xv-preview" class="panel p-4 mt-2 overflow-x-auto font-mono text-[13px] text-ink whitespace-pre"></pre>
+      <pre id="xv-preview" class="hl-block field mt-2" style="overflow:auto"><code id="xv-preview-code" class="hljs" style="background:transparent;padding:0"></code></pre>
     </div>
   </div>
 
@@ -32,10 +35,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { hl, wireInput } from '../../lib/highlight';
+
   const input = document.getElementById('xv-in') as HTMLTextAreaElement;
+  const inHl = document.getElementById('xv-in-hl')!;
   const status = document.getElementById('xv-status')!;
   const previewWrap = document.getElementById('xv-preview-wrap')!;
-  const preview = document.getElementById('xv-preview')!;
+  const preview = document.getElementById('xv-preview-code')!;
+  let rawOutput = '';
 
   function showStatus(msg: string, ok: boolean) {
     status.textContent = msg;
@@ -98,20 +105,21 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }
     showStatus('Well-formed XML ✓', true);
     try {
-      preview.textContent = prettyPrint(doc);
+      rawOutput = prettyPrint(doc);
     } catch {
-      preview.textContent = new XMLSerializer().serializeToString(doc);
+      rawOutput = new XMLSerializer().serializeToString(doc);
     }
+    hl(preview, rawOutput, 'xml');
     previewWrap.classList.remove('hidden');
   }
 
   document.getElementById('xv-copy')!.addEventListener('click', async () => {
     const btn = document.getElementById('xv-copy')!;
-    await navigator.clipboard.writeText(preview.textContent ?? '');
+    await navigator.clipboard.writeText(rawOutput);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy'), 1500);
   });
 
-  input.addEventListener('input', validate);
+  wireInput(input, inHl, () => 'xml', () => validate());
   validate();
 </script>

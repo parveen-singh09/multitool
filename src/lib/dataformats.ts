@@ -361,6 +361,64 @@ export function jsonToCsv(data: Json, delimiter: string): string {
   return lines.join('\n');
 }
 
+/* ─────────────────────────── JSON → YAML ───────────────────────────── */
+
+// Serialize a JSON value to YAML (block style). Mirrors parseYaml's subset.
+export function jsonToYaml(data: Json, indent = 0): string {
+  const pad = '  '.repeat(indent);
+  if (Array.isArray(data)) {
+    if (!data.length) return `${pad}[]\n`;
+    return data.map((v) => {
+      if (v !== null && typeof v === 'object' && (Array.isArray(v) ? v.length : Object.keys(v).length))
+        return `${pad}-\n${jsonToYaml(v, indent + 1)}`;
+      return `${pad}- ${yamlScalar(v)}\n`;
+    }).join('');
+  }
+  if (data !== null && typeof data === 'object') {
+    const keys = Object.keys(data);
+    if (!keys.length) return `${pad}{}\n`;
+    return keys.map((k) => {
+      const v = (data as { [k: string]: Json })[k];
+      const key = /^[\w.-]+$/.test(k) ? k : JSON.stringify(k);
+      if (v !== null && typeof v === 'object' && (Array.isArray(v) ? v.length : Object.keys(v).length))
+        return `${pad}${key}:\n${jsonToYaml(v, indent + 1)}`;
+      if (v !== null && typeof v === 'object')
+        return `${pad}${key}: ${Array.isArray(v) ? '[]' : '{}'}\n`;
+      return `${pad}${key}: ${yamlScalar(v)}\n`;
+    }).join('');
+  }
+  return `${pad}${yamlScalar(data)}\n`;
+}
+
+function yamlScalar(v: Json): string {
+  if (v === null) return 'null';
+  if (typeof v === 'string') return /[:#\-{}[\],&*!|>'"%@`]|^\s|\s$|^$|^(true|false|null|~)$|^[+-]?\d/.test(v) ? JSON.stringify(v) : v;
+  return String(v);
+}
+
+/* ─────────────────────────── JSON → XML ────────────────────────────── */
+
+const xmlEsc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+function xmlBody(obj: Json, indent: number): string {
+  const pad = '  '.repeat(indent);
+  if (obj === null) return '';
+  if (Array.isArray(obj)) return obj.map((v) => `${pad}<item>\n${xmlBody(v, indent + 1)}${pad}</item>\n`).join('');
+  if (typeof obj === 'object') {
+    return Object.entries(obj).map(([k, v]) => {
+      const tag = k.replace(/[^a-zA-Z0-9_.-]/g, '_').replace(/^[^a-zA-Z_]/, '_');
+      if (v !== null && typeof v === 'object') return `${pad}<${tag}>\n${xmlBody(v, indent + 1)}${pad}</${tag}>\n`;
+      return `${pad}<${tag}>${xmlEsc(String(v))}</${tag}>\n`;
+    }).join('');
+  }
+  return `${pad}${xmlEsc(String(obj))}\n`;
+}
+
+// Serialize a JSON value to a pretty-printed XML document.
+export function jsonToXml(data: Json): string {
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<root>\n' + xmlBody(data, 1) + '</root>';
+}
+
 /* ─────────────────────────────── TOML ──────────────────────────────── */
 
 // Minimal TOML parser: [table], [a.b] nested tables, key = value pairs

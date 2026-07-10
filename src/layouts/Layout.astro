@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import { SITE } from '../data/site';
+import { SidebarLayout } from '../components/SidebarLayout';
 
 export interface Props {
   title?: string;
@@ -60,6 +61,15 @@ const keywordList = keywords.join(', ');
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
 
+    <!-- Preload critical fonts -->
+    <link
+      rel="preload"
+      href="/fonts/satoshi-variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
     <!-- Primary meta -->
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
@@ -112,6 +122,8 @@ const keywordList = keywords.join(', ');
     }
   </head>
   <body>
-    <slot />
+    <SidebarLayout currentPath={Astro.url.pathname} client:load>
+      <slot />
+    </SidebarLayout>
   </body>
 </html>

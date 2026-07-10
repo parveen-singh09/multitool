@@ -1,15 +1,28 @@
 @import 'tailwindcss';
 
 /* ToolCities — Linear-inspired dark design system.
-   Tokens transcribed from DESIGN.md. Fonts: Inter (Display/Text
-   substitute) + JetBrains Mono (Mono substitute), self-hosted via
-   Fontsource for privacy (no Google Fonts calls). */
+   Tokens transcribed from DESIGN.md. Fonts: Satoshi (Display/Text)
+   + JetBrains Mono (Mono), self-hosted for privacy and offline-first performance. */
 
-@import '@fontsource/inter/400.css';
-@import '@fontsource/inter/500.css';
-@import '@fontsource/inter/600.css';
-@import '@fontsource/inter/700.css';
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/satoshi-variable.woff2') format('woff2');
+  font-weight: 300 900;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/satoshi-variable-italic.woff2') format('woff2');
+  font-weight: 300 900;
+  font-display: swap;
+  font-style: italic;
+}
+
 @import '@fontsource-variable/jetbrains-mono';
+
+@custom-variant dark (&:is([data-theme="dark"] *));
 
 @theme {
   /* ---- Color: brand & accent ---- */
@@ -39,8 +52,8 @@
   --color-success: #27a644;
 
   /* ---- Fonts ---- */
-  --font-display: 'Inter', 'SF Pro Display', -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;
-  --font-sans: 'Inter', 'SF Pro Display', -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Satoshi', -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Satoshi', -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
 
   /* ---- Radius scale ---- */
@@ -235,3 +248,111 @@ html[data-theme='light'] {
     padding-inline: 24px;
   }
 }
+
+:root {
+  --sidebar: var(--color-surface-1);
+  --sidebar-foreground: var(--color-ink-muted);
+  --sidebar-primary: var(--color-primary);
+  --sidebar-primary-foreground: var(--color-on-primary);
+  --sidebar-accent: var(--color-surface-2);
+  --sidebar-accent-foreground: var(--color-ink);
+  --sidebar-border: var(--color-hairline);
+  --sidebar-ring: var(--color-primary-focus);
+}
+
+@theme inline {
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* ---- Syntax-highlighting (highlight.js) ----
+   Shared by every Developer tool with a code input/output preview.
+   Two shapes: a read-only <pre class="hl-block"> for output, and an editable
+   .hl-edit wrapper (transparent <textarea> over a mirrored <pre class="hl-block">)
+   so the caret/selection stay native while the text underneath is colored.
+   Helpers live in src/lib/highlight.ts. */
+pre.hl-block {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+pre.hl-block > code { background: transparent; padding: 0; }
+
+.hl-edit {
+  position: relative;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 13px;
+  line-height: 1.55;
+  tab-size: 2;
+}
+.hl-edit > pre.hl-block,
+.hl-edit > textarea {
+  margin: 0;
+  padding: 0.75rem;
+  border: 0;
+  font: inherit;
+  tab-size: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.hl-edit > pre.hl-block {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: transparent;
+}
+.hl-edit > textarea {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  resize: none;
+  overflow: auto;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--color-ink);
+  outline: none;
+}
+.hl-edit > textarea::selection { background: color-mix(in srgb, var(--color-primary) 35%, transparent); }
+
+/* Token palette tuned to the Linear dark canvas. Used by both the output
+   <pre class="hl-block"> and the editable overlay's mirror. */
+.hl-block .hljs { color: var(--color-ink); }
+.hl-block .hljs-comment,
+.hl-block .hljs-quote { color: #62666d; font-style: italic; }
+.hl-block .hljs-keyword,
+.hl-block .hljs-selector-tag,
+.hl-block .hljs-built_in,
+.hl-block .hljs-literal { color: #828fff; }
+.hl-block .hljs-string,
+.hl-block .hljs-regexp,
+.hl-block .hljs-meta .hljs-string { color: #7fd0a6; }
+.hl-block .hljs-number,
+.hl-block .hljs-symbol { color: #d0a0ff; }
+.hl-block .hljs-attr,
+.hl-block .hljs-attribute,
+.hl-block .hljs-property,
+.hl-block .hljs-variable,
+.hl-block .hljs-template-variable { color: #7ec7ff; }
+.hl-block .hljs-title,
+.hl-block .hljs-title.function_,
+.hl-block .hljs-section,
+.hl-block .hljs-name { color: #f2c777; }
+.hl-block .hljs-params { color: #d0d6e0; }
+.hl-block .hljs-meta,
+.hl-block .hljs-comment .hljs-doctag { color: #8a8f98; }
+.hl-block .hljs-punctuation,
+.hl-block .hljs-tag { color: #8a8f98; }

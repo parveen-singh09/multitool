@@ -22,13 +22,18 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div id="csvf-status" class="hidden rounded-md border px-3 py-2 text-sm" role="status"></div>
 
-    <textarea
-      id="csvf-input"
-      class="field min-h-72 resize-y font-mono text-[13px]"
-      placeholder="Paste CSV here, e.g.&#10;name,age,city&#10;Ada, 36 ,London"
-      spellcheck="false"
-      aria-label="CSV input"
-    ></textarea>
+    <div class="hl-edit field p-0" style="height:18rem;resize:vertical;overflow:hidden">
+      <pre class="hl-block" aria-hidden="true"><code id="csvf-input-hl" class="hljs" style="background:transparent"></code></pre>
+      <textarea
+        id="csvf-input"
+        spellcheck="false"
+        autocapitalize="off"
+        autocomplete="off"
+        autocorrect="off"
+        placeholder="Paste CSV here, e.g.&#10;name,age,city&#10;Ada, 36 ,London"
+        aria-label="CSV input"
+      ></textarea>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -44,9 +49,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { wireInput } from '../../lib/highlight';
+
   const input = document.getElementById('csvf-input') as HTMLTextAreaElement;
+  const inHl = document.getElementById('csvf-input-hl')!;
   const status = document.getElementById('csvf-status')!;
   const delimSel = document.getElementById('csvf-delim') as HTMLSelectElement;
+
+  const refresh = wireInput(input, inHl, () => 'plaintext');
 
   function showStatus(msg: string, ok: boolean) {
     status.textContent = msg;
@@ -177,13 +187,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   document.getElementById('csvf-align')!.addEventListener('click', () => {
     if (!input.value.trim()) return;
     input.value = align(input.value);
+    refresh();
   });
   document.getElementById('csvf-normalize')!.addEventListener('click', () => {
     if (!input.value.trim()) return;
     input.value = normalize(input.value);
+    refresh();
   });
   document.getElementById('csvf-clear')!.addEventListener('click', () => {
     input.value = '';
+    refresh();
     status.classList.add('hidden');
   });
   document.getElementById('csvf-copy')!.addEventListener('click', async () => {

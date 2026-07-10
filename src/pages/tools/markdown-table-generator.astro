@@ -22,7 +22,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div class="flex flex-col gap-2">
       <label class="text-sm text-ink-subtle">Markdown output</label>
-      <textarea id="md-out" class="field min-h-40 resize-y font-mono text-[13px]" readonly></textarea>
+      <pre class="hl-block field min-h-40" style="resize:vertical;overflow:auto"><code id="md-out" class="hljs" style="background:transparent;padding:0"></code></pre>
       <button id="md-copy" class="btn btn-secondary w-fit">Copy Markdown</button>
     </div>
   </div>
@@ -39,9 +39,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { hl } from '../../lib/highlight';
+
   const $ = (id: string) => document.getElementById(id)!;
   const grid = $('md-grid') as HTMLTableElement;
-  const out = $('md-out') as HTMLTextAreaElement;
+  const out = $('md-out') as HTMLElement;
+  let rawOutput = '';
   let data: string[][] = [];
 
   function ensureData(rows: number, cols: number) {
@@ -83,7 +86,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const rowStr = (cells: string[]) => '| ' + cells.map((v, c) => (v || '').padEnd(widths[c])).join(' | ') + ' |';
     const lines = [rowStr(data[0]), '| ' + widths.map((_, c) => sep(c)).join(' | ') + ' |'];
     for (let r = 1; r < data.length; r++) lines.push(rowStr(data[r]));
-    out.value = lines.join('\n');
+    rawOutput = lines.join('\n');
+    hl(out, rawOutput, 'markdown');
   }
 
   function rebuild() {
@@ -96,7 +100,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   $('md-align').addEventListener('change', buildOut);
   $('md-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(out.value);
+    await navigator.clipboard.writeText(rawOutput);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy Markdown'), 1500);
   });

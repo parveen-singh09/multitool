@@ -12,7 +12,10 @@ console.log(greet("world"));`;
   <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
     <div class="flex flex-col gap-3">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Code
-        <textarea id="cd-code" class="field min-h-48 resize-y font-mono text-[13px]" spellcheck="false" set:text={sampleCode}></textarea>
+        <div class="hl-edit field p-0" style="height:12rem;resize:vertical;overflow:hidden">
+          <pre class="hl-block" aria-hidden="true"><code id="cd-code-hl" class="hljs" style="background:transparent"></code></pre>
+          <textarea id="cd-code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" set:text={sampleCode}></textarea>
+        </div>
       </label>
       <div class="grid grid-cols-2 gap-3">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">Theme
@@ -48,6 +51,8 @@ console.log(greet("world"));`;
 </ToolLayout>
 
 <script>
+  import { wireInput } from '../../lib/highlight';
+
   const $ = (id: string) => document.getElementById(id)!;
   const canvas = $('cd-canvas') as HTMLCanvasElement;
 
@@ -109,7 +114,8 @@ console.log(greet("world"));`;
     });
   }
 
-  ['cd-code', 'cd-theme', 'cd-title', 'cd-dots', 'cd-lines'].forEach((id) => $(id).addEventListener('input', draw));
+  ['cd-theme', 'cd-title', 'cd-dots', 'cd-lines'].forEach((id) => $(id).addEventListener('input', draw));
+  wireInput($('cd-code') as HTMLTextAreaElement, $('cd-code-hl'), () => 'javascript', () => draw());
   $('cd-dl').addEventListener('click', () => {
     const a = document.createElement('a'); a.href = canvas.toDataURL('image/png'); a.download = 'code-snippet.png'; a.click();
   });

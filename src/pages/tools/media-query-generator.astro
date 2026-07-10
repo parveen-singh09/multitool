@@ -29,7 +29,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </label>
     </div>
     <div class="flex items-start gap-2">
-      <code id="mq-css" class="field whitespace-pre-wrap font-mono text-[13px]"></code>
+      <pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto"><code id="mq-css" class="hljs" style="background:transparent;padding:0"></code></pre>
       <button id="mq-copy" class="btn btn-secondary whitespace-nowrap">Copy</button>
     </div>
   </div>
@@ -47,6 +47,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { hl } from '../../lib/highlight';
   const $ = (id: string) => document.getElementById(id)!;
   const presetEl = $('mq-preset') as HTMLSelectElement;
   const minEl = $('mq-min') as HTMLInputElement;
@@ -54,6 +55,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const orientEl = $('mq-orient') as HTMLSelectElement;
   const schemeEl = $('mq-scheme') as HTMLSelectElement;
   const cssEl = $('mq-css')!;
+  let rawOutput = '';
 
   presetEl.addEventListener('change', () => {
     if (!presetEl.value) return;
@@ -69,13 +71,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (orientEl.value) conds.push(`(orientation: ${orientEl.value})`);
     if (schemeEl.value) conds.push(`(prefers-color-scheme: ${schemeEl.value})`);
     const query = conds.length ? conds.join(' and ') : 'all';
-    cssEl.textContent = `@media ${query} {\n  /* your styles */\n}`;
+    rawOutput = `@media ${query} {\n  /* your styles */\n}`;
+    hl(cssEl, rawOutput, 'css');
   }
 
   [minEl, maxEl, orientEl, schemeEl].forEach((el) => el.addEventListener('input', update));
   $('mq-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(cssEl.textContent || '');
+    await navigator.clipboard.writeText(rawOutput);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy'), 1500);
   });

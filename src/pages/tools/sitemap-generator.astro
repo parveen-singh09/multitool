@@ -23,7 +23,7 @@ https://example.com/contact</textarea>
 
     <div class="flex flex-col gap-2">
       <label class="text-sm text-ink-subtle">sitemap.xml</label>
-      <textarea id="sm-out" class="field min-h-72 resize-y font-mono text-xs" readonly></textarea>
+      <pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto"><code id="sm-out" class="hljs" style="background:transparent;padding:0"></code></pre>
       <div class="flex gap-2">
         <button id="sm-copy" class="btn btn-secondary">Copy</button>
         <button id="sm-dl" class="btn btn-secondary">Download</button>
@@ -43,8 +43,11 @@ https://example.com/contact</textarea>
 </ToolLayout>
 
 <script>
+  import { hl } from '../../lib/highlight';
+
   const $ = (id: string) => document.getElementById(id)!;
-  const out = $('sm-out') as HTMLTextAreaElement;
+  const out = $('sm-out') as HTMLElement;
+  let rawOutput = '';
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
   function build() {
@@ -59,18 +62,19 @@ https://example.com/contact</textarea>
       if (priority) parts.push(`    <priority>${priority}</priority>`);
       return `  <url>\n${parts.join('\n')}\n  </url>`;
     }).join('\n');
-    out.value = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>`;
+    rawOutput = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>`;
+    hl(out, rawOutput, 'xml');
   }
 
   ['sm-urls', 'sm-freq', 'sm-priority', 'sm-lastmod'].forEach((id) => $(id).addEventListener('input', build));
   $('sm-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(out.value);
+    await navigator.clipboard.writeText(rawOutput);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy'), 1500);
   });
   $('sm-dl').addEventListener('click', () => {
-    const url = URL.createObjectURL(new Blob([out.value], { type: 'application/xml' }));
+    const url = URL.createObjectURL(new Blob([rawOutput], { type: 'application/xml' }));
     const a = document.createElement('a'); a.href = url; a.download = 'sitemap.xml'; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });

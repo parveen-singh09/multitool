@@ -25,7 +25,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <button id="mj-copy" class="btn btn-secondary">Copy JSON</button>
       <button id="mj-dl" class="btn btn-secondary">Download .json</button>
     </div>
-    <textarea id="mj-out" class="field min-h-80 resize-y font-mono text-[13px]" readonly aria-label="Generated mock JSON"></textarea>
+    <pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto"><code id="mj-out" class="hljs" style="background:transparent;padding:0" aria-label="Generated mock JSON"></code></pre>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -42,9 +42,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 <script>
   import { firstName, lastName, email, phoneUS, username, companyName, address, birthDate } from '../../lib/fakegen';
 
+  import { hl } from '../../lib/highlight';
+
   const $ = (id: string) => document.getElementById(id)!;
   const countEl = $('mj-count') as HTMLInputElement;
-  const out = $('mj-out') as HTMLTextAreaElement;
+  const out = $('mj-out') as HTMLElement;
+  let rawOutput = '';
 
   function fields(): string[] {
     return [...document.querySelectorAll<HTMLInputElement>('.mj-f:checked')].map((el) => el.value);
@@ -75,7 +78,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const fs = fields();
     const list = [];
     for (let i = 0; i < n; i++) list.push(record(i + 1, fs));
-    out.value = JSON.stringify(list, null, 2);
+    rawOutput = JSON.stringify(list, null, 2);
+    hl(out, rawOutput, 'json');
   }
 
   countEl.addEventListener('input', generate);
@@ -83,12 +87,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   $('mj-gen').addEventListener('click', generate);
   $('mj-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(out.value);
+    await navigator.clipboard.writeText(rawOutput);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy JSON'), 1500);
   });
   $('mj-dl').addEventListener('click', () => {
-    const url = URL.createObjectURL(new Blob([out.value], { type: 'application/json' }));
+    const url = URL.createObjectURL(new Blob([rawOutput], { type: 'application/json' }));
     const a = document.createElement('a'); a.href = url; a.download = 'mock-data.json'; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });

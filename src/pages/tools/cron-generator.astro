@@ -36,8 +36,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div class="panel panel-lift flex flex-col gap-2 p-4">
       <div class="flex items-center gap-3">
-        <code id="cr-expr" class="font-mono text-lg text-ink"></code>
-        <button id="cr-copy" class="btn btn-secondary ml-auto">Copy</button>
+        <pre class="hl-block flex-1" style="overflow:auto"><code id="cr-expr" class="hljs text-lg" style="background:transparent;padding:0"></code></pre>
+        <button id="cr-copy" class="btn btn-secondary">Copy</button>
       </div>
       <p id="cr-human" class="text-sm text-ink-subtle"></p>
     </div>
@@ -55,10 +55,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { hl } from '../../lib/highlight';
+
   const $ = (id: string) => document.getElementById(id)!;
   const fields = ['cr-min', 'cr-hour', 'cr-dom', 'cr-mon', 'cr-dow'];
-  const exprEl = $('cr-expr')!;
+  const exprEl = $('cr-expr') as HTMLElement;
   const humanEl = $('cr-human')!;
+  let rawOutput = '';
 
   const DOW = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const MON = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -91,7 +94,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   function build() {
     const vals = fields.map((id) => ($(id) as HTMLInputElement).value.trim() || '*');
-    exprEl.textContent = vals.join(' ');
+    rawOutput = vals.join(' ');
+    hl(exprEl, rawOutput, 'plaintext');
     humanEl.textContent = human(vals[0], vals[1], vals[2], vals[3], vals[4]);
   }
 
@@ -105,7 +109,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   fields.forEach((id) => $(id).addEventListener('input', build));
   $('cr-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(exprEl.textContent || '');
+    await navigator.clipboard.writeText(rawOutput);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy'), 1500);
   });

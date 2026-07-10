@@ -14,11 +14,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
       <div>
         <span class="text-[13px] text-ink-subtle">Header</span>
-        <pre id="jwt-header" class="panel panel-lift mt-2 min-h-24 overflow-x-auto p-4 font-mono text-[13px] text-ink"></pre>
+        <pre id="jwt-header" class="hl-block field panel-lift mt-2 min-h-24" style="overflow:auto"><code id="jwt-header-code" class="hljs" style="background:transparent;padding:0"></code></pre>
       </div>
       <div>
         <span class="text-[13px] text-ink-subtle">Payload</span>
-        <pre id="jwt-payload" class="panel panel-lift mt-2 min-h-24 overflow-x-auto p-4 font-mono text-[13px] text-ink"></pre>
+        <pre id="jwt-payload" class="hl-block field panel-lift mt-2 min-h-24" style="overflow:auto"><code id="jwt-payload-code" class="hljs" style="background:transparent;padding:0"></code></pre>
       </div>
     </div>
 
@@ -37,9 +37,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { hl } from '../../lib/highlight';
+
   const input = document.getElementById('jwt-in') as HTMLTextAreaElement;
-  const headerEl = document.getElementById('jwt-header')!;
-  const payloadEl = document.getElementById('jwt-payload')!;
+  const headerEl = document.getElementById('jwt-header-code')!;
+  const payloadEl = document.getElementById('jwt-payload-code')!;
   const err = document.getElementById('jwt-error')!;
   const expEl = document.getElementById('jwt-exp')!;
 
@@ -65,9 +67,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       return;
     }
     try {
-      headerEl.textContent = pretty(b64urlDecode(parts[0]));
+      hl(headerEl, pretty(b64urlDecode(parts[0])), 'json');
       const payloadJson = b64urlDecode(parts[1]);
-      payloadEl.textContent = pretty(payloadJson);
+      hl(payloadEl, pretty(payloadJson), 'json');
       const claims = JSON.parse(payloadJson);
       if (claims.exp) {
         const d = new Date(claims.exp * 1000);

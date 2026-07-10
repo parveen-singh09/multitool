@@ -8,7 +8,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">
       JSON to validate
-      <textarea id="jv-in" class="field min-h-72 resize-y font-mono text-[13px]" placeholder='Paste JSON here, e.g. {"hello":"world"}' spellcheck="false"></textarea>
+      <div class="hl-edit field p-0" style="height:24rem;resize:vertical;overflow:hidden">
+        <pre class="hl-block" aria-hidden="true"><code id="jv-in-hl" class="hljs" style="background:transparent"></code></pre>
+        <textarea id="jv-in" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder='Paste JSON here, e.g. {"hello":"world"}'></textarea>
+      </div>
     </label>
 
     <div id="jv-caret-wrap" class="hidden">
@@ -21,7 +24,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <div class="eyebrow">Formatted preview</div>
         <button id="jv-copy" class="btn btn-secondary ml-auto">Copy</button>
       </div>
-      <pre id="jv-preview" class="panel p-4 mt-2 overflow-x-auto font-mono text-[13px] text-ink whitespace-pre"></pre>
+      <pre id="jv-preview" class="hl-block field mt-2" style="overflow:auto"><code id="jv-preview-code" class="hljs" style="background:transparent;padding:0"></code></pre>
     </div>
   </div>
 
@@ -38,12 +41,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { hl, wireInput } from '../../lib/highlight';
+
   const input = document.getElementById('jv-in') as HTMLTextAreaElement;
+  const inHl = document.getElementById('jv-in-hl')!;
   const status = document.getElementById('jv-status')!;
   const caretWrap = document.getElementById('jv-caret-wrap')!;
   const caret = document.getElementById('jv-caret')!;
   const previewWrap = document.getElementById('jv-preview-wrap')!;
-  const preview = document.getElementById('jv-preview')!;
+  const preview = document.getElementById('jv-preview-code')!;
+  let rawOutput = '';
 
   function showStatus(msg: string, ok: boolean) {
     status.textContent = msg;
@@ -97,7 +104,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     try {
       const parsed = JSON.parse(text);
       showStatus('Valid JSON ✓', true);
-      preview.textContent = JSON.stringify(parsed, null, 2);
+      rawOutput = JSON.stringify(parsed, null, 2);
+      hl(preview, rawOutput, 'json');
       previewWrap.classList.remove('hidden');
     } catch (e) {
       const msg = (e as Error).message;
@@ -114,11 +122,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   document.getElementById('jv-copy')!.addEventListener('click', async () => {
     const btn = document.getElementById('jv-copy')!;
-    await navigator.clipboard.writeText(preview.textContent ?? '');
+    await navigator.clipboard.writeText(rawOutput);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy'), 1500);
   });
 
-  input.addEventListener('input', validate);
+  wireInput(input, inHl, () => 'json', () => validate());
   validate();
 </script>

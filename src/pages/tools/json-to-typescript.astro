@@ -4,24 +4,36 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="json-to-typescript">
   <div class="flex flex-col gap-4">
-    <div class="flex flex-wrap items-end gap-3">
+    <div class="flex flex-wrap items-end gap-x-5 gap-y-3">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Root type name
         <input id="jt-name" class="field w-40 font-mono" value="Root" spellcheck="false" autocomplete="off" />
       </label>
       <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="jt-alias" type="checkbox" class="accent-[#5e6ad2]" /> Type aliases instead of interfaces
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
         <input id="jt-optional" type="checkbox" class="accent-[#5e6ad2]" /> Mark all fields optional
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="jt-nullable" type="checkbox" class="accent-[#5e6ad2]" /> Prefer <code>| null</code> over <code>?</code>
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="jt-readonly" type="checkbox" class="accent-[#5e6ad2]" /> <code>readonly</code> properties
       </label>
     </div>
 
     <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-        JSON input
-        <textarea id="jt-in" class="field font-mono text-[13px]" rows="14" spellcheck="false"></textarea>
+        <span class="flex h-8 items-center">JSON input</span>
+        <div class="relative h-[19rem]">
+          <pre id="jt-in-hl" aria-hidden="true" class="field border-transparent absolute inset-0 m-0 overflow-auto whitespace-pre-wrap break-words pointer-events-none font-mono text-[13px] leading-[1.5]"></pre>
+          <textarea id="jt-in" class="field absolute inset-0 m-0 h-full resize-none overflow-auto whitespace-pre-wrap break-words bg-transparent font-mono text-[13px] leading-[1.5]" style="color:transparent;caret-color:var(--color-ink)" spellcheck="false" autocomplete="off"></textarea>
+        </div>
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-        <span class="flex items-center justify-between">TypeScript interfaces <button id="jt-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button></span>
-        <textarea id="jt-out" class="field font-mono text-[13px]" rows="14" readonly spellcheck="false"></textarea>
+        <span class="flex h-8 items-center justify-between">TypeScript definitions <button id="jt-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button></span>
+        <pre id="jt-out" class="field m-0 h-[19rem] overflow-auto whitespace-pre font-mono text-[13px] leading-[1.5]" aria-live="polite"></pre>
       </label>
     </div>
     <p id="jt-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
@@ -30,79 +42,221 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
       This free JSON to TypeScript converter turns a JSON sample into clean
-      TypeScript <code>interface</code> definitions, inferring types for strings,
-      numbers, booleans, arrays and nested objects. It creates named interfaces
-      for nested structures and merges array element shapes. Paste a real API
-      response and get typed models in seconds. Everything runs in your browser.
+      TypeScript definitions, inferring types for strings, numbers, booleans,
+      arrays and nested objects. Unlike a naive converter, it <strong>merges the
+      shapes of every object in an array</strong> into one interface, marking
+      fields that are missing from some elements as optional, and it
+      <strong>reuses identical interfaces</strong> instead of emitting duplicates.
+      Choose between <code>interface</code> and <code>type</code> output, mark all
+      fields optional, and prefer <code>| null</code> over optional <code>?</code>.
+      Paste a real API response and get typed models in seconds — everything runs
+      in your browser.
     </p>
   </div>
 </ToolLayout>
 
 <script>
   const input = document.getElementById('jt-in') as HTMLTextAreaElement;
-  const output = document.getElementById('jt-out') as HTMLTextAreaElement;
+  const inputHl = document.getElementById('jt-in-hl') as HTMLPreElement;
+  const output = document.getElementById('jt-out') as HTMLPreElement;
   const nameEl = document.getElementById('jt-name') as HTMLInputElement;
   const optEl = document.getElementById('jt-optional') as HTMLInputElement;
+  const aliasEl = document.getElementById('jt-alias') as HTMLInputElement;
+  const nullEl = document.getElementById('jt-nullable') as HTMLInputElement;
+  const roEl = document.getElementById('jt-readonly') as HTMLInputElement;
   const err = document.getElementById('jt-error')!;
 
+  // name -> body text, in insertion order; deduped by body below
   const interfaces = new Map<string, string>();
 
-  const pascal = (s: string) => s.replace(/(^\w|[-_ ]\w)/g, (m) => m.replace(/[-_ ]/, '').toUpperCase()).replace(/[^a-zA-Z0-9]/g, '') || 'Type';
-  const validKey = (k: string) => /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(k) ? k : JSON.stringify(k);
+  // Plaintext mirror of the highlighted <pre>, for the Copy button.
+  let plain = '';
+
+  // ---- Syntax highlighting (palette shared with the JSON formatter) ----
+  const KEYWORDS = new Set(['interface', 'type', 'readonly', 'extends']);
+  const PRIMITIVES = new Set(['string', 'number', 'boolean', 'any', 'null', 'undefined', 'unknown', 'void']);
+  const COLORS: Record<string, string> = {
+    keyword: '#c99bf0',
+    typeName: 'var(--color-primary-hover)',
+    primitive: '#e0b978',
+    string: '#7fd88f',
+    punct: 'var(--color-ink-subtle)',
+  };
+  const tok = /("(?:[^"\\]|\\.)*")|([A-Za-z_$][\w$]*)|(\s+)|([^\s])/g;
+
+  // Build colored spans via textContent so JSON-derived key names can't inject markup.
+  function highlight(text: string) {
+    output.textContent = '';
+    const frag = document.createDocumentFragment();
+    let m: RegExpExecArray | null;
+    tok.lastIndex = 0;
+    while ((m = tok.exec(text))) {
+      const [, str, ident, ws, punct] = m;
+      if (ws) { frag.appendChild(document.createTextNode(ws)); continue; }
+      let kind: keyof typeof COLORS | null = null;
+      let val = '';
+      if (str) { kind = 'string'; val = str; }
+      else if (ident) {
+        val = ident;
+        kind = KEYWORDS.has(ident) ? 'keyword'
+          : PRIMITIVES.has(ident) ? 'primitive'
+          : /^[A-Z]/.test(ident) ? 'typeName'
+          : null; // property keys / camelCase identifiers: default ink
+      } else { kind = 'punct'; val = punct; }
+      if (kind) {
+        const s = document.createElement('span');
+        s.textContent = val;
+        s.style.color = COLORS[kind];
+        frag.appendChild(s);
+      } else {
+        frag.appendChild(document.createTextNode(val));
+      }
+    }
+    output.appendChild(frag);
+  }
+
+  function render(text: string) { plain = text; highlight(text); }
+
+  // ---- JSON input highlighting (same palette; keys vs strings via lookahead) ----
+  const JCOLORS: Record<string, string> = {
+    key: 'var(--color-primary-hover)',
+    string: '#7fd88f',
+    number: '#e0b978',
+    literal: '#c99bf0',
+    punct: 'var(--color-ink-subtle)',
+  };
+  const jtok = /("(?:[^"\\]|\\.)*")|(-?\d[\d.eE+-]*)|(true|false|null)|(\s+)|([^\s])/g;
+
+  function highlightInput() {
+    const text = input.value;
+    inputHl.textContent = '';
+    const frag = document.createDocumentFragment();
+    let m: RegExpExecArray | null;
+    jtok.lastIndex = 0;
+    while ((m = jtok.exec(text))) {
+      const [, str, num, lit, ws, punct] = m;
+      if (ws) { frag.appendChild(document.createTextNode(ws)); continue; }
+      let kind: keyof typeof JCOLORS, val: string;
+      if (str) {
+        val = str;
+        // A string is a key if the next non-space char is a colon.
+        kind = text.slice(jtok.lastIndex).match(/^\s*:/) ? 'key' : 'string';
+      } else if (num) { kind = 'number'; val = num; }
+      else if (lit) { kind = 'literal'; val = lit; }
+      else { kind = 'punct'; val = punct; }
+      const s = document.createElement('span');
+      s.textContent = val;
+      s.style.color = JCOLORS[kind];
+      frag.appendChild(s);
+    }
+    // Trailing newline so the last line's height is preserved in the <pre>.
+    frag.appendChild(document.createTextNode('\n'));
+    inputHl.appendChild(frag);
+  }
+
+  const pascal = (s: string) =>
+    (s.replace(/(^\w|[-_ ]\w)/g, (m) => m.replace(/[-_ ]/, '').toUpperCase()).replace(/[^a-zA-Z0-9]/g, '') || 'Type')
+      .replace(/^[0-9]/, (d) => '_' + d);
+  const validKey = (k: string) => (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(k) ? k : JSON.stringify(k));
+  const singular = (s: string) => s.replace(/ies$/, 'y').replace(/([^s])s$/, '$1') || s;
+  const isObj = (v: any) => v !== null && typeof v === 'object' && !Array.isArray(v);
 
   function typeOf(val: any, name: string): string {
     if (val === null) return 'null';
     if (Array.isArray(val)) {
       if (!val.length) return 'any[]';
-      const elemTypes = new Set(val.map((v) => typeOf(v, singular(name))));
-      return (elemTypes.size === 1 ? [...elemTypes][0] : `(${[...elemTypes].join(' | ')})`) + '[]';
+      // If every element is a plain object, merge them into one interface.
+      if (val.every(isObj)) return register(mergeObjects(val), singular(name)) + '[]';
+      const parts = new Set(val.map((v) => typeOf(v, singular(name))));
+      const inner = parts.size === 1 ? [...parts][0] : `(${[...parts].join(' | ')})`;
+      return inner + '[]';
     }
-    if (typeof val === 'object') { return buildInterface(val, name); }
+    if (isObj(val)) return register(mergeObjects([val]), name);
     return typeof val === 'number' ? 'number' : typeof val === 'boolean' ? 'boolean' : 'string';
   }
-  const singular = (s: string) => s.replace(/ies$/, 'y').replace(/s$/, '') || s;
 
-  function buildInterface(obj: Record<string, any>, name: string): string {
-    const typeName = pascal(name);
-    const opt = optEl.checked ? '?' : '';
-    const lines = Object.entries(obj).map(([k, v]) => {
-      const t = typeOf(v, k);
-      return `  ${validKey(k)}${opt}: ${t};`;
+  // Merge N object samples: union of keys; each key carries its sample values and
+  // whether it was absent from any sample (=> optional).
+  function mergeObjects(objs: Record<string, any>[]) {
+    const keys: string[] = [];
+    const samples = new Map<string, any[]>();
+    const optional = new Set<string>();
+    for (const o of objs) {
+      for (const k of Object.keys(o)) {
+        if (!samples.has(k)) { samples.set(k, []); keys.push(k); }
+        samples.get(k)!.push(o[k]);
+      }
+    }
+    for (const k of keys) if (objs.some((o) => !(k in o))) optional.add(k);
+    return { keys, samples, optional };
+  }
+
+  type Shape = ReturnType<typeof mergeObjects>;
+
+  function bodyOf({ keys, samples, optional }: Shape): string {
+    const lines = keys.map((k) => {
+      const parts = new Set(samples.get(k)!.map((v) => typeOf(v, k)));
+      let t = parts.size === 1 ? [...parts][0] : [...parts].join(' | ');
+      const isOpt = optEl.checked || optional.has(k);
+      const nullPref = nullEl.checked;
+      // With "prefer null": express optionality as `| null` rather than `?`.
+      const mark = isOpt && !nullPref ? '?' : '';
+      if (isOpt && nullPref && !parts.has('null')) t += ' | null';
+      const ro = roEl.checked ? 'readonly ' : '';
+      return `  ${ro}${validKey(k)}${mark}: ${t};`;
     });
-    interfaces.set(typeName, `interface ${typeName} {\n${lines.join('\n')}\n}`);
+    return `{\n${lines.join('\n')}\n}`;
+  }
+
+  // Register a shape under a name, deduping identical bodies and resolving
+  // collisions (same name, different body) with a numeric suffix.
+  function register(shape: Shape, name: string): string {
+    const body = bodyOf(shape);
+    // Reuse an existing interface with an identical body.
+    for (const [n, b] of interfaces) if (b === body) return n;
+    let base = pascal(name);
+    let typeName = base;
+    let i = 2;
+    while (interfaces.has(typeName)) typeName = base + i++;
+    interfaces.set(typeName, body);
     return typeName;
+  }
+
+  function emit(name: string, body: string): string {
+    return aliasEl.checked ? `type ${name} = ${body};` : `interface ${name} ${body}`;
   }
 
   function run() {
     err.classList.add('hidden');
     interfaces.clear();
     const raw = input.value.trim();
-    if (!raw) { output.value = ''; return; }
+    if (!raw) { render(''); return; }
     let data: any;
     try { data = JSON.parse(raw); }
-    catch (e) { output.value = ''; err.textContent = 'Invalid JSON: ' + (e as Error).message; err.classList.remove('hidden'); return; }
+    catch (e) { render(''); err.textContent = 'Invalid JSON: ' + (e as Error).message; err.classList.remove('hidden'); return; }
+
     const rootName = pascal(nameEl.value || 'Root');
-    if (Array.isArray(data)) {
-      const t = typeOf(data, rootName);
-      if (!interfaces.size) { output.value = `type ${rootName} = ${t};`; return; }
-    } else if (typeof data === 'object' && data !== null) {
-      buildInterface(data, rootName);
+    if (isObj(data) || (Array.isArray(data) && data.length && data.every(isObj))) {
+      typeOf(data, rootName);
+      // Root registered last (children recurse first); reverse so it reads top-down.
+      render([...interfaces].reverse().map(([n, b]) => emit(n, b)).join('\n\n'));
     } else {
-      output.value = `type ${rootName} = ${typeOf(data, rootName)};`; return;
+      // Scalars, empty/mixed arrays: a single alias is the honest representation.
+      render(`type ${rootName} = ${typeOf(data, rootName)};`);
     }
-    // root interface last so dependencies read top-down; reverse insertion
-    output.value = [...interfaces.values()].reverse().join('\n\n');
   }
 
-  input.addEventListener('input', run);
+  input.addEventListener('input', () => { highlightInput(); run(); });
+  input.addEventListener('scroll', () => { inputHl.scrollTop = input.scrollTop; inputHl.scrollLeft = input.scrollLeft; });
   nameEl.addEventListener('input', run);
-  optEl.addEventListener('change', run);
+  [optEl, aliasEl, nullEl, roEl].forEach((el) => el.addEventListener('change', run));
   document.getElementById('jt-copy')!.addEventListener('click', async (e) => {
-    await navigator.clipboard.writeText(output.value);
+    await navigator.clipboard.writeText(plain);
     const b = e.currentTarget as HTMLButtonElement;
     b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
   });
 
-  input.value = '{\n  "id": 1,\n  "name": "Ada",\n  "active": true,\n  "roles": ["admin", "user"],\n  "profile": {\n    "age": 36,\n    "city": "London"\n  }\n}';
+  input.value = '{\n  "id": 1,\n  "name": "Ada",\n  "active": true,\n  "roles": ["admin", "user"],\n  "profile": {\n    "age": 36,\n    "city": "London"\n  },\n  "posts": [\n    { "title": "Hello", "views": 10 },\n    { "title": "World", "views": 3, "pinned": true }\n  ]\n}';
+  highlightInput();
   run();
 </script>

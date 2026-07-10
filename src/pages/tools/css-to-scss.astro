@@ -17,11 +17,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         CSS input
-        <textarea id="cs-in" class="field font-mono text-[13px]" rows="16" spellcheck="false"></textarea>
+        <div class="hl-edit field p-0" style="height:24rem;resize:vertical;overflow:hidden">
+          <pre class="hl-block" aria-hidden="true"><code id="cs-in-hl" class="hljs" style="background:transparent"></code></pre>
+          <textarea id="cs-in" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
+        </div>
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         SCSS output
-        <textarea id="cs-out" class="field font-mono text-[13px]" rows="16" readonly spellcheck="false"></textarea>
+        <pre class="hl-block field" style="height:24rem;overflow:auto"><code id="cs-out" class="hljs" style="background:transparent;padding:0"></code></pre>
       </label>
     </div>
   </div>
@@ -38,8 +41,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { hl, wireInput } from '../../lib/highlight';
+
   const input = document.getElementById('cs-in') as HTMLTextAreaElement;
-  const output = document.getElementById('cs-out') as HTMLTextAreaElement;
+  const inHl = document.getElementById('cs-in-hl') as HTMLElement;
+  const output = document.getElementById('cs-out') as HTMLElement;
   const nestEl = document.getElementById('cs-nest') as HTMLInputElement;
   const varsEl = document.getElementById('cs-vars') as HTMLInputElement;
 
@@ -115,13 +121,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return header + blocks;
   }
 
-  function run() { output.value = build(); }
+  let rawOutput = '';
+  function run() { rawOutput = build(); hl(output, rawOutput, 'scss'); }
 
-  input.addEventListener('input', run);
+  const refresh = wireInput(input, inHl, () => 'css', () => run());
   nestEl.addEventListener('change', run);
   varsEl.addEventListener('change', run);
   document.getElementById('cs-copy')!.addEventListener('click', async (e) => {
-    await navigator.clipboard.writeText(output.value);
+    await navigator.clipboard.writeText(rawOutput);
     const b = e.currentTarget as HTMLButtonElement;
     b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
   });
@@ -142,5 +149,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   background: #ffffff;
   color: #333333;
 }`;
+  refresh();
   run();
 </script>

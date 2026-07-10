@@ -46,7 +46,7 @@ flip|0%{transform:perspective(400px) rotateY(0)}100%{transform:perspective(400px
         <div id="an-box" class="flex h-24 w-24 items-center justify-center rounded-lg bg-[#5e6ad2] text-sm font-medium text-white">Demo</div>
       </div>
       <div class="flex items-start gap-2">
-        <code id="an-css" class="field whitespace-pre-wrap font-mono text-xs"></code>
+        <pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto"><code id="an-css" class="hljs" style="background:transparent;padding:0"></code></pre>
         <button id="an-copy" class="btn btn-secondary whitespace-nowrap">Copy</button>
       </div>
     </div>
@@ -72,9 +72,11 @@ flip|0%{transform:perspective(400px) rotateY(0)}100%{transform:perspective(400px
 </script>
 
 <script>
+  import { hl } from '../../lib/highlight';
   const $ = (id: string) => document.getElementById(id)!;
   const box = $('an-box') as HTMLElement;
   const cssEl = $('an-css')!;
+  let rawOutput = '';
   const kf = (window as any).__kf as Record<string, string>;
   const ids = ['an-effect', 'an-dur', 'an-delay', 'an-timing', 'an-iter'];
 
@@ -98,14 +100,15 @@ flip|0%{transform:perspective(400px) rotateY(0)}100%{transform:perspective(400px
     void box.offsetWidth; // reflow to restart
     box.style.animation = `${effect} ${dur}s ${timing} ${delay}s ${iter}`;
 
-    cssEl.textContent = `${keyframes}\n\n.element {\n  ${anim}\n}`;
+    rawOutput = `${keyframes}\n\n.element {\n  ${anim}\n}`;
+    hl(cssEl, rawOutput, 'css');
   }
 
   ids.forEach((id) => $(id).addEventListener('input', update));
   $('an-replay').addEventListener('click', update);
   $('an-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(cssEl.textContent || '');
+    await navigator.clipboard.writeText(rawOutput);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy'), 1500);
   });

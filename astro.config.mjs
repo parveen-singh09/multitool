@@ -2,13 +2,23 @@
 import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 import sitemap from '@astrojs/sitemap';
+import react from '@astrojs/react';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // https://astro.build/config
 export default defineConfig({
   site: 'https://toolcities.com',
-  integrations: [sitemap()],
+  integrations: [sitemap(), react()],
   vite: {
     plugins: [tailwindcss()],
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+      },
+    },
     // figlet ships font data as ESM modules under figlet/fonts/*. Vite's dep
     // optimizer mis-handles these dynamic imports in dev (names with spaces
     // 404 out of .vite/deps), so serve figlet unbundled.

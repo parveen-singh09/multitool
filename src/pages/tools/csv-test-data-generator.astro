@@ -33,7 +33,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <button id="cv-copy" class="btn btn-secondary">Copy CSV</button>
       <button id="cv-dl" class="btn btn-secondary">Download .csv</button>
     </div>
-    <textarea id="cv-out" class="field min-h-72 resize-y font-mono text-xs" readonly aria-label="Generated CSV"></textarea>
+    <pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto" aria-label="Generated CSV"><code id="cv-out" class="hljs" style="background:transparent;padding:0"></code></pre>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -51,11 +51,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 <script>
   import { firstName, lastName, email, phoneUS, companyName, address, birthDate } from '../../lib/fakegen';
 
+  import { hl } from '../../lib/highlight';
+
   const $ = (id: string) => document.getElementById(id)!;
   const countEl = $('cv-count') as HTMLInputElement;
   const delimEl = $('cv-delim') as HTMLSelectElement;
   const headerEl = $('cv-header') as HTMLInputElement;
-  const out = $('cv-out') as HTMLTextAreaElement;
+  const out = $('cv-out') as HTMLElement;
+  let rawOutput = '';
 
   const cols = () => [...document.querySelectorAll<HTMLInputElement>('.cv-f:checked')].map((el) => el.value);
   const delim = () => (delimEl.value === '\\t' ? '\t' : delimEl.value);
@@ -84,7 +87,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const lines: string[] = [];
     if (headerEl.checked) lines.push(cs.join(d));
     for (let i = 0; i < n; i++) lines.push(row(i + 1, cs).map((v) => esc(v, d)).join(d));
-    out.value = lines.join('\n');
+    rawOutput = lines.join('\n');
+    hl(out, rawOutput, 'plaintext');
   }
 
   [countEl, delimEl, headerEl].forEach((el) => el.addEventListener('input', generate));
@@ -92,12 +96,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   $('cv-gen').addEventListener('click', generate);
   $('cv-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(out.value);
+    await navigator.clipboard.writeText(rawOutput);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy CSV'), 1500);
   });
   $('cv-dl').addEventListener('click', () => {
-    const url = URL.createObjectURL(new Blob([out.value], { type: 'text/csv' }));
+    const url = URL.createObjectURL(new Blob([rawOutput], { type: 'text/csv' }));
     const a = document.createElement('a'); a.href = url; a.download = 'test-data.csv'; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });

@@ -21,7 +21,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div class="flex flex-col gap-2">
       <label class="text-sm text-ink-subtle">HTML output</label>
-      <textarea id="ht-out" class="field min-h-40 resize-y font-mono text-xs" readonly></textarea>
+      <pre class="hl-block field min-h-40" style="resize:vertical;overflow:auto"><code id="ht-out" class="hljs" style="background:transparent;padding:0"></code></pre>
       <button id="ht-copy" class="btn btn-secondary w-fit">Copy HTML</button>
     </div>
   </div>
@@ -39,9 +39,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { hl } from '../../lib/highlight';
+
   const $ = (id: string) => document.getElementById(id)!;
   const grid = $('ht-grid') as HTMLTableElement;
-  const out = $('ht-out') as HTMLTextAreaElement;
+  const out = $('ht-out') as HTMLElement;
+  let rawOutput = '';
   let data: string[][] = [];
 
   function ensureData(rows: number, cols: number) {
@@ -88,7 +91,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       html += '    <tr>\n' + data[r].map((c) => `      <td>${esc(c)}</td>`).join('\n') + '\n    </tr>\n';
     }
     html += '  </tbody>\n</table>';
-    out.value = html;
+    rawOutput = html;
+    hl(out, rawOutput, 'html');
   }
 
   function rebuild() {
@@ -103,7 +107,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   ['ht-header', 'ht-border'].forEach((id) => $(id).addEventListener('change', buildOut));
   $('ht-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(out.value);
+    await navigator.clipboard.writeText(rawOutput);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy HTML'), 1500);
   });

@@ -45,7 +45,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div id="fx-preview" class="min-h-40 rounded-lg border border-hairline bg-surface-2 p-4"></div>
 
     <div class="flex items-start gap-2">
-      <code id="fx-css" class="field whitespace-pre-wrap font-mono text-[13px]"></code>
+      <pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto"><code id="fx-css" class="hljs" style="background:transparent;padding:0"></code></pre>
       <button id="fx-copy" class="btn btn-secondary whitespace-nowrap">Copy</button>
     </div>
   </div>
@@ -62,9 +62,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { hl } from '../../lib/highlight';
   const $ = (id: string) => document.getElementById(id)!;
   const preview = $('fx-preview') as HTMLElement;
   const cssEl = $('fx-css')!;
+  let rawOutput = '';
   let mode: 'flex' | 'grid' = 'flex';
 
   function box(i: number): string {
@@ -93,7 +95,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       preview.innerHTML = Array.from({ length: items }, (_, i) => box(i + 1)).join('');
       css = `display: grid;\ngrid-template-columns: repeat(${cols}, 1fr);\ngap: ${gap}px;`;
     }
-    cssEl.textContent = `.container {\n  ${css.replace(/\n/g, '\n  ')}\n}`;
+    rawOutput = `.container {\n  ${css.replace(/\n/g, '\n  ')}\n}`;
+    hl(cssEl, rawOutput, 'css');
   }
 
   function setMode(m: 'flex' | 'grid') {
@@ -112,7 +115,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   $('fx-tab-grid').addEventListener('click', () => setMode('grid'));
   $('fx-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(cssEl.textContent || '');
+    await navigator.clipboard.writeText(rawOutput);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy'), 1500);
   });

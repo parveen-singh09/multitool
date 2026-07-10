@@ -18,8 +18,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <input id="bs-spread" type="range" min="-50" max="50" value="0" class="w-full accent-[#5e6ad2]" />
       </label>
       <div class="flex flex-wrap items-end gap-3">
-        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Color
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Shadow color
           <input id="bs-color" type="color" value="#5e6ad2" class="field h-10 w-16 cursor-pointer p-1" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Box color
+          <input id="bs-boxcolor" type="color" value="#ffffff" class="field h-10 w-16 cursor-pointer p-1" />
         </label>
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">Opacity: <span id="bs-ov" class="text-ink">30%</span>
           <input id="bs-opacity" type="range" min="0" max="100" value="30" class="w-32 accent-[#5e6ad2]" />
@@ -33,7 +36,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <div id="bs-box" class="h-28 w-28 rounded-lg bg-white"></div>
       </div>
       <div class="flex items-center gap-2">
-        <code id="bs-css" class="field font-mono text-[13px]"></code>
+        <code id="bs-css" class="field font-mono text-[13px] hl-block hljs"></code>
         <button id="bs-copy" class="btn btn-secondary whitespace-nowrap">Copy</button>
       </div>
     </div>
@@ -52,10 +55,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { hl } from '../../lib/highlight';
   const $ = (id: string) => document.getElementById(id)!;
   const box = $('bs-box') as HTMLElement;
   const cssEl = $('bs-css')!;
-  const ids = ['bs-x', 'bs-y', 'bs-blur', 'bs-spread', 'bs-opacity', 'bs-color', 'bs-inset'];
+  let rawOutput = '';
+  const ids = ['bs-x', 'bs-y', 'bs-blur', 'bs-spread', 'bs-opacity', 'bs-color', 'bs-boxcolor', 'bs-inset'];
 
   function hexToRgba(hex: string, a: number): string {
     const n = parseInt(hex.slice(1), 16);
@@ -69,19 +74,22 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const spread = ($('bs-spread') as HTMLInputElement).value;
     const opacity = Number(($('bs-opacity') as HTMLInputElement).value);
     const color = ($('bs-color') as HTMLInputElement).value;
+    const boxColor = ($('bs-boxcolor') as HTMLInputElement).value;
     const inset = ($('bs-inset') as HTMLInputElement).checked;
+    box.style.background = boxColor;
     $('bs-xv').textContent = `${x}px`; $('bs-yv').textContent = `${y}px`;
     $('bs-bv').textContent = `${blur}px`; $('bs-sv').textContent = `${spread}px`;
     $('bs-ov').textContent = `${opacity}%`;
     const value = `${inset ? 'inset ' : ''}${x}px ${y}px ${blur}px ${spread}px ${hexToRgba(color, opacity / 100)}`;
     box.style.boxShadow = value;
-    cssEl.textContent = `box-shadow: ${value};`;
+    rawOutput = `box-shadow: ${value};`;
+    hl(cssEl, rawOutput, 'css');
   }
 
   ids.forEach((id) => $(id).addEventListener('input', update));
   $('bs-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(cssEl.textContent || '');
+    await navigator.clipboard.writeText(rawOutput);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy'), 1500);
   });

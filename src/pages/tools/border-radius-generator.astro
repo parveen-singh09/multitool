@@ -28,7 +28,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <div id="br-box" class="h-40 w-40 border-2 border-[#5e6ad2] bg-[#5e6ad2]/20"></div>
       </div>
       <div class="flex items-center gap-2">
-        <code id="br-css" class="field font-mono text-[13px] break-all"></code>
+        <code id="br-css" class="field font-mono text-[13px] break-all hl-block hljs"></code>
         <button id="br-copy" class="btn btn-secondary whitespace-nowrap">Copy</button>
       </div>
     </div>
@@ -46,9 +46,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { hl } from '../../lib/highlight';
   const $ = (id: string) => document.getElementById(id)!;
   const box = $('br-box') as HTMLElement;
   const cssEl = $('br-css')!;
+  let rawOutput = '';
   const corners = ['br-tl', 'br-tr', 'br-br', 'br-bl'];
   const linkEl = $('br-link') as HTMLInputElement;
   const blobEl = $('br-blob') as HTMLInputElement;
@@ -70,14 +72,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       value = `${tl}px ${tr}px ${br}px ${bl}px`;
     }
     box.style.borderRadius = value;
-    cssEl.textContent = `border-radius: ${value};`;
+    rawOutput = `border-radius: ${value};`;
+    hl(cssEl, rawOutput, 'css');
   }
 
   corners.forEach((id) => $(id).addEventListener('input', () => update(id)));
   [linkEl, blobEl].forEach((el) => el.addEventListener('change', () => update()));
   $('br-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(cssEl.textContent || '');
+    await navigator.clipboard.writeText(rawOutput);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy'), 1500);
   });

@@ -20,7 +20,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div class="flex flex-col gap-2">
       <label class="text-sm text-ink-subtle">.gitignore</label>
-      <textarea id="gi-out" class="field min-h-72 resize-y font-mono text-xs" readonly></textarea>
+      <pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto"><code id="gi-out" class="hljs" style="background:transparent;padding:0"></code></pre>
       <div class="flex gap-2">
         <button id="gi-copy" class="btn btn-secondary">Copy</button>
         <button id="gi-dl" class="btn btn-secondary">Download</button>
@@ -41,8 +41,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { hl } from '../../lib/highlight';
+
   const $ = (id: string) => document.getElementById(id)!;
-  const out = $('gi-out') as HTMLTextAreaElement;
+  const out = $('gi-out') as HTMLElement;
+  let rawOutput = '';
 
   const BLOCKS: Record<string, { title: string; body: string }> = {
     node: { title: 'Node', body: 'node_modules/\nnpm-debug.log*\nyarn-error.log*\ndist/\n.cache/\ncoverage/' },
@@ -57,18 +60,19 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   function build() {
     const checked = [...document.querySelectorAll<HTMLInputElement>('.gi-r:checked')].map((el) => el.value);
-    out.value = checked.map((k) => `# ${BLOCKS[k].title}\n${BLOCKS[k].body}`).join('\n\n');
+    rawOutput = checked.map((k) => `# ${BLOCKS[k].title}\n${BLOCKS[k].body}`).join('\n\n');
+    hl(out, rawOutput, 'plaintext');
   }
 
   document.querySelectorAll('.gi-r').forEach((el) => el.addEventListener('change', build));
   $('gi-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(out.value);
+    await navigator.clipboard.writeText(rawOutput);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy'), 1500);
   });
   $('gi-dl').addEventListener('click', () => {
-    const url = URL.createObjectURL(new Blob([out.value], { type: 'text/plain' }));
+    const url = URL.createObjectURL(new Blob([rawOutput], { type: 'text/plain' }));
     const a = document.createElement('a'); a.href = url; a.download = '.gitignore'; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });

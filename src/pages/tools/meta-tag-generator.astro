@@ -27,7 +27,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div class="flex flex-col gap-2">
       <label class="text-sm text-ink-subtle">Generated meta tags</label>
-      <textarea id="mt-out" class="field min-h-72 resize-y font-mono text-xs" readonly></textarea>
+      <pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto"><code id="mt-out" class="hljs" style="background:transparent;padding:0"></code></pre>
       <button id="mt-copy" class="btn btn-secondary w-fit">Copy tags</button>
     </div>
   </div>
@@ -44,9 +44,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { hl } from '../../lib/highlight';
+
   const $ = (id: string) => document.getElementById(id)!;
-  const out = $('mt-out') as HTMLTextAreaElement;
+  const out = $('mt-out') as HTMLElement;
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  let rawOutput = '';
 
   function build() {
     const title = ($('mt-title') as HTMLInputElement).value;
@@ -62,13 +65,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (kw) lines.push(`<meta name="keywords" content="${esc(kw)}">`);
     if (author) lines.push(`<meta name="author" content="${esc(author)}">`);
     if (robots) lines.push(`<meta name="robots" content="${robots}">`);
-    out.value = lines.join('\n');
+    rawOutput = lines.join('\n');
+    hl(out, rawOutput, 'html');
   }
 
   ['mt-title', 'mt-desc', 'mt-keywords', 'mt-author', 'mt-robots', 'mt-viewport'].forEach((id) => $(id).addEventListener('input', build));
   $('mt-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(out.value);
+    await navigator.clipboard.writeText(rawOutput);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy tags'), 1500);
   });

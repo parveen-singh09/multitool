@@ -32,7 +32,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div class="flex flex-col gap-2">
       <label class="text-sm text-ink-subtle">Generated tags</label>
-      <textarea id="og-out" class="field min-h-72 resize-y font-mono text-xs" readonly></textarea>
+      <pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto"><code id="og-out" class="hljs" style="background:transparent;padding:0"></code></pre>
       <button id="og-copy" class="btn btn-secondary w-fit">Copy tags</button>
     </div>
   </div>
@@ -49,8 +49,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { hl } from '../../lib/highlight';
+
   const $ = (id: string) => document.getElementById(id)!;
-  const out = $('og-out') as HTMLTextAreaElement;
+  const out = $('og-out') as HTMLElement;
+  let rawOutput = '';
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const v = (id: string) => ($(id) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement).value;
 
@@ -69,13 +72,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (title) lines.push(`<meta name="twitter:title" content="${esc(title)}">`);
     if (desc) lines.push(`<meta name="twitter:description" content="${esc(desc)}">`);
     if (image) lines.push(`<meta name="twitter:image" content="${esc(image)}">`);
-    out.value = lines.join('\n');
+    rawOutput = lines.join('\n');
+    hl(out, rawOutput, 'html');
   }
 
   ['og-title', 'og-desc', 'og-url', 'og-image', 'og-type', 'og-card', 'og-site'].forEach((id) => $(id).addEventListener('input', build));
   $('og-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(out.value);
+    await navigator.clipboard.writeText(rawOutput);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy tags'), 1500);
   });

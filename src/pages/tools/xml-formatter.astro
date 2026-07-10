@@ -21,13 +21,18 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div id="xf-status" class="hidden rounded-md border px-3 py-2 text-sm" role="status"></div>
 
-    <textarea
-      id="xf-input"
-      class="field min-h-72 resize-y font-mono text-[13px]"
-      placeholder="Paste XML here, e.g. <root><item>value</item></root>"
-      spellcheck="false"
-      aria-label="XML input"
-    ></textarea>
+    <div class="hl-edit field p-0" style="height:18rem;resize:vertical;overflow:hidden">
+      <pre class="hl-block" aria-hidden="true"><code id="xf-input-hl" class="hljs" style="background:transparent"></code></pre>
+      <textarea
+        id="xf-input"
+        spellcheck="false"
+        autocapitalize="off"
+        autocomplete="off"
+        autocorrect="off"
+        placeholder="Paste XML here, e.g. <root><item>value</item></root>"
+        aria-label="XML input"
+      ></textarea>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -42,9 +47,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { wireInput } from '../../lib/highlight';
+
   const input = document.getElementById('xf-input') as HTMLTextAreaElement;
+  const inHl = document.getElementById('xf-input-hl')!;
   const status = document.getElementById('xf-status')!;
   const indentSel = document.getElementById('xf-indent') as HTMLSelectElement;
+
+  const refresh = wireInput(input, inHl, () => 'xml');
 
   function getIndent(): string {
     const v = indentSel.value;
@@ -98,6 +108,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       return;
     }
     input.value = doMinify ? minify(src) : beautify(src, getIndent());
+    refresh();
     showStatus('Well-formed XML ✓', true);
   }
 
@@ -105,6 +116,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   document.getElementById('xf-minify')!.addEventListener('click', () => process(true));
   document.getElementById('xf-clear')!.addEventListener('click', () => {
     input.value = '';
+    refresh();
     status.classList.add('hidden');
   });
   document.getElementById('xf-copy')!.addEventListener('click', async () => {

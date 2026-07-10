@@ -7,34 +7,111 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div class="flex flex-wrap items-center gap-2">
       <button id="jf-beautify" class="btn btn-primary">Beautify</button>
       <button id="jf-minify" class="btn btn-secondary">Minify</button>
+      <button id="jf-fix" class="btn btn-secondary" title="Repair trailing commas, comments, single quotes, unquoted keys">Auto-fix</button>
       <button id="jf-copy" class="btn btn-secondary">Copy</button>
+      <button id="jf-download" class="btn btn-secondary">Download</button>
       <button id="jf-clear" class="btn btn-tertiary">Clear</button>
+
+      <label class="btn btn-secondary cursor-pointer">
+        Upload file
+        <input id="jf-file" type="file" accept=".json,application/json,text/plain" class="hidden" />
+      </label>
+
       <label class="ml-auto flex items-center gap-2 text-sm text-ink-subtle">
+        Spec
+        <select id="jf-spec" class="field w-auto py-1" title="JSON specification to validate against">
+          <option value="rfc8259">RFC 8259</option>
+          <option value="rfc7159">RFC 7159</option>
+          <option value="rfc4627">RFC 4627 (original)</option>
+          <option value="ecma404">ECMA-404</option>
+          <option value="json5">JSON5</option>
+        </select>
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
         Indent
         <select id="jf-indent" class="field w-auto py-1">
           <option value="2">2 spaces</option>
+          <option value="3">3 spaces</option>
           <option value="4">4 spaces</option>
           <option value="tab">Tab</option>
         </select>
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="jf-sort" type="checkbox" class="accent-primary" />
+        Sort keys
       </label>
     </div>
 
     <div id="jf-status" class="hidden rounded-md border px-3 py-2 text-sm" role="status"></div>
 
-    <textarea
-      id="jf-input"
-      class="field min-h-72 resize-y font-mono text-[13px]"
-      placeholder='Paste JSON here, e.g. {"hello":"world"}'
-      spellcheck="false"
-      aria-label="JSON input"
-    ></textarea>
+    <div id="jf-caret-wrap" class="hidden">
+      <div class="eyebrow">Error location</div>
+      <pre id="jf-caret" class="panel p-4 mt-2 overflow-x-auto font-mono text-[13px] text-ink whitespace-pre"></pre>
+    </div>
+
+    <div class="hl-edit field p-0" style="height:18rem;resize:vertical;overflow:hidden">
+      <pre class="hl-block" aria-hidden="true"><code id="jf-input-hl" class="hljs" style="background:transparent"></code></pre>
+      <textarea
+        id="jf-input"
+        placeholder='Paste JSON here, drag a .json file in, or upload — e.g. {"hello":"world"}'
+        spellcheck="false"
+        autocapitalize="off"
+        autocomplete="off"
+        autocorrect="off"
+        aria-label="JSON input"
+      ></textarea>
+    </div>
+
+    <div id="jf-stats" class="hidden flex flex-wrap gap-2 text-[12px]"></div>
+
+    <!-- View toggle + tree -->
+    <div id="jf-view-wrap" class="hidden flex flex-col gap-2">
+      <div class="flex items-center gap-2">
+        <div class="eyebrow">Tree view</div>
+        <div class="ml-auto flex gap-2">
+          <button id="jf-expand" class="btn btn-tertiary py-1">Expand all</button>
+          <button id="jf-collapse" class="btn btn-tertiary py-1">Collapse all</button>
+        </div>
+      </div>
+      <div id="jf-tree" class="panel p-4 overflow-x-auto font-mono text-[13px] leading-relaxed"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free JSON formatter beautifies, minifies and validates JSON right in
+      your browser. Paste text, upload a file, or drag one in. Formatting
+      supports 2, 3 or 4-space and tab indentation, optional alphabetical key
+      sorting, and one-click minify. Validate against a chosen specification —
+      RFC 8259, 7159, 4627, ECMA-404 or the tolerant JSON5 superset. Invalid JSON is reported with the exact
+      line and column plus a caret under the offending character. The built-in
+      Auto-fix repairs the most common mistakes — trailing commas, comments,
+      single-quoted strings and unquoted keys — so lightly-broken JSON becomes
+      valid. A collapsible, syntax-highlighted tree view lets you explore large
+      documents, and a stats bar shows byte size, key count and nesting depth.
+      Nothing is uploaded — everything runs locally.
+    </p>
   </div>
 </ToolLayout>
 
 <script>
+  import { wireInput } from '../../lib/highlight';
+
   const input = document.getElementById('jf-input') as HTMLTextAreaElement;
+  const inputHl = document.getElementById('jf-input-hl') as HTMLElement;
   const status = document.getElementById('jf-status')!;
+  const caretWrap = document.getElementById('jf-caret-wrap')!;
+  const caret = document.getElementById('jf-caret')!;
   const indentSel = document.getElementById('jf-indent') as HTMLSelectElement;
+  const specSel = document.getElementById('jf-spec') as HTMLSelectElement;
+  const sortChk = document.getElementById('jf-sort') as HTMLInputElement;
+  const statsEl = document.getElementById('jf-stats')!;
+  const viewWrap = document.getElementById('jf-view-wrap')!;
+  const treeEl = document.getElementById('jf-tree')!;
+
+  // Re-highlight the input after programmatic `input.value =` writes (wireInput
+  // already mirrors on keystroke, so no extra input listener is needed).
+  const refresh = wireInput(input, inputHl, () => 'json');
 
   function getIndent(): string | number {
     const v = indentSel.value;
@@ -48,29 +125,321 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     status.style.color = ok ? '#27a644' : '#e08585';
   }
 
-  function process(minify: boolean) {
-    if (!input.value.trim()) return;
+  function hideResults() {
+    caretWrap.classList.add('hidden');
+    statsEl.classList.add('hidden');
+    viewWrap.classList.add('hidden');
+  }
+
+  // ---- Error position → line/col + caret (shared with validator behaviour) ----
+  function positionFromError(msg: string, text: string): number | null {
+    const posMatch = msg.match(/position (\d+)/i);
+    if (posMatch) return Math.min(Number(posMatch[1]), text.length);
+    const lineCol = msg.match(/line (\d+) column (\d+)/i);
+    if (lineCol) {
+      const line = Number(lineCol[1]);
+      const col = Number(lineCol[2]);
+      const lines = text.split('\n');
+      let idx = 0;
+      for (let i = 0; i < line - 1 && i < lines.length; i++) idx += lines[i].length + 1;
+      return idx + (col - 1);
+    }
+    return null;
+  }
+
+  function lineColFromPos(text: string, pos: number): { line: number; col: number } {
+    let line = 1, col = 1;
+    for (let i = 0; i < pos && i < text.length; i++) {
+      if (text[i] === '\n') { line++; col = 1; } else { col++; }
+    }
+    return { line, col };
+  }
+
+  function renderCaret(text: string, line: number, col: number) {
+    const lines = text.split('\n');
+    const target = lines[line - 1] ?? '';
+    const shown = target.length > 200 ? target.slice(0, 200) + '…' : target;
+    const pointer = ' '.repeat(Math.max(0, col - 1)) + '^';
+    caret.textContent = `line ${line}, column ${col}\n\n${shown}\n${pointer}`;
+    caretWrap.classList.remove('hidden');
+  }
+
+  // ---- Sort object keys deeply ----
+  function sortDeep(v: any): any {
+    if (Array.isArray(v)) return v.map(sortDeep);
+    if (v && typeof v === 'object') {
+      return Object.keys(v).sort().reduce((acc: any, k) => { acc[k] = sortDeep(v[k]); return acc; }, {});
+    }
+    return v;
+  }
+
+  // ---- Auto-fix: best-effort repair of common JSON mistakes ----
+  // ponytail: regex-based, not a full JSON5 parser. Handles the frequent cases
+  // (comments, trailing commas, single quotes, unquoted keys). Upgrade to a real
+  // tolerant parser (JSON5) only if users hit cases this misses.
+  function autoFix(src: string): string {
+    let s = src;
+    // strip /* */ and // comments (skips those inside strings via a scan)
+    s = stripComments(s);
+    // single-quoted strings → double-quoted (only when not already inside dquotes)
+    s = s.replace(/'((?:\\.|[^'\\])*)'/g, (_m, body) =>
+      '"' + body.replace(/\\'/g, "'").replace(/"/g, '\\"') + '"');
+    // unquoted object keys: {key: ...} or ,key: ...  →  "key":
+    s = s.replace(/([{,]\s*)([A-Za-z_$][\w$]*)(\s*:)/g, '$1"$2"$3');
+    // trailing commas before } or ]
+    s = s.replace(/,(\s*[}\]])/g, '$1');
+    return s.trim();
+  }
+
+  function stripComments(s: string): string {
+    let out = '', inStr = false, quote = '', i = 0;
+    while (i < s.length) {
+      const c = s[i], n = s[i + 1];
+      if (inStr) {
+        out += c;
+        if (c === '\\') { out += s[i + 1] ?? ''; i += 2; continue; }
+        if (c === quote) inStr = false;
+        i++; continue;
+      }
+      if (c === '"' || c === "'") { inStr = true; quote = c; out += c; i++; continue; }
+      if (c === '/' && n === '/') { while (i < s.length && s[i] !== '\n') i++; continue; }
+      if (c === '/' && n === '*') { i += 2; while (i < s.length && !(s[i] === '*' && s[i + 1] === '/')) i++; i += 2; continue; }
+      out += c; i++;
+    }
+    return out;
+  }
+
+  // ---- Stats ----
+  function pill(text: string): HTMLElement {
+    const el = document.createElement('span');
+    el.className = 'status-badge';
+    el.textContent = text;
+    return el;
+  }
+
+  function depthOf(v: any): number {
+    if (Array.isArray(v)) return 1 + (v.length ? Math.max(...v.map(depthOf)) : 0);
+    if (v && typeof v === 'object') {
+      const ks = Object.keys(v);
+      return 1 + (ks.length ? Math.max(...ks.map((k) => depthOf(v[k]))) : 0);
+    }
+    return 0;
+  }
+
+  function renderStats(parsed: any, text: string) {
+    statsEl.replaceChildren();
+    const bytes = new Blob([text]).size;
+    const size = bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`;
+    statsEl.appendChild(pill(`Size ${size}`));
+    if (parsed && typeof parsed === 'object') {
+      const count = Array.isArray(parsed) ? parsed.length : Object.keys(parsed).length;
+      statsEl.appendChild(pill(`${Array.isArray(parsed) ? 'Items' : 'Keys'} ${count}`));
+      statsEl.appendChild(pill(`Depth ${depthOf(parsed)}`));
+    }
+    statsEl.classList.remove('hidden');
+  }
+
+  // ---- Collapsible, syntax-highlighted tree (built via DOM — safe with untrusted input) ----
+  const COLORS: Record<string, string> = {
+    key: 'var(--color-primary-hover)',
+    string: '#7fd88f',
+    number: '#e0b978',
+    boolean: '#c99bf0',
+    null: 'var(--color-ink-subtle)',
+    punct: 'var(--color-ink-subtle)',
+  };
+
+  function span(text: string, kind: keyof typeof COLORS): HTMLElement {
+    const s = document.createElement('span');
+    s.textContent = text;
+    s.style.color = COLORS[kind];
+    return s;
+  }
+
+  function leafValue(v: any): HTMLElement {
+    if (v === null) return span('null', 'null');
+    const t = typeof v;
+    if (t === 'string') return span(JSON.stringify(v), 'string');
+    if (t === 'number') return span(String(v), 'number');
+    if (t === 'boolean') return span(String(v), 'boolean');
+    return span(String(v), 'null');
+  }
+
+  // Returns a block element for a value, prefixed by an optional key.
+  function buildNode(key: string | null, value: any): HTMLElement {
+    const isObj = value && typeof value === 'object';
+    const line = document.createElement('div');
+    line.style.whiteSpace = 'pre';
+
+    const keyPart = (): void => {
+      if (key !== null) {
+        line.appendChild(span(JSON.stringify(key), 'key'));
+        line.appendChild(span(': ', 'punct'));
+      }
+    };
+
+    if (!isObj) {
+      keyPart();
+      line.appendChild(leafValue(value));
+      return line;
+    }
+
+    const arr = Array.isArray(value);
+    const entries = arr
+      ? (value as any[]).map((v, i) => [String(i), v] as [string, any])
+      : Object.entries(value);
+    const open = arr ? '[' : '{';
+    const close = arr ? ']' : '}';
+
+    const details = document.createElement('details');
+    details.open = true;
+    details.className = 'jf-node';
+
+    const summary = document.createElement('summary');
+    summary.style.cursor = 'pointer';
+    summary.style.listStyle = 'none';
+    if (key !== null) {
+      summary.appendChild(span(JSON.stringify(key), 'key'));
+      summary.appendChild(span(': ', 'punct'));
+    }
+    summary.appendChild(span(open, 'punct'));
+    const count = span(`  ${entries.length} ${entries.length === 1 ? 'item' : 'items'}`, 'null');
+    count.classList.add('jf-count');
+    summary.appendChild(count);
+    details.appendChild(summary);
+
+    const body = document.createElement('div');
+    body.style.paddingLeft = '1.25rem';
+    body.style.borderLeft = '1px solid var(--color-hairline)';
+    body.style.marginLeft = '0.25rem';
+    for (const [k, v] of entries) body.appendChild(buildNode(arr ? null : k, v));
+    details.appendChild(body);
+
+    const closer = document.createElement('div');
+    closer.style.whiteSpace = 'pre';
+    closer.appendChild(span(close, 'punct'));
+    details.appendChild(closer);
+
+    return details;
+  }
+
+  function renderTree(parsed: any) {
+    treeEl.replaceChildren(buildNode(null, parsed));
+    viewWrap.classList.remove('hidden');
+  }
+
+  // ---- Core process ----
+  function parseCurrent(): { ok: true; value: any } | { ok: false } {
+    const text = input.value;
+    if (!text.trim()) { hideResults(); status.classList.add('hidden'); return { ok: false }; }
+    const spec = specSel.value;
     try {
-      const parsed = JSON.parse(input.value);
-      input.value = minify
-        ? JSON.stringify(parsed)
-        : JSON.stringify(parsed, null, getIndent());
-      showStatus('Valid JSON ✓', true);
+      // JSON5 is a tolerant superset — normalise it to strict JSON first.
+      // RFC 8259 / 7159 / ECMA-404 all accept any top-level value; only the
+      // original RFC 4627 requires the root to be an object or array.
+      const value = JSON.parse(spec === 'json5' ? autoFix(text) : text);
+      if (spec === 'rfc4627' && (value === null || typeof value !== 'object')) {
+        hideResults();
+        showStatus('Invalid JSON: RFC 4627 requires the top-level value to be an object or array.', false);
+        return { ok: false };
+      }
+      return { ok: true, value };
     } catch (e) {
-      showStatus(`Invalid JSON: ${(e as Error).message}`, false);
+      const msg = (e as Error).message;
+      const pos = positionFromError(msg, text);
+      hideResults();
+      if (pos !== null) {
+        const { line, col } = lineColFromPos(text, pos);
+        showStatus(`Invalid JSON at line ${line}, column ${col}: ${msg}`, false);
+        renderCaret(text, line, col);
+      } else {
+        showStatus(`Invalid JSON: ${msg}`, false);
+      }
+      return { ok: false };
     }
   }
 
-  document.getElementById('jf-beautify')!.addEventListener('click', () => process(false));
-  document.getElementById('jf-minify')!.addEventListener('click', () => process(true));
+  function format(minify: boolean) {
+    const res = parseCurrent();
+    if (!res.ok) return;
+    let value = res.value;
+    if (sortChk.checked) value = sortDeep(value);
+    input.value = minify ? JSON.stringify(value) : JSON.stringify(value, null, getIndent());
+    refresh();
+    caretWrap.classList.add('hidden');
+    showStatus('Valid JSON ✓', true);
+    renderStats(value, input.value);
+    renderTree(value);
+  }
+
+  document.getElementById('jf-beautify')!.addEventListener('click', () => format(false));
+  document.getElementById('jf-minify')!.addEventListener('click', () => format(true));
+
+  document.getElementById('jf-fix')!.addEventListener('click', () => {
+    if (!input.value.trim()) return;
+    input.value = autoFix(input.value);
+    refresh();
+    format(false);
+  });
+
   document.getElementById('jf-clear')!.addEventListener('click', () => {
     input.value = '';
+    refresh();
     status.classList.add('hidden');
+    hideResults();
   });
+
   document.getElementById('jf-copy')!.addEventListener('click', async () => {
     const btn = document.getElementById('jf-copy')!;
     await navigator.clipboard.writeText(input.value);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy'), 1500);
   });
+
+  document.getElementById('jf-download')!.addEventListener('click', () => {
+    if (!input.value.trim()) return;
+    const blob = new Blob([input.value], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'data.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // File upload + drag & drop
+  const fileInput = document.getElementById('jf-file') as HTMLInputElement;
+  async function loadFile(file: File) {
+    input.value = await file.text();
+    refresh();
+    format(false);
+  }
+  fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) loadFile(fileInput.files[0]); });
+  input.addEventListener('dragover', (e) => { e.preventDefault(); });
+  input.addEventListener('drop', (e) => {
+    const file = (e as DragEvent).dataTransfer?.files?.[0];
+    if (file) { e.preventDefault(); loadFile(file); }
+  });
+
+  // Tree expand/collapse all
+  const setAll = (open: boolean) =>
+    treeEl.querySelectorAll('details').forEach((d) => ((d as HTMLDetailsElement).open = open));
+  document.getElementById('jf-expand')!.addEventListener('click', () => setAll(true));
+  document.getElementById('jf-collapse')!.addEventListener('click', () => setAll(false));
 </script>
+
+<style>
+  /* Hide the default disclosure triangle; use a rotating caret instead. */
+  .jf-node > summary::before {
+    content: '▸';
+    display: inline-block;
+    width: 1rem;
+    color: var(--color-ink-subtle);
+    transition: transform 0.12s ease;
+  }
+  .jf-node[open] > summary::before { transform: rotate(90deg); }
+  .jf-node > summary { user-select: none; }
+  /* Show item count only when collapsed. */
+  .jf-node[open] > summary .jf-count { display: none; }
+  .jf-node > summary:hover { background: var(--color-surface-2); border-radius: var(--radius-xs); }
+</style>
