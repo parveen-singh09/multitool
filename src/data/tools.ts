@@ -3632,11 +3632,11 @@ export const tools: Tool[] = [
   {
     slug: 'sprite-sheet-maker',
     name: 'Sprite Sheet Maker',
-    tagline: 'Pack images into one sprite sheet.',
+    tagline: 'Pack, reorder and export sprite sheets.',
     description:
-      'Free sprite sheet maker. Drop multiple images to pack them into a single sprite sheet on a grid, with adjustable columns and padding, then download the PNG. Runs in your browser.',
+      'Free sprite sheet maker. Drop frames, drag to reorder, pack them into a uniform grid or a tight texture atlas, preview the animation at any FPS, then export the PNG plus a JSON atlas, CSS sprites or a ZIP bundle. You can also split an existing sheet back into frames. Runs entirely in your browser.',
     category: 'Image',
-    keywords: ['sprite sheet maker', 'sprite sheet generator', 'css sprite generator', 'game sprite packer', 'texture atlas maker'],
+    keywords: ['sprite sheet maker', 'sprite sheet generator', 'css sprite generator', 'game sprite packer', 'texture atlas maker', 'sprite sheet splitter', 'json atlas export', 'animation preview'],
     icon: 'M4 4h4v4H4zM10 4h4v4h-4zM16 4h4v4h-4zM4 10h4v4H4zM10 10h4v4h-4z',
   },
   {
@@ -3674,11 +3674,11 @@ export const tools: Tool[] = [
   {
     slug: 'gantt-chart-creator',
     name: 'Gantt Chart Creator',
-    tagline: 'Plan tasks on a Gantt timeline.',
+    tagline: 'Plan and schedule tasks on a Gantt chart.',
     description:
-      'Free Gantt chart creator. Add tasks with start and end dates to draw a Gantt chart of your project schedule, then download it as a PNG. Everything runs in your browser.',
+      'Free Gantt chart maker with dependencies, milestones, critical path and auto-scheduling. Add tasks with working-day durations, link them, and drag bars to reschedule — dependents update automatically. Weekends and holidays are skipped, progress and summary tasks roll up, and you can import/export MS Project XML, CSV and JSON or download PNG, SVG and PDF. Everything runs in your browser.',
     category: 'Image',
-    keywords: ['gantt chart creator', 'gantt chart maker', 'create gantt chart', 'project timeline chart', 'gantt generator'],
+    keywords: ['gantt chart creator', 'gantt chart maker', 'create gantt chart', 'project timeline chart', 'gantt generator', 'critical path', 'ms project alternative', 'project scheduler', 'task dependencies'],
     icon: 'M4 5h16v14H4zM6 9h6M6 12h9M6 15h4',
   },
   {
