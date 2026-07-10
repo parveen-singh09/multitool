@@ -529,6 +529,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       shuffle: true,
       drawOutOfBound: false,
       shrinkToFit: true,
+      // Built-in safety valve (off by default): abort a run once a single word's
+      // placement spiral exceeds this many ms, so a pathological layout (tiny
+      // words on a mask) self-terminates instead of freezing the tab.
+      abortThreshold: 2000,
       ...rotationOpts(),
     };
   }
@@ -547,6 +551,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   async function renderNow() {
     clearError();
+    // Cancel any in-flight layout. wordcloud2 places words across many timer
+    // ticks and does NOT self-cancel when a new run starts, so without this the
+    // previous run's timers keep firing and stack up on the main thread.
+    WordCloud.stop();
     canvas.width = W;
     canvas.height = H;
 
