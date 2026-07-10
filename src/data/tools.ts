@@ -3684,11 +3684,11 @@ export const tools: Tool[] = [
   {
     slug: 'org-chart-creator',
     name: 'Org Chart Creator',
-    tagline: 'Draw an organization hierarchy.',
+    tagline: 'Build an organization chart visually.',
     description:
-      'Free org chart creator. Enter roles and reporting lines from an indented list to draw an organization chart, then download it as a PNG. Everything is rendered in your browser.',
+      'Free visual org chart maker. Add people with titles, photos and departments, drag boxes to change who reports to whom, switch layouts and themes, or build the whole chart from a CSV. Export PNG, SVG, PDF or a reusable JSON project. Everything runs in your browser.',
     category: 'Image',
-    keywords: ['org chart creator', 'org chart maker', 'organizational chart generator', 'create org chart', 'hierarchy chart maker'],
+    keywords: ['org chart creator', 'org chart maker', 'organizational chart generator', 'create org chart', 'hierarchy chart maker', 'org chart from csv', 'org chart with photos', 'company structure chart', 'reporting structure diagram', 'smartdraw org chart alternative'],
     icon: 'M9 4h6v4H9zM4 16h6v4H4zM14 16h6v4h-6zM12 8v4M7 16v-2h10v2',
   },
   {
@@ -3704,11 +3704,11 @@ export const tools: Tool[] = [
   {
     slug: 'seating-chart-creator',
     name: 'Seating Chart Creator',
-    tagline: 'Arrange guests across tables.',
+    tagline: 'Drag guests onto tables and plan your event.',
     description:
-      'Free seating chart creator. Add guests and tables to arrange a seating plan for a wedding, class or event, then download it as a PNG. Everything runs in your browser.',
+      'Free drag-and-drop seating chart creator. Start from a wedding, banquet, classroom, restaurant or theater template, add round, rectangular, head, sweetheart or U-shape tables, then drag guests onto seats. Import your list from Excel or CSV, set keep-together and keep-apart rules, auto-seat the rest, and export a PNG, PDF or printable table cards. Everything runs in your browser.',
     category: 'Image',
-    keywords: ['seating chart creator', 'seating chart maker', 'wedding seating chart', 'table plan maker', 'seating plan generator'],
+    keywords: ['seating chart creator', 'seating chart maker', 'wedding seating chart', 'table plan maker', 'seating plan generator', 'drag and drop seating chart', 'reception table planner', 'classroom seating chart', 'banquet floor plan'],
     icon: 'M7 10a2 2 0 1 0 0-.01M17 10a2 2 0 1 0 0-.01M5 20v-3a3 3 0 0 1 3-3M19 20v-3a3 3 0 0 0-3-3M12 14a3 3 0 0 0-3 3v3h6v-3a3 3 0 0 0-3-3z',
   },
 

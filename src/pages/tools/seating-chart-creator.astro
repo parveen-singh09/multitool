@@ -3,193 +3,926 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
 <ToolLayout slug="seating-chart-creator">
-  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-    <div class="flex flex-col gap-4">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-        Event title
+  <div class="scc">
+    <!-- ── Toolbar ─────────────────────────────────────────────── -->
+    <div class="scc-toolbar panel panel-lift">
+      <label class="scc-tb-field">
+        <span>Event title</span>
         <input id="scc-title" class="field" type="text" value="Wedding Reception" />
       </label>
 
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-        Guests (one per line)
-        <textarea id="scc-guests" class="field min-h-48 resize-y font-mono text-[13px]" spellcheck="false">Alice
-Ben
-Carla
-David
-Emma
-Frank
-Grace
-Henry
-Isla
-Jack
-Kira
-Liam</textarea>
+      <label class="scc-tb-field">
+        <span>Template</span>
+        <select id="scc-template" class="field">
+          <option value="">Choose a layout…</option>
+          <option value="wedding">Wedding reception</option>
+          <option value="banquet">Banquet hall</option>
+          <option value="classroom">Classroom</option>
+          <option value="restaurant">Restaurant</option>
+          <option value="theater">Theater / rows</option>
+          <option value="ushape">U-shape meeting</option>
+        </select>
       </label>
 
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-          Number of tables
-          <input id="scc-tables" class="field" type="number" min="1" max="30" value="3" />
-        </label>
-        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-          Seats per table
-          <input id="scc-seats" class="field" type="number" min="1" max="20" value="4" />
-        </label>
-      </div>
+      <label class="scc-tb-field">
+        <span>Add table</span>
+        <select id="scc-add-shape" class="field">
+          <option value="round">Round</option>
+          <option value="rect">Rectangular</option>
+          <option value="head">Head table</option>
+          <option value="sweetheart">Sweetheart</option>
+          <option value="ushape">U-shape</option>
+        </select>
+      </label>
+      <button id="scc-add" class="btn btn-secondary">+ Add</button>
 
-      <div class="flex gap-2">
-        <button id="scc-png" class="btn btn-primary">Download PNG</button>
+      <label class="scc-tb-field scc-grow">
+        <span>Find my seat</span>
+        <input id="scc-find" class="field" type="text" placeholder="Search guest name…" />
+      </label>
+
+      <div class="scc-tb-actions">
+        <button id="scc-autoseat" class="btn btn-secondary">Auto-seat</button>
+        <button id="scc-png" class="btn btn-primary">PNG</button>
+        <button id="scc-pdf" class="btn btn-secondary">PDF</button>
+        <button id="scc-cards" class="btn btn-secondary">Table cards</button>
       </div>
-      <p id="scc-note" class="hidden text-[13px] text-ink-subtle" role="status"></p>
     </div>
 
-    <div class="flex flex-col gap-2">
-      <span class="text-sm text-ink-subtle">Preview</span>
-      <div class="panel p-4 overflow-auto">
-        <canvas id="scc-canvas" class="max-w-full h-auto rounded-md" aria-label="Seating chart preview"></canvas>
+    <div class="scc-main">
+      <!-- ── Left rail: roster + rules ─────────────────────────── -->
+      <aside class="scc-rail">
+        <section class="panel scc-card">
+          <header class="scc-card-h">
+            <span>Guests</span>
+            <span id="scc-count" class="status-badge">0</span>
+          </header>
+
+          <details class="scc-import">
+            <summary>Import / paste list</summary>
+            <p class="scc-hint">
+              One guest per line, or paste from Excel/CSV. Columns map to
+              <em>name, group, side, meal</em>. A header row is auto-detected.
+            </p>
+            <textarea id="scc-import-text" class="field scc-mono" spellcheck="false"
+              placeholder="Alice, Smith family, Bride, Chicken&#10;Ben, College friends, Groom, Vegan"></textarea>
+            <div class="scc-import-btns">
+              <button id="scc-import-btn" class="btn btn-secondary">Import</button>
+              <button id="scc-import-append" class="btn btn-tertiary">Append</button>
+            </div>
+          </details>
+
+          <div class="scc-add-guest">
+            <input id="scc-new-guest" class="field" type="text" placeholder="Add a guest…" />
+            <button id="scc-add-guest-btn" class="btn btn-secondary">Add</button>
+          </div>
+
+          <p class="scc-hint">Drag a chip onto a seat. Unseated guests:</p>
+          <div id="scc-tray" class="scc-tray" aria-label="Unseated guests"></div>
+          <ul id="scc-roster" class="scc-roster" aria-label="Guest roster"></ul>
+        </section>
+
+        <section class="panel scc-card">
+          <header class="scc-card-h"><span>Seating rules</span></header>
+          <div class="scc-rule-add">
+            <select id="scc-rule-type" class="field">
+              <option value="together">Keep together</option>
+              <option value="apart">Keep apart</option>
+            </select>
+            <select id="scc-rule-a" class="field"></select>
+            <select id="scc-rule-b" class="field"></select>
+            <button id="scc-rule-add-btn" class="btn btn-secondary">Add</button>
+          </div>
+          <ul id="scc-rules" class="scc-rules"></ul>
+        </section>
+
+        <section id="scc-inspector" class="panel scc-card scc-hidden">
+          <header class="scc-card-h"><span>Selected table</span></header>
+          <label class="scc-tb-field">
+            <span>Label</span>
+            <input id="scc-tbl-label" class="field" type="text" />
+          </label>
+          <div class="scc-inspector-row">
+            <label class="scc-tb-field">
+              <span>Shape</span>
+              <select id="scc-tbl-shape" class="field">
+                <option value="round">Round</option>
+                <option value="rect">Rectangular</option>
+                <option value="head">Head table</option>
+                <option value="sweetheart">Sweetheart</option>
+                <option value="ushape">U-shape</option>
+              </select>
+            </label>
+            <label class="scc-tb-field">
+              <span>Seats</span>
+              <input id="scc-tbl-seats" class="field" type="number" min="1" max="24" />
+            </label>
+          </div>
+          <label class="scc-tb-field">
+            <span>Rotation: <span id="scc-rot-val">0</span>°</span>
+            <input id="scc-tbl-rot" type="range" min="0" max="359" value="0" class="scc-range" />
+          </label>
+          <button id="scc-tbl-delete" class="btn btn-tertiary scc-danger">Delete table</button>
+        </section>
+      </aside>
+
+      <!-- ── Canvas ─────────────────────────────────────────────── -->
+      <div class="scc-stage panel panel-lift">
+        <svg id="scc-svg" viewBox="0 0 1000 720" role="img"
+          aria-label="Seating chart floor plan"></svg>
       </div>
     </div>
+
+    <p id="scc-note" class="scc-note scc-hidden" role="status"></p>
+
+    <!-- ── Print target (PDF + table cards) ──────────────────────── -->
+    <div id="scc-print" class="scc-print" aria-hidden="true"></div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free seating chart creator distributes a guest list across round
-      tables and draws each table with its guests' names, ready to download as a
-      PNG. Set how many tables and seats per table you need and guests are shared
-      out evenly. It is perfect for weddings, banquets, classrooms and events.
-      Everything runs in your browser.
+      This free seating chart creator is a full drag-and-drop floor plan editor
+      that runs entirely in your browser. Start from a template — wedding
+      reception, banquet hall, classroom, restaurant, theater rows or a U-shape
+      meeting — or build from scratch by adding round, rectangular, head,
+      sweetheart and U-shaped tables. Drag guests from the roster straight onto
+      any seat, swap two guests with a single drag, reposition and rotate tables
+      anywhere on the canvas, and resize any table's seat count on the fly.
+    </p>
+    <p>
+      Import your guest list by pasting from Excel, Google Sheets or a CSV file —
+      columns for name, group, side and meal are detected automatically. Set
+      keep-together and keep-apart rules, then let auto-seat fill the remaining
+      guests while respecting them. When you're done, download a high-resolution
+      PNG floor plan, save a PDF, or print table cards with each table's guest
+      list. A day-of "find my seat" search highlights any guest's table. Nothing
+      is uploaded — your guest list never leaves your device.
     </p>
   </div>
 </ToolLayout>
 
-<script>
-  const titleEl = document.getElementById('scc-title') as HTMLInputElement;
-  const guestsEl = document.getElementById('scc-guests') as HTMLTextAreaElement;
-  const tablesEl = document.getElementById('scc-tables') as HTMLInputElement;
-  const seatsEl = document.getElementById('scc-seats') as HTMLInputElement;
-  const noteEl = document.getElementById('scc-note') as HTMLParagraphElement;
-  const canvas = document.getElementById('scc-canvas') as HTMLCanvasElement;
-  const ctx = canvas.getContext('2d')!;
+<style>
+  .scc { display: flex; flex-direction: column; gap: 1rem; }
 
-  function guests(): string[] {
-    return guestsEl.value.split('\n').map((s) => s.trim()).filter((s) => s !== '');
+  .scc-toolbar {
+    display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.75rem;
+    padding: 0.875rem 1rem;
+  }
+  .scc-tb-field { display: flex; flex-direction: column; gap: 0.25rem;
+    font-size: 0.75rem; color: var(--color-ink-subtle); min-width: 8.5rem; }
+  .scc-tb-field > span { padding-left: 0.125rem; }
+  .scc-grow { flex: 1 1 12rem; }
+  .scc-tb-actions { display: flex; gap: 0.5rem; margin-left: auto; align-items: flex-end; }
+
+  .scc-main { display: grid; grid-template-columns: 320px 1fr; gap: 1rem; align-items: start; }
+  @media (max-width: 860px) { .scc-main { grid-template-columns: 1fr; } }
+
+  .scc-rail { display: flex; flex-direction: column; gap: 1rem; }
+  @media (min-width: 861px) {
+    /* Rail scrolls on its own; canvas stays put. 8rem ≈ page header + toolbar. */
+    .scc-rail { position: sticky; top: 1rem; max-height: calc(100vh - 8rem); overflow-y: auto; padding-right: 0.25rem; }
+  }
+  .scc-card { padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+  .scc-card-h { display: flex; align-items: center; justify-content: space-between;
+    font-weight: 600; color: var(--color-ink); font-size: 0.9375rem; }
+
+  .scc-import summary { cursor: pointer; font-size: 0.8125rem; color: var(--color-primary-hover); }
+  .scc-import[open] summary { margin-bottom: 0.5rem; }
+  .scc-hint { font-size: 0.75rem; color: var(--color-ink-subtle); line-height: 1.4; margin: 0; }
+  .scc-mono { font-family: ui-monospace, monospace; font-size: 12px; min-height: 6rem; resize: vertical; }
+  .scc-import-btns, .scc-import-btns { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+
+  .scc-add-guest { display: flex; gap: 0.5rem; }
+  .scc-add-guest .field { flex: 1; }
+
+  .scc-tray { display: flex; flex-wrap: wrap; gap: 0.375rem; min-height: 2.25rem;
+    padding: 0.5rem; border: 1px dashed var(--color-hairline-strong); border-radius: var(--radius-md); }
+  /* chips are created via document.createElement, so they miss Astro's scope
+     hash — :global() lets these rules reach them. */
+  :global(.scc-chip) {
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    background: var(--color-surface-3); border: 1px solid var(--color-hairline-tertiary);
+    color: var(--color-primary-hover); border-radius: 999px;
+    padding: 0.3rem 0.75rem; font-size: 0.8125rem; cursor: grab; user-select: none;
+    touch-action: none; transition: background 0.12s, border-color 0.12s;
+  }
+  :global(.scc-chip:hover) { cursor: grab; background: var(--color-surface-4, var(--color-surface-3));
+    border-color: var(--color-primary); }
+  :global(.scc-chip:active) { cursor: grabbing; }
+  :global(.scc-grip) { color: var(--color-ink-tertiary); font-size: 0.9rem; line-height: 1; letter-spacing: -1px; }
+  :global(body.scc-dragging), :global(body.scc-dragging *) { cursor: grabbing !important; }
+  :global(.scc-chip[data-side])::before { content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--dot, transparent); }
+
+  .scc-roster { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column;
+    gap: 0.25rem; max-height: 14rem; overflow-y: auto; }
+  .scc-roster li { display: grid; grid-template-columns: 1fr auto auto; gap: 0.375rem;
+    align-items: center; font-size: 0.8125rem; color: var(--color-ink-muted); }
+  .scc-roster .field { padding: 0.25rem 0.375rem; font-size: 0.75rem; }
+  .scc-roster button { background: none; border: none; color: var(--color-ink-tertiary);
+    cursor: pointer; font-size: 1rem; line-height: 1; padding: 0 0.25rem; }
+  .scc-roster button:hover { color: var(--color-ink); }
+
+  .scc-rule-add { display: grid; grid-template-columns: 1fr 1fr; gap: 0.375rem; }
+  .scc-rule-add select:first-child { grid-column: 1 / -1; }
+  .scc-rule-add button { grid-column: 1 / -1; }
+  .scc-rules { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.25rem; }
+  .scc-rules li { display: flex; align-items: center; justify-content: space-between;
+    font-size: 0.8125rem; color: var(--color-ink-muted);
+    background: var(--color-surface-2); border-radius: var(--radius-sm); padding: 0.25rem 0.5rem; }
+  .scc-rules button { background: none; border: none; color: var(--color-ink-tertiary); cursor: pointer; }
+  .scc-rules button:hover { color: var(--color-ink); }
+
+  .scc-inspector-row { display: grid; grid-template-columns: 1fr 5rem; gap: 0.5rem; }
+  .scc-inspector-row .scc-tb-field { min-width: 0; } /* let seats field shrink into its column */
+  .scc-range { width: 100%; accent-color: var(--color-primary); }
+  .scc-danger { color: #e5484d; }
+  .scc-danger:hover { background: rgba(229,72,77,0.1); }
+
+  .scc-stage { padding: 0.5rem; overflow: auto; }
+  #scc-svg { width: 100%; height: auto; display: block; touch-action: none; background: var(--color-canvas);
+    border-radius: var(--radius-md); }
+
+  .scc-note { font-size: 0.8125rem; color: #f5a524; }
+  .scc-hidden { display: none !important; }
+
+  /* Drag ghost */
+  :global(.scc-ghost) { position: fixed; z-index: 60; pointer-events: none; opacity: 0.9;
+    transform: translate(-50%, -50%); }
+
+  /* Print view — hidden on screen, revealed only during print.
+     :global() so the rules escape Astro's component scoping and can hide the
+     Header/Footer (separate components) during print. */
+  #scc-print { display: none; }
+  @media print {
+    :global(#scc-print) { display: block !important; }
+    :global(body.scc-printing *) { visibility: hidden; }
+    :global(body.scc-printing #scc-print),
+    :global(body.scc-printing #scc-print *) { visibility: visible; }
+    :global(body.scc-printing #scc-print) { position: absolute; left: 0; top: 0; width: 100%; }
+  }
+</style>
+
+<script>
+  type Shape = 'round' | 'rect' | 'head' | 'sweetheart' | 'ushape';
+  interface Guest { id: string; name: string; group: string; side: string; meal: string; }
+  interface Table { id: string; label: string; shape: Shape; seats: (string | null)[]; x: number; y: number; rotation: number; }
+  interface Rule { type: 'together' | 'apart'; a: string; b: string; }
+
+  const VB_W = 1000, VB_H = 720;
+  const SIDE_DOTS: Record<string, string> = { Bride: '#e05a8f', Groom: '#5e8fe0', '': 'transparent' };
+
+  let guests: Guest[] = [];
+  let tables: Table[] = [];
+  let rules: Rule[] = [];
+  let selectedId: string | null = null;
+  let uid = 0;
+  const nid = (p: string) => `${p}${++uid}`;
+
+  // ── DOM refs ───────────────────────────────────────────────────
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const svg = $('scc-svg') as unknown as SVGSVGElement;
+  const titleEl = $<HTMLInputElement>('scc-title');
+  const trayEl = $('scc-tray');
+  const rosterEl = $('scc-roster');
+  const rulesEl = $('scc-rules');
+  const countEl = $('scc-count');
+  const noteEl = $('scc-note');
+  const inspector = $('scc-inspector');
+
+  // ── Geometry: seat positions per shape (local coords, centered) ─
+  // Returns { body: string (svg markup), seats: {x,y}[] } for `capacity` seats.
+  function tableGeom(shape: Shape, cap: number): { body: string; seats: { x: number; y: number }[] } {
+    const seats: { x: number; y: number }[] = [];
+    let body = '';
+    const rect = (w: number, h: number) =>
+      `<rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" rx="8" class="scc-body"/>`;
+
+    if (shape === 'round') {
+      const r = Math.max(38, 12 + cap * 6);
+      body = `<circle cx="0" cy="0" r="${r}" class="scc-body"/>`;
+      for (let i = 0; i < cap; i++) {
+        const a = (i / cap) * Math.PI * 2 - Math.PI / 2;
+        seats.push({ x: Math.cos(a) * (r + 22), y: Math.sin(a) * (r + 22) });
+      }
+    } else if (shape === 'sweetheart') {
+      const w = 90, h = 46;
+      body = rect(w, h);
+      const n = Math.max(1, cap);
+      for (let i = 0; i < n; i++) seats.push({ x: (i - (n - 1) / 2) * 40, y: -h / 2 - 20 });
+    } else if (shape === 'head') {
+      // Seats on one long side only.
+      const w = Math.max(120, cap * 46), h = 52;
+      body = rect(w, h);
+      for (let i = 0; i < cap; i++) seats.push({ x: (i - (cap - 1) / 2) * 46, y: -h / 2 - 20 });
+    } else if (shape === 'rect') {
+      // Banquet: half top, half bottom.
+      const top = Math.ceil(cap / 2), bot = cap - top;
+      const perSide = Math.max(top, bot);
+      const w = Math.max(120, perSide * 46), h = 60;
+      body = rect(w, h);
+      const place = (n: number, y: number) => {
+        for (let i = 0; i < n; i++) seats.push({ x: (i - (n - 1) / 2) * 46, y });
+      };
+      place(top, -h / 2 - 20);
+      place(bot, h / 2 + 20);
+    } else {
+      // U-shape: seats along the inside of a U.
+      const w = 200, h = 160, t = 40;
+      body =
+        `<path d="M ${-w / 2} ${-h / 2} h ${w} v ${h} h ${-t} v ${-(h - t)} h ${-(w - 2 * t)} v ${h - t} h ${-t} Z" class="scc-body"/>`;
+      const inner = [-w / 2 + t, h / 2 - t, w / 2 - t]; // left x, bottom y, right x
+      // distribute seats: left column, bottom row, right column
+      const per = Math.ceil(cap / 3);
+      let placed = 0;
+      for (let i = 0; i < per && placed < cap; i++, placed++)
+        seats.push({ x: inner[0] - 22, y: -h / 2 + t + i * 34 });
+      for (let i = 0; i < per && placed < cap; i++, placed++)
+        seats.push({ x: -w / 2 + t + 20 + i * 34, y: inner[1] + 22 });
+      for (let i = 0; i < per && placed < cap; i++, placed++)
+        seats.push({ x: inner[2] + 22, y: h / 2 - t - i * 34 });
+    }
+    return { body, seats };
   }
 
-  function distribute(): string[][] {
-    const list = guests();
-    const nTables = Math.max(1, Math.min(30, Number(tablesEl.value) || 1));
-    const cap = Math.max(1, Math.min(20, Number(seatsEl.value) || 1));
-    const tables: string[][] = Array.from({ length: nTables }, () => []);
+  // ── CSV / paste parser ─────────────────────────────────────────
+  const HEADER_WORDS = ['name', 'guest', 'group', 'table', 'side', 'meal', 'diet', 'entree'];
+  function parseGuests(text: string): Guest[] {
+    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    if (!lines.length) return [];
+    const delim = lines[0].includes('\t') ? '\t' : lines[0].includes(',') ? ',' : '';
+    const split = (l: string) => (delim ? l.split(delim).map((c) => c.trim()) : [l]);
+    // header detection: first row cells are known column words
+    let cols = ['name', 'group', 'side', 'meal'];
+    let start = 0;
+    if (delim) {
+      const first = split(lines[0]).map((c) => c.toLowerCase());
+      if (first.some((c) => HEADER_WORDS.includes(c))) {
+        cols = first;
+        start = 1;
+      }
+    }
+    const idx = (want: string) => cols.findIndex((c) => c.includes(want));
+    const iName = Math.max(0, idx('name') === -1 ? (idx('guest') === -1 ? 0 : idx('guest')) : idx('name'));
+    const iGroup = idx('group'), iSide = idx('side'), iMeal = idx('meal') === -1 ? idx('entree') : idx('meal');
+    const out: Guest[] = [];
+    for (let i = start; i < lines.length; i++) {
+      const c = split(lines[i]);
+      const name = (c[iName] || '').trim();
+      if (!name) continue;
+      out.push({
+        id: nid('g'), name,
+        group: iGroup > -1 ? c[iGroup] || '' : '',
+        side: iSide > -1 ? c[iSide] || '' : '',
+        meal: iMeal > -1 ? c[iMeal] || '' : '',
+      });
+    }
+    return out;
+  }
+
+  // ── Templates ──────────────────────────────────────────────────
+  function applyTemplate(name: string): Table[] {
+    const mk = (shape: Shape, cap: number, x: number, y: number, label: string, rotation = 0): Table =>
+      ({ id: nid('t'), label, shape, seats: Array(cap).fill(null), x, y, rotation });
+    const out: Table[] = [];
+    if (name === 'wedding') {
+      out.push(mk('sweetheart', 2, 500, 110, 'Sweethearts'));
+      const cols = 3, rows = 2;
+      for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++)
+          out.push(mk('round', 8, 230 + c * 270, 320 + r * 250, `Table ${r * cols + c + 1}`));
+    } else if (name === 'banquet') {
+      for (let r = 0; r < 3; r++)
+        for (let c = 0; c < 3; c++)
+          out.push(mk('rect', 8, 220 + c * 290, 160 + r * 240, `Table ${r * 3 + c + 1}`));
+    } else if (name === 'classroom') {
+      out.push(mk('head', 4, 500, 90, 'Teacher'));
+      let n = 1;
+      for (let r = 0; r < 3; r++)
+        for (let c = 0; c < 4; c++)
+          out.push(mk('sweetheart', 2, 200 + c * 200, 260 + r * 150, `Desk ${n++}`));
+    } else if (name === 'restaurant') {
+      out.push(mk('round', 6, 250, 200, 'T1'));
+      out.push(mk('round', 4, 500, 180, 'T2'));
+      out.push(mk('round', 8, 760, 220, 'T3'));
+      out.push(mk('rect', 4, 250, 450, 'Booth 1'));
+      out.push(mk('rect', 4, 520, 470, 'Booth 2'));
+      out.push(mk('sweetheart', 2, 780, 480, 'Bar'));
+    } else if (name === 'theater') {
+      for (let r = 0; r < 4; r++)
+        out.push(mk('head', 8, 500, 140 + r * 140, `Row ${r + 1}`));
+    } else if (name === 'ushape') {
+      out.push(mk('ushape', 12, 500, 360, 'Boardroom'));
+    }
+    return out;
+  }
+
+  // ── Auto-seat (greedy, rule-aware) ─────────────────────────────
+  // ponytail: greedy first-fit; upgrade to backtracking only if real lists pack badly.
+  function autoSeat(): void {
+    const seatedIds = new Set(tables.flatMap((t) => t.seats).filter(Boolean) as string[]);
+    const pending = guests.filter((g) => !seatedIds.has(g.id));
+    const apart = (a: string, b: string) =>
+      rules.some((r) => r.type === 'apart' && ((r.a === a && r.b === b) || (r.a === b && r.b === a)));
+    const tableHas = (t: Table, id: string) => t.seats.includes(id);
+    const canSit = (t: Table, id: string) =>
+      t.seats.includes(null) && !t.seats.some((s) => s && apart(s, id));
+
+    // keep-together: try to route paired guests to the same table
+    const partnerOf = (id: string) => {
+      const r = rules.find((r) => r.type === 'together' && (r.a === id || r.b === id));
+      return r ? (r.a === id ? r.b : r.a) : null;
+    };
 
     let overflow = 0;
-    list.forEach((g, i) => {
-      // Round-robin placement keeps tables balanced; fall back to any table with room.
-      const idx = i % nTables;
-      if (tables[idx].length < cap) {
-        tables[idx].push(g);
-        return;
-      }
-      const free = tables.find((t) => t.length < cap);
-      if (free) free.push(g);
-      else overflow++;
-    });
-
-    if (overflow > 0) {
-      noteEl.textContent = `${overflow} guest(s) could not be seated — add tables or seats.`;
-      noteEl.classList.remove('hidden');
-    } else {
-      noteEl.classList.add('hidden');
+    for (const g of pending) {
+      let target: Table | undefined;
+      const mate = partnerOf(g.id);
+      if (mate) target = tables.find((t) => tableHas(t, mate) && canSit(t, g.id));
+      if (!target) target = tables.find((t) => canSit(t, g.id));
+      if (!target) { overflow++; continue; }
+      target.seats[target.seats.indexOf(null)] = g.id;
     }
-    return tables;
+    note(overflow ? `${overflow} guest(s) had no valid seat — add tables or relax rules.` : '');
   }
 
-  function draw(): void {
-    const tables = distribute();
-    const scale = 2;
-    const cols = Math.min(tables.length, 3);
-    const rows = Math.ceil(tables.length / cols);
-    const cellW = 220;
-    const cellH = 220;
-    const padTop = 80;
-    const padSide = 20;
-    const width = padSide * 2 + cols * cellW;
-    const height = padTop + rows * cellH + 20;
+  // ── Helpers ────────────────────────────────────────────────────
+  const guestById = (id: string | null) => guests.find((g) => g.id === id) || null;
+  const seatedSet = () => new Set(tables.flatMap((t) => t.seats).filter(Boolean) as string[]);
+  function note(msg: string) {
+    noteEl.textContent = msg;
+    noteEl.classList.toggle('scc-hidden', !msg);
+  }
+  function unseat(id: string) {
+    for (const t of tables) {
+      const i = t.seats.indexOf(id);
+      if (i > -1) t.seats[i] = null;
+    }
+  }
 
-    canvas.width = width * scale;
-    canvas.height = height * scale;
-    canvas.style.width = width + 'px';
-    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  // ── Render ─────────────────────────────────────────────────────
+  function render() {
+    renderRoster();
+    renderRules();
+    renderSVG();
+    renderInspector();
+    countEl.textContent = String(guests.length);
+    refreshAutoseatLabel();
+  }
 
-    ctx.fillStyle = '#0f1011';
-    ctx.fillRect(0, 0, width, height);
+  function renderRoster() {
+    const seated = seatedSet();
+    // tray = unseated draggable chips
+    trayEl.innerHTML = '';
+    const unseated = guests.filter((g) => !seated.has(g.id));
+    if (!unseated.length) trayEl.innerHTML = '<span class="scc-hint">All guests seated.</span>';
+    for (const g of unseated) trayEl.appendChild(chip(g));
 
-    ctx.fillStyle = '#f7f8f8';
-    ctx.font = '600 24px Inter, system-ui, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillText(titleEl.value || 'Seating Chart', padSide, 50);
+    // roster = editable rows
+    rosterEl.innerHTML = '';
+    for (const g of guests) {
+      const li = document.createElement('li');
+      const name = document.createElement('input');
+      name.className = 'field'; name.value = g.name;
+      name.oninput = () => { g.name = name.value; renderRuleSelectsOnly(); };
+      const tag = document.createElement('span');
+      tag.textContent = seated.has(g.id) ? '●' : '○';
+      tag.style.color = seated.has(g.id) ? 'var(--color-primary-hover)' : 'var(--color-ink-tertiary)';
+      tag.title = seated.has(g.id) ? 'Seated' : 'Unseated';
+      const del = document.createElement('button');
+      del.textContent = '×'; del.title = 'Remove guest';
+      del.onclick = () => { unseat(g.id); guests = guests.filter((x) => x !== g); rules = rules.filter((r) => r.a !== g.id && r.b !== g.id); render(); };
+      li.append(name, tag, del);
+      rosterEl.appendChild(li);
+    }
+    renderRuleSelectsOnly();
+  }
 
-    tables.forEach((seats, i) => {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const cx = padSide + col * cellW + cellW / 2;
-      const cy = padTop + row * cellH + cellH / 2;
-      const radius = 52;
+  function chip(g: Guest): HTMLElement {
+    const el = document.createElement('div');
+    el.className = 'scc-chip'; el.dataset.guest = g.id; el.textContent = g.name;
+    el.title = 'Drag onto a seat';
+    if (g.side) { el.dataset.side = g.side; el.style.setProperty('--dot', SIDE_DOTS[g.side] || '#8a8f98'); }
+    el.addEventListener('pointerdown', (e) => startGuestDrag(e, g.id, el));
+    return el;
+  }
 
-      // table circle
-      ctx.beginPath();
-      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-      ctx.fillStyle = '#141516';
-      ctx.fill();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = '#5e6ad2';
-      ctx.stroke();
+  function renderRuleSelectsOnly() {
+    const opts = guests.map((g) => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+    for (const id of ['scc-rule-a', 'scc-rule-b']) {
+      const sel = $<HTMLSelectElement>(id);
+      const prev = sel.value;
+      sel.innerHTML = opts;
+      if ([...sel.options].some((o) => o.value === prev)) sel.value = prev;
+    }
+  }
 
-      ctx.fillStyle = '#828fff';
-      ctx.font = '600 13px Inter, system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(`Table ${i + 1}`, cx, cy - 8);
-      ctx.fillStyle = '#8a8f98';
-      ctx.font = '11px Inter, system-ui, sans-serif';
-      ctx.fillText(`${seats.length} guest${seats.length === 1 ? '' : 's'}`, cx, cy + 10);
-
-      // guest name chips around the circle
-      const n = seats.length;
-      ctx.font = '11px Inter, system-ui, sans-serif';
-      seats.forEach((name, si) => {
-        const angle = (si / Math.max(n, 1)) * Math.PI * 2 - Math.PI / 2;
-        const gx = cx + Math.cos(angle) * (radius + 30);
-        const gy = cy + Math.sin(angle) * (radius + 30);
-
-        let label = name;
-        while (ctx.measureText(label).width > 70 && label.length > 1) {
-          label = label.slice(0, -2) + '…';
-        }
-        const tw = ctx.measureText(label).width;
-
-        ctx.fillStyle = '#18191a';
-        ctx.strokeStyle = '#34343a';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.roundRect(gx - tw / 2 - 6, gy - 9, tw + 12, 18, 6);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = '#f7f8f8';
-        ctx.fillText(label, gx, gy);
-      });
+  function renderRules() {
+    rulesEl.innerHTML = '';
+    if (!rules.length) { rulesEl.innerHTML = '<li class="scc-hint" style="background:none">No rules yet.</li>'; return; }
+    rules.forEach((r, i) => {
+      const li = document.createElement('li');
+      const a = guestById(r.a)?.name || '?', b = guestById(r.b)?.name || '?';
+      const label = document.createElement('span');
+      label.textContent = `${a} ${r.type === 'together' ? '⇔' : '⇎'} ${b}`;
+      const del = document.createElement('button');
+      del.textContent = '×';
+      del.onclick = () => { rules.splice(i, 1); render(); };
+      li.append(label, del);
+      rulesEl.appendChild(li);
     });
   }
 
-  [titleEl, guestsEl, tablesEl, seatsEl].forEach((el) => el.addEventListener('input', draw));
+  function renderSVG() {
+    const parts: string[] = [];
+    parts.push(`<text x="24" y="42" class="scc-title-t">${escapeHtml(titleEl.value || 'Seating Chart')}</text>`);
+    for (const t of tables) {
+      const { body, seats } = tableGeom(t.shape, t.seats.length);
+      const sel = t.id === selectedId;
+      parts.push(`<g class="scc-table ${sel ? 'is-sel' : ''}" transform="translate(${t.x},${t.y}) rotate(${t.rotation})">
+        <g class="scc-table-hit" data-table="${t.id}">${body}</g>
+        <text class="scc-table-label" text-anchor="middle" y="4">${escapeHtml(t.label)}</text>
+        <text class="scc-table-sub" text-anchor="middle" y="20">${t.seats.filter(Boolean).length}/${t.seats.length}</text>
+        ${seats.map((p, i) => {
+          const gid = t.seats[i]; const g = guestById(gid);
+          return `<g class="scc-seat" data-seat="${t.id}:${i}" transform="translate(${p.x},${p.y})">
+            <circle r="15" class="${g ? 'scc-seat-full' : 'scc-seat-empty'}"/>
+            ${g ? `<title>${escapeHtml(g.name)}</title><text class="scc-seat-label" text-anchor="middle" y="3" transform="rotate(${-t.rotation})">${escapeHtml(truncate(g.name, 8))}</text>` : ''}
+          </g>`;
+        }).join('')}
+        ${sel ? `<g class="scc-rot" data-rot="${t.id}" transform="translate(0,${-rotHandleDist(t.shape)})"><circle r="9"/><path d="M-4 0a4 4 0 1 0 8 0" fill="none"/></g>` : ''}
+      </g>`);
+    }
+    svg.innerHTML = parts.join('');
+  }
 
-  document.getElementById('scc-png')!.addEventListener('click', () => {
-    const link = document.createElement('a');
-    link.download = 'toolcities-seating-chart.png';
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+  function rotHandleDist(shape: Shape) {
+    return shape === 'round' ? 92 : shape === 'ushape' ? 110 : 70;
+  }
+
+  function renderInspector() {
+    const t = tables.find((x) => x.id === selectedId);
+    inspector.classList.toggle('scc-hidden', !t);
+    if (!t) return;
+    $<HTMLInputElement>('scc-tbl-label').value = t.label;
+    $<HTMLSelectElement>('scc-tbl-shape').value = t.shape;
+    $<HTMLInputElement>('scc-tbl-seats').value = String(t.seats.length);
+    $<HTMLInputElement>('scc-tbl-rot').value = String(t.rotation);
+    $('scc-rot-val').textContent = String(t.rotation);
+  }
+
+  function truncate(s: string, n: number) { return s.length > n ? s.slice(0, n - 1) + '…' : s; }
+  function escapeHtml(s: string) { return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!)); }
+
+  // ── Coordinate conversion ──────────────────────────────────────
+  function toSVG(clientX: number, clientY: number) {
+    const pt = svg.createSVGPoint(); pt.x = clientX; pt.y = clientY;
+    const m = svg.getScreenCTM(); if (!m) return { x: 0, y: 0 };
+    const p = pt.matrixTransform(m.inverse());
+    return { x: p.x, y: p.y };
+  }
+
+  // ── Drag: tables + rotation (delegated on SVG) ─────────────────
+  let drag: null | { kind: 'move' | 'rot'; id: string; ox: number; oy: number } = null;
+
+  svg.addEventListener('pointerdown', (e) => {
+    const el = e.target as Element;
+    const rot = el.closest('[data-rot]');
+    const seat = el.closest('[data-seat]');
+    const tableHit = el.closest('[data-table]');
+
+    if (seat) { startSeatDrag(e, (seat as HTMLElement).dataset.seat!); return; }
+    if (rot) {
+      const id = (rot as HTMLElement).dataset.rot!;
+      selectedId = id; drag = { kind: 'rot', id, ox: 0, oy: 0 }; render();
+      svg.setPointerCapture(e.pointerId); return;
+    }
+    if (tableHit) {
+      const id = (tableHit as HTMLElement).dataset.table!;
+      selectedId = id;
+      const t = tables.find((x) => x.id === id)!;
+      const p = toSVG(e.clientX, e.clientY);
+      drag = { kind: 'move', id, ox: p.x - t.x, oy: p.y - t.y };
+      render();
+      svg.setPointerCapture(e.pointerId);
+      return;
+    }
+    // click empty space → deselect
+    selectedId = null; render();
   });
 
-  draw();
+  svg.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const t = tables.find((x) => x.id === drag!.id); if (!t) return;
+    const p = toSVG(e.clientX, e.clientY);
+    if (drag.kind === 'move') {
+      t.x = clamp(p.x - drag.ox, 40, VB_W - 40);
+      t.y = clamp(p.y - drag.oy, 50, VB_H - 40);
+    } else {
+      const ang = Math.atan2(p.y - t.y, p.x - t.x) * 180 / Math.PI + 90;
+      t.rotation = ((Math.round(ang) % 360) + 360) % 360;
+    }
+    renderSVG(); renderInspector();
+  });
+
+  const endTableDrag = (e: PointerEvent) => { if (drag) { drag = null; try { svg.releasePointerCapture(e.pointerId); } catch {} } };
+  svg.addEventListener('pointerup', endTableDrag);
+  svg.addEventListener('pointercancel', endTableDrag);
+
+  const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
+  // ── Drag: guest chip / seat → seat ─────────────────────────────
+  let gdrag: null | { guestId: string; from: { tableId: string; idx: number } | null; ghost: HTMLElement; captureEl: Element; pointerId: number } = null;
+
+  function startGuestDrag(e: PointerEvent, guestId: string, sourceEl: Element) {
+    e.preventDefault();
+    beginGuestDrag(e, guestId, null, sourceEl);
+  }
+  function startSeatDrag(e: PointerEvent, seatKey: string) {
+    const [tableId, idxS] = seatKey.split(':'); const idx = +idxS;
+    const t = tables.find((x) => x.id === tableId)!;
+    const gid = t.seats[idx];
+    if (!gid) { // empty seat → just select table
+      selectedId = tableId; render(); return;
+    }
+    beginGuestDrag(e, gid, { tableId, idx }, svg); // capture on the stable svg, not the seat <g>
+  }
+  // captureEl gets pointer capture so move/up keep firing after the pointer
+  // leaves the chip or crosses the scrollable rail — window listeners alone drop those.
+  function beginGuestDrag(e: PointerEvent, guestId: string, from: { tableId: string; idx: number } | null, captureEl: Element) {
+    const g = guestById(guestId); if (!g) return;
+    const ghost = document.createElement('div');
+    ghost.className = 'scc-chip scc-ghost'; ghost.textContent = g.name;
+    ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px';
+    document.body.appendChild(ghost);
+    gdrag = { guestId, from, ghost, captureEl, pointerId: e.pointerId };
+    document.body.classList.add('scc-dragging'); // grabbing cursor everywhere for the drag
+    try { captureEl.setPointerCapture(e.pointerId); } catch {}
+    captureEl.addEventListener('pointermove', onGuestMove as EventListener);
+    captureEl.addEventListener('pointerup', onGuestUp as EventListener, { once: true });
+    captureEl.addEventListener('pointercancel', onGuestUp as EventListener, { once: true });
+  }
+  function onGuestMove(e: PointerEvent) {
+    if (!gdrag) return;
+    gdrag.ghost.style.left = e.clientX + 'px';
+    gdrag.ghost.style.top = e.clientY + 'px';
+  }
+  function onGuestUp(e: PointerEvent) {
+    if (!gdrag) return;
+    gdrag.captureEl.removeEventListener('pointermove', onGuestMove as EventListener);
+    try { gdrag.captureEl.releasePointerCapture(gdrag.pointerId); } catch {}
+    document.body.classList.remove('scc-dragging');
+    gdrag.ghost.remove();
+    const target = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-seat]') as HTMLElement | null;
+    const { guestId, from } = gdrag;
+    gdrag = null;
+
+    if (target) {
+      const [tId, iS] = target.dataset.seat!.split(':'); const idx = +iS;
+      const t = tables.find((x) => x.id === tId)!;
+      const occupant = t.seats[idx];
+      if (from) {
+        const ft = tables.find((x) => x.id === from.tableId)!;
+        ft.seats[from.idx] = occupant; // swap (occupant may be null → move)
+      } else if (occupant) {
+        unseat(guestId); // ensure not double-seated; occupant goes back to tray
+      }
+      // remove the dragged guest from any other seat, then place
+      if (!from) unseat(guestId);
+      t.seats[idx] = guestId;
+    } else {
+      // dropped outside a seat → unseat
+      unseat(guestId);
+    }
+    render();
+  }
+
+  // ── Controls wiring ────────────────────────────────────────────
+  titleEl.addEventListener('input', renderSVG);
+
+  $('scc-add').addEventListener('click', () => {
+    const shape = $<HTMLSelectElement>('scc-add-shape').value as Shape;
+    const capDefault: Record<Shape, number> = { round: 8, rect: 8, head: 6, sweetheart: 2, ushape: 12 };
+    const cap = capDefault[shape];
+    const id = nid('t');
+    tables.push({ id, label: `Table ${tables.length + 1}`, shape, seats: Array(cap).fill(null),
+      x: 150 + (tables.length % 4) * 200, y: 200 + Math.floor(tables.length / 4) * 220, rotation: 0 });
+    selectedId = id; render();
+  });
+
+  $('scc-template').addEventListener('change', (e) => {
+    const val = (e.target as HTMLSelectElement).value;
+    if (!val) return;
+    if (tables.some((t) => t.seats.some(Boolean)) && !confirm('Replace the current layout? Seated guests will be unseated.')) {
+      (e.target as HTMLSelectElement).value = ''; return;
+    }
+    tables = applyTemplate(val);
+    selectedId = null;
+    render();
+  });
+
+  // Guests
+  const addGuestInput = $<HTMLInputElement>('scc-new-guest');
+  function addGuestFromInput() {
+    const name = addGuestInput.value.trim(); if (!name) return;
+    guests.push({ id: nid('g'), name, group: '', side: '', meal: '' });
+    addGuestInput.value = ''; render();
+  }
+  $('scc-add-guest-btn').addEventListener('click', addGuestFromInput);
+  addGuestInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addGuestFromInput(); });
+
+  $('scc-import-btn').addEventListener('click', () => {
+    const parsed = parseGuests($<HTMLTextAreaElement>('scc-import-text').value);
+    if (!parsed.length) { note('No guests found to import.'); return; }
+    tables.forEach((t) => t.seats.fill(null));
+    guests = parsed; rules = []; note(''); render();
+  });
+  $('scc-import-append').addEventListener('click', () => {
+    const parsed = parseGuests($<HTMLTextAreaElement>('scc-import-text').value);
+    guests.push(...parsed); render();
+  });
+
+  // Rules
+  $('scc-rule-add-btn').addEventListener('click', () => {
+    const type = $<HTMLSelectElement>('scc-rule-type').value as Rule['type'];
+    const a = $<HTMLSelectElement>('scc-rule-a').value, b = $<HTMLSelectElement>('scc-rule-b').value;
+    if (!a || !b || a === b) { note('Pick two different guests for a rule.'); return; }
+    if (rules.some((r) => r.type === type && ((r.a === a && r.b === b) || (r.a === b && r.b === a)))) return;
+    rules.push({ type, a, b }); note(''); render();
+  });
+
+  // Inspector
+  $('scc-tbl-label').addEventListener('input', (e) => { const t = sel(); if (t) { t.label = (e.target as HTMLInputElement).value; renderSVG(); } });
+  $('scc-tbl-shape').addEventListener('change', (e) => { const t = sel(); if (t) { t.shape = (e.target as HTMLSelectElement).value as Shape; render(); } });
+  $('scc-tbl-seats').addEventListener('change', (e) => {
+    const t = sel(); if (!t) return;
+    const n = clamp(+(e.target as HTMLInputElement).value || 1, 1, 24);
+    const kept = t.seats.filter(Boolean).slice(0, n) as string[];
+    t.seats = Array(n).fill(null).map((_, i) => kept[i] ?? null);
+    render();
+  });
+  $('scc-tbl-rot').addEventListener('input', (e) => { const t = sel(); if (t) { t.rotation = +(e.target as HTMLInputElement).value; $('scc-rot-val').textContent = String(t.rotation); renderSVG(); } });
+  $('scc-tbl-delete').addEventListener('click', () => { const t = sel(); if (!t) return; tables = tables.filter((x) => x !== t); selectedId = null; render(); });
+  function sel() { return tables.find((x) => x.id === selectedId) || null; }
+
+  // Auto-seat — toggles: seat everyone, or clear all seats if any are filled.
+  const autoseatBtn = $('scc-autoseat');
+  function refreshAutoseatLabel() {
+    autoseatBtn.textContent = seatedSet().size ? 'Clear seats' : 'Auto-seat';
+  }
+  autoseatBtn.addEventListener('click', () => {
+    if (seatedSet().size) tables.forEach((t) => t.seats.fill(null)); // empty all
+    else autoSeat();
+    render();
+  });
+
+  // Find my seat
+  $<HTMLInputElement>('scc-find').addEventListener('input', (e) => {
+    const q = (e.target as HTMLInputElement).value.trim().toLowerCase();
+    if (!q) { selectedId = null; render(); return; }
+    const g = guests.find((x) => x.name.toLowerCase().includes(q));
+    if (!g) { note('No matching guest.'); return; }
+    const t = tables.find((x) => x.seats.includes(g.id));
+    if (t) { selectedId = t.id; note(`${g.name} → ${t.label}`); render(); }
+    else note(`${g.name} is not seated yet.`);
+  });
+
+  // ── Export: PNG (SVG → canvas) ─────────────────────────────────
+  $('scc-png').addEventListener('click', () => {
+    const prevSel = selectedId; selectedId = null; renderSVG(); // hide selection chrome
+    const styled = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VB_W} ${VB_H}">${styleBlock()}${svg.innerHTML}</svg>`;
+    const blob = new Blob([styled], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      const scale = 2;
+      const c = document.createElement('canvas'); c.width = VB_W * scale; c.height = VB_H * scale;
+      const ctx = c.getContext('2d')!;
+      ctx.fillStyle = '#010102'; ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      const a = document.createElement('a');
+      a.download = 'toolcities-seating-chart.png'; a.href = c.toDataURL('image/png'); a.click();
+      selectedId = prevSel; renderSVG();
+    };
+    img.onerror = () => { note('PNG export failed.'); selectedId = prevSel; renderSVG(); };
+    img.src = url;
+  });
+
+  // Inline styles so the serialized SVG renders standalone.
+  function styleBlock() {
+    return `<style>
+      .scc-title-t{fill:#f7f8f8;font:600 26px Inter,system-ui,sans-serif}
+      .scc-body{fill:#141516;stroke:#5e6ad2;stroke-width:2}
+      .scc-table-label{fill:#828fff;font:600 13px Inter,system-ui,sans-serif}
+      .scc-table-sub{fill:#8a8f98;font:11px Inter,system-ui,sans-serif}
+      .scc-seat-empty{fill:#18191a;stroke:#34343a}
+      .scc-seat-full{fill:#5e6ad2}
+      .scc-seat-label{fill:#f7f8f8;font:10px Inter,system-ui,sans-serif}
+    </style>`;
+  }
+
+  // ── Export: PDF + table cards (print) ──────────────────────────
+  function printView(html: string) {
+    const host = $('scc-print');
+    host.innerHTML = `<div class="scc-print-root">${styleBlockHtml()}${html}</div>`;
+    document.body.classList.add('scc-printing');
+    window.print();
+  }
+  function styleBlockHtml() {
+    return `<style>
+      .scc-print-root{color:#111;font-family:Inter,system-ui,sans-serif;padding:24px}
+      .scc-print-root h1{font-size:24px;margin:0 0 16px}
+      .scc-print-root svg{width:100%;height:auto;border:1px solid #ddd;background:#010102}
+      .scc-card-print{page-break-inside:avoid;border:1px solid #ccc;border-radius:8px;padding:16px;margin:0 0 16px}
+      .scc-card-print h2{margin:0 0 4px;font-size:20px}
+      .scc-card-print ol{margin:8px 0 0 20px;font-size:15px;line-height:1.6}
+      @page{margin:16mm}
+    </style>`;
+  }
+
+  $('scc-pdf').addEventListener('click', () => {
+    const prevSel = selectedId; selectedId = null; renderSVG();
+    const svgOut = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VB_W} ${VB_H}">${styleBlock()}${svg.innerHTML}</svg>`;
+    selectedId = prevSel; renderSVG();
+    printView(`<h1>${escapeHtml(titleEl.value || 'Seating Chart')}</h1>${svgOut}`);
+  });
+
+  $('scc-cards').addEventListener('click', () => {
+    if (!tables.length) { note('Add a table first.'); return; }
+    const cards = tables.map((t) => {
+      const names = t.seats.map((s) => guestById(s)?.name).filter(Boolean) as string[];
+      const items = names.length ? names.map((n) => `<li>${escapeHtml(n)}</li>`).join('') : '<li><em>Empty</em></li>';
+      return `<div class="scc-card-print"><h2>${escapeHtml(t.label)}</h2>
+        <div>${names.length}/${t.seats.length} seated</div><ol>${items}</ol></div>`;
+    }).join('');
+    printView(`<h1>${escapeHtml(titleEl.value || 'Seating Chart')} — Table cards</h1>${cards}`);
+  });
+  window.addEventListener('afterprint', () => document.body.classList.remove('scc-printing'));
+
+  // ── SVG element styling (on-page) ──────────────────────────────
+  const pageStyle = document.createElement('style');
+  pageStyle.textContent = `
+    #scc-svg .scc-title-t{fill:var(--color-ink);font:600 26px var(--font-sans)}
+    #scc-svg .scc-body{fill:var(--color-surface-2);stroke:var(--color-hairline-strong);stroke-width:2}
+    #scc-svg .scc-table.is-sel .scc-body{stroke:var(--color-primary);stroke-width:2.5}
+    #scc-svg .scc-table-hit{cursor:grab}
+    #scc-svg .scc-table-label{fill:var(--color-primary-hover);font:600 13px var(--font-sans);pointer-events:none}
+    #scc-svg .scc-table-sub{fill:var(--color-ink-subtle);font:11px var(--font-sans);pointer-events:none}
+    #scc-svg .scc-seat{cursor:pointer}
+    #scc-svg .scc-seat-empty{fill:var(--color-surface-3);stroke:var(--color-hairline)}
+    #scc-svg .scc-seat-full{fill:var(--color-primary)}
+    #scc-svg .scc-seat-label{fill:var(--color-ink);font:10px var(--font-sans);pointer-events:none}
+    #scc-svg .scc-rot{cursor:grab;fill:var(--color-primary);stroke:#fff;stroke-width:1.5}
+  `;
+  document.head.appendChild(pageStyle);
+
+  // ── Boot ───────────────────────────────────────────────────────
+  function seedDemo() {
+    guests = parseGuests(`name, side, meal
+Alice, Bride, Chicken
+Ben, Groom, Vegan
+Carla, Bride, Fish
+David, Groom, Chicken
+Emma, Bride, Vegan
+Frank, Groom, Fish
+Grace, Bride, Chicken
+Henry, Groom, Vegan`);
+    tables = applyTemplate('wedding');
+    autoSeat();
+  }
+
+  // ── Self-test (?selftest) ──────────────────────────────────────
+  function runSelfTest() {
+    // geometry: correct seat counts, finite coords
+    (['round', 'rect', 'head', 'sweetheart', 'ushape'] as Shape[]).forEach((s) => {
+      const g = tableGeom(s, 6);
+      console.assert(g.seats.length === 6, `geom ${s} seat count`, g.seats.length);
+      console.assert(g.seats.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y)), `geom ${s} finite`);
+    });
+    // parser: header + delimiter detection
+    const p1 = parseGuests('name,side,meal\nAlice,Bride,Fish\nBen,Groom,Vegan');
+    console.assert(p1.length === 2 && p1[0].name === 'Alice' && p1[0].side === 'Bride' && p1[0].meal === 'Fish', 'parse csv+header', p1);
+    const p2 = parseGuests('Carla\nDavid');
+    console.assert(p2.length === 2 && p2[0].name === 'Carla', 'parse plain', p2);
+    const p3 = parseGuests('Alice\tBride\nBen\tGroom');
+    console.assert(p3.length === 2 && p3[0].side === 'Bride', 'parse tab', p3);
+    // autoseat: keep-apart never co-seated, keep-together co-seated when room
+    guests = [{ id: 'a', name: 'A', group: '', side: '', meal: '' }, { id: 'b', name: 'B', group: '', side: '', meal: '' },
+      { id: 'c', name: 'C', group: '', side: '', meal: '' }, { id: 'd', name: 'D', group: '', side: '', meal: '' }];
+    tables = [{ id: 't1', label: 'T1', shape: 'round', seats: [null, null], x: 300, y: 300, rotation: 0 },
+      { id: 't2', label: 'T2', shape: 'round', seats: [null, null], x: 600, y: 300, rotation: 0 }];
+    rules = [{ type: 'apart', a: 'a', b: 'b' }, { type: 'together', a: 'c', b: 'd' }];
+    autoSeat();
+    const sameTable = (x: string, y: string) => tables.some((t) => t.seats.includes(x) && t.seats.includes(y));
+    console.assert(!sameTable('a', 'b'), 'keep-apart respected', tables.map((t) => t.seats));
+    console.assert(sameTable('c', 'd'), 'keep-together respected', tables.map((t) => t.seats));
+    console.log('%cseating-chart self-test complete', 'color:#5e6ad2');
+    // reset to demo after test
+    guests = []; tables = []; rules = [];
+  }
+
+  if (new URLSearchParams(location.search).has('selftest')) runSelfTest();
+  seedDemo();
+  render();
 </script>
