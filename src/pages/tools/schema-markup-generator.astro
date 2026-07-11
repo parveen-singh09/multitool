@@ -1,98 +1,246 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
+import { SCHEMA_TYPES } from '../../lib/schema-markup';
 ---
 
 <ToolLayout slug="schema-markup-generator">
-  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-    <div class="flex flex-col gap-3">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Schema type
-        <select id="sc-type" class="field">
-          <option value="Article">Article</option>
-          <option value="Product">Product</option>
-          <option value="LocalBusiness">Local Business</option>
-          <option value="Organization">Organization</option>
-          <option value="Person">Person</option>
-          <option value="FAQPage">FAQ Page</option>
-          <option value="Event">Event</option>
-        </select>
-      </label>
-      <div id="sc-fields" class="flex flex-col gap-3"></div>
-    </div>
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Schema type
+      <select id="sm-type" class="field">
+        {SCHEMA_TYPES.map((t) => <option value={t.id}>{t.name}</option>)}
+      </select>
+    </label>
 
-    <div class="flex flex-col gap-2">
-      <label class="text-sm text-ink-subtle">JSON-LD (paste into a &lt;script&gt; tag)</label>
-      <pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto"><code id="sc-out" class="hljs" style="background:transparent;padding:0"></code></pre>
-      <button id="sc-copy" class="btn btn-secondary w-fit">Copy script tag</button>
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <!-- Form (rendered client-side from config) -->
+      <div id="sm-form" class="flex flex-col gap-4"></div>
+
+      <!-- Output -->
+      <div class="flex flex-col gap-3">
+        <div class="panel panel-lift flex flex-col gap-2 p-4">
+          <div class="flex items-center justify-between gap-3">
+            <span class="eyebrow text-primary-hover">JSON-LD output</span>
+            <div class="flex gap-2">
+              <button id="sm-copy" class="btn btn-secondary">Copy</button>
+              <button id="sm-download" class="btn btn-secondary">Download</button>
+            </div>
+          </div>
+          <pre class="hl-block" style="max-height:60vh;overflow:auto;margin:0"><code id="sm-out" class="hljs language-html" style="background:transparent;padding:0"></code></pre>
+        </div>
+
+        <div id="sm-hints" class="panel p-4 text-[13px] text-ink-subtle"></div>
+
+        <p class="text-[13px] text-ink-tertiary">
+          Paste the code inside a
+          <code>&lt;script type="application/ld+json"&gt;</code> tag in your page
+          <code>&lt;head&gt;</code>, then
+          <a href="https://search.google.com/test/rich-results" target="_blank" rel="noopener" class="text-primary-hover underline">test it with Google’s Rich Results Test</a>.
+        </p>
+      </div>
     </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free schema markup generator creates JSON-LD structured data for the
-      most useful Schema.org types — Article, Product, Local Business,
-      Organization, Person, FAQ and Event. Structured data helps search engines
-      understand your content and can unlock rich results like star ratings, FAQs
-      and event details. Fill in the fields and copy the ready-to-embed
-      <code class="font-mono text-ink">&lt;script type="application/ld+json"&gt;</code>.
-      Runs in your browser.
+      This free schema markup generator builds valid
+      <a href="https://schema.org" target="_blank" rel="noopener" class="text-primary-hover underline">Schema.org</a>
+      structured data as JSON-LD — the format Google recommends for rich results.
+      Pick one of 13 types (Article, Breadcrumb, Event, FAQ Page, How To, Job
+      Posting, Local Business, Organization, Person, Product, Recipe, Video and
+      Website), fill in the fields, and copy the generated markup straight into
+      your page. Repeatable sections let you add multiple FAQ questions, recipe
+      ingredients, HowTo steps, event tickets, product reviews and more. Empty
+      fields are dropped automatically so the output stays clean, and recommended
+      fields are flagged so your markup is more likely to qualify for rich
+      snippets. Everything runs in your browser — nothing is uploaded.
     </p>
   </div>
 </ToolLayout>
 
 <script>
   import { hl } from '../../lib/highlight';
+  import { SCHEMA_TYPES, buildJsonLd, missingRecommended, type SchemaType, type FieldDef } from '../../lib/schema-markup';
 
   const $ = (id: string) => document.getElementById(id)!;
-  const typeEl = $('sc-type') as HTMLSelectElement;
-  const fieldsEl = $('sc-fields')!;
-  const out = $('sc-out') as HTMLElement;
-  let rawOutput = '';
+  const typeSel = $('sm-type') as HTMLSelectElement;
+  const formEl = $('sm-form');
+  const outEl = $('sm-out') as HTMLElement;
+  const hintsEl = $('sm-hints');
+  let raw = '';
 
-  // Field definitions per type: [key, label, default].
-  const SCHEMAS: Record<string, [string, string, string][]> = {
-    Article: [['headline', 'Headline', 'How to Use Structured Data'], ['author', 'Author name', 'Jane Doe'], ['datePublished', 'Date published', '2026-01-01'], ['image', 'Image URL', 'https://example.com/image.jpg'], ['description', 'Description', 'A short summary.']],
-    Product: [['name', 'Product name', 'Wireless Headphones'], ['image', 'Image URL', 'https://example.com/product.jpg'], ['description', 'Description', 'Noise-cancelling headphones.'], ['brand', 'Brand', 'Acme'], ['price', 'Price', '99.99'], ['priceCurrency', 'Currency', 'USD']],
-    LocalBusiness: [['name', 'Business name', 'Joe\'s Coffee'], ['telephone', 'Phone', '+1-555-010-1234'], ['streetAddress', 'Street', '123 Main St'], ['addressLocality', 'City', 'Springfield'], ['addressRegion', 'State', 'CA'], ['postalCode', 'ZIP', '90000']],
-    Organization: [['name', 'Name', 'Acme Inc'], ['url', 'Website', 'https://example.com'], ['logo', 'Logo URL', 'https://example.com/logo.png']],
-    Person: [['name', 'Name', 'Jane Doe'], ['jobTitle', 'Job title', 'Engineer'], ['url', 'Website', 'https://example.com'], ['email', 'Email', 'jane@example.com']],
-    FAQPage: [['q1', 'Question 1', 'What is your return policy?'], ['a1', 'Answer 1', '30-day returns.'], ['q2', 'Question 2', 'Do you ship internationally?'], ['a2', 'Answer 2', 'Yes, worldwide.']],
-    Event: [['name', 'Event name', 'Web Dev Conf'], ['startDate', 'Start date', '2026-06-01T09:00'], ['location', 'Location', 'Convention Center'], ['description', 'Description', 'A conference for developers.']],
-  };
-
-  function renderFields() {
-    const defs = SCHEMAS[typeEl.value];
-    fieldsEl.innerHTML = defs.map(([key, label, def]) =>
-      `<label class="flex flex-col gap-1 text-sm text-ink-subtle">${label}<input data-key="${key}" class="sc-in field" value="${def.replace(/"/g, '&quot;')}" /></label>`
-    ).join('');
-    fieldsEl.querySelectorAll('.sc-in').forEach((el) => el.addEventListener('input', build));
+  function fieldControl(f: FieldDef, id: string): HTMLElement {
+    if (f.type === 'textarea') {
+      const t = document.createElement('textarea');
+      t.className = 'field';
+      t.rows = 3;
+      t.id = id;
+      if (f.placeholder) t.placeholder = f.placeholder;
+      return t;
+    }
+    if (f.type === 'select') {
+      const s = document.createElement('select');
+      s.className = 'field';
+      s.id = id;
+      for (const opt of f.options || []) {
+        const o = document.createElement('option');
+        o.value = opt;
+        // Show only the short tail of schema.org enum URLs.
+        o.textContent = opt.startsWith('https://schema.org/') ? opt.slice('https://schema.org/'.length) : opt;
+        s.append(o);
+      }
+      return s;
+    }
+    const i = document.createElement('input');
+    i.className = 'field';
+    i.type = f.type === 'url' ? 'text' : f.type;
+    i.id = id;
+    if (f.placeholder) i.placeholder = f.placeholder;
+    if (f.type === 'url' || f.type === 'text') i.spellcheck = false;
+    return i;
   }
 
-  function build() {
-    const type = typeEl.value;
-    const get = (k: string) => (fieldsEl.querySelector(`[data-key="${k}"]`) as HTMLInputElement)?.value ?? '';
-    let obj: Record<string, unknown> = { '@context': 'https://schema.org', '@type': type };
-
-    if (type === 'Article') Object.assign(obj, { headline: get('headline'), author: { '@type': 'Person', name: get('author') }, datePublished: get('datePublished'), image: get('image'), description: get('description') });
-    else if (type === 'Product') Object.assign(obj, { name: get('name'), image: get('image'), description: get('description'), brand: { '@type': 'Brand', name: get('brand') }, offers: { '@type': 'Offer', price: get('price'), priceCurrency: get('priceCurrency') } });
-    else if (type === 'LocalBusiness') Object.assign(obj, { name: get('name'), telephone: get('telephone'), address: { '@type': 'PostalAddress', streetAddress: get('streetAddress'), addressLocality: get('addressLocality'), addressRegion: get('addressRegion'), postalCode: get('postalCode') } });
-    else if (type === 'Organization') Object.assign(obj, { name: get('name'), url: get('url'), logo: get('logo') });
-    else if (type === 'Person') Object.assign(obj, { name: get('name'), jobTitle: get('jobTitle'), url: get('url'), email: get('email') });
-    else if (type === 'FAQPage') obj.mainEntity = [
-      { '@type': 'Question', name: get('q1'), acceptedAnswer: { '@type': 'Answer', text: get('a1') } },
-      { '@type': 'Question', name: get('q2'), acceptedAnswer: { '@type': 'Answer', text: get('a2') } },
-    ];
-    else if (type === 'Event') Object.assign(obj, { name: get('name'), startDate: get('startDate'), location: { '@type': 'Place', name: get('location') }, description: get('description') });
-
-    rawOutput = `<script type="application/ld+json">\n${JSON.stringify(obj, null, 2)}\n<\/script>`;
-    hl(out, rawOutput, 'json');
+  function labelWrap(f: FieldDef, control: HTMLElement): HTMLElement {
+    const l = document.createElement('label');
+    l.className = 'flex flex-col gap-1 text-[13px] text-ink-subtle' + (f.half ? '' : ' sm:col-span-2');
+    const span = document.createElement('span');
+    span.textContent = f.label;
+    if (f.recommended) {
+      const badge = document.createElement('span');
+      badge.textContent = ' · recommended';
+      badge.className = 'text-ink-tertiary';
+      span.append(badge);
+    }
+    l.append(span, control);
+    return l;
   }
 
-  typeEl.addEventListener('change', () => { renderFields(); build(); });
-  $('sc-copy').addEventListener('click', async (e) => {
+  function fieldGrid(fields: FieldDef[], prefix: string): HTMLElement {
+    const grid = document.createElement('div');
+    grid.className = 'grid grid-cols-1 gap-3 sm:grid-cols-2';
+    for (const f of fields) {
+      const ctrl = fieldControl(f, prefix + f.id);
+      ctrl.addEventListener('input', render);
+      grid.append(labelWrap(f, ctrl));
+    }
+    return grid;
+  }
+
+  function renderForm(t: SchemaType) {
+    formEl.textContent = '';
+
+    if (t.fields.length) formEl.append(fieldGrid(t.fields, `f_${t.id}_`));
+
+    for (const grp of t.groups || []) {
+      const section = document.createElement('div');
+      section.className = 'flex flex-col gap-2';
+      section.dataset.group = grp.id;
+
+      const head = document.createElement('div');
+      head.className = 'flex items-center justify-between';
+      const h = document.createElement('span');
+      h.className = 'eyebrow text-primary-hover';
+      h.textContent = grp.label;
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'btn btn-secondary text-[13px]';
+      add.textContent = '+ ' + grp.addLabel;
+      head.append(h, add);
+
+      const rows = document.createElement('div');
+      rows.className = 'flex flex-col gap-3';
+      rows.dataset.rows = grp.id;
+      section.append(head, rows);
+
+      const addRow = () => {
+        const row = document.createElement('div');
+        row.className = 'sm-row panel p-3 flex flex-col gap-2';
+        row.append(fieldGrid(grp.fields, `g_${t.id}_${grp.id}_${rows.children.length}_`));
+        const rm = document.createElement('button');
+        rm.type = 'button';
+        rm.className = 'btn btn-ghost self-end text-[12px] text-ink-tertiary';
+        rm.textContent = 'Remove';
+        rm.addEventListener('click', () => { row.remove(); render(); });
+        row.append(rm);
+        rows.append(row);
+      };
+      add.addEventListener('click', () => { addRow(); render(); });
+
+      const initial = grp.initial ?? 1;
+      for (let i = 0; i < initial; i++) addRow();
+
+      formEl.append(section);
+    }
+  }
+
+  /** Collect current values, including repeatable groups, for the active type. */
+  function collect(t: SchemaType) {
+    const vals: Record<string, any> = {};
+    for (const f of t.fields) {
+      const el = document.getElementById(`f_${t.id}_${f.id}`) as HTMLInputElement | null;
+      if (el) vals[f.id] = el.value.trim();
+    }
+    for (const grp of t.groups || []) {
+      const rowsWrap = formEl.querySelector(`[data-rows="${grp.id}"]`);
+      const arr: any[] = [];
+      rowsWrap?.querySelectorAll(':scope > .sm-row').forEach((row) => {
+        const obj: Record<string, string> = {};
+        for (const f of grp.fields) {
+          const el = Array.from(row.querySelectorAll<HTMLInputElement>('input, textarea, select'))
+            .find((e) => e.id.endsWith(`_${f.id}`) && e.id.includes(`_${grp.id}_`));
+          if (el) obj[f.id] = el.value.trim();
+        }
+        arr.push(obj);
+      });
+      vals[grp.id] = arr;
+    }
+    return vals;
+  }
+
+  async function render() {
+    const t = SCHEMA_TYPES.find((x) => x.id === typeSel.value)!;
+    const vals = collect(t);
+    const json = buildJsonLd(t.id, vals);
+    raw = `<script type="application/ld+json">\n${JSON.stringify(json, null, 2)}\n<\/script>`;
+    await hl(outEl, raw, 'html');
+
+    const missing = missingRecommended(t.id, vals);
+    hintsEl.textContent = '';
+    if (missing.length) {
+      const p = document.createElement('p');
+      const label = document.createElement('span');
+      label.className = 'text-ink';
+      label.textContent = missing.join(', ');
+      p.append(document.createTextNode('For richer results, consider adding: '), label, document.createTextNode('.'));
+      hintsEl.append(p);
+    } else {
+      hintsEl.textContent = 'All recommended fields are filled. ✓';
+    }
+  }
+
+  function switchType() {
+    const t = SCHEMA_TYPES.find((x) => x.id === typeSel.value)!;
+    renderForm(t);
+    render();
+  }
+
+  typeSel.addEventListener('change', switchType);
+
+  $('sm-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(rawOutput);
+    await navigator.clipboard.writeText(raw);
     btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy script tag'), 1500);
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
   });
-  renderFields(); build();
+
+  $('sm-download').addEventListener('click', () => {
+    const blob = new Blob([raw], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${typeSel.value.toLowerCase()}-schema.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  switchType();
 </script>

@@ -2927,11 +2927,11 @@ export const tools: Tool[] = [
   {
     slug: 'email-validator',
     name: 'Email Validator',
-    tagline: 'Check email address syntax and format.',
+    tagline: 'Syntax, live MX/DNS, disposable & role checks.',
     description:
-      'Free email validator. Check whether an email address is correctly formatted, spot common typos and validate the domain syntax — for one address or a whole list. Runs entirely in your browser.',
+      'Free email validator. Check syntax, look up live MX/DNS records to confirm the domain can receive mail, flag disposable and role-based addresses, spot typos, and validate a whole list at once. Runs in your browser.',
     category: 'Developer',
-    keywords: ['email validator', 'validate email address', 'email format checker', 'check email syntax', 'email verification tool'],
+    keywords: ['email validator', 'validate email address', 'email format checker', 'check email syntax', 'email verification tool', 'mx record lookup', 'disposable email checker'],
     icon: 'M4 6h16v12H4zM4 7l8 6 8-6',
   },
   {
@@ -2943,26 +2943,6 @@ export const tools: Tool[] = [
     category: 'Developer',
     keywords: ['json validator', 'validate json online', 'json syntax checker', 'json lint', 'check json'],
     icon: 'M8 4H6a2 2 0 0 0-2 2v3l-1 3 1 3v3a2 2 0 0 0 2 2h2M16 4h2a2 2 0 0 1 2 2v3l1 3-1 3v3a2 2 0 0 1-2 2h-2',
-  },
-  {
-    slug: 'credit-card-validator',
-    name: 'Credit Card Validator',
-    tagline: 'Luhn check and card brand detection.',
-    description:
-      'Free credit card validator. Check a card number against the Luhn algorithm and detect the brand (Visa, Mastercard, Amex, Discover). For testing only — runs locally and nothing is stored or sent.',
-    category: 'Developer',
-    keywords: ['credit card validator', 'luhn check', 'card number validator', 'validate credit card', 'credit card checker'],
-    icon: 'M3 6h18v12H3zM3 10h18M6 15h4',
-  },
-  {
-    slug: 'iban-validator',
-    name: 'IBAN Validator',
-    tagline: 'Check IBAN checksum and structure.',
-    description:
-      'Free IBAN validator. Verify an International Bank Account Number using the ISO 7064 mod-97 checksum and per-country length rules, and see the country and check digits. Runs in your browser.',
-    category: 'Developer',
-    keywords: ['iban validator', 'validate iban', 'iban checker', 'bank account number validator', 'iban checksum'],
-    icon: 'M4 10l8-5 8 5M5 10v8m4-8v8m6-8v8m4-8v8M3 20h18',
   },
   {
     slug: 'url-validator',

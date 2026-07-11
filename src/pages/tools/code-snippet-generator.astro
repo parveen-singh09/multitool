@@ -9,115 +9,531 @@ console.log(greet("world"));`;
 ---
 
 <ToolLayout slug="code-snippet-generator">
-  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-    <div class="flex flex-col gap-3">
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,340px)_1fr]">
+    <!-- Controls -->
+    <div class="flex flex-col gap-4">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Code
-        <div class="hl-edit field p-0" style="height:12rem;resize:vertical;overflow:hidden">
+        <div class="hl-edit field p-0" style="height:14rem;resize:vertical;overflow:hidden">
           <pre class="hl-block" aria-hidden="true"><code id="cd-code-hl" class="hljs" style="background:transparent"></code></pre>
           <textarea id="cd-code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" set:text={sampleCode}></textarea>
         </div>
       </label>
+
       <div class="grid grid-cols-2 gap-3">
-        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Theme
-          <select id="cd-theme" class="field"><option value="dark">Dark</option><option value="midnight">Midnight</option><option value="light">Light</option></select>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Language
+          <select id="cd-lang" class="field">
+            <option value="auto">Auto-detect</option>
+            <option value="javascript">JavaScript</option>
+            <option value="typescript">TypeScript</option>
+            <option value="python">Python</option>
+            <option value="jsx">JSX / TSX</option>
+            <option value="html">HTML</option>
+            <option value="css">CSS</option>
+            <option value="json">JSON</option>
+            <option value="bash">Shell</option>
+            <option value="sql">SQL</option>
+            <option value="go">Go</option>
+            <option value="rust">Rust</option>
+            <option value="java">Java</option>
+            <option value="c">C</option>
+            <option value="cpp">C++</option>
+            <option value="csharp">C#</option>
+            <option value="php">PHP</option>
+            <option value="ruby">Ruby</option>
+            <option value="yaml">YAML</option>
+            <option value="markdown">Markdown</option>
+            <option value="plaintext">Plain text</option>
+          </select>
         </label>
-        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Window title
-          <input id="cd-title" class="field" value="script.js" />
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Theme
+          <select id="cd-theme" class="field">
+            <option value="linear">Linear</option>
+            <option value="oneDark">One Dark</option>
+            <option value="dracula">Dracula</option>
+            <option value="nord">Nord</option>
+            <option value="monokai">Monokai</option>
+            <option value="tokyoNight">Tokyo Night</option>
+            <option value="catppuccin">Catppuccin</option>
+            <option value="solarized">Solarized</option>
+            <option value="github">GitHub Light</option>
+          </select>
         </label>
       </div>
-      <div class="flex flex-wrap items-center gap-4">
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Background
+        <div id="cd-bg" class="grid grid-cols-8 gap-2"></div>
+      </label>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Window title
+        <input id="cd-title" class="field" value="script.js" placeholder="(none)" />
+      </label>
+
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Padding
+          <select id="cd-pad" class="field">
+            <option value="24">Small</option>
+            <option value="48" selected>Medium</option>
+            <option value="80">Large</option>
+            <option value="128">Huge</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Font size
+          <select id="cd-fs" class="field">
+            <option value="13">13px</option>
+            <option value="15" selected>15px</option>
+            <option value="17">17px</option>
+            <option value="20">20px</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
         <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="cd-dots" type="checkbox" class="accent-[#5e6ad2]" checked /> Traffic-light dots</label>
         <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="cd-lines" type="checkbox" class="accent-[#5e6ad2]" /> Line numbers</label>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="cd-shadow" type="checkbox" class="accent-[#5e6ad2]" checked /> Drop shadow</label>
       </div>
     </div>
 
+    <!-- Preview + export -->
     <div class="flex flex-col items-center gap-4">
-      <div class="flex w-full items-center justify-center overflow-auto rounded-lg border border-hairline bg-surface-2 p-4">
-        <canvas id="cd-canvas" class="max-w-full"></canvas>
+      <div class="flex w-full items-center justify-center overflow-auto rounded-lg border border-hairline bg-surface-2 p-4" style="background-image:linear-gradient(45deg,#0000 46%,#ffffff08 46% 54%,#0000 54%),linear-gradient(45deg,#0000 46%,#ffffff08 46% 54%,#0000 54%);background-size:20px 20px;background-position:0 0,10px 10px">
+        <canvas id="cd-canvas" class="max-w-full rounded-md"></canvas>
       </div>
-      <button id="cd-dl" class="btn btn-primary">Download PNG</button>
+      <div class="flex flex-wrap items-center justify-center gap-3">
+        <button id="cd-dl" class="btn btn-primary">Export</button>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle">Format
+          <select id="cd-format" class="field" style="padding-top:.35rem;padding-bottom:.35rem">
+            <option value="png">PNG</option>
+            <option value="svg">SVG</option>
+            <option value="jpeg">JPEG</option>
+          </select>
+        </label>
+        <button id="cd-copy" class="btn btn-secondary">Copy image</button>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle">Scale
+          <select id="cd-scale" class="field" style="padding-top:.35rem;padding-bottom:.35rem">
+            <option value="1">1×</option>
+            <option value="2" selected>2×</option>
+            <option value="3">3×</option>
+          </select>
+        </label>
+      </div>
     </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free code snippet image generator turns a block of code into a polished
-      PNG image — with a window frame, optional traffic-light dots and line numbers
-      — perfect for slides, documentation, blog posts and social media. Pick a
-      theme, set the window title, and download. The code is rendered on a canvas
-      in your browser, so nothing is sent anywhere.
+      Turn any block of code into a polished, shareable image — with real syntax
+      colors baked into the export, a window frame, gradient or solid backgrounds,
+      adjustable padding and multiple themes. Perfect for slides, docs, blog posts,
+      READMEs and social media.
+    </p>
+    <p>
+      Pick a language (or let it auto-detect), choose a theme and background, then
+      download a high-resolution PNG or copy the image straight to your clipboard.
+      Everything renders on a canvas in your browser, so your code never leaves
+      your device.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  import { wireInput } from '../../lib/highlight';
+  import { wireInput, loadHljs } from '../../lib/highlight';
+  import '@fontsource-variable/jetbrains-mono';
 
   const $ = (id: string) => document.getElementById(id)!;
   const canvas = $('cd-canvas') as HTMLCanvasElement;
+  const MONO = '"JetBrains Mono Variable", ui-monospace, monospace';
 
-  const THEMES: Record<string, { bg: string; win: string; fg: string; num: string }> = {
-    dark: { bg: '#1e1e2e', win: '#181825', fg: '#cdd6f4', num: '#585b70' },
-    midnight: { bg: '#0d1117', win: '#010409', fg: '#c9d1d9', num: '#484f58' },
-    light: { bg: '#ffffff', win: '#f0f1f2', fg: '#1f2328', num: '#8c959f' },
+  type Theme = {
+    fg: string; win: string; winFg: string; num: string;
+    // token role colors
+    keyword: string; string: string; number: string; comment: string;
+    fn: string; builtin: string; variable: string; property: string;
+    tag: string; type: string; punctuation: string;
   };
 
-  function draw() {
+  const THEMES: Record<string, Theme> = {
+    linear: {
+      fg: '#e6e7ea', win: '#181822', winFg: '#8a8f98', num: '#4b4e57',
+      keyword: '#828fff', string: '#7fd0a6', number: '#d0a0ff', comment: '#62666d',
+      fn: '#f2c777', builtin: '#828fff', variable: '#7ec7ff', property: '#7ec7ff',
+      tag: '#8a8f98', type: '#f2c777', punctuation: '#8a8f98',
+    },
+    oneDark: {
+      fg: '#abb2bf', win: '#21252b', winFg: '#7f848e', num: '#4b5263',
+      keyword: '#c678dd', string: '#98c379', number: '#d19a66', comment: '#5c6370',
+      fn: '#61afef', builtin: '#56b6c2', variable: '#e06c75', property: '#e06c75',
+      tag: '#e06c75', type: '#e5c07b', punctuation: '#abb2bf',
+    },
+    dracula: {
+      fg: '#f8f8f2', win: '#232530', winFg: '#8b8ea3', num: '#6272a4',
+      keyword: '#ff79c6', string: '#f1fa8c', number: '#bd93f9', comment: '#6272a4',
+      fn: '#50fa7b', builtin: '#8be9fd', variable: '#f8f8f2', property: '#66d9ef',
+      tag: '#ff79c6', type: '#8be9fd', punctuation: '#f8f8f2',
+    },
+    nord: {
+      fg: '#d8dee9', win: '#323947', winFg: '#7b869b', num: '#4c566a',
+      keyword: '#81a1c1', string: '#a3be8c', number: '#b48ead', comment: '#616e88',
+      fn: '#88c0d0', builtin: '#8fbcbb', variable: '#d8dee9', property: '#8fbcbb',
+      tag: '#81a1c1', type: '#8fbcbb', punctuation: '#eceff4',
+    },
+    monokai: {
+      fg: '#f8f8f2', win: '#2d2a2e', winFg: '#939293', num: '#5b595c',
+      keyword: '#ff6188', string: '#ffd866', number: '#ab9df2', comment: '#727072',
+      fn: '#a9dc76', builtin: '#78dce8', variable: '#f8f8f2', property: '#78dce8',
+      tag: '#ff6188', type: '#78dce8', punctuation: '#939293',
+    },
+    tokyoNight: {
+      fg: '#c0caf5', win: '#1a1b26', winFg: '#565f89', num: '#3b4261',
+      keyword: '#bb9af7', string: '#9ece6a', number: '#ff9e64', comment: '#565f89',
+      fn: '#7aa2f7', builtin: '#2ac3de', variable: '#c0caf5', property: '#73daca',
+      tag: '#f7768e', type: '#2ac3de', punctuation: '#89ddff',
+    },
+    catppuccin: {
+      fg: '#cdd6f4', win: '#1e1e2e', winFg: '#9399b2', num: '#45475a',
+      keyword: '#cba6f7', string: '#a6e3a1', number: '#fab387', comment: '#6c7086',
+      fn: '#89b4fa', builtin: '#f38ba8', variable: '#cdd6f4', property: '#89dceb',
+      tag: '#f38ba8', type: '#f9e2af', punctuation: '#94e2d5',
+    },
+    solarized: {
+      fg: '#93a1a1', win: '#002b36', winFg: '#657b83', num: '#586e75',
+      keyword: '#859900', string: '#2aa198', number: '#d33682', comment: '#586e75',
+      fn: '#268bd2', builtin: '#b58900', variable: '#cb4b16', property: '#268bd2',
+      tag: '#859900', type: '#b58900', punctuation: '#93a1a1',
+    },
+    github: {
+      fg: '#1f2328', win: '#eaeef2', winFg: '#57606a', num: '#8c959f',
+      keyword: '#cf222e', string: '#0a3069', number: '#0550ae', comment: '#6e7781',
+      fn: '#8250df', builtin: '#0550ae', variable: '#953800', property: '#0550ae',
+      tag: '#116329', type: '#953800', punctuation: '#24292f',
+    },
+  };
+
+  // hljs class -> theme role. First matching class on an element wins.
+  function roleColor(cls: string, t: Theme): string | null {
+    const c = ' ' + cls + ' ';
+    const has = (k: string) => c.includes(' hljs-' + k + ' ') || c.includes(' hljs-' + k);
+    if (has('comment') || has('quote')) return t.comment;
+    if (has('keyword') || has('selector-tag') || has('literal')) return t.keyword;
+    if (has('built_in')) return t.builtin;
+    if (has('string') || has('regexp') || has('char')) return t.string;
+    if (has('number') || has('symbol')) return t.number;
+    if (has('title') || has('function_') || has('section') || has('name')) return t.fn;
+    if (has('type') || has('class')) return t.type;
+    if (has('attr') || has('attribute') || has('property') || has('variable') || has('template-variable')) return t.property;
+    if (has('tag') || has('meta') || has('punctuation') || has('params') || has('doctag')) return t.punctuation;
+    return null;
+  }
+
+  type Run = { text: string; color: string };
+
+  // Highlight code and flatten hljs's nested spans into colored runs per line.
+  function tokenize(html: string, t: Theme): Run[][] {
+    const root = document.createElement('div');
+    root.innerHTML = html;
+    const flat: Run[] = [];
+    const walk = (node: Node, color: string) => {
+      node.childNodes.forEach((child) => {
+        if (child.nodeType === 3) {
+          flat.push({ text: (child.nodeValue || '').replace(/\t/g, '  '), color });
+        } else if (child.nodeType === 1) {
+          const el = child as HTMLElement;
+          walk(el, roleColor(el.className, t) || color);
+        }
+      });
+    };
+    walk(root, t.fg);
+
+    const lines: Run[][] = [[]];
+    for (const run of flat) {
+      const parts = run.text.split('\n');
+      parts.forEach((p, i) => {
+        if (i > 0) lines.push([]);
+        if (p) lines[lines.length - 1].push({ text: p, color: run.color });
+      });
+    }
+    return lines;
+  }
+
+  // Background presets: solid strings or [angle, ...stops] gradients. null = transparent.
+  // Brand presets mirror competitor "partner" gradients (Vercel, Cloudflare, …).
+  const BACKGROUNDS: (string | [number, ...string[]] | null)[] = [
+    [135, '#ff9a9e', '#fecfef'],
+    [135, '#a18cd1', '#fbc2eb'],
+    [135, '#84fab0', '#8fd3f4'],
+    [135, '#f6d365', '#fda085'],
+    [135, '#5ee7df', '#b490ca'],
+    [135, '#667eea', '#764ba2'],
+    [135, '#0d1117', '#1f2547'],
+    null, // transparent
+    // Brand presets
+    [135, '#000000', '#3a3a3a'],
+    [135, '#f6821f', '#faae40'],
+    [140, '#3ecf8e', '#164e3b'],
+    [135, '#38bdf8', '#4f46e5'],
+    [135, '#10a37f', '#0d8f6f'],
+    [135, '#4c51bf', '#1a202c'],
+    [135, '#6c47ff', '#3b1fa8'],
+    [135, '#635bff', '#8b5cf6'],
+  ];
+  const BG_NAMES = [
+    'Blush', 'Lavender', 'Mint', 'Peach', 'Aqua', 'Indigo', 'Midnight', 'Transparent',
+    'Vercel', 'Cloudflare', 'Supabase', 'Tailwind', 'OpenAI', 'Prisma', 'Clerk', 'Stripe',
+  ];
+  let bgIndex = 5;
+
+  function paintBg(ctx: CanvasRenderingContext2D, w: number, h: number) {
+    const bg = BACKGROUNDS[bgIndex];
+    if (bg === null) { ctx.clearRect(0, 0, w, h); return; }
+    if (typeof bg === 'string') { ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h); return; }
+    const [angle, ...stops] = bg;
+    const rad = (angle * Math.PI) / 180;
+    const cx = w / 2, cy = h / 2;
+    const dx = (Math.cos(rad) * (w + h)) / 2, dy = (Math.sin(rad) * (w + h)) / 2;
+    const g = ctx.createLinearGradient(cx - dx, cy - dy, cx + dx, cy + dy);
+    stops.forEach((s, i) => g.addColorStop(i / (stops.length - 1), s));
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  }
+
+  let currentLang = 'javascript';
+
+  // Last computed layout, reused for SVG export so it matches the canvas exactly.
+  type PRun = { text: string; color: string; x: number };
+  let layout: {
+    theme: Theme; cw: number; ch: number; winW: number; winH: number;
+    pad: number; winPad: number; titleH: number; numGutter: number;
+    lineHeight: number; fontSize: number; dots: boolean; title: string;
+    lineNums: boolean; shadow: boolean; codeX: number; codeY: number;
+    lines: PRun[][];
+  } | null = null;
+
+  async function draw() {
+    const hljs = await loadHljs();
     const code = ($('cd-code') as HTMLTextAreaElement).value || '';
     const theme = THEMES[($('cd-theme') as HTMLSelectElement).value];
-    const title = ($('cd-title') as HTMLInputElement).value;
+    const title = ($('cd-title') as HTMLInputElement).value.trim();
     const dots = ($('cd-dots') as HTMLInputElement).checked;
     const lineNums = ($('cd-lines') as HTMLInputElement).checked;
+    const shadow = ($('cd-shadow') as HTMLInputElement).checked;
+    const pad = +($('cd-pad') as HTMLSelectElement).value;
+    const fontSize = +($('cd-fs') as HTMLSelectElement).value;
+    const lineHeight = Math.round(fontSize * 1.6);
+    const scale = +($('cd-scale') as HTMLSelectElement).value;
+
+    // Highlight (auto-detect updates the language label).
+    const langSel = ($('cd-lang') as HTMLSelectElement).value;
+    let res;
+    if (langSel === 'auto') {
+      res = hljs.highlightAuto(code);
+      currentLang = res.language || 'plaintext';
+    } else {
+      const lang = hljs.getLanguage(langSel) ? langSel : 'plaintext';
+      res = hljs.highlight(code, { language: lang, ignoreIllegal: true });
+      currentLang = langSel;
+    }
+    const lines = tokenize(res.value, theme);
+
     const ctx = canvas.getContext('2d')!;
-    const fontSize = 26, lineHeight = 38, pad = 48, titleH = 64;
-    const scale = 2; // render at 2x for crisp text
-    ctx.font = `${fontSize}px "JetBrains Mono", ui-monospace, monospace`;
+    ctx.font = `${fontSize}px ${MONO}`;
 
-    const lines = code.split('\n');
-    const numGutter = lineNums ? ctx.measureText(String(lines.length)).width + 30 : 0;
-    let maxW = 0;
-    for (const l of lines) maxW = Math.max(maxW, ctx.measureText(l).width);
+    // Measure widest line by summing run widths.
+    let maxW = 1;
+    for (const line of lines) {
+      let w = 0;
+      for (const run of line) w += ctx.measureText(run.text).width;
+      maxW = Math.max(maxW, w);
+    }
 
-    const cw = Math.ceil(maxW + pad * 2 + numGutter);
-    const ch = Math.ceil(titleH + lines.length * lineHeight + pad);
+    const winPad = 20;                       // inner padding of the code area
+    const titleH = (dots || title) ? 44 : 0; // window chrome height
+    const numGutter = lineNums ? ctx.measureText(String(lines.length)).width + 24 : 0;
+
+    const winW = Math.ceil(maxW + numGutter + winPad * 2);
+    const winH = Math.ceil(titleH + lines.length * lineHeight + winPad * 2);
+    const cw = winW + pad * 2;
+    const ch = winH + pad * 2;
+
     canvas.width = cw * scale;
     canvas.height = ch * scale;
-    canvas.style.width = cw + 'px';
-    ctx.scale(scale, scale);
+    canvas.style.width = Math.min(cw, 1400) + 'px';
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
 
-    // Outer background.
-    ctx.fillStyle = theme.bg; ctx.fillRect(0, 0, cw, ch);
-    // Window title bar.
+    paintBg(ctx, cw, ch);
+
+    // Window card with optional drop shadow.
+    if (shadow) {
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.35)';
+      ctx.shadowBlur = 40; ctx.shadowOffsetY = 20;
+    }
     ctx.fillStyle = theme.win;
-    ctx.beginPath(); ctx.roundRect(16, 16, cw - 32, ch - 32, 12); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(pad, pad, winW, winH, 12); ctx.fill();
+    if (shadow) ctx.restore();
+
+    // Traffic-light dots.
     if (dots) {
       const cols = ['#ff5f56', '#ffbd2e', '#27c93f'];
-      cols.forEach((c, i) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(46 + i * 26, 42, 8, 0, Math.PI * 2); ctx.fill(); });
+      cols.forEach((c, i) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(pad + 24 + i * 20, pad + 22, 6, 0, Math.PI * 2); ctx.fill(); });
     }
+    // Title, centered in the chrome bar.
     if (title) {
-      ctx.fillStyle = theme.num;
-      ctx.font = `500 22px Inter, system-ui, sans-serif`;
+      ctx.fillStyle = theme.winFg;
+      ctx.font = `500 ${Math.round(fontSize * 0.9)}px Inter, system-ui, sans-serif`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(title, cw / 2, 42);
+      ctx.fillText(title, pad + winW / 2, pad + 22);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     }
-    // Code.
-    ctx.font = `${fontSize}px "JetBrains Mono", ui-monospace, monospace`;
-    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+
+    // Code, run by run with real syntax colors. Record x per run for SVG reuse.
+    ctx.font = `${fontSize}px ${MONO}`;
+    const codeX = pad + winPad + numGutter;
+    const codeY = pad + titleH + winPad;
+    const placed: PRun[][] = [];
     lines.forEach((line, i) => {
-      const y = titleH + 12 + i * lineHeight;
+      const y = codeY + i * lineHeight;
       if (lineNums) {
         ctx.fillStyle = theme.num;
-        ctx.fillText(String(i + 1), 40, y);
+        ctx.textAlign = 'right';
+        ctx.fillText(String(i + 1), pad + winPad + numGutter - 16, y);
+        ctx.textAlign = 'left';
       }
-      ctx.fillStyle = theme.fg;
-      ctx.fillText(line, 40 + numGutter, y);
+      let x = codeX;
+      const prow: PRun[] = [];
+      for (const run of line) {
+        ctx.fillStyle = run.color;
+        ctx.fillText(run.text, x, y);
+        prow.push({ text: run.text, color: run.color, x });
+        x += ctx.measureText(run.text).width;
+      }
+      placed.push(prow);
+    });
+
+    layout = {
+      theme, cw, ch, winW, winH, pad, winPad, titleH, numGutter,
+      lineHeight, fontSize, dots, title, lineNums, shadow, codeX, codeY,
+      lines: placed,
+    };
+  }
+
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  // Build an SVG string from the last layout. Text is real <text>, so it stays
+  // crisp at any zoom and selectable. Uses the same coordinates as the canvas.
+  function buildSvg(): string {
+    if (!layout) return '';
+    const L = layout, t = L.theme;
+    const bg = BACKGROUNDS[bgIndex];
+    const fs = L.fontSize;
+    const baseline = (i: number) => L.codeY + i * L.lineHeight + fs * 0.82; // top -> baseline
+    let bgDef = '', bgFill = 'none';
+    if (typeof bg === 'string') { bgFill = bg; }
+    else if (Array.isArray(bg)) {
+      const [angle, ...stops] = bg;
+      const rad = (angle * Math.PI) / 180;
+      const x2 = (50 + Math.cos(rad) * 50).toFixed(2), y2 = (50 + Math.sin(rad) * 50).toFixed(2);
+      const x1 = (50 - Math.cos(rad) * 50).toFixed(2), y1 = (50 - Math.sin(rad) * 50).toFixed(2);
+      const stopEls = stops.map((s, i) => `<stop offset="${(i / (stops.length - 1) * 100).toFixed(0)}%" stop-color="${s}"/>`).join('');
+      bgDef = `<linearGradient id="bg" x1="${x1}%" y1="${y1}%" x2="${x2}%" y2="${y2}%">${stopEls}</linearGradient>`;
+      bgFill = 'url(#bg)';
+    }
+    const parts: string[] = [];
+    parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${L.cw}" height="${L.ch}" viewBox="0 0 ${L.cw} ${L.ch}">`);
+    parts.push(`<defs>${bgDef}${L.shadow ? '<filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="20" stdDeviation="20" flood-color="#000" flood-opacity="0.35"/></filter>' : ''}</defs>`);
+    if (bgFill !== 'none') parts.push(`<rect width="${L.cw}" height="${L.ch}" fill="${bgFill}"/>`);
+    parts.push(`<rect x="${L.pad}" y="${L.pad}" width="${L.winW}" height="${L.winH}" rx="12" fill="${t.win}"${L.shadow ? ' filter="url(#sh)"' : ''}/>`);
+    if (L.dots) {
+      ['#ff5f56', '#ffbd2e', '#27c93f'].forEach((c, i) => {
+        parts.push(`<circle cx="${L.pad + 24 + i * 20}" cy="${L.pad + 22}" r="6" fill="${c}"/>`);
+      });
+    }
+    if (L.title) {
+      parts.push(`<text x="${L.pad + L.winW / 2}" y="${L.pad + 22}" fill="${t.winFg}" font-family="Inter, system-ui, sans-serif" font-size="${Math.round(fs * 0.9)}" font-weight="500" text-anchor="middle" dominant-baseline="middle">${esc(L.title)}</text>`);
+    }
+    const mono = 'JetBrains Mono, ui-monospace, monospace';
+    L.lines.forEach((line, i) => {
+      if (L.lineNums) {
+        parts.push(`<text x="${L.pad + L.winPad + L.numGutter - 16}" y="${baseline(i)}" fill="${t.num}" font-family="${mono}" font-size="${fs}" text-anchor="end">${i + 1}</text>`);
+      }
+      for (const run of line) {
+        if (!run.text.trim()) continue;
+        parts.push(`<text x="${run.x.toFixed(2)}" y="${baseline(i)}" fill="${run.color}" font-family="${mono}" font-size="${fs}" xml:space="preserve">${esc(run.text)}</text>`);
+      }
+    });
+    parts.push('</svg>');
+    return parts.join('');
+  }
+
+  function renderBgSwatches() {
+    const wrap = $('cd-bg');
+    wrap.innerHTML = '';
+    BACKGROUNDS.forEach((bg, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'aspect-square rounded-md border transition';
+      b.style.borderColor = i === bgIndex ? 'var(--color-primary)' : 'var(--color-hairline)';
+      b.style.borderWidth = i === bgIndex ? '2px' : '1px';
+      b.title = BG_NAMES[i] || '';
+      if (bg === null) {
+        b.style.backgroundImage = 'linear-gradient(45deg,#0000 46%,#8886 46% 54%,#0000 54%),linear-gradient(45deg,#0000 46%,#8886 46% 54%,#0000 54%)';
+        b.style.backgroundSize = '10px 10px';
+        b.style.backgroundPosition = '0 0,5px 5px';
+      } else if (typeof bg === 'string') {
+        b.style.background = bg;
+      } else {
+        b.style.background = `linear-gradient(${bg[0]}deg, ${bg.slice(1).join(', ')})`;
+      }
+      b.addEventListener('click', () => { bgIndex = i; renderBgSwatches(); draw(); });
+      wrap.appendChild(b);
     });
   }
 
-  ['cd-theme', 'cd-title', 'cd-dots', 'cd-lines'].forEach((id) => $(id).addEventListener('input', draw));
-  wireInput($('cd-code') as HTMLTextAreaElement, $('cd-code-hl'), () => 'javascript', () => draw());
+  ['cd-theme', 'cd-title', 'cd-pad', 'cd-fs', 'cd-dots', 'cd-lines', 'cd-shadow', 'cd-scale'].forEach((id) => $(id).addEventListener('input', () => draw()));
+  $('cd-lang').addEventListener('change', () => draw());
+
+  wireInput($('cd-code') as HTMLTextAreaElement, $('cd-code-hl'), () => {
+    const v = ($('cd-lang') as HTMLSelectElement).value;
+    return v === 'auto' ? currentLang : v;
+  }, () => draw());
+
+  function download(href: string, ext: string) {
+    const a = document.createElement('a');
+    a.href = href; a.download = 'code-snippet.' + ext; a.click();
+  }
+
   $('cd-dl').addEventListener('click', () => {
-    const a = document.createElement('a'); a.href = canvas.toDataURL('image/png'); a.download = 'code-snippet.png'; a.click();
+    const fmt = ($('cd-format') as HTMLSelectElement).value;
+    if (fmt === 'svg') {
+      const url = URL.createObjectURL(new Blob([buildSvg()], { type: 'image/svg+xml' }));
+      download(url, 'svg');
+      URL.revokeObjectURL(url);
+      return;
+    }
+    const mime = fmt === 'jpeg' ? 'image/jpeg' : 'image/png';
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      download(url, fmt === 'jpeg' ? 'jpg' : 'png');
+      URL.revokeObjectURL(url);
+    }, mime, 0.95);
   });
+
+  $('cd-copy').addEventListener('click', async () => {
+    const btn = $('cd-copy') as HTMLButtonElement;
+    const orig = btn.textContent;
+    try {
+      const blob: Blob = await new Promise((r) => canvas.toBlob((b) => r(b!), 'image/png'));
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      btn.textContent = 'Copied!';
+    } catch {
+      btn.textContent = 'Copy failed';
+    }
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  });
+
+  renderBgSwatches();
+  // Draw once the mono webfont is ready so measurements are correct.
+  (document as any).fonts?.ready.then(() => draw());
   draw();
 </script>

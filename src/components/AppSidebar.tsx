@@ -170,11 +170,18 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
                           {categoryTools.map((tool) => {
                             const isToolActive = `/tools/${tool.slug}` === normalizedPath;
                             return (
-                              <SidebarMenuSubItem key={tool.slug}>
+                              <SidebarMenuSubItem
+                                key={tool.slug}
+                                className={`before:content-[''] before:absolute before:-left-2 before:top-3 before:h-2 before:w-2 before:-translate-x-1/2 before:rounded-full before:ring-2 before:ring-sidebar after:content-[''] after:absolute after:-left-2 after:top-4 after:h-px after:w-3 ${
+                                  `/tools/${tool.slug}` === normalizedPath
+                                    ? "before:bg-primary after:bg-primary/50"
+                                    : "before:bg-sidebar-border after:bg-sidebar-border/60"
+                                }`}
+                              >
                                 <SidebarMenuSubButton asChild isActive={isToolActive}>
                                   <a
                                     href={`/tools/${tool.slug}`}
-                                    className={`block py-1 text-sm ${
+                                    className={`h-auto min-h-7 items-start overflow-visible whitespace-normal py-1.5 text-sm leading-snug ${
                                       isToolActive
                                         ? "text-primary-hover font-medium"
                                         : "text-ink-muted hover:text-ink"
