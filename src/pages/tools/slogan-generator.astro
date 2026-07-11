@@ -4,26 +4,37 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="slogan-generator">
   <div class="flex flex-col gap-4">
-    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Brand or product name
-      <input id="sl-name" class="field" value="Acme" spellcheck="false" />
-    </label>
+    <div class="grid gap-4 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Brand or product name
+        <input id="sl-name" class="field" value="Acme" spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">What you do <span class="text-ink-tertiary">(optional keyword)</span>
+        <input id="sl-word" class="field" value="coffee" spellcheck="false" placeholder="e.g. coffee, fitness, shoes" />
+      </label>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-1.5" id="sl-tones"></div>
+
     <div class="flex flex-wrap items-center gap-4">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
-        <input id="sl-count" type="number" min="4" max="40" value="12" class="field w-28" />
+        <input id="sl-count" type="number" min="4" max="60" value="20" class="field w-28" />
       </label>
       <button id="sl-gen" class="btn btn-primary ml-auto">Generate</button>
       <button id="sl-copy" class="btn btn-secondary">Copy all</button>
     </div>
+
     <ul id="sl-out" class="flex flex-col gap-2"></ul>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free slogan generator creates catchy taglines and slogans for your
-      brand or product from proven marketing sentence patterns. Enter your name and
-      generate a list of ready-to-riff-on lines — some bold, some playful, some
-      benefit-driven. Use them as-is or as a springboard for your own. Everything
-      runs in your browser.
+      This free slogan generator turns your brand name and a keyword for what you
+      do into catchy taglines and slogans. Filter by tone — bold, playful,
+      benefit-driven, minimal or rhyming — and click any line to copy it. Enter a
+      keyword like "coffee" or "fitness" and the lines weave it in, the way the
+      best marketing slogans lead with a benefit, not just a name. Generate a
+      batch, shortlist your favourites, and riff from there. Everything runs in
+      your browser — nothing is uploaded.
     </p>
   </div>
 </ToolLayout>
@@ -33,43 +44,146 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   const $ = (id: string) => document.getElementById(id)!;
   const nameEl = $('sl-name') as HTMLInputElement;
+  const wordEl = $('sl-word') as HTMLInputElement;
   const countEl = $('sl-count') as HTMLInputElement;
+  const tonesEl = $('sl-tones')!;
   const out = $('sl-out')!;
 
-  const T: ((n: string) => string)[] = [
-    (n) => `${n}. Simply better.`,
-    (n) => `Think ${n}.`,
-    (n) => `${n} — where quality meets you.`,
-    (n) => `Powered by ${n}.`,
-    (n) => `Life's better with ${n}.`,
-    (n) => `${n}: made for the moment.`,
-    (n) => `Discover the ${n} difference.`,
-    (n) => `Your world, the ${n} way.`,
-    (n) => `${n}. Ahead of the curve.`,
-    (n) => `Do more with ${n}.`,
-    (n) => `${n} — built to last.`,
-    (n) => `The future is ${n}.`,
-    (n) => `Nothing beats ${n}.`,
-    (n) => `${n}. Every single day.`,
-    (n) => `Rethink everything with ${n}.`,
-    (n) => `${n}: it just works.`,
+  type Tmpl = (n: string, k: string) => string;
+  // k = keyword lowercased (may be ''); K = Capitalized keyword.
+  const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+
+  // Templates by tone. Those needing a keyword are only used when one is given.
+  const TONES: { id: string; label: string; t: Tmpl[] }[] = [
+    {
+      id: 'bold', label: 'Bold', t: [
+        (n) => `${n}. No compromise.`,
+        (n) => `Nothing beats ${n}.`,
+        (n) => `${n}. Ahead of the curve.`,
+        (n) => `The future is ${n}.`,
+        (n) => `Rethink everything with ${n}.`,
+        (n) => `${n}. Own the moment.`,
+        (n, k) => `${n}: ${k || 'quality'}, redefined.`,
+        (n, k) => `Not just ${k || 'good'}. ${n}.`,
+      ],
+    },
+    {
+      id: 'playful', label: 'Playful', t: [
+        (n) => `${n}? Yes please.`,
+        (n) => `Life's better with ${n}.`,
+        (n) => `Keep calm and choose ${n}.`,
+        (n, k) => `Got ${k || 'plans'}? Get ${n}.`,
+        (n, k) => `Because ${k || 'life'} shouldn't be boring.`,
+        (n) => `${n}. Kind of a big deal.`,
+        (n, k) => `Your daily dose of ${k || 'good'}.`,
+      ],
+    },
+    {
+      id: 'benefit', label: 'Benefit', t: [
+        (n) => `${n}. Simply better.`,
+        (n) => `Do more with ${n}.`,
+        (n) => `${n} — built to last.`,
+        (n) => `Discover the ${n} difference.`,
+        (n, k) => `${k ? cap(k) + ' made simple' : 'Made simple'} — ${n}.`,
+        (n, k) => `Better ${k || 'results'}, every time.`,
+        (n, k) => `The smarter way to ${k || 'get it done'}.`,
+        (n, k) => `${n}: ${k || 'everything'} you can count on.`,
+      ],
+    },
+    {
+      id: 'minimal', label: 'Minimal', t: [
+        (n) => `Think ${n}.`,
+        (n) => `Just ${n}.`,
+        (n) => `${n}. Every day.`,
+        (n) => `Powered by ${n}.`,
+        (n, k) => `${cap(k) || n}. Perfected.`,
+        (n, k) => `${n}. ${cap(k) || 'Done right'}.`,
+      ],
+    },
+    {
+      id: 'rhyme', label: 'Rhyme', t: [
+        (n) => `${n} — the name you'll claim.`,
+        (n) => `${n}: the best, above the rest.`,
+        (n, k) => `For the ${k || 'best'}, forget the rest — ${n}.`,
+        (n) => `Say the word, be heard — ${n}.`,
+        (n, k) => `Great ${k || 'taste'}, no waste. ${n}.`,
+      ],
+    },
   ];
+
+  const active = new Set(TONES.map((x) => x.id)); // all on by default
+
+  function renderTones() {
+    tonesEl.innerHTML = TONES.map((x) =>
+      `<button data-t="${x.id}" class="seg ${active.has(x.id) ? 'seg-on' : ''}">${x.label}</button>`
+    ).join('');
+    tonesEl.querySelectorAll('button').forEach((b) =>
+      b.addEventListener('click', () => {
+        const id = (b as HTMLElement).dataset.t!;
+        if (active.has(id) && active.size > 1) active.delete(id);
+        else active.add(id);
+        renderTones();
+        generate();
+      })
+    );
+  }
 
   function generate() {
     const name = nameEl.value.trim() || 'Acme';
-    const n = Math.max(4, Math.min(40, Number(countEl.value) || 12));
-    const picked = shuffle(T).slice(0, Math.min(n, T.length)).map((f) => f(name));
-    while (picked.length < n) picked.push(pick(T)(name));
-    out.innerHTML = picked.map((s) => `<li class="panel px-4 py-2.5 text-[15px] text-ink">${s}</li>`).join('');
+    const k = wordEl.value.trim().toLowerCase().replace(/[^a-z0-9 ]/g, '');
+    const n = Math.max(4, Math.min(60, Number(countEl.value) || 20));
+
+    const pool = TONES.filter((x) => active.has(x.id)).flatMap((x) => x.t);
+    const usable = k ? pool : pool.filter((f) => f.length === 1); // arity 1 = name-only
+    const src = usable.length ? usable : pool;
+
+    const lines = new Set<string>();
+    shuffle(src).forEach((f) => lines.add(f(name, k)));
+    while (lines.size < n && src.length) lines.add(pick(src)(name, k));
+
+    const list = [...lines].slice(0, n);
+    out.innerHTML = list
+      .map((s) => `<li><button class="panel w-full px-4 py-2.5 text-left text-[15px] text-ink hover:border-hairline-strong" data-s="${s.replace(/"/g, '&quot;')}">${s}</button></li>`)
+      .join('');
+    out.querySelectorAll('button').forEach((b) =>
+      b.addEventListener('click', async () => {
+        await navigator.clipboard.writeText((b as HTMLElement).dataset.s!);
+        const orig = b.textContent;
+        b.textContent = 'Copied!';
+        setTimeout(() => (b.textContent = orig), 1000);
+      })
+    );
   }
 
-  [nameEl, countEl].forEach((el) => el.addEventListener('input', generate));
+  [nameEl, wordEl, countEl].forEach((el) => el.addEventListener('input', generate));
   $('sl-gen').addEventListener('click', generate);
   $('sl-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText([...out.querySelectorAll('li')].map((li) => li.textContent).join('\n'));
+    await navigator.clipboard.writeText([...out.querySelectorAll('button')].map((b) => (b as HTMLElement).dataset.s).join('\n'));
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy all'), 1500);
   });
+
+  renderTones();
   generate();
 </script>
+
+<style>
+  .seg {
+    padding: 0.3rem 0.7rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-hairline);
+    background-color: var(--color-surface-1);
+    color: var(--color-ink-subtle);
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  .seg:hover { border-color: var(--color-hairline-strong); color: var(--color-ink); }
+  .seg-on {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-on-primary);
+  }
+</style>

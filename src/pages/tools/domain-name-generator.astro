@@ -4,74 +4,234 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="domain-name-generator">
   <div class="flex flex-col gap-4">
-    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Keyword
-      <input id="dn-word" class="field" value="pixel" spellcheck="false" />
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Your keyword or idea
+      <input
+        id="dn-word"
+        class="field text-lg"
+        value="pixel"
+        spellcheck="false"
+        autocomplete="off"
+        placeholder="type an idea…"
+      />
     </label>
-    <div class="flex flex-wrap items-center gap-4">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
-        <input id="dn-count" type="number" min="6" max="60" value="24" class="field w-28" />
-      </label>
-      <button id="dn-gen" class="btn btn-primary ml-auto">Generate</button>
-      <button id="dn-copy" class="btn btn-secondary">Copy all</button>
+    <div class="flex flex-col gap-1.5">
+      <div class="flex items-center gap-3 text-sm text-ink-subtle">
+        <span>Domain types</span>
+        <button id="dn-all" type="button" class="text-[12px] text-ink-tertiary hover:text-ink">Select all</button>
+        <button id="dn-none" type="button" class="text-[12px] text-ink-tertiary hover:text-ink">Clear</button>
+      </div>
+      <div id="dn-tlds" class="flex flex-wrap gap-1.5" role="group" aria-label="Filter domain types"></div>
     </div>
-    <div id="dn-out" class="grid grid-cols-1 gap-2 sm:grid-cols-2"></div>
-    <p class="text-[13px] text-ink-tertiary">Ideas only — check availability with a registrar before you buy.</p>
+    <div id="dn-status" class="text-[13px] text-ink-tertiary" aria-live="polite">Checking availability…</div>
+    <div id="dn-out" class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3"></div>
+    <p class="text-[13px] text-ink-tertiary">
+      Availability is a live DNS check — a green dot means the domain isn't
+      resolving and is likely free, but only a registrar can confirm. Click any
+      name to search it at a registrar.
+    </p>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
       This free domain name generator turns a keyword into domain ideas across
       popular TLDs — .com, .io, .app, .dev, .co and more — using prefixes,
-      suffixes and blends to surface names that stand a better chance of being
-      available. It's a fast way to brainstorm a memorable web address. Click any
-      idea to copy it, then check availability with your registrar. Runs in your
-      browser.
+      suffixes and blends. As you type, each idea is checked live against public
+      DNS: a green dot means the name isn't resolving and is probably available,
+      while a taken name is dimmed. It's a fast way to brainstorm a memorable web
+      address and spot the free ones at a glance. The DNS check is a strong hint,
+      not a guarantee — a registered domain that simply has no DNS records can
+      still read as free — so click any name to confirm and register it. Runs
+      entirely in your browser; nothing you type is sent to a server of ours.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  import { shuffle, pick } from '../../lib/random';
-  import { TLDS } from '../../lib/fakedata';
+  import { shuffle } from '../../lib/random';
 
   const $ = (id: string) => document.getElementById(id)!;
   const wordEl = $('dn-word') as HTMLInputElement;
-  const countEl = $('dn-count') as HTMLInputElement;
+  const statusEl = $('dn-status')!;
   const out = $('dn-out')!;
 
+  // Core TLDs checked for the base word, plus prefix/suffix blends.
+  const TLDS = [
+    'com', 'io', 'app', 'dev', 'co', 'net', 'org', 'ai', 'xyz', 'tech',
+    'online', 'store', 'site', 'me', 'info', 'biz', 'cloud', 'digital',
+    'studio', 'design', 'agency', 'space', 'live', 'world', 'shop', 'club',
+    'pro', 'tv', 'gg', 'sh',
+  ];
   const PREFIX = ['get', 'try', 'go', 'my', 'the', 'join', 'use'];
   const SUFFIX = ['app', 'hq', 'ly', 'hub', 'lab', 'io', 'now', 'kit'];
+  const MAX = 60;
 
-  function generate() {
-    const w = (wordEl.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '') || 'brand');
-    const n = Math.max(6, Math.min(60, Number(countEl.value) || 24));
-    const roots = new Set<string>([w]);
-    for (const p of PREFIX) roots.add(p + w);
-    for (const s of SUFFIX) roots.add(w + s);
+  // Which TLDs the filter currently includes. The popular five start on;
+  // the rest are one tap away in the chip row.
+  const active = new Set<string>(['com', 'net', 'org', 'ai', 'io']);
+
+  type State = 'checking' | 'free' | 'taken' | 'error';
+
+  function candidates(w: string): string[] {
     const domains = new Set<string>();
-    for (const r of roots) {
-      const tld = pick(TLDS);
-      domains.add(`${r}.${tld}`);
-    }
-    // Add a few explicit .com/.io for the base word.
-    domains.add(`${w}.com`); domains.add(`${w}.io`); domains.add(`get${w}.com`);
-    const list = shuffle([...domains]).slice(0, n);
-    out.innerHTML = list.map((d) => `<button class="panel flex items-center justify-between px-4 py-2.5 text-left font-mono text-sm text-ink hover:border-hairline-strong" data-d="${d}"><span>${d}</span></button>`).join('');
-    out.querySelectorAll('button').forEach((b) => b.addEventListener('click', async () => {
-      await navigator.clipboard.writeText((b as HTMLElement).dataset.d!);
-      const span = b.querySelector('span')!; const orig = span.textContent;
-      span.textContent = 'Copied!'; setTimeout(() => (span.textContent = orig), 1000);
-    }));
+    // Base word across every active TLD — the names people actually want.
+    for (const tld of TLDS) if (active.has(tld)) domains.add(`${w}.${tld}`);
+    // Blends land on .com/.io — only when that TLD is in the filter.
+    if (active.has('com')) for (const p of PREFIX) domains.add(`${p}${w}.com`);
+    if (active.has('io')) for (const p of PREFIX) domains.add(`${p}${w}.io`);
+    if (active.has('com')) for (const s of SUFFIX) domains.add(`${w}${s}.com`);
+    if (active.has('io')) for (const s of SUFFIX) domains.add(`${w}${s}.io`);
+    return shuffle([...domains]).slice(0, MAX);
   }
 
-  [wordEl, countEl].forEach((el) => el.addEventListener('input', generate));
-  $('dn-gen').addEventListener('click', generate);
-  $('dn-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    const text = [...out.querySelectorAll('button')].map((b) => (b as HTMLElement).dataset.d).join('\n');
-    await navigator.clipboard.writeText(text);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  /**
+   * Cloudflare DNS-over-HTTPS (CORS-enabled). Status 3 = NXDOMAIN → the name
+   * doesn't resolve, so it's likely unregistered. Anything that resolves is
+   * treated as taken. Network/parse failure → 'error' (shown as unknown).
+   * ponytail: DNS is a heuristic, not a registry lookup — good enough for a
+   * "which of these is free?" scan; the UI says so and links out to confirm.
+   */
+  async function checkDoh(domain: string, signal: AbortSignal): Promise<State> {
+    try {
+      const res = await fetch(
+        `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=A`,
+        { headers: { accept: 'application/dns-json' }, signal },
+      );
+      if (!res.ok) return 'error';
+      const data = await res.json();
+      return data.Status === 3 ? 'free' : 'taken';
+    } catch (e) {
+      if ((e as Error).name === 'AbortError') throw e;
+      return 'error';
+    }
+  }
+
+  const DOT: Record<State, string> = {
+    checking: 'bg-hairline-strong animate-pulse',
+    free: 'bg-success',
+    taken: 'bg-ink-tertiary',
+    error: 'bg-ink-tertiary',
+  };
+  const LABEL: Record<State, string> = {
+    checking: 'Checking…',
+    free: 'Available',
+    taken: 'Taken',
+    error: 'Unknown',
+  };
+
+  function row(domain: string, state: State): string {
+    const registrar = `https://www.namecheap.com/domains/registration/results/?domain=${encodeURIComponent(domain)}`;
+    return `<a href="${registrar}" target="_blank" rel="noopener"
+      class="panel flex items-center gap-3 px-4 py-2.5 font-mono text-sm text-ink hover:border-hairline-strong ${state === 'taken' ? 'opacity-55' : ''}"
+      data-domain="${domain}">
+      <span class="inline-block h-2 w-2 shrink-0 rounded-full ${DOT[state]}"></span>
+      <span class="truncate">${domain}</span>
+      <span class="ml-auto shrink-0 text-[12px] ${state === 'free' ? 'text-success' : 'text-ink-tertiary'}">${LABEL[state]}</span>
+    </a>`;
+  }
+
+  // Bump on every new search so stale in-flight checks can bail out.
+  let runId = 0;
+  const CONCURRENCY = 8;
+
+  async function generate() {
+    const w = wordEl.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!w) {
+      out.innerHTML = '';
+      statusEl.textContent = 'Type a keyword to see available domains.';
+      return;
+    }
+
+    const mine = ++runId;
+    const controller = new AbortController();
+    const list = candidates(w);
+    if (!list.length) {
+      out.innerHTML = '';
+      statusEl.textContent = 'Pick at least one domain type above.';
+      return;
+    }
+
+    // Paint the whole list as "checking" up front, keyed by domain so we can
+    // patch each row in place as its result lands.
+    const states = new Map<string, State>(list.map((d) => [d, 'checking']));
+    const render = () => {
+      // Available first, then checking, then taken/unknown — like the reference.
+      // Within a group: exact keyword match first, then shortest name, then A–Z.
+      const order: Record<State, number> = { free: 0, checking: 1, error: 2, taken: 3 };
+      const sld = (d: string) => d.split('.')[0];
+      const sorted = [...states].sort(([da, sa], [db, sb]) => {
+        if (order[sa] !== order[sb]) return order[sa] - order[sb];
+        const ma = sld(da) === w ? 0 : 1, mb = sld(db) === w ? 0 : 1;
+        if (ma !== mb) return ma - mb;
+        if (da.length !== db.length) return da.length - db.length;
+        return da.localeCompare(db);
+      });
+      out.innerHTML = sorted.map(([d, s]) => row(d, s)).join('');
+    };
+    render();
+    statusEl.textContent = `Checking ${list.length} names…`;
+
+    // Simple concurrency pool over a shared queue.
+    const queue = [...list];
+    let free = 0;
+    async function worker() {
+      while (queue.length) {
+        const domain = queue.shift()!;
+        let state: State;
+        try {
+          state = await checkDoh(domain, controller.signal);
+        } catch {
+          return; // aborted — a newer search took over
+        }
+        if (mine !== runId) return; // superseded while awaiting
+        states.set(domain, state);
+        if (state === 'free') free++;
+        render();
+      }
+    }
+    await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+    if (mine !== runId) return;
+    statusEl.textContent = `${free} of ${list.length} look available.`;
+  }
+
+  // ---- TLD filter chips ----
+  const tldsEl = $('dn-tlds')!;
+  function renderChips() {
+    tldsEl.innerHTML = TLDS.map((tld) => {
+      const on = active.has(tld);
+      return `<button type="button" data-tld="${tld}" aria-pressed="${on}"
+        class="rounded-full border px-2.5 py-1 font-mono text-[12px] transition-colors ${
+          on
+            ? 'border-primary/50 bg-primary/15 text-ink'
+            : 'border-hairline text-ink-tertiary hover:border-hairline-strong hover:text-ink-subtle'
+        }">.${tld}</button>`;
+    }).join('');
+  }
+  tldsEl.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('button');
+    if (!btn) return;
+    const tld = btn.dataset.tld!;
+    if (active.has(tld)) active.delete(tld);
+    else active.add(tld);
+    renderChips();
+    generate();
+  });
+  $('dn-all').addEventListener('click', () => {
+    TLDS.forEach((t) => active.add(t));
+    renderChips();
+    generate();
+  });
+  $('dn-none').addEventListener('click', () => {
+    active.clear();
+    renderChips();
+    generate();
+  });
+  renderChips();
+
+  // Debounce typing so we don't fire a DNS storm on every keystroke.
+  let timer: number | undefined;
+  wordEl.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = window.setTimeout(generate, 350);
   });
   generate();
 </script>

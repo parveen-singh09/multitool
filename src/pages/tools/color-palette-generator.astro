@@ -4,95 +4,334 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="color-palette-generator">
   <div class="flex flex-col gap-4">
-    <div class="flex flex-wrap items-end gap-3">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Mode
-        <select id="cp-mode" class="field w-48">
-          <option value="random" selected>Random</option>
+    <!-- Toolbar -->
+    <div class="flex flex-wrap items-center gap-2">
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">Harmony
+        <select id="cp-mode" class="field w-44">
+          <option value="auto" selected>Auto (random)</option>
           <option value="analogous">Analogous</option>
+          <option value="monochrome">Monochromatic</option>
           <option value="complementary">Complementary</option>
+          <option value="split">Split-complementary</option>
           <option value="triadic">Triadic</option>
-          <option value="monochrome">Monochrome</option>
+          <option value="tetradic">Tetradic</option>
         </select>
       </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Base color
-        <input id="cp-base" type="color" value="#5e6ad2" class="field h-10 w-16 cursor-pointer p-1" />
-      </label>
-      <button id="cp-gen" class="btn btn-primary ml-auto">Generate (Space)</button>
-      <button id="cp-copy" class="btn btn-secondary">Copy HEX</button>
+
+      <div class="flex items-center gap-1 text-sm text-ink-subtle">
+        <span>Colors</span>
+        <button id="cp-minus" class="btn btn-secondary h-9 w-9 justify-center p-0" title="Remove a color" aria-label="Remove a color">−</button>
+        <span id="cp-count" class="w-5 text-center font-mono text-ink">5</span>
+        <button id="cp-plus" class="btn btn-secondary h-9 w-9 justify-center p-0" title="Add a color" aria-label="Add a color">+</button>
+      </div>
+
+      <button id="cp-gen" class="btn btn-primary">Generate <span class="ml-1 hidden text-[11px] opacity-70 sm:inline">Space</span></button>
+
+      <div class="ml-auto flex items-center gap-2">
+        <button id="cp-undo" class="btn btn-secondary h-9 w-9 justify-center p-0" title="Undo (Ctrl+Z)" aria-label="Undo">↺</button>
+        <button id="cp-redo" class="btn btn-secondary h-9 w-9 justify-center p-0" title="Redo (Ctrl+Y)" aria-label="Redo">↻</button>
+        <button id="cp-link" class="btn btn-secondary" title="Copy a shareable link to this palette">Copy link</button>
+        <select id="cp-export" class="field w-40" title="Export the palette">
+          <option value="" selected disabled>Export…</option>
+          <option value="hex">Copy HEX list</option>
+          <option value="rgb">Copy RGB list</option>
+          <option value="hsl">Copy HSL list</option>
+          <option value="css">Copy CSS variables</option>
+          <option value="json">Copy JSON</option>
+          <option value="png">Download PNG</option>
+        </select>
+      </div>
     </div>
-    <div id="cp-swatches" class="grid grid-cols-2 gap-3 sm:grid-cols-5"></div>
-    <p class="text-[13px] text-ink-tertiary">Click a swatch to lock it; locked colors stay when you regenerate. Press Space to generate.</p>
+
+    <!-- Swatches -->
+    <div id="cp-swatches" class="grid gap-2" style="grid-template-columns:repeat(5,minmax(0,1fr))"></div>
+
+    <p class="text-[13px] text-ink-tertiary">
+      Press <kbd class="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] text-ink-muted">Space</kbd> to generate.
+      Lock the colors you want to keep, drag swatches to reorder, click a hex to copy it, or click the pencil to fine-tune. Everything runs in your browser.
+    </p>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free color palette generator creates five-color palettes either at
-      random or built as a harmony — analogous, complementary, triadic or
-      monochrome — around a base color. Lock the colors you like by clicking them
-      and keep generating until the rest fall into place, then copy the HEX
-      values. It's a fast way to start a brand or UI palette. Runs in your browser.
+      This free color palette generator builds cohesive palettes fast. Hit the
+      space bar to roll a fresh set, lock the colors you love so they stay put,
+      and keep generating until the rest click into place. Choose a harmony —
+      analogous, monochromatic, complementary, split-complementary, triadic or
+      tetradic — to derive a palette from a locked base color, or leave it on
+      Auto for varied random schemes.
+    </p>
+    <p>
+      Adjust the palette size from three to eight colors, reorder swatches by
+      dragging, and fine-tune any color with the built-in picker. Every palette
+      lives in the page URL, so copying the link shares the exact colors — no
+      account needed. Export to a HEX, RGB or HSL list, ready-to-paste CSS
+      custom properties, JSON, or a PNG image. Each swatch also shows its nearest
+      CSS color name and picks a readable text color automatically. Runs entirely
+      in your browser.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  import { hexToRgb, rgbToHex, rgbToHsl, hslToRgb } from '../../lib/colors';
+  import {
+    hexToRgb, rgbToHex, rgbToHsl, hslToRgb, rgbToHsv, rgbToCmyk, nearestColorName,
+  } from '../../lib/colors';
   import { randInt } from '../../lib/random';
 
   const $ = (id: string) => document.getElementById(id)!;
   const modeEl = $('cp-mode') as HTMLSelectElement;
-  const baseEl = $('cp-base') as HTMLInputElement;
-  const wrap = $('cp-swatches')!;
-  const N = 5;
-  let colors: string[] = [];
-  let locked: boolean[] = new Array(N).fill(false);
+  const countEl = $('cp-count');
+  const wrap = $('cp-swatches');
+  const exportEl = $('cp-export') as HTMLSelectElement;
 
-  const hslHex = (h: number, s: number, l: number) => rgbToHex(hslToRgb({ h: (h + 360) % 360, s: Math.max(0, Math.min(100, s)), l: Math.max(0, Math.min(100, l)) }));
+  interface Swatch { hex: string; locked: boolean; }
+  let colors: Swatch[] = [];
+  let history: Swatch[][] = [];
+  let hpos = -1; // pointer into history
 
-  function build(): string[] {
-    const base = hexToRgb(baseEl.value) || { r: 94, g: 106, b: 210 };
-    const { h, s, l } = rgbToHsl(base);
-    const mode = modeEl.value;
+  const clampHsl = (h: number, s: number, l: number) => ({
+    h: ((h % 360) + 360) % 360,
+    s: Math.max(0, Math.min(100, s)),
+    l: Math.max(0, Math.min(100, l)),
+  });
+  const hslHex = (h: number, s: number, l: number) => {
+    const c = clampHsl(h, s, l);
+    return rgbToHex(hslToRgb(c));
+  };
+
+  // Readable text color over a background, via perceived luminance.
+  function textOn(hex: string): string {
+    const c = hexToRgb(hex) || { r: 0, g: 0, b: 0 };
+    const L = (0.299 * c.r + 0.587 * c.g + 0.114 * c.b) / 255;
+    return L > 0.6 ? '#0b0b0c' : '#ffffff';
+  }
+
+  // Build a fresh palette of `n` colors for a mode, seeded from an optional base HSL.
+  function build(n: number, mode: string, base: { h: number; s: number; l: number } | null): string[] {
+    const b = base || { h: randInt(0, 359), s: randInt(55, 80), l: randInt(45, 65) };
     const out: string[] = [];
-    for (let i = 0; i < N; i++) {
-      if (mode === 'random') out.push(hslHex(randInt(0, 359), randInt(45, 85), randInt(35, 70)));
-      else if (mode === 'analogous') out.push(hslHex(h + (i - 2) * 30, s, l));
-      else if (mode === 'complementary') out.push(hslHex(i % 2 === 0 ? h : h + 180, s, l - 10 + i * 5));
-      else if (mode === 'triadic') out.push(hslHex(h + (i % 3) * 120, s, l - 10 + i * 5));
-      else out.push(hslHex(h, s, 25 + i * 15)); // monochrome
+    const center = (n - 1) / 2;
+    for (let i = 0; i < n; i++) {
+      const t = i / Math.max(1, n - 1); // 0..1 ramp
+      switch (mode) {
+        case 'analogous':
+          out.push(hslHex(b.h + (i - center) * 28, b.s + randInt(-6, 6), b.l + (i - center) * 6));
+          break;
+        case 'monochrome':
+          out.push(hslHex(b.h + randInt(-4, 4), b.s + randInt(-10, 10), 22 + t * 60));
+          break;
+        case 'complementary':
+          out.push(hslHex(i % 2 === 0 ? b.h : b.h + 180, b.s + randInt(-8, 8), 40 + t * 30));
+          break;
+        case 'split':
+          out.push(hslHex(b.h + [0, 150, 210][i % 3], b.s + randInt(-8, 8), 42 + t * 26));
+          break;
+        case 'triadic':
+          out.push(hslHex(b.h + (i % 3) * 120, b.s + randInt(-8, 8), 42 + t * 26));
+          break;
+        case 'tetradic':
+          out.push(hslHex(b.h + (i % 4) * 90, b.s + randInt(-8, 8), 42 + t * 26));
+          break;
+        default: // auto — pleasant randoms
+          out.push(hslHex(randInt(0, 359), randInt(50, 82), randInt(40, 72)));
+      }
     }
     return out;
   }
 
   function generate() {
-    const fresh = build();
-    colors = colors.length ? colors.map((c, i) => (locked[i] ? c : fresh[i])) : fresh;
+    const n = colors.length || 5;
+    const firstLocked = colors.find((c) => c.locked);
+    const base = firstLocked ? rgbToHsl(hexToRgb(firstLocked.hex)!) : null;
+    const fresh = build(n, modeEl.value, base);
+    colors = colors.map((c, i) => (c.locked ? c : { hex: fresh[i], locked: false }));
+    commit();
+  }
+
+  // Push current state to history + sync URL, then render.
+  function commit() {
+    history = history.slice(0, hpos + 1);
+    history.push(colors.map((c) => ({ ...c })));
+    hpos = history.length - 1;
+    syncUrl();
+    render();
+  }
+
+  function syncUrl() {
+    const hash = colors.map((c) => c.hex.replace('#', '')).join('-');
+    history.length && window.history.replaceState(null, '', '#' + hash);
+  }
+
+  function restore(state: Swatch[]) {
+    colors = state.map((c) => ({ ...c }));
+    syncUrl();
     render();
   }
 
   function render() {
-    wrap.innerHTML = colors.map((c, i) => `
-      <button data-i="${i}" class="group relative flex h-32 flex-col justify-end overflow-hidden rounded-[10px] border border-hairline p-2 text-left" style="background:${c}">
-        <span class="rounded-[5px] bg-black/40 px-2 py-1 font-mono text-xs text-white">${c}${locked[i] ? ' 🔒' : ''}</span>
-      </button>`).join('');
-    wrap.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
-      const i = Number((b as HTMLElement).dataset.i);
-      locked[i] = !locked[i];
-      render();
-    }));
+    wrap.style.gridTemplateColumns = `repeat(${colors.length}, minmax(0, 1fr))`;
+    wrap.innerHTML = colors.map((c, i) => {
+      const fg = textOn(c.hex);
+      const name = nearestColorName(hexToRgb(c.hex) || { r: 0, g: 0, b: 0 }).name;
+      return `
+      <div class="cp-col group relative flex min-h-[clamp(220px,42vh,420px)] flex-col justify-end overflow-hidden rounded-[10px] border border-hairline" style="background:${c.hex}" draggable="true" data-i="${i}">
+        <div class="flex items-center justify-center gap-1 p-2 opacity-0 transition-opacity group-hover:opacity-100" style="color:${fg}">
+          <button class="cp-act rounded-md p-2 hover:bg-black/10" data-act="lock" data-i="${i}" title="${c.locked ? 'Unlock' : 'Lock'}" aria-label="${c.locked ? 'Unlock' : 'Lock'}">${c.locked ? '🔒' : '🔓'}</button>
+          <button class="cp-act rounded-md p-2 hover:bg-black/10" data-act="copy" data-i="${i}" title="Copy hex" aria-label="Copy hex">⧉</button>
+          <label class="cp-act cursor-pointer rounded-md p-2 hover:bg-black/10" title="Edit color" aria-label="Edit color">✎
+            <input type="color" value="${c.hex}" class="sr-only cp-edit" data-i="${i}" />
+          </label>
+          <button class="cp-act rounded-md p-2 hover:bg-black/10 ${colors.length <= 3 ? 'pointer-events-none opacity-30' : ''}" data-act="del" data-i="${i}" title="Remove" aria-label="Remove">✕</button>
+        </div>
+        <div class="select-none px-3 pb-4 pt-1 text-center" style="color:${fg}">
+          <button class="cp-act font-mono text-lg font-semibold uppercase tracking-wide" data-act="copy" data-i="${i}" title="Copy hex">${c.hex.replace('#', '')}</button>
+          <div class="mt-0.5 text-[11px] capitalize opacity-70">${name}</div>
+        </div>
+      </div>`;
+    }).join('');
+    updateHistoryButtons();
   }
 
-  [modeEl, baseEl].forEach((el) => el.addEventListener('input', () => { colors = []; generate(); }));
-  $('cp-gen').addEventListener('click', generate);
-  $('cp-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(colors.join(', '));
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy HEX'), 1500);
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.code === 'Space' && (e.target as HTMLElement).tagName !== 'INPUT') { e.preventDefault(); generate(); }
+  function updateHistoryButtons() {
+    ($('cp-undo') as HTMLButtonElement).disabled = hpos <= 0;
+    ($('cp-redo') as HTMLButtonElement).disabled = hpos >= history.length - 1;
+  }
+
+  // ---- Actions (event delegation) ----
+  wrap.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.cp-act') as HTMLElement | null;
+    if (!btn) return;
+    const i = Number(btn.dataset.i);
+    const act = btn.dataset.act;
+    if (act === 'lock') { colors[i].locked = !colors[i].locked; render(); }
+    else if (act === 'copy') { copy(colors[i].hex, btn); }
+    else if (act === 'del' && colors.length > 3) { colors.splice(i, 1); commit(); }
   });
 
-  generate();
+  wrap.addEventListener('input', (e) => {
+    const el = e.target as HTMLInputElement;
+    if (!el.classList.contains('cp-edit')) return;
+    const i = Number(el.dataset.i);
+    colors[i] = { hex: el.value, locked: true };
+    render();
+  });
+  wrap.addEventListener('change', (e) => {
+    if ((e.target as HTMLElement).classList.contains('cp-edit')) commit();
+  });
+
+  // ---- Drag to reorder ----
+  let dragFrom = -1;
+  wrap.addEventListener('dragstart', (e) => {
+    const col = (e.target as HTMLElement).closest('.cp-col') as HTMLElement | null;
+    dragFrom = col ? Number(col.dataset.i) : -1;
+  });
+  wrap.addEventListener('dragover', (e) => e.preventDefault());
+  wrap.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const col = (e.target as HTMLElement).closest('.cp-col') as HTMLElement | null;
+    const to = col ? Number(col.dataset.i) : -1;
+    if (dragFrom < 0 || to < 0 || dragFrom === to) return;
+    const [moved] = colors.splice(dragFrom, 1);
+    colors.splice(to, 0, moved);
+    commit();
+    dragFrom = -1;
+  });
+
+  // ---- Count stepper ----
+  $('cp-plus').addEventListener('click', () => {
+    if (colors.length >= 8) return;
+    const fresh = build(1, modeEl.value, rgbToHsl(hexToRgb(colors[colors.length - 1].hex)!))[0];
+    colors.push({ hex: fresh, locked: false });
+    countEl.textContent = String(colors.length);
+    commit();
+  });
+  $('cp-minus').addEventListener('click', () => {
+    if (colors.length <= 3) return;
+    colors.pop();
+    countEl.textContent = String(colors.length);
+    commit();
+  });
+
+  // ---- Toolbar ----
+  modeEl.addEventListener('change', () => { colors.forEach((c) => (c.locked = false)); generate(); });
+  $('cp-gen').addEventListener('click', generate);
+  $('cp-undo').addEventListener('click', () => { if (hpos > 0) restore(history[--hpos]); updateHistoryButtons(); });
+  $('cp-redo').addEventListener('click', () => { if (hpos < history.length - 1) restore(history[++hpos]); updateHistoryButtons(); });
+  $('cp-link').addEventListener('click', (e) => copy(location.href, e.currentTarget as HTMLElement, 'Copied!'));
+
+  exportEl.addEventListener('change', () => {
+    const fmt = exportEl.value;
+    exportEl.value = '';
+    if (fmt === 'png') return downloadPng();
+    const hexes = colors.map((c) => c.hex);
+    let text = '';
+    if (fmt === 'hex') text = hexes.join(', ');
+    else if (fmt === 'rgb') text = hexes.map((h) => { const c = hexToRgb(h)!; return `rgb(${c.r}, ${c.g}, ${c.b})`; }).join('\n');
+    else if (fmt === 'hsl') text = hexes.map((h) => { const c = rgbToHsl(hexToRgb(h)!); return `hsl(${c.h}, ${c.s}%, ${c.l}%)`; }).join('\n');
+    else if (fmt === 'css') text = ':root {\n' + hexes.map((h, i) => `  --color-${i + 1}: ${h};`).join('\n') + '\n}';
+    else if (fmt === 'json') text = JSON.stringify(hexes.map((h) => { const rgb = hexToRgb(h)!; return { hex: h, rgb, hsl: rgbToHsl(rgb), hsv: rgbToHsv(rgb), cmyk: rgbToCmyk(rgb), name: nearestColorName(rgb).name }; }), null, 2);
+    navigator.clipboard.writeText(text);
+  });
+
+  function downloadPng() {
+    const W = 240, H = 320;
+    const canvas = document.createElement('canvas');
+    canvas.width = W * colors.length;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d')!;
+    colors.forEach((c, i) => {
+      ctx.fillStyle = c.hex;
+      ctx.fillRect(i * W, 0, W, H);
+      ctx.fillStyle = textOn(c.hex);
+      ctx.font = '600 22px ui-monospace, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(c.hex.toUpperCase(), i * W + W / 2, H - 28);
+    });
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = 'palette.png';
+    a.click();
+  }
+
+  async function copy(text: string, el: HTMLElement, label = 'Copied') {
+    await navigator.clipboard.writeText(text);
+    const prev = el.textContent;
+    el.textContent = label;
+    setTimeout(() => (el.textContent = prev), 1200);
+  }
+
+  // ---- Keyboard ----
+  document.addEventListener('keydown', (e) => {
+    const tag = (e.target as HTMLElement).tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+    if (e.code === 'Space') { e.preventDefault(); generate(); }
+    else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (hpos > 0) restore(history[--hpos]); updateHistoryButtons(); }
+    else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) { e.preventDefault(); if (hpos < history.length - 1) restore(history[++hpos]); updateHistoryButtons(); }
+  });
+
+  // ---- Init: from URL hash or fresh ----
+  function fromHash(): Swatch[] | null {
+    const raw = location.hash.replace(/^#/, '');
+    if (!raw) return null;
+    const parts = raw.split('-').filter(Boolean);
+    if (parts.length < 3 || parts.length > 8) return null;
+    const out: Swatch[] = [];
+    for (const p of parts) {
+      const hex = '#' + p;
+      if (!hexToRgb(hex)) return null;
+      out.push({ hex: rgbToHex(hexToRgb(hex)!), locked: false });
+    }
+    return out;
+  }
+
+  const initial = fromHash();
+  if (initial) {
+    colors = initial;
+    countEl.textContent = String(colors.length);
+    commit();
+  } else {
+    colors = new Array(5).fill(null).map(() => ({ hex: '#000000', locked: false }));
+    generate();
+  }
 </script>

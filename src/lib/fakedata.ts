@@ -82,16 +82,76 @@ export const ADJECTIVES = [
   'restless', 'brave', 'quiet', 'wild', 'distant', 'radiant', 'shattered', 'velvet',
   'hollow', 'endless', 'shining', 'fading', 'electric', 'lonely', 'sacred', 'humble',
   'fierce', 'cosmic', 'amber', 'dusty', 'nimble', 'stormy', 'clever', 'bold',
+  ...(
+    'happy sad angry calm eager tired weary bright pale vivid dull sharp blunt smooth ' +
+    'rough soft hard warm cool icy fiery misty foggy sunny cloudy rainy snowy windy ' +
+    'breezy frosty humid dry damp arid lush barren fertile modern rustic urban rural ' +
+    'noble royal loyal fickle honest greedy gracious cruel kind tender bitter sweet ' +
+    'sour salty spicy bland tasty fresh stale ripe rotten crisp tough chewy tiny giant ' +
+    'huge massive vast petite slim slender stout burly lanky sturdy fragile brittle ' +
+    'flexible rigid supple firm loose tight snug baggy plush cozy elegant fancy plain ' +
+    'simple complex ornate sleek glossy matte rusty polished worn tattered ragged ' +
+    'pristine spotless filthy grimy muddy sandy rocky grassy leafy thorny prickly fuzzy ' +
+    'furry scaly silky wooden metallic glassy plastic stony marble ivory ebony coral ' +
+    'pearl silver bronze copper merry jolly cheerful gloomy somber grim bleak dreary ' +
+    'dismal cheery upbeat sleepy drowsy alert keen dim faint meek shy timid daring ' +
+    'reckless careful cautious prudent wise foolish silly witty smart sly cunning naive ' +
+    'innocent guilty proud vain modest curious anxious nervous jealous furious joyful ' +
+    'hopeful fearful graceful clumsy agile swift rapid speedy slow sluggish lazy busy ' +
+    'idle active crazy sane wicked holy divine mortal eternal timeless fleeting steady ' +
+    'shaky wobbly solid molten mild tepid boiling chilly toasty savory hearty juicy ' +
+    'creamy flaky gooey sticky slippery greasy oily grand mighty feeble weak strong potent'
+  ).split(' '),
 ];
 export const NOUNS = [
   'mountain', 'river', 'forest', 'shadow', 'ember', 'harbor', 'meadow', 'comet',
   'lantern', 'echo', 'canyon', 'garden', 'falcon', 'thunder', 'willow', 'horizon',
   'compass', 'anchor', 'phoenix', 'glacier', 'orchid', 'raven', 'summit', 'voyage',
   'engine', 'signal', 'circuit', 'nebula', 'pixel', 'harvest', 'beacon', 'atlas',
+  ...(
+    'island valley desert ocean lake pond stream brook waterfall cliff cave cavern ' +
+    'boulder pebble gravel dune prairie tundra jungle swamp marsh lagoon reef atoll ' +
+    'volcano crater ridge slope hill plateau plain field pasture orchard vineyard ' +
+    'grove thicket bramble hedge fern moss lichen clover tulip daisy lily rose poppy ' +
+    'maple cedar birch aspen pine oak elm ash spruce bamboo cactus palm sequoia eagle ' +
+    'hawk owl sparrow robin finch heron crane swan goose duck otter beaver badger fox ' +
+    'wolf bear deer moose elk bison lynx cougar panther tiger lion leopard cheetah ' +
+    'zebra rhino hippo camel llama alpaca donkey mule stallion mare foal calf lamb ' +
+    'piglet kitten puppy dolphin whale shark seal walrus penguin turtle lizard gecko ' +
+    'cobra viper python salmon trout perch bass carp shrimp crab lobster oyster clam ' +
+    'coral sponge starfish jellyfish castle tower bridge tunnel arch dome spire vault ' +
+    'temple shrine chapel abbey cottage cabin lodge manor palace fortress citadel ' +
+    'lighthouse windmill mill barn stable market plaza avenue alley boulevard courtyard ' +
+    'balcony terrace attic cellar hearth chimney rafter beam ladder staircase corridor ' +
+    'gateway threshold hammer chisel wrench pliers anvil forge kettle cauldron goblet ' +
+    'chalice flask vial scroll parchment quill inkwell candle torch chandelier hourglass ' +
+    'sextant telescope microscope prism crystal gemstone diamond emerald sapphire ruby ' +
+    'topaz opal jade quartz granite marble basalt obsidian meteor asteroid galaxy planet ' +
+    'satellite rocket probe reactor turbine piston gear lever pulley cog spring valve'
+  ).split(' '),
 ];
 export const VERBS = [
   'runs', 'whispers', 'builds', 'dreams', 'flows', 'rises', 'wanders', 'glows',
   'breaks', 'sings', 'drifts', 'burns', 'climbs', 'waits', 'turns', 'shines',
+  ...(
+    'jumps leaps sprints dashes crawls creeps slides glides soars dives plunges floats ' +
+    'sinks swims paddles rows sails steers drives rides races chases follows leads guides ' +
+    'carries drags pushes pulls lifts hoists drops tosses throws catches grabs clutches ' +
+    'holds releases twists bends folds tears rips cuts slices chops grinds crushes smashes ' +
+    'shatters cracks splits joins binds ties knots weaves stitches sews mends fixes shapes ' +
+    'molds carves sculpts paints draws sketches writes reads speaks shouts murmurs mumbles ' +
+    'laughs giggles cries weeps sighs groans yawns sneezes coughs hums chants roars growls ' +
+    'barks howls purrs chirps tweets buzzes hisses rattles clangs chimes rings ticks knocks ' +
+    'taps thumps pounds hammers drills scrapes sweeps mops scrubs wipes rinses soaks dries ' +
+    'bakes roasts fries poaches steams simmers stirs blends whisks minces dices peels grates ' +
+    'sprinkles pours fills empties spills drips leaks gushes sprays splashes freezes melts ' +
+    'thaws boils cools warms heats gleams flickers flashes sparks blazes smolders fades dims ' +
+    'brightens gathers scatters spreads shrinks swells expands contracts vibrates trembles ' +
+    'shivers quakes sways rocks tilts leans topples crumbles collapses rebuilds restores ' +
+    'plants sows reaps harvests digs plows waters prunes trims mows rakes hunts fishes ' +
+    'tracks stalks pounces guards defends attacks retreats flees hides seeks finds loses ' +
+    'wins bargains trades sells buys spends saves counts measures weighs sorts stacks packs'
+  ).split(' '),
 ];
 
 export const TLDS = ['com', 'io', 'app', 'dev', 'co', 'net', 'org', 'ai', 'xyz', 'tech', 'studio', 'works'];

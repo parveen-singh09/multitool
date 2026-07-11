@@ -48,6 +48,51 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+  // 500 default bios composed from three independent sentence banks (identity / habit / outlook).
+  // Any A+B+C reads coherently; 18^3 = 5832 combos, so 500 unique is easy.
+  const BIO_A = [
+    'Curious by nature.', 'Optimist with a plan.', 'Quietly ambitious, loudly kind.',
+    'Part planner, part improviser.', 'Perpetual work in progress.', 'Half maker, half daydreamer.',
+    'Coffee first, questions later.', 'Lover of details most people skip.', 'Not in a hurry, not standing still.',
+    'A collector of moments and bad puns.', 'Curious mind, steady hands.', 'Endlessly nosy about how things work.',
+    'Grounded by routine, pulled by wonder.', 'Fueled by tea and stubborn hope.', 'Equal parts dreamer and doer.',
+    'Rooting for the late bloomers.', 'Still surprised by how much there is to learn.', 'Happiest with a project underway.',
+  ];
+  const BIO_B = [
+    'I chase small joys and big ideas.', 'I build things meant to last.', 'I learn out loud and ship often.',
+    'I make room for wonder in ordinary days.', 'I turn hunches into things you can touch.', 'I collect good sentences and too many notebooks.',
+    'I like hard problems and soft landings.', 'I care about craft and getting the small things right.', 'I keep a short list of loves and a long list of maybes.',
+    'I trade certainty for curiosity most days.', 'I do ordinary things with unreasonable care.', 'I read more than I probably should.',
+    'I solve problems that matter with people I like.', 'I share what I make, freely.', 'I pay attention, on purpose.',
+    'I take slow mornings and honest work.', 'I follow the questions further than the answers.', 'I keep the promises I make.',
+  ];
+  const BIO_C = [
+    'Trying to leave things better than I found them.', 'The rest tends to follow.', 'That never gets old.',
+    'Simple over clever, honest over polished.', 'Beginnings are overrated; I like the second draft.', 'The margins are where the magic hides.',
+    'Just moving at a pace that keeps me honest.', 'Still figuring it out, cheerfully.', 'Both lists keep growing.',
+    'Leaving a little room for luck.', 'That is the whole plan.', 'Holding plans loosely and values tightly.',
+    'Paying it forward when I can.', 'One small choice at a time.', 'The internet raised me.',
+    'Somewhere better than the map promised.', 'Ask me about any of it.', 'The rest is just weather.',
+  ];
+
+  function buildDefaults(n: number): string[] {
+    const bios: string[] = [];
+    const nb = BIO_B.length, nc = BIO_C.length;
+    // Base decomposition gives independent A/B/C indices -> 18^3 = 5832 unique combos.
+    const max = BIO_A.length * nb * nc;
+    for (let i = 0; i < n && i < max; i++) {
+      bios.push(`${BIO_A[i % BIO_A.length]} ${BIO_B[Math.floor(i / BIO_A.length) % nb]} ${BIO_C[Math.floor(i / (BIO_A.length * nb)) % nc]}`);
+    }
+    return bios;
+  }
+  const DEFAULT_BIOS = buildDefaults(500);
+
+  // ponytail self-check: dev-only, confirms the pool is 500 unique.
+  if (import.meta.env.DEV) {
+    console.assert(DEFAULT_BIOS.length === 500, 'expected 500 bios');
+    console.assert(new Set(DEFAULT_BIOS).size === 500, 'bios not all unique');
+  }
+
   function templates(role: string, ints: string[], vibe: string): string[] {
     const i1 = ints[0] || 'life', i2 = ints[1] || 'ideas', i3 = ints[2] || 'good coffee';
     if (vibe === 'professional') return [
@@ -82,7 +127,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const n = Math.max(3, Math.min(20, Number(countEl.value) || 6));
     const pool = templates(role, ints, vibeEl.value);
     const picked = shuffle(pool).slice(0, Math.min(n, pool.length));
-    while (picked.length < n) picked.push(pick(pool));
+    const fill = shuffle(DEFAULT_BIOS);
+    while (picked.length < n) picked.push(fill[picked.length % fill.length]);
     out.innerHTML = picked.map((b) => `<li class="panel px-4 py-2.5 text-[15px] text-ink">${b}</li>`).join('');
   }
 

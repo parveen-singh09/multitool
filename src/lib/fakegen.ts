@@ -2,7 +2,8 @@
 // profile, mock JSON, CSV). All values are fictional and use reserved/test
 // ranges where a real value could otherwise collide with a person.
 
-import { randInt, pick, luhnCheckDigit } from './random';
+import { randInt, pick, randFloat, randHex } from './random';
+import { getLocale, type Locale } from './locales';
 import {
   FIRST_NAMES_M, FIRST_NAMES_F, LAST_NAMES, STREETS, STREET_TYPES,
   CITIES, US_STATES, EMAIL_DOMAINS, COMPANY_ADJ, COMPANY_NOUN, COMPANY_SUFFIX,
@@ -92,51 +93,93 @@ export function birthDate(minAge = 18, maxAge = 80): string {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
-// Luhn-valid test card number for a scheme. These are deliberately valid-format
-// TEST numbers — they are not real, active accounts.
-export interface Card { scheme: string; number: string; cvv: string; expiry: string; }
+// ---- Rich locale-aware user profile (for the profile generator) ----
 
-const CARD_PREFIX: Record<string, { prefix: string; len: number; cvvLen: number }> = {
-  Visa: { prefix: '4', len: 16, cvvLen: 3 },
-  Mastercard: { prefix: '55', len: 16, cvvLen: 3 },
-  Amex: { prefix: '37', len: 15, cvvLen: 4 },
-  Discover: { prefix: '6011', len: 16, cvvLen: 3 },
-};
+const TITLES_M = ['Mr', 'Dr', 'Prof'];
+const TITLES_F = ['Ms', 'Mrs', 'Miss', 'Dr', 'Prof'];
+const PW_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%';
+// IANA-ish offsets with a representative zone label.
+const TIMEZONES = [
+  { offset: '-08:00', name: 'America/Los_Angeles' }, { offset: '-05:00', name: 'America/New_York' },
+  { offset: '+00:00', name: 'Europe/London' }, { offset: '+01:00', name: 'Europe/Paris' },
+  { offset: '+02:00', name: 'Europe/Athens' }, { offset: '+03:00', name: 'Europe/Moscow' },
+  { offset: '+05:30', name: 'Asia/Kolkata' }, { offset: '+08:00', name: 'Asia/Shanghai' },
+  { offset: '+09:00', name: 'Asia/Tokyo' }, { offset: '+10:00', name: 'Australia/Sydney' },
+];
 
-export function creditCard(scheme: keyof typeof CARD_PREFIX): Card {
-  const spec = CARD_PREFIX[scheme];
-  let body = spec.prefix;
-  while (body.length < spec.len - 1) body += randInt(0, 9);
-  const num = body + luhnCheckDigit(body);
-  const grouped = scheme === 'Amex'
-    ? `${num.slice(0, 4)} ${num.slice(4, 10)} ${num.slice(10)}`
-    : num.replace(/(.{4})/g, '$1 ').trim();
-  let cvv = '';
-  for (let i = 0; i < spec.cvvLen; i++) cvv += randInt(0, 9);
-  const exp = `${String(randInt(1, 12)).padStart(2, '0')}/${String(randInt(26, 32))}`;
-  return { scheme, number: grouped, cvv, expiry: exp };
+export interface ProfileOptions {
+  sex?: Sex;
+  nat?: string; // locale key, or 'any'
 }
 
-// Format-valid IBAN using mod-97. Country + BBAN length per spec.
-const IBAN_SPEC: Record<string, number> = { DE: 18, GB: 18, FR: 23, ES: 20, NL: 14, IT: 23 };
-
-export function iban(country: keyof typeof IBAN_SPEC): string {
-  const bbanLen = IBAN_SPEC[country];
-  let bban = '';
-  for (let i = 0; i < bbanLen; i++) bban += randInt(0, 9);
-  // Compute check digits: move country+00 to end, convert letters, mod 97.
-  const rearranged = bban + country + '00';
-  const numeric = rearranged.replace(/[A-Z]/g, (c) => String(c.charCodeAt(0) - 55));
-  let remainder = 0;
-  for (const ch of numeric) remainder = (remainder * 10 + (ch.charCodeAt(0) - 48)) % 97;
-  const check = String(98 - remainder).padStart(2, '0');
-  return (country + check + bban).replace(/(.{4})/g, '$1 ').trim();
+/** RFC-4122 v4 UUID drawn from the shared (seedable) RNG. */
+export function uuid(): string {
+  const h = randHex(32).split('');
+  h[12] = '4';
+  h[16] = '89ab'[randInt(0, 3)];
+  const s = h.join('');
+  return `${s.slice(0, 8)}-${s.slice(8, 12)}-${s.slice(12, 16)}-${s.slice(16, 20)}-${s.slice(20)}`;
 }
 
-// SSN-formatted value in the non-issuable 900-999 area range (never assigned).
-export function ssn(): string {
-  const area = randInt(900, 999);
-  const group = String(randInt(1, 99)).padStart(2, '0');
-  const serial = String(randInt(1, 9999)).padStart(4, '0');
-  return `${area}-${group}-${serial}`;
+function password(len = 12): string {
+  let out = '';
+  for (let i = 0; i < len; i++) out += PW_CHARS[randInt(0, PW_CHARS.length - 1)];
+  return out;
 }
+
+// YYYY-MM-DD `years` before now (offset by the random day/month), plus the age.
+function dateYearsAgo(years: number): { date: string; age: number } {
+  const now = new Date();
+  const d = new Date(now.getFullYear() - years, randInt(0, 11), randInt(1, 28));
+  const age = now.getFullYear() - d.getFullYear() -
+    (now < new Date(now.getFullYear(), d.getMonth(), d.getDate()) ? 1 : 0);
+  return { date: d.toISOString().slice(0, 10), age };
+}
+
+export function profile(opts: ProfileOptions = {}) {
+  const loc: Locale = getLocale(opts.nat ?? 'any');
+  const sex: Exclude<Sex, 'any'> =
+    opts.sex === 'male' || opts.sex === 'female' ? opts.sex : (randInt(0, 1) ? 'male' : 'female');
+  const first = pick(sex === 'male' ? loc.firstM : loc.firstF);
+  const last = pick(loc.last);
+  const title = pick(sex === 'male' ? TITLES_M : TITLES_F);
+
+  const streetType = loc.streetTypes.length ? pick(loc.streetTypes) : '';
+  const dob = dateYearsAgo(randInt(18, 80));
+  const registered = dateYearsAgo(randInt(0, 12));
+
+  return {
+    gender: sex,
+    title,
+    firstName: first,
+    lastName: last,
+    fullName: `${first} ${last}`,
+    initials: (first[0] + last[0]).toUpperCase(),
+    username: username(),
+    email: email(first, last),
+    password: password(),
+    phone: loc.phone(),
+    cell: loc.phone(),
+    uuid: uuid(),
+    age: dob.age,
+    dob: dob.date,
+    registered: registered.date,
+    nat: loc.key.toUpperCase(),
+    nationality: loc.label,
+    flag: loc.flag,
+    location: {
+      street: loc.streetLine(randInt(1, 9999), pick(loc.streets), streetType),
+      city: pick(loc.cities),
+      [loc.regionLabel.toLowerCase()]: pick(loc.regions),
+      postcode: loc.postcode(),
+      country: loc.label,
+      coordinates: {
+        latitude: +(randFloat() * 180 - 90).toFixed(4),
+        longitude: +(randFloat() * 360 - 180).toFixed(4),
+      },
+      timezone: pick(TIMEZONES),
+    },
+  };
+}
+
+export type Profile = ReturnType<typeof profile>;

@@ -4,80 +4,143 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="nickname-generator">
   <div class="flex flex-col gap-4">
-    <div class="flex flex-wrap items-end gap-3">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Your name
-        <input id="nk-name" class="field" value="Alex" spellcheck="false" />
-      </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Style
-        <select id="nk-style" class="field w-36"><option value="cute">Cute</option><option value="cool">Cool</option><option value="gamer">Gamer</option></select>
-      </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
-        <input id="nk-count" type="number" min="4" max="40" value="16" class="field w-24" />
-      </label>
-      <button id="nk-gen" class="btn btn-primary ml-auto">Generate</button>
-      <button id="nk-copy" class="btn btn-secondary">Copy all</button>
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Type your name or nickname
+      <input id="nk-name" class="field text-lg" value="Alex" spellcheck="false" autocomplete="off" placeholder="Alex" />
+    </label>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <div id="nk-tabs" class="flex gap-1">
+        <button class="btn btn-secondary is-active" data-tab="fonts">Fancy Fonts</button>
+        <button class="btn btn-secondary" data-tab="decor">Decorated</button>
+        <button class="btn btn-secondary" data-tab="nicks">Nicknames</button>
+      </div>
+      <div id="nk-nickopts" class="ml-auto hidden items-center gap-2">
+        <select id="nk-style" class="field w-32"><option value="cute">Cute</option><option value="cool">Cool</option><option value="gamer">Gamer</option></select>
+        <button id="nk-regen" class="btn btn-secondary">Shuffle</button>
+      </div>
     </div>
-    <div id="nk-out" class="grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
+
+    <div id="nk-out" class="grid grid-cols-1 gap-2 sm:grid-cols-2"></div>
+    <button id="nk-more" class="btn btn-secondary mx-auto hidden">Load more</button>
+    <p class="text-center text-[13px] text-ink-subtle">Tap any style to copy it.</p>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free nickname generator turns your name into fun nicknames in three
-      flavors — cute, cool and gamer-style — using playful prefixes, suffixes and
-      word pairings. It's perfect for games, social handles, group chats and giving
-      a friend a new tag. Click any nickname to copy it. Everything runs in your
-      browser.
+      This free stylish name generator turns your name into 100+ fancy fonts,
+      symbols and nickname styles that work anywhere — no app or font install
+      needed. The <strong>Fancy Fonts</strong> tab renders your text in bold,
+      italic, script, cursive, gothic (fraktur), bubble, small-caps, upside-down
+      and other Unicode variants. <strong>Decorated</strong> wraps it in gaming
+      and social frames (꧁༺ ༻꧂, ★彡 彡★, ▄︻デ══━一, hearts, sparkles) that are
+      popular on PUBG, Free Fire, Roblox, Discord, Instagram and TikTok.
+      <strong>Nicknames</strong> invents cute, cool and gamer-style handles from
+      your name. Tap any result to copy it. Everything runs in your browser.
+    </p>
+    <p>
+      Tip: some styles rely on Unicode characters that a few older apps don't
+      render. If one shows as boxes, pick another — the bold, italic and
+      decorated styles have the widest support.
     </p>
   </div>
 </ToolLayout>
 
 <script>
   import { shuffle, pick, randInt } from '../../lib/random';
+  import { fontVariants, decorate } from '../../lib/fancytext';
 
   const $ = (id: string) => document.getElementById(id)!;
   const nameEl = $('nk-name') as HTMLInputElement;
   const styleEl = $('nk-style') as HTMLSelectElement;
-  const countEl = $('nk-count') as HTMLInputElement;
   const out = $('nk-out')!;
+  const moreBtn = $('nk-more') as HTMLButtonElement;
+  const nickOpts = $('nk-nickopts')!;
 
+  let tab: 'fonts' | 'decor' | 'nicks' = 'fonts';
+  let shown = 0;
+  const PAGE = 24;
+
+  // ── word-based nicknames (kept from the original tool) ──
   const CUTE = { pre: ['Sweet', 'Little', 'Lil', 'Bubbly', 'Sunny', 'Honey'], suf: ['bug', 'bear', 'boo', 'kins', 'pie', 'cake'] };
   const COOL = { pre: ['Ace', 'Neo', 'Max', 'Shadow', 'Blaze', 'Steel'], suf: ['X', 'Prime', 'Storm', 'Wolf', 'Star', 'Zero'] };
   const GAMER = { pre: ['xX', 'Pro', 'Dark', 'Toxic', 'Epic', 'Ghost'], suf: ['Slayer', 'Sniper', '99', 'YT', 'Gg', 'TTV'] };
-
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 
-  function generate() {
+  function nicknames(n: number): string[] {
     const name = cap(nameEl.value.trim().replace(/[^a-zA-Z]/g, '') || 'Alex');
     const style = styleEl.value === 'cute' ? CUTE : styleEl.value === 'cool' ? COOL : GAMER;
     const gamer = styleEl.value === 'gamer';
-    const n = Math.max(4, Math.min(40, Number(countEl.value) || 16));
     const set = new Set<string>();
     let guard = 0;
     while (set.size < n && guard < n * 20) {
       guard++;
-      const p = pick(style.pre), s = pick(style.suf);
-      const style3 = randInt(0, 3);
-      if (gamer && style3 === 0) set.add(`xX${name}Xx`);
-      else if (style3 === 1) set.add(`${p}${name}`);
-      else if (style3 === 2) set.add(`${name}${s}`);
+      const p = pick(style.pre), s = pick(style.suf), k = randInt(0, 3);
+      if (gamer && k === 0) set.add(`xX${name}Xx`);
+      else if (k === 1) set.add(`${p}${name}`);
+      else if (k === 2) set.add(`${name}${s}`);
       else set.add(`${p}${name}${s}`);
     }
-    const list = shuffle([...set]).slice(0, n);
-    out.innerHTML = list.map((nn) => `<button class="panel px-3 py-2.5 text-center text-[15px] font-medium text-ink hover:border-hairline-strong" data-n="${nn}">${nn}</button>`).join('');
-    out.querySelectorAll('button').forEach((b) => b.addEventListener('click', async () => {
-      await navigator.clipboard.writeText((b as HTMLElement).dataset.n!);
-      const orig = b.textContent; b.textContent = 'Copied!';
-      setTimeout(() => (b.textContent = orig), 1000);
-    }));
+    return shuffle([...set]);
   }
 
-  [nameEl, styleEl, countEl].forEach((el) => el.addEventListener('input', generate));
-  $('nk-gen').addEventListener('click', generate);
-  $('nk-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText([...out.querySelectorAll('button')].map((b) => (b as HTMLElement).dataset.n).join('\n'));
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  function rows(): string[] {
+    const raw = nameEl.value.trim() || 'Alex';
+    if (tab === 'fonts') return fontVariants(raw).map((v) => v.value);
+    if (tab === 'decor') return decorate(raw);
+    return nicknames(60);
+  }
+
+  function render() {
+    const all = rows();
+    if (shown === 0) shown = Math.min(PAGE, all.length);
+    const slice = all.slice(0, shown);
+    out.innerHTML = slice
+      .map(
+        (v) =>
+          `<button class="panel flex items-center justify-between gap-2 px-3.5 py-3 text-left text-[17px] text-ink hover:border-hairline-strong" data-v="${v.replace(/"/g, '&quot;')}"><span class="truncate">${v.replace(/</g, '&lt;')}</span><span class="shrink-0 text-[11px] uppercase tracking-wide text-ink-subtle">copy</span></button>`,
+      )
+      .join('');
+    moreBtn.classList.toggle('hidden', shown >= all.length);
+    out.querySelectorAll('button').forEach((b) =>
+      b.addEventListener('click', async () => {
+        await navigator.clipboard.writeText((b as HTMLElement).dataset.v!);
+        const tag = b.querySelector('span:last-child')!;
+        const orig = tag.textContent;
+        tag.textContent = 'copied!';
+        setTimeout(() => (tag.textContent = orig), 1000);
+      }),
+    );
+  }
+
+  function reset() {
+    shown = 0;
+    render();
+  }
+
+  $('nk-tabs').addEventListener('click', (e) => {
+    const t = (e.target as HTMLElement).closest('[data-tab]') as HTMLElement | null;
+    if (!t) return;
+    tab = t.dataset.tab as typeof tab;
+    $('nk-tabs').querySelectorAll('button').forEach((b) => b.classList.toggle('is-active', b === t));
+    nickOpts.classList.toggle('hidden', tab !== 'nicks');
+    nickOpts.classList.toggle('flex', tab === 'nicks');
+    reset();
   });
-  generate();
+
+  nameEl.addEventListener('input', reset);
+  styleEl.addEventListener('change', reset);
+  $('nk-regen').addEventListener('click', reset);
+  moreBtn.addEventListener('click', () => {
+    shown += PAGE;
+    render();
+  });
+  render();
 </script>
+
+<style>
+  .is-active {
+    background: var(--color-surface-2);
+    border-color: var(--color-hairline-strong);
+    color: var(--color-ink);
+  }
+</style>

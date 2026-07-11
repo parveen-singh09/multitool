@@ -38,30 +38,64 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const out = $('pm-out')!;
 
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  const a = () => pick(ADJECTIVES);
+  const n = () => pick(NOUNS);
+  const v = () => pick(VERBS);
 
-  function haiku(theme: string): string {
-    return [
-      `${cap(pick(ADJECTIVES))} ${theme} at dawn`,
-      `${cap(pick(NOUNS))} ${pick(VERBS)} beneath the ${pick(NOUNS)}`,
-      `${pick(ADJECTIVES)} light returns`,
-    ].join('\n');
-  }
+  // Many structural templates per style so the *shape* varies, not just the
+  // filled-in words. Combined with the ~250-word banks the output space is
+  // effectively unbounded; the templates are what stop poems feeling repetitive.
+  const HAIKU: Array<(t: string) => string[]> = [
+    (t) => [`${cap(a())} ${t} at dawn`, `${cap(n())} ${v()} beneath the ${n()}`, `${a()} light returns`],
+    (t) => [`the ${t} ${v()} slow`, `a ${a()} ${n()} drifts alone`, `${a()} and unseen`],
+    (t) => [`${cap(n())} in the ${t}`, `${v()} where the ${a()} ${n()} sleeps`, `dusk folds into night`],
+    (t) => [`${cap(a())} ${n()} falls`, `the ${t} ${v()} without a sound`, `morning ${v()} on`],
+    (t) => [`beneath the ${t}`, `${a()} ${n()} ${v()} once more`, `${a()} and still`],
+    (t) => [`${cap(t)}, ${a()} and cold`, `a lone ${n()} ${v()} past`, `the ${a()} hour ${v()}`],
+    (t) => [`${cap(v())} through the ${t}`, `${a()} ${n()} against the ${n()}`, `nothing else remains`],
+    (t) => [`the ${a()} ${t} ${v()}`, `a ${n()} ${v()} toward the ${n()}`, `${a()} light, then dark`],
+    (t) => [`${cap(n())} and ${n()}`, `${v()} where the ${t} once was`, `${a()} silence holds`],
+    (t) => [`first ${t} of spring`, `${a()} ${n()} ${v()} on the wind`, `${a()} and alone`],
+    (t) => [`${cap(a())} ${t} sky`, `the ${n()} ${v()}, the ${n()} ${v()}`, `${a()} world below`],
+    (t) => [`when the ${t} ${v()}`, `${a()} ${n()} ${v()} into ${n()}`, `dawn ${v()} again`],
+    (t) => [`${cap(a())} and ${a()}`, `the ${t} ${v()} past the ${n()}`, `${n()} ${v()} home`],
+    (t) => [`quiet ${t} light`, `a ${a()} ${n()} ${v()} below`, `the ${n()} ${v()} still`],
+  ];
 
-  function couplet(theme: string): string {
-    const lines: string[] = [];
-    for (let i = 0; i < 2; i++) {
-      lines.push(`The ${pick(ADJECTIVES)} ${theme} ${pick(VERBS)} once more,`);
-      lines.push(`A ${pick(ADJECTIVES)} ${pick(NOUNS)} by the shore.`);
-    }
-    return lines.join('\n');
-  }
+  const COUPLET: Array<(t: string) => string[]> = [
+    (t) => [`The ${a()} ${t} ${v()} once more,`, `A ${a()} ${n()} by the shore.`],
+    (t) => [`Beneath the ${t} the ${n()} ${v()} deep,`, `While ${a()} ${n()} lies fast asleep.`],
+    (t) => [`O ${a()} ${t}, ${v()} tonight,`, `And fill the ${n()} with ${a()} light.`],
+    (t) => [`The ${n()} ${v()} where the ${t} ran,`, `A ${a()} ${n()} since it began.`],
+    (t) => [`I ${v()} the ${t} at break of day,`, `As ${a()} ${n()} drift away.`],
+    (t) => [`No ${a()} ${n()} could ever say,`, `How ${a()} the ${t} looks today.`],
+    (t) => [`The ${t} ${v()} through ${a()} air,`, `And leaves a ${a()} ${n()} there.`],
+    (t) => [`When ${a()} ${n()} ${v()} the night,`, `The ${t} ${v()} soft and bright.`],
+    (t) => [`A ${n()} ${v()} across the ${t},`, `Where ${a()} ${n()} used to be.`],
+    (t) => [`Let ${a()} ${n()} ${v()} the ${t} slow,`, `Where only ${a()} rivers go.`],
+    (t) => [`The ${a()} ${t} will not stay,`, `It ${v()}, then ${v()} away.`],
+    (t) => [`Upon the ${t} a ${n()} ${v()},`, `And ${a()} ${n()} softly sighs.`],
+    (t) => [`So ${v()}, ${a()} ${t}, and be free,`, `A ${a()} ${n()} for you and me.`],
+  ];
 
-  function free(theme: string): string {
-    const lines = [`${cap(theme)},`];
-    for (let i = 0; i < 4; i++) lines.push(`${cap(pick(ADJECTIVES))} and ${pick(ADJECTIVES)}, the ${pick(NOUNS)} ${pick(VERBS)}`);
-    lines.push(`— and still, the ${theme} remains.`);
-    return lines.join('\n');
-  }
+  const FREE: Array<(t: string) => string[]> = [
+    (t) => [`${cap(t)},`, `${cap(a())} and ${a()}, the ${n()} ${v()}`, `${cap(a())} and ${a()}, the ${n()} ${v()}`, `— and still, the ${t} remains.`],
+    (t) => [`I remember the ${t} —`, `how it ${v()}, how the ${a()} ${n()} ${v()},`, `how nothing ${a()} ever lasts.`, `Only the ${n()}. Only the ${t}.`],
+    (t) => [`${cap(a())} ${t}.`, `The ${n()} ${v()}.`, `The ${n()} ${v()}.`, `Somewhere, a ${a()} ${n()} ${v()}`, `and does not ${v()} back.`],
+    (t) => [`Tell me about the ${t},`, `the ${a()} way it ${v()},`, `the ${n()} that ${v()} beside it,`, `the ${a()} ${n()} that will not ${v()}.`],
+    (t) => [`Here, at the ${t}:`, `${a()} ${n()}, ${a()} ${n()},`, `a ${n()} that ${v()} and ${v()},`, `until the ${t} is all there is.`],
+    (t) => [`The ${t} does not ${v()} for us.`, `It ${v()}. It ${v()}.`, `The ${a()} ${n()} ${v()} on,`, `${a()}, ${a()}, unafraid.`],
+    (t) => [`Once, the ${t} was ${a()}.`, `Now the ${n()} ${v()} where it stood,`, `and the ${a()} ${n()} ${v()}`, `like it always knew.`],
+    (t) => [`${cap(t)} —`, `a ${a()} ${n()}, ${v()},`, `a ${a()} ${n()}, ${v()},`, `and the ${a()} light between them.`],
+    (t) => [`What the ${t} ${v()}:`, `the ${n()}, the ${a()} ${n()},`, `the ${a()} hour when the ${n()} ${v()}`, `and everything ${v()} still.`],
+    (t) => [`Let the ${t} ${v()}.`, `Let the ${a()} ${n()} ${v()}.`, `Let the ${n()} ${v()} its ${a()} way home.`, `Let it all be ${a()}.`],
+    (t) => [`In the ${t} I found`, `a ${a()} ${n()},`, `a ${a()} ${n()},`, `and the ${a()} ${n()} that ${v()} between.`],
+    (t) => [`The ${a()} ${t} ${v()}.`, `Below it, the ${n()} ${v()};`, `above it, the ${n()} ${v()}.`, `And I, ${a()}, ${v()} on.`],
+  ];
+
+  const haiku = (t: string) => pick(HAIKU)(t).join('\n');
+  const couplet = (t: string) => pick(COUPLET)(t).join('\n');
+  const free = (t: string) => pick(FREE)(t).join('\n');
 
   function generate() {
     const theme = themeEl.value.trim().toLowerCase() || 'ocean';

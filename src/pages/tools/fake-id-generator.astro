@@ -1,69 +1,224 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
+import { LOCALES } from '../../lib/locales';
+import { FIELD_GROUPS, FIELD_TYPES } from '../../lib/genfields';
 ---
 
 <ToolLayout slug="fake-id-generator">
-  <div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-5">
     <div class="panel flex items-start gap-3 p-4">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0 text-ink-subtle" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM12 8v5M12 16h.01"/></svg>
-      <p class="text-[13px] leading-relaxed text-ink-subtle">This generates <strong class="text-ink">fictional identity fields for software testing</strong> only. It is not a real ID document and must never be used to deceive, impersonate or defraud anyone.</p>
+      <p class="text-[13px] leading-relaxed text-ink-subtle">This generates <strong class="text-ink">fictional data for software testing</strong> only. It is not a real ID document and must never be used to deceive, impersonate or defraud anyone.</p>
     </div>
+
+    <!-- Global controls -->
     <div class="flex flex-wrap items-end gap-3">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Gender
-        <select id="fi-sex" class="field w-32"><option value="any" selected>Any</option><option value="male">Male</option><option value="female">Female</option></select>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Rows
+        <input id="fi-count" type="number" min="1" max="5000" value="25" class="field w-24" />
       </label>
-      <button id="fi-gen" class="btn btn-primary ml-auto">Generate identity</button>
-      <button id="fi-copy" class="btn btn-secondary">Copy</button>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Locale
+        <select id="fi-locale" class="field w-48">
+          <option value="any" selected>Any</option>
+          {LOCALES.map((l) => <option value={l.key}>{l.flag} {l.label}</option>)}
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        <span class="flex items-center gap-1 whitespace-nowrap">Seed <span class="text-ink-tertiary">(optional)</span></span>
+        <input id="fi-seed" type="text" placeholder="e.g. project-x" class="field w-40" />
+      </label>
+      <label id="fi-table-wrap" class="hidden flex-col gap-1 text-sm text-ink-subtle">Table name
+        <input id="fi-table" type="text" value="mock_data" class="field w-40" />
+      </label>
     </div>
-    <div id="fi-card" class="panel panel-lift grid grid-cols-1 gap-x-6 gap-y-2 p-5 sm:grid-cols-2"></div>
+
+    <!-- Column builder -->
+    <div class="flex flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <span class="text-xs uppercase tracking-wide text-ink-tertiary">Columns</span>
+        <button id="fi-add" class="btn btn-secondary text-sm">+ Add column</button>
+      </div>
+      <div id="fi-cols" class="flex flex-col gap-2"></div>
+    </div>
+
+    <!-- Output -->
+    <div class="flex flex-col gap-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="flex overflow-hidden rounded-md border border-hairline" role="tablist" aria-label="Export format">
+          <button data-fmt="json" class="fi-fmt btn-fmt is-active">JSON</button>
+          <button data-fmt="csv" class="fi-fmt btn-fmt">CSV</button>
+          <button data-fmt="sql" class="fi-fmt btn-fmt">SQL</button>
+          <button data-fmt="xml" class="fi-fmt btn-fmt">XML</button>
+          <button data-fmt="yaml" class="fi-fmt btn-fmt">YAML</button>
+        </div>
+        <button id="fi-gen" class="btn btn-primary ml-auto">Generate</button>
+        <button id="fi-copy" class="btn btn-secondary">Copy</button>
+        <button id="fi-dl" class="btn btn-secondary">Download</button>
+      </div>
+      <pre class="hl-block field min-h-80" style="resize:vertical;overflow:auto" aria-label="Generated data"><code id="fi-out" class="hljs font-mono text-[13px]" style="background:transparent;padding:0"></code></pre>
+    </div>
   </div>
+
+  <!-- One column-row template, cloned per column -->
+  <template id="fi-col-tpl">
+    <div class="fi-col flex flex-wrap items-center gap-2">
+      <input class="fi-name field w-40" placeholder="column_name" />
+      <select class="fi-type field w-52">
+        {FIELD_GROUPS.map((g) => (
+          <optgroup label={g}>
+            {FIELD_TYPES.filter((f) => f.group === g).map((f) => (
+              <option value={f.key} data-opts={f.needsOpts ?? ''} data-ph={f.placeholder ?? ''}>{f.label}</option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+      <input class="fi-opts field w-44" style="display:none" />
+      <button class="fi-remove btn btn-secondary px-2 py-1" aria-label="Remove column" title="Remove">✕</button>
+    </div>
+  </template>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free fake ID data generator assembles a full set of fictional identity
-      fields — name, date of birth, address, phone, email and a random ID number —
-      in one click, so you can populate test records and demos with a coherent
-      persona. Every field is invented and uses safe test ranges. It is strictly
-      for QA and development, never for real identification. Runs in your browser.
+      This free test data generator builds tables of realistic fake records from
+      the columns you define. Name each column, pick a data type — names, emails,
+      dates, number ranges, auto-increment IDs, UUIDs, Luhn-valid credit cards,
+      lat/long, pick-from-list and more — set a row count and a country locale,
+      then export to <strong class="text-ink-muted">JSON, CSV, SQL, XML or YAML</strong>.
+    </p>
+    <p>
+      Enter a <strong class="text-ink-muted">seed</strong> for fully reproducible
+      output — the same seed regenerates the exact same rows, so fixtures stay
+      stable. Leave it blank for cryptographically random results. Everything runs
+      in your browser; nothing is uploaded. It is strictly for QA, demos and
+      development — never for real identification.
     </p>
   </div>
 </ToolLayout>
 
+<style>
+  #fi-locale { font-family: 'Twemoji Country Flags', var(--font-sans); }
+  @font-face {
+    font-family: 'Twemoji Country Flags';
+    unicode-range: U+1F1E6-1F1FF;
+    src: url('https://cdn.jsdelivr.net/npm/country-flag-emoji-polyfill@0.1/dist/TwemojiCountryFlags.woff2') format('woff2');
+    font-display: swap;
+  }
+  .btn-fmt {
+    padding: 6px 14px; font-size: 13px; font-weight: 500;
+    color: var(--color-ink-subtle, #8a8f98);
+    background: var(--color-canvas, #010102);
+    border-right: 1px solid var(--color-hairline, #23252a);
+  }
+  .btn-fmt:last-child { border-right: 0; }
+  .btn-fmt.is-active { background: var(--color-surface-2, #141516); color: var(--color-ink, #f7f8f8); }
+</style>
+
 <script>
-  import { firstName, lastName, email, phoneUS, address, birthDate, type Sex } from '../../lib/fakegen';
-  import { randString } from '../../lib/random';
+  import { setSeed } from '../../lib/random';
+  import { getLocale } from '../../lib/locales';
+  import { FIELD_BY_KEY } from '../../lib/genfields';
+  import { serialize, MIME, type Format } from '../../lib/exportformats';
+  import { hl } from '../../lib/highlight';
 
   const $ = (id: string) => document.getElementById(id)!;
-  const sexEl = $('fi-sex') as HTMLSelectElement;
-  const card = $('fi-card')!;
-  let current: Record<string, string> = {};
+  const countEl = $('fi-count') as HTMLInputElement;
+  const localeEl = $('fi-locale') as HTMLSelectElement;
+  const seedEl = $('fi-seed') as HTMLInputElement;
+  const tableEl = $('fi-table') as HTMLInputElement;
+  const tableWrap = $('fi-table-wrap');
+  const colsEl = $('fi-cols');
+  const out = $('fi-out') as HTMLElement;
+  const tpl = $('fi-col-tpl') as HTMLTemplateElement;
 
-  function generate() {
-    const sex = sexEl.value as Sex;
-    const first = firstName(sex);
-    const last = lastName();
-    const a = address();
-    current = {
-      'Full name': `${first} ${last}`,
-      'Date of birth': birthDate(21, 75),
-      'ID number': randString(9, 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789'),
-      'Address': `${a.street}, ${a.city}, ${a.stateAbbr} ${a.zip}`,
-      'Phone': phoneUS(),
-      'Email': email(first, last),
-    };
-    card.innerHTML = Object.entries(current).map(([k, v]) =>
-      `<div class="flex flex-col gap-0.5"><span class="text-xs uppercase tracking-wide text-ink-tertiary">${k}</span><span class="font-mono text-sm text-ink">${v}</span></div>`
-    ).join('');
+  const HL_LANG: Record<Format, string> = { json: 'json', csv: 'plaintext', sql: 'sql', xml: 'xml', yaml: 'yaml' };
+  let fmt: Format = 'json';
+  let raw = '';
+
+  // Show/hide the inline options input based on the selected type.
+  function syncOpts(col: Element) {
+    const type = col.querySelector('.fi-type') as HTMLSelectElement;
+    const opts = col.querySelector('.fi-opts') as HTMLInputElement;
+    const sel = type.selectedOptions[0];
+    if (sel?.dataset.opts) {
+      opts.style.display = '';
+      opts.placeholder = sel.dataset.ph || '';
+    } else {
+      opts.style.display = 'none';
+    }
   }
 
-  sexEl.addEventListener('input', generate);
+  function addColumn(name = '', type = 'firstName', optsVal = '') {
+    const node = tpl.content.firstElementChild!.cloneNode(true) as HTMLElement;
+    (node.querySelector('.fi-name') as HTMLInputElement).value = name;
+    (node.querySelector('.fi-type') as HTMLSelectElement).value = type;
+    (node.querySelector('.fi-opts') as HTMLInputElement).value = optsVal;
+    node.querySelector('.fi-type')!.addEventListener('change', () => syncOpts(node));
+    node.querySelector('.fi-remove')!.addEventListener('click', () => {
+      if (colsEl.children.length > 1) node.remove();
+    });
+    colsEl.appendChild(node);
+    syncOpts(node);
+  }
+
+  interface ColSpec { name: string; type: string; opts: string; }
+  function columns(): ColSpec[] {
+    return [...colsEl.querySelectorAll('.fi-col')].map((c, i) => ({
+      name: (c.querySelector('.fi-name') as HTMLInputElement).value.trim() || `col${i + 1}`,
+      type: (c.querySelector('.fi-type') as HTMLSelectElement).value,
+      opts: (c.querySelector('.fi-opts') as HTMLInputElement).value,
+    }));
+  }
+
+  function generate() {
+    const n = Math.max(1, Math.min(5000, Number(countEl.value) || 1));
+    const cols = columns();
+    setSeed(seedEl.value.trim() || null);
+    const rows: Record<string, unknown>[] = [];
+    for (let r = 1; r <= n; r++) {
+      const locale = getLocale(localeEl.value); // re-picked per row for 'any'
+      const rec: Record<string, unknown> = {};
+      for (const col of cols) {
+        const ft = FIELD_BY_KEY.get(col.type);
+        rec[col.name] = ft ? ft.gen({ row: r, locale, opts: col.opts }) : '';
+      }
+      rows.push(rec);
+    }
+    setSeed(null);
+    raw = serialize(rows, fmt, tableEl.value.trim() || 'mock_data');
+    void hl(out, raw, HL_LANG[fmt]);
+  }
+
+  // Format tabs
+  document.querySelectorAll<HTMLButtonElement>('.fi-fmt').forEach((b) => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.fi-fmt').forEach((x) => x.classList.remove('is-active'));
+      b.classList.add('is-active');
+      fmt = b.dataset.fmt as Format;
+      tableWrap.classList.toggle('hidden', fmt !== 'sql');
+      tableWrap.classList.toggle('flex', fmt === 'sql');
+      generate();
+    });
+  });
+
+  $('fi-add').addEventListener('click', () => addColumn());
   $('fi-gen').addEventListener('click', generate);
+  [countEl, localeEl, seedEl, tableEl].forEach((el) => el.addEventListener('input', generate));
+
   $('fi-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    const text = Object.entries(current).map(([k, v]) => `${k}: ${v}`).join('\n');
-    await navigator.clipboard.writeText(text);
+    await navigator.clipboard.writeText(raw);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy'), 1500);
   });
+  $('fi-dl').addEventListener('click', () => {
+    const url = URL.createObjectURL(new Blob([raw], { type: MIME[fmt] }));
+    const a = document.createElement('a'); a.href = url; a.download = `test-data.${fmt}`; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+
+  // Default column set.
+  addColumn('id', 'increment', '1');
+  addColumn('first_name', 'firstName');
+  addColumn('last_name', 'lastName');
+  addColumn('email', 'email');
   generate();
 </script>

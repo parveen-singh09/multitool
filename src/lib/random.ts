@@ -1,6 +1,48 @@
 // Secure randomness helpers shared across the generator tools.
-// Everything is built on crypto.getRandomValues so output is
-// cryptographically strong and never touches a server.
+// The default entropy source is crypto.getRandomValues (never touches a
+// server). It can be swapped for a seeded PRNG via setSeed() so a run is
+// exactly reproducible — same seed + inputs => same output.
+
+/** Fill 32 bits from the CSPRNG. */
+function cryptoUint32(): number {
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return buf[0];
+}
+
+// The current entropy source: returns a uint32 (0 .. 0xffffffff).
+let rngSource: () => number = cryptoUint32;
+
+/** xmur3 string hash -> 32-bit seed. */
+function xmur3(str: string): number {
+  let h = 1779033703 ^ str.length;
+  for (let i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  h = Math.imul(h ^ (h >>> 16), 2246822507);
+  h = Math.imul(h ^ (h >>> 13), 3266489909);
+  return (h ^= h >>> 16) >>> 0;
+}
+
+/** mulberry32 PRNG seeded from a 32-bit value -> uint32 generator. */
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return (t ^ (t >>> 14)) >>> 0;
+  };
+}
+
+/**
+ * Seed the shared RNG for reproducible output. Pass a non-empty string to make
+ * every subsequent draw deterministic; pass null/'' to restore CSPRNG entropy.
+ */
+export function setSeed(seed: string | null | undefined): void {
+  rngSource = seed == null || seed === '' ? cryptoUint32 : mulberry32(xmur3(seed));
+}
 
 /** Uniform random integer in [min, max] inclusive, rejection-sampled to avoid modulo bias. */
 export function randInt(min: number, max: number): number {
@@ -11,20 +53,16 @@ export function randInt(min: number, max: number): number {
   if (range <= 0) return min;
   // 32-bit rejection sampling.
   const maxValid = Math.floor(0xffffffff / range) * range;
-  const buf = new Uint32Array(1);
   let x = 0;
   do {
-    crypto.getRandomValues(buf);
-    x = buf[0];
+    x = rngSource();
   } while (x >= maxValid);
   return min + (x % range);
 }
 
 /** A random float in [0, 1) using 32 bits of entropy. */
 export function randFloat(): number {
-  const buf = new Uint32Array(1);
-  crypto.getRandomValues(buf);
-  return buf[0] / 0x100000000;
+  return rngSource() / 0x100000000;
 }
 
 /** Pick one random element from an array. */

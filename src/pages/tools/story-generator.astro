@@ -12,48 +12,54 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
       This free story idea generator sparks your next piece of fiction with a
-      random prompt that combines a character, a setting, a goal and an obstacle,
-      plus a genre and a ready-made opening line. It's built for writers facing a
-      blank page, students doing creative exercises, and game masters improvising
-      a scene. Generate as many as you like. Everything runs in your browser.
+      hand-written premise drawn from a deck of nearly 200 ideas across 15 genres,
+      plus a ready-made opening line. Every idea is dealt without repeating until
+      you've seen them all. It's built for writers facing a blank page, students
+      doing creative exercises, and game masters improvising a scene. Generate as
+      many as you like. Everything runs in your browser.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  import { pick } from '../../lib/random';
+  import { pick, shuffle } from '../../lib/random';
+  import { STORY_IDEAS } from '../../data/story-ideas';
 
   const $ = (id: string) => document.getElementById(id)!;
   const card = $('st-card')!;
   let current: Record<string, string> = {};
 
-  const CHARACTERS = ['a retired detective', 'a curious child', 'an exiled queen', 'a lonely lighthouse keeper', 'a rogue android', 'a traveling musician', 'a disillusioned scientist', 'a small-town baker', 'a reluctant hero', 'a time-worn ghost'];
-  const SETTINGS = ['a rain-soaked city at night', 'a colony on a distant moon', 'a village that forgot its own name', 'the last library on Earth', 'a train that never stops', 'a floating market above the clouds', 'an abandoned amusement park', 'a kingdom under permanent winter'];
-  const GOALS = ['must find a lost letter', 'wants to undo a single mistake', 'is hunting for a stolen melody', 'needs to deliver a warning before dawn', 'seeks a door that only appears at midnight', 'must reunite two estranged friends', 'is searching for the truth about their past'];
-  const OBSTACLES = ['but no one believes them', 'while being followed by a shadow', 'though time is running backwards', 'yet every clue contradicts the last', 'while slowly losing their memories', 'but the only witness has vanished', 'though the price is everything they love'];
-  const GENRES = ['Mystery', 'Science fiction', 'Fantasy', 'Literary drama', 'Thriller', 'Magical realism', 'Adventure'];
-  const OPENERS = ['The morning it happened, the sky was the wrong color.', 'Nobody expected the door to be unlocked.', 'It began, as these things often do, with a knock.', 'She had exactly one hour, and she knew it.', 'The map was wrong, but the destination was real.'];
+  const OPENERS = ['The morning it happened, the sky was the wrong color.', 'Nobody expected the door to be unlocked.', 'It began, as these things often do, with a knock.', 'She had exactly one hour, and she knew it.', 'The map was wrong, but the destination was real.', 'By the time the lights came back, everything had changed.', 'He counted the days on the wall until the wall ran out.', 'The letter arrived forty years too late.', 'Everyone in town agreed on one thing: it never happened.', 'The last train left without her, and she was glad.', 'There are three rules here, and I had already broken two.', 'The clock struck a number that does not exist.', 'She woke to find the sea had moved inland overnight.', 'The recording started playing before anyone pressed play.', 'On the day the birds stopped singing, I stopped listening.'];
+
+  // Deal from a shuffled deck: no idea repeats until all 194 are seen, then reshuffle.
+  let deck: typeof STORY_IDEAS = [];
+  function deal() {
+    if (deck.length === 0) deck = shuffle(STORY_IDEAS);
+    return deck.pop()!;
+  }
+
+  // ponytail: track last opener so the line never repeats back-to-back.
+  let lastOpener = '';
+  function nextOpener() {
+    let v = pick(OPENERS);
+    while (v === lastOpener) v = pick(OPENERS);
+    return (lastOpener = v);
+  }
 
   function generate() {
+    const idea = deal();
     current = {
-      Character: pick(CHARACTERS),
-      Setting: pick(SETTINGS),
-      Goal: pick(GOALS),
-      Obstacle: pick(OBSTACLES),
-      Genre: pick(GENRES),
-      'Opening line': pick(OPENERS),
+      Premise: idea.premise,
+      Genre: idea.genre,
+      'Opening line': nextOpener(),
     };
-    const premise = `${cap(current.Character)} in ${current.Setting} ${current.Goal}, ${current.Obstacle}.`;
-    current.Premise = premise;
     card.innerHTML = `
-      <p class="text-lg leading-relaxed text-ink">${premise}</p>
+      <p class="text-lg leading-relaxed text-ink">${idea.premise}</p>
       <div class="grid grid-cols-1 gap-2 border-t border-hairline pt-3 sm:grid-cols-2">
-        ${['Character', 'Setting', 'Goal', 'Obstacle', 'Genre', 'Opening line'].map((k) =>
+        ${['Genre', 'Opening line'].map((k) =>
           `<div class="flex flex-col"><span class="text-xs uppercase tracking-wide text-ink-tertiary">${k}</span><span class="text-sm text-ink-subtle">${current[k]}</span></div>`).join('')}
       </div>`;
   }
-
-  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
   $('st-gen').addEventListener('click', generate);
   $('st-copy').addEventListener('click', async (e) => {

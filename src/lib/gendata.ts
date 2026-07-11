@@ -325,3 +325,53 @@ export const GAMERTAG_NOUN = [
 export const GAMERTAG_SUFFIX = [
   'X', 'YT', 'TTV', 'HD', 'Pro', 'GG', 'FX', 'Zz', 'xX', '99', '007', '360', 'OP',
 ];
+
+/* ------------------------------------------------------------------ *
+ * Username themes — shared adjectives plus per-category noun banks.
+ * Mirrors the NordPass category set (Movies, Music, Animals, Space,
+ * Food, Nature, Sports) and drives the username generator.
+ * ------------------------------------------------------------------ */
+export const USERNAME_ADJ = [
+  'Cosmic', 'Silent', 'Golden', 'Crimson', 'Hidden', 'Electric', 'Frozen', 'Gentle',
+  'Brave', 'Wild', 'Radiant', 'Velvet', 'Endless', 'Shining', 'Lonely', 'Sacred',
+  'Fierce', 'Amber', 'Nimble', 'Stormy', 'Clever', 'Bold', 'Lucky', 'Mellow',
+  'Swift', 'Quiet', 'Vivid', 'Neon', 'Rustic', 'Dreamy', 'Wandering', 'Emerald',
+];
+
+export const USERNAME_THEMES: Record<string, string[]> = {
+  Movies: [
+    'Reel', 'Cameo', 'Director', 'Villain', 'Hero', 'Sequel', 'Cinema', 'Matinee',
+    'Blockbuster', 'Screenplay', 'Rogue', 'Maverick', 'Gladiator', 'Wizard', 'Rebel',
+    'Bounty', 'Outlaw', 'Phantom', 'Jedi', 'Detective', 'Spectre', 'Renegade',
+  ],
+  Music: [
+    'Melody', 'Rhythm', 'Bassline', 'Chord', 'Encore', 'Vinyl', 'Anthem', 'Harmony',
+    'Tempo', 'Riff', 'Chorus', 'Groove', 'Ballad', 'Cadence', 'Octave', 'Reverb',
+    'Maestro', 'Sonata', 'Beat', 'Lyric', 'Falsetto', 'Overture',
+  ],
+  Animals: [
+    'Fox', 'Otter', 'Falcon', 'Panther', 'Lynx', 'Raven', 'Wolf', 'Heron', 'Badger',
+    'Cobra', 'Stag', 'Osprey', 'Manta', 'Jaguar', 'Ibex', 'Kestrel', 'Marten',
+    'Puma', 'Orca', 'Gecko', 'Owl', 'Bison',
+  ],
+  Space: [
+    'Comet', 'Nebula', 'Quasar', 'Orbit', 'Pulsar', 'Nova', 'Galaxy', 'Meteor',
+    'Cosmos', 'Rover', 'Lander', 'Photon', 'Eclipse', 'Aurora', 'Asteroid', 'Vega',
+    'Rocket', 'Voyager', 'Zenith', 'Halo', 'Cluster', 'Solstice',
+  ],
+  Food: [
+    'Waffle', 'Pepper', 'Mango', 'Noodle', 'Biscuit', 'Cocoa', 'Pretzel', 'Mocha',
+    'Pesto', 'Truffle', 'Bagel', 'Churro', 'Wasabi', 'Toffee', 'Gelato', 'Sriracha',
+    'Muffin', 'Ramen', 'Pickle', 'Cinnamon', 'Praline', 'Espresso',
+  ],
+  Nature: [
+    'River', 'Canyon', 'Willow', 'Cedar', 'Boulder', 'Meadow', 'Glacier', 'Fern',
+    'Summit', 'Ember', 'Thistle', 'Cavern', 'Delta', 'Grove', 'Tundra', 'Maple',
+    'Ridge', 'Marsh', 'Blossom', 'Coral', 'Dune', 'Cascade',
+  ],
+  Sports: [
+    'Striker', 'Sprinter', 'Champion', 'Rally', 'Ace', 'Dunk', 'Pitcher', 'Rookie',
+    'Slugger', 'Winger', 'Keeper', 'Hurdle', 'Volley', 'Sprint', 'Marathon', 'Captain',
+    'Rebound', 'Freekick', 'Grandslam', 'Podium', 'Overtime', 'Playoff',
+  ],
+};

@@ -1995,52 +1995,22 @@ export const tools: Tool[] = [
   {
     slug: 'fake-email-generator',
     name: 'Fake Email Generator',
-    tagline: 'Random email addresses for test data.',
+    tagline: 'Disposable inbox that really receives mail.',
     description:
-      'Free online fake email generator. Generate random email addresses from names for testing signup forms, databases and mailing lists. Uses example/test domains. Runs in your browser.',
+      'Free temporary email generator with a real disposable inbox — receive verification codes and links with no signup, then throw the address away. Plus bulk random addresses for test data. Runs in your browser.',
     category: 'Generators',
-    keywords: ['fake email generator', 'random email generator', 'test email generator', 'dummy email address', 'sample email generator'],
+    keywords: ['fake email generator', 'temporary email', 'disposable email', 'temp mail', 'throwaway email', 'random email generator', '10 minute mail'],
     icon: 'M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1ZM4 7l8 6 8-6',
   },
   {
     slug: 'fake-phone-generator',
     name: 'Fake Phone Number Generator',
-    tagline: 'Random phone numbers by country format.',
+    tagline: 'Random phone numbers for 16 countries.',
     description:
-      'Free online fake phone number generator. Generate random phone numbers in US, UK and international formats for testing forms and sample data. Uses reserved test ranges. Runs in your browser.',
+      'Free online fake phone number generator for 16 countries — US, UK, Canada, Australia, Germany, France, Japan, India, Brazil and more. Get a number in national, international, E.164 and plain-digit formats at once, or generate up to 1000 unique numbers and export as list, CSV or JSON. Uses reserved test ranges. Runs in your browser.',
     category: 'Generators',
-    keywords: ['fake phone number generator', 'random phone number generator', 'test phone number', 'dummy phone number', 'sample phone numbers'],
+    keywords: ['fake phone number generator', 'random phone number generator', 'test phone number', 'dummy phone number', 'sample phone numbers', 'e164 phone number', 'international phone number generator', 'bulk phone numbers'],
     icon: 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L20 13l2 5v0a2 2 0 0 1-2 2 16 16 0 0 1-15-15 2 2 0 0 1 2-2Z',
-  },
-  {
-    slug: 'credit-card-generator',
-    name: 'Credit Card Number Generator',
-    tagline: 'Luhn-valid test card numbers (not real).',
-    description:
-      'Free online credit card number generator. Generate Luhn-valid test card numbers for Visa, Mastercard, Amex and Discover with expiry and CVV, for payment-form QA. Test data only — not real cards. Runs in your browser.',
-    category: 'Generators',
-    keywords: ['credit card generator', 'test credit card number generator', 'fake credit card generator', 'luhn valid card number', 'dummy card number'],
-    icon: 'M3 7h18v10H3zM3 10h18M6 14h4',
-  },
-  {
-    slug: 'iban-generator',
-    name: 'IBAN Generator',
-    tagline: 'Format-valid IBANs for testing.',
-    description:
-      'Free online IBAN generator. Generate international bank account numbers with a valid mod-97 check for several countries, for testing payment and banking forms. Not real accounts. Runs in your browser.',
-    category: 'Generators',
-    keywords: ['iban generator', 'test iban generator', 'fake iban generator', 'valid iban generator', 'random iban'],
-    icon: 'M3 21h18M4 10h16M5 10 12 4l7 6M6 10v11M18 10v11M10 10v11M14 10v11',
-  },
-  {
-    slug: 'ssn-generator',
-    name: 'SSN Generator',
-    tagline: 'Format-valid test SSNs (non-issuable).',
-    description:
-      'Free online SSN generator. Generate US Social Security number-formatted test values using non-issuable ranges so they can never match a real person. For form testing only. Runs in your browser.',
-    category: 'Generators',
-    keywords: ['ssn generator', 'fake ssn generator', 'test ssn generator', 'random social security number', 'dummy ssn'],
-    icon: 'M3 6h18v12H3zM7 10a2 2 0 1 1 0 .01M11 10h6M11 14h4',
   },
   {
     slug: 'random-user-profile-generator',
@@ -2055,11 +2025,11 @@ export const tools: Tool[] = [
   {
     slug: 'company-name-generator',
     name: 'Company Name Generator',
-    tagline: 'Business names from word combinations.',
+    tagline: 'Brandable business names from your keywords.',
     description:
-      'Free online company name generator. Generate business and startup name ideas by combining descriptive words and industry terms, with an optional legal suffix. Runs entirely in your browser.',
+      'Free company name generator. Turn keywords into brandable business and startup name ideas across styles like brandable, compound and evocative, with logo previews and saved favorites. Runs entirely in your browser.',
     category: 'Generators',
-    keywords: ['company name generator', 'business name generator', 'startup name generator', 'brand name ideas', 'random company name'],
+    keywords: ['company name generator', 'business name generator', 'startup name generator', 'brandable name generator', 'namelix alternative'],
     icon: 'M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M15 9h.01M9 13h.01M15 13h.01M10 21v-4h4v4',
   },
   {
@@ -2075,11 +2045,11 @@ export const tools: Tool[] = [
   {
     slug: 'fake-id-generator',
     name: 'Fake ID Data Generator',
-    tagline: 'Fictional identity fields for test data.',
+    tagline: 'Build custom test data tables in any format.',
     description:
-      'Free online fake ID data generator. Generate a complete set of fictional identity fields — name, DOB, address, phone, email and a fake ID number — for QA and demos. Not a real ID. Runs in your browser.',
+      'Free online test data generator. Define your own columns and data types — names, emails, dates, number ranges, UUIDs, credit cards, pick-from-list and more — set a row count and locale, and export fictional records as JSON, CSV, SQL, XML or YAML. Seedable and reproducible. Not a real ID. Runs in your browser.',
     category: 'Generators',
-    keywords: ['fake id generator', 'fake identity generator', 'random identity generator', 'test id data generator', 'fictional identity generator'],
+    keywords: ['fake id generator', 'test data generator', 'fake data generator', 'sample data generator', 'random data generator', 'mock data generator'],
     icon: 'M3 5h18v14H3zM7 9a2 2 0 1 1 0 .01M6 15c0-1.5 1.5-3 3-3M14 9h4M14 13h4M14 16h2',
   },
   {
@@ -2193,16 +2163,6 @@ export const tools: Tool[] = [
     category: 'Generators',
     keywords: ['color palette generator', 'color scheme generator', 'random color palette', 'palette generator', 'color combination generator'],
     icon: 'M12 3a9 9 0 1 0 0 18 3 3 0 0 0 0-6h-1a2 2 0 0 1 0-4h2a4 4 0 0 0 0-8ZM7.5 12a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm3-4a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z',
-  },
-  {
-    slug: 'color-scheme-generator',
-    name: 'Color Scheme Generator',
-    tagline: 'Harmonious schemes from one base color.',
-    description:
-      'Free online color scheme generator. Enter a base color and get complementary, analogous, triadic, tetradic, split-complementary and monochromatic schemes with tints and shades. Runs in your browser.',
-    category: 'Generators',
-    keywords: ['color scheme generator', 'color harmony generator', 'complementary color generator', 'analogous colors', 'triadic color scheme'],
-    icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM12 3v9l6 6',
   },
   {
     slug: 'pattern-generator',
@@ -2425,9 +2385,9 @@ export const tools: Tool[] = [
     name: 'Hashtag Generator',
     tagline: 'Turn keywords into social hashtags.',
     description:
-      'Free online hashtag generator. Turn a topic or keywords into a set of relevant hashtags for Instagram, TikTok, X and LinkedIn, with camel-case and popularity variations. Runs in your browser.',
+      'Free hashtag generator for Instagram, TikTok, YouTube, X, Facebook & LinkedIn. Turns keywords into relevant tags grouped by reach tier — broad, popular and niche — with select-and-copy. Runs in your browser.',
     category: 'Generators',
-    keywords: ['hashtag generator', 'instagram hashtag generator', 'social media hashtags', 'hashtag maker', 'tiktok hashtag generator'],
+    keywords: ['hashtag generator', 'instagram hashtag generator', 'social media hashtags', 'hashtag maker', 'tiktok hashtag generator', 'youtube hashtag generator'],
     icon: 'M10 3 8 21M16 3l-2 18M4 8h16M3 16h16',
   },
   {
@@ -2523,11 +2483,11 @@ export const tools: Tool[] = [
   {
     slug: 'nickname-generator',
     name: 'Nickname Generator',
-    tagline: 'Fun nicknames from your name.',
+    tagline: 'Fancy fonts, symbols and nicknames for your name.',
     description:
-      'Free online nickname generator. Turn a name into fun nicknames — cute, cool and gamer-style — using prefixes, suffixes and playful word pairings. Great for games, social media and friends. Runs in your browser.',
+      'Free stylish name generator. Turn any name into 100+ fancy fonts, cool symbols and nickname styles — bold, italic, cursive, gothic, bubble and upside-down text, plus decorated gaming frames for PUBG, Free Fire, Roblox, Discord, Instagram and TikTok. Tap to copy. Runs in your browser.',
     category: 'Generators',
-    keywords: ['nickname generator', 'cool nickname generator', 'gamer nickname generator', 'nickname ideas', 'random nickname maker'],
+    keywords: ['stylish name generator', 'fancy text generator', 'nickname generator', 'cool fonts generator', 'fancy name maker', 'stylish text', 'gamer name generator'],
     icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21a8 8 0 0 1 16 0M18 5l2 2-2 2',
   },
   {

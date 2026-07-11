@@ -1,52 +1,266 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
+
+const THEMES = ['All', 'Movies', 'Music', 'Animals', 'Space', 'Food', 'Nature', 'Sports'];
+const TYPES = [
+  { id: 'random', label: 'Random' },
+  { id: 'gamer', label: 'Gamer tag' },
+  { id: 'social', label: 'Social handle' },
+];
 ---
 
 <ToolLayout slug="username-generator">
-  <div class="flex flex-col gap-4">
-    <div class="flex flex-wrap items-end gap-3">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
-        <input id="un-count" type="number" min="1" max="500" value="15" class="field w-28" />
-      </label>
-      <button id="un-gen" class="btn btn-primary ml-auto">Generate</button>
-      <button id="un-copy" class="btn btn-secondary">Copy all</button>
+  <div class="flex flex-col gap-5">
+    <!-- Type presets -->
+    <div class="flex flex-wrap gap-2" role="tablist" aria-label="Username type">
+      {TYPES.map((t, i) => (
+        <button
+          class:list={['seg', i === 0 && 'seg-on']}
+          data-type={t.id}
+          role="tab"
+          aria-selected={i === 0 ? 'true' : 'false'}
+        >{t.label}</button>
+      ))}
     </div>
-    <textarea id="un-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated usernames"></textarea>
+
+    <!-- Theme + keyword -->
+    <div class="flex flex-wrap items-end gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Theme
+        <select id="un-theme" class="field w-40">
+          {THEMES.map((t) => <option value={t}>{t}</option>)}
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Keyword (optional)
+        <input id="un-word" class="field w-48" placeholder="e.g. your name" spellcheck="false" autocomplete="off" maxlength="16" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="un-count" type="number" min="1" max="200" value="24" class="field w-24" />
+      </label>
+    </div>
+
+    <!-- Length slider -->
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      <span>Max length: <span id="un-len-val" class="font-mono text-ink">18</span></span>
+      <input id="un-len" type="range" min="6" max="30" value="18" class="w-full max-w-md accent-[#5e6ad2]" />
+    </label>
+
+    <!-- Advanced toggles -->
+    <div class="flex flex-wrap items-center gap-4">
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="un-num" type="checkbox" class="accent-[#5e6ad2]" checked /> Add numbers</label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="un-leet" type="checkbox" class="accent-[#5e6ad2]" /> Leetify (3, 0, 1…)</label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="un-rand" type="checkbox" class="accent-[#5e6ad2]" /> Random characters</label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">Seed
+        <input id="un-seed" class="field w-28" placeholder="optional" spellcheck="false" autocomplete="off" title="Same seed + settings reproduce the same batch" />
+      </label>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <button id="un-gen" class="btn btn-primary">Generate</button>
+      <button id="un-copy" class="btn btn-secondary">Copy all</button>
+      <span id="un-hint" class="text-xs text-ink-subtle">Tap any username to copy it.</span>
+    </div>
+
+    <div id="un-out" class="grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
+
+    <!-- Availability: updates to the last-tapped username -->
+    <div id="un-avail" class="hidden flex-wrap items-center gap-2 border-t border-hairline pt-4 text-sm text-ink-subtle">
+      <span>Check <span id="un-avail-name" class="font-mono text-ink"></span> on:</span>
+      <a data-site="youtube.com/@" target="_blank" rel="noopener noreferrer" class="chip">YouTube</a>
+      <a data-site="reddit.com/user/" target="_blank" rel="noopener noreferrer" class="chip">Reddit</a>
+      <a data-site="instagram.com/" target="_blank" rel="noopener noreferrer" class="chip">Instagram</a>
+      <a data-site="twitch.tv/" target="_blank" rel="noopener noreferrer" class="chip">Twitch</a>
+      <a data-site="github.com/" target="_blank" rel="noopener noreferrer" class="chip">GitHub</a>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free username generator creates unique, memorable usernames and handles
-      by combining adjectives, nouns and numbers in a few different styles — great
-      for games, social media, forums and new sign-ups when your first choice is
-      taken. Generate a batch and pick your favorite. Everything runs in your
-      browser and nothing is uploaded.
+      This free username generator creates unique, memorable usernames and handles for
+      games, social media, forums and new sign-ups. Pick a type — random, gamer tag or
+      social handle — choose a theme like Animals, Space or Music, and set a maximum
+      length. Add your own keyword to weave your name in, or switch on leetify and
+      random-character modes to make a handle harder to link across accounts.
+    </p>
+    <p>
+      Generate a batch, then tap any result to copy it, or use the availability links to
+      check it on YouTube, Reddit, Instagram, Twitch and GitHub. Set a seed to reproduce
+      the exact same batch later. Everything runs in your browser and nothing is uploaded.
     </p>
   </div>
 </ToolLayout>
 
+<style>
+  .seg {
+    padding: 0.4rem 0.85rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-hairline);
+    background-color: var(--color-surface-1);
+    color: var(--color-ink-subtle);
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  .seg:hover { border-color: var(--color-hairline-strong); color: var(--color-ink); }
+  .seg-on {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-on-primary);
+  }
+  .chip {
+    padding: 0.3rem 0.7rem;
+    font-size: 0.8125rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-hairline);
+    background-color: var(--color-surface-1);
+    color: var(--color-ink);
+    text-decoration: none;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+  .chip:hover { background-color: var(--color-surface-2); border-color: var(--color-hairline-strong); }
+  #un-avail:not(.hidden) { display: flex; }
+</style>
+
 <script>
-  import { username } from '../../lib/fakegen';
+  import {
+    USERNAME_ADJ, USERNAME_THEMES, GAMERTAG_SUFFIX,
+  } from '../../lib/gendata';
+  import { pick, randInt, randString, setSeed, ALPHA_LOWER, DIGITS } from '../../lib/random';
 
   const $ = (id: string) => document.getElementById(id)!;
+  const themeEl = $('un-theme') as HTMLSelectElement;
+  const wordEl = $('un-word') as HTMLInputElement;
   const countEl = $('un-count') as HTMLInputElement;
-  const out = $('un-out') as HTMLTextAreaElement;
+  const lenEl = $('un-len') as HTMLInputElement;
+  const lenVal = $('un-len-val');
+  const numEl = $('un-num') as HTMLInputElement;
+  const leetEl = $('un-leet') as HTMLInputElement;
+  const randEl = $('un-rand') as HTMLInputElement;
+  const seedEl = $('un-seed') as HTMLInputElement;
+  const out = $('un-out')!;
+  const copyAll = $('un-copy') as HTMLButtonElement;
 
-  function generate() {
-    const n = Math.max(1, Math.min(500, Number(countEl.value) || 1));
-    const set = new Set<string>();
-    let guard = 0;
-    while (set.size < n && guard < n * 20) { set.add(username()); guard++; }
-    out.value = [...set].join('\n');
+  let type = 'random';
+  const segs = [...document.querySelectorAll<HTMLButtonElement>('.seg')];
+
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+  const clean = (s: string) => s.replace(/[^A-Za-z0-9]/g, '');
+  const leetMap: Record<string, string> = { e: '3', o: '0', s: '5', a: '4', t: '7', i: '1' };
+  const leet = (s: string) => s.replace(/[eosati]/gi, (c) => leetMap[c.toLowerCase()] ?? c);
+
+  // Noun bank for the selected theme (All => union of every theme).
+  function nouns(): string[] {
+    const t = themeEl.value;
+    if (t === 'All' || !USERNAME_THEMES[t]) return Object.values(USERNAME_THEMES).flat();
+    return USERNAME_THEMES[t];
   }
 
-  countEl.addEventListener('input', generate);
+  // Build one raw (pre-length, pre-leet) username for the active type.
+  function core(maxLen: number): string {
+    const kw = clean(wordEl.value.trim());
+    const noun = pick(nouns());
+
+    // Random-characters mode: keyword (or short base) + filler to length.
+    if (randEl.checked) {
+      const base = kw ? kw : cap(pick(USERNAME_ADJ));
+      const fill = Math.max(3, maxLen - base.length);
+      return base + randString(fill, ALPHA_LOWER + DIGITS);
+    }
+
+    if (type === 'gamer') {
+      const a = kw ? cap(kw) : cap(pick(USERNAME_ADJ));
+      let tag = randInt(0, 1) ? a + noun : noun + a;
+      if (randInt(0, 2) === 0) tag += pick(GAMERTAG_SUFFIX);
+      return tag;
+    }
+
+    if (type === 'social') {
+      // lowercase, handle-style with . or _ separators
+      const a = kw ? kw.toLowerCase() : pick(USERNAME_ADJ).toLowerCase();
+      const sep = pick(['', '.', '_']);
+      return `${a}${sep}${noun.toLowerCase()}`;
+    }
+
+    // random: Adjective + Noun, keyword substitutes one part
+    const adj = kw ? cap(kw) : cap(pick(USERNAME_ADJ));
+    return randInt(0, 1) ? adj + noun : cap(pick(USERNAME_ADJ)) + noun;
+  }
+
+  function one(maxLen: number): string {
+    let u = core(maxLen);
+    if (leetEl.checked) u = leet(u);
+    // Numbers: append until we hit target length (skip if random-chars already filled it).
+    if (numEl.checked && !randEl.checked) {
+      const room = Math.max(1, Math.min(4, maxLen - u.length));
+      u += randInt(0, +('9'.repeat(room)));
+    }
+    if (u.length > maxLen) u = u.slice(0, maxLen);
+    return u;
+  }
+
+  function generate() {
+    // Deterministic when a seed is set; otherwise CSPRNG.
+    setSeed(seedEl.value.trim() || null);
+    lenVal.textContent = lenEl.value;
+    const n = Math.max(1, Math.min(200, Number(countEl.value) || 1));
+    const maxLen = Math.max(6, Math.min(30, Number(lenEl.value) || 18));
+    const set = new Set<string>();
+    let guard = 0;
+    while (set.size < n && guard++ < n * 30) {
+      const u = one(maxLen);
+      if (u.length >= 3) set.add(u);
+    }
+    setSeed(null); // restore entropy for anything else on the page
+
+    out.innerHTML = [...set]
+      .map(
+        (u) =>
+          `<div class="group relative"><button class="panel w-full truncate px-3 py-2.5 text-center font-mono text-sm text-ink transition-colors hover:border-hairline-strong hover:bg-surface-2" data-n="${u}">${u}</button></div>`
+      )
+      .join('');
+    out.querySelectorAll<HTMLButtonElement>('button[data-n]').forEach((b) =>
+      b.addEventListener('click', async () => {
+        await navigator.clipboard.writeText(b.dataset.n!);
+        const orig = b.textContent;
+        b.textContent = 'Copied!';
+        setTimeout(() => (b.textContent = orig), 1000);
+        showAvailability(b.dataset.n!);
+      })
+    );
+  }
+
+  const avail = $('un-avail');
+  const availName = $('un-avail-name');
+  function showAvailability(name: string) {
+    // Handles are lowercased and stripped to the common allowed set.
+    const handle = name.toLowerCase().replace(/[^a-z0-9._-]/g, '');
+    availName.textContent = name;
+    avail.querySelectorAll<HTMLAnchorElement>('a[data-site]').forEach((a) => {
+      a.href = `https://${a.dataset.site}${handle}`;
+    });
+    avail.classList.remove('hidden');
+  }
+
+  segs.forEach((s) =>
+    s.addEventListener('click', () => {
+      segs.forEach((x) => {
+        x.classList.toggle('seg-on', x === s);
+        x.setAttribute('aria-selected', x === s ? 'true' : 'false');
+      });
+      type = s.dataset.type!;
+      generate();
+    })
+  );
+
+  [themeEl, wordEl, countEl, lenEl, numEl, leetEl, randEl, seedEl].forEach((el) =>
+    el.addEventListener('input', generate)
+  );
   $('un-gen').addEventListener('click', generate);
-  $('un-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(out.value);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  copyAll.addEventListener('click', async () => {
+    const all = [...out.querySelectorAll<HTMLButtonElement>('button[data-n]')].map((b) => b.dataset.n!).join('\n');
+    await navigator.clipboard.writeText(all);
+    copyAll.textContent = 'Copied!';
+    setTimeout(() => (copyAll.textContent = 'Copy all'), 1500);
   });
   generate();
 </script>
