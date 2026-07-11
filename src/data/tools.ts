@@ -1975,21 +1975,21 @@ export const tools: Tool[] = [
   {
     slug: 'fake-name-generator',
     name: 'Fake Name Generator',
-    tagline: 'Random full names for testing & demos.',
+    tagline: 'Random names by nationality for testing & demos.',
     description:
-      'Free online fake name generator. Generate random realistic full names — first and last, by gender — one at a time or in bulk for testing, mockups and sample data. Runs in your browser, nothing uploaded.',
+      'Free online fake name generator. Generate random realistic names across 13 nationality name sets — American, British, Italian, Spanish, French, German, Japanese, Chinese, Indian, Arabic, Russian and more — by gender and display format, one at a time or in bulk. Runs in your browser, nothing uploaded.',
     category: 'Generators',
-    keywords: ['fake name generator', 'random name generator', 'random full name', 'test name generator', 'dummy name generator'],
+    keywords: ['fake name generator', 'random name generator', 'random full name', 'test name generator', 'dummy name generator', 'name generator by nationality', 'international name generator'],
     icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21a8 8 0 0 1 16 0',
   },
   {
     slug: 'fake-address-generator',
     name: 'Fake Address Generator',
-    tagline: 'Random street addresses for testing.',
+    tagline: 'Random addresses for 16 countries.',
     description:
-      'Free online fake address generator. Generate random realistic-looking street addresses with city, state and ZIP for form testing and sample data. Fictional only. Runs entirely in your browser.',
+      'Free online fake address generator for 16 countries — US, UK, Canada, Australia, Germany, France, Italy, Spain, Netherlands, Sweden, Japan, China, India, Brazil, Mexico and Russia. Generates a coherent persona per record: locale name, street, real city and region, correct postal code and phone, plus coordinates, currency and timezone. Single identity with click-to-copy fields or bulk export as CSV/JSON. Fictional only. Runs entirely in your browser.',
     category: 'Generators',
-    keywords: ['fake address generator', 'random address generator', 'test address generator', 'dummy address', 'random street address'],
+    keywords: ['fake address generator', 'random address generator', 'international address generator', 'test address generator', 'dummy address', 'random street address', 'fake address by country', 'us uk canada address generator'],
     icon: 'M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5M9 21v-6h6v6',
   },
   {

@@ -3,52 +3,153 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
 <ToolLayout slug="pdf417-generator">
-  <div class="flex flex-col gap-4">
-    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-      Data to encode
-      <textarea id="pf-text" class="field min-h-24 resize-y font-mono text-[13px]" placeholder="Enter text or data…" spellcheck="false">TOOLCITIES PDF417 SAMPLE</textarea>
-    </label>
-
-    <div class="flex justify-center rounded-md border border-hairline bg-white p-6">
-      <canvas id="pf-canvas" class="max-w-full"></canvas>
+  <div class="grid gap-6 lg:grid-cols-[1fr_320px]">
+    <!-- Preview -->
+    <div class="flex flex-col gap-4">
+      <div id="pf-stage" class="flex min-h-[220px] items-center justify-center rounded-md border border-hairline bg-white p-6">
+        <canvas id="pf-canvas" class="max-w-full"></canvas>
+      </div>
+      <p id="pf-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+      <div class="flex flex-wrap gap-2">
+        <button id="pf-png" type="button" class="btn btn-primary">Download PNG</button>
+        <button id="pf-svg" type="button" class="btn btn-secondary">Download SVG</button>
+        <button id="pf-copy" type="button" class="btn btn-tertiary">Copy PNG</button>
+      </div>
     </div>
 
-    <div class="flex flex-wrap gap-2">
-      <button id="pf-png" type="button" class="btn btn-primary">Download PNG</button>
-      <button id="pf-svg" type="button" class="btn btn-secondary">Download SVG</button>
+    <!-- Controls -->
+    <div class="flex flex-col gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Data to encode
+        <textarea id="pf-text" class="field min-h-24 resize-y font-mono text-[13px]" placeholder="Enter text or data…" spellcheck="false">TOOLCITIES PDF417 SAMPLE</textarea>
+      </label>
+
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Error correction
+          <select id="pf-ec" class="field">
+            <option value="">Auto</option>
+            <option value="0">Level 0</option>
+            <option value="1">Level 1</option>
+            <option value="2">Level 2</option>
+            <option value="3">Level 3</option>
+            <option value="4">Level 4</option>
+            <option value="5">Level 5</option>
+            <option value="6">Level 6</option>
+            <option value="7">Level 7</option>
+            <option value="8">Level 8</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Data columns
+          <select id="pf-cols" class="field">
+            <option value="">Auto</option>
+            <option>1</option><option>2</option><option>3</option><option>4</option>
+            <option>5</option><option>6</option><option>7</option><option>8</option>
+            <option>9</option><option>10</option><option>12</option><option>16</option>
+            <option>20</option><option>30</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Module scale <span id="pf-scale-v" class="text-ink-tertiary">3</span>
+          <input id="pf-scale" type="range" min="1" max="8" value="3" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Row height <span id="pf-rowmult-v" class="text-ink-tertiary">3</span>
+          <input id="pf-rowmult" type="range" min="1" max="10" value="3" />
+        </label>
+      </div>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Rotation
+        <select id="pf-rotate" class="field">
+          <option value="N">None</option>
+          <option value="R">90° right</option>
+          <option value="L">90° left</option>
+          <option value="I">180°</option>
+        </select>
+      </label>
+
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Bars
+          <input id="pf-bar" type="color" value="#000000" class="h-9 w-full cursor-pointer rounded-md border border-hairline bg-transparent" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Background
+          <input id="pf-bg" type="color" value="#ffffff" class="h-9 w-full cursor-pointer rounded-md border border-hairline bg-transparent" />
+        </label>
+      </div>
+
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="pf-compact" type="checkbox" class="accent-[#5e6ad2]" /> Truncated (compact) PDF417
+      </label>
     </div>
-    <p id="pf-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
       This free PDF417 generator encodes text and data into a high-capacity
       PDF417 stacked 2D barcode — the wide, multi-row format printed on driver's
-      licenses, boarding passes and shipping labels. Enter your content, preview
-      it, and download it as a PNG or scalable SVG. Encoding happens entirely in
-      your browser, so nothing you type is ever uploaded.
+      licenses, boarding passes and shipping labels. Tune the error-correction
+      level, data-column count, row height and module scale, recolor the symbol,
+      rotate it, or switch to the compact (truncated) variant, then download a
+      crisp PNG or scalable SVG — or copy it straight to your clipboard.
+    </p>
+    <p>
+      Everything is encoded entirely in your browser, so nothing you type is ever
+      uploaded — no accounts, no watermarks, no limits.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  import { toCanvas, toSVG } from '../../lib/barcode';
+  import { toCanvas, toSVG, type RenderOpts } from '../../lib/barcode';
 
-  const textEl = document.getElementById('pf-text') as HTMLTextAreaElement;
-  const canvas = document.getElementById('pf-canvas') as HTMLCanvasElement;
-  const err = document.getElementById('pf-error')!;
-  const BCID = 'pdf417';
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const textEl = $<HTMLTextAreaElement>('pf-text');
+  const ecEl = $<HTMLSelectElement>('pf-ec');
+  const colsEl = $<HTMLSelectElement>('pf-cols');
+  const scaleEl = $<HTMLInputElement>('pf-scale');
+  const rowmultEl = $<HTMLInputElement>('pf-rowmult');
+  const rotateEl = $<HTMLSelectElement>('pf-rotate');
+  const barEl = $<HTMLInputElement>('pf-bar');
+  const bgEl = $<HTMLInputElement>('pf-bg');
+  const compactEl = $<HTMLInputElement>('pf-compact');
+  const canvas = $<HTMLCanvasElement>('pf-canvas');
+  const err = $<HTMLElement>('pf-error');
 
+  const noHash = (c: string) => c.replace('#', '');
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
 
+  function opts(): RenderOpts {
+    const o: RenderOpts = {
+      bcid: 'pdf417',
+      text: textEl.value.trim(),
+      scale: Number(scaleEl.value),
+      rowmult: Number(rowmultEl.value),
+      rotate: rotateEl.value,
+      barcolor: noHash(barEl.value),
+      backgroundcolor: noHash(bgEl.value),
+      paddingwidth: 4,
+      paddingheight: 4,
+    };
+    if (ecEl.value !== '') o.eclevel = Number(ecEl.value);
+    if (colsEl.value !== '') o.columns = Number(colsEl.value);
+    if (compactEl.checked) o.compact = true;
+    return o;
+  }
+
   async function draw() {
-    const text = textEl.value.trim();
-    if (!text) { setErr('Enter some text to encode.'); return; }
+    if (!textEl.value.trim()) { setErr('Enter some data to encode.'); return; }
     try {
-      await toCanvas(canvas, { bcid: BCID, text, scale: 3 });
+      await toCanvas(canvas, opts());
       setErr('');
     } catch (e) {
-      setErr('Could not encode that data.');
+      setErr('Could not encode that data. Try fewer columns or a lower error-correction level.');
     }
   }
 
@@ -57,15 +158,27 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   }
 
   let t: number;
-  textEl.addEventListener('input', () => { clearTimeout(t); t = window.setTimeout(draw, 200); });
-  document.getElementById('pf-png')!.addEventListener('click', () => download(canvas.toDataURL('image/png'), 'pdf417.png'));
-  document.getElementById('pf-svg')!.addEventListener('click', async () => {
+  textEl.addEventListener('input', () => { clearTimeout(t); t = window.setTimeout(draw, 180); });
+  [scaleEl, rowmultEl].forEach((el) => el.addEventListener('input', () => {
+    $('pf-scale-v').textContent = scaleEl.value;
+    $('pf-rowmult-v').textContent = rowmultEl.value;
+    draw();
+  }));
+  [ecEl, colsEl, rotateEl, barEl, bgEl, compactEl].forEach((el) => el.addEventListener('input', draw));
+
+  $('pf-png').addEventListener('click', () => download(canvas.toDataURL('image/png'), 'pdf417.png'));
+  $('pf-svg').addEventListener('click', async () => {
     try {
-      const svg = await toSVG({ bcid: BCID, text: textEl.value.trim(), scale: 3 });
-      const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+      const url = URL.createObjectURL(new Blob([await toSVG(opts())], { type: 'image/svg+xml' }));
       download(url, 'pdf417.svg');
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch { setErr('Could not encode that data.'); }
+    } catch { setErr('Could not export SVG for that data.'); }
+  });
+  $('pf-copy').addEventListener('click', () => {
+    canvas.toBlob(async (blob) => {
+      if (!blob || !navigator.clipboard?.write) return;
+      try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); } catch {}
+    });
   });
 
   draw();

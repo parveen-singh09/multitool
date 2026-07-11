@@ -11,22 +11,46 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Suffix
         <input id="sn-suffix" class="field font-mono" placeholder="" spellcheck="false" />
       </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Digits
-        <input id="sn-len" type="number" min="1" max="12" value="6" class="field" />
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Length
+        <input id="sn-len" type="number" min="1" max="24" value="6" class="field" />
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
-        <input id="sn-count" type="number" min="1" max="1000" value="10" class="field" />
+        <input id="sn-count" type="number" min="1" max="10000" value="10" class="field" />
       </label>
     </div>
+
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Mode
+        <select id="sn-mode" class="field">
+          <option value="seq" selected>Sequential</option>
+          <option value="rand">Random</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle" data-seq>Start at
+        <input id="sn-start" type="number" min="0" value="1" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle" data-seq>Add each time
+        <input id="sn-step" type="number" min="1" value="1" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle" data-rand hidden>Characters
+        <select id="sn-set" class="field">
+          <option value="num" selected>Numbers</option>
+          <option value="unambig">No ambiguous (A-Z 2-9)</option>
+          <option value="upper">Uppercase + numbers</option>
+          <option value="lower">Lowercase + numbers</option>
+          <option value="alnum">Letters + numbers</option>
+        </select>
+      </label>
+    </div>
+
     <div class="flex flex-wrap items-center gap-4">
       <label class="flex items-center gap-2 text-sm text-ink-subtle">
-        <input id="sn-mode" type="checkbox" class="accent-[#5e6ad2]" checked /> Sequential (unchecked = random)
-      </label>
-      <label class="flex items-center gap-2 text-sm text-ink-subtle">
-        Start at <input id="sn-start" type="number" min="0" value="1" class="field w-24" />
+        <input id="sn-pad" type="checkbox" class="accent-primary" checked /> Zero-pad to length
       </label>
       <button id="sn-gen" class="btn btn-primary ml-auto">Generate</button>
       <button id="sn-copy" class="btn btn-secondary">Copy all</button>
+      <button id="sn-txt" class="btn btn-secondary">Export .txt</button>
+      <button id="sn-csv" class="btn btn-secondary">Export .csv</button>
     </div>
     <textarea id="sn-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated serial numbers"></textarea>
   </div>
@@ -34,41 +58,86 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
       This free serial number generator creates serial numbers in bulk with a
-      custom prefix, suffix and zero-padded number. Choose sequential mode to
-      count up from a starting value, or random mode for unpredictable numbers.
-      Perfect for products, tickets, assets and test data. Everything is
-      generated in your browser and never uploaded.
+      custom prefix, suffix and length. Choose sequential mode to count up from a
+      starting value with any step size, or random mode with a character set of
+      your choice — digits, uppercase, lowercase, alphanumeric, or a
+      no-ambiguous set that drops easily-confused characters like O and 0.
+      Generate up to 10,000 at once, copy them, or export as a .txt list or .csv
+      sheet. Random codes are de-duplicated within each batch. Everything is
+      generated in your browser with a secure random source and never uploaded.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  import { randInt } from '../../lib/random';
+  import { randInt, randString, DIGITS, ALPHA_UPPER, ALPHA_LOWER, UNAMBIGUOUS } from '../../lib/random';
 
   const $ = (id: string) => document.getElementById(id)!;
   const prefix = $('sn-prefix') as HTMLInputElement;
   const suffix = $('sn-suffix') as HTMLInputElement;
   const lenEl = $('sn-len') as HTMLInputElement;
   const countEl = $('sn-count') as HTMLInputElement;
-  const modeEl = $('sn-mode') as HTMLInputElement;
+  const modeEl = $('sn-mode') as HTMLSelectElement;
   const startEl = $('sn-start') as HTMLInputElement;
+  const stepEl = $('sn-step') as HTMLInputElement;
+  const setEl = $('sn-set') as HTMLSelectElement;
+  const padEl = $('sn-pad') as HTMLInputElement;
   const out = $('sn-out') as HTMLTextAreaElement;
 
-  function generate() {
-    const len = Math.max(1, Math.min(12, Number(lenEl.value) || 1));
-    const n = Math.max(1, Math.min(1000, Number(countEl.value) || 1));
-    const seq = modeEl.checked;
-    const start = Number(startEl.value) || 0;
-    const max = Math.pow(10, len);
-    const list: string[] = [];
-    for (let i = 0; i < n; i++) {
-      const num = seq ? (start + i) % max : randInt(0, max - 1);
-      list.push(prefix.value + String(num).padStart(len, '0') + suffix.value);
+  function alphabet(): string {
+    switch (setEl.value) {
+      case 'unambig': return UNAMBIGUOUS;
+      case 'upper': return ALPHA_UPPER + DIGITS;
+      case 'lower': return ALPHA_LOWER + DIGITS;
+      case 'alnum': return ALPHA_UPPER + ALPHA_LOWER + DIGITS;
+      default: return DIGITS;
     }
-    out.value = list.join('\n');
   }
 
-  ['sn-prefix', 'sn-suffix', 'sn-len', 'sn-count', 'sn-mode', 'sn-start'].forEach((id) => $(id).addEventListener('input', generate));
+  function generate() {
+    const len = Math.max(1, Math.min(24, Number(lenEl.value) || 1));
+    const n = Math.max(1, Math.min(10000, Number(countEl.value) || 1));
+    const rand = modeEl.value === 'rand';
+    const pad = padEl.checked;
+    const pre = prefix.value, suf = suffix.value;
+    const body = (s: string) => pre + (pad ? s.padStart(len, '0') : s) + suf;
+
+    if (rand) {
+      const ab = alphabet();
+      const seen = new Set<string>();
+      let guard = 0;
+      while (seen.size < n && guard < n * 40) {
+        guard++;
+        seen.add(body(randString(len, ab)));
+      }
+      out.value = [...seen].join('\n');
+    } else {
+      const start = Number(startEl.value) || 0;
+      const step = Math.max(1, Number(stepEl.value) || 1);
+      const list: string[] = [];
+      for (let i = 0; i < n; i++) list.push(body(String(start + i * step)));
+      out.value = list.join('\n');
+    }
+  }
+
+  function syncMode() {
+    const rand = modeEl.value === 'rand';
+    document.querySelectorAll('[data-seq]').forEach((el) => ((el as HTMLElement).hidden = rand));
+    document.querySelectorAll('[data-rand]').forEach((el) => ((el as HTMLElement).hidden = !rand));
+    generate();
+  }
+
+  function download(name: string, text: string) {
+    const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  ['sn-prefix', 'sn-suffix', 'sn-len', 'sn-count', 'sn-start', 'sn-step', 'sn-set', 'sn-pad'].forEach((id) => $(id).addEventListener('input', generate));
+  modeEl.addEventListener('change', syncMode);
   $('sn-gen').addEventListener('click', generate);
   $('sn-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
@@ -76,5 +145,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy all'), 1500);
   });
-  generate();
+  $('sn-txt').addEventListener('click', () => download('serial-numbers.txt', out.value));
+  $('sn-csv').addEventListener('click', () => download('serial-numbers.csv', 'serial\n' + out.value));
+
+  syncMode();
 </script>

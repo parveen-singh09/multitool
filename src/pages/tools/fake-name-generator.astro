@@ -1,55 +1,142 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
+import { NAME_SETS, NAME_SET_KEYS } from '../../lib/namesets';
 ---
 
 <ToolLayout slug="fake-name-generator">
   <div class="flex flex-col gap-4">
+    <!-- Featured single name -->
+    <div id="fn-card" class="panel panel-lift flex flex-wrap items-center justify-between gap-4 p-5">
+      <div class="flex flex-col gap-1">
+        <span class="text-xs uppercase tracking-wide text-ink-tertiary">Random name</span>
+        <span id="fn-hero" class="font-display text-2xl font-semibold text-ink">—</span>
+        <span id="fn-hero-meta" class="text-[13px] text-ink-subtle"></span>
+      </div>
+      <div class="flex gap-2">
+        <button id="fn-again" class="btn btn-secondary">Shuffle</button>
+        <button id="fn-copy1" class="btn btn-secondary">Copy</button>
+      </div>
+    </div>
+
+    <!-- Controls -->
     <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Name set
+        <select id="fn-set" class="field w-48">
+          {NAME_SET_KEYS.map((k) => <option value={k} selected={k === 'american'}>{NAME_SETS[k].label}</option>)}
+        </select>
+      </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Gender
         <select id="fn-sex" class="field w-32"><option value="any" selected>Any</option><option value="male">Male</option><option value="female">Female</option></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Format
+        <select id="fn-format" class="field w-48">
+          <option value="first last" selected>First Last</option>
+          <option value="last, first">Last, First</option>
+          <option value="first m last">First M. Last</option>
+          <option value="first">First only</option>
+          <option value="last">Last only</option>
+          <option value="initials">Initials (F.L.)</option>
+        </select>
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
         <input id="fn-count" type="number" min="1" max="1000" value="10" class="field w-28" />
       </label>
       <button id="fn-gen" class="btn btn-primary ml-auto">Generate</button>
       <button id="fn-copy" class="btn btn-secondary">Copy all</button>
+      <button id="fn-dl" class="btn btn-secondary">Download</button>
     </div>
     <textarea id="fn-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated names"></textarea>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free fake name generator creates random, realistic full names for
-      testing forms, seeding databases, designing mockups and writing sample
-      content. Pick a gender or leave it random, choose how many you need, and
-      generate a whole batch at once. All names are fictional and generated
-      locally in your browser — nothing is uploaded.
+      This free fake name generator creates random, realistic full names across
+      more than a dozen nationality name sets — American, British, Italian, Spanish,
+      French, German, Scandinavian, Dutch, Japanese, Chinese, Indian, Arabic and
+      Russian. Pick a name set and gender, choose a display format, and generate a
+      single name or a batch of up to 1,000 at once for testing forms, seeding
+      databases, designing mockups and writing sample content.
+    </p>
+    <p>
+      All names are fictional and assembled locally in your browser from common
+      given and family names for each culture — nothing is uploaded and no name
+      refers to a real person. Need a full persona with address, email and phone?
+      Try the fake ID data generator or random user profile generator.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  import { fullName, type Sex } from '../../lib/fakegen';
+  import { NAME_SETS, type NameSetKey } from '../../lib/namesets';
+  import { pick, randInt } from '../../lib/random';
+
+  type Sex = 'male' | 'female' | 'any';
 
   const $ = (id: string) => document.getElementById(id)!;
+  const setEl = $('fn-set') as HTMLSelectElement;
   const sexEl = $('fn-sex') as HTMLSelectElement;
+  const fmtEl = $('fn-format') as HTMLSelectElement;
   const countEl = $('fn-count') as HTMLInputElement;
   const out = $('fn-out') as HTMLTextAreaElement;
+  const hero = $('fn-hero');
+  const heroMeta = $('fn-hero-meta');
+
+  function pickSex(sex: Sex): 'm' | 'f' {
+    if (sex === 'male') return 'm';
+    if (sex === 'female') return 'f';
+    return randInt(0, 1) ? 'm' : 'f';
+  }
+
+  function makeName(): string {
+    const set = NAME_SETS[setEl.value as NameSetKey];
+    const g = pickSex(sexEl.value as Sex);
+    const first = pick(set[g]);
+    const last = pick(set.last);
+    const mid = pick(set[g]);
+    switch (fmtEl.value) {
+      case 'last, first': return `${last}, ${first}`;
+      case 'first m last': return `${first} ${mid[0]}. ${last}`;
+      case 'first': return first;
+      case 'last': return last;
+      case 'initials': return `${first[0]}.${last[0]}.`;
+      default: return `${first} ${last}`;
+    }
+  }
+
+  function shuffleHero() {
+    hero.textContent = makeName();
+    const set = NAME_SETS[setEl.value as NameSetKey];
+    const sex = sexEl.value === 'any' ? 'any gender' : sexEl.value;
+    heroMeta.textContent = `${set.label} · ${sex}`;
+  }
 
   function generate() {
     const n = Math.max(1, Math.min(1000, Number(countEl.value) || 1));
     const list: string[] = [];
-    for (let i = 0; i < n; i++) list.push(fullName(sexEl.value as Sex));
+    for (let i = 0; i < n; i++) list.push(makeName());
     out.value = list.join('\n');
+    shuffleHero();
   }
 
-  [sexEl, countEl].forEach((el) => el.addEventListener('input', generate));
-  $('fn-gen').addEventListener('click', generate);
-  $('fn-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(out.value);
+  const copyBtn = async (btn: HTMLButtonElement, text: string, label: string) => {
+    await navigator.clipboard.writeText(text);
     btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+    setTimeout(() => (btn.textContent = label), 1500);
+  };
+
+  [setEl, sexEl, fmtEl, countEl].forEach((el) => el.addEventListener('input', generate));
+  $('fn-gen').addEventListener('click', generate);
+  $('fn-again').addEventListener('click', shuffleHero);
+  $('fn-copy1').addEventListener('click', (e) => copyBtn(e.currentTarget as HTMLButtonElement, hero.textContent || '', 'Copy'));
+  $('fn-copy').addEventListener('click', (e) => copyBtn(e.currentTarget as HTMLButtonElement, out.value, 'Copy all'));
+  $('fn-dl').addEventListener('click', () => {
+    const blob = new Blob([out.value], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'fake-names.txt';
+    a.click();
+    URL.revokeObjectURL(a.href);
   });
+
   generate();
 </script>

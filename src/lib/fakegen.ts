@@ -34,8 +34,8 @@ export interface Address {
   country: string;
 }
 
-export function address(): Address {
-  const st = pick(US_STATES);
+export function address(stateAbbr?: string): Address {
+  const st = US_STATES.find((s) => s.abbr === stateAbbr) ?? pick(US_STATES);
   return {
     street: `${randInt(1, 9999)} ${pick(STREETS)} ${pick(STREET_TYPES)}`,
     city: pick(CITIES),

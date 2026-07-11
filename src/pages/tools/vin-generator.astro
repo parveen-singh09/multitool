@@ -1,74 +1,201 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
+import { MAKES } from '../../lib/vin';
+
+const YEARS: number[] = [];
+for (let y = 2026; y >= 1981; y--) YEARS.push(y);
 ---
 
 <ToolLayout slug="vin-generator">
-  <div class="flex flex-col gap-4">
-    <div class="flex flex-wrap items-end gap-3">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-        How many
-        <input id="vn-count" type="number" min="1" max="500" value="10" class="field w-28" />
-      </label>
-      <button id="vn-gen" class="btn btn-primary ml-auto">Generate</button>
-      <button id="vn-copy" class="btn btn-secondary">Copy all</button>
+  <div class="flex flex-col gap-6">
+    <!-- Tabs -->
+    <div class="flex flex-wrap gap-2" role="tablist" id="vn-tabs">
+      <button type="button" class="btn btn-primary" data-tab="generate" aria-selected="true">Generate</button>
+      <button type="button" class="btn btn-secondary" data-tab="decode" aria-selected="false">Decode</button>
+      <button type="button" class="btn btn-secondary" data-tab="validate" aria-selected="false">Validate</button>
     </div>
-    <textarea id="vn-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated VINs"></textarea>
+
+    <!-- Generate -->
+    <section data-pane="generate" class="flex flex-col gap-4">
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Make
+          <select id="vn-make" class="field w-48">
+            <option value="">Any (random WMI)</option>
+            {MAKES.map((m) => <option value={m.wmi}>{m.name}</option>)}
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Model year
+          <select id="vn-year" class="field w-36">
+            <option value="">Any</option>
+            {YEARS.map((y) => <option value={y}>{y}</option>)}
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          How many
+          <input id="vn-count" type="number" min="1" max="500" value="10" class="field w-28" />
+        </label>
+        <button id="vn-gen" class="btn btn-primary ml-auto">Generate</button>
+        <button id="vn-copy" class="btn btn-secondary">Copy all</button>
+        <button id="vn-dl" class="btn btn-secondary">Download .txt</button>
+      </div>
+      <textarea id="vn-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated VINs"></textarea>
+    </section>
+
+    <!-- Decode -->
+    <section data-pane="decode" class="hidden flex-col gap-4">
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-1 flex-col gap-1 text-sm text-ink-subtle">
+          VIN
+          <input id="vn-dec-in" type="text" maxlength="17" placeholder="1HGCM82633A004352"
+            class="field font-mono uppercase tracking-wide" aria-label="VIN to decode" />
+        </label>
+        <button id="vn-dec-btn" class="btn btn-primary">Decode</button>
+      </div>
+      <div id="vn-dec-result" class="hidden flex-col gap-3"></div>
+    </section>
+
+    <!-- Validate -->
+    <section data-pane="validate" class="hidden flex-col gap-4">
+      <p class="text-sm text-ink-subtle">Paste one VIN per line. Each is checked for length, character set, and the position-9 check digit.</p>
+      <textarea id="vn-val-in" class="field min-h-40 resize-y font-mono text-[13px] uppercase"
+        placeholder="1HGCM82633A004352&#10;WBA3A5C50CF256789" aria-label="VINs to validate"></textarea>
+      <button id="vn-val-btn" class="btn btn-primary self-start">Validate</button>
+      <div id="vn-val-result" class="flex flex-col gap-2"></div>
+    </section>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free VIN generator creates 17-character vehicle identification numbers
-      with a valid position-9 check digit, computed with the official North
-      American transliteration and weighting scheme. It excludes the letters I, O
-      and Q as the standard requires. These VINs are random samples for testing
-      and demos — they do not identify any real vehicle. Runs in your browser.
+      This free VIN toolkit generates, decodes, and validates 17-character vehicle
+      identification numbers entirely in your browser. Generated VINs carry a valid
+      position-9 check digit computed with the official North American transliteration
+      and weighting scheme, and can be pinned to a specific make (using that maker's
+      real World Manufacturer Identifier) and model year. The decoder breaks a VIN into
+      its WMI, VDS, and VIS sections and reads out the manufacturing region, country,
+      make, model year, plant code, and serial. The validator checks length, the
+      I/O/Q exclusion, the allowed character set, and the checksum.
+    </p>
+    <p>
+      Generated VINs are random samples for testing, demos, and sample data — they do
+      not identify any real vehicle. Nothing is uploaded; everything runs locally.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  import { randInt } from '../../lib/random';
+  import { generateVin, decodeVin, type DecodeResult } from '../../lib/vin';
 
-  const countEl = document.getElementById('vn-count') as HTMLInputElement;
-  const out = document.getElementById('vn-out') as HTMLTextAreaElement;
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
-  // VIN uses A-Z (no I,O,Q) and 0-9.
-  const CHARS = 'ABCDEFGHJKLMNPRSTUVWXYZ0123456789';
-  const WEIGHTS = [8, 7, 6, 5, 4, 3, 2, 10, 0, 9, 8, 7, 6, 5, 4, 3, 2];
-  const TRANS: Record<string, number> = {
-    A: 1, B: 2, C: 3, D: 4, E: 5, F: 6, G: 7, H: 8,
-    J: 1, K: 2, L: 3, M: 4, N: 5, P: 7, R: 9,
-    S: 2, T: 3, U: 4, V: 5, W: 6, X: 7, Y: 8, Z: 9,
-    '0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
-  };
+  // --- Tabs ---
+  const tabs = $('vn-tabs');
+  const panes = document.querySelectorAll<HTMLElement>('[data-pane]');
+  tabs.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-tab]');
+    if (!btn) return;
+    const tab = btn.dataset.tab!;
+    tabs.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) => {
+      const on = b === btn;
+      b.className = on ? 'btn btn-primary' : 'btn btn-secondary';
+      b.setAttribute('aria-selected', String(on));
+    });
+    panes.forEach((p) => {
+      const on = p.dataset.pane === tab;
+      p.classList.toggle('hidden', !on);
+      p.classList.toggle('flex', on);
+    });
+  });
 
-  function checkDigit(chars: string[]): string {
-    let sum = 0;
-    for (let i = 0; i < 17; i++) sum += TRANS[chars[i]] * WEIGHTS[i];
-    const r = sum % 11;
-    return r === 10 ? 'X' : String(r);
-  }
-
-  function vin(): string {
-    const chars: string[] = [];
-    for (let i = 0; i < 17; i++) chars.push(CHARS[randInt(0, CHARS.length - 1)]);
-    chars[8] = checkDigit(chars); // fix position 9 (index 8) to a valid check digit
-    return chars.join('');
-  }
+  // --- Generate ---
+  const makeEl = $<HTMLSelectElement>('vn-make');
+  const yearEl = $<HTMLSelectElement>('vn-year');
+  const countEl = $<HTMLInputElement>('vn-count');
+  const out = $<HTMLTextAreaElement>('vn-out');
 
   function generate() {
     const n = Math.max(1, Math.min(500, Number(countEl.value) || 1));
+    const wmi = makeEl.value || undefined;
+    const year = yearEl.value ? Number(yearEl.value) : undefined;
     const list: string[] = [];
-    for (let i = 0; i < n; i++) list.push(vin());
+    for (let i = 0; i < n; i++) list.push(generateVin({ wmi, year }));
     out.value = list.join('\n');
   }
-
-  document.getElementById('vn-gen')!.addEventListener('click', generate);
-  document.getElementById('vn-copy')!.addEventListener('click', async (e) => {
+  $('vn-gen').addEventListener('click', generate);
+  $('vn-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
     await navigator.clipboard.writeText(out.value);
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy all'), 1500);
   });
+  $('vn-dl').addEventListener('click', () => {
+    const blob = new Blob([out.value], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'vins.txt';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  // --- Decode ---
+  const decIn = $<HTMLInputElement>('vn-dec-in');
+  const decResult = $('vn-dec-result');
+  const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
+
+  function row(label: string, value: string) {
+    return `<div class="flex justify-between gap-4 border-b border-hairline py-2 text-sm">
+      <span class="text-ink-subtle">${label}</span>
+      <span class="font-mono text-ink text-right">${esc(value) || '—'}</span></div>`;
+  }
+  function renderDecode(r: DecodeResult) {
+    const badge = r.valid
+      ? '<span class="rounded-pill bg-surface-2 px-2 py-0.5 text-[12px]" style="color:var(--color-semantic-success)">✓ Valid</span>'
+      : `<span class="rounded-pill bg-surface-2 px-2 py-0.5 text-[12px] text-ink-muted">✗ ${esc(r.error || 'Invalid')}</span>`;
+    decResult.innerHTML = `
+      <div class="flex items-center gap-3 flex-wrap">
+        <span class="font-mono text-lg text-ink tracking-wide">${esc(r.vin)}</span>${badge}
+      </div>
+      <div class="panel p-4">
+        ${row('WMI (world manufacturer, 1–3)', r.wmi)}
+        ${row('VDS (vehicle descriptor, 4–9)', r.vds)}
+        ${row('VIS (vehicle identifier, 10–17)', r.vis)}
+        ${row('Region', r.region)}
+        ${row('Country', r.country)}
+        ${row('Make', r.make ?? 'Unknown WMI')}
+        ${row('Model year', r.year ? `${r.year} (code ${r.yearCode})` : `code ${r.yearCode}`)}
+        ${row('Plant code', r.plant)}
+        ${row('Serial number', r.serial)}
+        ${row('Check digit (pos 9)', `${r.checkDigit} — expected ${r.expectedCheckDigit} ${r.checkValid ? '✓' : '✗'}`)}
+      </div>`;
+    decResult.classList.remove('hidden');
+    decResult.classList.add('flex');
+  }
+  function doDecode() {
+    const v = decIn.value.trim();
+    if (!v) return;
+    renderDecode(decodeVin(v));
+  }
+  $('vn-dec-btn').addEventListener('click', doDecode);
+  decIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') doDecode(); });
+
+  // --- Validate ---
+  const valIn = $<HTMLTextAreaElement>('vn-val-in');
+  const valResult = $('vn-val-result');
+  $('vn-val-btn').addEventListener('click', () => {
+    const lines = valIn.value.split('\n').map((l) => l.trim()).filter(Boolean);
+    if (!lines.length) { valResult.innerHTML = ''; return; }
+    valResult.innerHTML = lines.map((line) => {
+      const r = decodeVin(line);
+      const mark = r.valid ? '✓' : '✗';
+      const color = r.valid ? 'var(--color-semantic-success)' : 'var(--color-ink-subtle)';
+      const note = r.valid ? 'valid' : esc(r.error || 'invalid');
+      return `<div class="flex items-center gap-3 rounded-md bg-surface-1 px-3 py-2 text-sm">
+        <span style="color:${color}" class="font-mono">${mark}</span>
+        <span class="font-mono text-ink">${esc(line)}</span>
+        <span class="ml-auto text-ink-subtle text-[13px]">${note}</span></div>`;
+    }).join('');
+  });
+
   generate();
 </script>
