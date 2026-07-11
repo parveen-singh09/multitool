@@ -63,13 +63,17 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <span>Preview</span>
           <span class="flex items-center gap-2">
             <span id="jb-stats" class="text-xs text-ink-tertiary"></span>
-            <button id="jb-copy" type="button" class="btn btn-secondary py-1">Copy</button>
             <button id="jb-download" type="button" class="btn btn-secondary py-1">Download</button>
           </span>
         </div>
-        <div id="jb-preview" class="jb-preview field min-h-80 overflow-auto p-0" style="resize:vertical">
-          <div class="jb-gutter" id="jb-gutter" aria-hidden="true"></div>
-          <pre class="jb-code hl-block" style="margin:0"><code id="jb-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+        <div class="jb-preview-wrap field min-h-80 p-0" style="resize:vertical;overflow:hidden">
+          <button id="jb-copy" type="button" class="jb-copy-btn" title="Copy" aria-label="Copy">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          </button>
+          <div id="jb-preview" class="jb-preview overflow-auto" style="height:100%">
+            <div class="jb-gutter" id="jb-gutter" aria-hidden="true"></div>
+            <pre class="jb-code hl-block" style="margin:0"><code id="jb-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+          </div>
         </div>
       </div>
     </div>
@@ -293,10 +297,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     });
   });
 
+  const COPY_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+  const CHECK_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>';
   document.getElementById('jb-copy')!.addEventListener('click', async (e) => {
     await navigator.clipboard.writeText(rawOutput);
     const b = e.currentTarget as HTMLButtonElement;
-    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
+    b.innerHTML = CHECK_ICON; setTimeout(() => (b.innerHTML = COPY_ICON), 1400);
   });
 
   document.getElementById('jb-download')!.addEventListener('click', () => {
@@ -330,6 +336,29 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </script>
 
 <style is:global>
+  .jb-preview-wrap {
+    position: relative;
+  }
+  .jb-copy-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.4rem;
+    border-radius: 6px;
+    color: var(--color-ink-subtle);
+    background: color-mix(in srgb, var(--color-surface-2) 85%, transparent);
+    border: 1px solid var(--color-hairline);
+    cursor: pointer;
+    transition: color 0.12s, background 0.12s;
+  }
+  .jb-copy-btn:hover {
+    color: var(--color-ink);
+    background: var(--color-surface-2);
+  }
   .jb-preview {
     display: grid;
     grid-template-columns: auto 1fr;

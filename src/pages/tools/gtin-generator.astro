@@ -7,19 +7,38 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div class="flex flex-wrap items-end gap-3">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         GTIN format
-        <select id="gt-fmt" class="field w-40">
-          <option value="8">GTIN-8</option>
+        <select id="gt-fmt" class="field w-48">
+          <option value="8">GTIN-8 (EAN-8)</option>
           <option value="12">GTIN-12 (UPC-A)</option>
           <option value="13" selected>GTIN-13 (EAN-13)</option>
-          <option value="14">GTIN-14</option>
+          <option value="14">GTIN-14 (ITF-14)</option>
         </select>
       </label>
-      <button id="gt-rand" type="button" class="btn btn-primary">Generate</button>
+      <label class="flex flex-1 flex-col gap-1 text-sm text-ink-subtle" style="min-width:220px">
+        <span>Base digits <span class="text-ink-tertiary" id="gt-hint"></span></span>
+        <input id="gt-input" class="field font-mono" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="type digits or Generate" />
+      </label>
+      <button id="gt-rand" type="button" class="btn btn-secondary">Generate</button>
     </div>
-    <p class="text-[13px] text-ink-tertiary">GTIN: <span id="gt-full" class="font-mono text-ink"></span></p>
+
+    <p class="text-[13px] text-ink-tertiary">
+      GTIN: <span id="gt-full" class="font-mono text-ink"></span>
+      <span id="gt-cd" class="ml-2"></span>
+      <button id="gt-copy" type="button" class="btn btn-tertiary ml-2 py-0.5 text-[12px]">Copy</button>
+    </p>
 
     <div class="flex justify-center rounded-md border border-hairline bg-white p-6">
       <canvas id="gt-canvas" class="max-w-full"></canvas>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle" style="min-width:180px">
+        Scale <span id="gt-scale-v" class="text-ink-tertiary">3</span>
+        <input id="gt-scale" type="range" min="1" max="8" value="3" />
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="gt-label" type="checkbox" class="accent-[#5e6ad2]" checked /> Human-readable text
+      </label>
     </div>
 
     <div class="flex flex-wrap gap-2">
@@ -33,68 +52,103 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p>
       This free GTIN generator creates valid Global Trade Item Numbers in all
       four lengths — GTIN-8, GTIN-12, GTIN-13 and GTIN-14 — each with a correct
-      mod-10 check digit. GTIN-12 renders as a UPC-A barcode and GTIN-13 as an
-      EAN-13; the shorter and longer forms are shown as numbers with their check
-      digit. Handy for testing product and inventory systems. Runs in your browser.
+      mod-10 check digit. Type your own base digits and the check digit is
+      calculated automatically, or hit Generate for a random valid number.
+      GTIN-8 renders as EAN-8, GTIN-12 as UPC-A, GTIN-13 as EAN-13 and GTIN-14
+      as an ITF-14 barcode (the shipping-carton symbology, the same output as an
+      "EAN-14"). Adjust the scale, toggle the human-readable text, and download a
+      crisp PNG or scalable SVG. Everything runs in your browser — no uploads,
+      no accounts, no watermarks.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  import { toCanvas, toSVG } from '../../lib/barcode';
+  import { toCanvas, toSVG, type RenderOpts } from '../../lib/barcode';
   import { gtinCheckDigit, randInt } from '../../lib/random';
 
-  const fmtEl = document.getElementById('gt-fmt') as HTMLSelectElement;
-  const fullEl = document.getElementById('gt-full')!;
-  const canvas = document.getElementById('gt-canvas') as HTMLCanvasElement;
-  const err = document.getElementById('gt-error')!;
-  const pngBtn = document.getElementById('gt-png') as HTMLButtonElement;
-  const svgBtn = document.getElementById('gt-svg') as HTMLButtonElement;
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const fmtEl = $<HTMLSelectElement>('gt-fmt');
+  const inputEl = $<HTMLInputElement>('gt-input');
+  const hintEl = $('gt-hint');
+  const fullEl = $('gt-full');
+  const cdEl = $('gt-cd');
+  const scaleEl = $<HTMLInputElement>('gt-scale');
+  const labelEl = $<HTMLInputElement>('gt-label');
+  const canvas = $<HTMLCanvasElement>('gt-canvas');
+  const err = $('gt-error');
+  const pngBtn = $<HTMLButtonElement>('gt-png');
+  const svgBtn = $<HTMLButtonElement>('gt-svg');
   let current = '';
 
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+  const bcidFor = (len: number) => ({ 8: 'ean8', 12: 'upca', 13: 'ean13', 14: 'itf14' }[len]!);
 
-  // Which formats have a renderable linear barcode symbology in bwip-js.
-  function bcidFor(len: number): string | null {
-    if (len === 12) return 'upca';
-    if (len === 13) return 'ean13';
-    if (len === 8) return 'ean8';
-    return null; // GTIN-14 has no single standalone retail symbology here
+  function opts(): RenderOpts {
+    return {
+      bcid: bcidFor(Number(fmtEl.value)),
+      text: current,
+      includetext: labelEl.checked,
+      scale: Number(scaleEl.value),
+      height: 18,
+      paddingwidth: 4,
+      paddingheight: 4,
+    };
   }
 
-  async function generate() {
+  async function render() {
+    const len = Number(fmtEl.value);
+    hintEl.textContent = `(${len - 1} digits)`;
+    const base = inputEl.value.replace(/\D/g, '').slice(0, len - 1);
+    if (inputEl.value !== base) inputEl.value = base;
+
+    if (base.length < len - 1) {
+      current = ''; fullEl.textContent = ''; cdEl.textContent = '';
+      pngBtn.disabled = svgBtn.disabled = true;
+      setErr(`Enter ${len - 1} digits (or hit Generate).`);
+      return;
+    }
+    const cd = gtinCheckDigit(base);
+    current = base + cd;
+    fullEl.textContent = current;
+    cdEl.innerHTML = `check digit <span class="font-mono text-ink">${cd}</span>`;
+    try {
+      await toCanvas(canvas, opts());
+      pngBtn.disabled = svgBtn.disabled = false;
+      setErr('');
+    } catch {
+      pngBtn.disabled = svgBtn.disabled = true;
+      setErr('Could not render this barcode.');
+    }
+  }
+
+  function generate() {
     const len = Number(fmtEl.value);
     let p = '';
     for (let i = 0; i < len - 1; i++) p += randInt(0, 9);
-    current = p + gtinCheckDigit(p);
-    fullEl.textContent = current;
-
-    const bcid = bcidFor(len);
-    canvas.classList.toggle('hidden', !bcid);
-    pngBtn.disabled = !bcid; svgBtn.disabled = !bcid;
-    if (bcid) {
-      try {
-        await toCanvas(canvas, { bcid, text: current, includetext: true, scale: 3, height: 20 });
-        setErr('');
-      } catch { setErr('Could not render barcode.'); }
-    } else {
-      setErr('GTIN-14 has no standalone retail barcode — use the number, or GTIN-13 for a barcode.');
-    }
+    inputEl.value = p;
+    render();
   }
 
   function download(href: string, name: string) {
     const a = document.createElement('a'); a.href = href; a.download = name; a.click();
   }
 
-  fmtEl.addEventListener('change', generate);
-  document.getElementById('gt-rand')!.addEventListener('click', generate);
-  pngBtn.addEventListener('click', () => download(canvas.toDataURL('image/png'), 'gtin.png'));
+  fmtEl.addEventListener('change', () => { inputEl.value = ''; render(); });
+  inputEl.addEventListener('input', render);
+  scaleEl.addEventListener('input', () => { $('gt-scale-v').textContent = scaleEl.value; render(); });
+  labelEl.addEventListener('change', render);
+  $('gt-rand').addEventListener('click', generate);
+  $('gt-copy').addEventListener('click', () => current && navigator.clipboard?.writeText(current));
+
+  pngBtn.addEventListener('click', () => download(canvas.toDataURL('image/png'), `gtin-${current}.png`));
   svgBtn.addEventListener('click', async () => {
-    const bcid = bcidFor(Number(fmtEl.value)); if (!bcid || !current) return;
-    const svg = await toSVG({ bcid, text: current, includetext: true, scale: 3, height: 20 });
-    const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
-    download(url, 'gtin.svg');
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    if (!current) return;
+    try {
+      const url = URL.createObjectURL(new Blob([await toSVG(opts())], { type: 'image/svg+xml' }));
+      download(url, `gtin-${current}.svg`);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch { setErr('Could not export SVG.'); }
   });
 
   generate();

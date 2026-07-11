@@ -9,7 +9,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <button id="jsf-minify" class="btn btn-secondary">Minify</button>
       <button id="jsf-copy" class="btn btn-secondary">Copy</button>
       <button id="jsf-clear" class="btn btn-tertiary">Clear</button>
-      <label class="ml-auto flex items-center gap-2 text-sm text-ink-subtle">
+      <span id="jsf-stats" class="ml-auto text-xs text-ink-tertiary"></span>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-ink-subtle">
+      <label class="flex items-center gap-2">
         Indent
         <select id="jsf-indent" class="field w-auto py-1">
           <option value="2">2 spaces</option>
@@ -17,11 +21,31 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <option value="tab">Tab</option>
         </select>
       </label>
+      <label class="flex items-center gap-2">
+        Wrap
+        <select id="jsf-width" class="field w-auto py-1">
+          <option value="80" selected>80 cols</option>
+          <option value="100">100 cols</option>
+          <option value="120">120 cols</option>
+          <option value="999999">No wrap</option>
+        </select>
+      </label>
+      <label class="flex items-center gap-2">
+        Quotes
+        <select id="jsf-quote" class="field w-auto py-1">
+          <option value="double">Double</option>
+          <option value="single">Single</option>
+        </select>
+      </label>
+      <label class="flex items-center gap-2">
+        <input id="jsf-semi" type="checkbox" class="accent-primary" checked />
+        Semicolons
+      </label>
     </div>
 
     <div id="jsf-status" class="hidden rounded-md border px-3 py-2 text-sm" role="status"></div>
 
-    <div class="hl-edit field p-0" style="height:18rem;resize:vertical;overflow:hidden">
+    <div class="hl-edit field p-0" style="height:22rem;resize:vertical;overflow:hidden">
       <pre class="hl-block" aria-hidden="true"><code id="jsf-input-hl" class="hljs" style="background:transparent"></code></pre>
       <textarea
         id="jsf-input"
@@ -37,13 +61,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free JavaScript formatter re-indents messy JS using brace depth for
-      consistent nesting, with an adjustable indent size, and offers a minify
-      option that strips comments and extra whitespace. Strings, template
-      literals and line comments are respected during formatting. Everything
-      runs entirely in your browser — your code is never uploaded. It is a
-      lightweight indenter rather than a full parser, so unusual code may need a
-      quick review.
+      This free JavaScript formatter runs your code through the Prettier engine
+      for clean, standards-compliant output — consistent indentation, line
+      breaks, quote style and spacing that goes beyond a simple re-indenter.
+      Choose 2-space, 4-space or tab indentation, set a wrap width, switch
+      between single and double quotes, and toggle semicolons. A Minify option
+      strips comments and extra whitespace to shrink file size while preserving
+      strings, template literals and regular expressions. If Prettier can't
+      parse a partial or invalid snippet, the formatter falls back to a
+      brace-depth re-indenter so you still get readable output. Everything runs
+      entirely in your browser — your code is never uploaded.
     </p>
   </div>
 </ToolLayout>
@@ -54,13 +81,19 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const input = document.getElementById('jsf-input') as HTMLTextAreaElement;
   const inHl = document.getElementById('jsf-input-hl')!;
   const status = document.getElementById('jsf-status')!;
+  const stats = document.getElementById('jsf-stats')!;
   const indentSel = document.getElementById('jsf-indent') as HTMLSelectElement;
+  const widthSel = document.getElementById('jsf-width') as HTMLSelectElement;
+  const quoteSel = document.getElementById('jsf-quote') as HTMLSelectElement;
+  const semiChk = document.getElementById('jsf-semi') as HTMLInputElement;
 
   const refresh = wireInput(input, inHl, () => 'javascript');
 
-  function getIndent(): string {
+  function indentInfo() {
     const v = indentSel.value;
-    return v === 'tab' ? '\t' : ' '.repeat(Number(v));
+    return v === 'tab'
+      ? { useTabs: true, tabWidth: 2, unit: '\t' }
+      : { useTabs: false, tabWidth: Number(v), unit: ' '.repeat(Number(v)) };
   }
 
   function showStatus(msg: string, ok: boolean) {
@@ -70,9 +103,28 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     status.style.color = ok ? '#27a644' : '#e08585';
   }
 
-  // Walk the source char by char, tracking strings/comments so braces inside
-  // them don't affect depth. Insert newlines around { } and after ;.
-  function beautify(code: string, unit: string): string {
+  // Lazy-load Prettier only when the user actually formats — keeps the tool light.
+  let prettier: any = null;
+  let plugins: any[] = [];
+  let loading: Promise<void> | null = null;
+  function loadPrettier() {
+    if (prettier) return Promise.resolve();
+    if (loading) return loading;
+    loading = Promise.all([
+      import('prettier/standalone'),
+      import('prettier/plugins/babel'),
+      import('prettier/plugins/estree'),
+    ]).then(([p, babel, estree]) => {
+      prettier = (p as any).default ?? p;
+      plugins = [(babel as any).default ?? babel, (estree as any).default ?? estree];
+    });
+    return loading;
+  }
+
+  // Fallback re-indenter for code Prettier can't parse (partial snippets).
+  // Walks char by char, tracking strings/comments so braces inside them don't
+  // affect depth. Insert newlines around { } and after ;.
+  function fallbackBeautify(code: string, unit: string): string {
     const src = code.replace(/\r\n/g, '\n');
     let out = '';
     let depth = 0;
@@ -88,7 +140,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const c = src[i];
       const next = src[i + 1];
 
-      // Line comment: copy to end of line verbatim.
       if (c === '/' && next === '/') {
         const end = src.indexOf('\n', i);
         const stop = end === -1 ? n : end;
@@ -96,7 +147,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         i = stop;
         continue;
       }
-      // Block comment: copy verbatim.
       if (c === '/' && next === '*') {
         const end = src.indexOf('*/', i + 2);
         const stop = end === -1 ? n : end + 2;
@@ -104,7 +154,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         i = stop;
         continue;
       }
-      // Strings and template literals: copy verbatim including escapes.
       if (c === '"' || c === "'" || c === '`') {
         const quote = c;
         let j = i + 1;
@@ -144,7 +193,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         if (!out.endsWith('\n')) out += '\n';
         out += unit.repeat(depth) + '}';
         i++;
-        // Keep trailing constructs like `};`, `else`, `)` on suitable lines.
         while (i < n && /[ \t]/.test(src[i])) i++;
         if (src[i] === ';') {
           out += ';';
@@ -182,6 +230,26 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       .filter((l, idx, arr) => !(l.trim() === '' && arr[idx - 1]?.trim() === ''))
       .join('\n')
       .trim();
+  }
+
+  async function beautify(code: string): Promise<{ text: string; fell_back: boolean }> {
+    const { useTabs, tabWidth, unit } = indentInfo();
+    await loadPrettier();
+    try {
+      const text = (await prettier.format(code, {
+        parser: 'babel',
+        plugins,
+        useTabs,
+        tabWidth,
+        printWidth: Number(widthSel.value),
+        singleQuote: quoteSel.value === 'single',
+        semi: semiChk.checked,
+      })).replace(/\n$/, '');
+      return { text, fell_back: false };
+    } catch {
+      // Prettier throws on invalid/partial code — fall back to the re-indenter.
+      return { text: fallbackBeautify(code, unit), fell_back: true };
+    }
   }
 
   function minify(code: string): string {
@@ -224,8 +292,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         continue;
       }
       if (/\s/.test(c)) {
-        // Collapse runs of whitespace to a single space, but drop it when it
-        // sits next to punctuation to keep output tight.
+        // Collapse whitespace, but keep a space between word chars so tokens
+        // don't merge (e.g. `return x` must not become `returnx`).
         let j = i;
         while (j < n && /\s/.test(src[j])) j++;
         const prev = out[out.length - 1] || '';
@@ -240,12 +308,24 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return out.trim();
   }
 
-  function process(doMinify: boolean) {
+  async function process(doMinify: boolean) {
     const src = input.value.trim();
     if (!src) return;
-    input.value = doMinify ? minify(src) : beautify(src, getIndent());
-    refresh();
-    showStatus(doMinify ? 'Minified ✓' : 'Formatted ✓', true);
+    if (doMinify) {
+      const before = src.length;
+      const result = minify(src);
+      input.value = result;
+      refresh();
+      stats.textContent = `${before} → ${result.length} chars (${Math.round((1 - result.length / before) * 100)}% smaller)`;
+      showStatus('Minified ✓', true);
+    } else {
+      const { text, fell_back } = await beautify(src);
+      input.value = text;
+      refresh();
+      stats.textContent = `${text.length} chars · ${text.split('\n').length} lines`;
+      if (fell_back) showStatus("Formatted with fallback (Prettier couldn't parse the input)", false);
+      else showStatus('Formatted ✓', true);
+    }
   }
 
   document.getElementById('jsf-beautify')!.addEventListener('click', () => process(false));
@@ -253,6 +333,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   document.getElementById('jsf-clear')!.addEventListener('click', () => {
     input.value = '';
     refresh();
+    stats.textContent = '';
     status.classList.add('hidden');
   });
   document.getElementById('jsf-copy')!.addEventListener('click', async () => {

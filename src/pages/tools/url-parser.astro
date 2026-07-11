@@ -5,7 +5,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 <ToolLayout slug="url-parser">
   <div class="flex flex-col gap-4">
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-      URL
+      URL or query string
       <input
         id="up-in"
         type="text"
@@ -20,22 +20,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div id="up-results" class="flex flex-col gap-4">
       <div class="panel p-4">
-        <div class="grid grid-cols-[minmax(90px,auto)_1fr] gap-x-4 gap-y-2 text-sm">
-          <div class="text-ink-subtle">Protocol</div><div id="up-protocol" class="font-mono text-[13px] text-ink break-all">—</div>
-          <div class="text-ink-subtle">Username</div><div id="up-username" class="font-mono text-[13px] text-ink break-all">—</div>
-          <div class="text-ink-subtle">Password</div><div id="up-password" class="font-mono text-[13px] text-ink break-all">—</div>
-          <div class="text-ink-subtle">Host</div><div id="up-host" class="font-mono text-[13px] text-ink break-all">—</div>
-          <div class="text-ink-subtle">Hostname</div><div id="up-hostname" class="font-mono text-[13px] text-ink break-all">—</div>
-          <div class="text-ink-subtle">Port</div><div id="up-port" class="font-mono text-[13px] text-ink break-all">—</div>
-          <div class="text-ink-subtle">Pathname</div><div id="up-pathname" class="font-mono text-[13px] text-ink break-all">—</div>
-          <div class="text-ink-subtle">Search</div><div id="up-search" class="font-mono text-[13px] text-ink break-all">—</div>
-          <div class="text-ink-subtle">Hash</div><div id="up-hash" class="font-mono text-[13px] text-ink break-all">—</div>
-          <div class="text-ink-subtle">Origin</div><div id="up-origin" class="font-mono text-[13px] text-ink break-all">—</div>
-        </div>
+        <div id="up-fields" class="grid grid-cols-[minmax(90px,auto)_1fr_auto] items-center gap-x-3 gap-y-2 text-sm"></div>
       </div>
 
       <div id="up-params-wrap" class="panel p-4">
-        <div class="mb-2 text-sm text-ink-subtle">Query parameters (decoded)</div>
+        <div class="mb-3 flex items-center justify-between">
+          <span class="text-sm text-ink-subtle">Query parameters <span id="up-count" class="text-ink-subtle/60"></span></span>
+          <button id="up-copy-json" class="btn btn-secondary text-[13px]">Copy as JSON</button>
+        </div>
         <div id="up-params" class="flex flex-col gap-2"></div>
       </div>
     </div>
@@ -45,9 +37,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p>
       This free URL parser splits any URL into its components using the browser's
       native <code>URL</code> API. It shows the protocol, host, hostname, port,
-      pathname, search string and fragment, and lists every query parameter as a
-      decoded key-value pair. Paste a link to inspect its structure or debug a
-      redirect. Parsing runs entirely in your browser — nothing is uploaded.
+      pathname, search string and fragment, and lists every query parameter with
+      both its raw and URL-decoded value. Repeated keys are listed separately, and
+      you can copy any single value, or the whole query string as JSON. You can
+      even paste a bare query string like <code>a=1&amp;b=2</code> without a scheme.
+      Parsing runs entirely in your browser — nothing is uploaded.
     </p>
   </div>
 </ToolLayout>
@@ -56,26 +50,78 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const input = document.getElementById('up-in') as HTMLInputElement;
   const err = document.getElementById('up-error')!;
   const results = document.getElementById('up-results')!;
+  const fieldsEl = document.getElementById('up-fields')!;
   const paramsWrap = document.getElementById('up-params-wrap')!;
   const paramsEl = document.getElementById('up-params')!;
+  const countEl = document.getElementById('up-count')!;
+  const copyJsonBtn = document.getElementById('up-copy-json') as HTMLButtonElement;
 
-  const fields: Record<string, string> = {
-    protocol: 'up-protocol',
-    username: 'up-username',
-    password: 'up-password',
-    host: 'up-host',
-    hostname: 'up-hostname',
-    port: 'up-port',
-    pathname: 'up-pathname',
-    search: 'up-search',
-    hash: 'up-hash',
-    origin: 'up-origin',
+  const FIELDS = ['protocol', 'username', 'password', 'host', 'hostname', 'port', 'pathname', 'search', 'hash', 'origin'] as const;
+  const LABELS: Record<string, string> = {
+    protocol: 'Protocol', username: 'Username', password: 'Password', host: 'Host',
+    hostname: 'Hostname', port: 'Port', pathname: 'Pathname', search: 'Search',
+    hash: 'Hash', origin: 'Origin',
   };
+
+  let lastParams: [string, string][] = [];
+
+  function copyBtn(text: string) {
+    const b = document.createElement('button');
+    b.className = 'btn btn-secondary shrink-0 px-2 py-1 text-[11px]';
+    b.textContent = 'Copy';
+    b.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(text);
+      b.textContent = 'Copied!';
+      setTimeout(() => (b.textContent = 'Copy'), 1200);
+    });
+    return b;
+  }
+
+  // Fallback: bare query string with no scheme (e.g. "a=1&b=2" or "?a=1&b=2").
+  function asQueryString(raw: string): URLSearchParams | null {
+    if (!/=|&/.test(raw)) return null;
+    return new URLSearchParams(raw.replace(/^\?/, ''));
+  }
 
   function setError(msg: string) {
     err.textContent = msg;
     err.classList.remove('hidden');
     results.classList.add('hidden');
+  }
+
+  function renderParams(entries: [string, string][]) {
+    lastParams = entries;
+    paramsEl.textContent = '';
+    countEl.textContent = entries.length ? `(${entries.length})` : '';
+    if (!entries.length) {
+      paramsWrap.classList.add('hidden');
+      return;
+    }
+    paramsWrap.classList.remove('hidden');
+    for (const [key, value] of entries) {
+      const row = document.createElement('div');
+      row.className = 'grid grid-cols-[minmax(90px,auto)_1fr_auto] items-center gap-x-3 border-t border-white/5 pt-2 text-sm first:border-0 first:pt-0';
+
+      const k = document.createElement('div');
+      k.className = 'font-mono text-[13px] text-primary-hover break-all';
+      k.textContent = key;
+
+      const v = document.createElement('div');
+      v.className = 'font-mono text-[13px] text-ink break-all';
+      const decoded = value === '' ? '(empty)' : value;
+      v.textContent = decoded;
+      // URLSearchParams already decodes; show the raw encoded form when it differs.
+      const encoded = encodeURIComponent(value);
+      if (value !== '' && encoded !== value) {
+        const rawSpan = document.createElement('span');
+        rawSpan.className = 'block text-ink-subtle/70';
+        rawSpan.textContent = `raw: ${encoded}`;
+        v.append(rawSpan);
+      }
+
+      row.append(k, v, copyBtn(value));
+      paramsEl.append(row);
+    }
   }
 
   function parse() {
@@ -86,42 +132,51 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       return;
     }
 
-    let url: URL;
+    let url: URL | null = null;
     try {
       url = new URL(raw);
     } catch {
-      setError('Invalid URL. Include a scheme, e.g. https://example.com/path?a=1');
+      const qs = asQueryString(raw);
+      if (!qs) {
+        setError('Invalid URL. Include a scheme, e.g. https://example.com/path?a=1 — or paste a query string like a=1&b=2');
+        return;
+      }
+      err.classList.add('hidden');
+      results.classList.remove('hidden');
+      fieldsEl.textContent = '';
+      renderParams([...qs.entries()]);
       return;
     }
 
     err.classList.add('hidden');
     results.classList.remove('hidden');
 
-    for (const [key, id] of Object.entries(fields)) {
-      const val = (url as unknown as Record<string, string>)[key];
-      document.getElementById(id)!.textContent = val && val !== '' ? val : '—';
+    fieldsEl.textContent = '';
+    for (const key of FIELDS) {
+      const val = (url as unknown as Record<string, string>)[key] || '';
+      const label = document.createElement('div');
+      label.className = 'text-ink-subtle';
+      label.textContent = LABELS[key];
+      const value = document.createElement('div');
+      value.className = 'font-mono text-[13px] text-ink break-all';
+      value.textContent = val || '—';
+      fieldsEl.append(label, value, val ? copyBtn(val) : document.createElement('div'));
     }
 
-    paramsEl.textContent = '';
-    const entries = [...url.searchParams.entries()];
-    if (!entries.length) {
-      paramsWrap.classList.add('hidden');
-      return;
-    }
-    paramsWrap.classList.remove('hidden');
-    for (const [key, value] of entries) {
-      const row = document.createElement('div');
-      row.className = 'grid grid-cols-[minmax(90px,auto)_1fr] gap-x-4 border-t border-white/5 pt-2 text-sm first:border-0 first:pt-0';
-      const k = document.createElement('div');
-      k.className = 'font-mono text-[13px] text-primary-hover break-all';
-      k.textContent = key;
-      const v = document.createElement('div');
-      v.className = 'font-mono text-[13px] text-ink break-all';
-      v.textContent = value === '' ? '(empty)' : value;
-      row.append(k, v);
-      paramsEl.append(row);
-    }
+    renderParams([...url.searchParams.entries()]);
   }
+
+  copyJsonBtn.addEventListener('click', async () => {
+    // Group repeated keys into arrays so no value is lost.
+    const obj: Record<string, string | string[]> = {};
+    for (const [k, v] of lastParams) {
+      if (k in obj) obj[k] = ([] as string[]).concat(obj[k], v);
+      else obj[k] = v;
+    }
+    await navigator.clipboard.writeText(JSON.stringify(obj, null, 2));
+    copyJsonBtn.textContent = 'Copied!';
+    setTimeout(() => (copyJsonBtn.textContent = 'Copy as JSON'), 1200);
+  });
 
   input.addEventListener('input', parse);
   parse();

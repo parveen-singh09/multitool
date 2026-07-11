@@ -179,15 +179,17 @@ export const tools: Tool[] = [
   {
     slug: 'qr-code-generator',
     name: 'QR Code Generator',
-    tagline: 'Turn text or links into scannable QR codes.',
+    tagline: 'Design custom QR codes with logos, colors and shapes.',
     description:
-      'Free online QR code generator. Turn any text, URL or contact info into a scannable QR code and download it as PNG or SVG. Generated privately in your browser.',
+      'Free online QR code generator. Encode a URL, WiFi login, vCard, email, SMS, location, event or Bitcoin address, then customize the dot and eye shapes, colors, gradients and center logo. Download high-resolution PNG or vector SVG. Generated privately in your browser — nothing is uploaded.',
     category: 'Generators',
     keywords: [
       'qr code generator',
-      'create qr code',
+      'custom qr code generator',
+      'qr code with logo',
+      'wifi qr code generator',
+      'vcard qr code',
       'free qr code maker',
-      'text to qr code',
       'url qr code generator',
     ],
     icon: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z',
@@ -416,14 +418,16 @@ export const tools: Tool[] = [
   {
     slug: 'uuid-generator',
     name: 'UUID Generator',
-    tagline: 'Generate random v4 UUIDs in bulk.',
+    tagline: 'Generate v1, v3, v4, v5, v6 & v7 UUIDs in bulk.',
     description:
-      'Free online UUID generator. Create random RFC 4122 version-4 UUIDs (GUIDs) one at a time or in bulk, using your browser secure crypto. Nothing is sent to a server.',
+      'Free online UUID / GUID generator. Create RFC 4122 & 9562 UUIDs — v4 random, v7 time-ordered, v1/v6 time-based, v3/v5 namespace, plus nil & max — one at a time or up to 10,000 at once. Runs in your browser; nothing is sent to a server.',
     category: 'Generators',
     keywords: [
       'uuid generator',
       'guid generator',
       'v4 uuid',
+      'v7 uuid',
+      'uuid v5 generator',
       'random uuid',
       'generate uuid online',
     ],
@@ -1303,11 +1307,11 @@ export const tools: Tool[] = [
   {
     slug: 'barcode-generator',
     name: 'Barcode Generator',
-    tagline: 'Create Code 128 barcodes (PNG / SVG).',
+    tagline: 'Create 30+ barcode types (PNG / SVG).',
     description:
-      'Free online barcode generator. Create Code 128 barcodes from any text or numbers, adjust the height and label, and download as PNG or SVG. Generated privately in your browser.',
+      'Free online barcode generator supporting 30+ symbologies — Code 128, Code 39, EAN/UPC, GS1, QR Code, Data Matrix, PDF417, Aztec, MaxiCode and postal codes. Adjust size, colors, rotation and label, then download as PNG or SVG. Generated privately in your browser.',
     category: 'Generators',
-    keywords: ['barcode generator', 'code 128 generator', 'create barcode', 'free barcode maker', 'barcode png svg'],
+    keywords: ['barcode generator', 'code 128 generator', 'ean upc generator', 'gs1 barcode', 'free barcode maker', 'barcode png svg'],
     icon: 'M4 5v14M7 5v14M9 5v14M12 5v14M14 5v14M17 5v14M20 5v14',
   },
   {
@@ -2957,11 +2961,11 @@ export const tools: Tool[] = [
   {
     slug: 'phone-number-validator',
     name: 'Phone Number Validator',
-    tagline: 'Check phone number format by country.',
+    tagline: 'Validity, country, line type & E.164 format.',
     description:
-      'Free phone number validator. Check whether a phone number matches the expected format and length for a chosen country, and see it normalized to E.164. Runs entirely in your browser.',
+      'Free phone number validator. Check if a number is valid worldwide, detect the country and region, identify the line type (mobile, fixed, toll-free, VoIP), and format it as E.164, international, national and a tel: URI. Runs entirely in your browser.',
     category: 'Developer',
-    keywords: ['phone number validator', 'validate phone number', 'phone format checker', 'e164 validator', 'check phone number'],
+    keywords: ['phone number validator', 'validate phone number', 'phone format checker', 'e164 validator', 'check phone number', 'phone line type lookup', 'international phone validator'],
     icon: 'M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z',
   },
   {
@@ -3235,11 +3239,11 @@ export const tools: Tool[] = [
   {
     slug: 'csv-analyzer',
     name: 'CSV Analyzer',
-    tagline: 'Column stats and data profiling for CSV.',
+    tagline: 'View, profile, sort and convert CSV or TSV.',
     description:
-      'Free CSV analyzer. Paste CSV to profile each column — data type, unique values, min/max, empty cells and row count — for a quick data-quality overview. Runs in your browser.',
+      'Free CSV analyzer and viewer. Upload a file, paste text or load a URL, then browse the data in a searchable, sortable, paged table. Profiles every column — data type, unique values, min/max/mean and empty cells — and exports to JSON, TSV or clean CSV. Runs entirely in your browser.',
     category: 'Developer',
-    keywords: ['csv analyzer', 'csv statistics', 'data profiling', 'analyze csv online', 'csv column stats'],
+    keywords: ['csv analyzer', 'csv viewer', 'view csv online', 'csv statistics', 'data profiling', 'analyze csv online', 'csv column stats', 'csv to json', 'sort csv'],
     icon: 'M4 19V5m0 14h16M8 17V9m4 8V6m4 11v-5',
   },
 
@@ -3941,9 +3945,9 @@ export const tools: Tool[] = [
   {
     slug: 'internet-speed-test',
     name: 'Internet Speed Test',
-    tagline: 'Measure download, upload, ping & jitter.',
+    tagline: 'Download, upload, ping, jitter & bufferbloat.',
     description:
-      'Free internet speed test. Measure your download and upload speed in Mbps plus ping latency and jitter, shown live on an animated speedometer. Runs in your browser against Cloudflare’s global edge.',
+      'Free internet speed test with multi-stream download and upload measurement for accurate gigabit results. Measures ping, jitter, latency under load and a bufferbloat grade, detects your ISP, IP and test server, and rates your connection for calls, streaming and gaming. Runs entirely in your browser against Cloudflare’s global edge.',
     category: 'Developer',
     keywords: [
       'internet speed test',
@@ -3951,6 +3955,10 @@ export const tools: Tool[] = [
       'download speed test',
       'upload speed test',
       'ping test',
+      'bufferbloat test',
+      'latency under load',
+      'jitter test',
+      'gigabit speed test',
     ],
     icon: 'M4 15a8 8 0 0116 0M12 15l4.5-4.5',
   },
