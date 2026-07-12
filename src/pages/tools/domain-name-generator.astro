@@ -8,12 +8,51 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <input
         id="dn-word"
         class="field text-lg"
-        value="pixel"
+        value="tool"
         spellcheck="false"
         autocomplete="off"
         placeholder="type an idea…"
       />
     </label>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Word style
+        <select id="dn-style" class="field">
+          <option value="common">Common words</option>
+          <option value="daily">Daily-use words</option>
+          <option value="professional">Professional</option>
+          <option value="creative">Creative / invented</option>
+          <option value="techy">Techy / startup</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Syllables (approx.)
+        <input id="dn-syl" type="number" min="1" max="6" value="2" class="field" />
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="panel flex items-center justify-between gap-3 px-3 py-2">
+        <label class="flex items-center gap-2 text-sm text-ink-subtle">
+          <input id="dn-prefix-on" type="checkbox" class="h-4 w-4 accent-primary" />
+          Add a prefix
+        </label>
+        <label class="flex items-center gap-1.5 text-[13px] text-ink-tertiary">
+          letters
+          <input id="dn-prefix-n" type="number" min="1" max="6" value="2" class="field w-16 py-1" />
+        </label>
+      </div>
+      <div class="panel flex items-center justify-between gap-3 px-3 py-2">
+        <label class="flex items-center gap-2 text-sm text-ink-subtle">
+          <input id="dn-suffix-on" type="checkbox" class="h-4 w-4 accent-primary" />
+          Add a suffix
+        </label>
+        <label class="flex items-center gap-1.5 text-[13px] text-ink-tertiary">
+          letters
+          <input id="dn-suffix-n" type="number" min="1" max="6" value="2" class="field w-16 py-1" />
+        </label>
+      </div>
+    </div>
+
     <div class="flex flex-col gap-1.5">
       <div class="flex items-center gap-3 text-sm text-ink-subtle">
         <span>Domain types</span>
@@ -22,7 +61,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
       <div id="dn-tlds" class="flex flex-wrap gap-1.5" role="group" aria-label="Filter domain types"></div>
     </div>
-    <div id="dn-status" class="text-[13px] text-ink-tertiary" aria-live="polite">Checking availability…</div>
+
+    <div class="flex flex-wrap items-center gap-2.5">
+      <button id="dn-gen" type="button" class="btn btn-primary">Generate names</button>
+      <button id="dn-ai-gen" type="button" class="btn btn-primary bg-gradient-to-r from-[#5e6ad2] via-[#7c5cff] to-[#a855f7] hover:opacity-90">✦ AI generate</button>
+      <button id="dn-more" type="button" class="btn btn-secondary ml-auto hidden">Show more</button>
+    </div>
+
+    <div id="dn-status" class="text-[13px] text-ink-tertiary" aria-live="polite">Type an idea and hit Generate.</div>
     <div id="dn-out" class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3"></div>
     <p class="text-[13px] text-ink-tertiary">
       Availability is a live DNS check — a green dot means the domain isn't
@@ -34,52 +80,177 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
       This free domain name generator turns a keyword into domain ideas across
-      popular TLDs — .com, .io, .app, .dev, .co and more — using prefixes,
-      suffixes and blends. As you type, each idea is checked live against public
-      DNS: a green dot means the name isn't resolving and is probably available,
-      while a taken name is dimmed. It's a fast way to brainstorm a memorable web
-      address and spot the free ones at a glance. The DNS check is a strong hint,
-      not a guarantee — a registered domain that simply has no DNS records can
-      still read as free — so click any name to confirm and register it. Runs
-      entirely in your browser; nothing you type is sent to a server of ours.
+      popular TLDs — .com, .io, .app, .dev, .co and more. Tune the word style
+      (common, daily-use, professional, creative or techy), the number of
+      syllables, and whether to add a short prefix or suffix of a given length,
+      and the generator drafts brandable names to match. Each idea is then checked
+      live against public DNS: a green dot means the name isn't resolving and is
+      probably available, while a taken name is dimmed. The DNS check is a
+      strong hint, not a guarantee — a registered domain that simply has no DNS
+      records can still read as free — so click any name to confirm and register
+      it.
     </p>
   </div>
 </ToolLayout>
 
 <script>
   import { shuffle } from '../../lib/random';
+  import { aiChat } from '../../lib/ai';
 
   const $ = (id: string) => document.getElementById(id)!;
   const wordEl = $('dn-word') as HTMLInputElement;
+  const styleEl = $('dn-style') as HTMLSelectElement;
+  const sylEl = $('dn-syl') as HTMLInputElement;
+  const prefixOnEl = $('dn-prefix-on') as HTMLInputElement;
+  const prefixNEl = $('dn-prefix-n') as HTMLInputElement;
+  const suffixOnEl = $('dn-suffix-on') as HTMLInputElement;
+  const suffixNEl = $('dn-suffix-n') as HTMLInputElement;
   const statusEl = $('dn-status')!;
   const out = $('dn-out')!;
 
-  // Core TLDs checked for the base word, plus prefix/suffix blends.
+  // Core TLDs the base name is checked against.
   const TLDS = [
     'com', 'io', 'app', 'dev', 'co', 'net', 'org', 'ai', 'xyz', 'tech',
     'online', 'store', 'site', 'me', 'info', 'biz', 'cloud', 'digital',
     'studio', 'design', 'agency', 'space', 'live', 'world', 'shop', 'club',
     'pro', 'tv', 'gg', 'sh',
   ];
-  const PREFIX = ['get', 'try', 'go', 'my', 'the', 'join', 'use'];
-  const SUFFIX = ['app', 'hq', 'ly', 'hub', 'lab', 'io', 'now', 'kit'];
+  // Fallback affixes used when the remote name service is unavailable.
+  const PREFIX = [
+    'get', 'try', 'go', 'my', 'the', 'join', 'use', 'best', 'top', 'pro',
+    'super', 'smart', 'quick', 'easy', 'meta', 'nova', 'hey', 'with', 'on',
+    'up', 'we', 'all', 'one', 'real',
+  ];
+  const SUFFIX = [
+    'app', 'hq', 'ly', 'hub', 'lab', 'io', 'now', 'kit', 'ify', 'ist',
+    'ster', 'zone', 'spot', 'base', 'box', 'flow', 'wise', 'genius', 'pro',
+    'works', 'stack', 'space', 'yard', 'craft',
+  ];
   const MAX = 60;
+  // AI generate keeps searching until it finds this many available domains…
+  const TARGET = 30;
+  // …but never fires more than this many AI requests, and never DNS-checks
+  // more than this many names in a single run — both hard runaway backstops.
+  const MAX_ROUNDS = 5;
+  const MAX_CHECK = 300;
 
-  // Which TLDs the filter currently includes. The popular five start on;
-  // the rest are one tap away in the chip row.
+  // Which TLDs the filter currently includes.
   const active = new Set<string>(['com', 'net', 'org', 'ai', 'io']);
 
   type State = 'checking' | 'free' | 'taken' | 'error';
 
-  function candidates(w: string): string[] {
+  interface Settings {
+    word: string;
+    style: string;
+    syllables: number;
+    prefixLen: number; // 0 = no prefix
+    suffixLen: number; // 0 = no suffix
+  }
+
+  function readSettings(): Settings {
+    return {
+      word: wordEl.value.trim().toLowerCase().replace(/[^a-z0-9]/g, ''),
+      style: styleEl.value,
+      syllables: clampNum(sylEl.value, 1, 6, 2),
+      prefixLen: prefixOnEl.checked ? clampNum(prefixNEl.value, 1, 6, 2) : 0,
+      suffixLen: suffixOnEl.checked ? clampNum(suffixNEl.value, 1, 6, 2) : 0,
+    };
+  }
+  const clampNum = (v: string, lo: number, hi: number, dflt: number) =>
+    Math.max(lo, Math.min(hi, Number(v) || dflt));
+
+  const STYLE_HINT: Record<string, string> = {
+    common: 'plain, common English words everyone knows',
+    daily: 'everyday, daily-use conversational words',
+    professional: 'polished, professional, business-appropriate words',
+    creative: 'creative, invented, made-up brandable coinages',
+    techy: 'modern techy / startup-flavored words',
+  };
+
+  /** Turn settings into the generation prompt. `exclude` are labels already tried. */
+  function buildPrompt(s: Settings, exclude: string[] = []): string {
+    const w = s.word;
+    // Every name must contain the literal keyword — this is the anchor, not a theme.
+    const parts = [
+      `Generate 24 brandable domain name ideas. Every single name MUST contain the exact word "${w}" as a literal substring — do not replace it with synonyms or themed words.`,
+    ];
+    const style = STYLE_HINT[s.style] ?? 'brandable';
+    // Describe exactly how the added letters attach to the keyword.
+    if (s.prefixLen && s.suffixLen) {
+      parts.push(`Build each name as: a ~${s.prefixLen}-letter prefix, then "${w}", then a ~${s.suffixLen}-letter suffix (e.g. "go${w}ify").`);
+    } else if (s.prefixLen) {
+      parts.push(`Build each name by prepending a ~${s.prefixLen}-letter prefix directly before "${w}" (e.g. "get${w}").`);
+    } else if (s.suffixLen) {
+      parts.push(`Build each name by appending a ~${s.suffixLen}-letter suffix directly after "${w}" (e.g. "${w}zone").`);
+    } else {
+      parts.push(`Combine "${w}" with another short word to make each name (e.g. "${w}hub", "my${w}").`);
+    }
+    parts.push(`Use ${style} vocabulary for the added prefix/suffix, roughly ${s.syllables} syllable(s) each.`);
+    if (exclude.length) {
+      // Keep the exclusion list bounded so the prompt can't balloon over rounds.
+      const recent = exclude.slice(-80).join(', ');
+      parts.push(`Do NOT reuse any of these already-suggested names: ${recent}. Give fresh, different ideas.`);
+    }
+    parts.push(
+      'Return ONLY a JSON array of lowercase strings — just the name part, no TLD, no dots, no spaces, letters and digits only. No prose.',
+    );
+    return parts.join(' ');
+  }
+
+  /**
+   * Extract clean second-level labels (no TLD) from the reply. Tolerates a
+   * bare array, a ```json fence, or an array embedded in prose.
+   */
+  function parseNames(text: string): string[] {
+    let arr: unknown;
+    const match = text.match(/\[[\s\S]*\]/);
+    try {
+      arr = JSON.parse(match ? match[0] : text);
+    } catch {
+      return [];
+    }
+    if (!Array.isArray(arr)) return [];
+    const seen = new Set<string>();
+    for (const item of arr) {
+      if (typeof item !== 'string') continue;
+      // Strip any TLD the model tacked on, keep letters/digits only.
+      const label = item.split('.')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (label.length >= 2 && label.length <= 30) seen.add(label);
+    }
+    return [...seen];
+  }
+
+  /** Ask the name service for labels. Throws on any failure so the caller can fall back. */
+  async function aiNames(s: Settings, exclude: string[] = []): Promise<string[]> {
+    const content = await aiChat(
+      [
+        { role: 'system', content: 'You are a brandable domain name generator. You reply with a JSON array of lowercase name labels and nothing else.' },
+        { role: 'user', content: buildPrompt(s, exclude) },
+      ],
+      { temperature: 0.9 },
+    );
+    // Hard guarantee: the model is told to keep the keyword, but it drifts — so
+    // drop any name that doesn't actually contain the literal word.
+    const names = parseNames(content).filter((n) => n.includes(s.word));
+    if (!names.length) throw new Error('no names parsed');
+    return names;
+  }
+
+  /** Algorithmic fallback name labels (the original behaviour). */
+  function fallbackNames(s: Settings): string[] {
+    const w = s.word;
+    const labels = new Set<string>([w]);
+    for (const p of PREFIX) labels.add(`${p}${w}`);
+    for (const suf of SUFFIX) labels.add(`${w}${suf}`);
+    return [...labels];
+  }
+
+  /** Expand name labels into full domains across the active TLDs, capped at MAX. */
+  function expand(labels: string[]): string[] {
     const domains = new Set<string>();
-    // Base word across every active TLD — the names people actually want.
-    for (const tld of TLDS) if (active.has(tld)) domains.add(`${w}.${tld}`);
-    // Blends land on .com/.io — only when that TLD is in the filter.
-    if (active.has('com')) for (const p of PREFIX) domains.add(`${p}${w}.com`);
-    if (active.has('io')) for (const p of PREFIX) domains.add(`${p}${w}.io`);
-    if (active.has('com')) for (const s of SUFFIX) domains.add(`${w}${s}.com`);
-    if (active.has('io')) for (const s of SUFFIX) domains.add(`${w}${s}.io`);
+    for (const label of labels) {
+      for (const tld of TLDS) if (active.has(tld)) domains.add(`${label}.${tld}`);
+    }
     return shuffle([...domains]).slice(0, MAX);
   }
 
@@ -129,50 +300,62 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </a>`;
   }
 
-  // Bump on every new search so stale in-flight checks can bail out.
+  // Bump on every new run so stale in-flight checks can bail out.
   let runId = 0;
   const CONCURRENCY = 8;
+  // Last generated name labels, so TLD toggles re-expand without a new request.
+  let currentLabels: string[] = [];
 
-  async function generate() {
-    const w = wordEl.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (!w) {
-      out.innerHTML = '';
-      statusEl.textContent = 'Type a keyword to see available domains.';
-      return;
-    }
+  // Persistent AI-run state so "Show more" resumes the same search instead of
+  // restarting: results and tried labels accumulate across clicks.
+  const moreEl = $('dn-more') as HTMLButtonElement;
+  let aiStates: Map<string, State> | null = null;
+  let aiTried: string[] = [];
+  let aiSettings: Settings | null = null;
+  // Each "Show more" click looks for this many additional available domains.
+  const MORE_TARGET = 15;
 
-    const mine = ++runId;
-    const controller = new AbortController();
-    const list = candidates(w);
-    if (!list.length) {
-      out.innerHTML = '';
-      statusEl.textContent = 'Pick at least one domain type above.';
-      return;
-    }
+  /** Hide the Show-more button and drop any resumable AI state. */
+  function resetAi() {
+    aiStates = null;
+    aiTried = [];
+    aiSettings = null;
+    moreEl.classList.add('hidden');
+  }
 
-    // Paint the whole list as "checking" up front, keyed by domain so we can
-    // patch each row in place as its result lands.
-    const states = new Map<string, State>(list.map((d) => [d, 'checking']));
-    const render = () => {
-      // Available first, then checking, then taken/unknown — like the reference.
-      // Within a group: exact keyword match first, then shortest name, then A–Z.
-      const order: Record<State, number> = { free: 0, checking: 1, error: 2, taken: 3 };
-      const sld = (d: string) => d.split('.')[0];
-      const sorted = [...states].sort(([da, sa], [db, sb]) => {
-        if (order[sa] !== order[sb]) return order[sa] - order[sb];
-        const ma = sld(da) === w ? 0 : 1, mb = sld(db) === w ? 0 : 1;
-        if (ma !== mb) return ma - mb;
-        if (da.length !== db.length) return da.length - db.length;
-        return da.localeCompare(db);
-      });
-      out.innerHTML = sorted.map(([d, s]) => row(d, s)).join('');
-    };
-    render();
-    statusEl.textContent = `Checking ${list.length} names…`;
+  /** Render the state map: available first, keyword-exact first, then short & alphabetical. */
+  function renderStates(states: Map<string, State>, w: string) {
+    const order: Record<State, number> = { free: 0, checking: 1, error: 2, taken: 3 };
+    const sld = (d: string) => d.split('.')[0];
+    const sorted = [...states].sort(([da, sa], [db, sb]) => {
+      if (order[sa] !== order[sb]) return order[sa] - order[sb];
+      const ma = sld(da) === w ? 0 : 1, mb = sld(db) === w ? 0 : 1;
+      if (ma !== mb) return ma - mb;
+      if (da.length !== db.length) return da.length - db.length;
+      return da.localeCompare(db);
+    });
+    out.innerHTML = sorted.map(([d, s]) => row(d, s)).join('');
+  }
 
-    // Simple concurrency pool over a shared queue.
+  const freeCount = (states: Map<string, State>) =>
+    [...states.values()].filter((s) => s === 'free').length;
+
+  /**
+   * DNS-check `list`, writing results into the shared `states` map and
+   * re-rendering as each lands. Domains already in the map are left untouched,
+   * so this can be called repeatedly to accumulate across AI rounds.
+   */
+  async function checkList(
+    states: Map<string, State>,
+    list: string[],
+    controller: AbortController,
+    mine: number,
+    w: string,
+  ) {
+    for (const d of list) if (!states.has(d)) states.set(d, 'checking');
+    renderStates(states, w);
+
     const queue = [...list];
-    let free = 0;
     async function worker() {
       while (queue.length) {
         const domain = queue.shift()!;
@@ -180,17 +363,173 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         try {
           state = await checkDoh(domain, controller.signal);
         } catch {
-          return; // aborted — a newer search took over
+          return; // aborted — a newer run took over
         }
         if (mine !== runId) return; // superseded while awaiting
         states.set(domain, state);
-        if (state === 'free') free++;
-        render();
+        renderStates(states, w);
       }
     }
     await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+  }
+
+  /** One-shot check of a full domain list (local path + TLD re-checks). */
+  async function checkAll(list: string[], controller: AbortController) {
+    const mine = runId;
+    const w = readSettings().word;
+    const states = new Map<string, State>();
+    statusEl.textContent = `Checking ${list.length} names…`;
+    await checkList(states, list, controller, mine, w);
     if (mine !== runId) return;
-    statusEl.textContent = `${free} of ${list.length} look available.`;
+    statusEl.textContent = `${freeCount(states)} of ${list.length} look available.`;
+  }
+
+  /** Re-expand the current labels across the active TLDs and re-check. */
+  function recheck() {
+    if (!currentLabels.length) return;
+    runId++;
+    resetAi(); // TLD re-check owns the display now — drop resumable AI state.
+    const list = expand(currentLabels);
+    if (!list.length) {
+      out.innerHTML = '';
+      statusEl.textContent = 'Pick at least one domain type above.';
+      return;
+    }
+    checkAll(list, new AbortController());
+  }
+
+  /** Local single pass: build affix names, then DNS-check them once. */
+  async function generateLocal() {
+    const s = readSettings();
+    if (!s.word) {
+      out.innerHTML = '';
+      currentLabels = [];
+      statusEl.textContent = 'Type a keyword to see available domains.';
+      resetAi();
+      return;
+    }
+    const mine = ++runId;
+    resetAi();
+    const labels = fallbackNames(s);
+    currentLabels = labels;
+    const list = expand(labels);
+    if (!list.length) {
+      out.innerHTML = '';
+      statusEl.textContent = 'Pick at least one domain type above.';
+      return;
+    }
+    if (mine !== runId) return;
+    await checkAll(list, new AbortController());
+  }
+
+  /**
+   * Shared AI loop: ask the model for fresh labels and DNS-check them,
+   * accumulating into the module-scope aiStates/aiTried until `target` domains
+   * look available or a backstop trips (MAX_ROUNDS requests / MAX_CHECK names
+   * per invocation). Returns false if a newer run superseded this one.
+   */
+  async function runAiRounds(mine: number, controller: AbortController, target: number): Promise<boolean> {
+    const s = aiSettings!;
+    const states = aiStates!;
+    const w = s.word;
+    let checked = 0; // fresh per-invocation budget, so each "Show more" can work
+
+    for (let round = 0; round < MAX_ROUNDS; round++) {
+      if (freeCount(states) >= target || checked >= MAX_CHECK) break;
+
+      statusEl.textContent =
+        states.size === 0
+          ? 'Generating name ideas…'
+          : `Found ${freeCount(states)}/${target} available — searching more…`;
+
+      let labels: string[];
+      try {
+        labels = await aiNames(s, aiTried);
+      } catch {
+        if (mine !== runId) return false;
+        // First AI call of a fresh run failed — degrade to a single local
+        // pass. Any later failure just stops and keeps what we've found.
+        if (states.size === 0 && round === 0) {
+          const fb = fallbackNames(s);
+          currentLabels = fb;
+          await checkList(states, expand(fb), controller, mine, w);
+        }
+        break;
+      }
+      if (mine !== runId) return false;
+
+      // Only labels we haven't tried yet, expanded to unchecked domains,
+      // trimmed to stay within this invocation's MAX_CHECK budget.
+      const fresh = labels.filter((l) => !aiTried.includes(l));
+      aiTried.push(...fresh);
+      currentLabels = [...aiTried];
+      let list = expand(fresh).filter((d) => !states.has(d));
+      const remaining = MAX_CHECK - checked;
+      if (list.length > remaining) list = list.slice(0, remaining);
+      if (!list.length) continue;
+      checked += list.length;
+
+      await checkList(states, list, controller, mine, w);
+      if (mine !== runId) return false;
+    }
+    return true;
+  }
+
+  /** Settle the AI status line and reveal "Show more" once results exist. */
+  function finishAi() {
+    const states = aiStates!;
+    if (states.size === 0) {
+      out.innerHTML = '';
+      statusEl.textContent = 'No names to check — try a different keyword.';
+      resetAi();
+      return;
+    }
+    statusEl.textContent = `Found ${freeCount(states)} available after checking ${states.size} names.`;
+    moreEl.classList.remove('hidden');
+  }
+
+  /**
+   * AI run: keep asking the model until TARGET (30) domains look available.
+   * Taken names stay visible, dimmed below the available ones. "Show more"
+   * then resumes this same search for another batch.
+   */
+  async function generateAi() {
+    const s = readSettings();
+    if (!s.word) {
+      out.innerHTML = '';
+      currentLabels = [];
+      statusEl.textContent = 'Type a keyword to see available domains.';
+      resetAi();
+      return;
+    }
+    if (active.size === 0) {
+      out.innerHTML = '';
+      statusEl.textContent = 'Pick at least one domain type above.';
+      resetAi();
+      return;
+    }
+
+    const mine = ++runId;
+    aiSettings = s;
+    aiStates = new Map<string, State>();
+    aiTried = [];
+    moreEl.classList.add('hidden');
+
+    const ok = await runAiRounds(mine, new AbortController(), TARGET);
+    if (!ok || mine !== runId) return;
+    finishAi();
+  }
+
+  /** Resume the last AI search, looking for MORE_TARGET additional available names. */
+  async function showMoreAi() {
+    if (!aiStates || !aiSettings) return;
+    const mine = ++runId;
+    moreEl.disabled = true;
+    const target = freeCount(aiStates) + MORE_TARGET;
+    const ok = await runAiRounds(mine, new AbortController(), target);
+    moreEl.disabled = false;
+    if (!ok || mine !== runId) return;
+    finishAi();
   }
 
   // ---- TLD filter chips ----
@@ -213,25 +552,34 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (active.has(tld)) active.delete(tld);
     else active.add(tld);
     renderChips();
-    generate();
+    recheck(); // TLD change only re-expands — no new request.
   });
   $('dn-all').addEventListener('click', () => {
     TLDS.forEach((t) => active.add(t));
     renderChips();
-    generate();
+    recheck();
   });
   $('dn-none').addEventListener('click', () => {
     active.clear();
     renderChips();
-    generate();
+    recheck();
   });
   renderChips();
 
-  // Debounce typing so we don't fire a DNS storm on every keystroke.
-  let timer: number | undefined;
-  wordEl.addEventListener('input', () => {
-    clearTimeout(timer);
-    timer = window.setTimeout(generate, 350);
+  // Name-building runs on the buttons and on Enter — not on every keystroke,
+  // since each AI run can cost a request. Enter uses the plain (local) path.
+  $('dn-gen').addEventListener('click', () => generateLocal());
+  $('dn-ai-gen').addEventListener('click', () => generateAi());
+  moreEl.addEventListener('click', () => showMoreAi());
+  wordEl.addEventListener('keydown', (e) => {
+    if ((e as KeyboardEvent).key === 'Enter') generateLocal();
   });
-  generate();
+
+  // ponytail self-check: dev-only, the one non-trivial pure bit is the parser.
+  if (import.meta.env.DEV) {
+    console.assert(JSON.stringify(parseNames('```json\n["Pixel","pixel.com","a b","zz"]\n```')) === JSON.stringify(['pixel', 'zz']), 'parseNames should clean, dedupe, strip TLDs');
+    console.assert(parseNames('not json').length === 0, 'parseNames tolerates junk');
+  }
+
+  generateLocal(); // initial paint uses the local path — no request on load.
 </script>

@@ -11,7 +11,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Meal
         <select id="rc-meal" class="field w-36"><option value="any">Any</option><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select>
       </label>
-      <button id="rc-gen" class="btn btn-primary ml-auto">New idea</button>
+      <div class="ml-auto flex flex-wrap items-center gap-2.5">
+        <button id="rc-gen" class="btn btn-primary">New idea</button>
+        <button id="rc-ai-gen" type="button" class="btn btn-primary bg-gradient-to-r from-[#5e6ad2] via-[#7c5cff] to-[#a855f7] hover:opacity-90">✦ AI generate</button>
+      </div>
     </div>
     <div class="panel flex flex-col gap-3 p-5">
       <h2 class="text-lg font-semibold text-ink">Ask the chef</h2>
@@ -31,15 +34,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       a handful of key ingredients, and a quick method sketch — filtered by cuisine
       and meal type. It's meant to break you out of a cooking rut and spark
       inspiration, not to be a precise recipe. Adjust quantities to taste.
-      Ideas run in your browser; the chef chat is powered by Grok via Puter.
+      Ideas run in your browser; ask the chef to tweak or swap anything.
     </p>
   </div>
 </ToolLayout>
 
-<script is:inline src="https://js.puter.com/v2/"></script>
-
 <script>
   import { pick, sample } from '../../lib/random';
+  import { aiChat } from '../../lib/ai';
 
   const $ = (id: string) => document.getElementById(id)!;
   const out = $('rc-out')!;
@@ -54,6 +56,17 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   let currentRecipe = '';
 
+  /** Render a recipe and stash a plain-text copy for the chef-chat context. */
+  function render(name: string, ingredients: string[], steps: string[]) {
+    currentRecipe = `${name}\nIngredients: ${ingredients.join(', ')}\nMethod:\n${steps.map((s, i) => `${i + 1}. ${s}`).join('\n')}`;
+    out.innerHTML = `
+      <h2 class="text-xl font-semibold text-ink">${esc(name)}</h2>
+      <div><div class="text-xs uppercase tracking-wide text-ink-tertiary mb-1">Ingredients</div><ul class="flex flex-wrap gap-2">${ingredients.map((i) => `<li class="status-badge">${esc(i)}</li>`).join('')}</ul></div>
+      <div><div class="text-xs uppercase tracking-wide text-ink-tertiary mb-1">Method</div><ol class="flex flex-col gap-1 text-[15px] text-ink-subtle">${steps.map((s, i) => `<li>${i + 1}. ${esc(s)}</li>`).join('')}</ol></div>`;
+  }
+
+  const sel = (id: string) => ($(id) as HTMLSelectElement).value;
+
   function generate() {
     const protein = pick(PROTEINS), style = pick(STYLE), flavor = pick(FLAVOR);
     const veg = sample(VEG, 2), carb = pick(CARB);
@@ -65,20 +78,36 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       `Add the vegetables and ${carb}; combine over heat.`,
       `Finish, taste, adjust seasoning, and serve as a ${style}.`,
     ];
-    currentRecipe = `${name}\nIngredients: ${ingredients.join(', ')}\nMethod:\n${steps.map((s, i) => `${i + 1}. ${s}`).join('\n')}`;
-    out.innerHTML = `
-      <h2 class="text-xl font-semibold text-ink">${name}</h2>
-      <div><div class="text-xs uppercase tracking-wide text-ink-tertiary mb-1">Ingredients</div><ul class="flex flex-wrap gap-2">${ingredients.map((i) => `<li class="status-badge">${i}</li>`).join('')}</ul></div>
-      <div><div class="text-xs uppercase tracking-wide text-ink-tertiary mb-1">Method</div><ol class="flex flex-col gap-1 text-[15px] text-ink-subtle">${steps.map((s, i) => `<li>${i + 1}. ${s}</li>`).join('')}</ol></div>`;
+    render(name, ingredients, steps);
+  }
+
+  // AI path: ask the model for a recipe as JSON, fall back to local on any failure.
+  async function aiGenerate() {
+    const btn = $('rc-ai-gen') as HTMLButtonElement;
+    btn.disabled = true;
+    out.innerHTML = `<p class="text-[15px] text-ink-subtle">Generating…</p>`;
+    try {
+      const cuisine = sel('rc-cuisine'), meal = sel('rc-meal');
+      const reply = await aiChat([
+        { role: 'system', content: 'You are a chef. Output valid JSON only, no prose, no code fences.' },
+        { role: 'user', content: `Invent one ${cuisine === 'any' ? '' : cuisine} ${meal === 'any' ? 'meal' : meal} recipe idea. Respond ONLY with JSON of this exact shape: {"name":"...","ingredients":["..."],"steps":["..."]}` },
+      ]);
+      const r = JSON.parse(reply.replace(/^```(?:json)?\s*|\s*```$/g, '').trim());
+      if (!r.name || !Array.isArray(r.ingredients) || !Array.isArray(r.steps)) throw new Error('shape');
+      render(r.name, r.ingredients, r.steps);
+    } catch {
+      generate(); // remote unavailable / bad output — use local generator
+    } finally {
+      btn.disabled = false;
+    }
   }
 
   ['rc-cuisine', 'rc-meal'].forEach((id) => $(id).addEventListener('change', generate));
   $('rc-gen').addEventListener('click', generate);
+  $('rc-ai-gen').addEventListener('click', aiGenerate);
   generate();
 
-  // --- Chat: Grok via Puter.js (client-side, no key). js.puter.com/v2 loaded in the page. ---
-  declare const puter: any;
-  const MODEL = 'x-ai/grok-3';
+  // --- Chef chat (browser-side, PUBLIC_ key — no per-user login). ---
   const chatBox = $('rc-chat');
   const chatInput = $('rc-chat-input') as HTMLInputElement;
   const history: { role: 'user' | 'assistant'; content: string }[] = [];
@@ -103,16 +132,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     bubble('assistant', 'Thinking…');
     const pending = chatBox.lastElementChild!;
     try {
-      const res = await puter.ai.chat([
+      const reply = await aiChat([
         { role: 'system', content: `You are a friendly chef. Give concise, practical cooking advice. Always answer in short bullet points. ${ctx()}` },
         ...history,
         { role: 'user', content: msg },
-      ], { model: MODEL });
-      const reply = res?.message?.content ?? '';
+      ]);
       pending.textContent = reply || '(no reply)';
       history.push({ role: 'user', content: msg }, { role: 'assistant', content: reply });
     } catch {
-      pending.textContent = 'Chef is unavailable right now. Check your Puter sign-in and try again.';
+      pending.textContent = 'Chef is unavailable right now. Try again in a moment.';
     }
   });
 </script>

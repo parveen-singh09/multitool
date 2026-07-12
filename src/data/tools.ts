@@ -3517,16 +3517,6 @@ export const tools: Tool[] = [
     icon: 'M5 20V6l4-2v16M15 20V6l4-2v16M9 12h.01M19 12h.01',
   },
   {
-    slug: 'stock-market-simulator',
-    name: 'Stock Market Simulator',
-    tagline: 'Practice trading with fake money.',
-    description:
-      'Free stock market simulator. Trade a simulated stock with virtual cash on a random-walk price and track your portfolio value. For practice only — everything runs in your browser.',
-    category: 'Calculators',
-    keywords: ['stock market simulator', 'trading simulator', 'paper trading', 'stock simulator', 'investing simulator'],
-    icon: 'M4 19V5m0 14h16M8 15l3-4 3 2 4-6',
-  },
-  {
     slug: 'savings-goal-simulator',
     name: 'Savings Goal Simulator',
     tagline: 'See how savings grow over time.',
@@ -3813,14 +3803,14 @@ export const tools: Tool[] = [
     icon: 'M6 3l4 18 3-7 7-3zM6 3l7 7',
   },
   {
-    slug: 'character-creator',
-    name: 'Character Creator',
-    tagline: 'Roll an RPG character with stats & backstory.',
+    slug: 'pokemon-team-planner',
+    name: 'Pokémon Team Planner',
+    tagline: 'Build & analyze a team for any Pokémon game.',
     description:
-      'Free character creator. Roll a complete tabletop character — name, race, class, six ability scores, a trait, ideal, flaw and backstory hook — for D&D, writing and RPGs. Runs in your browser.',
+      'Free Pokémon team planner for every mainline game, Red/Blue through Scarlet/Violet. Pick catchable Pokémon by region, toggle gender/shiny/Tera, randomize, and see live type weakness, resistance and coverage analysis. Share your team by URL. Runs in your browser.',
     category: 'Generators',
-    keywords: ['character creator', 'rpg character generator', 'dnd character generator', 'random character maker', 'character sheet generator'],
-    icon: 'M12 3l2.5 5 5.5.8-4 3.9.9 5.5L12 16l-4.9 2.6.9-5.5-4-3.9 5.5-.8z',
+    keywords: ['pokemon team planner', 'pokemon team builder', 'pokemon type coverage', 'team weakness calculator', 'pokemon planner'],
+    icon: 'M3 12h6a3 3 0 0 0 6 0h6M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM9 12a3 3 0 0 1 6 0',
   },
   {
     slug: 'oligo-analyzer',
@@ -3905,9 +3895,9 @@ export const tools: Tool[] = [
   {
     slug: 'gps-speedometer',
     name: 'GPS Speedometer',
-    tagline: 'Live speed from your device’s GPS.',
+    tagline: 'Live speed from your device’s GPS — km/h, mph, knots & more.',
     description:
-      'Free GPS speedometer. See your real-world speed in km/h or mph live from your device’s GPS, with current, average and top speed on an animated dial. Runs entirely in your browser — no location data is uploaded.',
+      'Free GPS speedometer. See your live speed, top speed, average speed, trip distance, altitude and compass heading straight from your device’s GPS, on an animated dial and large digital readout. Switch between km/h, mph, knots and m/s, set a speed-limit alert, and use HUD windshield mode with keep-awake. Runs entirely in your browser — no location data is uploaded.',
     category: 'Calculators',
     keywords: [
       'gps speedometer',
@@ -3915,6 +3905,7 @@ export const tools: Tool[] = [
       'digital speedometer',
       'car speed tracker',
       'speed tracker app',
+      'mph kmh knots speedometer',
     ],
     icon: 'M4 15a8 8 0 0116 0M12 15l5-3M12 21v-2',
   },
