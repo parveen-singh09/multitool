@@ -15,18 +15,27 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div class="panel panel-lift p-4"><div id="av-mean" class="font-display text-xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Mean</div></div>
       <div class="panel p-4"><div id="av-median" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Median</div></div>
       <div class="panel p-4"><div id="av-mode" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Mode</div></div>
+      <div class="panel p-4"><div id="av-min" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Min</div></div>
+      <div class="panel p-4"><div id="av-max" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Max</div></div>
       <div class="panel p-4"><div id="av-range" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Range</div></div>
       <div class="panel p-4"><div id="av-sum" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Sum</div></div>
       <div class="panel p-4"><div id="av-count" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Count</div></div>
+      <div class="panel p-4"><div id="av-sd" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Std dev (population)</div></div>
+      <div class="panel p-4"><div id="av-sds" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Std dev (sample)</div></div>
+      <div class="panel p-4"><div id="av-var" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Variance (population)</div></div>
+      <div class="panel p-4"><div id="av-q1" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Q1</div></div>
+      <div class="panel p-4"><div id="av-q3" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Q3</div></div>
+      <div class="panel p-4"><div id="av-iqr" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">IQR</div></div>
     </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
       This free average calculator takes a list of numbers and returns the mean,
-      median, mode and range, plus the sum and count. Separate values with
-      commas, spaces or new lines. It is ideal for quick statistics on grades,
-      measurements or survey data. All calculations run in your browser.
+      median, mode, min, max and range, plus the sum, count, standard deviation
+      (population and sample), variance and quartiles (Q1, Q3, IQR). Separate
+      values with commas, spaces or new lines. It is ideal for quick statistics
+      on grades, measurements or survey data. All calculations run in your browser.
     </p>
   </div>
 </ToolLayout>
@@ -43,15 +52,20 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   function calc() {
     err.classList.add('hidden');
     const nums = parse();
-    const ids = ['av-mean', 'av-median', 'av-mode', 'av-range', 'av-sum', 'av-count'];
+    const ids = ['av-mean', 'av-median', 'av-mode', 'av-min', 'av-max', 'av-range', 'av-sum', 'av-count', 'av-sd', 'av-sds', 'av-var', 'av-q1', 'av-q3', 'av-iqr'];
     if (!nums.length) { ids.forEach((id) => (document.getElementById(id)!.textContent = '—')); return; }
     if (nums.some(isNaN)) { err.textContent = 'Some values are not valid numbers.'; err.classList.remove('hidden'); return; }
 
     const sum = nums.reduce((a, b) => a + b, 0);
     const mean = sum / nums.length;
     const sorted = [...nums].sort((a, b) => a - b);
-    const mid = Math.floor(sorted.length / 2);
-    const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+
+    // median of a sorted slice
+    const medianOf = (arr: number[]) => {
+      const m = Math.floor(arr.length / 2);
+      return arr.length % 2 ? arr[m] : (arr[m - 1] + arr[m]) / 2;
+    };
+    const median = medianOf(sorted);
 
     const freq = new Map<number, number>();
     nums.forEach((n) => freq.set(n, (freq.get(n) || 0) + 1));
@@ -59,12 +73,34 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const modes = [...freq.entries()].filter(([, f]) => f === maxFreq).map(([n]) => n);
     const mode = maxFreq === 1 ? 'none' : modes.join(', ');
 
-    document.getElementById('av-mean')!.textContent = String(round(mean));
-    document.getElementById('av-median')!.textContent = String(round(median));
-    document.getElementById('av-mode')!.textContent = mode;
-    document.getElementById('av-range')!.textContent = String(round(sorted[sorted.length - 1] - sorted[0]));
-    document.getElementById('av-sum')!.textContent = String(round(sum));
-    document.getElementById('av-count')!.textContent = String(nums.length);
+    // variance / standard deviation
+    const sqDiff = nums.reduce((a, b) => a + (b - mean) ** 2, 0);
+    const popVar = sqDiff / nums.length;
+    const popSd = Math.sqrt(popVar);
+    const sampleSd = nums.length > 1 ? Math.sqrt(sqDiff / (nums.length - 1)) : NaN;
+
+    // quartiles — exclusive median-of-halves (Tukey) method
+    const half = Math.floor(sorted.length / 2);
+    const lower = sorted.slice(0, half);
+    const upper = sorted.slice(sorted.length % 2 ? half + 1 : half);
+    const q1 = lower.length ? medianOf(lower) : sorted[0];
+    const q3 = upper.length ? medianOf(upper) : sorted[sorted.length - 1];
+
+    const set = (id: string, v: number | string) => (document.getElementById(id)!.textContent = typeof v === 'number' ? (isNaN(v) ? '—' : String(round(v))) : v);
+    set('av-mean', mean);
+    set('av-median', median);
+    set('av-mode', mode);
+    set('av-min', sorted[0]);
+    set('av-max', sorted[sorted.length - 1]);
+    set('av-range', sorted[sorted.length - 1] - sorted[0]);
+    set('av-sum', sum);
+    set('av-count', nums.length);
+    set('av-sd', popSd);
+    set('av-sds', sampleSd);
+    set('av-var', popVar);
+    set('av-q1', q1);
+    set('av-q3', q3);
+    set('av-iqr', q3 - q1);
   }
 
   input.addEventListener('input', calc);

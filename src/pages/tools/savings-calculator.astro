@@ -4,64 +4,175 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="savings-calculator">
   <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap gap-2" role="tablist" aria-label="Mode">
+      <button type="button" data-mode="goal" class="sv-tab btn btn-primary" aria-selected="true">Save for a goal</button>
+      <button type="button" data-mode="project" class="sv-tab btn btn-secondary" aria-selected="false">Project a balance</button>
+    </div>
+
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Savings goal
+      <label id="sv-goal-wrap" class="flex flex-col gap-1 text-sm text-ink-subtle">Savings goal
         <input id="sv-goal" type="number" min="0" class="field" value="20000" inputmode="decimal" />
+      </label>
+      <label id="sv-deposit-wrap" class="hidden flex-col gap-1 text-sm text-ink-subtle">Monthly deposit
+        <input id="sv-deposit" type="number" min="0" class="field" value="500" inputmode="decimal" />
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Amount saved so far
         <input id="sv-have" type="number" min="0" class="field" value="2000" inputmode="decimal" />
       </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Months to reach goal
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Months
         <input id="sv-months" type="number" min="1" class="field" value="24" inputmode="decimal" />
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Annual interest rate (%)
         <input id="sv-rate" type="number" min="0" step="0.01" class="field" value="3" inputmode="decimal" />
       </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Compounding
+        <select id="sv-freq" class="field">
+          <option value="12" selected>Monthly</option>
+          <option value="4">Quarterly</option>
+          <option value="1">Annually</option>
+          <option value="365">Daily</option>
+        </select>
+      </label>
     </div>
 
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <div class="panel panel-lift p-6 text-center"><div id="sv-monthly" class="font-display text-2xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Save per month</div></div>
+      <div class="panel panel-lift p-6 text-center"><div id="sv-primary" class="font-display text-2xl font-semibold text-primary-hover">—</div><div id="sv-primary-lbl" class="mt-1 text-[13px] text-ink-subtle">Save per month</div></div>
       <div class="panel p-6 text-center"><div id="sv-interest" class="font-mono text-xl" style="color:var(--color-success)">—</div><div class="mt-1 text-[13px] text-ink-subtle">Interest earned</div></div>
+    </div>
+
+    <p id="sv-note" class="hidden text-[13px] text-ink-muted"></p>
+
+    <!-- Growth chart -->
+    <div class="panel p-5">
+      <div class="mb-3 text-sm text-ink-muted">Balance over time</div>
+      <svg id="sv-chart" viewBox="0 0 320 120" class="w-full" preserveAspectRatio="none" role="img" aria-label="Savings balance over time"></svg>
+      <div id="sv-axis" class="mt-1 flex justify-between font-mono text-[11px] text-ink-tertiary"></div>
     </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free savings goal calculator tells you how much to set aside each
-      month to reach a target amount by a chosen date, taking any starting
-      balance and interest rate into account. It is a simple way to plan for a
-      holiday, deposit or emergency fund. Everything is calculated in your
-      browser.
+      This free savings calculator works two ways: find how much to set aside each
+      month to reach a target by a chosen date, or project the balance you'll have
+      from a fixed monthly deposit. It accounts for your starting balance, interest
+      rate and compounding frequency, and charts the balance over time. A simple
+      way to plan for a holiday, deposit or emergency fund. Everything is
+      calculated in your browser.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  const ids = ['sv-goal', 'sv-have', 'sv-months', 'sv-rate'];
-  const el: Record<string, HTMLInputElement> = {};
-  ids.forEach((id) => (el[id] = document.getElementById(id) as HTMLInputElement));
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const sel = (id: string) => document.getElementById(id) as unknown as HTMLSelectElement;
   const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+  const money0 = (n: number) => Math.round(n).toLocaleString();
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  let mode: 'goal' | 'project' = 'goal';
+
+  // Simulate month-by-month, applying interest per the compounding frequency, and
+  // capture the balance at each year boundary for the chart.
+  function simulate(have: number, monthly: number, annualRate: number, months: number, perYear: number) {
+    // Effective monthly growth factor from the chosen compounding frequency.
+    const monthlyFactor = perYear === 12 ? 1 + annualRate / 12 : Math.pow(1 + annualRate / perYear, perYear / 12);
+    let balance = have;
+    const points: number[] = [have];
+    for (let m = 1; m <= months; m++) {
+      balance = balance * monthlyFactor + monthly;
+      if (m % 12 === 0 || m === months) points.push(balance);
+    }
+    return { balance, points };
+  }
 
   function calc() {
-    const goal = Number(el['sv-goal'].value);
-    const have = Number(el['sv-have'].value);
-    const n = Number(el['sv-months'].value);
-    const r = Number(el['sv-rate'].value) / 100 / 12;
-    if (!(n > 0)) { document.getElementById('sv-monthly')!.textContent = '—'; return; }
+    const have = Number($('sv-have').value) || 0;
+    const n = Number($('sv-months').value);
+    const annualRate = Number($('sv-rate').value) / 100;
+    const perYear = Number(sel('sv-freq').value);
+    const primaryEl = document.getElementById('sv-primary')!;
+    const interestEl = document.getElementById('sv-interest')!;
+    const noteEl = document.getElementById('sv-note')!;
+    if (!(n > 0)) { primaryEl.textContent = '—'; interestEl.textContent = '—'; return; }
 
-    // Future value of current savings.
-    const fvHave = r === 0 ? have : have * Math.pow(1 + r, n);
-    const remaining = Math.max(0, goal - fvHave);
-    // Monthly payment needed for the remaining, as future value of an annuity.
-    let monthly: number;
-    if (remaining === 0) monthly = 0;
-    else if (r === 0) monthly = remaining / n;
-    else monthly = remaining * r / (Math.pow(1 + r, n) - 1);
+    const monthlyFactor = perYear === 12 ? 1 + annualRate / 12 : Math.pow(1 + annualRate / perYear, perYear / 12);
+    const r = monthlyFactor - 1; // effective monthly rate
 
-    const contributed = have + monthly * n;
-    document.getElementById('sv-monthly')!.textContent = money(monthly);
-    document.getElementById('sv-interest')!.textContent = money(Math.max(0, goal - contributed));
+    if (mode === 'goal') {
+      const goal = Number($('sv-goal').value);
+      const fvHave = have * Math.pow(1 + r, n);
+      const remaining = Math.max(0, goal - fvHave);
+      let monthly: number;
+      if (remaining === 0) monthly = 0;
+      else if (r === 0) monthly = remaining / n;
+      else monthly = (remaining * r) / (Math.pow(1 + r, n) - 1);
+
+      primaryEl.textContent = money(monthly);
+      document.getElementById('sv-primary-lbl')!.textContent = 'Save per month';
+      const contributed = have + monthly * n;
+      interestEl.textContent = money(Math.max(0, goal - contributed));
+
+      noteEl.classList.toggle('hidden', monthly > 0);
+      if (monthly === 0) noteEl.textContent = `Your starting balance grows to ${money0(fvHave)} on its own — the goal is already covered without new deposits.`;
+
+      const { points } = simulate(have, monthly, annualRate, n, perYear);
+      drawChart(points, n);
+    } else {
+      const deposit = Number($('sv-deposit').value) || 0;
+      const { balance, points } = simulate(have, deposit, annualRate, n, perYear);
+      const contributed = have + deposit * n;
+      primaryEl.textContent = money(balance);
+      document.getElementById('sv-primary-lbl')!.textContent = `Balance after ${n} months`;
+      interestEl.textContent = money(Math.max(0, balance - contributed));
+      noteEl.classList.add('hidden');
+      drawChart(points, n);
+    }
   }
-  ids.forEach((id) => el[id].addEventListener('input', calc));
+
+  function drawChart(points: number[], months: number) {
+    const svg = document.getElementById('sv-chart')!;
+    svg.innerHTML = '';
+    const W = 320, H = 120;
+    const maxV = Math.max(...points, 1);
+    const n = points.length - 1;
+    const x = (i: number) => (n === 0 ? 0 : (i / n) * W);
+    const y = (v: number) => H - (v / maxV) * H;
+    const line = points.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`);
+
+    const area = document.createElementNS(SVGNS, 'polygon');
+    area.setAttribute('points', [`0,${H}`, ...line, `${W},${H}`].join(' '));
+    area.setAttribute('fill', '#5e6ad2');
+    area.setAttribute('opacity', '0.3');
+    svg.appendChild(area);
+
+    const poly = document.createElementNS(SVGNS, 'polyline');
+    poly.setAttribute('points', line.join(' '));
+    poly.setAttribute('fill', 'none');
+    poly.setAttribute('stroke', '#828fff');
+    poly.setAttribute('stroke-width', '2');
+    poly.setAttribute('vector-effect', 'non-scaling-stroke');
+    svg.appendChild(poly);
+
+    document.getElementById('sv-axis')!.innerHTML = `<span>Now</span><span>${Math.round(months / 2)} mo</span><span>${months} mo</span>`;
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.sv-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      mode = tab.dataset.mode as 'goal' | 'project';
+      document.querySelectorAll('.sv-tab').forEach((t) => {
+        const active = t === tab;
+        t.setAttribute('aria-selected', String(active));
+        t.classList.toggle('btn-primary', active);
+        t.classList.toggle('btn-secondary', !active);
+      });
+      document.getElementById('sv-goal-wrap')!.classList.toggle('hidden', mode !== 'goal');
+      document.getElementById('sv-goal-wrap')!.classList.toggle('flex', mode === 'goal');
+      document.getElementById('sv-deposit-wrap')!.classList.toggle('hidden', mode !== 'project');
+      document.getElementById('sv-deposit-wrap')!.classList.toggle('flex', mode === 'project');
+      calc();
+    });
+  });
+
+  ['sv-goal', 'sv-deposit', 'sv-have', 'sv-months', 'sv-rate'].forEach((id) => $(id).addEventListener('input', calc));
+  sel('sv-freq').addEventListener('change', calc);
   calc();
 </script>

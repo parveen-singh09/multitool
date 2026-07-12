@@ -1,15 +1,112 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 import MediaConverter from '../../components/MediaConverter.astro';
+
+// FAQ content is shared between the visible section and the JSON-LD FAQPage
+// schema below so the two never drift.
+const faqs = [
+  {
+    q: 'Is this AVI to MP4 converter really free?',
+    a: 'Yes. There is no signup, no watermark, no email, and no daily conversion cap. Every option — quality, resolution, frame rate, trimming — is available at no cost.',
+  },
+  {
+    q: 'Are my files uploaded to a server?',
+    a: 'No. The conversion runs entirely inside your browser using an in-page media engine (ffmpeg compiled to WebAssembly). Your video never leaves your device, which is why there is no file-size limit and nothing to delete afterwards.',
+  },
+  {
+    q: 'Is there a maximum file size?',
+    a: 'There is no fixed limit. Because processing is local, the practical ceiling is your device memory rather than an upload quota. Multi-gigabyte AVI files work on most modern machines.',
+  },
+  {
+    q: 'Why is video conversion slower than an upload site?',
+    a: 'Cloud converters offload the work to their own servers. Here the re-encode happens on your CPU, so expect roughly real-time speed — a few minutes of footage takes a few minutes. In exchange you get full privacy and no upload wait.',
+  },
+  {
+    q: 'What codecs does the output MP4 use?',
+    a: 'Video is encoded as H.264 and audio as AAC — the most widely supported MP4 combination, playable on iPhone, Android, Windows, macOS, and every major browser and social platform.',
+  },
+  {
+    q: 'Can I shrink the file or keep maximum quality?',
+    a: 'Both. The quality control maps to the encoder CRF: choose High for near-lossless output, Balanced for the default, or Smaller/Smallest to prioritise file size. Lowering the resolution or frame rate reduces size further.',
+  },
+];
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqs.map((f) => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: { '@type': 'Answer', text: f.a },
+  })),
+};
 ---
 
 <ToolLayout slug="avi-converter">
   <MediaConverter slug="avi-converter" />
 
-  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
-    <p>
-      This free AVI to MP4 converter re-encodes older AVI video into modern MP4 (H.264 + AAC), producing smaller files with far wider support. All processing happens locally in your browser using an
-      in-page media engine, so your files are never uploaded to any server.
-    </p>
+  <div slot="about" class="flex flex-col gap-10 text-[15px] leading-relaxed text-ink-subtle">
+    <section class="flex flex-col gap-4">
+      <p>
+        This free AVI to MP4 converter re-encodes older AVI video into modern MP4 (H.264 video + AAC audio),
+        producing dramatically smaller files with far wider support. Everything happens locally in your browser
+        using an in-page media engine, so your files are never uploaded to any server — there is no size limit,
+        no queue, and no signup.
+      </p>
+      <p>
+        AVI is a legacy container from the DivX/Xvid era that many phones, browsers, and editors no longer play
+        cleanly. MP4 with H.264 is the universal standard: it streams on the web, plays on iPhone and Android,
+        drops straight into video editors, and uploads to YouTube, Instagram, and messaging apps without a second
+        conversion.
+      </p>
+    </section>
+
+    <section class="flex flex-col gap-4">
+      <h2 class="font-display text-lg font-semibold text-ink">Features</h2>
+      <ul class="grid gap-x-8 gap-y-2 sm:grid-cols-2">
+        <li class="flex gap-2"><span class="text-primary-hover">·</span> Drag-and-drop or click to load an AVI file</li>
+        <li class="flex gap-2"><span class="text-primary-hover">·</span> Quality control (CRF) from near-lossless to smallest size</li>
+        <li class="flex gap-2"><span class="text-primary-hover">·</span> Resolution presets — 1080p, 720p, 480p, 360p, or keep original</li>
+        <li class="flex gap-2"><span class="text-primary-hover">·</span> Frame-rate control — 60, 30, 24, 15 fps, or keep original</li>
+        <li class="flex gap-2"><span class="text-primary-hover">·</span> Trim to a start and end point before converting</li>
+        <li class="flex gap-2"><span class="text-primary-hover">·</span> Remove the audio track entirely for a silent MP4</li>
+        <li class="flex gap-2"><span class="text-primary-hover">·</span> Live progress bar and in-page video preview of the result</li>
+        <li class="flex gap-2"><span class="text-primary-hover">·</span> One-click download — no watermark, no account</li>
+      </ul>
+    </section>
+
+    <section class="flex flex-col gap-4">
+      <h2 class="font-display text-lg font-semibold text-ink">How to convert AVI to MP4</h2>
+      <ol class="flex flex-col gap-2">
+        <li><span class="text-ink">1.</span> Drop your AVI file onto the box above, or click to browse for it.</li>
+        <li><span class="text-ink">2.</span> Optional: set the quality, resolution, frame rate, or trim points.</li>
+        <li><span class="text-ink">3.</span> Click <span class="text-ink">Convert to MP4</span> and watch the progress bar.</li>
+        <li><span class="text-ink">4.</span> Preview the result in place, then download your MP4.</li>
+      </ol>
+    </section>
+
+    <section class="flex flex-col gap-4">
+      <h2 class="font-display text-lg font-semibold text-ink">Why convert in your browser</h2>
+      <p>
+        Most online AVI converters upload your video to a server, cap the free file size (often 100 MB to 1 GB),
+        queue you behind other users, and stamp the output with a watermark unless you pay. Because this tool runs
+        the encode locally, none of that applies: your footage stays private on your device, the only size limit
+        is your own hardware, and the full-quality output is always free.
+      </p>
+    </section>
+
+    <section class="flex flex-col gap-4">
+      <h2 class="font-display text-lg font-semibold text-ink">Frequently asked questions</h2>
+      <div class="flex flex-col gap-4">
+        {faqs.map((f) => (
+          <div class="flex flex-col gap-1">
+            <p class="text-ink">{f.q}</p>
+            <p>{f.a}</p>
+          </div>
+        ))}
+      </div>
+    </section>
   </div>
+
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
 </ToolLayout>

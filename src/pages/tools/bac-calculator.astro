@@ -22,8 +22,18 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <label class="flex flex-col gap-1 text-sm text-ink-subtle"><span id="bac-weight-label">Body weight (kg)</span>
         <input id="bac-weight" type="number" min="0" step="0.1" class="field" value="70" inputmode="decimal" />
       </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Number of standard drinks
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Number of drinks
         <input id="bac-drinks" type="number" min="0" step="0.5" class="field" value="2" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Drink type (sets alcohol grams)
+        <select id="bac-type" class="field">
+          <option value="14">Standard drink (14 g)</option>
+          <option value="14">Beer · 12 oz @ 5%</option>
+          <option value="16.6">Pint · 16 oz @ 5%</option>
+          <option value="14">Wine · 5 oz @ 12%</option>
+          <option value="14">Shot · 1.5 oz @ 40%</option>
+          <option value="custom">Custom (enter grams)</option>
+        </select>
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Grams of alcohol per drink
         <input id="bac-grams" type="number" min="0" step="0.1" class="field" value="14" inputmode="decimal" />
@@ -40,8 +50,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div class="panel p-5">
       <div class="flex flex-col gap-2 text-sm">
-        <div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">Total alcohol consumed</span><span id="bac-total" class="font-mono text-ink-muted">—</span></div>
-        <div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">Eliminated over time</span><span id="bac-elim" class="font-mono text-ink-muted">—</span></div>
+        <div class="flex items-center justify-between"><span class="text-ink-subtle">Total alcohol consumed</span><span id="bac-total" class="font-mono text-ink-muted">—</span></div>
+        <div class="flex items-center justify-between border-t border-hairline pt-2"><span class="text-ink-subtle">Eliminated over time</span><span id="bac-elim" class="font-mono text-ink-muted">—</span></div>
+        <div class="flex items-center justify-between border-t border-hairline pt-2"><span class="text-ink-subtle">Time until below 0.08% limit</span><span id="bac-under" class="font-mono text-ink-muted">—</span></div>
+        <div class="flex items-center justify-between border-t border-hairline pt-2"><span class="text-ink-subtle">Time until BAC returns to 0</span><span id="bac-sober" class="font-mono text-ink-muted">—</span></div>
       </div>
     </div>
   </div>
@@ -74,13 +86,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const statusEl = document.getElementById('bac-status')!;
     const totalEl = document.getElementById('bac-total')!;
     const elimEl = document.getElementById('bac-elim')!;
+    const underEl = document.getElementById('bac-under')!;
+    const soberEl = document.getElementById('bac-sober')!;
 
     if (!(weightInput > 0) || !(drinks >= 0) || !(gramsPerDrink >= 0) || !(hours >= 0)) {
       valueEl.textContent = '—';
       statusEl.textContent = '';
       statusEl.style.color = '';
-      totalEl.textContent = '—';
-      elimEl.textContent = '—';
+      totalEl.textContent = elimEl.textContent = underEl.textContent = soberEl.textContent = '—';
       return;
     }
 
@@ -105,6 +118,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     totalEl.textContent = `${alcoholGrams.toFixed(1)} g alcohol`;
     elimEl.textContent = `${eliminated.toFixed(3)}% over ${hours} h`;
+
+    // Time projections at the standard 0.015%/hr elimination rate.
+    const fmtHrs = (h: number) => {
+      const hh = Math.floor(h);
+      const mm = Math.round((h - hh) * 60);
+      return hh > 0 ? `~${hh} h ${mm} min` : `~${mm} min`;
+    };
+    underEl.textContent = bac <= 0.08 ? 'Already below 0.08%' : fmtHrs((bac - 0.08) / 0.015);
+    soberEl.textContent = bac <= 0 ? 'BAC is 0' : fmtHrs(bac / 0.015);
   }
 
   document.querySelectorAll('#bac-sex button').forEach((b) => {
@@ -118,6 +140,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       lbl.textContent = unit === 'lb' ? 'Body weight (lb)' : 'Body weight (kg)';
       calc();
     });
+  });
+  // Drink-type preset fills the grams field; "custom" leaves it editable.
+  const typeSel = document.getElementById('bac-type') as HTMLSelectElement;
+  typeSel.addEventListener('change', () => {
+    if (typeSel.value !== 'custom') $('bac-grams').value = typeSel.value;
+    calc();
   });
   document.querySelectorAll('#bac-weight, #bac-drinks, #bac-grams, #bac-hours').forEach((el) => el.addEventListener('input', calc));
   calc();

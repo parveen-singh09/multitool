@@ -1,14 +1,371 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
-import UnitConverter from '../../components/UnitConverter.astro';
 ---
 
 <ToolLayout slug="angle-converter">
-  <UnitConverter slug="angle-converter" />
+  <div id="ac-root" class="flex flex-col gap-6">
+    <!-- Converter -->
+    <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="ac-from-val">From</label>
+        <input
+          id="ac-from-val"
+          type="text"
+          class="field"
+          value="1"
+          inputmode="decimal"
+          spellcheck="false"
+          autocapitalize="off"
+          autocomplete="off"
+          autocorrect="off"
+          placeholder="e.g. 90  or  12°30'15&quot;"
+        />
+        <select id="ac-from-unit" class="field mt-1"></select>
+      </div>
+      <button
+        id="ac-swap"
+        type="button"
+        class="btn btn-secondary mb-1 h-10 w-10 shrink-0 justify-self-center p-0"
+        aria-label="Swap units"
+        title="Swap units"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
+      </button>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="ac-to-val">To</label>
+        <div class="relative">
+          <input id="ac-to-val" type="text" class="field pr-16" readonly />
+          <button id="ac-copy" type="button" class="btn btn-tertiary absolute right-1 top-1/2 -translate-y-1/2 px-2 py-1 text-[13px]" title="Copy result">Copy</button>
+        </div>
+        <select id="ac-to-unit" class="field mt-1"></select>
+      </div>
+    </div>
+
+    <!-- Precision + formula -->
+    <div class="flex flex-wrap items-center gap-3">
+      <label class="flex items-center gap-2 text-[13px] text-ink-subtle">
+        Decimals
+        <select id="ac-prec" class="field w-auto py-1">
+          <option value="auto" selected>Auto</option>
+          <option value="0">0</option>
+          <option value="2">2</option>
+          <option value="4">4</option>
+          <option value="6">6</option>
+          <option value="8">8</option>
+          <option value="10">10</option>
+        </select>
+      </label>
+      <p id="ac-formula" class="text-[13px] text-ink-tertiary"></p>
+    </div>
+
+    <p id="ac-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <!-- Live preview + all-units breakdown -->
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-[auto_1fr]">
+      <div class="panel panel-lift flex flex-col items-center gap-2 p-4">
+        <svg id="ac-svg" width="150" height="150" viewBox="0 0 150 150" role="img" aria-label="Angle preview"></svg>
+        <span id="ac-svg-label" class="font-mono text-[13px] text-ink-subtle"></span>
+      </div>
+
+      <div class="panel panel-lift overflow-hidden">
+        <div class="border-b border-hairline px-4 py-2 text-[13px] text-ink-subtle">This angle expressed in every unit</div>
+        <div id="ac-breakdown" class="divide-y divide-hairline"></div>
+      </div>
+    </div>
+
+    <!-- Common conversions -->
+    <div>
+      <p class="mb-2 text-[13px] text-ink-subtle">Common angle equivalents</p>
+      <div id="ac-table" class="overflow-hidden rounded-md border border-hairline"></div>
+    </div>
+  </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free angle converter converts angles between degrees, radians, gradians, arcminutes, arcseconds and full revolutions using exact math — handy for geometry, trigonometry and programming. All conversion runs in your browser.
+      This free angle converter converts between degrees, radians, gradians (gon),
+      arcminutes, arcseconds, milliradians, mils (NATO), compass points, sextants,
+      octants, signs, quadrants and full revolutions (turns) using exact math —
+      handy for geometry, trigonometry, surveying, navigation and programming.
+      Every conversion runs entirely in your browser; nothing is uploaded.
+    </p>
+    <p>
+      Beyond a plain From/To conversion it does what most single-purpose calculators
+      don't: it accepts degrees-minutes-seconds (DMS) input like
+      <span class="font-mono text-ink-muted">12°30'15"</span> (or plain
+      <span class="font-mono text-ink-muted">12 30 15</span>), shows the result as a
+      simplified symbolic multiple of π where possible (for example
+      <span class="font-mono text-ink-muted">π/6 rad</span> instead of only
+      0.523598…), draws a live preview of the angle, lists the same value in every
+      supported unit at once, and lets you pick the decimal precision or copy the
+      result with one click.
+    </p>
+    <p>
+      Quick reference: a full circle is 360°, 2π radians, 400 gon, 6400 mils, 32
+      compass points or 1 revolution. A right angle is 90° = π/2 rad = 100 gon.
+      To convert degrees to radians multiply by π/180; to convert radians to degrees
+      multiply by 180/π.
     </p>
   </div>
 </ToolLayout>
+
+<script>
+  // Self-contained angle converter. Base unit: DEGREE (makes DMS + preview simple).
+  // No shared lib — the task scopes edits to this file only.
+
+  // degrees per 1 of each unit
+  const UNITS: Record<string, number> = {
+    'Degree (°)': 1,
+    'Radian (rad)': 180 / Math.PI,
+    'Milliradian (mrad)': 180 / Math.PI / 1000,
+    'Gradian / gon (ᵍ)': 0.9,
+    'Arcminute (′)': 1 / 60,
+    'Arcsecond (″)': 1 / 3600,
+    'Mil (NATO)': 0.05625,
+    'Point (compass)': 11.25,
+    'Sign': 30,
+    'Octant': 45,
+    'Sextant': 60,
+    'Quadrant (right angle)': 90,
+    'Turn': 360,
+    'Revolution': 360,
+  };
+  const RAD_KEY = 'Radian (rad)';
+  const UNIT_NAMES = Object.keys(UNITS);
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const fromVal = $<HTMLInputElement>('ac-from-val');
+  const toVal = $<HTMLInputElement>('ac-to-val');
+  const fromUnit = $<HTMLSelectElement>('ac-from-unit');
+  const toUnit = $<HTMLSelectElement>('ac-to-unit');
+  const prec = $<HTMLSelectElement>('ac-prec');
+  const swap = $<HTMLButtonElement>('ac-swap');
+  const copyBtn = $<HTMLButtonElement>('ac-copy');
+  const formula = $('ac-formula');
+  const err = $('ac-error');
+  const breakdown = $('ac-breakdown');
+  const table = $('ac-table');
+  const svg = $('ac-svg');
+  const svgLabel = $('ac-svg-label');
+
+  // ---- number formatting ----
+  function fmt(n: number): string {
+    if (!isFinite(n)) return n > 0 ? '∞' : '-∞';
+    if (n === 0) return '0';
+    const p = prec.value;
+    if (p !== 'auto') return trimZeros(n.toFixed(Number(p)));
+    const abs = Math.abs(n);
+    if (abs >= 1e15 || abs < 1e-6) return n.toExponential(6);
+    return trimZeros((Math.round(n * 1e9) / 1e9).toString());
+  }
+  function trimZeros(s: string): string {
+    return s.includes('.') ? s.replace(/\.?0+$/, '') : s;
+  }
+
+  // ---- DMS parsing (degrees only) ----
+  // Accepts: 12°30'15.5"  |  12 30 15  |  -12°30'  |  12d 30m 15s  |  plain number
+  function parseDegreesDMS(raw: string): number {
+    const t = raw.trim();
+    if (t === '') return NaN;
+    const plain = Number(t);
+    if (!isNaN(plain)) return plain; // ordinary decimal
+    const sign = /^-/.test(t) ? -1 : 1;
+    const nums = t.replace(/[^0-9.\-]+/g, ' ').trim().split(/\s+/).map(Number);
+    if (nums.some(isNaN) || nums.length === 0 || nums.length > 3) return NaN;
+    const [d = 0, m = 0, s = 0] = nums.map(Math.abs);
+    return sign * (d + m / 60 + s / 3600);
+  }
+
+  // ---- degrees -> D M S string ----
+  function toDMS(deg: number): string {
+    if (!isFinite(deg)) return '—';
+    const sign = deg < 0 ? '-' : '';
+    let a = Math.abs(deg);
+    let d = Math.floor(a);
+    let m = Math.floor((a - d) * 60);
+    let s = (a - d - m / 60) * 3600;
+    // fix rounding creep at the second boundary
+    if (Math.round(s * 1e6) / 1e6 >= 60) { s -= 60; m += 1; }
+    if (m >= 60) { m -= 60; d += 1; }
+    const sStr = trimZeros((Math.round(s * 100) / 100).toFixed(2));
+    return `${sign}${d}° ${m}′ ${sStr}″`;
+  }
+
+  // ---- symbolic π radians via continued-fraction rational approx of deg/180 ----
+  function toPiRadians(deg: number): string | null {
+    if (!isFinite(deg) || deg === 0) return deg === 0 ? '0' : null;
+    const target = deg / 180; // radians = target * π
+    const neg = target < 0;
+    let x = Math.abs(target);
+    // continued fraction
+    let h0 = 0, h1 = 1, k0 = 1, k1 = 0, b = x;
+    for (let i = 0; i < 40; i++) {
+      const a = Math.floor(b);
+      const h2 = a * h1 + h0;
+      const k2 = a * k1 + k0;
+      if (k2 > 100000) break;
+      h0 = h1; h1 = h2; k0 = k1; k1 = k2;
+      if (Math.abs(h1 / k1 - x) < 1e-12) break;
+      const frac = b - a;
+      if (frac < 1e-12) break;
+      b = 1 / frac;
+    }
+    if (k1 === 0 || Math.abs(h1 / k1 - x) > 1e-9) return null; // not a clean fraction
+    const p = h1, q = k1;
+    const s = neg ? '-' : '';
+    if (p === 0) return '0';
+    if (q === 1) return p === 1 ? `${s}π` : `${s}${p}π`;
+    const num = p === 1 ? 'π' : `${p}π`;
+    return `${s}${num}/${q}`;
+  }
+
+  const toDeg = (v: number, unit: string) => v * UNITS[unit];
+  const fromDeg = (deg: number, unit: string) => deg / UNITS[unit];
+
+  // ---- SVG angle preview ----
+  function drawAngle(deg: number) {
+    if (!isFinite(deg)) { svg.innerHTML = ''; svgLabel.textContent = '—'; return; }
+    const cx = 75, cy = 75, r = 58;
+    const a = ((deg % 360) + 360) % 360; // normalized 0..360
+    const rad = (a * Math.PI) / 180;
+    // SVG y grows downward; measure angle CCW from positive x-axis.
+    const ex = cx + r * Math.cos(-rad);
+    const ey = cy + r * Math.sin(-rad);
+    const large = a > 180 ? 1 : 0;
+    const sector = a >= 359.999
+      ? `<circle cx="${cx}" cy="${cy}" r="${r}" fill="var(--color-primary)" fill-opacity="0.14"/>`
+      : `<path d="M${cx} ${cy} L${cx + r} ${cy} A${r} ${r} 0 ${large} 0 ${ex.toFixed(2)} ${ey.toFixed(2)} Z" fill="var(--color-primary)" fill-opacity="0.14"/>`;
+    svg.innerHTML = `
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--color-hairline-strong)" stroke-width="1"/>
+      ${sector}
+      <line x1="${cx}" y1="${cy}" x2="${cx + r}" y2="${cy}" stroke="var(--color-ink-tertiary)" stroke-width="1.5"/>
+      <line x1="${cx}" y1="${cy}" x2="${ex.toFixed(2)}" y2="${ey.toFixed(2)}" stroke="var(--color-primary)" stroke-width="2"/>
+      <circle cx="${cx}" cy="${cy}" r="2.5" fill="var(--color-ink)"/>
+    `;
+    svgLabel.textContent = `${fmt(a)}° in circle`;
+  }
+
+  // ---- all-units breakdown ----
+  function renderBreakdown(deg: number) {
+    if (!isFinite(deg)) { breakdown.innerHTML = '<div class="px-4 py-2 text-[13px] text-ink-tertiary">—</div>'; return; }
+    const rows: string[] = [];
+    // Degrees line gets an extra DMS badge.
+    const dms = toDMS(deg);
+    rows.push(row('Degree (°)', fmt(deg), `DMS ${dms}`));
+    const pi = toPiRadians(deg);
+    rows.push(row(RAD_KEY, fmt(fromDeg(deg, RAD_KEY)), pi ? `${pi} rad` : ''));
+    const seen = new Set(['Degree (°)', RAD_KEY]);
+    for (const u of UNIT_NAMES) {
+      if (seen.has(u)) continue;
+      seen.add(u);
+      rows.push(row(u, fmt(fromDeg(deg, u)), ''));
+    }
+    breakdown.innerHTML = rows.join('');
+  }
+  function row(unit: string, val: string, extra: string): string {
+    const badge = extra
+      ? `<span class="ml-2 rounded-sm bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] text-ink-muted">${extra}</span>`
+      : '';
+    return `<div class="flex items-center justify-between gap-3 px-4 py-2 text-[13px]">
+      <span class="text-ink-subtle">${unit}</span>
+      <span class="text-right"><span class="font-mono text-ink">${val}</span>${badge}</span>
+    </div>`;
+  }
+
+  // ---- reference table of common angles ----
+  const COMMON = [0, 30, 45, 60, 90, 120, 135, 180, 270, 360];
+  function renderTable() {
+    const rows = COMMON.map((d) => {
+      const pi = toPiRadians(d) ?? '';
+      const rad = (Math.round((d * Math.PI / 180) * 1e6) / 1e6);
+      const gon = d / 0.9;
+      return `<tr class="border-t border-hairline">
+        <td class="px-3 py-2 text-ink">${d}°</td>
+        <td class="px-3 py-2 text-right font-mono text-ink-subtle">${pi ? pi + ' ' : ''}(${rad})</td>
+        <td class="px-3 py-2 text-right font-mono text-ink-subtle">${trimZeros((Math.round(gon * 1e4) / 1e4).toString())} gon</td>
+      </tr>`;
+    }).join('');
+    table.innerHTML = `<table class="w-full text-[13px]">
+      <thead><tr class="text-left text-ink-tertiary">
+        <th class="px-3 py-2 font-medium">Degrees</th>
+        <th class="px-3 py-2 text-right font-medium">Radians</th>
+        <th class="px-3 py-2 text-right font-medium">Gradians</th>
+      </tr></thead>${rows}</table>`;
+  }
+
+  // ---- main ----
+  function fillUnits() {
+    const opts = UNIT_NAMES.map((u) => `<option>${u}</option>`).join('');
+    fromUnit.innerHTML = opts;
+    toUnit.innerHTML = opts;
+    fromUnit.value = 'Degree (°)';
+    toUnit.value = RAD_KEY;
+  }
+
+  function parseFrom(): number {
+    const u = fromUnit.value;
+    // DMS syntax only meaningful for degrees; other units take a plain number.
+    if (u === 'Degree (°)') return parseDegreesDMS(fromVal.value);
+    const n = Number(fromVal.value.trim());
+    return fromVal.value.trim() === '' ? NaN : n;
+  }
+
+  function convert() {
+    err.classList.add('hidden');
+    const v = parseFrom();
+    if (isNaN(v)) {
+      toVal.value = '';
+      formula.textContent = '';
+      drawAngle(NaN);
+      renderBreakdown(NaN);
+      if (fromVal.value.trim() !== '') {
+        err.textContent = 'Enter a number, or degrees-minutes-seconds like 12°30\'15" (degrees only).';
+        err.classList.remove('hidden');
+      }
+      return;
+    }
+    const deg = toDeg(v, fromUnit.value);
+    const result = fromDeg(deg, toUnit.value);
+    toVal.value = fmt(result);
+    formula.textContent = `${fmt(v)} ${short(fromUnit.value)} = ${fmt(result)} ${short(toUnit.value)}`;
+    drawAngle(deg);
+    renderBreakdown(deg);
+  }
+
+  // short label = text before the parenthesis/slash for the inline formula
+  function short(u: string): string {
+    return u.replace(/\s*[/(].*$/, '').trim();
+  }
+
+  fromVal.addEventListener('input', convert);
+  fromUnit.addEventListener('change', convert);
+  toUnit.addEventListener('change', convert);
+  prec.addEventListener('change', convert);
+  swap.addEventListener('click', () => {
+    const a = fromUnit.value;
+    fromUnit.value = toUnit.value;
+    toUnit.value = a;
+    if (toVal.value !== '') fromVal.value = toVal.value;
+    convert();
+  });
+  copyBtn.addEventListener('click', async () => {
+    if (!toVal.value) return;
+    try {
+      await navigator.clipboard.writeText(toVal.value);
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => (copyBtn.textContent = 'Copy'), 1400);
+    } catch {
+      /* clipboard blocked — no-op */
+    }
+  });
+
+  fillUnits();
+  renderTable();
+  convert();
+
+  // ponytail: one runnable self-check — silent unless the math regresses.
+  console.assert(Math.abs(fromDeg(toDeg(1, 'Degree (°)'), RAD_KEY) - Math.PI / 180) < 1e-12, 'deg→rad');
+  console.assert(Math.abs(parseDegreesDMS("12°30'15\"") - (12 + 30 / 60 + 15 / 3600)) < 1e-9, 'DMS parse');
+  console.assert(parseDegreesDMS('12 30 0') === 12.5, 'DMS spaces');
+  console.assert(toPiRadians(90) === 'π/2' && toPiRadians(180) === 'π' && toPiRadians(360) === '2π', 'π symbolic');
+  console.assert(fromDeg(360, 'Mil (NATO)') === 6400 && fromDeg(360, 'Turn') === 1, 'unit factors');
+</script>

@@ -32,8 +32,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <option value="1000">Kilogram (kg)</option>
         </select>
       </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Weight
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Coin preset (optional)
+        <select id="silver-coin" class="field"><option value="">— none (enter weight) —</option></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Weight (per item)
         <input id="silver-weight" type="number" min="0" step="0.01" class="field" value="100" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Quantity
+        <input id="silver-qty" type="number" min="1" step="1" class="field" value="1" inputmode="numeric" />
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Weight unit
         <select id="silver-unit" class="field">
@@ -52,6 +58,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <option value="0.925" selected>Sterling .925</option>
           <option value="0.900">Coin silver .900</option>
           <option value="0.800">.800 silver</option>
+          <option value="0.400">40% silver (.400)</option>
+          <option value="0.350">War nickel (.350)</option>
         </select>
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Buyer pays (% of melt)
@@ -310,7 +318,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   function calc() {
     const spot = Number($('silver-spot').value) || 0; // price per quoted unit
     const code = sel('silver-cur').value || 'USD';
-    const weight = Number($('silver-weight').value) || 0;
+    const qty = Math.max(1, Number($('silver-qty').value) || 1);
+    const weight = (Number($('silver-weight').value) || 0) * qty;
     const toOzt = Number(sel('silver-unit').value); // factor: weight unit → troy ounces
     const priceUnitG = Number(sel('silver-price-unit').value) || OZT_G; // grams per quoted unit
     const purity = Number(sel('silver-purity').value);
@@ -379,8 +388,31 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   $('silver-fetch').addEventListener('click', fetchLive);
 
+  // Named silver coin presets: total coin weight in grams + fineness (standard US specs).
+  const COINS: { label: string; grams: number; purity: string }[] = [
+    { label: 'Mercury / Roosevelt dime (90%)', grams: 2.5, purity: '0.900' },
+    { label: 'Washington quarter (90%)', grams: 6.25, purity: '0.900' },
+    { label: 'Half dollar — Walking Liberty/Franklin/Kennedy (90%)', grams: 12.5, purity: '0.900' },
+    { label: 'Morgan / Peace dollar (90%)', grams: 26.73, purity: '0.900' },
+    { label: '40% Kennedy half (1965–70)', grams: 11.5, purity: '0.400' },
+    { label: 'War nickel (1942–45, 35%)', grams: 5.0, purity: '0.350' },
+    { label: '1 oz silver round/bar (.999)', grams: 31.1034768, purity: '0.999' },
+    { label: 'Sterling flatware — per gram (.925)', grams: 1, purity: '0.925' },
+  ];
+  const coinSel = sel('silver-coin');
+  coinSel.innerHTML = '<option value="">— none (enter weight) —</option>' +
+    COINS.map((c, i) => `<option value="${i}">${c.label}</option>`).join('');
+  coinSel.addEventListener('change', () => {
+    if (coinSel.value === '') return;
+    const c = COINS[Number(coinSel.value)];
+    sel('silver-unit').value = '0.03215075'; // grams
+    $('silver-weight').value = String(c.grams);
+    sel('silver-purity').value = c.purity;
+    calc();
+  });
+
   document
-    .querySelectorAll('#silver-spot, #silver-weight, #silver-unit, #silver-purity, #silver-pct')
+    .querySelectorAll('#silver-spot, #silver-weight, #silver-qty, #silver-unit, #silver-purity, #silver-pct')
     .forEach((el) => el.addEventListener('input', calc));
 
   populateCurrencies(); // fill the dropdown with all currencies on load

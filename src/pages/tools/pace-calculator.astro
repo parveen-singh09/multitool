@@ -6,6 +6,19 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   <div class="flex flex-col gap-4">
     <p class="text-[13px] text-ink-subtle">Fill in any two fields and leave the one you want to solve for blank, then press Calculate.</p>
 
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle sm:max-w-xs">Race preset (optional)
+      <select id="pc-preset" class="field">
+        <option value="">— choose a distance —</option>
+        <option value="5">5K</option>
+        <option value="10">10K</option>
+        <option value="21.0975">Half marathon</option>
+        <option value="42.195">Marathon</option>
+        <option value="1.60934">1 mile</option>
+        <option value="1.5">1500 m</option>
+        <option value="0.8">800 m</option>
+      </select>
+    </label>
+
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Distance
         <span class="flex gap-2">
@@ -28,6 +41,33 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <p id="pc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
     <div id="pc-out" class="panel panel-lift p-6 text-center text-ink-subtle" aria-live="polite">Enter two values and calculate.</div>
+
+    <!-- Split table -->
+    <div id="pc-splits-wrap" class="hidden panel p-0">
+      <div class="px-5 py-3 text-sm text-ink-muted">Splits</div>
+      <div class="overflow-x-auto border-t border-hairline">
+        <table class="w-full text-right text-[13px]">
+          <thead class="text-ink-subtle"><tr class="border-b border-hairline"><th class="px-4 py-2 text-left font-medium">Distance</th><th class="px-4 py-2 font-medium">Cumulative time</th></tr></thead>
+          <tbody id="pc-splits" class="font-mono text-ink-muted"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Race-time predictor (Riegel) -->
+    <div class="panel p-5">
+      <div class="mb-3 text-sm text-ink-muted">Predict another race time from a known result (Riegel)</div>
+      <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
+        <input id="pc-r-d1" type="number" min="0" step="0.01" class="field w-24" value="10" inputmode="decimal" aria-label="Known distance" />
+        <select id="pc-r-u1" class="field w-20"><option value="km">km</option><option value="mi">mi</option></select>
+        in
+        <input id="pc-r-t1" type="text" class="field w-28 font-mono" value="00:50:00" spellcheck="false" aria-label="Known time" />
+        → predict
+        <input id="pc-r-d2" type="number" min="0" step="0.01" class="field w-24" value="21.0975" inputmode="decimal" aria-label="Target distance" />
+        <select id="pc-r-u2" class="field w-20"><option value="km">km</option><option value="mi">mi</option></select>
+        =
+        <span id="pc-r-out" class="font-mono text-lg text-primary-hover">—</span>
+      </div>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -77,15 +117,35 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const hasP = !isNaN(p) && p > 0;
     const u = unit.value;
 
+    // speed helper: seconds-per-unit → units/hour
+    const speedStr = (secPerUnit: number) => `${(3600 / secPerUnit).toFixed(2)} ${u === 'mi' ? 'mph' : 'km/h'}`;
+    let solvedDist = d, solvedPace = p;
+
     if (hasD && hasT && !hasP) {
-      out.innerHTML = `<div class="font-display text-3xl font-semibold text-primary-hover">${fmt(t / d, false)}</div><div class="mt-1 text-[13px] text-ink-subtle">per ${u}</div>`;
+      solvedPace = t / d;
+      out.innerHTML = `<div class="font-display text-3xl font-semibold text-primary-hover">${fmt(solvedPace, false)}</div><div class="mt-1 text-[13px] text-ink-subtle">per ${u} · ${speedStr(solvedPace)}</div>`;
     } else if (hasD && hasP && !hasT) {
-      out.innerHTML = `<div class="font-display text-3xl font-semibold text-primary-hover">${fmt(p * d)}</div><div class="mt-1 text-[13px] text-ink-subtle">total time</div>`;
+      out.innerHTML = `<div class="font-display text-3xl font-semibold text-primary-hover">${fmt(p * d)}</div><div class="mt-1 text-[13px] text-ink-subtle">total time · ${speedStr(p)}</div>`;
     } else if (hasT && hasP && !hasD) {
-      out.innerHTML = `<div class="font-display text-3xl font-semibold text-primary-hover">${(t / p).toFixed(2)} ${u}</div><div class="mt-1 text-[13px] text-ink-subtle">distance</div>`;
+      solvedDist = t / p;
+      out.innerHTML = `<div class="font-display text-3xl font-semibold text-primary-hover">${solvedDist.toFixed(2)} ${u}</div><div class="mt-1 text-[13px] text-ink-subtle">distance · ${speedStr(p)}</div>`;
     } else {
       err.textContent = 'Enter exactly two of the three fields.';
       err.classList.remove('hidden');
+      document.getElementById('pc-splits-wrap')!.classList.add('hidden');
+      return;
+    }
+
+    // Splits table when we know distance + pace.
+    const splitsWrap = document.getElementById('pc-splits-wrap')!;
+    if (solvedDist > 0 && solvedPace > 0 && solvedDist <= 200) {
+      const rows: string[] = [];
+      for (let k = 1; k <= Math.floor(solvedDist); k++) rows.push(`<tr class="border-b border-hairline/50"><td class="px-4 py-1.5 text-left text-ink-subtle">${k} ${u}</td><td class="px-4 py-1.5">${fmt(solvedPace * k)}</td></tr>`);
+      if (solvedDist % 1 > 0.01) rows.push(`<tr class="border-b border-hairline/50"><td class="px-4 py-1.5 text-left text-ink-subtle">${solvedDist.toFixed(2)} ${u}</td><td class="px-4 py-1.5">${fmt(solvedPace * solvedDist)}</td></tr>`);
+      document.getElementById('pc-splits')!.innerHTML = rows.join('');
+      splitsWrap.classList.remove('hidden');
+    } else {
+      splitsWrap.classList.add('hidden');
     }
   }
 
@@ -94,5 +154,25 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     dist.value = ''; timeEl.value = ''; paceEl.value = '';
     out.textContent = 'Enter two values and calculate.';
     err.classList.add('hidden');
+    document.getElementById('pc-splits-wrap')!.classList.add('hidden');
   });
+
+  // Preset fills the distance field (in km) and sets the unit to km.
+  document.getElementById('pc-preset')!.addEventListener('change', (e) => {
+    const v = (e.target as HTMLSelectElement).value;
+    if (v) { dist.value = v; unit.value = 'km'; }
+  });
+
+  // Riegel race-time predictor: T2 = T1 × (D2/D1)^1.06 (distances in same unit → km).
+  function predict() {
+    const toKm = (val: number, u2: string) => (u2 === 'mi' ? val * 1.60934 : val);
+    const d1 = toKm(Number((document.getElementById('pc-r-d1') as HTMLInputElement).value), (document.getElementById('pc-r-u1') as HTMLSelectElement).value);
+    const d2 = toKm(Number((document.getElementById('pc-r-d2') as HTMLInputElement).value), (document.getElementById('pc-r-u2') as HTMLSelectElement).value);
+    const t1 = toSeconds((document.getElementById('pc-r-t1') as HTMLInputElement).value);
+    const out2 = document.getElementById('pc-r-out')!;
+    if (!(d1 > 0) || !(d2 > 0) || !(t1 > 0)) { out2.textContent = '—'; return; }
+    out2.textContent = fmt(t1 * Math.pow(d2 / d1, 1.06));
+  }
+  ['pc-r-d1', 'pc-r-u1', 'pc-r-t1', 'pc-r-d2', 'pc-r-u2'].forEach((id) => document.getElementById(id)!.addEventListener('input', predict));
+  predict();
 </script>

@@ -1,14 +1,296 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
-import UnitConverter from '../../components/UnitConverter.astro';
 ---
 
 <ToolLayout slug="data-storage-converter">
-  <UnitConverter slug="data-storage-converter" />
+  <div id="ds-root" class="flex flex-col gap-6">
+    <!-- Quick two-way convert (MB → GB style) -->
+    <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="ds-from-val">From</label>
+        <input id="ds-from-val" type="text" inputmode="decimal" class="field" value="1" autocomplete="off" spellcheck="false" />
+        <select id="ds-from-unit" class="field mt-1"></select>
+      </div>
+      <button
+        id="ds-swap"
+        type="button"
+        class="btn btn-secondary mb-1 h-10 w-10 shrink-0 justify-self-center p-0"
+        aria-label="Swap units"
+        title="Swap units"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
+      </button>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="ds-to-val">To</label>
+        <div class="flex gap-2">
+          <input id="ds-to-val" type="text" class="field flex-1" readonly />
+          <button id="ds-copy-to" type="button" class="btn btn-secondary h-10 shrink-0 px-3" title="Copy result">Copy</button>
+        </div>
+        <select id="ds-to-unit" class="field mt-1"></select>
+      </div>
+    </div>
+
+    <p id="ds-formula" class="text-[13px] text-ink-tertiary"></p>
+    <p id="ds-error" class="hidden text-[13px] text-[#e5484d]"></p>
+
+    <!-- Presets -->
+    <div class="flex flex-col gap-2">
+      <p class="text-[13px] text-ink-subtle">Quick conversions</p>
+      <div id="ds-presets" class="flex flex-wrap gap-2"></div>
+    </div>
+
+    <!-- Controls -->
+    <div class="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-hairline pt-4">
+      <div class="flex items-center gap-2">
+        <label class="text-[13px] text-ink-subtle" for="ds-precision">Decimal places</label>
+        <select id="ds-precision" class="field h-9 py-1">
+          <option value="0">0</option>
+          <option value="2">2</option>
+          <option value="4">4</option>
+          <option value="6" selected>6</option>
+          <option value="10">10</option>
+        </select>
+      </div>
+      <label class="flex items-center gap-2 text-[13px] text-ink-subtle">
+        <input id="ds-sep" type="checkbox" class="h-4 w-4 accent-primary" />
+        Thousands separators
+      </label>
+      <button id="ds-copy-all" type="button" class="btn btn-secondary ml-auto h-9 px-3">Copy all</button>
+    </div>
+
+    <!-- All-units table -->
+    <div>
+      <p class="mb-2 text-[13px] text-ink-subtle">Value in every unit</p>
+      <div id="ds-table" class="overflow-hidden rounded-md border border-hairline"></div>
+    </div>
+  </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free data storage converter converts digital storage between bits, bytes, kilobytes, megabytes, gigabytes and terabytes, in both SI (1000-based) and binary (1024-based) units — so you can see the difference marketing and operating systems create. Runs in your browser.
+      This free data storage converter converts digital storage between bits, bytes, kilobytes, megabytes, gigabytes, terabytes, petabytes and exabytes — in both SI decimal (1000-based) and IEC binary (1024-based) units — so you can see the difference that marketing and operating systems create. It also covers network bit units (Kbit, Mbit, Gbit, Tbit) for bandwidth math. Everything runs in your browser; nothing is uploaded.
+    </p>
+    <p>
+      Enter a value and pick a unit to convert two ways at once, or read the full table below to see the same value expressed in every unit simultaneously. Use the quick-conversion presets for the common cases, adjust decimal places for precision, toggle thousands separators, and copy any result to your clipboard.
+    </p>
+    <p>
+      <strong class="text-ink-muted">SI vs binary:</strong> disk manufacturers advertise capacity in decimal units where 1 GB = 1,000,000,000 bytes, while operating systems like Windows report in binary units where 1 GiB = 1,073,741,824 bytes but often label it "GB". That is why a "1 TB" drive shows as roughly 931 GB. This converter keeps the two families clearly separated so you always know which one you are looking at.
     </p>
   </div>
 </ToolLayout>
+
+<script>
+  // Self-contained data-storage converter. Base unit = byte.
+  // Three families kept explicitly separate: network bits, SI decimal bytes,
+  // IEC binary bytes. ponytail: inline units, no shared-lib dependency to extend.
+  type Group = 'bit' | 'si' | 'iec';
+  interface Unit { id: string; label: string; group: Group; bytes: number }
+
+  const UNITS: Unit[] = [
+    { id: 'bit', label: 'Bit (b)', group: 'bit', bytes: 0.125 },
+    { id: 'Kbit', label: 'Kilobit (Kbit)', group: 'bit', bytes: 125 },
+    { id: 'Mbit', label: 'Megabit (Mbit)', group: 'bit', bytes: 125000 },
+    { id: 'Gbit', label: 'Gigabit (Gbit)', group: 'bit', bytes: 125000000 },
+    { id: 'Tbit', label: 'Terabit (Tbit)', group: 'bit', bytes: 125000000000 },
+    { id: 'B', label: 'Byte (B)', group: 'si', bytes: 1 },
+    { id: 'KB', label: 'Kilobyte (KB)', group: 'si', bytes: 1e3 },
+    { id: 'MB', label: 'Megabyte (MB)', group: 'si', bytes: 1e6 },
+    { id: 'GB', label: 'Gigabyte (GB)', group: 'si', bytes: 1e9 },
+    { id: 'TB', label: 'Terabyte (TB)', group: 'si', bytes: 1e12 },
+    { id: 'PB', label: 'Petabyte (PB)', group: 'si', bytes: 1e15 },
+    { id: 'EB', label: 'Exabyte (EB)', group: 'si', bytes: 1e18 },
+    { id: 'KiB', label: 'Kibibyte (KiB)', group: 'iec', bytes: 1024 },
+    { id: 'MiB', label: 'Mebibyte (MiB)', group: 'iec', bytes: 1048576 },
+    { id: 'GiB', label: 'Gibibyte (GiB)', group: 'iec', bytes: 1073741824 },
+    { id: 'TiB', label: 'Tebibyte (TiB)', group: 'iec', bytes: 1099511627776 },
+    { id: 'PiB', label: 'Pebibyte (PiB)', group: 'iec', bytes: 1125899906842624 },
+  ];
+  const byId = (id: string) => UNITS.find((u) => u.id === id)!;
+  const GROUP_LABEL: Record<Group, string> = {
+    bit: 'Bits (network)',
+    si: 'Bytes — SI decimal (1000)',
+    iec: 'Bytes — IEC binary (1024)',
+  };
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const fromVal = $('ds-from-val') as HTMLInputElement;
+  const toVal = $('ds-to-val') as HTMLInputElement;
+  const fromUnit = $('ds-from-unit') as HTMLSelectElement;
+  const toUnit = $('ds-to-unit') as HTMLSelectElement;
+  const swap = $('ds-swap') as HTMLButtonElement;
+  const formula = $('ds-formula');
+  const error = $('ds-error');
+  const table = $('ds-table');
+  const precision = $('ds-precision') as HTMLSelectElement;
+  const sep = $('ds-sep') as HTMLInputElement;
+  const presets = $('ds-presets');
+  const copyTo = $('ds-copy-to') as HTMLButtonElement;
+  const copyAll = $('ds-copy-all') as HTMLButtonElement;
+
+  function optionsHtml(): string {
+    const groups: Group[] = ['bit', 'si', 'iec'];
+    return groups
+      .map((g) => {
+        const opts = UNITS.filter((u) => u.group === g)
+          .map((u) => `<option value="${u.id}">${u.label}</option>`)
+          .join('');
+        return `<optgroup label="${GROUP_LABEL[g]}">${opts}</optgroup>`;
+      })
+      .join('');
+  }
+
+  // Format a number to the chosen decimal places, trimming trailing zeros and
+  // falling back to exponential for values that would otherwise render as 0 or
+  // lose all significance.
+  function fmt(n: number): string {
+    if (!isFinite(n)) return n < 0 ? '-∞' : '∞';
+    if (n === 0) return '0';
+    const p = Number(precision.value);
+    const abs = Math.abs(n);
+    if (abs >= 1e18 || abs < Math.pow(10, -p)) {
+      return n.toExponential(Math.min(Math.max(p, 2), 12)).replace(/\.?0+e/, 'e');
+    }
+    let s = n.toFixed(p);
+    if (s.includes('.')) s = s.replace(/\.?0+$/, '');
+    if (sep.checked) {
+      const [i, d] = s.split('.');
+      const neg = i.startsWith('-');
+      const gi = (neg ? i.slice(1) : i).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      s = (neg ? '-' : '') + (d ? gi + '.' + d : gi);
+    }
+    return s;
+  }
+
+  function parseInput(): number | null {
+    const raw = fromVal.value.trim().replace(/,/g, '');
+    if (raw === '') return NaN; // empty = neutral, not an error
+    const v = Number(raw);
+    if (!isFinite(v)) return null; // invalid
+    if (v < 0) return null;
+    return v;
+  }
+
+  function bytesOf(value: number, unitId: string): number {
+    return value * byId(unitId).bytes;
+  }
+  function fromBytes(bytes: number, unitId: string): number {
+    return bytes / byId(unitId).bytes;
+  }
+
+  function showError(msg: string) {
+    error.textContent = msg;
+    error.classList.remove('hidden');
+    toVal.value = '';
+    formula.textContent = '';
+    table.innerHTML = '';
+  }
+  function clearError() {
+    error.classList.add('hidden');
+    error.textContent = '';
+  }
+
+  function convert() {
+    const v = parseInput();
+    if (v === null) {
+      showError('Enter a valid, non-negative number.');
+      return;
+    }
+    clearError();
+    if (isNaN(v)) {
+      toVal.value = '';
+      formula.textContent = '';
+      table.innerHTML = '';
+      return;
+    }
+    const bytes = bytesOf(v, fromUnit.value);
+    const result = fromBytes(bytes, toUnit.value);
+    toVal.value = fmt(result);
+    formula.textContent = `${fmt(v)} ${fromUnit.value} = ${fmt(result)} ${toUnit.value}`;
+    renderTable(bytes);
+  }
+
+  function renderTable(bytes: number) {
+    const groups: Group[] = ['bit', 'si', 'iec'];
+    const rows = groups
+      .map((g) => {
+        const header = `<tr class="bg-surface-2"><td colspan="3" class="px-3 py-1.5 text-[11px] uppercase tracking-wide text-ink-tertiary">${GROUP_LABEL[g]}</td></tr>`;
+        const body = UNITS.filter((u) => u.group === g)
+          .map((u) => {
+            const val = fmt(fromBytes(bytes, u.id));
+            const isActive = u.id === fromUnit.value;
+            return `<tr class="border-t border-hairline ${isActive ? 'bg-surface-1' : ''}">
+              <td class="px-3 py-2 text-ink-subtle">${u.label}</td>
+              <td class="px-3 py-2 text-right font-mono text-ink">${val}</td>
+              <td class="px-2 py-2 text-right"><button type="button" class="ds-copy btn btn-tertiary h-7 px-2 text-[12px]" data-val="${val}" data-unit="${u.id}" title="Copy ${u.id}">Copy</button></td>
+            </tr>`;
+          })
+          .join('');
+        return header + body;
+      })
+      .join('');
+    table.innerHTML = `<table class="w-full text-[13px]">${rows}</table>`;
+  }
+
+  async function copyText(text: string, btn: HTMLButtonElement) {
+    try {
+      await navigator.clipboard.writeText(text);
+      const prev = btn.textContent;
+      btn.textContent = 'Copied';
+      setTimeout(() => { btn.textContent = prev; }, 1200);
+    } catch {
+      /* clipboard unavailable — silently ignore */
+    }
+  }
+
+  // Presets: [value, fromId, toId]
+  const PRESETS: [number, string, string][] = [
+    [1, 'GB', 'MB'],
+    [1, 'TB', 'GB'],
+    [1, 'MB', 'KB'],
+    [1, 'GiB', 'GB'],
+    [1, 'TB', 'TiB'],
+    [1, 'Gbit', 'MB'],
+  ];
+  presets.innerHTML = PRESETS.map(
+    ([v, f, t], i) => `<button type="button" class="ds-preset btn btn-secondary h-8 px-3 text-[12px]" data-i="${i}">${v} ${f} → ${t}</button>`,
+  ).join('');
+  presets.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.ds-preset') as HTMLElement | null;
+    if (!btn) return;
+    const [v, f, t] = PRESETS[Number(btn.dataset.i)];
+    fromVal.value = String(v);
+    fromUnit.value = f;
+    toUnit.value = t;
+    convert();
+  });
+
+  fromUnit.innerHTML = optionsHtml();
+  toUnit.innerHTML = optionsHtml();
+  fromUnit.value = 'MB';
+  toUnit.value = 'GB';
+
+  fromVal.addEventListener('input', convert);
+  fromUnit.addEventListener('change', convert);
+  toUnit.addEventListener('change', convert);
+  precision.addEventListener('change', convert);
+  sep.addEventListener('change', convert);
+  swap.addEventListener('click', () => {
+    const a = fromUnit.value;
+    fromUnit.value = toUnit.value;
+    toUnit.value = a;
+    if (toVal.value !== '') fromVal.value = toVal.value.replace(/,/g, '');
+    convert();
+  });
+  copyTo.addEventListener('click', () => copyText(toVal.value, copyTo));
+  copyAll.addEventListener('click', () => {
+    const bytes = bytesOf(parseInput() || 0, fromUnit.value);
+    const text = UNITS.map((u) => `${fmt(fromBytes(bytes, u.id))} ${u.id}`).join('\n');
+    copyText(text, copyAll);
+  });
+  table.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.ds-copy') as HTMLButtonElement | null;
+    if (!btn) return;
+    copyText(`${btn.dataset.val} ${btn.dataset.unit}`, btn);
+  });
+
+  convert();
+</script>

@@ -15,10 +15,32 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div class="panel panel-lift p-4"><div id="sd-pop" class="font-display text-xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Population σ</div></div>
       <div class="panel panel-lift p-4"><div id="sd-sample" class="font-display text-xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Sample s</div></div>
       <div class="panel p-4"><div id="sd-var" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Variance (pop.)</div></div>
+      <div class="panel p-4"><div id="sd-svar" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Variance (sample)</div></div>
+      <div class="panel p-4"><div id="sd-sem" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Std error (SEM)</div></div>
       <div class="panel p-4"><div id="sd-mean" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Mean</div></div>
+      <div class="panel p-4"><div id="sd-median" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Median</div></div>
+      <div class="panel p-4"><div id="sd-min" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Min</div></div>
+      <div class="panel p-4"><div id="sd-max" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Max</div></div>
+      <div class="panel p-4"><div id="sd-range" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Range</div></div>
       <div class="panel p-4"><div id="sd-sum" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Sum</div></div>
       <div class="panel p-4"><div id="sd-count" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Count</div></div>
     </div>
+
+    <!-- Step-by-step working -->
+    <details class="panel p-0">
+      <summary class="cursor-pointer list-none px-5 py-4 text-sm font-medium text-ink hover:text-primary-hover">
+        <span class="inline-flex items-center gap-2">▸ Step-by-step working</span>
+      </summary>
+      <div class="border-t border-hairline px-5 py-4">
+        <div id="sd-steps" class="flex flex-col gap-2 font-mono text-[13px] text-ink-subtle"></div>
+        <div class="mt-3 overflow-x-auto">
+          <table class="w-full text-right text-[12px]">
+            <thead class="text-ink-subtle"><tr class="border-b border-hairline"><th class="px-3 py-1.5 text-left font-medium">xᵢ</th><th class="px-3 py-1.5 font-medium">xᵢ − x̄</th><th class="px-3 py-1.5 font-medium">(xᵢ − x̄)²</th></tr></thead>
+            <tbody id="sd-table" class="text-ink-muted"></tbody>
+          </table>
+        </div>
+      </div>
+    </details>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -40,8 +62,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   function calc() {
     err.classList.add('hidden');
     const nums = input.value.split(/[\s,]+/).filter((s) => s !== '').map(Number);
-    const ids = ['sd-pop', 'sd-sample', 'sd-var', 'sd-mean', 'sd-sum', 'sd-count'];
-    if (!nums.length) { ids.forEach((id) => (document.getElementById(id)!.textContent = '—')); return; }
+    const ids = ['sd-pop', 'sd-sample', 'sd-var', 'sd-svar', 'sd-sem', 'sd-mean', 'sd-median', 'sd-min', 'sd-max', 'sd-range', 'sd-sum', 'sd-count'];
+    if (!nums.length) { ids.forEach((id) => (document.getElementById(id)!.textContent = '—')); document.getElementById('sd-steps')!.innerHTML = ''; document.getElementById('sd-table')!.innerHTML = ''; return; }
     if (nums.some(isNaN)) { err.textContent = 'Some values are not valid numbers.'; err.classList.remove('hidden'); return; }
 
     const n = nums.length;
@@ -50,13 +72,37 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const sqDiff = nums.reduce((a, b) => a + (b - mean) ** 2, 0);
     const popVar = sqDiff / n;
     const sampleVar = n > 1 ? sqDiff / (n - 1) : 0;
+    const sampleSd = Math.sqrt(sampleVar);
+    const sem = n > 1 ? sampleSd / Math.sqrt(n) : NaN;
 
-    document.getElementById('sd-pop')!.textContent = String(round(Math.sqrt(popVar)));
-    document.getElementById('sd-sample')!.textContent = n > 1 ? String(round(Math.sqrt(sampleVar))) : 'n/a';
-    document.getElementById('sd-var')!.textContent = String(round(popVar));
-    document.getElementById('sd-mean')!.textContent = String(round(mean));
-    document.getElementById('sd-sum')!.textContent = String(round(sum));
-    document.getElementById('sd-count')!.textContent = String(n);
+    const sorted = [...nums].sort((a, b) => a - b);
+    const mid = Math.floor(n / 2);
+    const median = n % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+
+    const set = (id: string, v: number | string) => (document.getElementById(id)!.textContent = typeof v === 'number' ? (isNaN(v) ? 'n/a' : String(round(v))) : v);
+    set('sd-pop', Math.sqrt(popVar));
+    set('sd-sample', n > 1 ? sampleSd : 'n/a');
+    set('sd-var', popVar);
+    set('sd-svar', n > 1 ? sampleVar : 'n/a');
+    set('sd-sem', sem);
+    set('sd-mean', mean);
+    set('sd-median', median);
+    set('sd-min', sorted[0]);
+    set('sd-max', sorted[n - 1]);
+    set('sd-range', sorted[n - 1] - sorted[0]);
+    set('sd-sum', sum);
+    set('sd-count', n);
+
+    // Step-by-step working.
+    document.getElementById('sd-steps')!.innerHTML = [
+      `Mean x̄ = ${round(sum)} / ${n} = ${round(mean)}`,
+      `Σ(xᵢ − x̄)² = ${round(sqDiff)}`,
+      `Population variance = ${round(sqDiff)} / ${n} = ${round(popVar)} → σ = √${round(popVar)} = ${round(Math.sqrt(popVar))}`,
+      n > 1 ? `Sample variance = ${round(sqDiff)} / ${n - 1} = ${round(sampleVar)} → s = √${round(sampleVar)} = ${round(sampleSd)}` : '',
+    ].filter(Boolean).map((s) => `<div>${s}</div>`).join('');
+    document.getElementById('sd-table')!.innerHTML = nums
+      .map((x) => `<tr class="border-b border-hairline/40"><td class="px-3 py-1 text-left">${round(x)}</td><td class="px-3 py-1">${round(x - mean)}</td><td class="px-3 py-1">${round((x - mean) ** 2)}</td></tr>`)
+      .join('');
   }
 
   input.addEventListener('input', calc);

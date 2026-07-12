@@ -4,19 +4,42 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="discord-time-converter">
   <div class="flex flex-col gap-5">
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Date
         <input id="dt-date" type="date" class="field" />
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Time
         <input id="dt-time" type="time" step="1" class="field" />
       </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Timezone
+        <select id="dt-tz" class="field"></select>
+      </label>
     </div>
 
     <div class="flex flex-wrap items-center gap-2 text-[13px] text-ink-subtle">
-      <span>Unix timestamp:</span>
-      <input id="dt-unix" class="field w-40 font-mono" spellcheck="false" inputmode="numeric" />
-      <button id="dt-now" class="btn btn-secondary">Set to now</button>
+      <span class="text-ink-tertiary">Quick set:</span>
+      <button class="btn btn-tertiary px-2 py-1 text-[13px]" data-preset="now">Now</button>
+      <button class="btn btn-tertiary px-2 py-1 text-[13px]" data-preset="3600">+1 hour</button>
+      <button class="btn btn-tertiary px-2 py-1 text-[13px]" data-preset="21600">+6 hours</button>
+      <button class="btn btn-tertiary px-2 py-1 text-[13px]" data-preset="86400">+1 day</button>
+      <button class="btn btn-tertiary px-2 py-1 text-[13px]" data-preset="604800">+1 week</button>
+      <span id="dt-offset" class="ml-auto font-mono text-ink-tertiary"></span>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Unix timestamp (seconds)
+        <input id="dt-unix" class="field font-mono" spellcheck="false" inputmode="numeric" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Decode Discord markup
+        <input id="dt-decode" class="field font-mono" spellcheck="false" placeholder="&lt;t:1699999999:F&gt;" />
+      </label>
+    </div>
+
+    <p id="dt-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="flex items-center justify-between">
+      <span class="eyebrow text-ink-tertiary">All styles</span>
+      <button id="dt-copyall" class="btn btn-secondary px-2 py-1 text-[13px]">Copy all</button>
     </div>
 
     <div id="dt-out" class="flex flex-col gap-2"></div>
@@ -29,8 +52,18 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       into a message and Discord renders it in each viewer's own timezone — great
       for scheduling events, raids and streams across regions. All seven styles are
       shown (short/long time, short/long date, full date-time, and the "in 3 hours"
-      relative style) with a live preview and one-tap copy. Pick a date or type a
-      raw Unix timestamp. Everything runs in your browser.
+      relative style) with a live preview and one-tap copy.
+    </p>
+    <p>
+      Set the moment however suits you: pick a date and time, choose the timezone
+      it should be read in (defaults to your own, but pick New York, London, Tokyo
+      or any IANA zone to schedule for another region), type a raw Unix timestamp,
+      or use the quick-set buttons. The timezone's current UTC offset is shown so
+      you can double-check. Paste an existing <code>&lt;t:…&gt;</code> tag into the
+      decode box to read back the exact date, time and style it points to — handy
+      for verifying a timestamp someone else posted. Millisecond timestamps
+      (13 digits) are detected automatically. Use "Copy all" to grab every style
+      at once. Everything runs in your browser; nothing is uploaded.
     </p>
   </div>
 </ToolLayout>
@@ -38,64 +71,128 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 <script>
   const dateEl = document.getElementById('dt-date') as HTMLInputElement;
   const timeEl = document.getElementById('dt-time') as HTMLInputElement;
+  const tzEl = document.getElementById('dt-tz') as HTMLSelectElement;
   const unixEl = document.getElementById('dt-unix') as HTMLInputElement;
+  const decodeEl = document.getElementById('dt-decode') as HTMLInputElement;
+  const offsetEl = document.getElementById('dt-offset')!;
+  const errEl = document.getElementById('dt-error')!;
   const out = document.getElementById('dt-out')!;
 
-  const STYLES: { code: string; name: string; render: (d: Date) => string }[] = [
-    { code: 't', name: 'Short time', render: (d) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) },
-    { code: 'T', name: 'Long time', render: (d) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' }) },
-    { code: 'd', name: 'Short date', render: (d) => d.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' }) },
-    { code: 'D', name: 'Long date', render: (d) => d.toLocaleDateString([], { day: 'numeric', month: 'long', year: 'numeric' }) },
-    { code: 'f', name: 'Date & time (default)', render: (d) => d.toLocaleString([], { day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit' }) },
-    { code: 'F', name: 'Day, date & time', render: (d) => d.toLocaleString([], { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit' }) },
-    { code: 'R', name: 'Relative', render: (d) => relative(d) },
+  const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+  // Populate timezone list from the runtime's IANA database; fall back to local only.
+  let zones: string[] = [];
+  try { zones = (Intl as any).supportedValuesOf('timeZone'); } catch { zones = [localTz]; }
+  if (!zones.includes(localTz)) zones.unshift(localTz);
+  tzEl.innerHTML = zones.map((z) => `<option value="${z}"${z === localTz ? ' selected' : ''}>${z}</option>`).join('');
+
+  const STYLES: { code: string; name: string; opts: Intl.DateTimeFormatOptions }[] = [
+    { code: 't', name: 'Short time', opts: { hour: 'numeric', minute: '2-digit' } },
+    { code: 'T', name: 'Long time', opts: { hour: 'numeric', minute: '2-digit', second: '2-digit' } },
+    { code: 'd', name: 'Short date', opts: { day: '2-digit', month: '2-digit', year: 'numeric' } },
+    { code: 'D', name: 'Long date', opts: { day: 'numeric', month: 'long', year: 'numeric' } },
+    { code: 'f', name: 'Date & time (default)', opts: { day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit' } },
+    { code: 'F', name: 'Day, date & time', opts: { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit' } },
+    { code: 'R', name: 'Relative', opts: {} },
   ];
 
-  function relative(d: Date): string {
-    const diff = d.getTime() - Date.now();
+  function relative(ms: number): string {
+    const diff = ms - Date.now();
     const abs = Math.abs(diff);
     const rtf = new Intl.RelativeTimeFormat([], { numeric: 'auto' });
     const units: [Intl.RelativeTimeFormatUnit, number][] = [
       ['year', 31536000000], ['month', 2592000000], ['day', 86400000],
       ['hour', 3600000], ['minute', 60000], ['second', 1000],
     ];
-    for (const [unit, ms] of units) {
-      if (abs >= ms || unit === 'second') return rtf.format(Math.round(diff / ms), unit);
+    for (const [unit, ms2] of units) {
+      if (abs >= ms2 || unit === 'second') return rtf.format(Math.round(diff / ms2), unit);
     }
     return 'now';
   }
 
-  let unix = Math.floor(Date.now() / 1000);
+  const pad = (n: number) => String(n).padStart(2, '0');
 
+  // Offset (ms) between the given instant's wall clock in `tz` and true UTC.
+  function tzOffsetMs(tz: string, date: Date): number {
+    const dtf = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, hourCycle: 'h23',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    });
+    const map: Record<string, number> = {};
+    for (const p of dtf.formatToParts(date)) if (p.type !== 'literal') map[p.type] = +p.value;
+    const asUTC = Date.UTC(map.year, map.month - 1, map.day, map.hour, map.minute, map.second);
+    return asUTC - date.getTime();
+  }
+
+  // Wall-clock fields interpreted in `tz` → unix seconds. Two passes handle DST edges.
+  function zonedToUnix(y: number, mo: number, da: number, h: number, mi: number, s: number, tz: string): number {
+    const wallAsUTC = Date.UTC(y, mo - 1, da, h, mi, s);
+    let ts = wallAsUTC - tzOffsetMs(tz, new Date(wallAsUTC));
+    ts = wallAsUTC - tzOffsetMs(tz, new Date(ts));
+    return Math.floor(ts / 1000);
+  }
+
+  // unix seconds → the wall-clock parts as they read in `tz`.
+  function unixToZonedParts(unixSec: number, tz: string) {
+    const dtf = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, hourCycle: 'h23',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    });
+    const map: Record<string, string> = {};
+    for (const p of dtf.formatToParts(new Date(unixSec * 1000))) if (p.type !== 'literal') map[p.type] = p.value;
+    return map;
+  }
+
+  function showOffset() {
+    const off = tzOffsetMs(tzEl.value, new Date(unix * 1000)) / 60000; // minutes east of UTC (positive = ahead)
+    const sign = off >= 0 ? '+' : '-';
+    const a = Math.abs(off);
+    offsetEl.textContent = `UTC${sign}${pad(Math.floor(a / 60))}:${pad(a % 60)}`;
+  }
+
+  function error(msg: string) { errEl.textContent = msg; errEl.classList.remove('hidden'); }
+  function clearError() { errEl.classList.add('hidden'); }
+
+  let unix = Math.floor(Date.now() / 1000);
+  let highlightStyle = '';
+
+  // unix is source of truth → fill date/time fields (in selected tz) and the unix box.
   function syncFromUnix() {
-    const d = new Date(unix * 1000);
-    // Populate the date/time fields in local time.
-    const pad = (n: number) => String(n).padStart(2, '0');
-    dateEl.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-    timeEl.value = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    const p = unixToZonedParts(unix, tzEl.value);
+    dateEl.value = `${p.year}-${p.month}-${p.day}`;
+    timeEl.value = `${p.hour}:${p.minute}:${p.second}`;
     unixEl.value = String(unix);
+    showOffset();
     render();
   }
 
+  // date/time fields are source of truth → recompute unix in selected tz.
   function syncFromFields() {
     if (!dateEl.value) return;
     const [y, mo, da] = dateEl.value.split('-').map(Number);
-    const t = timeEl.value || '00:00:00';
-    const [h, mi, s] = t.split(':').map(Number);
-    const d = new Date(y, mo - 1, da, h || 0, mi || 0, s || 0);
-    unix = Math.floor(d.getTime() / 1000);
+    const [h, mi, s] = (timeEl.value || '00:00:00').split(':').map(Number);
+    unix = zonedToUnix(y, mo, da, h || 0, mi || 0, s || 0, tzEl.value);
     unixEl.value = String(unix);
+    showOffset();
     render();
   }
 
   function render() {
-    const d = new Date(unix * 1000);
+    const ms = unix * 1000;
+    const d = new Date(ms);
+    const tz = tzEl.value;
     out.innerHTML = STYLES.map((st) => {
       const code = `<t:${unix}:${st.code}>`;
-      return `<div class="panel panel-lift flex flex-wrap items-center gap-3 p-3">
+      const preview = st.code === 'R'
+        ? relative(ms)
+        : d.toLocaleString([], { ...st.opts, timeZone: tz });
+      const ring = st.code === highlightStyle ? ' style="border-color:var(--color-primary)"' : '';
+      return `<div class="panel panel-lift flex flex-wrap items-center gap-3 p-3"${ring}>
         <span class="w-40 shrink-0 text-xs text-ink-tertiary">${st.name}</span>
         <code class="rounded-xs bg-surface-2 px-2 py-1 font-mono text-[13px] text-ink">${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code>
-        <span class="text-[13px] text-ink-muted">${st.render(d)}</span>
+        <span class="text-[13px] text-ink-muted">${preview}</span>
         <button class="btn btn-secondary ml-auto" data-copy="${code.replace(/"/g, '&quot;')}">Copy</button>
       </div>`;
     }).join('');
@@ -108,17 +205,59 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     });
   }
 
-  dateEl.addEventListener('input', syncFromFields);
-  timeEl.addEventListener('input', syncFromFields);
+  dateEl.addEventListener('input', () => { clearError(); highlightStyle = ''; syncFromFields(); });
+  timeEl.addEventListener('input', () => { clearError(); highlightStyle = ''; syncFromFields(); });
+  // Changing the zone keeps the wall clock fixed and recomputes the timestamp.
+  tzEl.addEventListener('change', () => { clearError(); syncFromFields(); });
+
   unixEl.addEventListener('input', () => {
-    const v = parseInt(unixEl.value, 10);
-    if (!Number.isNaN(v)) { unix = v; const d = new Date(unix * 1000); const pad = (n: number) => String(n).padStart(2, '0');
-      dateEl.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-      timeEl.value = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-      render();
-    }
+    clearError();
+    highlightStyle = '';
+    const raw = unixEl.value.trim();
+    if (!raw) return;
+    let v = Number(raw);
+    if (!Number.isFinite(v) || !/^-?\d+$/.test(raw)) { error('Unix timestamp must be a whole number of seconds.'); return; }
+    if (Math.abs(v) >= 1e12) v = Math.floor(v / 1000); // ponytail: 13-digit input is milliseconds
+    unix = v;
+    const p = unixToZonedParts(unix, tzEl.value);
+    dateEl.value = `${p.year}-${p.month}-${p.day}`;
+    timeEl.value = `${p.hour}:${p.minute}:${p.second}`;
+    showOffset();
+    render();
   });
-  document.getElementById('dt-now')!.addEventListener('click', () => { unix = Math.floor(Date.now() / 1000); syncFromUnix(); });
+
+  // Accept "<t:123:F>", "t:123", or a bare number; pull the first integer + optional style.
+  decodeEl.addEventListener('input', () => {
+    clearError();
+    const raw = decodeEl.value.trim();
+    if (!raw) { highlightStyle = ''; render(); return; }
+    const m = raw.match(/-?\d+/);
+    if (!m) { error('No timestamp found. Expected something like <t:1699999999:F>.'); return; }
+    let v = Number(m[0]);
+    if (Math.abs(v) >= 1e12) v = Math.floor(v / 1000); // ponytail: tolerate ms if pasted
+    unix = v;
+    const sm = raw.match(/:([tTdDfFR])>?\s*$/);
+    highlightStyle = sm ? sm[1] : '';
+    syncFromUnix();
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('[data-preset]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      clearError();
+      highlightStyle = '';
+      const off = Number(btn.dataset.preset);
+      unix = Math.floor(Date.now() / 1000) + (Number.isFinite(off) ? off : 0);
+      syncFromUnix();
+    });
+  });
+
+  document.getElementById('dt-copyall')!.addEventListener('click', async (e) => {
+    const all = STYLES.map((st) => `<t:${unix}:${st.code}>`).join('\n');
+    await navigator.clipboard.writeText(all);
+    const b = e.currentTarget as HTMLButtonElement;
+    b.textContent = 'Copied all!';
+    setTimeout(() => (b.textContent = 'Copy all'), 1400);
+  });
 
   syncFromUnix();
 </script>

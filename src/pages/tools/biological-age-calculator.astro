@@ -90,6 +90,18 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div id="ba-value" class="mt-1 font-display text-5xl font-semibold text-primary-hover">—</div>
       <div id="ba-delta" class="mt-2 text-sm text-ink-muted"></div>
     </div>
+
+    <!-- Per-factor impact breakdown -->
+    <div class="panel p-5">
+      <div class="mb-3 text-sm text-ink-muted">What's moving your number</div>
+      <div id="ba-breakdown" class="flex flex-col gap-2 text-sm"></div>
+    </div>
+
+    <!-- Improvement tips tied to worst factors -->
+    <div id="ba-tips-wrap" class="hidden panel p-5">
+      <div class="mb-3 text-sm text-ink-muted">Where you'd gain the most</div>
+      <ul id="ba-tips" class="flex flex-col gap-2 text-sm text-ink-subtle"></ul>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -109,24 +121,73 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 <script>
   const $ = (id: string) => document.getElementById(id) as unknown as HTMLSelectElement;
   const IDS = ['ba-exercise', 'ba-sleep', 'ba-diet', 'ba-smoke', 'ba-alcohol', 'ba-stress', 'ba-bmi', 'ba-social', 'ba-rhr', 'ba-family'];
+  const LABELS: Record<string, string> = {
+    'ba-exercise': 'Exercise', 'ba-sleep': 'Sleep', 'ba-diet': 'Diet', 'ba-smoke': 'Smoking',
+    'ba-alcohol': 'Alcohol', 'ba-stress': 'Stress', 'ba-bmi': 'Body weight (BMI)',
+    'ba-social': 'Social wellbeing', 'ba-rhr': 'Resting heart rate', 'ba-family': 'Family longevity',
+  };
+  // Tip shown when a factor is adding years (value above threshold).
+  const TIPS: Record<string, string> = {
+    'ba-exercise': 'Aim for at least 150 minutes of moderate activity a week.',
+    'ba-sleep': 'Target 7–9 hours of sleep on a consistent schedule.',
+    'ba-diet': 'Shift toward whole foods and more vegetables; cut processed meals.',
+    'ba-smoke': 'Quitting smoking is the single biggest change you can make here.',
+    'ba-alcohol': 'Reducing heavy drinking lowers long-term health risk.',
+    'ba-stress': 'Build in recovery — mindfulness, breaks, or exercise reduce chronic stress.',
+    'ba-bmi': 'Moving toward a healthy BMI range reduces metabolic strain.',
+    'ba-social': 'Strengthen social ties; connection is linked to longer, healthier life.',
+    'ba-rhr': 'Regular cardio lowers resting heart rate over time.',
+    'ba-family': 'Family history is fixed, but healthy habits offset much of the risk.',
+  };
 
   function calc() {
     const age = Number((document.getElementById('ba-age') as HTMLInputElement).value);
     const valueEl = document.getElementById('ba-value')!;
     const deltaEl = document.getElementById('ba-delta')!;
+    const breakdownEl = document.getElementById('ba-breakdown')!;
+    const tipsWrap = document.getElementById('ba-tips-wrap')!;
+    const tipsEl = document.getElementById('ba-tips')!;
 
     if (!(age > 0)) {
       valueEl.textContent = '—';
       deltaEl.textContent = '';
+      breakdownEl.innerHTML = '';
+      tipsWrap.classList.add('hidden');
       return;
     }
 
     let delta = 0;
-    for (const id of IDS) delta += Number($(id).value);
+    const factors: { id: string; value: number }[] = [];
+    for (const id of IDS) {
+      const v = Number($(id).value);
+      delta += v;
+      factors.push({ id, value: v });
+    }
 
     // Bound the swing so it stays plausible.
     delta = Math.max(-15, Math.min(18, delta));
     const bio = Math.max(1, Math.round((age + delta) * 10) / 10);
+
+    // Breakdown, sorted by magnitude (biggest movers first).
+    const nonZero = factors.filter((f) => f.value !== 0).sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+    breakdownEl.innerHTML = nonZero.length
+      ? nonZero
+          .map((f) => {
+            const up = f.value > 0;
+            const color = up ? '#d2a05e' : '#27a644';
+            return `<div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">${LABELS[f.id]}</span><span class="font-mono" style="color:${color}">${up ? '+' : ''}${f.value} yr</span></div>`;
+          })
+          .join('')
+      : '<span class="text-ink-tertiary">All factors are neutral.</span>';
+
+    // Tips from the worst (age-adding) factors.
+    const worst = nonZero.filter((f) => f.value >= 1.5).slice(0, 3);
+    if (worst.length) {
+      tipsWrap.classList.remove('hidden');
+      tipsEl.innerHTML = worst.map((f) => `<li class="flex gap-2"><span class="text-primary-hover">→</span><span>${TIPS[f.id]}</span></li>`).join('');
+    } else {
+      tipsWrap.classList.add('hidden');
+    }
 
     valueEl.textContent = String(bio);
     const diff = Math.round((bio - age) * 10) / 10;

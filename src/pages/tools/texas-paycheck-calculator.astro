@@ -4,10 +4,27 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="texas-paycheck-calculator">
   <div class="flex flex-col gap-5">
+    <div class="flex flex-wrap gap-2" role="tablist" aria-label="Pay type">
+      <button type="button" data-pay="salary" class="tx-tab btn btn-primary" aria-selected="true">Salary</button>
+      <button type="button" data-pay="hourly" class="tx-tab btn btn-secondary" aria-selected="false">Hourly</button>
+    </div>
+
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Gross pay (per period)
-        <input id="tx-gross" type="number" min="0" class="field" value="2500" inputmode="decimal" />
+      <!-- Salary inputs -->
+      <label id="tx-salary-wrap" class="flex flex-col gap-1 text-sm text-ink-subtle">Gross pay
+        <span class="flex gap-2">
+          <input id="tx-gross" type="number" min="0" class="field" value="2500" inputmode="decimal" />
+          <select id="tx-grossbasis" class="field w-32"><option value="period">per period</option><option value="year">per year</option></select>
+        </span>
       </label>
+
+      <!-- Hourly inputs -->
+      <div id="tx-hourly-wrap" class="hidden grid-cols-3 gap-2 sm:col-span-2">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Hourly rate<input id="tx-rate" type="number" min="0" step="0.01" class="field" value="25" inputmode="decimal" /></label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Hours / period<input id="tx-hours" type="number" min="0" step="0.5" class="field" value="80" inputmode="decimal" /></label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">OT hours (1.5×)<input id="tx-othours" type="number" min="0" step="0.5" class="field" value="0" inputmode="decimal" /></label>
+      </div>
+
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Pay frequency
         <select id="tx-freq" class="field">
           <option value="52">Weekly</option>
@@ -25,6 +42,18 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Pre-tax deductions (per period)
         <input id="tx-pretax" type="number" min="0" class="field" value="0" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Dependents (child tax credit)
+        <input id="tx-children" type="number" min="0" step="1" class="field" value="0" inputmode="numeric" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Other dependents
+        <input id="tx-otherdep" type="number" min="0" step="1" class="field" value="0" inputmode="numeric" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Extra federal withholding (per period)
+        <input id="tx-extra" type="number" min="0" step="1" class="field" value="0" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Other taxable income / year (W-4 4a)
+        <input id="tx-other" type="number" min="0" step="1" class="field" value="0" inputmode="decimal" />
       </label>
     </div>
 
@@ -105,11 +134,28 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const money = (n: number) =>
     '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+  let payType: 'salary' | 'hourly' = 'salary';
+
   function calc() {
-    const gross = Number($('tx-gross').value) || 0;
     const periods = Number(sel('tx-freq').value);
     const status = sel('tx-status').value;
     const pretax = Number($('tx-pretax').value) || 0;
+    const extra = Number($('tx-extra').value) || 0;
+    const otherIncome = Number($('tx-other').value) || 0;
+    const childCredit = (Number($('tx-children').value) || 0) * 2000;
+    const otherDepCredit = (Number($('tx-otherdep').value) || 0) * 500;
+
+    // Gross per period from the chosen mode.
+    let gross: number;
+    if (payType === 'hourly') {
+      const rate = Number($('tx-rate').value) || 0;
+      const hours = Number($('tx-hours').value) || 0;
+      const ot = Number($('tx-othours').value) || 0;
+      gross = rate * hours + rate * 1.5 * ot;
+    } else {
+      const amt = Number($('tx-gross').value) || 0;
+      gross = sel('tx-grossbasis').value === 'year' ? amt / periods : amt;
+    }
 
     const netEl = document.getElementById('tx-net')!;
     const annualEl = document.getElementById('tx-annual-net')!;
@@ -125,7 +171,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const annualGross = gross * periods;
     const annualPretax = pretax * periods;
 
-    // FICA is on gross minus most pre-tax (approximate: treat pre-tax as reducing FICA too).
     const ficaWages = Math.max(0, annualGross - annualPretax);
     const ss = Math.min(ficaWages, SS_WAGE_BASE) * SS_RATE;
     let medicare = ficaWages * MEDI_RATE;
@@ -133,9 +178,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       medicare += (ficaWages - ADDL_MEDI_THRESHOLD[status]) * ADDL_MEDI_RATE;
     }
 
-    // Federal income tax on annual taxable = gross - pretax - standard deduction.
-    const taxable = Math.max(0, annualGross - annualPretax - STD[status]);
-    const fedAnnual = federalTax(taxable, status);
+    // Federal income tax: taxable = gross - pretax + other income - standard deduction,
+    // then subtract W-4 dependent credits (floored at 0), plus any extra withholding.
+    const taxable = Math.max(0, annualGross - annualPretax + otherIncome - STD[status]);
+    const fedAnnual = Math.max(0, federalTax(taxable, status) - childCredit - otherDepCredit) + extra * periods;
 
     const annualNet = annualGross - annualPretax - ss - medicare - fedAnnual;
     const perNet = annualNet / periods;
@@ -164,8 +210,25 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       .join('');
   }
 
+  document.querySelectorAll<HTMLButtonElement>('.tx-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      payType = tab.dataset.pay as 'salary' | 'hourly';
+      document.querySelectorAll('.tx-tab').forEach((t) => {
+        const active = t === tab;
+        t.setAttribute('aria-selected', String(active));
+        t.classList.toggle('btn-primary', active);
+        t.classList.toggle('btn-secondary', !active);
+      });
+      document.getElementById('tx-salary-wrap')!.classList.toggle('hidden', payType !== 'salary');
+      document.getElementById('tx-salary-wrap')!.classList.toggle('flex', payType === 'salary');
+      document.getElementById('tx-hourly-wrap')!.classList.toggle('hidden', payType !== 'hourly');
+      document.getElementById('tx-hourly-wrap')!.classList.toggle('grid', payType === 'hourly');
+      calc();
+    });
+  });
+
   document
-    .querySelectorAll('#tx-gross, #tx-freq, #tx-status, #tx-pretax')
+    .querySelectorAll('#tx-gross, #tx-grossbasis, #tx-rate, #tx-hours, #tx-othours, #tx-freq, #tx-status, #tx-pretax, #tx-children, #tx-otherdep, #tx-extra, #tx-other')
     .forEach((el) => el.addEventListener('input', calc));
   calc();
 </script>

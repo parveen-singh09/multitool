@@ -26,6 +26,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div class="panel p-4"><div id="ag-months" class="font-mono text-xl text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Total months</div></div>
       <div class="panel p-4"><div id="ag-weeks" class="font-mono text-xl text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Total weeks</div></div>
       <div class="panel p-4"><div id="ag-days" class="font-mono text-xl text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Total days</div></div>
+      <div class="panel p-4"><div id="ag-hours" class="font-mono text-xl text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Total hours</div></div>
+      <div class="panel p-4"><div id="ag-minutes" class="font-mono text-xl text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Total minutes</div></div>
+      <div class="panel p-4"><div id="ag-seconds" class="font-mono text-xl text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Total seconds</div></div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="panel p-4 text-center"><div id="ag-born" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Day of the week born</div></div>
+      <div class="panel p-4 text-center"><div id="ag-bday" class="font-mono text-lg text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Next birthday</div></div>
     </div>
   </div>
 
@@ -48,6 +56,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const monthsEl = document.getElementById('ag-months')!;
   const weeksEl = document.getElementById('ag-weeks')!;
   const daysEl = document.getElementById('ag-days')!;
+  const hoursEl = document.getElementById('ag-hours')!;
+  const minutesEl = document.getElementById('ag-minutes')!;
+  const secondsEl = document.getElementById('ag-seconds')!;
+  const bornEl = document.getElementById('ag-born')!;
+  const bdayEl = document.getElementById('ag-bday')!;
 
   function calc() {
     err.classList.add('hidden');
@@ -84,6 +97,21 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     monthsEl.textContent = totalMonths.toLocaleString();
     weeksEl.textContent = Math.floor(totalDays / 7).toLocaleString();
     daysEl.textContent = totalDays.toLocaleString();
+    hoursEl.textContent = (totalDays * 24).toLocaleString();
+    minutesEl.textContent = (totalDays * 24 * 60).toLocaleString();
+    secondsEl.textContent = (totalDays * 86400).toLocaleString();
+
+    // Day of the week born
+    bornEl.textContent = start.toLocaleDateString(undefined, { weekday: 'long' });
+
+    // Next birthday relative to the "age at" date.
+    let nextBday = new Date(end.getFullYear(), start.getMonth(), start.getDate());
+    if (nextBday < end) nextBday = new Date(end.getFullYear() + 1, start.getMonth(), start.getDate());
+    const daysToBday = Math.ceil((nextBday.getTime() - end.getTime()) / 86400000);
+    const turning = nextBday.getFullYear() - start.getFullYear();
+    bdayEl.textContent = daysToBday === 0
+      ? `Happy birthday! Turning ${turning}`
+      : `${daysToBday.toLocaleString()} days — turning ${turning}`;
   }
 
   [dob, at].forEach((el) => el.addEventListener('input', calc));

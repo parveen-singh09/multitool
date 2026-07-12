@@ -13,11 +13,26 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <label class="flex flex-col gap-1 text-sm text-ink-subtle"><span id="fc-dist-label">Trip distance (km)</span>
         <input id="fc-dist" type="number" min="0" step="1" class="field" value="300" inputmode="decimal" />
       </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle"><span id="fc-eff-label">Fuel efficiency (L/100km)</span>
+      <label id="fc-eff-wrap" class="flex flex-col gap-1 text-sm text-ink-subtle"><span id="fc-eff-label">Fuel efficiency (L/100km)</span>
         <input id="fc-eff" type="number" min="0" step="0.1" class="field" value="7.5" inputmode="decimal" />
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle"><span id="fc-price-label">Fuel price (per L)</span>
         <input id="fc-price" type="number" min="0" step="0.01" class="field" value="1.60" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="flex flex-wrap items-end gap-4">
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="fc-roundtrip" type="checkbox" class="accent-primary" /> Round trip (double the distance)
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Split between (people)
+        <input id="fc-people" type="number" min="1" step="1" class="field w-24" value="1" inputmode="numeric" />
+      </label>
+      <label id="fc-effmode-wrap" class="hidden flex-col gap-1 text-sm text-ink-subtle">Efficiency unit
+        <select id="fc-effmode" class="field">
+          <option value="l100">L/100km</option>
+          <option value="kml">km/L</option>
+        </select>
       </label>
     </div>
 
@@ -26,7 +41,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div id="fc-cost-note" class="mt-2 text-sm text-ink-muted">Total fuel cost</div>
     </div>
 
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
       <div class="panel p-5 text-center">
         <div id="fc-fuel" class="font-mono text-xl text-ink">—</div>
         <div id="fc-fuel-label" class="mt-1 text-[13px] text-ink-subtle">Fuel needed (L)</div>
@@ -34,6 +49,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div class="panel p-5 text-center">
         <div id="fc-per" class="font-mono text-xl text-ink">—</div>
         <div id="fc-per-label" class="mt-1 text-[13px] text-ink-subtle">Cost per km</div>
+      </div>
+      <div class="panel p-5 text-center">
+        <div id="fc-person" class="font-mono text-xl text-ink">—</div>
+        <div class="mt-1 text-[13px] text-ink-subtle">Cost per person</div>
       </div>
     </div>
   </div>
@@ -61,13 +80,18 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const money = (n: number) =>
     n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
 
+  const effModeSel = document.getElementById('fc-effmode') as HTMLSelectElement;
+
   function setUnit(next: 'metric' | 'us') {
     unit = next;
+    // The km/L efficiency mode only applies to metric units.
+    document.getElementById('fc-effmode-wrap')!.classList.toggle('hidden', unit !== 'metric');
+    document.getElementById('fc-effmode-wrap')!.classList.toggle('flex', unit === 'metric');
     if (unit === 'metric') {
       metricBtn.className = 'btn btn-primary';
       usBtn.className = 'btn btn-secondary';
       document.getElementById('fc-dist-label')!.textContent = 'Trip distance (km)';
-      document.getElementById('fc-eff-label')!.textContent = 'Fuel efficiency (L/100km)';
+      document.getElementById('fc-eff-label')!.textContent = effModeSel.value === 'kml' ? 'Fuel efficiency (km/L)' : 'Fuel efficiency (L/100km)';
       document.getElementById('fc-price-label')!.textContent = 'Fuel price (per L)';
       document.getElementById('fc-fuel-label')!.textContent = 'Fuel needed (L)';
       document.getElementById('fc-per-label')!.textContent = 'Cost per km';
@@ -84,13 +108,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   }
 
   function calc() {
-    const d = Number(dist.value) || 0;
+    let d = Number(dist.value) || 0;
     const e = Number(eff.value) || 0;
     const p = Number(price.value) || 0;
+    const people = Math.max(1, Number((document.getElementById('fc-people') as HTMLInputElement).value) || 1);
+    if ((document.getElementById('fc-roundtrip') as HTMLInputElement).checked) d *= 2;
 
     let fuel = 0;
     if (unit === 'metric') {
-      fuel = (d / 100) * e; // litres
+      fuel = effModeSel.value === 'kml' ? (e > 0 ? d / e : 0) : (d / 100) * e; // litres
     } else {
       fuel = e > 0 ? d / e : 0; // gallons
     }
@@ -102,9 +128,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     document.getElementById('fc-fuel')!.textContent =
       money(fuel) + (unit === 'metric' ? ' L' : ' gal');
     document.getElementById('fc-per')!.textContent = perDist.toFixed(3);
+    document.getElementById('fc-person')!.textContent = money(cost / people);
   }
 
   [dist, eff, price].forEach((el) => el.addEventListener('input', calc));
+  ['fc-roundtrip', 'fc-people'].forEach((id) => document.getElementById(id)!.addEventListener('input', calc));
+  effModeSel.addEventListener('change', () => setUnit('metric'));
   metricBtn.addEventListener('click', () => setUnit('metric'));
   usBtn.addEventListener('click', () => setUnit('us'));
 

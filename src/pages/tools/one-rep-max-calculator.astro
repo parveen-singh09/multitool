@@ -24,7 +24,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div id="orm-sub" class="mt-2 text-sm text-ink-muted"></div>
     </div>
 
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
       <div class="panel p-5 text-center">
         <div id="orm-epley" class="font-mono text-xl text-ink">—</div>
         <div class="mt-1 text-[13px] text-ink-subtle">Epley 1RM</div>
@@ -32,6 +32,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div class="panel p-5 text-center">
         <div id="orm-brzycki" class="font-mono text-xl text-ink">—</div>
         <div class="mt-1 text-[13px] text-ink-subtle">Brzycki 1RM</div>
+      </div>
+      <div class="panel p-5 text-center">
+        <div id="orm-lombardi" class="font-mono text-xl text-ink">—</div>
+        <div class="mt-1 text-[13px] text-ink-subtle">Lombardi 1RM</div>
       </div>
     </div>
 
@@ -78,20 +82,24 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       document.getElementById('orm-sub')!.textContent = '';
       document.getElementById('orm-epley')!.textContent = '—';
       document.getElementById('orm-brzycki')!.textContent = '—';
+      document.getElementById('orm-lombardi')!.textContent = '—';
       document.getElementById('orm-table')!.innerHTML = '';
     };
     if (!(weight > 0) || !(reps >= 1)) { clear(); return; }
 
     const epley = weight * (1 + reps / 30);
     const brzycki = reps < 37 ? weight * (36 / (37 - reps)) : NaN;
-    const oneRm = isFinite(brzycki) ? (epley + brzycki) / 2 : epley;
+    const lombardi = weight * Math.pow(reps, 0.1);
+    const estimates = [epley, brzycki, lombardi].filter((n) => isFinite(n));
+    const oneRm = estimates.reduce((a, b) => a + b, 0) / estimates.length;
 
     const fmt = (n: number) => `${Math.round(n * 10) / 10} ${unit}`;
 
     document.getElementById('orm-value')!.textContent = fmt(oneRm);
-    document.getElementById('orm-sub')!.textContent = 'Estimated one-rep max (average of Epley & Brzycki)';
+    document.getElementById('orm-sub')!.textContent = 'Estimated one-rep max (average of Epley, Brzycki & Lombardi)';
     document.getElementById('orm-epley')!.textContent = fmt(epley);
     document.getElementById('orm-brzycki')!.textContent = isFinite(brzycki) ? fmt(brzycki) : '—';
+    document.getElementById('orm-lombardi')!.textContent = fmt(lombardi);
 
     const rows = percentages
       .map((p) => {

@@ -56,10 +56,24 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Goal
         <select id="m-goal" class="field">
-          <option value="-0.2">Lose weight (−20%)</option>
-          <option value="0" selected>Maintain (0%)</option>
-          <option value="0.15">Gain muscle (+15%)</option>
+          <option value="-1000">Lose 1 kg/week (−1000 cal)</option>
+          <option value="-500">Lose 0.5 kg/week (−500 cal)</option>
+          <option value="-250">Lose 0.25 kg/week (−250 cal)</option>
+          <option value="0" selected>Maintain weight</option>
+          <option value="250">Gain 0.25 kg/week (+250 cal)</option>
+          <option value="500">Gain 0.5 kg/week (+500 cal)</option>
         </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Macro split
+        <select id="m-split" class="field">
+          <option value="30/40/30" selected>Balanced (30P / 40C / 30F)</option>
+          <option value="40/40/20">High-protein (40P / 40C / 20F)</option>
+          <option value="30/20/50">Low-carb (30P / 20C / 50F)</option>
+          <option value="25/5/70">Keto (25P / 5C / 70F)</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Body fat % (optional)
+        <input id="m-bf" type="number" min="0" max="70" step="0.1" class="field" placeholder="uses Katch-McArdle" inputmode="decimal" />
       </label>
     </div>
 
@@ -71,15 +85,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
       <div class="panel p-5 text-center">
         <div id="m-protein" class="font-mono text-xl text-ink">—</div>
-        <div class="mt-1 text-[13px] text-ink-subtle">Protein · 30%</div>
+        <div id="m-protein-lbl" class="mt-1 text-[13px] text-ink-subtle">Protein · 30%</div>
       </div>
       <div class="panel p-5 text-center">
         <div id="m-carbs" class="font-mono text-xl text-ink">—</div>
-        <div class="mt-1 text-[13px] text-ink-subtle">Carbs · 40%</div>
+        <div id="m-carbs-lbl" class="mt-1 text-[13px] text-ink-subtle">Carbs · 40%</div>
       </div>
       <div class="panel p-5 text-center">
         <div id="m-fat" class="font-mono text-xl text-ink">—</div>
-        <div class="mt-1 text-[13px] text-ink-subtle">Fat · 30%</div>
+        <div id="m-fat-lbl" class="mt-1 text-[13px] text-ink-subtle">Fat · 30%</div>
       </div>
     </div>
   </div>
@@ -88,10 +102,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p>
       This free macro calculator estimates your daily calorie target and how to
       split it across protein, carbs, and fat. It finds your BMR with the
-      Mifflin-St Jeor equation, scales it by your activity level to get total
-      daily energy expenditure, then adjusts for your goal before dividing
-      calories into a 30% protein, 40% carb, 30% fat split. These numbers are
-      general guides, not medical advice. Runs entirely in your browser.
+      Mifflin-St Jeor equation — or the more precise Katch-McArdle equation when
+      you enter your body-fat percentage — scales it by your activity level to
+      get total daily energy expenditure, then adjusts for a rate-based goal.
+      Choose a macro split (balanced, high-protein, low-carb or keto) to see your
+      protein, carb and fat targets in grams. These numbers are general guides,
+      not medical advice. Runs entirely in your browser.
     </p>
   </div>
 </ToolLayout>
@@ -141,24 +157,41 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     };
     if (!(age > 0) || !(cm > 0) || !(kg > 0)) { clear(); return; }
 
-    const bmr = 10 * kg + 6.25 * cm - 5 * age + (sex === 'male' ? 5 : -161);
+    // BMR: Katch-McArdle when body fat is given (more accurate for lean users),
+    // otherwise Mifflin-St Jeor.
+    const bf = Number($('m-bf').value);
+    let bmr: string | number;
+    let bmrLabel: string;
+    if (bf > 0 && bf < 70) {
+      const lean = kg * (1 - bf / 100);
+      bmr = 370 + 21.6 * lean;
+      bmrLabel = 'Katch-McArdle';
+    } else {
+      bmr = 10 * kg + 6.25 * cm - 5 * age + (sex === 'male' ? 5 : -161);
+      bmrLabel = 'Mifflin-St Jeor';
+    }
+    bmr = Number(bmr);
     const tdee = bmr * Number(sel('m-activity').value);
-    const target = tdee * (1 + Number(sel('m-goal').value));
+    const target = Math.max(0, tdee + Number(sel('m-goal').value));
 
-    const proteinG = Math.round((target * 0.3) / 4);
-    const carbsG = Math.round((target * 0.4) / 4);
-    const fatG = Math.round((target * 0.3) / 9);
+    const [pPct, cPct, fPct] = sel('m-split').value.split('/').map(Number);
+    const proteinG = Math.round((target * (pPct / 100)) / 4);
+    const carbsG = Math.round((target * (cPct / 100)) / 4);
+    const fatG = Math.round((target * (fPct / 100)) / 9);
 
     document.getElementById('m-calories')!.textContent = Math.round(target).toLocaleString() + ' cal';
     document.getElementById('m-calories-sub')!.textContent =
-      `Target calories/day · TDEE ${Math.round(tdee).toLocaleString()} · BMR ${Math.round(bmr).toLocaleString()}`;
+      `Target calories/day · TDEE ${Math.round(tdee).toLocaleString()} · BMR ${Math.round(bmr).toLocaleString()} (${bmrLabel})`;
     document.getElementById('m-protein')!.textContent = proteinG + ' g';
     document.getElementById('m-carbs')!.textContent = carbsG + ' g';
     document.getElementById('m-fat')!.textContent = fatG + ' g';
+    document.getElementById('m-protein-lbl')!.textContent = `Protein · ${pPct}%`;
+    document.getElementById('m-carbs-lbl')!.textContent = `Carbs · ${cPct}%`;
+    document.getElementById('m-fat-lbl')!.textContent = `Fat · ${fPct}%`;
   }
 
   document
-    .querySelectorAll('#m-sex, #m-age, #m-cm, #m-kg, #m-ft, #m-in, #m-lb, #m-activity, #m-goal')
+    .querySelectorAll('#m-sex, #m-age, #m-cm, #m-kg, #m-ft, #m-in, #m-lb, #m-bf, #m-activity, #m-goal, #m-split')
     .forEach((el) => el.addEventListener('input', calc));
   calc();
 </script>

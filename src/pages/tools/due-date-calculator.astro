@@ -4,30 +4,62 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="due-date-calculator">
   <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle sm:max-w-xs">Estimate based on
+      <select id="dd-method" class="field">
+        <option value="lmp">Last menstrual period (LMP)</option>
+        <option value="conception">Conception date</option>
+        <option value="ivf">IVF transfer date</option>
+        <option value="ultrasound">Ultrasound</option>
+      </select>
+    </label>
+
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">First day of last period
-        <input id="dd-lmp" type="date" class="field" />
+      <label id="dd-date-wrap" class="flex flex-col gap-1 text-sm text-ink-subtle"><span id="dd-date-lbl">First day of last period</span>
+        <input id="dd-in" type="date" class="field" />
       </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Average cycle length (days)
-        <input id="dd-cycle" type="number" min="20" max="45" class="field" value="28" inputmode="numeric" />
+      <label id="dd-cycle-wrap" class="flex flex-col gap-1 text-sm text-ink-subtle">Average cycle length (days)
+        <input id="dd-cycle" type="number" min="22" max="44" class="field" value="28" inputmode="numeric" />
+      </label>
+      <label id="dd-ivf-wrap" class="hidden flex-col gap-1 text-sm text-ink-subtle">Embryo age at transfer
+        <select id="dd-ivf-day" class="field">
+          <option value="3">Day 3</option>
+          <option value="5" selected>Day 5</option>
+          <option value="6">Day 6</option>
+        </select>
+      </label>
+      <label id="dd-us-wrap" class="hidden flex-col gap-1 text-sm text-ink-subtle">Gestational age at scan
+        <div class="flex gap-2">
+          <input id="dd-us-w" type="number" min="0" max="45" class="field" value="12" inputmode="numeric" aria-label="weeks" />
+          <input id="dd-us-d" type="number" min="0" max="6" class="field" value="0" inputmode="numeric" aria-label="days" />
+        </div>
       </label>
     </div>
 
     <div class="panel panel-lift p-6 text-center">
-      <div id="dd-date" class="font-display text-3xl font-semibold text-primary-hover">—</div>
+      <div id="dd-out" class="font-display text-3xl font-semibold text-primary-hover">—</div>
       <div class="mt-1 text-[13px] text-ink-subtle">estimated due date</div>
+      <div id="dd-count" class="mt-2 text-sm text-ink-muted"></div>
     </div>
-    <div class="grid grid-cols-2 gap-3 text-center">
+    <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-3">
       <div class="panel p-4"><div id="dd-week" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Current week</div></div>
       <div class="panel p-4"><div id="dd-tri" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Trimester</div></div>
+      <div class="panel p-4"><div id="dd-conc" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Est. conception</div></div>
+    </div>
+
+    <!-- Milestones -->
+    <div class="panel p-5">
+      <div class="mb-3 text-sm text-ink-muted">Milestones</div>
+      <div id="dd-milestones" class="flex flex-col gap-2 text-sm"></div>
     </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free pregnancy due date calculator estimates your baby’s due date from
-      the first day of your last menstrual period, adjusting for cycle length. It
-      also shows the current pregnancy week and trimester. This is an estimate —
+      This free pregnancy due date calculator estimates your baby's due date from
+      your last menstrual period, conception date, IVF transfer date, or an
+      ultrasound measurement. It also shows the current pregnancy week and
+      trimester, estimated conception date, a countdown, and key milestones like
+      the end of each trimester, viability and full term. This is an estimate —
       only a small share of babies arrive exactly on the due date. All
       calculations run in your browser.
     </p>
@@ -35,26 +67,82 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
-  const lmp = document.getElementById('dd-lmp') as HTMLInputElement;
-  const cycle = document.getElementById('dd-cycle') as HTMLInputElement;
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const sel = (id: string) => document.getElementById(id) as unknown as HTMLSelectElement;
+  const fmt = (d: Date) => d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+  const addDays = (d: Date, n: number) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
 
   function calc() {
-    if (!lmp.value) return;
-    const start = new Date(lmp.value + 'T00:00:00');
-    const adjust = (Number(cycle.value) || 28) - 28;
-    // Naegele's rule: LMP + 280 days, adjusted for cycle length.
-    const due = new Date(start);
-    due.setDate(due.getDate() + 280 + adjust);
-    document.getElementById('dd-date')!.textContent = due.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    const method = sel('dd-method').value;
+    if (!$('dd-in').value) return;
+    const input = new Date($('dd-in').value + 'T00:00:00');
+
+    // Derive the LMP-equivalent start date (day 0 of a 280-day gestation).
+    let lmp: Date;
+    if (method === 'conception') {
+      lmp = addDays(input, -14); // conception ≈ LMP + 14
+    } else if (method === 'ivf') {
+      const embryoAge = Number(sel('dd-ivf-day').value);
+      // transfer date corresponds to conception + embryoAge; LMP = transfer − embryoAge − 14
+      lmp = addDays(input, -(embryoAge + 14));
+    } else if (method === 'ultrasound') {
+      const gaDays = Number($('dd-us-w').value) * 7 + Number($('dd-us-d').value);
+      lmp = addDays(input, -gaDays); // scan date minus gestational age = LMP
+    } else {
+      const adjust = (Number($('dd-cycle').value) || 28) - 28;
+      lmp = addDays(input, -adjust); // normalize cycle so +280 works below
+    }
+
+    const due = addDays(lmp, 280);
+    document.getElementById('dd-out')!.textContent = fmt(due);
+    document.getElementById('dd-conc')!.textContent = fmt(addDays(lmp, 14)).replace(/, \d{4}$/, '');
 
     const today = new Date();
-    const daysPreg = Math.floor((today.getTime() - start.getTime()) / 86400000);
+    today.setHours(0, 0, 0, 0);
+    const daysPreg = Math.floor((today.getTime() - lmp.getTime()) / 86400000);
     const weeks = Math.floor(daysPreg / 7);
     const weekEl = document.getElementById('dd-week')!;
     const triEl = document.getElementById('dd-tri')!;
-    if (daysPreg < 0 || weeks > 45) { weekEl.textContent = '—'; triEl.textContent = '—'; return; }
-    weekEl.textContent = `${weeks}w ${daysPreg % 7}d`;
-    triEl.textContent = weeks < 13 ? '1st' : weeks < 27 ? '2nd' : '3rd';
+    const countEl = document.getElementById('dd-count')!;
+
+    if (daysPreg < 0 || weeks > 45) {
+      weekEl.textContent = '—'; triEl.textContent = '—'; countEl.textContent = '';
+    } else {
+      weekEl.textContent = `${weeks}w ${daysPreg % 7}d`;
+      triEl.textContent = weeks < 13 ? '1st' : weeks < 27 ? '2nd' : '3rd';
+      const daysLeft = Math.round((due.getTime() - today.getTime()) / 86400000);
+      countEl.textContent = daysLeft > 0
+        ? `${Math.floor(daysLeft / 7)} weeks ${daysLeft % 7} days to go`
+        : daysLeft === 0 ? 'Due today!' : `${Math.abs(daysLeft)} days past due date`;
+    }
+
+    // Milestones from LMP.
+    const milestones: [string, number][] = [
+      ['End of 1st trimester', 13 * 7],
+      ['End of 2nd trimester', 27 * 7],
+      ['Viability (~24 weeks)', 24 * 7],
+      ['Full term (37 weeks)', 37 * 7],
+      ['Due date (40 weeks)', 280],
+    ];
+    document.getElementById('dd-milestones')!.innerHTML = milestones
+      .map(([label, d]) => `<div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">${label}</span><span class="font-mono text-ink-muted">${fmt(addDays(lmp, d))}</span></div>`)
+      .join('');
   }
-  [lmp, cycle].forEach((el) => el.addEventListener('input', calc));
+
+  sel('dd-method').addEventListener('change', () => {
+    const m = sel('dd-method').value;
+    const labels: Record<string, string> = {
+      lmp: 'First day of last period', conception: 'Conception date',
+      ivf: 'IVF transfer date', ultrasound: 'Ultrasound date',
+    };
+    document.getElementById('dd-date-lbl')!.textContent = labels[m];
+    document.getElementById('dd-cycle-wrap')!.classList.toggle('hidden', m !== 'lmp');
+    document.getElementById('dd-cycle-wrap')!.classList.toggle('flex', m === 'lmp');
+    document.getElementById('dd-ivf-wrap')!.classList.toggle('hidden', m !== 'ivf');
+    document.getElementById('dd-ivf-wrap')!.classList.toggle('flex', m === 'ivf');
+    document.getElementById('dd-us-wrap')!.classList.toggle('hidden', m !== 'ultrasound');
+    document.getElementById('dd-us-wrap')!.classList.toggle('flex', m === 'ultrasound');
+    calc();
+  });
+  ['dd-in', 'dd-cycle', 'dd-ivf-day', 'dd-us-w', 'dd-us-d'].forEach((id) => document.getElementById(id)!.addEventListener('input', calc));
 </script>

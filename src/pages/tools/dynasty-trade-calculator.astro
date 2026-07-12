@@ -4,6 +4,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="dynasty-trade-calculator">
   <div class="flex flex-col gap-5">
+    <div class="flex flex-wrap gap-4">
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="dt-superflex" type="checkbox" class="accent-primary" /> Superflex (QBs worth more)
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="dt-tep" type="checkbox" class="accent-primary" /> TE premium
+      </label>
+    </div>
+
     <div class="flex flex-col gap-2">
       <label class="text-sm text-ink-subtle" for="dt-search">Add a player or pick</label>
       <div class="flex gap-2">
@@ -34,6 +43,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div class="panel panel-lift p-6 text-center">
       <div id="dt-verdict" class="font-display text-2xl font-semibold text-ink">Add assets to both sides</div>
       <div id="dt-detail" class="mt-2 text-sm text-ink-muted"></div>
+      <button id="dt-share" type="button" class="btn btn-secondary mt-4 hidden">Copy trade link</button>
     </div>
   </div>
 
@@ -92,6 +102,21 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     '2026 2nd (projected)': 1800,
   };
 
+  // Positions for the assets that get scoring adjustments.
+  const QBS = new Set(['Josh Allen', 'Jayden Daniels', 'Patrick Mahomes', 'Lamar Jackson']);
+  const TES = new Set(['Travis Kelce', 'Brock Bowers', 'Sam LaPorta', 'Trey McBride']);
+
+  const superflexEl = document.getElementById('dt-superflex') as HTMLInputElement;
+  const tepEl = document.getElementById('dt-tep') as HTMLInputElement;
+
+  // Value with scoring adjustments: QBs get a big Superflex bump; TEs a smaller TE-premium bump.
+  function valueOf(name: string): number {
+    let v = ASSETS[name] || 0;
+    if (superflexEl.checked && QBS.has(name)) v *= 1.8;
+    if (tepEl.checked && TES.has(name)) v *= 1.2;
+    return Math.round(v);
+  }
+
   const sides: { a: string[]; b: string[] } = { a: [], b: [] };
 
   // Populate datalist.
@@ -114,14 +139,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
             (name, i) => `<li class="flex items-center justify-between gap-2 rounded-sm bg-surface-2 px-3 py-1.5">
               <span class="text-ink">${name}</span>
               <span class="flex items-center gap-3">
-                <span class="font-mono text-ink-subtle">${ASSETS[name]}</span>
+                <span class="font-mono text-ink-subtle">${valueOf(name)}</span>
                 <button data-side="${side}" data-i="${i}" class="dt-remove text-ink-tertiary transition-colors hover:text-[#e5484d]" aria-label="Remove">✕</button>
               </span>
             </li>`
           )
           .join('');
       }
-      const total = items.reduce((s, n) => s + (ASSETS[n] || 0), 0);
+      const total = items.reduce((s, n) => s + valueOf(n), 0);
       document.getElementById(`dt-total-${side}`)!.textContent = total.toLocaleString('en-US');
     }
 
@@ -133,12 +158,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       });
     });
 
+    (document.getElementById('dt-share') as HTMLButtonElement).classList.toggle('hidden', !sides.a.length && !sides.b.length);
     verdict();
   }
 
   function verdict() {
-    const ta = sides.a.reduce((s, n) => s + (ASSETS[n] || 0), 0);
-    const tb = sides.b.reduce((s, n) => s + (ASSETS[n] || 0), 0);
+    const ta = sides.a.reduce((s, n) => s + valueOf(n), 0);
+    const tb = sides.b.reduce((s, n) => s + valueOf(n), 0);
     const vEl = document.getElementById('dt-verdict')!;
     const dEl = document.getElementById('dt-detail')!;
 
@@ -181,6 +207,34 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   search.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') add('a');
   });
+  [superflexEl, tepEl].forEach((el) => el.addEventListener('change', render));
+
+  // Shareable URL: encode both sides + settings into the query string.
+  const shareBtn = document.getElementById('dt-share') as HTMLButtonElement;
+  shareBtn.addEventListener('click', () => {
+    const params = new URLSearchParams();
+    if (sides.a.length) params.set('a', sides.a.join('|'));
+    if (sides.b.length) params.set('b', sides.b.join('|'));
+    if (superflexEl.checked) params.set('sf', '1');
+    if (tepEl.checked) params.set('tep', '1');
+    const url = `${location.origin}${location.pathname}?${params.toString()}`;
+    navigator.clipboard?.writeText(url).then(() => {
+      const prev = shareBtn.textContent;
+      shareBtn.textContent = 'Copied!';
+      setTimeout(() => (shareBtn.textContent = prev), 1500);
+    });
+  });
+
+  // Load a shared trade from the URL, keeping only known assets.
+  function loadFromUrl() {
+    const p = new URLSearchParams(location.search);
+    const parse = (v: string | null) => (v ? v.split('|').filter((n) => n in ASSETS) : []);
+    sides.a = parse(p.get('a'));
+    sides.b = parse(p.get('b'));
+    superflexEl.checked = p.get('sf') === '1';
+    tepEl.checked = p.get('tep') === '1';
+  }
+  loadFromUrl();
 
   render();
 </script>

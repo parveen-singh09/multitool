@@ -8,7 +8,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Starting amount
         <input id="iv-p" type="number" min="0" class="field" value="5000" inputmode="decimal" />
       </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Monthly contribution
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Contribution
         <input id="iv-pmt" type="number" min="0" class="field" value="300" inputmode="decimal" />
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Expected annual return (%)
@@ -17,6 +17,18 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Years
         <input id="iv-years" type="number" min="0" step="0.5" class="field" value="20" inputmode="decimal" />
       </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Contribute
+        <select id="iv-freq" class="field">
+          <option value="12">Monthly</option>
+          <option value="1">Annually</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Timing
+        <select id="iv-timing" class="field">
+          <option value="end">End of period</option>
+          <option value="begin">Beginning of period</option>
+        </select>
+      </label>
     </div>
 
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -24,36 +36,150 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div class="panel p-5 text-center"><div id="iv-invested" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total invested</div></div>
       <div class="panel p-5 text-center"><div id="iv-gain" class="font-mono text-xl" style="color:var(--color-success)">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total return</div></div>
     </div>
+
+    <!-- Growth chart: stacked area (invested + interest) -->
+    <div class="panel p-5">
+      <div class="mb-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-ink-subtle">
+        <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" style="background:#5e6ad2"></span>Invested</span>
+        <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" style="background:#828fff"></span>Interest</span>
+      </div>
+      <svg id="iv-chart" viewBox="0 0 320 140" class="w-full" preserveAspectRatio="none" role="img" aria-label="Investment growth over time"></svg>
+      <div id="iv-chart-axis" class="mt-1 flex justify-between font-mono text-[11px] text-ink-tertiary"></div>
+    </div>
+
+    <!-- Yearly breakdown -->
+    <details class="panel p-0">
+      <summary class="cursor-pointer list-none px-5 py-4 text-sm font-medium text-ink hover:text-primary-hover">
+        <span class="inline-flex items-center gap-2">▸ Year-by-year breakdown</span>
+      </summary>
+      <div class="overflow-x-auto border-t border-hairline">
+        <table class="w-full text-right text-[13px]">
+          <thead class="text-ink-subtle">
+            <tr class="border-b border-hairline">
+              <th class="px-4 py-2 text-left font-medium">Year</th>
+              <th class="px-4 py-2 font-medium">Contributions</th>
+              <th class="px-4 py-2 font-medium">Interest</th>
+              <th class="px-4 py-2 font-medium">Balance</th>
+            </tr>
+          </thead>
+          <tbody id="iv-sched" class="font-mono text-ink-muted"></tbody>
+        </table>
+      </div>
+    </details>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
       This free investment calculator projects the future value of an investment
-      that combines a starting lump sum with regular monthly contributions,
-      compounded monthly at your expected annual return. See how much you invest
-      versus how much you gain over time. All calculations run in your browser.
+      that combines a starting lump sum with regular contributions, compounded at
+      your expected annual return. Choose monthly or annual contributions at the
+      beginning or end of each period, watch the growth chart split what you put
+      in from what you earn, and read the full year-by-year breakdown. All
+      calculations run in your browser.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  const ids = ['iv-p', 'iv-pmt', 'iv-rate', 'iv-years'];
-  const el: Record<string, HTMLInputElement> = {};
+  const ids = ['iv-p', 'iv-pmt', 'iv-rate', 'iv-years', 'iv-freq', 'iv-timing'];
+  const el: Record<string, HTMLInputElement | HTMLSelectElement> = {};
   ids.forEach((id) => (el[id] = document.getElementById(id) as HTMLInputElement));
   const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+  const money0 = (n: number) => Math.round(n).toLocaleString();
+  const SVGNS = 'http://www.w3.org/2000/svg';
 
   function calc() {
     const P = Number(el['iv-p'].value);
     const pmt = Number(el['iv-pmt'].value);
-    const r = Number(el['iv-rate'].value) / 100 / 12;
-    const n = Math.round(Number(el['iv-years'].value) * 12);
+    const annual = Number(el['iv-rate'].value) / 100;
+    const yearsF = Number(el['iv-years'].value);
+    const perYear = Number((el['iv-freq'] as HTMLSelectElement).value); // 12 or 1
+    const begin = (el['iv-timing'] as HTMLSelectElement).value === 'begin';
+    const periods = Math.round(yearsF * perYear);
+    const r = annual / perYear;
+
+    // Step period-by-period; snapshot balance + cumulative invested at each year end.
     let balance = P;
-    for (let i = 0; i < n; i++) balance = balance * (1 + r) + pmt;
-    const invested = P + pmt * n;
+    let invested = P;
+    const yearRows: { year: number; contributions: number; interest: number; balance: number }[] = [];
+    const points: { invested: number; balance: number }[] = [{ invested: P, balance: P }];
+    let prevYearBalance = P, prevYearInvested = P;
+    for (let i = 1; i <= periods; i++) {
+      if (begin) balance += pmt;
+      balance *= 1 + r;
+      if (!begin) balance += pmt;
+      invested += pmt;
+      if (i % perYear === 0 || i === periods) {
+        const yr = Math.ceil(i / perYear);
+        yearRows.push({
+          year: yr,
+          contributions: invested - prevYearInvested,
+          interest: balance - prevYearBalance - (invested - prevYearInvested),
+          balance,
+        });
+        points.push({ invested, balance });
+        prevYearBalance = balance; prevYearInvested = invested;
+      }
+    }
+
     document.getElementById('iv-final')!.textContent = money(balance);
     document.getElementById('iv-invested')!.textContent = money(invested);
     document.getElementById('iv-gain')!.textContent = money(balance - invested);
+
+    drawChart(points);
+
+    const sched = document.getElementById('iv-sched')!;
+    sched.innerHTML = '';
+    for (const row of yearRows) {
+      const tr = document.createElement('tr');
+      tr.className = 'border-b border-hairline/50';
+      tr.innerHTML = `<td class="px-4 py-1.5 text-left text-ink-subtle">${row.year}</td><td class="px-4 py-1.5">${money0(row.contributions)}</td><td class="px-4 py-1.5">${money0(Math.max(0, row.interest))}</td><td class="px-4 py-1.5">${money0(row.balance)}</td>`;
+      sched.appendChild(tr);
+    }
   }
+
+  // Stacked area: lower band = invested (principal+contributions), upper = interest.
+  function drawChart(points: { invested: number; balance: number }[]) {
+    const svg = document.getElementById('iv-chart')!;
+    svg.innerHTML = '';
+    const W = 320, H = 140;
+    const maxV = Math.max(...points.map((p) => p.balance), 1);
+    const n = points.length - 1;
+    const x = (i: number) => (n === 0 ? 0 : (i / n) * W);
+    const y = (v: number) => H - (v / maxV) * H;
+
+    const investedLine = points.map((p, i) => `${x(i).toFixed(1)},${y(p.invested).toFixed(1)}`);
+    const balanceLine = points.map((p, i) => `${x(i).toFixed(1)},${y(p.balance).toFixed(1)}`);
+
+    // interest band (between invested and balance)
+    const interestArea = document.createElementNS(SVGNS, 'polygon');
+    interestArea.setAttribute('points', [...balanceLine, ...investedLine.slice().reverse()].join(' '));
+    interestArea.setAttribute('fill', '#828fff');
+    interestArea.setAttribute('opacity', '0.35');
+    svg.appendChild(interestArea);
+
+    // invested band (baseline to invested)
+    const investedArea = document.createElementNS(SVGNS, 'polygon');
+    investedArea.setAttribute('points', [`0,${H}`, ...investedLine, `${W},${H}`].join(' '));
+    investedArea.setAttribute('fill', '#5e6ad2');
+    investedArea.setAttribute('opacity', '0.4');
+    svg.appendChild(investedArea);
+
+    // balance stroke on top
+    const line = document.createElementNS(SVGNS, 'polyline');
+    line.setAttribute('points', balanceLine.join(' '));
+    line.setAttribute('fill', 'none');
+    line.setAttribute('stroke', '#828fff');
+    line.setAttribute('stroke-width', '2');
+    line.setAttribute('vector-effect', 'non-scaling-stroke');
+    svg.appendChild(line);
+
+    // axis labels: year 0, mid, end
+    const axis = document.getElementById('iv-chart-axis')!;
+    axis.innerHTML = `<span>Yr 0</span><span>Yr ${Math.round(n / 2)}</span><span>Yr ${n}</span>`;
+  }
+
   ids.forEach((id) => el[id].addEventListener('input', calc));
+  ['iv-freq', 'iv-timing'].forEach((id) => el[id].addEventListener('change', calc));
   calc();
 </script>

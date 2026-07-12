@@ -4,10 +4,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="crypto-converter">
   <div class="flex flex-col gap-4">
-    <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-2">
+    <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
       <div class="flex flex-col gap-1">
-        <label class="text-sm text-ink-subtle" for="cr-from-val">Cryptocurrency</label>
-        <input id="cr-from-val" type="number" class="field" value="1" inputmode="decimal" />
+        <label class="text-sm text-ink-subtle" for="cr-from-val">From (cryptocurrency)</label>
+        <input id="cr-from-val" type="number" class="field" value="1" inputmode="decimal" min="0" />
         <div class="relative mt-1">
           <button
             id="cr-from-trigger"
@@ -22,26 +22,83 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
               <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </button>
-          <ul
+          <div
             id="cr-from-list"
-            role="listbox"
-            tabindex="-1"
-            aria-label="Cryptocurrency"
-            class="absolute z-20 mt-1 hidden max-h-72 w-full overflow-auto rounded-md border border-hairline bg-surface-1 py-1 shadow-xl"
-          ></ul>
+            class="absolute z-20 mt-1 hidden w-full overflow-hidden rounded-md border border-hairline bg-surface-1 shadow-xl"
+          >
+            <div class="border-b border-hairline p-1.5">
+              <input
+                id="cr-from-search"
+                type="text"
+                class="field w-full text-[15px]"
+                placeholder="Search coin…"
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
+              />
+            </div>
+            <ul
+              id="cr-from-options"
+              role="listbox"
+              tabindex="-1"
+              aria-label="Cryptocurrency"
+              class="max-h-64 overflow-auto py-1"
+            ></ul>
+          </div>
         </div>
       </div>
+
+      <div class="flex justify-center pb-1 sm:pb-[calc(0.375rem+42px)]">
+        <button
+          id="cr-swap"
+          type="button"
+          class="btn-tertiary flex h-9 w-9 items-center justify-center rounded-md p-0"
+          title="Swap from and to"
+          aria-label="Swap from and to"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M7 4v13m0 0l-3-3m3 3l3-3M17 20V7m0 0l-3 3m3-3l3 3" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </div>
+
       <div class="flex flex-col gap-1">
-        <label class="text-sm text-ink-subtle" for="cr-to-val">Currency</label>
-        <input id="cr-to-val" type="number" class="field" readonly />
+        <label class="text-sm text-ink-subtle" for="cr-to-val">To (currency or coin)</label>
+        <div class="relative">
+          <input id="cr-to-val" type="number" class="field pr-10" inputmode="decimal" min="0" />
+          <button
+            id="cr-copy"
+            type="button"
+            class="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded text-ink-tertiary hover:bg-surface-2 hover:text-ink"
+            title="Copy result"
+            aria-label="Copy result"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.75" />
+              <path d="M5 15V5a2 2 0 012-2h10" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
         <select id="cr-to" class="field mt-1"></select>
       </div>
     </div>
 
-    <p id="cr-rate" class="flex items-center gap-1.5 text-[13px] text-ink-tertiary"></p>
+    <div class="flex flex-wrap items-center gap-1.5">
+      <span class="mr-1 text-[13px] text-ink-tertiary">Amount</span>
+      <button type="button" class="cr-preset btn-tertiary px-2.5 py-1 text-[13px]" data-amt="0.5">0.5</button>
+      <button type="button" class="cr-preset btn-tertiary px-2.5 py-1 text-[13px]" data-amt="1">1</button>
+      <button type="button" class="cr-preset btn-tertiary px-2.5 py-1 text-[13px]" data-amt="10">10</button>
+      <button type="button" class="cr-preset btn-tertiary px-2.5 py-1 text-[13px]" data-amt="100">100</button>
+      <button type="button" class="cr-preset btn-tertiary px-2.5 py-1 text-[13px]" data-amt="1000">1,000</button>
+    </div>
+
+    <p id="cr-rate" class="flex flex-wrap items-center gap-1.5 text-[13px] text-ink-tertiary"></p>
 
     <div>
-      <p id="cr-table-label" class="mb-2 text-[13px] text-ink-subtle">Market prices</p>
+      <div class="mb-2 flex items-center justify-between gap-2">
+        <p id="cr-table-label" class="text-[13px] text-ink-subtle">Market prices</p>
+        <span class="text-[12px] text-ink-tertiary">24h change</span>
+      </div>
       <div id="cr-table" class="max-h-80 overflow-auto rounded-md border border-hairline"></div>
     </div>
 
@@ -52,11 +109,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p>
       This free cryptocurrency converter uses live market prices to convert from
       any of 100 major coins — Bitcoin, Ethereum, Solana and more — into any of
-      166 world currencies. Enter an amount, choose the coin and target currency,
-      and see the value plus a live price table. Crypto prices come from a public
-      market-data service and exchange rates from a public FX service, fetched
-      directly from your browser; no account is needed and nothing you enter is
-      stored. Crypto prices are volatile, so treat figures as indicative.
+      166 world currencies or into another cryptocurrency (crypto-to-crypto).
+      Enter an amount on either side and the other updates instantly, or tap an
+      amount preset. Search the coin picker by name or ticker, swap the two sides
+      with one click, and copy the result. A live price table shows every coin
+      with its 24-hour change. Crypto prices come from a public market-data
+      service and exchange rates from a public FX service, fetched directly from
+      your browser; no account is needed and nothing you enter is stored. Crypto
+      prices are volatile, so treat figures as indicative.
     </p>
   </div>
 </ToolLayout>
@@ -119,24 +179,47 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const fromVal = document.getElementById('cr-from-val') as HTMLInputElement;
   const toVal = document.getElementById('cr-to-val') as HTMLInputElement;
   const fromTrigger = document.getElementById('cr-from-trigger') as HTMLButtonElement;
-  const fromList = document.getElementById('cr-from-list') as HTMLUListElement;
+  const fromPanel = document.getElementById('cr-from-list') as HTMLDivElement;
+  const fromList = document.getElementById('cr-from-options') as HTMLUListElement;
+  const fromSearch = document.getElementById('cr-from-search') as HTMLInputElement;
   const fromIcon = document.getElementById('cr-from-icon')!;
   const fromLabel = document.getElementById('cr-from-label')!;
   const toSel = document.getElementById('cr-to') as HTMLSelectElement;
+  const swapBtn = document.getElementById('cr-swap') as HTMLButtonElement;
+  const copyBtn = document.getElementById('cr-copy') as HTMLButtonElement;
   const rateLine = document.getElementById('cr-rate')!;
   const table = document.getElementById('cr-table')!;
   const tableLabel = document.getElementById('cr-table-label')!;
   const err = document.getElementById('cr-error')!;
 
-  // Selected CoinGecko id for the custom cryptocurrency dropdown.
+  // Selected CoinGecko id for the custom cryptocurrency dropdown (the "from" coin).
   let fromId = 'bitcoin';
+  // Which side the user last edited, so the other side is the computed output.
+  let lastEdited: 'from' | 'to' = 'from';
 
   // USD price of one coin, keyed by CoinGecko id.
   let coinUsd: Record<string, number> = {};
+  // 24h price change %, keyed by CoinGecko id.
+  let coinChg: Record<string, number> = {};
   // Icon URL for one coin, keyed by CoinGecko id.
   let coinImg: Record<string, string> = {};
   // Units of currency per 1 USD, keyed by ISO code.
   let fx: Record<string, number> = {};
+
+  // A "to" target is either a crypto coin (id prefixed "c:") or a fiat ISO code.
+  const isCoinTarget = (v: string) => v.startsWith('c:');
+  const targetCoinId = (v: string) => v.slice(2);
+  // USD value of one unit of the current target (coin or fiat), or undefined.
+  function targetUsdPerUnit(v: string): number | undefined {
+    if (isCoinTarget(v)) {
+      const p = coinUsd[targetCoinId(v)];
+      return p ? p : undefined; // price of 1 target coin in USD
+    }
+    const r = fx[v];
+    return r ? 1 / r : undefined; // 1 fiat unit in USD
+  }
+  // Human label + symbol for the current target, for the rate line.
+  const targetSym = (v: string) => (isCoinTarget(v) ? COINS[targetCoinId(v)]?.[0] ?? v : v);
 
   let ccyName: { of: (c: string) => string | undefined };
   try { ccyName = new Intl.DisplayNames(undefined, { type: 'currency' }); }
@@ -148,6 +231,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   const fmt = (n: number, max = 6) =>
     new Intl.NumberFormat(undefined, { maximumFractionDigits: max }).format(n);
+
+  // Round to 8 significant-ish decimals without scientific notation.
+  const round8 = (n: number) => Math.round(n * 1e8) / 1e8;
 
   // Coin icon <img>; empty string when no icon is known so layout stays stable.
   const iconImg = (id: string, size = 16) => {
@@ -173,7 +259,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     // Custom cryptocurrency listbox: one option row per coin, icon + symbol + name.
     fromList.innerHTML = Object.entries(COINS)
       .map(([id, [sym, name]], i) => `
-        <li role="option" id="cr-opt-${i}" data-id="${id}" aria-selected="${id === fromId}"
+        <li role="option" id="cr-opt-${i}" data-id="${id}" data-search="${sym} ${name}" aria-selected="${id === fromId}"
           class="flex cursor-pointer items-center gap-2 px-3 py-2 text-[15px] text-ink-subtle aria-selected:bg-surface-2 hover:bg-surface-2">
           <span class="cr-opt-icon flex shrink-0 items-center"></span>
           <span class="min-w-0 flex-1 truncate">${sym} <span class="text-ink-tertiary">${name}</span></span>
@@ -185,10 +271,32 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const seen = new Set<string>();
     const codes = FIAT_CODES.filter((c) => (seen.has(c) ? false : seen.add(c)));
     codes.sort((a, b) => currencyName(a).localeCompare(currencyName(b)));
-    toSel.innerHTML = codes
+    const fiatOpts = codes
       .map((code) => `<option value="${code}">${code} — ${currencyName(code)}</option>`)
       .join('');
+    // Also let the target be another cryptocurrency (crypto-to-crypto).
+    const coinOpts = Object.entries(COINS)
+      .map(([id, [sym, name]]) => `<option value="c:${id}">${sym} — ${name}</option>`)
+      .join('');
+    toSel.innerHTML =
+      `<optgroup label="Fiat currencies">${fiatOpts}</optgroup>` +
+      `<optgroup label="Cryptocurrencies">${coinOpts}</optgroup>`;
     toSel.value = 'USD';
+  }
+
+  const escRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  // Filter the coin listbox by the search box (matches symbol or name).
+  function filterCoins() {
+    const q = fromSearch.value.trim().toLowerCase();
+    let firstVisible: HTMLElement | null = null;
+    fromList.querySelectorAll<HTMLElement>('li[data-id]').forEach((li) => {
+      const hay = (li.dataset.search ?? '').toLowerCase();
+      const show = !q || hay.includes(q);
+      li.classList.toggle('hidden', !show);
+      if (show && !firstVisible) firstVisible = li;
+    });
+    if (firstVisible) setActive(firstVisible);
   }
 
   // Reflect the selected coin in the trigger button (icon + name).
@@ -210,14 +318,17 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   }
 
   function openList() {
-    fromList.classList.remove('hidden');
+    fromPanel.classList.remove('hidden');
     fromTrigger.setAttribute('aria-expanded', 'true');
+    fromSearch.value = '';
+    filterCoins();
+    fromSearch.focus();
     const sel = fromList.querySelector<HTMLElement>('li[aria-selected="true"]');
     (sel ?? fromList.querySelector<HTMLElement>('li'))?.scrollIntoView({ block: 'nearest' });
   }
 
   function closeList() {
-    fromList.classList.add('hidden');
+    fromPanel.classList.add('hidden');
     fromTrigger.setAttribute('aria-expanded', 'false');
   }
 
@@ -229,33 +340,56 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     updateFromTrigger();
     closeList();
     fromTrigger.focus();
+    // Keep whichever side the user last edited fixed; recompute the other.
     convert();
   }
 
   function convert() {
     if (!Object.keys(coinUsd).length || !Object.keys(fx).length) return;
-    const v = Number(fromVal.value);
-    const usd = coinUsd[fromId];
-    const rate = fx[toSel.value];
-    if (isNaN(v) || usd === undefined || rate === undefined) { toVal.value = ''; rateLine.textContent = ''; return; }
-    const perUnit = usd * rate; // value of 1 coin in the target currency
-    toVal.value = String(Math.round(v * perUnit * 1e8) / 1e8);
+    const usd = coinUsd[fromId];             // USD price of 1 "from" coin
+    const tgt = toSel.value;
+    const tgtUsd = targetUsdPerUnit(tgt);    // USD value of 1 target unit
+    if (usd === undefined || tgtUsd === undefined) {
+      toVal.value = ''; fromVal.value = ''; rateLine.textContent = ''; return;
+    }
+    const perUnit = usd / tgtUsd; // how many target units 1 "from" coin is worth
+
+    if (lastEdited === 'to') {
+      const t = Number(toVal.value);
+      if (toVal.value === '' || isNaN(t)) { fromVal.value = ''; }
+      else fromVal.value = String(round8(t / perUnit));
+    } else {
+      const v = Number(fromVal.value);
+      if (fromVal.value === '' || isNaN(v)) { toVal.value = ''; }
+      else toVal.value = String(round8(v * perUnit));
+    }
+
     const sym = COINS[fromId][0];
-    rateLine.innerHTML = `${iconImg(fromId)}<span>1 ${sym} = ${fmtCcy(perUnit, toSel.value)}</span>`;
+    const rhs = isCoinTarget(tgt)
+      ? `${fmt(perUnit, 8)} ${targetSym(tgt)}`
+      : fmtCcy(perUnit, tgt);
+    rateLine.innerHTML = `${iconImg(fromId)}<span>1 ${sym} = ${rhs}</span>`;
   }
 
   function renderTable() {
-    const rate = fx[toSel.value];
+    // Table always prices in a fiat: use the target when it is fiat, else USD.
+    const code = isCoinTarget(toSel.value) ? 'USD' : toSel.value;
+    const rate = fx[code];
     if (rate === undefined) { table.innerHTML = ''; return; }
-    tableLabel.textContent = `Market prices (${toSel.value})`;
+    tableLabel.textContent = `Market prices (${code})`;
     const rows = Object.entries(COINS).map(([id, [sym, name]]) => {
       const usd = coinUsd[id];
       if (usd === undefined) return '';
+      const chg = coinChg[id];
+      const chgCell = chg === undefined
+        ? '<td class="px-3 py-2 text-right font-mono text-ink-tertiary">—</td>'
+        : `<td class="px-3 py-2 text-right font-mono" style="color:${chg >= 0 ? '#30a46c' : '#e5484d'}">${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%</td>`;
       return `<tr class="border-t border-hairline">
         <td class="px-3 py-2 text-ink-subtle">
           <span class="flex items-center gap-2">${iconImg(id)}<span>${sym} <span class="text-ink-tertiary">${name}</span></span></span>
         </td>
-        <td class="px-3 py-2 text-right font-mono text-ink">${fmtCcy(usd * rate, toSel.value)}</td>
+        <td class="px-3 py-2 text-right font-mono text-ink">${fmtCcy(usd * rate, code)}</td>
+        ${chgCell}
       </tr>`;
     }).join('');
     table.innerHTML = `<table class="w-full text-[13px]">${rows}</table>`;
@@ -273,7 +407,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       if (!fxRes.ok) throw new Error('fx status ' + fxRes.status);
       const priceJson = await priceRes.json();
       const fxJson = await fxRes.json();
-      const markets = priceJson as Array<{ id: string; current_price?: number; image?: string }>;
+      const markets = priceJson as Array<{ id: string; current_price?: number; image?: string; price_change_percentage_24h?: number }>;
       coinUsd = Object.fromEntries(
         markets
           .filter((m) => typeof m.current_price === 'number')
@@ -283,6 +417,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         markets
           .filter((m) => typeof m.image === 'string')
           .map((m) => [m.id, m.image as string]),
+      );
+      coinChg = Object.fromEntries(
+        markets
+          .filter((m) => typeof m.price_change_percentage_24h === 'number')
+          .map((m) => [m.id, m.price_change_percentage_24h as number]),
       );
       fx = (fxJson.rates ?? {}) as Record<string, number>;
       if (!Object.keys(coinUsd).length || !Object.keys(fx).length) throw new Error('empty');
@@ -295,11 +434,52 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }
   }
 
-  fromVal.addEventListener('input', convert);
+  fromVal.addEventListener('input', () => { lastEdited = 'from'; convert(); });
+  toVal.addEventListener('input', () => { lastEdited = 'to'; convert(); });
   toSel.addEventListener('change', () => { convert(); renderTable(); });
 
+  // Amount presets set the "from" amount.
+  document.querySelectorAll<HTMLButtonElement>('.cr-preset').forEach((b) =>
+    b.addEventListener('click', () => {
+      fromVal.value = b.dataset.amt ?? '1';
+      lastEdited = 'from';
+      convert();
+    }),
+  );
+
+  // Swap: the current "to" target becomes the "from" coin (when it is a coin),
+  // otherwise just flip the amounts and keep the value the user sees.
+  swapBtn.addEventListener('click', () => {
+    const tgt = toSel.value;
+    if (isCoinTarget(tgt)) {
+      // from-coin <-> to-coin: exchange both sides.
+      const newFrom = targetCoinId(tgt);
+      toSel.value = 'c:' + fromId;
+      selectFrom(newFrom); // updates trigger + converts
+    } else {
+      // from is a coin, to is fiat — can't make a coin the target's "from",
+      // so just move the computed amount into the from box and recompute.
+      const t = toVal.value;
+      fromVal.value = t;
+      lastEdited = 'from';
+      convert();
+    }
+    renderTable();
+  });
+
+  // Copy the result value to the clipboard.
+  copyBtn.addEventListener('click', async () => {
+    if (!toVal.value) return;
+    try {
+      await navigator.clipboard.writeText(toVal.value);
+      const orig = copyBtn.getAttribute('title');
+      copyBtn.setAttribute('title', 'Copied!');
+      setTimeout(() => copyBtn.setAttribute('title', orig ?? 'Copy result'), 1200);
+    } catch { /* clipboard unavailable */ }
+  });
+
   // --- Custom cryptocurrency dropdown interaction ---
-  const isOpen = () => !fromList.classList.contains('hidden');
+  const isOpen = () => !fromPanel.classList.contains('hidden');
 
   fromTrigger.addEventListener('click', () => (isOpen() ? closeList() : openList()));
 
@@ -308,9 +488,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (li) selectFrom(li.dataset.id!);
   });
 
+  fromSearch.addEventListener('input', filterCoins);
+
   // Roving highlight for keyboard users; tracks the "active" option separately
-  // from the committed selection.
-  const options = () => Array.from(fromList.querySelectorAll<HTMLElement>('li[data-id]'));
+  // from the committed selection. Only visible (unfiltered) options participate.
+  const options = () =>
+    Array.from(fromList.querySelectorAll<HTMLElement>('li[data-id]')).filter(
+      (li) => !li.classList.contains('hidden'),
+    );
   const setActive = (el: HTMLElement | null) => {
     if (!el) return;
     fromList.querySelectorAll('li.cr-active').forEach((n) => n.classList.remove('cr-active', 'bg-surface-2'));
@@ -324,25 +509,24 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       openList();
-      setActive(fromList.querySelector<HTMLElement>('li[aria-selected="true"]') ?? options()[0]);
-      fromList.focus();
     }
   });
 
-  fromList.addEventListener('keydown', (e) => {
+  // Keyboard navigation lives on the search box (which holds focus when open).
+  fromSearch.addEventListener('keydown', (e) => {
     const opts = options();
     const cur = activeEl();
     const idx = cur ? opts.indexOf(cur) : -1;
     if (e.key === 'ArrowDown') { e.preventDefault(); setActive(opts[Math.min(idx + 1, opts.length - 1)] ?? opts[0]); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(opts[Math.max(idx - 1, 0)]); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(opts[Math.max(idx - 1, 0)] ?? opts[0]); }
     else if (e.key === 'Home') { e.preventDefault(); setActive(opts[0]); }
     else if (e.key === 'End') { e.preventDefault(); setActive(opts[opts.length - 1]); }
-    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (cur) selectFrom(cur.dataset.id!); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (cur) selectFrom(cur.dataset.id!); else if (opts[0]) selectFrom(opts[0].dataset.id!); }
     else if (e.key === 'Escape') { e.preventDefault(); closeList(); fromTrigger.focus(); }
   });
 
   document.addEventListener('click', (e) => {
-    if (isOpen() && !fromTrigger.contains(e.target as Node) && !fromList.contains(e.target as Node)) closeList();
+    if (isOpen() && !fromTrigger.contains(e.target as Node) && !fromPanel.contains(e.target as Node)) closeList();
   });
 
   fillSelects();

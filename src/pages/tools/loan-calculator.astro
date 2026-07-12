@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="loan-calculator">
   <div class="flex flex-col gap-4">
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Loan amount
         <input id="ln-amt" type="number" min="0" class="field" value="100000" inputmode="decimal" />
       </label>
@@ -14,6 +14,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Term (years)
         <input id="ln-years" type="number" min="0" step="0.5" class="field" value="5" inputmode="decimal" />
       </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Extra payment / month
+        <input id="ln-extra" type="number" min="0" class="field" value="0" inputmode="decimal" />
+      </label>
     </div>
 
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -21,14 +24,52 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div class="panel p-5 text-center"><div id="ln-interest" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total interest</div></div>
       <div class="panel p-5 text-center"><div id="ln-total" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total repayment</div></div>
     </div>
+
+    <!-- Principal vs interest split -->
+    <div class="flex flex-col gap-2">
+      <div class="flex h-4 overflow-hidden rounded-full bg-surface-3">
+        <span id="ln-bar-p" class="transition-[width] duration-300" style="width:0;background:#5e6ad2" title="Principal"></span>
+        <span id="ln-bar-i" class="transition-[width] duration-300" style="width:0;background:#8a8f98" title="Interest"></span>
+      </div>
+      <div class="flex flex-wrap gap-x-5 gap-y-1 text-xs text-ink-subtle">
+        <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" style="background:#5e6ad2"></span>Principal <span id="ln-lp" class="font-mono text-ink-muted"></span></span>
+        <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" style="background:#8a8f98"></span>Interest <span id="ln-li" class="font-mono text-ink-muted"></span></span>
+      </div>
+    </div>
+
+    <!-- Payoff note when extra payment is set -->
+    <div id="ln-payoff" class="hidden panel p-4 text-center text-[13px] text-ink-muted"></div>
+
+    <!-- Amortization schedule (yearly) -->
+    <details class="panel p-0">
+      <summary class="cursor-pointer list-none px-5 py-4 text-sm font-medium text-ink hover:text-primary-hover">
+        <span class="inline-flex items-center gap-2">▸ Amortization schedule (by year)</span>
+      </summary>
+      <div class="overflow-x-auto border-t border-hairline">
+        <table class="w-full text-right text-[13px]">
+          <thead class="text-ink-subtle">
+            <tr class="border-b border-hairline">
+              <th class="px-4 py-2 text-left font-medium">Year</th>
+              <th class="px-4 py-2 font-medium">Principal</th>
+              <th class="px-4 py-2 font-medium">Interest</th>
+              <th class="px-4 py-2 font-medium">Balance</th>
+            </tr>
+          </thead>
+          <tbody id="ln-sched" class="font-mono text-ink-muted"></tbody>
+        </table>
+      </div>
+    </details>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
       This free loan calculator works out your fixed monthly payment (EMI), the
       total interest you will pay, and the total amount repaid over the life of a
-      loan. Enter the amount borrowed, the annual interest rate and the term in
-      years to see the breakdown instantly. All calculations run in your browser.
+      loan. It also builds a full amortization schedule showing how each year's
+      payments split between principal and interest, and how much interest an
+      extra monthly payment saves you. Enter the amount borrowed, the annual
+      interest rate and the term to see everything instantly. All calculations
+      run in your browser.
     </p>
   </div>
 </ToolLayout>
@@ -37,27 +78,85 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const amt = document.getElementById('ln-amt') as HTMLInputElement;
   const rate = document.getElementById('ln-rate') as HTMLInputElement;
   const years = document.getElementById('ln-years') as HTMLInputElement;
+  const extraEl = document.getElementById('ln-extra') as HTMLInputElement;
   const emiEl = document.getElementById('ln-emi')!;
   const intEl = document.getElementById('ln-interest')!;
   const totEl = document.getElementById('ln-total')!;
 
   const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+  const money0 = (n: number) => Math.round(n).toLocaleString();
+
+  // Iterate months from a fixed base payment + optional extra. Returns total
+  // interest, months to payoff, and per-year principal/interest/balance rows.
+  function amortize(P: number, r: number, base: number, extra: number) {
+    let bal = P, totalInterest = 0, month = 0, yrP = 0, yrI = 0;
+    const yearsArr: { principal: number; interest: number; balance: number }[] = [];
+    const cap = 1200;
+    while (bal > 0.005 && month < cap) {
+      const interest = bal * r;
+      let principalPaid = base - interest + extra;
+      if (principalPaid <= 0) break;
+      if (principalPaid > bal) principalPaid = bal;
+      bal -= principalPaid; totalInterest += interest;
+      yrP += principalPaid; yrI += interest; month++;
+      if (month % 12 === 0 || bal <= 0.005) { yearsArr.push({ principal: yrP, interest: yrI, balance: Math.max(0, bal) }); yrP = 0; yrI = 0; }
+    }
+    return { totalInterest, months: month, years: yearsArr, paysOff: bal <= 0.005 };
+  }
 
   function calc() {
     const P = Number(amt.value);
     const annual = Number(rate.value);
     const n = Number(years.value) * 12;
-    if (!(P > 0) || !(n > 0)) { emiEl.textContent = intEl.textContent = totEl.textContent = '—'; return; }
+    const extra = Math.max(0, Number(extraEl.value) || 0);
+    const sched = document.getElementById('ln-sched')!;
+    const payoffBox = document.getElementById('ln-payoff')!;
+    sched.innerHTML = '';
+    if (!(P > 0) || !(n > 0)) {
+      emiEl.textContent = intEl.textContent = totEl.textContent = '—';
+      payoffBox.classList.add('hidden');
+      return;
+    }
     const r = annual / 12 / 100;
-    let emi: number;
-    if (r === 0) emi = P / n;
-    else emi = (P * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
-    const total = emi * n;
+    const emi = r === 0 ? P / n : (P * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+
+    const res = amortize(P, r, emi, extra);
+    const totalInterest = res.totalInterest;
     emiEl.textContent = money(emi);
-    intEl.textContent = money(total - P);
-    totEl.textContent = money(total);
+    intEl.textContent = money(totalInterest);
+    totEl.textContent = money(P + totalInterest);
+
+    // split bar
+    const total = P + totalInterest;
+    document.getElementById('ln-bar-p')!.style.width = `${(P / total) * 100}%`;
+    document.getElementById('ln-bar-i')!.style.width = `${(totalInterest / total) * 100}%`;
+    document.getElementById('ln-lp')!.textContent = money0(P);
+    document.getElementById('ln-li')!.textContent = money0(totalInterest);
+
+    // payoff note vs baseline
+    if (extra > 0) {
+      const base = amortize(P, r, emi, 0);
+      const saved = base.totalInterest - totalInterest;
+      const monthsSaved = base.months - res.months;
+      payoffBox.classList.remove('hidden');
+      payoffBox.innerHTML = res.paysOff && saved > 0.5
+        ? `Paid off in <span class="font-mono text-ink">${Math.floor(res.months / 12)}y ${res.months % 12}m</span> — <span class="text-success">${monthsSaved} fewer payments</span>, saving <span class="font-mono text-success">${money0(saved)}</span> in interest.`
+        : 'Extra payment added.';
+    } else {
+      payoffBox.classList.add('hidden');
+    }
+
+    // yearly schedule
+    let yr = 1;
+    for (const y of res.years) {
+      const tr = document.createElement('tr');
+      tr.className = 'border-b border-hairline/50';
+      tr.innerHTML = `<td class="px-4 py-1.5 text-left text-ink-subtle">${yr}</td><td class="px-4 py-1.5">${money0(y.principal)}</td><td class="px-4 py-1.5">${money0(y.interest)}</td><td class="px-4 py-1.5">${money0(y.balance)}</td>`;
+      sched.appendChild(tr);
+      yr++;
+    }
   }
 
-  [amt, rate, years].forEach((el) => el.addEventListener('input', calc));
+  [amt, rate, years, extraEl].forEach((el) => el.addEventListener('input', calc));
   calc();
 </script>

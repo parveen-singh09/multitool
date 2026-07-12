@@ -18,8 +18,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p id="pc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
 
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <div class="panel panel-lift p-6 text-center"><div id="pc-npr" class="font-mono text-2xl font-semibold text-primary-hover break-all">—</div><div class="mt-1 text-[13px] text-ink-subtle">Permutations (ₙPᵣ)</div></div>
-      <div class="panel panel-lift p-6 text-center"><div id="pc-ncr" class="font-mono text-2xl font-semibold text-primary-hover break-all">—</div><div class="mt-1 text-[13px] text-ink-subtle">Combinations (ₙCᵣ)</div></div>
+      <div class="panel panel-lift p-6 text-center"><div id="pc-npr" class="font-mono text-2xl font-semibold text-primary-hover break-all">—</div><div class="mt-1 text-[13px] text-ink-subtle">Permutations (ₙPᵣ)</div><div id="pc-npr-f" class="mt-1 text-[12px] text-ink-tertiary"></div></div>
+      <div class="panel panel-lift p-6 text-center"><div id="pc-ncr" class="font-mono text-2xl font-semibold text-primary-hover break-all">—</div><div class="mt-1 text-[13px] text-ink-subtle">Combinations (ₙCᵣ)</div><div id="pc-ncr-f" class="mt-1 text-[12px] text-ink-tertiary"></div></div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="panel p-5 text-center"><div id="pc-npr-rep" class="font-mono text-xl text-ink break-all">—</div><div class="mt-1 text-[13px] text-ink-subtle">Permutations with repetition (nʳ)</div></div>
+      <div class="panel p-5 text-center"><div id="pc-ncr-rep" class="font-mono text-xl text-ink break-all">—</div><div class="mt-1 text-[13px] text-ink-subtle">Combinations with repetition</div></div>
     </div>
 
     <div class="panel p-5">
@@ -84,9 +89,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   }
 
   const setEmpty = () => {
-    ['pc-npr', 'pc-ncr', 'pc-nfact', 'pc-rfact', 'pc-nrfact'].forEach(
+    ['pc-npr', 'pc-ncr', 'pc-nfact', 'pc-rfact', 'pc-nrfact', 'pc-npr-rep', 'pc-ncr-rep'].forEach(
       (id) => (document.getElementById(id)!.textContent = '—'),
     );
+    ['pc-npr-f', 'pc-ncr-f'].forEach((id) => (document.getElementById(id)!.textContent = ''));
   };
 
   function calc() {
@@ -122,6 +128,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     write('pc-nfact', factorial(n));
     write('pc-rfact', factorial(r));
     write('pc-nrfact', factorial(n - r));
+    // With repetition: permutations = n^r, combinations = C(n+r-1, r).
+    write('pc-npr-rep', Math.pow(n, r));
+    write('pc-ncr-rep', n === 0 && r === 0 ? 1 : nCr(n + r - 1, r));
+
+    // Substituted formula strings.
+    document.getElementById('pc-npr-f')!.textContent = `${n}! / (${n} − ${r})!`;
+    document.getElementById('pc-ncr-f')!.textContent = `${n}! / (${r}! · (${n} − ${r})!)`;
 
     if (anyApprox) approxEl.classList.remove('hidden');
   }

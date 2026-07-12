@@ -43,6 +43,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <option value="0.05">Pennyweight (dwt)</option>
           <option value="0.00003215075">Milligram (mg)</option>
           <option value="32.150747">Kilogram (kg)</option>
+          <option value="0.375">Tola (11.664 g)</option>
+          <option value="0.4901052">Baht (15.244 g)</option>
         </select>
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Purity / Fineness
@@ -52,7 +54,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <option value="0.950" selected>Jewelry Pt950</option>
           <option value="0.900">Pt900</option>
           <option value="0.850">Pt850</option>
+          <option value="custom">Custom fineness…</option>
         </select>
+      </label>
+      <label id="plat-custom-wrap" class="hidden flex-col gap-1 text-sm text-ink-subtle">Custom fineness (0–1)
+        <input id="plat-custom" type="number" min="0" max="1" step="0.001" class="field" value="0.585" inputmode="decimal" />
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Buyer pays (% of melt)
         <input id="plat-pct" type="number" min="0" max="100" class="field" value="100" inputmode="decimal" />
@@ -226,6 +232,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   }
 
   let lastUpdated = '';
+  let spotFetchedAt: number | null = null; // performance.now() at last successful fetch
+  let statusBase = ''; // status text without the age suffix
 
   // Recompute the spot-price field from live USD platinum price + selected
   // currency rate, i.e. the local price in the chosen currency and market's unit.
@@ -264,8 +272,19 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const unit = UNIT_SHORT[String(priceUnitG)] ?? `${priceUnitG} g`;
     const prem = premiumPct ? ` (incl. ~${premiumPct}% local duty & dealer premium)` : '';
     const asOf = lastUpdated ? ` · rates as of ${lastUpdated}` : '';
-    status.textContent = `${code} platinum price: ${money(localSpot, code)}/${unit}${prem}${asOf}.`;
+    statusBase = `${code} platinum price: ${money(localSpot, code)}/${unit}${prem}${asOf}.`;
+    status.textContent = statusBase;
   }
+
+  // Tick a "spot fetched N ago" suffix so users can judge the reading's freshness.
+  setInterval(() => {
+    if (spotFetchedAt == null || !statusBase) return;
+    const status = document.getElementById('plat-status')!;
+    if (status.classList.contains('text-red-400')) return;
+    const secs = Math.round((performance.now() - spotFetchedAt) / 1000);
+    const age = secs < 60 ? `${secs}s ago` : `${Math.floor(secs / 60)}m ago`;
+    status.textContent = `${statusBase} Spot fetched ${age}.`;
+  }, 5000);
 
   async function fetchLive() {
     const btn = $('plat-fetch');
@@ -296,6 +315,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           ? new Date(fx.time_last_update_utc).toLocaleString()
           : '';
 
+      spotFetchedAt = performance.now();
       populateCurrencies();
       syncSpotFromLive(true); // set spot + status to the selected currency's price in its market unit
       calc();
@@ -314,7 +334,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const weight = Number($('plat-weight').value) || 0;
     const toOzt = Number(sel('plat-unit').value); // factor: weight unit → troy ounces
     const priceUnitG = Number(sel('plat-price-unit').value) || OZT_G; // grams per quoted unit
-    const purity = Number(sel('plat-purity').value);
+    const purity = sel('plat-purity').value === 'custom'
+      ? Math.min(1, Math.max(0, Number($('plat-custom').value) || 0))
+      : Number(sel('plat-purity').value);
     const pct = (Number($('plat-pct').value) || 0) / 100;
 
     const valueEl = document.getElementById('plat-value')!;
@@ -355,6 +377,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       .join('');
   }
 
+  // Purity change: reveal the custom fineness field when "Custom" is picked.
+  sel('plat-purity').addEventListener('change', () => {
+    const custom = sel('plat-purity').value === 'custom';
+    document.getElementById('plat-custom-wrap')!.classList.toggle('hidden', !custom);
+    document.getElementById('plat-custom-wrap')!.classList.toggle('flex', custom);
+    calc();
+  });
+
   // Currency change: reprice from the live USD base and snap to that market's quote unit.
   sel('plat-cur').addEventListener('change', () => {
     syncSpotFromLive(true);
@@ -381,7 +411,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   $('plat-fetch').addEventListener('click', fetchLive);
 
   document
-    .querySelectorAll('#plat-spot, #plat-weight, #plat-unit, #plat-purity, #plat-pct')
+    .querySelectorAll('#plat-spot, #plat-weight, #plat-unit, #plat-purity, #plat-pct, #plat-custom')
     .forEach((el) => el.addEventListener('input', calc));
 
   populateCurrencies(); // fill the dropdown with all currencies on load

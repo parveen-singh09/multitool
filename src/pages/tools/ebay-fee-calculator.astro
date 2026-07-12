@@ -20,12 +20,22 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Shipping label you pay ($)
         <input id="eb-labelcost" type="number" min="0" step="0.01" value="0" class="field" />
       </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Promoted listing ad rate (%)
+        <input id="eb-adrate" type="number" min="0" step="0.1" value="0" class="field" />
+      </label>
       <label class="flex items-center gap-2 text-sm text-ink-subtle">
         <input id="eb-topseller" type="checkbox" class="accent-[#5e6ad2]" /> Below-standard seller (+5% fee)
       </label>
       <label class="flex items-center gap-2 text-sm text-ink-subtle">
         <input id="eb-intl" type="checkbox" class="accent-[#5e6ad2]" /> International fee (+1.65%)
       </label>
+
+      <div class="mt-2 border-t border-hairline pt-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Goal-seek: target net profit ($)
+          <input id="eb-goal" type="number" min="0" step="1" placeholder="e.g. 30" class="field" />
+        </label>
+        <p id="eb-goal-out" class="mt-2 text-[13px] text-ink-subtle"></p>
+      </div>
     </div>
 
     <div class="flex flex-col gap-3">
@@ -95,10 +105,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     let feePct = cat.fee;
     if ($('eb-topseller').checked) feePct += 5;
     if ($('eb-intl').checked) feePct += 1.65;
+    const adRate = parseFloat($('eb-adrate').value) || 0;
 
     const fvf = gross * (feePct / 100);
+    const adFee = gross * (adRate / 100);
     const fixed = gross <= 10 ? FIXED_FEE_LOW : FIXED_FEE;
-    const totalFees = fvf + fixed;
+    const totalFees = fvf + adFee + fixed;
     const payout = gross - totalFees;
     const profit = payout - cost - labelCost;
     const margin = price > 0 ? (profit / price) * 100 : 0;
@@ -106,9 +118,27 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     out.innerHTML =
       row('Buyer pays (item + shipping)', money(gross)) +
       row(`Final value fee (${feePct.toFixed(2)}%)`, `−${money(fvf)}`) +
+      (adRate > 0 ? row(`Promoted listing (${adRate.toFixed(1)}%)`, `−${money(adFee)}`) : '') +
       row('Fixed per-order fee', `−${money(fixed)}`) +
       row('Total eBay fees', `−${money(totalFees)}`, true) +
       row('Your payout', money(payout));
+
+    // Goal-seek: required item price for a target net profit (holds shipping/cost/fees fixed,
+    // assumes the $0.40 per-order fee since goal sales are typically over $10).
+    const goalEl = $('eb-goal');
+    const goalOut = document.getElementById('eb-goal-out')!;
+    const target = parseFloat(goalEl.value);
+    if (isFinite(target) && goalEl.value !== '') {
+      const k = 1 - (feePct + adRate) / 100;
+      if (k > 0) {
+        const requiredPrice = (target + FIXED_FEE + cost + labelCost) / k - shipping;
+        goalOut.textContent = `Sell at ${money(requiredPrice)} to net ${money(target)} profit.`;
+      } else {
+        goalOut.textContent = 'Fee rate too high to reach a positive profit.';
+      }
+    } else {
+      goalOut.textContent = '';
+    }
 
     const profitColor = profit >= 0 ? '#27a644' : '#e08585';
     profitEl.innerHTML =
@@ -117,7 +147,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
        <span class="text-[13px] text-ink-subtle">Margin on sale price: ${margin.toFixed(1)}% · Fees are ${gross > 0 ? ((totalFees / gross) * 100).toFixed(1) : '0'}% of the sale</span>`;
   }
 
-  ['eb-price', 'eb-shipping', 'eb-cost', 'eb-labelcost', 'eb-topseller', 'eb-intl'].forEach((id) => $(id).addEventListener('input', compute));
+  ['eb-price', 'eb-shipping', 'eb-cost', 'eb-labelcost', 'eb-topseller', 'eb-intl', 'eb-adrate', 'eb-goal'].forEach((id) => $(id).addEventListener('input', compute));
   catEl.addEventListener('change', compute);
   compute();
 </script>

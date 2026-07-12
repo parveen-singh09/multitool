@@ -15,23 +15,34 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <input id="dd-end" type="date" class="field" />
         </label>
       </div>
+      <label class="flex items-center gap-2 text-[13px] text-ink-subtle">
+        <input id="dd-inclusive" type="checkbox" class="accent-primary" />
+        Include end date (count both days)
+      </label>
       <p id="dd-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
       <div id="dd-main" class="font-display text-2xl font-semibold text-primary-hover" aria-live="polite">—</div>
-      <div class="grid grid-cols-3 gap-3 text-center text-[13px]">
+      <div class="grid grid-cols-2 gap-3 text-center text-[13px] sm:grid-cols-4">
         <div class="panel p-3"><div id="dd-days" class="font-mono text-ink">—</div><div class="mt-1 text-ink-subtle">Days</div></div>
         <div class="panel p-3"><div id="dd-weeks" class="font-mono text-ink">—</div><div class="mt-1 text-ink-subtle">Weeks</div></div>
         <div class="panel p-3"><div id="dd-months" class="font-mono text-ink">—</div><div class="mt-1 text-ink-subtle">Months</div></div>
+        <div class="panel p-3"><div id="dd-business" class="font-mono text-ink">—</div><div class="mt-1 text-ink-subtle">Business days</div></div>
       </div>
     </div>
 
-    <!-- Add / subtract days -->
+    <!-- Add / subtract from a date -->
     <div class="panel panel-lift flex flex-col gap-3 p-5">
-      <p class="text-sm text-ink">Add or subtract days from a date</p>
+      <p class="text-sm text-ink">Add or subtract from a date</p>
       <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
         <input id="da-date" type="date" class="field" />
         <select id="da-op" class="field w-24"><option value="1">add</option><option value="-1">subtract</option></select>
-        <input id="da-days" type="number" class="field w-24" value="30" inputmode="numeric" />
-        <span>days =</span>
+        <input id="da-amt" type="number" class="field w-24" value="30" inputmode="numeric" />
+        <select id="da-unit" class="field w-28">
+          <option value="days">days</option>
+          <option value="weeks">weeks</option>
+          <option value="months">months</option>
+          <option value="years">years</option>
+        </select>
+        <span>=</span>
         <span id="da-out" class="font-mono text-ink">—</span>
       </div>
     </div>
@@ -51,13 +62,28 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
   const err = document.getElementById('dd-error')!;
 
+  // Count Mon–Fri between two dates. Inclusive of both endpoints when `inc` set.
+  function businessDays(a: Date, b: Date, inc: boolean): number {
+    let count = 0;
+    const cur = new Date(a);
+    const end = new Date(b);
+    if (!inc) cur.setDate(cur.getDate() + 1); // exclusive of start; end excluded below
+    while (cur < end || (inc && cur <= end)) {
+      const wd = cur.getDay();
+      if (wd !== 0 && wd !== 6) count++;
+      cur.setDate(cur.getDate() + 1);
+    }
+    return count;
+  }
+
   function diff() {
     err.classList.add('hidden');
     if (!$('dd-start').value || !$('dd-end').value) return;
     let a = new Date($('dd-start').value + 'T00:00:00');
     let b = new Date($('dd-end').value + 'T00:00:00');
     if (b < a) [a, b] = [b, a];
-    const days = Math.round((b.getTime() - a.getTime()) / 86400000);
+    const inclusive = (document.getElementById('dd-inclusive') as HTMLInputElement).checked;
+    const days = Math.round((b.getTime() - a.getTime()) / 86400000) + (inclusive ? 1 : 0);
 
     // Calendar Y/M/D breakdown via clamped month anchoring (avoids negative-day
     // borrow errors for end-of-month pairs like Jan 31 -> Mar 1).
@@ -80,18 +106,24 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     document.getElementById('dd-days')!.textContent = days.toLocaleString();
     document.getElementById('dd-weeks')!.textContent = Math.floor(days / 7).toLocaleString();
     document.getElementById('dd-months')!.textContent = (y * 12 + m).toLocaleString();
+    document.getElementById('dd-business')!.textContent = businessDays(a, b, inclusive).toLocaleString();
   }
 
   function addSub() {
     if (!$('da-date').value) return;
     const base = new Date($('da-date').value + 'T00:00:00');
-    const delta = Number($('da-op').value) * Number($('da-days').value);
-    base.setDate(base.getDate() + delta);
-    document.getElementById('da-out')!.textContent = base.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    const sign = Number($('da-op').value);
+    const amt = sign * Number($('da-amt').value);
+    const unit = ($('da-unit') as unknown as HTMLSelectElement).value;
+    if (unit === 'weeks') base.setDate(base.getDate() + amt * 7);
+    else if (unit === 'months') base.setMonth(base.getMonth() + amt);
+    else if (unit === 'years') base.setFullYear(base.getFullYear() + amt);
+    else base.setDate(base.getDate() + amt);
+    document.getElementById('da-out')!.textContent = base.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
   }
 
-  document.querySelectorAll('#dd-start, #dd-end').forEach((el) => el.addEventListener('input', diff));
-  document.querySelectorAll('#da-date, #da-op, #da-days').forEach((el) => el.addEventListener('input', addSub));
+  document.querySelectorAll('#dd-start, #dd-end, #dd-inclusive').forEach((el) => el.addEventListener('input', diff));
+  document.querySelectorAll('#da-date, #da-op, #da-amt, #da-unit').forEach((el) => el.addEventListener('input', addSub));
 
   // Seed with today + a month out.
   const today = new Date();

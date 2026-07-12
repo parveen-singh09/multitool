@@ -65,6 +65,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <span class="flex items-center gap-1.5 text-ink-subtle"><span class="h-2.5 w-2.5 rounded-full" style="background:#e5484d"></span>Obese 30+</span>
       </div>
     </div>
+
+    <div class="grid grid-cols-1 gap-3 text-center sm:grid-cols-3">
+      <div class="panel p-4"><div id="bmi-range" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Healthy weight for your height</div></div>
+      <div class="panel p-4"><div id="bmi-prime" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">BMI Prime</div></div>
+      <div class="panel p-4"><div id="bmi-ponderal" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Ponderal Index</div></div>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -103,9 +109,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }
     const marker = document.getElementById('bmi-marker')!;
     const markerVal = document.getElementById('bmi-marker-val')!;
+    const rangeEl = document.getElementById('bmi-range')!;
+    const primeEl = document.getElementById('bmi-prime')!;
+    const ponderalEl = document.getElementById('bmi-ponderal')!;
     if (!(m > 0) || !(kg > 0)) {
       valueEl.textContent = '—'; catEl.textContent = '';
       markerVal.textContent = '—'; marker.style.left = '0';
+      rangeEl.textContent = primeEl.textContent = ponderalEl.textContent = '—';
       return;
     }
     const bmi = kg / (m * m);
@@ -113,6 +123,17 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const [label, color] = category(bmi);
     catEl.textContent = label;
     catEl.style.color = color;
+
+    // Healthy weight range for this height (BMI 18.5–25), shown in the active unit.
+    const loKg = 18.5 * m * m;
+    const hiKg = 25 * m * m;
+    if (unit === 'imperial') {
+      rangeEl.textContent = `${(loKg / 0.45359237).toFixed(0)}–${(hiKg / 0.45359237).toFixed(0)} lb`;
+    } else {
+      rangeEl.textContent = `${loKg.toFixed(1)}–${hiKg.toFixed(1)} kg`;
+    }
+    primeEl.textContent = (bmi / 25).toFixed(2);
+    ponderalEl.textContent = (kg / (m * m * m)).toFixed(1) + ' kg/m³';
 
     // Chart scale spans BMI 15–40 (4% per unit; ticks at 18.5→14%, 25→40%, 30→60%).
     const pos = Math.max(0, Math.min(100, 14 + (bmi - 18.5) * 4));

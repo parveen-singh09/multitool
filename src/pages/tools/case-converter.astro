@@ -1,33 +1,64 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 
+// Grouped so related transforms sit together in the UI.
 const modes = [
-  { id: 'upper', label: 'UPPERCASE' },
-  { id: 'lower', label: 'lowercase' },
-  { id: 'title', label: 'Title Case' },
   { id: 'sentence', label: 'Sentence case' },
+  { id: 'lower', label: 'lower case' },
+  { id: 'upper', label: 'UPPER CASE' },
+  { id: 'capitalize', label: 'Capitalized Case' },
+  { id: 'title', label: 'Title Case' },
+  { id: 'alternate', label: 'aLtErNaTiNg' },
+  { id: 'inverse', label: 'InVeRsE CaSe' },
   { id: 'camel', label: 'camelCase' },
+  { id: 'pascal', label: 'PascalCase' },
   { id: 'snake', label: 'snake_case' },
   { id: 'kebab', label: 'kebab-case' },
+  { id: 'constant', label: 'CONSTANT_CASE' },
+  { id: 'dot', label: 'dot.case' },
 ];
 ---
 
 <ToolLayout slug="case-converter">
   <div class="flex flex-col gap-4">
-    <textarea
-      id="cc-input"
-      class="field min-h-40 resize-y"
-      placeholder="Type or paste text to convert…"
-      aria-label="Text to convert"
-    ></textarea>
+    <div class="flex flex-col gap-1">
+      <span class="flex items-center justify-between text-sm text-ink-subtle">
+        <span>Your text</span>
+        <button id="cc-clear" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Clear</button>
+      </span>
+      <textarea
+        id="cc-input"
+        class="field min-h-40 resize-y"
+        placeholder="Type or paste text to convert…"
+        aria-label="Text to convert"
+        spellcheck="false"
+      ></textarea>
+      <div class="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-ink-subtle" aria-live="polite">
+        <span><span id="cc-chars">0</span> characters</span>
+        <span><span id="cc-words">0</span> words</span>
+        <span><span id="cc-sentences">0</span> sentences</span>
+        <span><span id="cc-lines">0</span> lines</span>
+      </div>
+    </div>
 
-    <div class="flex flex-wrap gap-2">
-      {modes.map((m) => (
-        <button class="btn btn-secondary" data-mode={m.id}>{m.label}</button>
+    <div class="flex flex-wrap gap-2" role="group" aria-label="Conversion modes">
+      {modes.map((m, i) => (
+        <button
+          class={i === 0 ? 'btn btn-primary' : 'btn btn-secondary'}
+          data-mode={m.id}
+          aria-pressed={i === 0 ? 'true' : 'false'}
+        >{m.label}</button>
       ))}
     </div>
 
-    <div class="relative">
+    <div class="flex flex-col gap-1">
+      <span class="flex items-center justify-between text-sm text-ink-subtle">
+        <span>Result</span>
+        <span class="flex gap-2">
+          <button id="cc-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button>
+          <button id="cc-download" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Download</button>
+        </span>
+      </span>
       <textarea
         id="cc-output"
         class="field min-h-40 resize-y"
@@ -35,45 +66,153 @@ const modes = [
         aria-label="Converted text"
         readonly
       ></textarea>
-      <button id="cc-copy" class="btn btn-primary absolute right-3 top-3">Copy</button>
     </div>
+
+    <p id="cc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free case converter changes the capitalization of your text in one
+      click and updates live as you type. Choose from 13 transforms: Sentence
+      case, lower case, UPPER CASE, Capitalized Case, smart Title Case (which
+      keeps short articles and prepositions like “a”, “the”, “of” lowercase
+      unless they start or end the title), aLtErNaTiNg, InVeRsE CaSe, plus the
+      programmer formats camelCase, PascalCase, snake_case, kebab-case,
+      CONSTANT_CASE and dot.case.
+    </p>
+    <p>
+      A live counter shows characters, words, sentences and lines as you edit.
+      Copy the result to your clipboard or download it as a .txt file. All
+      conversion runs entirely in your browser — nothing is uploaded to a
+      server, so it works offline and keeps your text private.
+    </p>
   </div>
 </ToolLayout>
 
 <script>
   const input = document.getElementById('cc-input') as HTMLTextAreaElement;
   const output = document.getElementById('cc-output') as HTMLTextAreaElement;
-  const copyBtn = document.getElementById('cc-copy') as HTMLButtonElement;
+  const err = document.getElementById('cc-error')!;
+  const charsEl = document.getElementById('cc-chars')!;
+  const wordsEl = document.getElementById('cc-words')!;
+  const sentencesEl = document.getElementById('cc-sentences')!;
+  const linesEl = document.getElementById('cc-lines')!;
+
+  let mode = 'sentence';
 
   const words = (s: string) => s.match(/[A-Za-z0-9]+/g) || [];
+
+  // Small words kept lowercase in Title Case unless first/last (AP-ish).
+  const SMALL = new Set([
+    'a','an','and','as','at','but','by','en','for','if','in','nor','of','on',
+    'or','per','the','to','v','vs','via','with',
+  ]);
+
+  const titleCase = (s: string) =>
+    // Operate per line so titles on separate lines each capitalize correctly.
+    s.split('\n').map((line) => {
+      const toks = line.match(/[A-Za-z0-9']+|[^A-Za-z0-9']+/g) || [];
+      const wordIdx: number[] = [];
+      toks.forEach((t, i) => { if (/[A-Za-z0-9]/.test(t)) wordIdx.push(i); });
+      const first = wordIdx[0], last = wordIdx[wordIdx.length - 1];
+      return toks
+        .map((t, i) => {
+          if (!/[A-Za-z0-9]/.test(t)) return t;
+          const lower = t.toLowerCase();
+          if (i !== first && i !== last && SMALL.has(lower)) return lower;
+          return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+        })
+        .join('');
+    }).join('\n');
 
   const converters: Record<string, (s: string) => string> = {
     upper: (s) => s.toUpperCase(),
     lower: (s) => s.toLowerCase(),
-    title: (s) => s.replace(/\w\S*/g, (w) => w[0].toUpperCase() + w.slice(1).toLowerCase()),
+    // Capitalize the first letter of every word, keep the rest lowercase.
+    capitalize: (s) => s.replace(/[A-Za-z0-9]+/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()),
+    title: titleCase,
+    // First letter of each sentence uppercased; rest lowercased.
     sentence: (s) =>
-      s.toLowerCase().replace(/(^\s*\w|[.!?]\s*\w)/g, (c) => c.toUpperCase()),
+      s.toLowerCase().replace(/(^\s*[a-z])|([.!?]\s*[a-z])|(\n\s*[a-z])/g, (c) => c.toUpperCase()),
+    alternate: (s) => {
+      let n = 0;
+      return s.replace(/[A-Za-z]/g, (c) => (n++ % 2 === 0 ? c.toLowerCase() : c.toUpperCase()));
+    },
+    inverse: (s) =>
+      s.replace(/[A-Za-z]/g, (c) => (c === c.toLowerCase() ? c.toUpperCase() : c.toLowerCase())),
     camel: (s) =>
-      words(s)
-        .map((w, i) =>
-          i === 0 ? w.toLowerCase() : w[0].toUpperCase() + w.slice(1).toLowerCase()
-        )
-        .join(''),
+      words(s).map((w, i) =>
+        i === 0 ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+      ).join(''),
+    pascal: (s) =>
+      words(s).map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(''),
     snake: (s) => words(s).map((w) => w.toLowerCase()).join('_'),
     kebab: (s) => words(s).map((w) => w.toLowerCase()).join('-'),
+    constant: (s) => words(s).map((w) => w.toUpperCase()).join('_'),
+    dot: (s) => words(s).map((w) => w.toLowerCase()).join('.'),
   };
+
+  function updateStats() {
+    const v = input.value;
+    charsEl.textContent = String(v.length);
+    wordsEl.textContent = String((v.match(/\S+/g) || []).length);
+    // Count sentence-terminating runs; fall back to 0 for empty/whitespace.
+    sentencesEl.textContent = String((v.match(/[^\s.!?][^.!?]*[.!?]+/g) || []).length);
+    linesEl.textContent = String(v ? v.split('\n').length : 0);
+  }
+
+  function convert() {
+    updateStats();
+    err.classList.add('hidden');
+    try {
+      output.value = input.value ? converters[mode](input.value) : '';
+    } catch (e) {
+      output.value = '';
+      err.textContent = `Conversion failed: ${(e as Error).message}`;
+      err.classList.remove('hidden');
+    }
+  }
 
   document.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const mode = btn.dataset.mode!;
-      output.value = converters[mode](input.value);
+      mode = btn.dataset.mode!;
+      document.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach((b) => {
+        const active = b === btn;
+        b.classList.toggle('btn-primary', active);
+        b.classList.toggle('btn-secondary', !active);
+        b.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+      convert();
     });
   });
 
-  copyBtn.addEventListener('click', async () => {
+  input.addEventListener('input', convert);
+
+  document.getElementById('cc-clear')!.addEventListener('click', () => {
+    input.value = '';
+    convert();
+    input.focus();
+  });
+
+  document.getElementById('cc-copy')!.addEventListener('click', async (e) => {
     if (!output.value) return;
     await navigator.clipboard.writeText(output.value);
-    copyBtn.textContent = 'Copied!';
-    setTimeout(() => (copyBtn.textContent = 'Copy'), 1500);
+    const b = e.currentTarget as HTMLButtonElement;
+    b.textContent = 'Copied!';
+    setTimeout(() => (b.textContent = 'Copy'), 1400);
   });
+
+  document.getElementById('cc-download')!.addEventListener('click', () => {
+    if (!output.value) return;
+    const blob = new Blob([output.value], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'converted.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  updateStats();
 </script>

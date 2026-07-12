@@ -1,15 +1,127 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 import MediaConverter from '../../components/MediaConverter.astro';
+
+// FAQ content is shared between the visible section and the JSON-LD FAQPage
+// schema below so the two never drift.
+const faqs = [
+  {
+    q: 'Is this FLAC to MP3 converter really free?',
+    a: 'Yes. There is no signup, no watermark, no email, and no daily conversion cap. Every option — bitrate, VBR/CBR quality, sample rate, channels, normalization, trimming and fades — is available at no cost.',
+  },
+  {
+    q: 'Are my files uploaded to a server?',
+    a: 'No. The conversion runs entirely inside your browser using an in-page media engine (ffmpeg compiled to WebAssembly). Your audio never leaves your device, which is why there is no file-size limit and nothing to delete afterwards.',
+  },
+  {
+    q: 'Can I convert several FLAC files at once?',
+    a: 'Yes. Drop a whole folder of FLAC tracks — for example a ripped album — and they are queued and converted one by one, each with its own progress bar. When more than one is done you can download them together as a single ZIP.',
+  },
+  {
+    q: 'What is the difference between VBR and CBR quality?',
+    a: 'CBR (constant bitrate) locks every second of audio to the same bitrate — 320 kbps down to 64 kbps — which is predictable and best for strict size targets. VBR (variable bitrate) lets the encoder spend more bits on complex passages and fewer on simple ones, giving better quality per megabyte. V0 is the highest-quality VBR setting and V2 (the default) is transparent to most listeners at a smaller size.',
+  },
+  {
+    q: 'Will converting to MP3 lose audio quality?',
+    a: 'FLAC is lossless and MP3 is lossy, so some data is discarded by definition. In practice, at V0/V2 VBR or 256–320 kbps CBR the result is transparent to most ears on most equipment. Keep the FLAC originals if you want an archival master; use MP3 for phones, cars, and players with limited space.',
+  },
+  {
+    q: 'Why convert FLAC to MP3 at all?',
+    a: 'FLAC files are large and not universally supported — many car stereos, older phones, Bluetooth speakers, and web uploads reject them. MP3 is the most compatible audio format in the world and is roughly 3–6× smaller, so it plays everywhere and fits far more music on a device.',
+  },
+  {
+    q: 'Can I normalize loudness or trim a track?',
+    a: 'Yes. Turn on Normalize to apply EBU R128 loudness normalization so tracks play at a consistent volume. Use the trim and fade controls to cut to a start and end point and add fade-in or fade-out — useful for making ringtones or clips from a longer recording.',
+  },
+];
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqs.map((f) => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: { '@type': 'Answer', text: f.a },
+  })),
+};
 ---
 
 <ToolLayout slug="flac-to-mp3">
   <MediaConverter slug="flac-to-mp3" />
 
-  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
-    <p>
-      This free FLAC to MP3 converter turns lossless FLAC audio into compact MP3 files that play on virtually any device or player. All processing happens locally in your browser using an
-      in-page media engine, so your files are never uploaded to any server.
-    </p>
+  <div slot="about" class="flex flex-col gap-10 text-[15px] leading-relaxed text-ink-subtle">
+    <section class="flex flex-col gap-4">
+      <p>
+        This free FLAC to MP3 converter turns lossless FLAC audio into compact MP3 files that play on virtually any
+        device or player. Everything happens locally in your browser using an in-page media engine, so your files are
+        never uploaded to any server — there is no size limit, no queue, and no signup.
+      </p>
+      <p>
+        FLAC preserves every bit of the original recording, which makes it ideal for archiving but leaves you with large
+        files that many phones, car stereos, Bluetooth speakers, and upload forms simply will not play. MP3 is the most
+        widely supported audio format in existence and is several times smaller, so converting lets you carry far more
+        music and share it anywhere without a second thought.
+      </p>
+    </section>
+
+    <section class="flex flex-col gap-4">
+      <h2 class="font-display text-lg font-semibold text-ink">Features</h2>
+      <ul class="grid gap-x-8 gap-y-2 sm:grid-cols-2">
+        <li class="flex gap-2"><span class="text-primary-hover">·</span> Drag-and-drop or click to load one file or a whole album</li>
+        <li class="flex gap-2"><span class="text-primary-hover">·</span> VBR quality presets (V0/V2/V4) for the best quality per megabyte</li>
+        <li class="flex gap-2"><span class="text-primary-hover">·</span> CBR bitrates from 320 kbps down to 64 kbps for exact size control</li>
+        <li class="flex gap-2"><span class="text-primary-hover">·</span> Sample-rate control — 48, 44.1, 32, 22.05, 16, 8 kHz, or keep original</li>
+        <li class="flex gap-2"><span class="text-primary-hover">·</span> Channel control — keep original, force stereo, or downmix to mono</li>
+        <li class="flex gap-2"><span class="text-primary-hover">·</span> EBU R128 loudness normalization for consistent volume</li>
+        <li class="flex gap-2"><span class="text-primary-hover">·</span> Trim to a start and end point, plus fade-in and fade-out</li>
+        <li class="flex gap-2"><span class="text-primary-hover">·</span> Batch queue with per-file progress and download-all-as-ZIP</li>
+        <li class="flex gap-2"><span class="text-primary-hover">·</span> In-page audio preview of every result before you save it</li>
+        <li class="flex gap-2"><span class="text-primary-hover">·</span> Fully private and free — no upload, no watermark, no account</li>
+      </ul>
+    </section>
+
+    <section class="flex flex-col gap-4">
+      <h2 class="font-display text-lg font-semibold text-ink">How to convert FLAC to MP3</h2>
+      <ol class="flex flex-col gap-2">
+        <li><span class="text-ink">1.</span> Drop your FLAC files onto the box above, or click to browse for them.</li>
+        <li><span class="text-ink">2.</span> Optional: pick a VBR or CBR quality, set sample rate or channels, normalize, or trim.</li>
+        <li><span class="text-ink">3.</span> Click <span class="text-ink">Convert to MP3</span> and watch each file's progress bar.</li>
+        <li><span class="text-ink">4.</span> Preview any track in place, then download individually or grab them all as a ZIP.</li>
+      </ol>
+    </section>
+
+    <section class="flex flex-col gap-4">
+      <h2 class="font-display text-lg font-semibold text-ink">Choosing the right quality</h2>
+      <p>
+        For general listening, the default <span class="text-ink">V2 VBR</span> setting is transparent to most ears at a
+        modest file size. Choose <span class="text-ink">V0</span> or <span class="text-ink">320 kbps CBR</span> when you
+        want the closest thing to the FLAC source, or step down to 128–192 kbps to fit more tracks on a small device.
+        For spoken-word audio like podcasts or voice memos, 64–96 kbps mono keeps files tiny with no audible loss.
+      </p>
+    </section>
+
+    <section class="flex flex-col gap-4">
+      <h2 class="font-display text-lg font-semibold text-ink">Why convert in your browser</h2>
+      <p>
+        Most online FLAC converters upload your audio to a server, cap the free file size, queue you behind other users,
+        and limit how many files you can convert per day unless you pay. Because this tool runs the encode locally, none
+        of that applies: your music stays private on your device, the only size limit is your own hardware, and every
+        quality option — including full 320 kbps and batch ZIP export — is always free.
+      </p>
+    </section>
+
+    <section class="flex flex-col gap-4">
+      <h2 class="font-display text-lg font-semibold text-ink">Frequently asked questions</h2>
+      <div class="flex flex-col gap-4">
+        {faqs.map((f) => (
+          <div class="flex flex-col gap-1">
+            <p class="text-ink">{f.q}</p>
+            <p>{f.a}</p>
+          </div>
+        ))}
+      </div>
+    </section>
   </div>
+
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
 </ToolLayout>

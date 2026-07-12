@@ -20,13 +20,42 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <label class="text-sm text-ink-subtle" for="cu-to-val">To</label>
         <div class="relative">
           <span id="cu-to-sym" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ink-tertiary"></span>
-          <input id="cu-to-val" type="number" class="field pl-8" readonly />
+          <input id="cu-to-val" type="number" class="field pl-8 pr-10" inputmode="decimal" />
+          <button id="cu-copy" type="button" class="absolute right-2 top-1/2 -translate-y-1/2 rounded-xs p-1 text-ink-tertiary hover:text-ink" aria-label="Copy converted amount" title="Copy result">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
         </div>
         <select id="cu-to" class="field mt-1"></select>
       </div>
     </div>
 
-    <p id="cu-rate" class="text-[13px] text-ink-tertiary"></p>
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <p id="cu-rate" class="text-[13px] text-ink-tertiary"></p>
+      <label class="flex items-center gap-1.5 text-[13px] text-ink-subtle">
+        Decimals
+        <select id="cu-dp" class="field h-7 w-auto py-0 pl-2 pr-6 text-[13px]">
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4" selected>4</option>
+          <option value="6">6</option>
+          <option value="8">8</option>
+        </select>
+      </label>
+    </div>
+
+    <div>
+      <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <p class="text-[13px] text-ink-subtle">Rate history</p>
+        <div id="cu-periods" class="flex gap-1"></div>
+      </div>
+      <div class="rounded-md border border-hairline p-3">
+        <div id="cu-chart-wrap" class="relative">
+          <svg id="cu-chart" viewBox="0 0 600 160" preserveAspectRatio="none" class="h-40 w-full" aria-label="Exchange rate history chart" role="img"></svg>
+          <p id="cu-chart-msg" class="absolute inset-0 flex items-center justify-center text-[13px] text-ink-tertiary">Loading history…</p>
+        </div>
+        <div id="cu-stats" class="mt-3 grid grid-cols-2 gap-2 text-[13px] sm:grid-cols-4"></div>
+      </div>
+    </div>
 
     <div>
       <p class="mb-2 text-[13px] text-ink-subtle">Quick amounts</p>
@@ -42,8 +71,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       between more than 160 world currencies. Enter an amount, pick your
       currencies, and see the converted value plus a quick reference table.
       Rates are fetched directly from your browser to a public rates service —
-      no account, and the amounts you type are never stored. Rates are
-      indicative and update once per day.
+      no account, and the amounts you type are never stored.
+    </p>
+    <p>
+      Type in either field to convert in both directions, swap the pair with a
+      click, and copy the result. A rate-history chart shows how the pair has
+      moved over the last week, month, six months, year, or five years, with
+      the period high, low, average, and change. Choose how many decimal places
+      you want, from 2 up to 8 for precise conversions. All rates are
+      mid-market (interbank) rates shown for reference and update once per day —
+      they do not include the margin a bank or transfer service may add.
     </p>
   </div>
 </ToolLayout>
@@ -122,11 +159,22 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const rateLine = document.getElementById('cu-rate')!;
   const table = document.getElementById('cu-table')!;
   const err = document.getElementById('cu-error')!;
+  const dpSel = document.getElementById('cu-dp') as HTMLSelectElement;
+  const copyBtn = document.getElementById('cu-copy') as HTMLButtonElement;
+  const periods = document.getElementById('cu-periods')!;
+  const chart = document.getElementById('cu-chart')!;
+  const chartMsg = document.getElementById('cu-chart-msg')!;
+  const stats = document.getElementById('cu-stats')!;
 
   // rates are stored relative to USD (er-api base). rates['USD'] = 1.
   let rates: Record<string, number> = {};
+  let lastUpdate = '';
+  let dp = 4;               // decimal places for the result
+  let period = '1M';        // active history window
 
+  const dpFmt = (n: number) => new Intl.NumberFormat(undefined, { maximumFractionDigits: dp }).format(n);
   const fmt = (n: number) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 4 }).format(n);
+  const round = (n: number, d: number) => { const p = 10 ** d; return Math.round(n * p) / p; };
 
   function fillSelects() {
     const codes = Object.keys(NAMES);
@@ -140,30 +188,39 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     fromSel.value = 'USD'; toSel.value = 'EUR';
   }
 
-  function convert() {
+  // Convert `amount` of `a` into `b` using USD-relative rates.
+  const cross = (amount: number, a: string, b: string) => (amount / rates[a]) * rates[b];
+
+  // Recompute from a given side; `src` is which field the user last edited.
+  function convert(src: 'from' | 'to' = 'from') {
     const from = fromSel.value, to = toSel.value;
-    // keep the input symbol prefixes in sync even before rates arrive
     fromSym.textContent = sym(from);
     toSym.textContent = sym(to);
     if (!Object.keys(rates).length) return;
-    const v = Number(fromVal.value);
-    if (isNaN(v) || !rates[from] || !rates[to]) { toVal.value = ''; return; }
-    // value in EUR = v / rates[from]; then * rates[to]
-    const eur = v / rates[from];
-    const result = eur * rates[to];
-    toVal.value = String(Math.round(result * 1e4) / 1e4);
-    const one = (1 / rates[from]) * rates[to];
-    rateLine.textContent = `${sym(from)}1 ${from} = ${sym(to)}${fmt(one)} ${to}  ·  ${sym(to)}1 ${to} = ${sym(from)}${fmt(1 / one)} ${from}`;
+    if (!rates[from] || !rates[to]) return;
+
+    if (src === 'to') {
+      const v = Number(toVal.value);
+      fromVal.value = (toVal.value === '' || isNaN(v)) ? '' : String(round(cross(v, to, from), dp));
+    } else {
+      const v = Number(fromVal.value);
+      toVal.value = (fromVal.value === '' || isNaN(v)) ? '' : String(round(cross(v, from, to), dp));
+    }
+
+    const one = cross(1, from, to);
+    rateLine.textContent =
+      `${sym(from)}1 ${from} = ${sym(to)}${dpFmt(one)} ${to}  ·  ${sym(to)}1 ${to} = ${sym(from)}${dpFmt(1 / one)} ${from}`
+      + (lastUpdate ? `  ·  mid-market rate, updated ${lastUpdate}` : '');
     renderTable(from, to);
   }
 
   function renderTable(from: string, to: string) {
     const amounts = [1, 5, 10, 25, 50, 100, 500, 1000];
-    const one = (1 / rates[from]) * rates[to];
+    const one = cross(1, from, to);
     table.innerHTML = `<table class="w-full text-[13px]">${amounts.map((a) => `
       <tr class="border-t border-hairline">
         <td class="px-3 py-2 text-ink-subtle">${sym(from)}${fmt(a)} ${from}</td>
-        <td class="px-3 py-2 text-right font-mono text-ink">${sym(to)}${fmt(Math.round(a * one * 100) / 100)} ${to}</td>
+        <td class="px-3 py-2 text-right font-mono text-ink">${sym(to)}${fmt(round(a * one, 2))} ${to}</td>
       </tr>`).join('')}</table>`;
   }
 
@@ -174,6 +231,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const data = await res.json();
       if (data.result !== 'success' || !data.rates) throw new Error('bad payload');
       rates = { USD: 1, ...data.rates };
+      if (data.time_last_update_utc) lastUpdate = String(data.time_last_update_utc).replace(/ \d{2}:\d{2}:\d{2}.*/, '');
       convert();
     } catch (e) {
       err.textContent = 'Could not load live exchange rates. Check your connection and refresh — the converter needs an internet connection to fetch rates.';
@@ -181,16 +239,100 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }
   }
 
-  fromVal.addEventListener('input', convert);
-  fromSel.addEventListener('change', convert);
-  toSel.addEventListener('change', convert);
+  // ---- Rate history chart (ECB series via Frankfurter; ~30 currencies) ----
+  const PERIODS: Record<string, number> = { '1W': 7, '1M': 30, '6M': 182, '1Y': 365, '5Y': 1825 };
+
+  function renderPeriods() {
+    periods.innerHTML = Object.keys(PERIODS).map((p) =>
+      `<button type="button" data-p="${p}" class="btn ${p === period ? 'btn-secondary' : 'btn-tertiary'} h-7 px-2 text-[12px]">${p}</button>`
+    ).join('');
+  }
+
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+  async function loadHistory() {
+    const from = fromSel.value, to = toSel.value;
+    stats.innerHTML = '';
+    chart.innerHTML = '';
+    chartMsg.classList.remove('hidden');
+    if (from === to) { chartMsg.textContent = 'Pick two different currencies to see rate history.'; return; }
+    chartMsg.textContent = 'Loading history…';
+    const end = new Date();
+    const start = new Date(end.getTime() - PERIODS[period] * 864e5);
+    try {
+      const url = `https://api.frankfurter.app/${iso(start)}..${iso(end)}?from=${from}&to=${to}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('bad status ' + res.status);
+      const data = await res.json();
+      const days = Object.keys(data.rates || {}).sort();
+      const series = days.map((d) => data.rates[d][to]).filter((n: number) => typeof n === 'number');
+      if (series.length < 2) throw new Error('no series');
+      drawChart(series, from, to);
+    } catch (e) {
+      // Frankfurter only covers major (ECB) currencies; degrade gracefully.
+      chartMsg.textContent = `Rate history isn't available for ${from}/${to}.`;
+    }
+  }
+
+  function drawChart(series: number[], from: string, to: string) {
+    chartMsg.classList.add('hidden');
+    const W = 600, H = 160, pad = 4;
+    const min = Math.min(...series), max = Math.max(...series);
+    const span = max - min || 1;
+    const x = (i: number) => pad + (i / (series.length - 1)) * (W - 2 * pad);
+    const y = (v: number) => H - pad - ((v - min) / span) * (H - 2 * pad);
+    const line = series.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
+    const area = `M${x(0).toFixed(1)} ${H} ` + series.map((v, i) => `L${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ') + ` L${x(series.length - 1).toFixed(1)} ${H} Z`;
+    chart.innerHTML =
+      `<defs><linearGradient id="cu-grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#5e6ad2" stop-opacity="0.25"/>
+        <stop offset="100%" stop-color="#5e6ad2" stop-opacity="0"/>
+      </linearGradient></defs>
+      <path d="${area}" fill="url(#cu-grad)"/>
+      <path d="${line}" fill="none" stroke="#5e6ad2" stroke-width="2" vector-effect="non-scaling-stroke"/>`;
+
+    const first = series[0], last = series[series.length - 1];
+    const avg = series.reduce((a, b) => a + b, 0) / series.length;
+    const chg = ((last - first) / first) * 100;
+    const chgColor = chg >= 0 ? '#27a644' : '#e5484d';
+    const cell = (label: string, val: string, color?: string) =>
+      `<div class="rounded-xs border border-hairline px-2 py-1.5">
+        <div class="text-ink-tertiary">${label}</div>
+        <div class="font-mono text-ink"${color ? ` style="color:${color}"` : ''}>${val}</div>
+      </div>`;
+    stats.innerHTML =
+      cell('Low', dpFmt(min)) +
+      cell('High', dpFmt(max)) +
+      cell('Average', dpFmt(avg)) +
+      cell(`Change`, `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%`, chgColor);
+  }
+
+  fromVal.addEventListener('input', () => convert('from'));
+  toVal.addEventListener('input', () => convert('to'));
+  fromSel.addEventListener('change', () => { convert('from'); loadHistory(); });
+  toSel.addEventListener('change', () => { convert('from'); loadHistory(); });
+  dpSel.addEventListener('change', () => { dp = Number(dpSel.value); convert('from'); loadHistory(); });
+  copyBtn.addEventListener('click', async () => {
+    if (!toVal.value) return;
+    try { await navigator.clipboard.writeText(toVal.value); } catch {}
+  });
+  periods.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest('button[data-p]') as HTMLElement | null;
+    if (!b) return;
+    period = b.dataset.p!;
+    renderPeriods();
+    loadHistory();
+  });
   document.getElementById('cu-swap')!.addEventListener('click', () => {
     const a = fromSel.value; fromSel.value = toSel.value; toSel.value = a;
     if (toVal.value) fromVal.value = toVal.value;
-    convert();
+    convert('from');
+    loadHistory();
   });
 
   fillSelects();
+  renderPeriods();
   convert(); // show currency symbols immediately, before live rates arrive
   loadRates();
+  loadHistory();
 </script>

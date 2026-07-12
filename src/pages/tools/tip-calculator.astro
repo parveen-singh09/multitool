@@ -14,6 +14,20 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Split between (people)
         <input id="tp-people" type="number" min="1" step="1" class="field" value="2" inputmode="numeric" />
       </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Tax already in bill ($)
+        <input id="tp-tax" type="number" min="0" step="0.01" class="field" value="0" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Tip is calculated on
+        <select id="tp-base" class="field"><option value="total">Total (incl. tax)</option><option value="pretax">Pre-tax subtotal</option></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Round
+        <select id="tp-round" class="field">
+          <option value="none">No rounding</option>
+          <option value="1">Total up to whole $</option>
+          <option value="5">Total up to next $5</option>
+          <option value="pp1">Per person up to whole $</option>
+        </select>
+      </label>
     </div>
 
     <div class="flex flex-wrap gap-2">
@@ -22,10 +36,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       ))}
     </div>
 
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
       <div class="panel p-5 text-center"><div id="tp-tip" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Tip</div></div>
       <div class="panel p-5 text-center"><div id="tp-total" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total</div></div>
-      <div class="panel panel-lift p-5 text-center"><div id="tp-each" class="font-display text-2xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Per person</div></div>
+      <div class="panel p-5 text-center"><div id="tp-tipeach" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Tip / person</div></div>
+      <div class="panel panel-lift p-5 text-center"><div id="tp-each" class="font-display text-2xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total / person</div></div>
     </div>
   </div>
 
@@ -43,18 +58,33 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const bill = document.getElementById('tp-bill') as HTMLInputElement;
   const pct = document.getElementById('tp-pct') as HTMLInputElement;
   const people = document.getElementById('tp-people') as HTMLInputElement;
+  const taxEl = document.getElementById('tp-tax') as HTMLInputElement;
+  const baseEl = document.getElementById('tp-base') as unknown as HTMLSelectElement;
+  const roundEl = document.getElementById('tp-round') as unknown as HTMLSelectElement;
   const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
 
   function calc() {
     const b = Number(bill.value) || 0;
-    const tip = b * (Number(pct.value) || 0) / 100;
-    const total = b + tip;
+    const tax = Number(taxEl.value) || 0;
     const n = Math.max(1, Math.floor(Number(people.value) || 1));
+    // Tip base: full bill or the pre-tax subtotal.
+    const tipBase = baseEl.value === 'pretax' ? Math.max(0, b - tax) : b;
+    let tip = tipBase * (Number(pct.value) || 0) / 100;
+    let total = b + tip;
+
+    // Round-up options adjust the tip so the target lands on a round figure.
+    const mode = roundEl.value;
+    if (mode === '1') { total = Math.ceil(total); tip = total - b; }
+    else if (mode === '5') { total = Math.ceil(total / 5) * 5; tip = total - b; }
+    else if (mode === 'pp1') { const per = Math.ceil(total / n); total = per * n; tip = total - b; }
+
     document.getElementById('tp-tip')!.textContent = money(tip);
     document.getElementById('tp-total')!.textContent = money(total);
+    document.getElementById('tp-tipeach')!.textContent = money(tip / n);
     document.getElementById('tp-each')!.textContent = money(total / n);
   }
-  [bill, pct, people].forEach((el) => el.addEventListener('input', calc));
+  [bill, pct, people, taxEl].forEach((el) => el.addEventListener('input', calc));
+  [baseEl, roundEl].forEach((el) => el.addEventListener('change', calc));
   document.querySelectorAll<HTMLButtonElement>('.tp-quick').forEach((btn) => {
     btn.addEventListener('click', () => { pct.value = btn.dataset.pct!; calc(); });
   });

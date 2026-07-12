@@ -23,16 +23,31 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Expected annual return (%)
         <input id="rt-return" type="number" min="0" step="0.1" class="field" value="7" inputmode="decimal" />
       </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Inflation rate (%)
+        <input id="rt-inflation" type="number" min="0" step="0.1" class="field" value="2.5" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Annual contribution increase (%)
+        <input id="rt-increase" type="number" min="0" step="0.5" class="field" value="0" inputmode="decimal" />
+      </label>
     </div>
 
     <div class="panel panel-lift p-6 text-center">
       <div id="rt-final" class="font-display text-4xl font-semibold text-primary-hover">—</div>
       <div id="rt-sub" class="mt-2 text-sm text-ink-muted"></div>
+      <div id="rt-real" class="mt-1 text-[13px] text-ink-subtle"></div>
     </div>
 
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
       <div class="panel p-5 text-center"><div id="rt-contrib" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total contributions</div></div>
       <div class="panel p-5 text-center"><div id="rt-growth" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total growth</div></div>
+      <div class="panel p-5 text-center"><div id="rt-withdraw" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Monthly income (4% rule)</div></div>
+    </div>
+
+    <!-- Projection chart -->
+    <div class="panel p-5">
+      <div class="mb-3 text-sm text-ink-muted">Balance growth to retirement</div>
+      <svg id="rt-chart" viewBox="0 0 320 120" class="w-full" preserveAspectRatio="none" role="img" aria-label="Retirement balance over time"></svg>
+      <div id="rt-axis" class="mt-1 flex justify-between font-mono text-[11px] text-ink-tertiary"></div>
     </div>
 
     <div class="panel p-5">
@@ -65,60 +80,108 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const matchEl = document.getElementById('rt-match') as HTMLInputElement;
   const returnEl = document.getElementById('rt-return') as HTMLInputElement;
 
+  const inflationEl = document.getElementById('rt-inflation') as HTMLInputElement;
+  const increaseEl = document.getElementById('rt-increase') as HTMLInputElement;
+
   const finalEl = document.getElementById('rt-final')!;
   const subEl = document.getElementById('rt-sub')!;
+  const realEl = document.getElementById('rt-real')!;
   const contribEl = document.getElementById('rt-contrib')!;
   const growthEl = document.getElementById('rt-growth')!;
+  const withdrawEl = document.getElementById('rt-withdraw')!;
   const startEl = document.getElementById('rt-start')!;
   const youEl = document.getElementById('rt-you')!;
   const employerEl = document.getElementById('rt-employer')!;
   const growth2El = document.getElementById('rt-growth2')!;
 
   const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+  const money0 = (n: number) => Math.round(n).toLocaleString();
+  const SVGNS = 'http://www.w3.org/2000/svg';
 
   function reset() {
     finalEl.textContent = '—';
-    subEl.textContent = '';
-    contribEl.textContent = growthEl.textContent = '—';
+    subEl.textContent = ''; realEl.textContent = '';
+    contribEl.textContent = growthEl.textContent = withdrawEl.textContent = '—';
     startEl.textContent = youEl.textContent = employerEl.textContent = growth2El.textContent = '—';
+    document.getElementById('rt-chart')!.innerHTML = '';
+    document.getElementById('rt-axis')!.innerHTML = '';
   }
 
   function calc() {
     const age = Number(ageEl.value);
     const retire = Number(retireEl.value);
     const start = Number(balanceEl.value);
-    const monthly = Number(monthlyEl.value);
+    let monthly = Number(monthlyEl.value);
     const matchPct = Number(matchEl.value);
     const annual = Number(returnEl.value);
+    const inflation = Number(inflationEl.value) / 100;
+    const increase = Number(increaseEl.value) / 100;
 
     const months = Math.round((retire - age) * 12);
     if (!(months > 0) || !(start >= 0) || !(monthly >= 0)) { reset(); return; }
 
     const r = annual / 12 / 100;
-    const employerMonthly = monthly * (matchPct / 100);
-    const contribPerMonth = monthly + employerMonthly;
-
     let balance = start;
+    let yourContrib = 0, employerContrib = 0;
+    const yearlyPoints: number[] = [start];
+
     for (let i = 0; i < months; i++) {
-      balance = balance * (1 + r) + contribPerMonth;
+      // Bump the monthly contribution once per completed year.
+      if (i > 0 && i % 12 === 0 && increase > 0) monthly *= 1 + increase;
+      const employerMonthly = monthly * (matchPct / 100);
+      balance = balance * (1 + r) + monthly + employerMonthly;
+      yourContrib += monthly;
+      employerContrib += employerMonthly;
+      if ((i + 1) % 12 === 0 || i === months - 1) yearlyPoints.push(balance);
     }
 
-    const yourContrib = monthly * months;
-    const employerContrib = employerMonthly * months;
     const totalContrib = yourContrib + employerContrib;
     const growth = balance - start - totalContrib;
+    const years = months / 12;
+    const realBalance = balance / Math.pow(1 + inflation, years);
 
     finalEl.textContent = money(balance);
-    subEl.textContent = `Projected balance at age ${retire} over ${months} months`;
+    subEl.textContent = `Projected balance at age ${retire} over ${Math.round(years)} years`;
+    realEl.textContent = inflation > 0 ? `≈ ${money0(realBalance)} in today's dollars (after ${(inflation * 100).toFixed(1)}% inflation)` : '';
     contribEl.textContent = money(totalContrib);
     growthEl.textContent = money(growth);
+    withdrawEl.textContent = money0((balance * 0.04) / 12);
 
     startEl.textContent = money(start);
     youEl.textContent = money(yourContrib);
     employerEl.textContent = money(employerContrib);
     growth2El.textContent = money(growth);
+
+    drawChart(yearlyPoints);
   }
 
-  [ageEl, retireEl, balanceEl, monthlyEl, matchEl, returnEl].forEach((el) => el.addEventListener('input', calc));
+  function drawChart(points: number[]) {
+    const svg = document.getElementById('rt-chart')!;
+    svg.innerHTML = '';
+    const W = 320, H = 120;
+    const maxV = Math.max(...points, 1);
+    const n = points.length - 1;
+    const x = (i: number) => (n === 0 ? 0 : (i / n) * W);
+    const y = (v: number) => H - (v / maxV) * H;
+    const line = points.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`);
+
+    const area = document.createElementNS(SVGNS, 'polygon');
+    area.setAttribute('points', [`0,${H}`, ...line, `${W},${H}`].join(' '));
+    area.setAttribute('fill', '#5e6ad2');
+    area.setAttribute('opacity', '0.3');
+    svg.appendChild(area);
+
+    const poly = document.createElementNS(SVGNS, 'polyline');
+    poly.setAttribute('points', line.join(' '));
+    poly.setAttribute('fill', 'none');
+    poly.setAttribute('stroke', '#828fff');
+    poly.setAttribute('stroke-width', '2');
+    poly.setAttribute('vector-effect', 'non-scaling-stroke');
+    svg.appendChild(poly);
+
+    document.getElementById('rt-axis')!.innerHTML = `<span>Now</span><span>${Math.round(n / 2)} yr</span><span>${n} yr</span>`;
+  }
+
+  [ageEl, retireEl, balanceEl, monthlyEl, matchEl, returnEl, inflationEl, increaseEl].forEach((el) => el.addEventListener('input', calc));
   calc();
 </script>

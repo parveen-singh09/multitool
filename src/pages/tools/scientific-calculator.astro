@@ -15,7 +15,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div id="sc-pad" class="grid grid-cols-5 gap-2">
       {[
         'sin','cos','tan','(',')',
-        'log','ln','sqrt','^','%',
+        'log','ln','sqrt','^','n!',
+        'MC','MR','M+','M−','Ans',
         '7','8','9','/','C',
         '4','5','6','*','⌫',
         '1','2','3','-','pi',
@@ -24,6 +25,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <button data-key={k} class={`sc-btn btn ${k === '=' ? 'btn-primary' : 'btn-secondary'}`}>{k}</button>
       ))}
     </div>
+
+    <div class="flex items-center justify-between text-[13px] text-ink-subtle">
+      <span>Memory: <span id="sc-mem" class="font-mono text-ink-muted">0</span></span>
+      <button id="sc-clear-hist" type="button" class="text-ink-tertiary hover:text-primary-hover">Clear history</button>
+    </div>
+    <ul id="sc-history" class="flex flex-col gap-1 font-mono text-[13px] text-ink-tertiary"></ul>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -41,13 +48,24 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const exprEl = document.getElementById('sc-expr') as HTMLInputElement;
   const resultEl = document.getElementById('sc-result')!;
 
+  let memory = 0; // M+/M−/MR/MC store
+  let ans = 0; // last successful result, recalled via "Ans"
+
   const angleMode = () =>
     (document.querySelector('input[name="sc-angle"]:checked') as HTMLInputElement).value;
 
   // ---- Tokenizer ----
-  type Tok = { t: 'num' | 'op' | 'fn' | 'lp' | 'rp' | 'const'; v: string };
-  const FUNCS = ['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'log', 'ln', 'sqrt', 'abs'];
+  type Tok = { t: 'num' | 'op' | 'fn' | 'lp' | 'rp' | 'const' | 'post'; v: string };
+  const FUNCS = ['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'sinh', 'cosh', 'tanh', 'log', 'ln', 'sqrt', 'abs'];
   const CONSTS: Record<string, number> = { pi: Math.PI, e: Math.E };
+
+  const factorial = (n: number): number => {
+    if (n < 0 || !Number.isInteger(n)) return NaN; // integers only
+    if (n > 170) return Infinity; // overflows double past 170!
+    let f = 1;
+    for (let i = 2; i <= n; i++) f *= i;
+    return f;
+  };
 
   function tokenize(s: string): Tok[] {
     const toks: Tok[] = [];
@@ -65,10 +83,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         let word = '';
         while (i < s.length && /[a-z]/i.test(s[i])) word += s[i++].toLowerCase();
         if (FUNCS.includes(word)) toks.push({ t: 'fn', v: word });
+        else if (word === 'ans') toks.push({ t: 'num', v: String(ans) });
         else if (word in CONSTS) toks.push({ t: 'const', v: word });
         else throw new Error(`Unknown name "${word}"`);
         continue;
       }
+      if (c === '!') { toks.push({ t: 'post', v: '!' }); i++; continue; }
       if ('+-*/^%'.includes(c)) { toks.push({ t: 'op', v: c }); i++; continue; }
       if (c === '(') { toks.push({ t: 'lp', v: c }); i++; continue; }
       if (c === ')') { toks.push({ t: 'rp', v: c }); i++; continue; }
@@ -87,6 +107,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     let prev: Tok | null = null;
     for (const tok of toks) {
       if (tok.t === 'num' || tok.t === 'const') { out.push(tok); }
+      else if (tok.t === 'post') { out.push(tok); } // postfix (!) applies to the operand already output
       else if (tok.t === 'fn') { stack.push(tok); }
       else if (tok.t === 'op') {
         // Detect unary minus/plus.
@@ -126,7 +147,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     for (const tok of rpn) {
       if (tok.t === 'num') st.push(parseFloat(tok.v));
       else if (tok.t === 'const') st.push(CONSTS[tok.v]);
-      else if (tok.t === 'op') {
+      else if (tok.t === 'post') {
+        const x = st.pop()!;
+        if (x === undefined) throw new Error('Malformed expression');
+        if (tok.v === '!') st.push(factorial(x));
+      } else if (tok.t === 'op') {
         if (tok.v === 'u-') { st.push(-st.pop()!); continue; }
         const b = st.pop()!, a = st.pop()!;
         if (a === undefined || b === undefined) throw new Error('Malformed expression');
@@ -137,6 +162,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         const f: Record<string, number> = {
           sin: Math.sin(toRad(x)), cos: Math.cos(toRad(x)), tan: Math.tan(toRad(x)),
           asin: fromRad(Math.asin(x)), acos: fromRad(Math.acos(x)), atan: fromRad(Math.atan(x)),
+          sinh: Math.sinh(x), cosh: Math.cosh(x), tanh: Math.tanh(x),
           log: Math.log10(x), ln: Math.log(x), sqrt: Math.sqrt(x), abs: Math.abs(x),
         };
         st.push(f[tok.v]);
@@ -146,29 +172,58 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return st[0];
   }
 
-  function evaluate() {
+  // Live evaluation (does not commit to Ans/history — that happens on "=").
+  function evaluate(): number | null {
     const src = exprEl.value.trim();
-    if (!src) { resultEl.textContent = '0'; resultEl.style.color = ''; return; }
+    if (!src) { resultEl.textContent = '0'; resultEl.style.color = ''; return null; }
     try {
       const val = evalRPN(toRPN(tokenize(src)));
       if (!isFinite(val)) throw new Error('Result is not finite');
       resultEl.textContent = String(Math.round(val * 1e10) / 1e10);
       resultEl.style.color = '';
+      return val;
     } catch (e) {
       resultEl.textContent = (e as Error).message;
       resultEl.style.color = '#e5484d';
+      return null;
+    }
+  }
+
+  const memEl = document.getElementById('sc-mem')!;
+  const histEl = document.getElementById('sc-history')!;
+  const history: string[] = [];
+
+  function commit() {
+    const src = exprEl.value.trim();
+    const val = evaluate();
+    if (val !== null && src) {
+      ans = val;
+      history.unshift(`${src} = ${Math.round(val * 1e10) / 1e10}`);
+      if (history.length > 8) history.pop();
+      histEl.innerHTML = history.map((h) => `<li>${h}</li>`).join('');
     }
   }
 
   exprEl.addEventListener('input', evaluate);
   document.querySelectorAll('input[name="sc-angle"]').forEach((r) => r.addEventListener('change', evaluate));
+  document.getElementById('sc-clear-hist')!.addEventListener('click', () => { history.length = 0; histEl.innerHTML = ''; });
 
   document.querySelectorAll<HTMLButtonElement>('.sc-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       const k = btn.dataset.key!;
       if (k === 'C') { exprEl.value = ''; }
       else if (k === '⌫') { exprEl.value = exprEl.value.slice(0, -1); }
-      else if (k === '=') { evaluate(); exprEl.focus(); return; }
+      else if (k === '=') { commit(); exprEl.focus(); return; }
+      else if (k === 'n!') { exprEl.value += '!'; }
+      else if (k === 'Ans') { exprEl.value += 'Ans'; }
+      else if (k === 'MC') { memory = 0; memEl.textContent = '0'; exprEl.focus(); return; }
+      else if (k === 'MR') { exprEl.value += String(memory); }
+      else if (k === 'M+' || k === 'M−') {
+        const val = evaluate();
+        if (val !== null) { memory += k === 'M+' ? val : -val; memEl.textContent = String(Math.round(memory * 1e10) / 1e10); }
+        exprEl.focus();
+        return;
+      }
       else if (['sin', 'cos', 'tan', 'log', 'ln', 'sqrt'].includes(k)) { exprEl.value += k + '('; }
       else { exprEl.value += k; }
       evaluate();

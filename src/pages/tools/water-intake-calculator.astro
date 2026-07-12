@@ -11,6 +11,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <select id="wt-unit" class="field w-24"><option value="kg">kg</option><option value="lb">lb</option></select>
         </span>
       </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Sex
+        <select id="wt-sex" class="field">
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+      </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Exercise (min/day)
         <input id="wt-ex" type="number" min="0" class="field" value="30" inputmode="numeric" />
       </label>
@@ -19,6 +25,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <option value="1">Temperate</option>
           <option value="1.1">Warm</option>
           <option value="1.2">Hot</option>
+        </select>
+      </label>
+      <label id="wt-preg-wrap" class="flex flex-col gap-1 text-sm text-ink-subtle">Pregnancy / lactation
+        <select id="wt-preg" class="field">
+          <option value="0">Not applicable</option>
+          <option value="0.3">Pregnant (+0.3 L)</option>
+          <option value="0.7">Breastfeeding (+0.7 L)</option>
         </select>
       </label>
     </div>
@@ -42,20 +55,31 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 <script>
   const weight = document.getElementById('wt-weight') as HTMLInputElement;
   const unit = document.getElementById('wt-unit') as HTMLSelectElement;
+  const sexEl = document.getElementById('wt-sex') as HTMLSelectElement;
   const ex = document.getElementById('wt-ex') as HTMLInputElement;
   const climate = document.getElementById('wt-climate') as HTMLSelectElement;
+  const pregEl = document.getElementById('wt-preg') as HTMLSelectElement;
 
   function calc() {
     let kg = Number(weight.value);
     if (unit.value === 'lb') kg *= 0.45359237;
     if (!(kg > 0)) { document.getElementById('wt-litres')!.textContent = '—'; document.getElementById('wt-cups')!.textContent = ''; return; }
-    // ~35 ml per kg baseline + ~0.35 L per 30 min exercise, scaled by climate.
-    let litres = (kg * 35) / 1000;
+    // ~35 ml/kg baseline (males), slightly lower for females; + exercise, scaled by climate.
+    const perKg = sexEl.value === 'female' ? 31 : 35;
+    let litres = (kg * perKg) / 1000;
     litres += (Number(ex.value) / 30) * 0.35;
     litres *= Number(climate.value);
+    // Pregnancy/lactation only applies to females; add after scaling.
+    if (sexEl.value === 'female') litres += Number(pregEl.value) || 0;
+
+    // Pregnancy option is only meaningful for females.
+    document.getElementById('wt-preg-wrap')!.classList.toggle('hidden', sexEl.value !== 'female');
+
+    const ozTotal = litres * 33.814;
     document.getElementById('wt-litres')!.textContent = litres.toFixed(2) + ' L';
-    document.getElementById('wt-cups')!.textContent = `about ${Math.round(litres * 1000 / 250)} cups (250 ml) per day`;
+    document.getElementById('wt-cups')!.textContent =
+      `about ${Math.round((litres * 1000) / 250)} cups (250 ml) · ${Math.round(ozTotal)} fl oz per day`;
   }
-  [weight, unit, ex, climate].forEach((el) => el.addEventListener('input', calc));
+  [weight, unit, sexEl, ex, climate, pregEl].forEach((el) => el.addEventListener('input', calc));
   calc();
 </script>

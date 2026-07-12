@@ -11,22 +11,45 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <label class="flex items-center gap-2 text-sm text-ink-subtle">
         <input id="cs-vars" type="checkbox" class="accent-[#5e6ad2]" checked /> Extract repeated colors to variables
       </label>
-      <button id="cs-copy" type="button" class="btn btn-secondary">Copy</button>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Indent
+        <select id="cs-indent" class="field w-auto py-1">
+          <option value="2" selected>2 spaces</option>
+          <option value="4">4 spaces</option>
+          <option value="tab">Tab</option>
+        </select>
+      </label>
     </div>
 
     <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-        CSS input
-        <div class="hl-edit field p-0" style="height:24rem;resize:vertical;overflow:hidden">
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        <span class="flex items-center justify-between">
+          <span>CSS input</span>
+          <span class="flex gap-2">
+            <button id="cs-open" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Open file</button>
+            <button id="cs-clear" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Clear</button>
+          </span>
+        </span>
+        <div id="cs-drop" class="hl-edit field p-0" style="height:24rem;resize:vertical;overflow:hidden">
           <pre class="hl-block" aria-hidden="true"><code id="cs-in-hl" class="hljs" style="background:transparent"></code></pre>
           <textarea id="cs-in" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
         </div>
-      </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-        SCSS output
+        <input id="cs-file" type="file" accept=".css,text/css" class="hidden" />
+      </div>
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        <span class="flex items-center justify-between">
+          <span>SCSS output</span>
+          <span class="flex gap-2">
+            <button id="cs-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button>
+            <button id="cs-download" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Download</button>
+          </span>
+        </span>
         <pre class="hl-block field" style="height:24rem;overflow:auto"><code id="cs-out" class="hljs" style="background:transparent;padding:0"></code></pre>
-      </label>
+      </div>
     </div>
+
+    <p id="cs-stats" class="text-[13px] text-ink-tertiary"></p>
+    <p id="cs-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -34,8 +57,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       This free CSS to SCSS converter rewrites plain CSS into SCSS syntax. It can
       nest rules that share a parent selector (turning <code>.card</code> and
       <code>.card .title</code> into nested blocks) and pull repeated color
-      values out into <code>$variables</code> at the top. The output is valid
-      SCSS you can drop into a Sass build. Everything is processed in your browser.
+      values out into <code>$variables</code> at the top. Choose your indent
+      (2 spaces, 4 spaces or a tab), open a <code>.css</code> file or drag one
+      onto the editor, then copy or download valid SCSS you can drop straight
+      into a Sass build.
+    </p>
+    <p>
+      Both panes are syntax-highlighted as you type, malformed CSS (such as
+      unbalanced braces) is flagged inline, and a live count shows how many rules
+      were parsed and how many variables were extracted. Everything runs entirely
+      in your browser — no code is uploaded to a server.
     </p>
   </div>
 </ToolLayout>
@@ -48,8 +79,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const output = document.getElementById('cs-out') as HTMLElement;
   const nestEl = document.getElementById('cs-nest') as HTMLInputElement;
   const varsEl = document.getElementById('cs-vars') as HTMLInputElement;
+  const indentEl = document.getElementById('cs-indent') as HTMLSelectElement;
+  const statsEl = document.getElementById('cs-stats') as HTMLElement;
+  const errEl = document.getElementById('cs-error') as HTMLElement;
+  const dropEl = document.getElementById('cs-drop') as HTMLElement;
+  const fileEl = document.getElementById('cs-file') as HTMLInputElement;
 
   interface Rule { selector: string; body: string; }
+
+  const unit = () => (indentEl.value === 'tab' ? '\t' : ' '.repeat(Number(indentEl.value)));
 
   function parseRules(css: string): Rule[] {
     // strip comments
@@ -63,7 +101,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return rules;
   }
 
-  function extractVars(rules: Rule[]): { vars: Map<string, string>; } {
+  function extractVars(rules: Rule[]): Map<string, string> {
     const colorCount = new Map<string, number>();
     const colorRe = /#[0-9a-fA-F]{3,8}\b|rgba?\([^)]+\)|hsla?\([^)]+\)/g;
     for (const r of rules) {
@@ -73,7 +111,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const vars = new Map<string, string>();
     let i = 1;
     for (const [color, n] of colorCount) if (n >= 2) vars.set(color, `$color-${i++}`);
-    return { vars };
+    return vars;
   }
 
   function applyVars(body: string, vars: Map<string, string>): string {
@@ -87,18 +125,19 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const fmtBody = (body: string, indent: string) =>
     body.split(';').map((d) => d.trim()).filter(Boolean).map((d) => `${indent}${d};`).join('\n');
 
-  function build(): string {
+  function build(): { scss: string; ruleCount: number; varCount: number } {
     const raw = input.value;
-    if (!raw.trim()) return '';
+    if (!raw.trim()) return { scss: '', ruleCount: 0, varCount: 0 };
     const rules = parseRules(raw);
-    const { vars } = varsEl.checked ? extractVars(rules) : { vars: new Map<string, string>() };
+    const vars = varsEl.checked ? extractVars(rules) : new Map<string, string>();
+    const u = unit();
 
     let header = '';
     if (vars.size) header = [...vars].map(([color, name]) => `${name}: ${color};`).join('\n') + '\n\n';
 
     if (!nestEl.checked) {
-      const body = rules.map((r) => `${r.selector} {\n${fmtBody(applyVars(r.body, vars), '  ')}\n}`).join('\n\n');
-      return header + body;
+      const body = rules.map((r) => `${r.selector} {\n${fmtBody(applyVars(r.body, vars), u)}\n}`).join('\n\n');
+      return { scss: header + body, ruleCount: rules.length, varCount: vars.size };
     }
 
     // Nest: group by first token of selector.
@@ -111,26 +150,73 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       else tree[root].children.push({ selector: parts.slice(1).join(' '), body: r.body });
     }
     const blocks = Object.entries(tree).map(([root, { self, children }]) => {
-      let inner = self ? fmtBody(applyVars(self, vars), '  ') : '';
+      let inner = self ? fmtBody(applyVars(self, vars), u) : '';
       const nested = children.map((c) => {
-        const sel = /^[.#:&\[]/.test(c.selector) ? `&${c.selector.startsWith('&') ? c.selector.slice(1) : ' ' + c.selector}` : c.selector;
-        return `  ${c.selector} {\n${fmtBody(applyVars(c.body, vars), '    ')}\n  }`;
+        return `${u}${c.selector} {\n${fmtBody(applyVars(c.body, vars), u + u)}\n${u}}`;
       }).join('\n');
       return `${root} {\n${[inner, nested].filter(Boolean).join('\n')}\n}`;
     }).join('\n\n');
-    return header + blocks;
+    return { scss: header + blocks, ruleCount: rules.length, varCount: vars.size };
   }
 
   let rawOutput = '';
-  function run() { rawOutput = build(); hl(output, rawOutput, 'scss'); }
+  function run() {
+    errEl.classList.add('hidden');
+    const raw = input.value;
+    // Cheap validation: unbalanced braces almost always means malformed CSS.
+    const opens = (raw.match(/\{/g) || []).length;
+    const closes = (raw.match(/\}/g) || []).length;
+    if (raw.trim() && opens !== closes) {
+      errEl.textContent = `Unbalanced braces: ${opens} "{" vs ${closes} "}". Check for a missing brace — output may be incomplete.`;
+      errEl.classList.remove('hidden');
+    }
+    const { scss, ruleCount, varCount } = build();
+    rawOutput = scss;
+    hl(output, rawOutput, 'scss');
+    statsEl.textContent = raw.trim()
+      ? `${ruleCount} rule${ruleCount === 1 ? '' : 's'} · ${varCount} variable${varCount === 1 ? '' : 's'} extracted`
+      : '';
+  }
 
   const refresh = wireInput(input, inHl, () => 'css', () => run());
   nestEl.addEventListener('change', run);
   varsEl.addEventListener('change', run);
+  indentEl.addEventListener('change', run);
+
   document.getElementById('cs-copy')!.addEventListener('click', async (e) => {
+    if (!rawOutput) return;
     await navigator.clipboard.writeText(rawOutput);
     const b = e.currentTarget as HTMLButtonElement;
     b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
+  });
+
+  document.getElementById('cs-download')!.addEventListener('click', () => {
+    if (!rawOutput) return;
+    const blob = new Blob([rawOutput], { type: 'text/x-scss' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'converted.scss';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById('cs-clear')!.addEventListener('click', () => {
+    input.value = ''; rawOutput = ''; output.textContent = ''; statsEl.textContent = '';
+    errEl.classList.add('hidden');
+    refresh(); run();
+  });
+
+  // File open + drag-drop: read a .css file into the editor.
+  function loadFile(file: File) {
+    file.text().then((text) => { input.value = text; refresh(); run(); });
+  }
+  document.getElementById('cs-open')!.addEventListener('click', () => fileEl.click());
+  fileEl.addEventListener('change', () => { if (fileEl.files?.[0]) loadFile(fileEl.files[0]); });
+  dropEl.addEventListener('dragover', (e) => { e.preventDefault(); });
+  dropEl.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const f = e.dataTransfer?.files?.[0];
+    if (f) loadFile(f);
   });
 
   input.value = `.card {

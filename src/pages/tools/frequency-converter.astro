@@ -1,14 +1,355 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
-import UnitConverter from '../../components/UnitConverter.astro';
 ---
 
 <ToolLayout slug="frequency-converter">
-  <UnitConverter slug="frequency-converter" />
+  <div id="fc-root" class="flex flex-col gap-6">
+    <!-- Converter -->
+    <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="fc-from-val">From</label>
+        <input
+          id="fc-from-val"
+          type="text"
+          class="field"
+          value="440"
+          inputmode="decimal"
+          spellcheck="false"
+          autocapitalize="off"
+          autocomplete="off"
+          autocorrect="off"
+          placeholder="e.g. 440  or  2.4e9"
+        />
+        <select id="fc-from-unit" class="field mt-1"></select>
+      </div>
+      <button
+        id="fc-swap"
+        type="button"
+        class="btn btn-secondary mb-1 h-10 w-10 shrink-0 justify-self-center p-0"
+        aria-label="Swap units"
+        title="Swap units"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
+      </button>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="fc-to-val">To</label>
+        <div class="relative">
+          <input id="fc-to-val" type="text" class="field pr-16" readonly />
+          <button id="fc-copy" type="button" class="btn btn-tertiary absolute right-1 top-1/2 -translate-y-1/2 px-2 py-1 text-[13px]" title="Copy result">Copy</button>
+        </div>
+        <select id="fc-to-unit" class="field mt-1"></select>
+      </div>
+    </div>
+
+    <!-- Precision + formula -->
+    <div class="flex flex-wrap items-center gap-3">
+      <label class="flex items-center gap-2 text-[13px] text-ink-subtle">
+        Decimals
+        <select id="fc-prec" class="field w-auto py-1">
+          <option value="auto" selected>Auto</option>
+          <option value="0">0</option>
+          <option value="2">2</option>
+          <option value="4">4</option>
+          <option value="6">6</option>
+          <option value="8">8</option>
+          <option value="10">10</option>
+        </select>
+      </label>
+      <p id="fc-formula" class="text-[13px] text-ink-tertiary"></p>
+    </div>
+
+    <p id="fc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <!-- Derived physics readouts + all-units breakdown -->
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div class="panel panel-lift overflow-hidden">
+        <div class="border-b border-hairline px-4 py-2 text-[13px] text-ink-subtle">Physical properties of this frequency</div>
+        <div id="fc-derived" class="divide-y divide-hairline"></div>
+      </div>
+
+      <div class="panel panel-lift overflow-hidden">
+        <div class="border-b border-hairline px-4 py-2 text-[13px] text-ink-subtle">This frequency in every unit</div>
+        <div id="fc-breakdown" class="divide-y divide-hairline"></div>
+      </div>
+    </div>
+
+    <!-- Common frequency reference table -->
+    <div>
+      <p class="mb-2 text-[13px] text-ink-subtle">Common real-world frequencies</p>
+      <div id="fc-table" class="overflow-x-auto rounded-md border border-hairline"></div>
+    </div>
+  </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free frequency converter converts frequency between hertz, kilohertz, megahertz, gigahertz, revolutions per minute and radians per second. Useful for audio, radio and rotational speed. Runs entirely in your browser.
+      This free frequency converter converts between hertz (Hz), kilohertz (kHz),
+      megahertz (MHz), gigahertz (GHz), terahertz (THz), petahertz (PHz),
+      revolutions per minute (RPM), revolutions per hour (RPH), beats per minute
+      (BPM), radians per second, radians per minute and degrees per second — useful
+      for audio, radio, telecom, mechanical rotation and physics. Enter a plain
+      number or scientific notation like <span class="font-mono text-ink-muted">2.4e9</span>.
+      Every conversion runs entirely in your browser; nothing is uploaded.
+    </p>
+    <p>
+      Beyond a plain From/To conversion it does what most single-purpose calculators
+      don't: it shows the <strong class="text-ink-muted">period</strong> (T = 1/f,
+      auto-scaled from days down to femtoseconds), the
+      <strong class="text-ink-muted">angular frequency</strong> (ω = 2πf), the
+      <strong class="text-ink-muted">wavelength</strong> of an electromagnetic wave in
+      vacuum (λ = c/f) and of a sound wave in 20 °C air (λ = 343 m·s⁻¹ / f), classifies
+      the frequency into its <strong class="text-ink-muted">radio / EM spectrum band</strong>
+      (VLF through visible light), and names the <strong class="text-ink-muted">nearest
+      musical note</strong> (A4 = 440 Hz) with cents deviation. It also lists the value in
+      every supported unit at once, lets you pick the decimal precision, and copies the
+      result with one click.
+    </p>
+    <p>
+      Quick reference: 1 kHz = 1,000 Hz, 1 MHz = 1,000,000 Hz, 1 GHz = 1,000,000,000 Hz.
+      To get the period in seconds, divide 1 by the frequency in hertz. To get angular
+      frequency in radians per second, multiply the frequency in hertz by 2π. RPM ÷ 60 = Hz.
+      Mains power is 50 Hz in Europe and 60 Hz in North America; concert pitch A is 440 Hz;
+      Wi-Fi and Bluetooth run at 2.4 GHz.
     </p>
   </div>
 </ToolLayout>
+
+<script>
+  // Self-contained frequency converter. Base unit: HERTZ.
+  // No shared lib — the task scopes edits to this file only.
+
+  const TAU = 2 * Math.PI;
+  const C_LIGHT = 299792458;   // m/s, speed of light in vacuum
+  const V_SOUND = 343;         // m/s, speed of sound in 20 °C air
+
+  // hertz per 1 of each unit
+  const UNITS: Record<string, number> = {
+    'Hertz (Hz)': 1,
+    'Kilohertz (kHz)': 1e3,
+    'Megahertz (MHz)': 1e6,
+    'Gigahertz (GHz)': 1e9,
+    'Terahertz (THz)': 1e12,
+    'Petahertz (PHz)': 1e15,
+    'Revolution / minute (RPM)': 1 / 60,
+    'Revolution / hour (RPH)': 1 / 3600,
+    'Beat / minute (BPM)': 1 / 60,
+    'Radian / second (rad/s)': 1 / TAU,
+    'Radian / minute': 1 / (TAU * 60),
+    'Degree / second (°/s)': 1 / 360,
+  };
+  const UNIT_NAMES = Object.keys(UNITS);
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const fromVal = $<HTMLInputElement>('fc-from-val');
+  const toVal = $<HTMLInputElement>('fc-to-val');
+  const fromUnit = $<HTMLSelectElement>('fc-from-unit');
+  const toUnit = $<HTMLSelectElement>('fc-to-unit');
+  const prec = $<HTMLSelectElement>('fc-prec');
+  const swap = $<HTMLButtonElement>('fc-swap');
+  const copyBtn = $<HTMLButtonElement>('fc-copy');
+  const formula = $('fc-formula');
+  const err = $('fc-error');
+  const derived = $('fc-derived');
+  const breakdown = $('fc-breakdown');
+  const table = $('fc-table');
+
+  // ---- number formatting ----
+  function fmt(n: number): string {
+    if (!isFinite(n)) return n > 0 ? '∞' : n < 0 ? '-∞' : '—';
+    if (n === 0) return '0';
+    const p = prec.value;
+    if (p !== 'auto') return trimZeros(n.toFixed(Number(p)));
+    const abs = Math.abs(n);
+    if (abs >= 1e15 || abs < 1e-6) return n.toExponential(6);
+    return trimZeros((Math.round(n * 1e9) / 1e9).toString());
+  }
+  function trimZeros(s: string): string {
+    if (s.includes('e') || s.includes('E')) return s;
+    return s.includes('.') ? s.replace(/\.?0+$/, '') : s;
+  }
+
+  // ---- SI auto-scaler: pick the entry whose factor the value clears ----
+  // table sorted descending by factor; returns "<value/factor> <suffix>".
+  function scale(value: number, table: [number, string][]): string {
+    if (!isFinite(value)) return '—';
+    const abs = Math.abs(value);
+    if (abs === 0) return `0 ${table[table.length - 1][1]}`;
+    for (const [f, s] of table) if (abs >= f) return `${fmt(value / f)} ${s}`;
+    const [f, s] = table[table.length - 1];
+    return `${fmt(value / f)} ${s}`;
+  }
+  const TIME_TABLE: [number, string][] = [
+    [86400, 'days'], [3600, 'h'], [60, 'min'], [1, 's'],
+    [1e-3, 'ms'], [1e-6, 'µs'], [1e-9, 'ns'], [1e-12, 'ps'], [1e-15, 'fs'],
+  ];
+  const LEN_TABLE: [number, string][] = [
+    [1e3, 'km'], [1, 'm'], [1e-2, 'cm'], [1e-3, 'mm'],
+    [1e-6, 'µm'], [1e-9, 'nm'], [1e-12, 'pm'],
+  ];
+
+  // ---- radio / EM spectrum band by frequency (Hz) ----
+  function emBand(hz: number): string {
+    if (!isFinite(hz) || hz <= 0) return '—';
+    const bands: [number, string][] = [
+      [30, 'ELF — extremely low frequency'],
+      [300, 'SLF — super low frequency'],
+      [3e3, 'ULF — ultra low frequency'],
+      [30e3, 'VLF — very low frequency'],
+      [300e3, 'LF — low frequency (longwave)'],
+      [3e6, 'MF — medium frequency (AM radio)'],
+      [30e6, 'HF — high frequency (shortwave)'],
+      [300e6, 'VHF — very high frequency (FM / TV)'],
+      [3e9, 'UHF — ultra high frequency (mobile, Wi-Fi, GPS)'],
+      [30e9, 'SHF — super high frequency (radar, satellite)'],
+      [300e9, 'EHF — millimetre wave (5G mmWave)'],
+      [3e12, 'THF — submillimetre / far infrared'],
+      [4e14, 'Infrared light'],
+      [7.9e14, 'Visible light'],
+      [3e16, 'Ultraviolet light'],
+      [3e19, 'X-rays'],
+      [Infinity, 'Gamma rays'],
+    ];
+    for (const [ceil, name] of bands) if (hz < ceil) return name;
+    return '—';
+  }
+
+  // ---- nearest musical note (A4 = 440 Hz, equal temperament) ----
+  const NOTE_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+  function nearestNote(hz: number): string {
+    if (!isFinite(hz) || hz <= 0) return '—';
+    const midi = 69 + 12 * Math.log2(hz / 440);
+    const n = Math.round(midi);
+    if (n < 12 || n > 127) return '—'; // outside ~C0..G9
+    const name = NOTE_NAMES[((n % 12) + 12) % 12];
+    const octave = Math.floor(n / 12) - 1;
+    const cents = Math.round((midi - n) * 100);
+    const dev = cents === 0 ? 'exact' : `${cents > 0 ? '+' : ''}${cents}¢`;
+    return `${name}${octave} (${dev})`;
+  }
+
+  // ---- derived-property readout panel ----
+  function renderDerived(hz: number) {
+    if (!isFinite(hz)) { derived.innerHTML = drow('—', ''); return; }
+    const rows = [
+      drow('Period (T = 1/f)', hz === 0 ? '∞' : scale(1 / hz, TIME_TABLE)),
+      drow('Angular frequency (ω = 2πf)', `${fmt(TAU * hz)} rad/s`),
+      drow('Wavelength — light in vacuum', hz === 0 ? '∞' : scale(C_LIGHT / hz, LEN_TABLE)),
+      drow('Wavelength — sound in air (20 °C)', hz === 0 ? '∞' : scale(V_SOUND / hz, LEN_TABLE)),
+      drow('Radio / EM band', emBand(hz)),
+      drow('Nearest musical note', nearestNote(hz)),
+    ];
+    derived.innerHTML = rows.join('');
+  }
+  function drow(label: string, val = ''): string {
+    return `<div class="flex items-center justify-between gap-3 px-4 py-2 text-[13px]">
+      <span class="text-ink-subtle">${label}</span>
+      <span class="text-right font-mono text-ink">${val}</span>
+    </div>`;
+  }
+
+  // ---- all-units breakdown ----
+  const hzTo = (hz: number, unit: string) => hz / UNITS[unit];
+  function renderBreakdown(hz: number) {
+    if (!isFinite(hz)) { breakdown.innerHTML = drow('—', ''); return; }
+    breakdown.innerHTML = UNIT_NAMES.map((u) => drow(u, fmt(hzTo(hz, u)))).join('');
+  }
+
+  // ---- reference table of common real-world frequencies ----
+  const COMMON: [number, string][] = [
+    [50, 'Mains power (Europe)'],
+    [60, 'Mains power (North America)'],
+    [261.626, 'Middle C (C4)'],
+    [440, 'Concert pitch A (A4)'],
+    [20000, 'Upper limit of human hearing'],
+    [1e6, 'AM radio (≈ 1 MHz)'],
+    [1e8, 'FM radio (≈ 100 MHz)'],
+    [2.4e9, 'Wi-Fi / Bluetooth (2.4 GHz)'],
+    [5e9, 'Wi-Fi (5 GHz)'],
+    [5.4e14, 'Green visible light'],
+  ];
+  function renderTable() {
+    const rows = COMMON.map(([hz, what]) => `<tr class="border-t border-hairline">
+      <td class="whitespace-nowrap px-3 py-2 font-mono text-ink">${fmt(hz)} Hz</td>
+      <td class="whitespace-nowrap px-3 py-2 text-right font-mono text-ink-subtle">${scale(1 / hz, TIME_TABLE)}</td>
+      <td class="whitespace-nowrap px-3 py-2 text-right font-mono text-ink-subtle">${scale(C_LIGHT / hz, LEN_TABLE)}</td>
+      <td class="px-3 py-2 text-ink-subtle">${what}</td>
+    </tr>`).join('');
+    table.innerHTML = `<table class="w-full text-[13px]">
+      <thead><tr class="text-left text-ink-tertiary">
+        <th class="px-3 py-2 font-medium">Frequency</th>
+        <th class="px-3 py-2 text-right font-medium">Period</th>
+        <th class="px-3 py-2 text-right font-medium">Wavelength (EM)</th>
+        <th class="px-3 py-2 font-medium">What it is</th>
+      </tr></thead>${rows}</table>`;
+  }
+
+  // ---- short label for the inline formula ----
+  function short(u: string): string {
+    const m = u.match(/\(([^)]+)\)/); // prefer the parenthetical symbol
+    return m ? m[1] : u.replace(/\s*\/.*$/, '').trim();
+  }
+
+  // ---- main ----
+  function fillUnits() {
+    const opts = UNIT_NAMES.map((u) => `<option>${u}</option>`).join('');
+    fromUnit.innerHTML = opts;
+    toUnit.innerHTML = opts;
+    fromUnit.value = 'Hertz (Hz)';
+    toUnit.value = 'Kilohertz (kHz)';
+  }
+
+  function convert() {
+    err.classList.add('hidden');
+    const raw = fromVal.value.trim();
+    const v = raw === '' ? NaN : Number(raw);
+    if (isNaN(v)) {
+      toVal.value = '';
+      formula.textContent = '';
+      renderDerived(NaN);
+      renderBreakdown(NaN);
+      if (raw !== '') {
+        err.textContent = 'Enter a number — plain (440) or scientific notation (2.4e9).';
+        err.classList.remove('hidden');
+      }
+      return;
+    }
+    const hz = v * UNITS[fromUnit.value];
+    const result = hzTo(hz, toUnit.value);
+    toVal.value = fmt(result);
+    formula.textContent = `${fmt(v)} ${short(fromUnit.value)} = ${fmt(result)} ${short(toUnit.value)}`;
+    renderDerived(hz);
+    renderBreakdown(hz);
+  }
+
+  fromVal.addEventListener('input', convert);
+  fromUnit.addEventListener('change', convert);
+  toUnit.addEventListener('change', convert);
+  prec.addEventListener('change', convert);
+  swap.addEventListener('click', () => {
+    const a = fromUnit.value;
+    fromUnit.value = toUnit.value;
+    toUnit.value = a;
+    if (toVal.value !== '') fromVal.value = toVal.value;
+    convert();
+  });
+  copyBtn.addEventListener('click', async () => {
+    if (!toVal.value) return;
+    try {
+      await navigator.clipboard.writeText(toVal.value);
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => (copyBtn.textContent = 'Copy'), 1400);
+    } catch {
+      /* clipboard blocked — no-op */
+    }
+  });
+
+  fillUnits();
+  renderTable();
+  convert();
+
+  // ponytail: one runnable self-check — silent unless the math regresses.
+  console.assert(Math.abs(hzTo(1e6, 'Megahertz (MHz)') - 1) < 1e-9, 'Hz→MHz');
+  console.assert(Math.abs(hzTo(1, 'Revolution / minute (RPM)') - 60) < 1e-9, 'Hz→RPM');
+  console.assert(Math.abs(hzTo(1, 'Radian / second (rad/s)') - TAU) < 1e-9, 'Hz→rad/s');
+  console.assert(nearestNote(440).startsWith('A4'), 'A4 note');
+  console.assert(emBand(2.4e9).startsWith('UHF'), 'EM band');
+</script>

@@ -43,6 +43,26 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <div id="wg-note" class="mt-2 text-sm text-ink-muted"></div>
       </div>
     </div>
+
+    <!-- Part C: Grade needed on the final/remaining work -->
+    <div class="panel p-6">
+      <h2 class="mb-4 font-display text-lg font-semibold text-ink">Grade needed on the final</h2>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Current grade (%)
+          <input id="gn-current" type="number" min="0" step="0.1" class="field" value="85" inputmode="decimal" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Target course grade (%)
+          <input id="gn-target" type="number" min="0" step="0.1" class="field" value="90" inputmode="decimal" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Weight of final/remaining (%)
+          <input id="gn-weight" type="number" min="0" max="100" step="0.1" class="field" value="30" inputmode="decimal" />
+        </label>
+      </div>
+      <div class="mt-4 panel panel-lift p-6 text-center">
+        <div id="gn-out" class="font-display text-4xl font-semibold text-primary-hover">—</div>
+        <div id="gn-note" class="mt-2 text-sm text-ink-muted"></div>
+      </div>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -135,6 +155,32 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   addBtn.addEventListener('click', () => addRow());
 
+  // ---- Part C: Grade needed on the final ----
+  const gnCurrent = document.getElementById('gn-current') as HTMLInputElement;
+  const gnTarget = document.getElementById('gn-target') as HTMLInputElement;
+  const gnWeight = document.getElementById('gn-weight') as HTMLInputElement;
+
+  function calcNeeded() {
+    const c = Number(gnCurrent.value) || 0;
+    const t = Number(gnTarget.value) || 0;
+    const w = (Number(gnWeight.value) || 0) / 100;
+    const out = document.getElementById('gn-out')!;
+    const note = document.getElementById('gn-note')!;
+    if (w <= 0) { out.textContent = '—'; out.style.color = ''; note.textContent = 'Enter the weight of the final (greater than 0%).'; return; }
+    const needed = (t - c * (1 - w)) / w;
+    if (needed <= 0) {
+      out.textContent = '0%'; out.style.color = 'var(--color-success)';
+      note.textContent = "You've already secured your target — 0% needed on the final.";
+    } else if (needed > 100) {
+      out.textContent = needed.toFixed(1) + '%'; out.style.color = '#e5484d';
+      note.textContent = `Not reachable — even 100% only gets you to ${(c * (1 - w) + 100 * w).toFixed(1)}%.`;
+    } else {
+      out.textContent = needed.toFixed(1) + '%'; out.style.color = '';
+      note.textContent = `Score ${needed.toFixed(1)}% on the final to finish with ${t.toFixed(1)}%.`;
+    }
+  }
+  [gnCurrent, gnTarget, gnWeight].forEach((el) => el.addEventListener('input', calcNeeded));
+
   // Start with 3 rows
   addRow('Homework', '90', '20');
   addRow('Midterm', '85', '30');
@@ -142,4 +188,5 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   calcEZ();
   calcWeighted();
+  calcNeeded();
 </script>

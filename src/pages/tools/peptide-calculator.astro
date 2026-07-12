@@ -51,6 +51,25 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </div>
 
     <div id="pep-doses" class="text-center text-sm text-ink-muted"></div>
+
+    <!-- Weekly schedule helper -->
+    <div class="panel p-5">
+      <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
+        At <input id="pep-perweek" type="number" min="0" step="1" class="field w-20" value="7" inputmode="numeric" /> doses per week,
+        <span id="pep-weekly" class="text-ink-muted">—</span>
+      </div>
+    </div>
+
+    <!-- Reverse: solve water volume for a target units-per-dose -->
+    <div class="panel p-5">
+      <div class="mb-3 text-sm text-ink-muted">Reverse: how much water for a target draw?</div>
+      <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
+        To make the dose above sit at
+        <input id="pep-target-units" type="number" min="0" step="1" class="field w-24" value="25" inputmode="decimal" /> units, add
+        <span id="pep-target-water" class="font-mono text-lg text-primary-hover">—</span>
+        <span class="text-[13px] text-ink-tertiary">of bacteriostatic water</span>
+      </div>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -116,10 +135,28 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const doses = totalMcg / doseMcg;
     document.getElementById('pep-doses')!.textContent =
       `This vial holds about ${doses.toFixed(1)} doses of ${dose} ${doseUnit}.`;
+
+    // Weekly schedule helper.
+    const perWeek = Number($('pep-perweek').value) || 0;
+    const weeklyEl = document.getElementById('pep-weekly')!;
+    if (perWeek > 0) {
+      const weeklyMcg = perWeek * doseMcg;
+      const daysSupply = (doses / perWeek) * 7;
+      const weeklyDisplay = weeklyMcg >= 1000 ? `${(weeklyMcg / 1000).toFixed(2)} mg` : `${Math.round(weeklyMcg)} mcg`;
+      weeklyEl.textContent = `that's ${weeklyDisplay}/week and the vial lasts about ${Math.round(daysSupply)} days (${(daysSupply / 7).toFixed(1)} weeks).`;
+    } else {
+      weeklyEl.textContent = '—';
+    }
+
+    // Reverse: water needed so the dose draws to a target number of units.
+    const targetUnits = Number($('pep-target-units').value) || 0;
+    const twEl = document.getElementById('pep-target-water')!;
+    // drawUnits = doseMcg × water × unitsPerMl / totalMcg → water = targetUnits × totalMcg / (doseMcg × unitsPerMl)
+    twEl.textContent = targetUnits > 0 ? `${((targetUnits * totalMcg) / (doseMcg * unitsPerMl)).toFixed(2)} mL` : '—';
   }
 
   document
-    .querySelectorAll('#pep-amount, #pep-water, #pep-dose, #pep-dose-unit, #pep-syringe')
+    .querySelectorAll('#pep-amount, #pep-water, #pep-dose, #pep-dose-unit, #pep-syringe, #pep-perweek, #pep-target-units')
     .forEach((el) => el.addEventListener('input', calc));
   calc();
 </script>

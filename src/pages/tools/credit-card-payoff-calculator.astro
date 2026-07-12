@@ -4,6 +4,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="credit-card-payoff-calculator">
   <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap gap-2" role="tablist" aria-label="Mode">
+      <button type="button" data-mode="payment" class="cc-tab btn btn-primary" aria-selected="true">By monthly payment</button>
+      <button type="button" data-mode="months" class="cc-tab btn btn-secondary" aria-selected="false">By target date</button>
+    </div>
+
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Balance
         <input id="cc-balance" type="number" min="0" step="100" class="field" value="5000" inputmode="decimal" />
@@ -11,8 +16,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">APR (%)
         <input id="cc-apr" type="number" min="0" step="0.01" class="field" value="20" inputmode="decimal" />
       </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Monthly payment
+      <label id="cc-payment-wrap" class="flex flex-col gap-1 text-sm text-ink-subtle">Monthly payment
         <input id="cc-payment" type="number" min="0" step="10" class="field" value="200" inputmode="decimal" />
+      </label>
+      <label id="cc-target-wrap" class="hidden flex-col gap-1 text-sm text-ink-subtle">Pay off within (months)
+        <input id="cc-target" type="number" min="1" step="1" class="field" value="24" inputmode="numeric" />
       </label>
     </div>
 
@@ -29,16 +37,46 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div class="panel p-5 text-center"><div id="cc-interest" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total interest paid</div></div>
       <div class="panel p-5 text-center"><div id="cc-total" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total paid</div></div>
     </div>
+
+    <!-- Extra payment comparison (payment mode only) -->
+    <div id="cc-extra-wrap" class="panel p-5">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle sm:flex-row sm:items-center sm:justify-between">
+        <span>Add extra per month</span>
+        <input id="cc-extra" type="number" min="0" step="10" class="field sm:w-40" value="50" inputmode="decimal" />
+      </label>
+      <div id="cc-extra-result" class="mt-3 text-[13px] text-ink-muted"></div>
+    </div>
+
+    <!-- Payoff schedule (yearly) -->
+    <details class="panel p-0">
+      <summary class="cursor-pointer list-none px-5 py-4 text-sm font-medium text-ink hover:text-primary-hover">
+        <span class="inline-flex items-center gap-2">▸ Payoff schedule (by year)</span>
+      </summary>
+      <div class="overflow-x-auto border-t border-hairline">
+        <table class="w-full text-right text-[13px]">
+          <thead class="text-ink-subtle">
+            <tr class="border-b border-hairline">
+              <th class="px-4 py-2 text-left font-medium">Year</th>
+              <th class="px-4 py-2 font-medium">Principal</th>
+              <th class="px-4 py-2 font-medium">Interest</th>
+              <th class="px-4 py-2 font-medium">Balance</th>
+            </tr>
+          </thead>
+          <tbody id="cc-sched" class="font-mono text-ink-muted"></tbody>
+        </table>
+      </div>
+    </details>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free credit card payoff calculator shows how long it will take to clear
-      your balance with a fixed monthly payment, along with the total interest and
-      total amount you will pay. It simulates the balance month by month, applying
-      interest at your APR before each payment. If the payment is too small to cover
-      the monthly interest, it warns you that the balance will never be paid off.
-      Runs entirely in your browser.
+      This free credit card payoff calculator works two ways: enter a fixed
+      monthly payment to see how long the balance takes to clear, or set a target
+      number of months to find the payment required to hit it. It shows the total
+      interest and amount paid, a year-by-year payoff schedule, and how many
+      months and dollars an extra monthly payment would save. If a payment is too
+      small to cover the monthly interest, it warns that the balance will never be
+      paid off. Runs entirely in your browser.
     </p>
   </div>
 </ToolLayout>
@@ -47,66 +85,132 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const balanceEl = document.getElementById('cc-balance') as HTMLInputElement;
   const aprEl = document.getElementById('cc-apr') as HTMLInputElement;
   const paymentEl = document.getElementById('cc-payment') as HTMLInputElement;
+  const targetEl = document.getElementById('cc-target') as HTMLInputElement;
+  const extraEl = document.getElementById('cc-extra') as HTMLInputElement;
 
   const warnEl = document.getElementById('cc-warn')!;
   const monthsEl = document.getElementById('cc-months')!;
   const subEl = document.getElementById('cc-sub')!;
   const interestEl = document.getElementById('cc-interest')!;
   const totalEl = document.getElementById('cc-total')!;
+  const schedEl = document.getElementById('cc-sched')!;
+  const extraResultEl = document.getElementById('cc-extra-result')!;
 
   const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+  const money0 = (n: number) => Math.round(n).toLocaleString();
+  let mode: 'payment' | 'months' = 'payment';
 
-  function reset() {
-    monthsEl.textContent = '—';
-    subEl.textContent = '';
-    interestEl.textContent = totalEl.textContent = '—';
-  }
-
-  function calc() {
-    const balance = Number(balanceEl.value);
-    const apr = Number(aprEl.value);
-    const payment = Number(paymentEl.value);
-
-    warnEl.classList.add('hidden');
-
-    if (!(balance > 0) || !(payment > 0)) { reset(); return; }
-
-    const r = apr / 12 / 100;
-    const firstInterest = balance * r;
-
-    if (r > 0 && payment <= firstInterest) {
-      warnEl.classList.remove('hidden');
-      reset();
-      return;
-    }
-
-    let bal = balance;
-    let months = 0;
-    let totalInterest = 0;
-    const cap = 12000; // safety cap: 1000 years
-
+  // Simulate paying `payment`/month on `balance` at monthly rate `r`.
+  // Returns null if it never pays off.
+  function simulate(balance: number, r: number, payment: number, wantSchedule = false) {
+    if (r > 0 && payment <= balance * r) return null;
+    let bal = balance, months = 0, totalInterest = 0, yrP = 0, yrI = 0;
+    const rows: { principal: number; interest: number; balance: number }[] = [];
+    const cap = 12000;
     while (bal > 0 && months < cap) {
       const interest = bal * r;
       totalInterest += interest;
+      let principal = payment - interest;
+      if (principal > bal) principal = bal;
       bal = bal + interest - payment;
-      months++;
       if (bal < 0) bal = 0;
+      months++; yrP += principal; yrI += interest;
+      if (wantSchedule && (months % 12 === 0 || bal <= 0)) {
+        rows.push({ principal: yrP, interest: yrI, balance: bal });
+        yrP = 0; yrI = 0;
+      }
     }
-
-    const totalPaid = balance + totalInterest;
-    const years = Math.floor(months / 12);
-    const remMonths = months % 12;
-    let human = '';
-    if (years > 0) human += `${years} year${years !== 1 ? 's' : ''}`;
-    if (remMonths > 0) human += `${years > 0 ? ' ' : ''}${remMonths} month${remMonths !== 1 ? 's' : ''}`;
-    if (!human) human = '0 months';
-
-    monthsEl.textContent = `${months} mo`;
-    subEl.textContent = human;
-    interestEl.textContent = money(totalInterest);
-    totalEl.textContent = money(totalPaid);
+    return { months, totalInterest, rows };
   }
 
-  [balanceEl, aprEl, paymentEl].forEach((el) => el.addEventListener('input', calc));
+  const humanMonths = (months: number) => {
+    const y = Math.floor(months / 12), m = months % 12;
+    let s = '';
+    if (y > 0) s += `${y} year${y !== 1 ? 's' : ''}`;
+    if (m > 0) s += `${y > 0 ? ' ' : ''}${m} month${m !== 1 ? 's' : ''}`;
+    return s || '0 months';
+  };
+
+  function reset() {
+    monthsEl.textContent = '—'; subEl.textContent = '';
+    interestEl.textContent = totalEl.textContent = '—';
+    schedEl.innerHTML = ''; extraResultEl.textContent = '';
+  }
+
+  function calc() {
+    warnEl.classList.add('hidden');
+    const balance = Number(balanceEl.value);
+    const apr = Number(aprEl.value);
+    const r = apr / 12 / 100;
+    if (!(balance > 0)) { reset(); return; }
+
+    let payment: number;
+    if (mode === 'months') {
+      // Solve required payment for target months via amortization formula.
+      const n = Number(targetEl.value);
+      if (!(n > 0)) { reset(); return; }
+      payment = r === 0 ? balance / n : (balance * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+    } else {
+      payment = Number(paymentEl.value);
+      if (!(payment > 0)) { reset(); return; }
+    }
+
+    const res = simulate(balance, r, payment, true);
+    if (!res) { warnEl.classList.remove('hidden'); reset(); return; }
+
+    if (mode === 'months') {
+      monthsEl.textContent = money(payment) + '/mo';
+      subEl.textContent = `to clear in ${humanMonths(res.months)}`;
+    } else {
+      monthsEl.textContent = `${res.months} mo`;
+      subEl.textContent = humanMonths(res.months);
+    }
+    interestEl.textContent = money(res.totalInterest);
+    totalEl.textContent = money(balance + res.totalInterest);
+
+    // schedule
+    schedEl.innerHTML = '';
+    let yr = 1;
+    for (const row of res.rows) {
+      const tr = document.createElement('tr');
+      tr.className = 'border-b border-hairline/50';
+      tr.innerHTML = `<td class="px-4 py-1.5 text-left text-ink-subtle">${yr}</td><td class="px-4 py-1.5">${money0(row.principal)}</td><td class="px-4 py-1.5">${money0(row.interest)}</td><td class="px-4 py-1.5">${money0(row.balance)}</td>`;
+      schedEl.appendChild(tr);
+      yr++;
+    }
+
+    // extra-payment comparison (payment mode)
+    const extra = Number(extraEl.value) || 0;
+    if (mode === 'payment' && extra > 0) {
+      const withExtra = simulate(balance, r, payment + extra);
+      if (withExtra) {
+        const monthsSaved = res.months - withExtra.months;
+        const interestSaved = res.totalInterest - withExtra.totalInterest;
+        extraResultEl.innerHTML = `Paying <span class="font-mono text-ink">${money0(payment + extra)}</span>/mo clears it in <span class="font-mono text-ink">${humanMonths(withExtra.months)}</span> — <span class="text-success">${monthsSaved} months sooner</span>, saving <span class="font-mono text-success">${money0(interestSaved)}</span> in interest.`;
+      }
+    } else {
+      extraResultEl.textContent = '';
+    }
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.cc-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      mode = tab.dataset.mode as 'payment' | 'months';
+      document.querySelectorAll('.cc-tab').forEach((t) => {
+        const active = t === tab;
+        t.setAttribute('aria-selected', String(active));
+        t.classList.toggle('btn-primary', active);
+        t.classList.toggle('btn-secondary', !active);
+      });
+      document.getElementById('cc-payment-wrap')!.classList.toggle('hidden', mode !== 'payment');
+      document.getElementById('cc-payment-wrap')!.classList.toggle('flex', mode === 'payment');
+      document.getElementById('cc-target-wrap')!.classList.toggle('hidden', mode !== 'months');
+      document.getElementById('cc-target-wrap')!.classList.toggle('flex', mode === 'months');
+      document.getElementById('cc-extra-wrap')!.classList.toggle('hidden', mode !== 'payment');
+      calc();
+    });
+  });
+
+  [balanceEl, aprEl, paymentEl, targetEl, extraEl].forEach((el) => el.addEventListener('input', calc));
   calc();
 </script>
