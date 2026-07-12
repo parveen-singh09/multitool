@@ -1,10 +1,40 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
+
+const templates = [
+  { id: 'accent-bar', name: 'Accent bar' },
+  { id: 'photo-left', name: 'Photo left' },
+  { id: 'logo-top', name: 'Logo top' },
+  { id: 'two-column', name: 'Two column' },
+  { id: 'minimal', name: 'Minimal line' },
+  { id: 'name-block', name: 'Name block' },
+  { id: 'compact', name: 'Compact' },
+  { id: 'banner', name: 'Banner header' },
+  { id: 'stacked-icons', name: 'Stacked icons' },
+  { id: 'classic', name: 'Classic serif' },
+];
 ---
 
 <ToolLayout slug="email-signature-creator">
-  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-    <div class="flex flex-col gap-4">
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+    <!-- Editor -->
+    <div class="flex flex-col gap-5">
+      <div>
+        <span class="mb-2 block text-sm text-ink-subtle">Template</span>
+        <div id="esc-templates" class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {templates.map((t, i) => (
+            <button
+              type="button"
+              data-tpl={t.id}
+              class:list={[
+                'field flex items-center justify-center px-2 py-2 text-[13px] font-medium transition-colors',
+                i === 0 ? 'esc-tpl-active' : '',
+              ]}
+            >{t.name}</button>
+          ))}
+        </div>
+      </div>
+
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">
           Full name
@@ -19,6 +49,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <input id="esc-company" class="field" type="text" value="ToolCities" />
         </label>
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Department
+          <input id="esc-department" class="field" type="text" value="" placeholder="Design" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
           Phone
           <input id="esc-phone" class="field" type="text" value="+1 555 010 2030" />
         </label>
@@ -31,56 +65,122 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <input id="esc-website" class="field" type="text" value="toolcities.com" />
         </label>
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-          Accent color
-          <input id="esc-accent" class="field h-10 cursor-pointer p-1" type="color" value="#5e6ad2" />
+          Address
+          <input id="esc-address" class="field" type="text" value="" placeholder="123 Market St, SF" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Photo URL
+          <input id="esc-photo" class="field" type="text" value="" placeholder="https://…/me.jpg" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Logo URL
+          <input id="esc-logo" class="field" type="text" value="" placeholder="https://…/logo.png" />
+        </label>
+      </div>
+
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-[auto_1fr_auto]">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Accent
+          <input id="esc-accent" class="field h-10 w-full cursor-pointer p-1 sm:w-16" type="color" value="#5e6ad2" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Font
+          <select id="esc-font" class="field">
+            <option value="Arial, Helvetica, sans-serif">Arial / sans-serif</option>
+            <option value="Georgia, 'Times New Roman', serif">Georgia / serif</option>
+            <option value="Verdana, Geneva, sans-serif">Verdana</option>
+            <option value="'Trebuchet MS', Tahoma, sans-serif">Trebuchet</option>
+            <option value="'Courier New', monospace">Courier / mono</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Photo shape
+          <select id="esc-photoshape" class="field">
+            <option value="round">Round</option>
+            <option value="square">Square</option>
+          </select>
         </label>
       </div>
 
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-        Links (one per line, as <code class="text-ink-muted">Label | https://url</code>)
-        <textarea id="esc-links" class="field min-h-32 resize-y font-mono text-[13px]" spellcheck="false">LinkedIn | https://linkedin.com/in/alexmorgan
-Twitter | https://twitter.com/alexmorgan</textarea>
+        Social links (one per line, as <code class="text-ink-muted">Label | https://url</code>)
+        <textarea id="esc-links" class="field min-h-24 resize-y font-mono text-[13px]" spellcheck="false">LinkedIn | https://linkedin.com/in/alexmorgan
+Twitter | https://twitter.com/alexmorgan
+GitHub | https://github.com/alexmorgan</textarea>
       </label>
 
-      <div class="flex gap-2">
-        <button id="esc-copy" class="btn btn-primary">Copy HTML</button>
-        <button id="esc-copy-rich" class="btn btn-secondary">Copy signature</button>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="esc-icons" type="checkbox" class="h-4 w-4 accent-[#5e6ad2]" checked />
+        Show social icons (loaded from cdn.simpleicons.org)
+      </label>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Disclaimer / legal footer (optional)
+        <textarea id="esc-disclaimer" class="field min-h-16 resize-y text-[13px]" spellcheck="false" placeholder="This email and any attachments are confidential…"></textarea>
+      </label>
+
+      <div class="flex flex-wrap gap-2">
+        <button id="esc-copy-rich" class="btn btn-primary">Copy signature</button>
+        <button id="esc-copy" class="btn btn-secondary">Copy HTML</button>
+        <button id="esc-download" class="btn btn-secondary">Download .htm</button>
       </div>
     </div>
 
+    <!-- Preview -->
     <div class="flex flex-col gap-2">
       <span class="text-sm text-ink-subtle">Live preview</span>
-      <div class="panel p-4">
-        <div id="esc-preview"></div>
+      <div class="panel p-5">
+        <!-- White canvas: signatures are designed for light email bodies -->
+        <div class="rounded-md bg-white p-5">
+          <div id="esc-preview"></div>
+        </div>
       </div>
+      <p class="text-[13px] leading-relaxed text-ink-tertiary">
+        “Copy signature” copies rich HTML — paste straight into Gmail, Outlook,
+        or Apple Mail signature settings. Everything runs in your browser.
+      </p>
     </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free email signature creator turns your name, title, company and
-      links into a clean, inline-styled HTML signature. Fill in the fields,
-      preview it live, then copy the HTML source to paste into Gmail, Outlook,
-      Apple Mail or any client that accepts a custom signature. Everything runs
-      entirely in your browser — nothing is uploaded.
+      This free email signature generator turns your details into a clean,
+      table-based, inline-styled HTML signature that renders reliably in Gmail,
+      Outlook, Microsoft 365, Apple Mail, and most other clients. Pick from ten
+      built-in templates — accent bar, photo layouts, banner header, minimal
+      one-liner, classic serif and more — add a photo, company logo, social
+      icons, address and a legal disclaimer, then copy the signature or download
+      it as an <code>.htm</code> file. Everything runs entirely in your browser;
+      nothing is uploaded.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  const ids = ['esc-name', 'esc-title', 'esc-company', 'esc-phone', 'esc-email', 'esc-website', 'esc-accent', 'esc-links'];
+  const ids = [
+    'esc-name', 'esc-title', 'esc-company', 'esc-department', 'esc-phone',
+    'esc-email', 'esc-website', 'esc-address', 'esc-photo', 'esc-logo',
+    'esc-accent', 'esc-font', 'esc-photoshape', 'esc-links', 'esc-disclaimer',
+  ];
   const preview = document.getElementById('esc-preview') as HTMLDivElement;
   const copyBtn = document.getElementById('esc-copy') as HTMLButtonElement;
   const copyRichBtn = document.getElementById('esc-copy-rich') as HTMLButtonElement;
+  const downloadBtn = document.getElementById('esc-download') as HTMLButtonElement;
+  const iconsToggle = document.getElementById('esc-icons') as HTMLInputElement;
+  const tplWrap = document.getElementById('esc-templates') as HTMLDivElement;
 
-  const val = (id: string): string => (document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement).value.trim();
+  let template = 'accent-bar';
+
+  const val = (id: string): string =>
+    (document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement).value.trim();
 
   function esc(s: string): string {
-    return s
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function href(url: string, kind: 'web' | 'mail' = 'web'): string {
+    if (kind === 'mail') return url.startsWith('mailto:') ? url : `mailto:${url}`;
+    return /^https?:\/\//.test(url) ? url : `https://${url}`;
   }
 
   interface Link { label: string; url: string; }
@@ -96,57 +196,232 @@ Twitter | https://twitter.com/alexmorgan</textarea>
       .filter((l) => l.label !== '' || l.url !== '');
   }
 
-  function buildHtml(): string {
-    const name = esc(val('esc-name'));
-    const title = esc(val('esc-title'));
-    const company = esc(val('esc-company'));
-    const phone = esc(val('esc-phone'));
-    const email = esc(val('esc-email'));
-    const website = esc(val('esc-website'));
-    const accent = val('esc-accent') || '#5e6ad2';
+  // Map a link label/url to a Simple Icons slug for the icon CDN.
+  const ICON_SLUGS: Record<string, string> = {
+    twitter: 'x', x: 'x', linkedin: 'linkedin', github: 'github', instagram: 'instagram',
+    facebook: 'facebook', youtube: 'youtube', tiktok: 'tiktok', dribbble: 'dribbble',
+    behance: 'behance', medium: 'medium', mastodon: 'mastodon', threads: 'threads',
+    telegram: 'telegram', whatsapp: 'whatsapp', discord: 'discord', twitch: 'twitch',
+    pinterest: 'pinterest', reddit: 'reddit', snapchat: 'snapchat', spotify: 'spotify',
+  };
 
-    const contactRows: string[] = [];
-    if (phone) contactRows.push(`<span style="color:#555555;">${phone}</span>`);
-    if (email) {
-      const href = email.startsWith('mailto:') ? email : `mailto:${email}`;
-      contactRows.push(`<a href="${esc(href)}" style="color:${esc(accent)};text-decoration:none;">${email}</a>`);
-    }
-    if (website) {
-      const href = /^https?:\/\//.test(website) ? website : `https://${website}`;
-      contactRows.push(`<a href="${esc(href)}" style="color:${esc(accent)};text-decoration:none;">${website}</a>`);
-    }
+  function iconSlug(l: Link): string | null {
+    const hay = `${l.label} ${l.url}`.toLowerCase();
+    for (const key in ICON_SLUGS) if (hay.includes(key)) return ICON_SLUGS[key];
+    return null;
+  }
 
-    const links = parseLinks()
+  interface Data {
+    name: string; title: string; company: string; department: string;
+    phone: string; email: string; website: string; address: string;
+    photo: string; logo: string; accent: string; font: string;
+    photoShape: string; links: Link[]; disclaimer: string; icons: boolean;
+  }
+
+  function collect(): Data {
+    return {
+      name: val('esc-name'), title: val('esc-title'), company: val('esc-company'),
+      department: val('esc-department'), phone: val('esc-phone'), email: val('esc-email'),
+      website: val('esc-website'), address: val('esc-address'), photo: val('esc-photo'),
+      logo: val('esc-logo'), accent: val('esc-accent') || '#5e6ad2', font: val('esc-font'),
+      photoShape: val('esc-photoshape'), links: parseLinks(),
+      disclaimer: val('esc-disclaimer'), icons: iconsToggle.checked,
+    };
+  }
+
+  const SEP = '<span style="color:#cccccc;"> &nbsp;·&nbsp; </span>';
+  const MUTED = '#666666';
+  const SUB = '#888888';
+
+  function photoImg(d: Data, size: number): string {
+    if (!d.photo) return '';
+    const radius = d.photoShape === 'round' ? size / 2 : 6;
+    return `<img src="${esc(href(d.photo))}" width="${size}" height="${size}" alt="${esc(d.name)}" style="border-radius:${radius}px;object-fit:cover;display:block;" />`;
+  }
+
+  function logoImg(d: Data, height: number): string {
+    if (!d.logo) return '';
+    return `<img src="${esc(href(d.logo))}" height="${height}" alt="${esc(d.company)}" style="display:block;max-height:${height}px;border:0;" />`;
+  }
+
+  function titleLine(d: Data): string {
+    const parts = [d.title, d.company].filter(Boolean);
+    let line = parts.join(', ');
+    if (d.department && d.company) line = `${d.title ? d.title + ', ' : ''}${d.department} · ${d.company}`;
+    return line;
+  }
+
+  function contactRows(d: Data): string {
+    const rows: string[] = [];
+    if (d.phone) rows.push(`<span style="color:${MUTED};">${esc(d.phone)}</span>`);
+    if (d.email) rows.push(`<a href="${esc(href(d.email, 'mail'))}" style="color:${esc(d.accent)};text-decoration:none;">${esc(d.email)}</a>`);
+    if (d.website) rows.push(`<a href="${esc(href(d.website))}" style="color:${esc(d.accent)};text-decoration:none;">${esc(d.website)}</a>`);
+    if (d.address) rows.push(`<span style="color:${SUB};">${esc(d.address)}</span>`);
+    return rows.length ? `<div style="margin-top:8px;font-size:13px;">${rows.join(SEP)}</div>` : '';
+  }
+
+  // Text links (no icons)
+  function textLinks(d: Data): string {
+    if (!d.links.length) return '';
+    const inner = d.links
+      .map((l) => `<a href="${esc(href(l.url))}" style="color:${esc(d.accent)};text-decoration:none;font-weight:600;">${esc(l.label)}</a>`)
+      .join(SEP);
+    return `<div style="margin-top:6px;font-size:13px;">${inner}</div>`;
+  }
+
+  // Icon links via cdn.simpleicons.org, colored with the accent. Falls back to
+  // a text link for platforms without a known icon slug.
+  function iconLinks(d: Data): string {
+    if (!d.links.length) return '';
+    const hex = d.accent.replace('#', '');
+    const inner = d.links
       .map((l) => {
-        const href = /^https?:\/\//.test(l.url) ? l.url : `https://${l.url}`;
-        return `<a href="${esc(href)}" style="color:${esc(accent)};text-decoration:none;font-weight:600;">${esc(l.label)}</a>`;
+        const slug = iconSlug(l);
+        if (!slug) return `<a href="${esc(href(l.url))}" style="color:${esc(d.accent)};text-decoration:none;font-weight:600;font-size:13px;">${esc(l.label)}</a>`;
+        return `<a href="${esc(href(l.url))}" style="text-decoration:none;"><img src="https://cdn.simpleicons.org/${slug}/${hex}" width="20" height="20" alt="${esc(l.label)}" style="display:inline-block;border:0;vertical-align:middle;" /></a>`;
       })
-      .join('<span style="color:#cccccc;"> &nbsp;·&nbsp; </span>');
+      .join('<span style="display:inline-block;width:10px;"></span>');
+    return `<div style="margin-top:10px;line-height:1;">${inner}</div>`;
+  }
 
-    const titleLine = [title, company].filter((s) => s !== '').join(', ');
+  function links(d: Data): string {
+    return d.icons ? iconLinks(d) : textLinks(d);
+  }
 
-    return [
-      `<table cellpadding="0" cellspacing="0" border="0" style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#222222;border-collapse:collapse;">`,
-      `<tr><td style="border-left:3px solid ${esc(accent)};padding-left:14px;">`,
-      name ? `<div style="font-size:17px;font-weight:700;color:#111111;">${name}</div>` : '',
-      titleLine ? `<div style="font-size:13px;color:#666666;margin-top:2px;">${titleLine}</div>` : '',
-      contactRows.length ? `<div style="margin-top:8px;font-size:13px;">${contactRows.join('<span style="color:#cccccc;"> &nbsp;·&nbsp; </span>')}</div>` : '',
-      links ? `<div style="margin-top:6px;font-size:13px;">${links}</div>` : '',
-      `</td></tr>`,
-      `</table>`,
-    ]
-      .filter((s) => s !== '')
-      .join('');
+  function nameEl(d: Data, size = 17): string {
+    return d.name ? `<div style="font-size:${size}px;font-weight:700;color:#111111;">${esc(d.name)}</div>` : '';
+  }
+  function titleEl(d: Data): string {
+    const t = titleLine(d);
+    return t ? `<div style="font-size:13px;color:${MUTED};margin-top:2px;">${esc(t)}</div>` : '';
+  }
+
+  function wrapTable(d: Data, inner: string): string {
+    return `<table cellpadding="0" cellspacing="0" border="0" style="font-family:${d.font};font-size:14px;line-height:1.5;color:#222222;border-collapse:collapse;">${inner}</table>`;
+  }
+
+  function disclaimerEl(d: Data): string {
+    if (!d.disclaimer) return '';
+    return `<div style="margin-top:12px;padding-top:10px;border-top:1px solid #eeeeee;font-size:11px;line-height:1.4;color:#999999;max-width:520px;">${esc(d.disclaimer)}</div>`;
+  }
+
+  // ---- Templates ---------------------------------------------------------
+
+  type Renderer = (d: Data) => string;
+
+  const RENDERERS: Record<string, Renderer> = {
+    'accent-bar': (d) => wrapTable(d,
+      `<tr><td style="border-left:3px solid ${esc(d.accent)};padding-left:14px;">${nameEl(d)}${titleEl(d)}${contactRows(d)}${links(d)}</td></tr>`
+    ),
+
+    'photo-left': (d) => {
+      const cells = [];
+      if (d.photo) cells.push(`<td style="padding-right:16px;vertical-align:top;">${photoImg(d, 76)}</td>`);
+      cells.push(`<td style="border-left:2px solid ${esc(d.accent)};padding-left:16px;vertical-align:top;">${nameEl(d)}${titleEl(d)}${contactRows(d)}${links(d)}</td>`);
+      return wrapTable(d, `<tr>${cells.join('')}</tr>`);
+    },
+
+    'logo-top': (d) => wrapTable(d,
+      `${d.logo ? `<tr><td style="padding-bottom:10px;">${logoImg(d, 40)}</td></tr>` : ''}` +
+      `<tr><td>${nameEl(d, 18)}${titleEl(d)}${contactRows(d)}${links(d)}</td></tr>`
+    ),
+
+    'two-column': (d) =>
+      `<table cellpadding="0" cellspacing="0" border="0" style="font-family:${d.font};font-size:14px;color:#222222;border-collapse:collapse;">` +
+      `<tr><td style="padding-right:18px;vertical-align:top;">${nameEl(d)}${titleEl(d)}${d.company ? `<div style="font-size:13px;color:${MUTED};margin-top:4px;">${esc(d.company)}</div>` : ''}</td>` +
+      `<td style="border-left:1px solid #dddddd;padding-left:18px;vertical-align:top;">${contactRows(d).replace('margin-top:8px;', 'margin-top:0;')}${links(d)}</td></tr></table>`,
+
+    minimal: (d) => {
+      const line = [
+        d.name ? `<span style="font-weight:700;color:#111111;">${esc(d.name)}</span>` : '',
+        titleLine(d) ? `<span style="color:${MUTED};">${esc(titleLine(d))}</span>` : '',
+      ].filter(Boolean).join('<span style="color:#cccccc;"> — </span>');
+      return wrapTable(d,
+        `<tr><td>${line ? `<div style="font-size:14px;">${line}</div>` : ''}${contactRows(d)}${links(d)}</td></tr>`
+      );
+    },
+
+    'name-block': (d) => wrapTable(d,
+      `<tr><td>` +
+      `<div style="background:${esc(d.accent)};color:#ffffff;display:inline-block;padding:6px 12px;border-radius:6px;font-size:16px;font-weight:700;">${esc(d.name || 'Your Name')}</div>` +
+      `${titleEl(d)}${contactRows(d)}${links(d)}</td></tr>`
+    ),
+
+    compact: (d) => {
+      const cells = [];
+      if (d.photo) cells.push(`<td style="padding-right:12px;vertical-align:middle;">${photoImg(d, 48)}</td>`);
+      cells.push(`<td style="vertical-align:middle;">${nameEl(d, 15)}${titleEl(d)}` +
+        `<div style="margin-top:4px;font-size:12px;">${[
+          d.phone ? `<span style="color:${MUTED};">${esc(d.phone)}</span>` : '',
+          d.email ? `<a href="${esc(href(d.email, 'mail'))}" style="color:${esc(d.accent)};text-decoration:none;">${esc(d.email)}</a>` : '',
+        ].filter(Boolean).join(SEP)}</div>${links(d)}</td>`);
+      return wrapTable(d, `<tr>${cells.join('')}</tr>`);
+    },
+
+    banner: (d) => wrapTable(d,
+      `<tr><td style="background:${esc(d.accent)};padding:12px 16px;border-radius:6px 6px 0 0;">` +
+      `<span style="color:#ffffff;font-size:17px;font-weight:700;">${esc(d.name || 'Your Name')}</span>` +
+      `${titleLine(d) ? `<span style="color:rgba(255,255,255,0.85);font-size:13px;"> — ${esc(titleLine(d))}</span>` : ''}</td></tr>` +
+      `<tr><td style="border:1px solid #eeeeee;border-top:0;padding:12px 16px;border-radius:0 0 6px 6px;">${contactRows(d).replace('margin-top:8px;', 'margin-top:0;')}${links(d)}</td></tr>`
+    ),
+
+    'stacked-icons': (d) => {
+      const cells = [];
+      if (d.photo) cells.push(`<td style="padding-right:16px;vertical-align:top;">${photoImg(d, 72)}</td>`);
+      const rows = [
+        nameEl(d),
+        titleEl(d),
+        d.phone ? `<div style="font-size:13px;color:${MUTED};margin-top:6px;">☎ ${esc(d.phone)}</div>` : '',
+        d.email ? `<div style="font-size:13px;margin-top:2px;">✉ <a href="${esc(href(d.email, 'mail'))}" style="color:${esc(d.accent)};text-decoration:none;">${esc(d.email)}</a></div>` : '',
+        d.website ? `<div style="font-size:13px;margin-top:2px;">🌐 <a href="${esc(href(d.website))}" style="color:${esc(d.accent)};text-decoration:none;">${esc(d.website)}</a></div>` : '',
+        d.address ? `<div style="font-size:13px;margin-top:2px;color:${SUB};">📍 ${esc(d.address)}</div>` : '',
+        links(d),
+      ].join('');
+      cells.push(`<td style="vertical-align:top;">${rows}</td>`);
+      return wrapTable(d, `<tr>${cells.join('')}</tr>`);
+    },
+
+    classic: (d) =>
+      `<table cellpadding="0" cellspacing="0" border="0" style="font-family:Georgia,'Times New Roman',serif;font-size:14px;line-height:1.6;color:#333333;border-collapse:collapse;">` +
+      `<tr><td>` +
+      `${d.name ? `<div style="font-size:18px;font-weight:700;color:#111111;letter-spacing:0.3px;">${esc(d.name)}</div>` : ''}` +
+      `${titleLine(d) ? `<div style="font-size:13px;font-style:italic;color:${MUTED};margin-top:2px;">${esc(titleLine(d))}</div>` : ''}` +
+      `<div style="height:1px;background:${esc(d.accent)};width:60px;margin:8px 0;"></div>` +
+      `${contactRows(d).replace('margin-top:8px;', 'margin-top:0;')}${links(d)}</td></tr></table>`,
+  };
+
+  function buildHtml(): string {
+    const d = collect();
+    const sig = (RENDERERS[template] || RENDERERS['accent-bar'])(d);
+    return sig + disclaimerEl(d);
   }
 
   function render(): void {
     preview.innerHTML = buildHtml();
   }
 
+  // ---- Template picker ---------------------------------------------------
+
+  tplWrap.querySelectorAll<HTMLButtonElement>('[data-tpl]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      template = btn.dataset.tpl!;
+      tplWrap.querySelectorAll('[data-tpl]').forEach((b) => b.classList.remove('esc-tpl-active'));
+      btn.classList.add('esc-tpl-active');
+      render();
+    });
+  });
+
+  // ---- Actions -----------------------------------------------------------
+
+  function flash(btn: HTMLButtonElement, label: string): void {
+    const orig = btn.textContent;
+    btn.textContent = label;
+    setTimeout(() => (btn.textContent = orig), 1500);
+  }
+
   copyBtn.addEventListener('click', async () => {
     await navigator.clipboard.writeText(buildHtml());
-    copyBtn.textContent = 'Copied!';
-    setTimeout(() => (copyBtn.textContent = 'Copy HTML'), 1500);
+    flash(copyBtn, 'Copied!');
   });
 
   copyRichBtn.addEventListener('click', async () => {
@@ -160,10 +435,29 @@ Twitter | https://twitter.com/alexmorgan</textarea>
     } catch {
       await navigator.clipboard.writeText(html);
     }
-    copyRichBtn.textContent = 'Copied!';
-    setTimeout(() => (copyRichBtn.textContent = 'Copy signature'), 1500);
+    flash(copyRichBtn, 'Copied!');
+  });
+
+  downloadBtn.addEventListener('click', () => {
+    const doc = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${buildHtml()}</body></html>`;
+    const url = URL.createObjectURL(new Blob([doc], { type: 'text/html' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'signature.htm';
+    a.click();
+    URL.revokeObjectURL(url);
+    flash(downloadBtn, 'Downloaded!');
   });
 
   ids.forEach((id) => document.getElementById(id)!.addEventListener('input', render));
+  iconsToggle.addEventListener('change', render);
   render();
 </script>
+
+<style>
+  .esc-tpl-active {
+    border-color: var(--color-primary) !important;
+    color: var(--color-ink) !important;
+    background-color: var(--color-surface-2) !important;
+  }
+</style>

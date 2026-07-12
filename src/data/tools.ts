@@ -3499,11 +3499,11 @@ export const tools: Tool[] = [
   {
     slug: 'slot-machine-simulator',
     name: 'Slot Machine Simulator',
-    tagline: 'Spin virtual reels for fun.',
+    tagline: '5-reel slot with free spins & wilds.',
     description:
-      'Free slot machine simulator. Spin three reels with virtual credits and watch your balance over time. Purely for fun with no real money — everything runs in your browser.',
+      'Free slot machine simulator: a 5-reel, 10-payline video slot with wilds, scatters, free spins, autoplay and live RTP stats. Virtual credits only, no real money — runs in your browser.',
     category: 'Generators',
-    keywords: ['slot machine simulator', 'free slot machine', 'slot simulator', 'virtual slots', 'slot machine game'],
+    keywords: ['slot machine simulator', 'free slot machine', 'slot simulator', 'virtual slots', 'slot machine game', 'free spins slot', 'video slot simulator'],
     icon: 'M5 7h14v10H5zM9 7v10M15 7v10M7 3h10v4H7z',
   },
   {
@@ -3693,16 +3693,6 @@ export const tools: Tool[] = [
     icon: 'M5 5h14v14H5zM5 9h14M9 3v4M15 3v4M12 13v3m-2-2h4',
   },
   {
-    slug: 'vcard-downloader',
-    name: 'vCard Downloader',
-    tagline: 'Build a contact .vcf file.',
-    description:
-      'Free vCard downloader. Enter contact details to build a valid .vcf vCard you can import into any address book, with a QR option. Everything is created in your browser.',
-    category: 'Generators',
-    keywords: ['vcard downloader', 'vcf file generator', 'create vcard', 'contact card generator', 'vcf download'],
-    icon: 'M4 5h16v14H4zM9 10a2 2 0 1 0 0-.01M6 16a3 3 0 0 1 6 0M14 9h4M14 13h4',
-  },
-  {
     slug: 'typegrow-linkedin-formatter',
     name: 'LinkedIn Text Formatter',
     tagline: 'Bold, italic & styled text for LinkedIn posts.',
@@ -3823,16 +3813,6 @@ export const tools: Tool[] = [
     icon: 'M6 3l4 18 3-7 7-3zM6 3l7 7',
   },
   {
-    slug: 'picrew-oc-maker',
-    name: 'Picrew OC Maker',
-    tagline: 'Build a cute cartoon avatar for your OC.',
-    description:
-      'Free Picrew-style OC maker. Build a cute cartoon avatar from layered parts — face, skin, hair, eyes and background — then download a PNG. Original art, drawn in your browser.',
-    category: 'Generators',
-    keywords: ['picrew oc maker', 'oc maker', 'anime avatar maker', 'character avatar creator', 'picrew style maker'],
-    icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM5 20a7 7 0 0 1 14 0',
-  },
-  {
     slug: 'character-creator',
     name: 'Character Creator',
     tagline: 'Roll an RPG character with stats & backstory.',
@@ -3895,11 +3875,11 @@ export const tools: Tool[] = [
   {
     slug: 'kanoodle-solver',
     name: 'Kanoodle Solver',
-    tagline: 'Solve the 5×11 Kanoodle puzzle board.',
+    tagline: 'Play & solve the 5×11 Kanoodle board.',
     description:
-      'Free Kanoodle solver. Mark the pieces already on your 5×11 board and let a backtracking exact-cover solver fit the remaining polyomino pieces to fill every empty square. Runs in your browser.',
+      'Free Kanoodle player and solver. Place, rotate and flip all 12 real pieces on the 5×11 board, then Solve, get a Hint, check if it is Solvable, or deal a Random puzzle. A backtracking exact-cover solver fills every hole. Runs in your browser.',
     category: 'Generators',
-    keywords: ['kanoodle solver', 'kanoodle solutions', 'polyomino solver', 'kanoodle answers', 'puzzle solver'],
+    keywords: ['kanoodle solver', 'kanoodle player', 'kanoodle solutions', 'polyomino solver', 'kanoodle answers', 'kanoodle hint', 'puzzle solver'],
     icon: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
   },
   {
