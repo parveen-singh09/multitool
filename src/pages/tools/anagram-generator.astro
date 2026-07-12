@@ -4,18 +4,40 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="anagram-generator">
   <div class="flex flex-col gap-5">
-    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Letters or a word
-      <input id="an-in" class="field" value="listen" spellcheck="false" maxlength="15" autocomplete="off" />
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Letters, word or phrase
+      <input id="an-in" class="field" value="dormitory" spellcheck="false" maxlength="24" autocomplete="off" />
     </label>
-    <div class="flex flex-wrap items-center gap-4">
-      <label class="flex items-center gap-2 text-sm text-ink-subtle">
-        <input id="an-full" type="checkbox" class="accent-[#5e6ad2]" /> Full anagrams only (use every letter)
-      </label>
-      <button id="an-scramble" class="btn btn-secondary ml-auto">Scramble letters</button>
+
+    <div class="flex flex-wrap gap-2">
+      <button id="an-mode-full" class="btn btn-primary" data-mode="full">Full anagrams</button>
+      <button id="an-mode-within" class="btn btn-secondary" data-mode="within">Words within</button>
+      <button id="an-scramble" class="btn btn-secondary ml-auto">Scramble</button>
     </div>
 
+    <!-- Advanced options (full-anagram mode) -->
+    <details id="an-opts" class="rounded-lg border border-hairline bg-surface-1 px-4 py-3">
+      <summary class="cursor-pointer text-sm text-ink-subtle select-none">Advanced options</summary>
+      <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Include word(s) — force into every result
+          <input id="an-include" class="field" spellcheck="false" autocomplete="off" placeholder="e.g. my" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Max words per anagram
+          <input id="an-maxwords" class="field" type="number" min="1" max="6" value="2" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Shortest word length
+          <input id="an-minlen" class="field" type="number" min="1" max="24" value="2" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Longest word length
+          <input id="an-maxlen" class="field" type="number" min="1" max="24" placeholder="auto" />
+        </label>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle">
+          <input id="an-cap" type="checkbox" class="accent-[#5e6ad2]" /> Capitalize each word
+        </label>
+      </div>
+    </details>
+
     <div class="flex items-baseline justify-between border-t border-hairline pt-4">
-      <p id="an-summary" class="text-sm text-ink-subtle"></p>
+      <p id="an-summary" class="text-sm text-ink-subtle">Loading dictionary…</p>
       <button id="an-copy" class="btn btn-secondary">Copy all</button>
     </div>
     <div id="an-out" class="flex flex-col gap-4"></div>
@@ -23,102 +45,294 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free anagram generator takes any set of letters and finds every word that
-      can be spelled from them, grouped by length — a fast way to unscramble letters
-      for Scrabble, Words with Friends, crosswords and word puzzles. Tick "Full anagrams
-      only" to see just the words that use every letter. Use "Scramble letters" to jumble
-      a word for your own puzzle. It searches a built-in word list right in your browser,
-      so nothing is uploaded.
+      This free anagram generator rearranges the letters of any word or phrase into new
+      words and multi-word phrases. In <strong>Full anagrams</strong> mode it uses every
+      letter — turning "dormitory" into "dirty room" — searching a 360,000-word dictionary
+      right in your browser. Use the advanced options to force a word into every result,
+      cap how many words each anagram may use, or set minimum and maximum word lengths.
+    </p>
+    <p>
+      Switch to <strong>Words within</strong> to find every word you can spell from a subset
+      of the letters, grouped by length — handy for Scrabble, Words with Friends, crosswords
+      and word puzzles. Everything runs locally, so nothing you type is uploaded.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  import { WORDS } from '../../lib/wordlist';
   import { shuffle } from '../../lib/random';
 
   const $ = (id: string) => document.getElementById(id)!;
   const inEl = $('an-in') as HTMLInputElement;
-  const fullEl = $('an-full') as HTMLInputElement;
+  const includeEl = $('an-include') as HTMLInputElement;
+  const maxWordsEl = $('an-maxwords') as HTMLInputElement;
+  const minLenEl = $('an-minlen') as HTMLInputElement;
+  const maxLenEl = $('an-maxlen') as HTMLInputElement;
+  const capEl = $('an-cap') as HTMLInputElement;
+  const optsEl = $('an-opts') as HTMLDetailsElement;
   const out = $('an-out')!;
   const summary = $('an-summary')!;
 
-  // Precompute a letter-count signature for each dictionary word once.
-  type Counts = Record<string, number>;
-  function counts(s: string): Counts {
-    const c: Counts = {};
-    for (const ch of s) c[ch] = (c[ch] || 0) + 1;
-    return c;
-  }
-  const DICT = WORDS.map((w) => ({ w, c: counts(w) }));
+  const A = 'a'.charCodeAt(0);
+  const RESULT_CAP = 400; // stop after this many anagrams — keeps pathological inputs bounded
+  const STEP_CAP = 4_000_000; // recursion-node ceiling; bail with partial results if hit
 
-  // Can `word` be built from the available letter pool?
-  function fits(word: Counts, pool: Counts): boolean {
-    for (const ch in word) if (!pool[ch] || word[ch] > pool[ch]) return false;
-    return true;
+  // 26-slot letter-count vector for a lowercased [a-z] string.
+  function sig(s: string): Int32Array {
+    const v = new Int32Array(26);
+    for (let i = 0; i < s.length; i++) {
+      const k = s.charCodeAt(i) - A;
+      if (k >= 0 && k < 26) v[k]++;
+    }
+    return v;
+  }
+  const clean = (s: string) => s.toLowerCase().replace(/[^a-z]/g, '');
+
+  // ── Dictionary ────────────────────────────────────────────────
+  let WORDS: string[] = [];
+  let SIGS: Uint8Array; // flat 26-per-word letter counts
+  let dictReady: Promise<void> | null = null;
+
+  function loadDict(): Promise<void> {
+    if (dictReady) return dictReady;
+    dictReady = (async () => {
+      const res = await fetch('/squaredle-dict.txt.gz');
+      if (!res.ok) throw new Error('dict fetch failed');
+      const buf = new Uint8Array(await res.arrayBuffer());
+      // The dev server may transparently gunzip (Content-Encoding: gzip). Only
+      // run DecompressionStream when the bytes are actually still gzipped
+      // (magic 0x1f 0x8b); otherwise decode the already-plain bytes directly.
+      const gzipped = buf[0] === 0x1f && buf[1] === 0x8b;
+      let text: string;
+      if (gzipped && 'DecompressionStream' in window) {
+        const ds = new (window as any).DecompressionStream('gzip');
+        text = await new Response(new Blob([buf]).stream().pipeThrough(ds)).text();
+      } else {
+        text = new TextDecoder().decode(buf);
+      }
+      const words: string[] = [];
+      for (const line of text.split('\n')) {
+        const w = line.trim();
+        if (w.length >= 1 && /^[a-z]+$/.test(w)) words.push(w);
+      }
+      WORDS = words;
+      SIGS = new Uint8Array(words.length * 26);
+      for (let i = 0; i < words.length; i++) {
+        const w = words[i];
+        const base = i * 26;
+        for (let j = 0; j < w.length; j++) SIGS[base + w.charCodeAt(j) - A]++;
+      }
+    })();
+    return dictReady;
   }
 
+  // ── State ─────────────────────────────────────────────────────
+  let mode: 'full' | 'within' = 'full';
   let lastList: string[] = [];
 
+  const titleCase = (s: string) =>
+    s.replace(/\b[a-z]/g, (m) => m.toUpperCase());
+
+  // ── Full multi-word anagram search ────────────────────────────
+  function fullAnagrams(pool: Int32Array): { results: string[]; capped: boolean } {
+    const total = pool.reduce((a, b) => a + b, 0);
+    const maxWords = Math.max(1, Math.min(6, parseInt(maxWordsEl.value) || 2));
+    const minLen = Math.max(1, parseInt(minLenEl.value) || 1);
+    const maxLen = parseInt(maxLenEl.value) || total;
+
+    // Candidate words: those that fit the pool and pass length filters.
+    // Store index (into SIGS) + length; sort by length desc for nicer output.
+    const cand: { i: number; len: number; w: string }[] = [];
+    for (let i = 0; i < WORDS.length; i++) {
+      const w = WORDS[i];
+      if (w.length < minLen || w.length > maxLen || w.length > total) continue;
+      const base = i * 26;
+      let ok = true;
+      for (let k = 0; k < 26; k++) {
+        if (SIGS[base + k] > pool[k]) { ok = false; break; }
+      }
+      if (ok) cand.push({ i, len: w.length, w });
+    }
+    cand.sort((a, b) => b.len - a.len || (a.w < b.w ? -1 : 1));
+
+    const results: string[] = [];
+    const remaining = Int32Array.from(pool);
+    const chosen: string[] = [];
+    let steps = 0;
+    let capped = false;
+
+    function recurse(start: number, left: number): void {
+      if (results.length >= RESULT_CAP || capped) return;
+      if (left === 0) {
+        results.push(chosen.join(' '));
+        return;
+      }
+      if (chosen.length >= maxWords) return; // out of word budget with letters left
+      for (let ci = start; ci < cand.length; ci++) {
+        if (++steps > STEP_CAP) { capped = true; return; }
+        const { i, len } = cand[ci];
+        if (len > left) continue;
+        const base = i * 26;
+        let fits = true;
+        for (let k = 0; k < 26; k++) {
+          if (SIGS[base + k] > remaining[k]) { fits = false; break; }
+        }
+        if (!fits) continue;
+        for (let k = 0; k < 26; k++) remaining[k] -= SIGS[base + k];
+        chosen.push(cand[ci].w);
+        recurse(ci, left - len); // ci (not ci+1) allows word repeats; start=ci dedups permutations
+        chosen.pop();
+        for (let k = 0; k < 26; k++) remaining[k] += SIGS[base + k];
+        if (results.length >= RESULT_CAP || capped) return;
+      }
+    }
+    recurse(0, total);
+    return { results, capped };
+  }
+
+  // ── Words-within (subset) search ──────────────────────────────
+  function wordsWithin(pool: Int32Array, self: string): string[] {
+    const total = pool.reduce((a, b) => a + b, 0);
+    const minLen = Math.max(1, parseInt(minLenEl.value) || 1);
+    const maxLen = parseInt(maxLenEl.value) || total;
+    const hits: string[] = [];
+    for (let i = 0; i < WORDS.length; i++) {
+      const w = WORDS[i];
+      if (w === self || w.length < minLen || w.length > maxLen || w.length > total) continue;
+      const base = i * 26;
+      let ok = true;
+      for (let k = 0; k < 26; k++) {
+        if (SIGS[base + k] > pool[k]) { ok = false; break; }
+      }
+      if (ok) hits.push(w);
+    }
+    return hits;
+  }
+
+  // ── Render ────────────────────────────────────────────────────
+  function chip(w: string) {
+    return `<span class="rounded-md border border-hairline bg-surface-1 px-2.5 py-1 text-[15px] text-ink">${w}</span>`;
+  }
+
   function solve() {
-    const raw = inEl.value.toLowerCase().replace(/[^a-z]/g, '');
-    const pool = counts(raw);
-    const total = raw.length;
-    const fullOnly = fullEl.checked;
-
-    const matches = DICT.filter(({ w, c }) => {
-      if (w === raw) return false; // skip the input itself
-      if (fullOnly && w.length !== total) return false;
-      return fits(c, pool);
-    }).map((m) => m.w);
-
-    lastList = matches;
-
+    const raw = clean(inEl.value);
     if (!raw) {
       summary.textContent = 'Type some letters to begin.';
       out.innerHTML = '';
-      return;
-    }
-    if (!matches.length) {
-      summary.textContent = `No words found in ${total} letters.`;
-      out.innerHTML = '';
+      lastList = [];
       return;
     }
 
-    // Group by length, longest first.
-    const groups = new Map<number, string[]>();
-    for (const w of matches) {
-      if (!groups.has(w.length)) groups.set(w.length, []);
-      groups.get(w.length)!.push(w);
+    if (mode === 'within') {
+      const list = wordsWithin(sig(raw), raw);
+      lastList = list;
+      if (!list.length) {
+        summary.textContent = `No words found within "${raw}".`;
+        out.innerHTML = '';
+        return;
+      }
+      const groups = new Map<number, string[]>();
+      for (const w of list) (groups.get(w.length) ?? groups.set(w.length, []).get(w.length)!).push(w);
+      const lengths = [...groups.keys()].sort((a, b) => b - a);
+      summary.textContent = `${list.length} word${list.length === 1 ? '' : 's'} within "${raw}".`;
+      out.innerHTML = lengths
+        .map((len) => {
+          const words = groups.get(len)!.sort();
+          return `<div class="flex flex-col gap-2">
+            <span class="text-[13px] font-medium uppercase tracking-wide text-ink-tertiary">${len} letters · ${words.length}</span>
+            <div class="flex flex-wrap gap-2">${words.map(chip).join('')}</div>
+          </div>`;
+        })
+        .join('');
+      return;
     }
-    const lengths = [...groups.keys()].sort((a, b) => b - a);
 
-    summary.textContent = `${matches.length} word${matches.length === 1 ? '' : 's'} from "${raw}".`;
-    out.innerHTML = lengths
-      .map((len) => {
-        const words = groups.get(len)!.sort();
-        const chips = words
-          .map((w) => `<span class="rounded-md border border-hairline bg-surface-1 px-2.5 py-1 text-[15px] text-ink">${w}</span>`)
-          .join('');
-        return `<div class="flex flex-col gap-2">
-          <span class="text-[13px] font-medium uppercase tracking-wide text-ink-tertiary">${len} letters · ${words.length}</span>
-          <div class="flex flex-wrap gap-2">${chips}</div>
-        </div>`;
-      })
-      .join('');
+    // Full-anagram mode. Subtract any forced include words from the pool first.
+    const pool = sig(raw);
+    const includeWords = clean(includeEl.value).length
+      ? includeEl.value.trim().split(/\s+/).map(clean).filter(Boolean)
+      : [];
+    const prefix: string[] = [];
+    for (const iw of includeWords) {
+      const s = sig(iw);
+      let fits = true;
+      for (let k = 0; k < 26; k++) if (s[k] > pool[k]) { fits = false; break; }
+      if (!fits) {
+        summary.textContent = `Can't include "${iw}" — its letters aren't all in "${raw}".`;
+        out.innerHTML = '';
+        lastList = [];
+        return;
+      }
+      for (let k = 0; k < 26; k++) pool[k] -= s[k];
+      prefix.push(iw);
+    }
+
+    summary.textContent = 'Searching…';
+    out.innerHTML = '';
+    // Yield once so "Searching…" paints before the (possibly heavy) search.
+    setTimeout(() => {
+      if (clean(inEl.value) !== raw) return; // input changed while yielding
+      const { results, capped } = fullAnagrams(pool);
+      let phrases = results.map((r) => (prefix.length ? prefix.join(' ') + ' ' + r : r));
+      // Drop the trivial "input === output" phrase; sort shortest-word-count first.
+      phrases = phrases.filter((p) => clean(p) !== raw + prefix.join(''));
+      phrases.sort((a, b) => a.split(' ').length - b.split(' ').length || (a < b ? -1 : 1));
+      if (capEl.checked) phrases = phrases.map(titleCase);
+      lastList = phrases;
+
+      if (!phrases.length) {
+        summary.textContent = `No full anagrams found for "${raw}".`;
+        return;
+      }
+      summary.textContent = capped
+        ? `Showing first ${phrases.length} anagrams (search limited).`
+        : `${phrases.length} full anagram${phrases.length === 1 ? '' : 's'} of "${raw}".`;
+      out.innerHTML = `<div class="flex flex-wrap gap-2">${phrases.map(chip).join('')}</div>`;
+    }, 0);
   }
 
-  [inEl, fullEl].forEach((el) => el.addEventListener('input', solve));
+  // ── Wiring ────────────────────────────────────────────────────
+  function setMode(m: 'full' | 'within') {
+    mode = m;
+    ($('an-mode-full') as HTMLButtonElement).className =
+      'btn ' + (m === 'full' ? 'btn-primary' : 'btn-secondary');
+    ($('an-mode-within') as HTMLButtonElement).className =
+      'btn ' + (m === 'within' ? 'btn-primary' : 'btn-secondary');
+    optsEl.style.display = ''; // options apply to both modes (length filters)
+    if (WORDS.length) solve();
+  }
+  $('an-mode-full').addEventListener('click', () => setMode('full'));
+  $('an-mode-within').addEventListener('click', () => setMode('within'));
+
+  let t: number | undefined;
+  const debounced = () => {
+    clearTimeout(t);
+    t = window.setTimeout(() => WORDS.length && solve(), 200);
+  };
+  [inEl, includeEl, maxWordsEl, minLenEl, maxLenEl].forEach((el) =>
+    el.addEventListener('input', debounced)
+  );
+  capEl.addEventListener('change', () => WORDS.length && solve());
+
   $('an-scramble').addEventListener('click', () => {
-    const raw = inEl.value.toLowerCase().replace(/[^a-z]/g, '');
+    const raw = clean(inEl.value);
     if (raw.length > 1) inEl.value = shuffle([...raw]).join('');
-    solve();
+    if (WORDS.length) solve();
   });
+
   $('an-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(lastList.join(', '));
+    await navigator.clipboard.writeText(lastList.join('\n'));
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy all'), 1500);
   });
-  solve();
+
+  loadDict()
+    .then(() => {
+      summary.textContent = 'Ready.';
+      solve();
+    })
+    .catch(() => {
+      summary.textContent = 'Failed to load the dictionary. Try reloading.';
+    });
 </script>

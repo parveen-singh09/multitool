@@ -109,6 +109,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return s.replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]!));
   }
 
+  // Real text metrics beat guessing char count * 0.6 — matters for serif/mono/wide glyphs.
+  const measureCtx = document.createElement('canvas').getContext('2d')!;
+  function textWidth(text: string, size: number, weight: string, font: string, spacing: number) {
+    measureCtx.font = `${weight} ${size}px ${font}`;
+    const w = measureCtx.measureText(text).width;
+    return text.length > 1 ? w + spacing * (text.length - 1) : w;
+  }
+
   function buildSvg(): { svg: string; w: number; h: number } {
     const name = escapeXml(get('lg-name') || 'Brand');
     const tag = escapeXml(get('lg-tag'));
@@ -125,10 +133,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const tagColor = bgChoice === '#ffffff' ? '#6b7280' : onAccent ? 'rgba(255,255,255,0.8)' : '#8a8f98';
     const bg = bgChoice === 'accent' ? accent : bgChoice;
 
-    // Estimate text width (~0.6em per char at the chosen size).
     const nameSize = 54;
-    const nameW = name.length * nameSize * 0.6;
     const tagSize = 20;
+    const nameW = textWidth(name, nameSize, weight, font, -1);
+    const tagW = tag ? textWidth(tag, tagSize, '400', font, 1) : 0;
+    const textW = Math.max(nameW, tagW);
     const iconBox = 88;
     const gap = 24;
     const pad = 40;
@@ -137,7 +146,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     let w: number, h: number, iconG = '', textG = '';
 
     if (layout === 'top' && showIcon) {
-      w = Math.max(iconBox, nameW) + pad * 2;
+      w = Math.max(iconBox, textW) + pad * 2;
       const textBlockH = nameSize + (tag ? tagSize + 12 : 0);
       h = pad * 2 + iconBox + gap + textBlockH;
       const cx = w / 2;
@@ -147,7 +156,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       if (tag) textG += `<text x="${cx}" y="${ty + tagSize + 10}" text-anchor="middle" font-family="${font}" font-weight="400" font-size="${tagSize}" fill="${tagColor}" letter-spacing="1">${tag}</text>`;
     } else if (layout === 'left' && showIcon) {
       const textX = pad + iconBox + gap;
-      w = textX + nameW + pad;
+      w = textX + textW + pad;
       h = pad * 2 + Math.max(iconBox, nameSize + (tag ? tagSize + 12 : 0));
       const cy = h / 2;
       iconG = `<g transform="translate(${pad},${cy - iconBox / 2}) scale(${iconBox / 100})" color="${iconColor}">${ICONS[iconName]}</g>`;
@@ -155,7 +164,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       textG = `<text x="${textX}" y="${ty}" font-family="${font}" font-weight="${weight}" font-size="${nameSize}" fill="${textColor}" letter-spacing="-1" dominant-baseline="${tag ? 'auto' : 'middle'}">${name}</text>`;
       if (tag) textG += `<text x="${textX}" y="${cy + tagSize + 6}" font-family="${font}" font-weight="400" font-size="${tagSize}" fill="${tagColor}" letter-spacing="1">${tag}</text>`;
     } else {
-      w = nameW + pad * 2;
+      w = textW + pad * 2;
       h = pad * 2 + nameSize + (tag ? tagSize + 12 : 0);
       const cx = w / 2;
       const ty = pad + nameSize * 0.8;

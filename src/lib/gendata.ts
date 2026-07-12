@@ -5,41 +5,73 @@
 /* ------------------------------------------------------------------ *
  * Pictionary
  * ------------------------------------------------------------------ */
-export interface PictionaryBank {
-  easy: string[];
-  medium: string[];
-  hard: string[];
+export type PictionaryTier = 'easy' | 'medium' | 'hard';
+
+export interface PictionaryWord {
+  word: string;
+  tier: PictionaryTier;
+  category: string;
 }
 
-export const PICTIONARY: PictionaryBank = {
-  easy: [
-    'apple', 'ball', 'cat', 'dog', 'house', 'sun', 'moon', 'star', 'tree', 'car',
-    'boat', 'fish', 'bird', 'hat', 'shoe', 'book', 'cup', 'key', 'door', 'clock',
-    'chair', 'table', 'bed', 'lamp', 'flower', 'cloud', 'rain', 'snow', 'fire', 'ice',
-    'egg', 'cake', 'pizza', 'banana', 'carrot', 'spider', 'snake', 'frog', 'bee', 'ant',
-    'eye', 'nose', 'hand', 'foot', 'smile', 'heart', 'kite', 'drum', 'bell', 'flag',
-  ],
-  medium: [
-    'airport', 'birthday', 'campfire', 'dentist', 'elephant', 'fountain', 'guitar',
-    'hamburger', 'igloo', 'jellyfish', 'kangaroo', 'lighthouse', 'mailbox', 'newspaper',
-    'octopus', 'penguin', 'quicksand', 'rainbow', 'sandcastle', 'telescope', 'umbrella',
-    'volcano', 'waterfall', 'xylophone', 'yardstick', 'zipper', 'astronaut', 'bicycle',
-    'chandelier', 'dinosaur', 'escalator', 'fireworks', 'greenhouse', 'helicopter',
-    'iceberg', 'jackpot', 'keyboard', 'lawnmower', 'microphone', 'notebook', 'orchestra',
-    'parachute', 'quarantine', 'refrigerator', 'skateboard', 'treasure', 'unicorn',
-    'vampire', 'windmill', 'zombie',
-  ],
-  hard: [
-    'acceleration', 'bureaucracy', 'claustrophobia', 'déjà vu', 'entrepreneur',
-    'foreshadowing', 'gravity', 'hypothesis', 'inflation', 'jetlag', 'kaleidoscope',
-    'loophole', 'metabolism', 'nostalgia', 'optimism', 'photosynthesis', 'quarantine',
-    'recession', 'serendipity', 'telepathy', 'utopia', 'vertigo', 'wanderlust',
-    'xenophobia', 'yin and yang', 'zeitgeist', 'algorithm', 'boycott', 'checkmate',
-    'democracy', 'ecosystem', 'firewall', 'genome', 'hologram', 'infinity',
-    'karma', 'labyrinth', 'momentum', 'nirvana', 'overture', 'paradox', 'quicksilver',
-    'renaissance', 'stereotype', 'turbulence', 'undertow', 'velocity', 'whirlpool',
-  ],
-};
+// Compact tagger: one category + tier for a run of words.
+const P = (category: string, tier: PictionaryTier, words: string[]): PictionaryWord[] =>
+  words.map((word) => ({ word, tier, category }));
+
+// ~350 words across 12 categories × 3 difficulty tiers. Every word is
+// drawable — no proper nouns that only some players would know.
+export const PICTIONARY_WORDS: PictionaryWord[] = [
+  ...P('Animals', 'easy', ['cat', 'dog', 'fish', 'bird', 'cow', 'pig', 'duck', 'bee', 'ant', 'frog', 'snake', 'spider', 'horse', 'sheep', 'mouse']),
+  ...P('Animals', 'medium', ['elephant', 'kangaroo', 'octopus', 'penguin', 'jellyfish', 'flamingo', 'hedgehog', 'squirrel', 'dolphin', 'butterfly', 'crocodile', 'peacock']),
+  ...P('Animals', 'hard', ['platypus', 'chameleon', 'narwhal', 'armadillo', 'wolverine', 'seahorse', 'pangolin', 'axolotl']),
+
+  ...P('Food & Drink', 'easy', ['apple', 'egg', 'cake', 'pizza', 'banana', 'carrot', 'bread', 'milk', 'cheese', 'cookie', 'ice cream', 'burger']),
+  ...P('Food & Drink', 'medium', ['spaghetti', 'pineapple', 'popcorn', 'sandwich', 'pancake', 'watermelon', 'cupcake', 'hot dog', 'sushi', 'taco', 'waffle']),
+  ...P('Food & Drink', 'hard', ['croissant', 'guacamole', 'lasagna', 'espresso', 'smoothie', 'barbecue']),
+
+  ...P('Household', 'easy', ['chair', 'table', 'bed', 'lamp', 'cup', 'key', 'door', 'clock', 'spoon', 'fork', 'broom', 'pillow', 'mirror', 'candle']),
+  ...P('Household', 'medium', ['umbrella', 'toothbrush', 'refrigerator', 'vacuum', 'stapler', 'blender', 'hairdryer', 'ladder', 'mousetrap', 'doorbell']),
+  ...P('Household', 'hard', ['chandelier', 'thermostat', 'corkscrew', 'grandfather clock']),
+
+  ...P('Nature', 'easy', ['sun', 'moon', 'star', 'tree', 'cloud', 'rain', 'snow', 'fire', 'flower', 'leaf', 'rock', 'river', 'mountain', 'beach']),
+  ...P('Nature', 'medium', ['rainbow', 'volcano', 'waterfall', 'iceberg', 'tornado', 'lightning', 'cactus', 'desert', 'island', 'forest']),
+  ...P('Nature', 'hard', ['photosynthesis', 'ecosystem', 'avalanche', 'geyser', 'aurora']),
+
+  ...P('Sports & Games', 'easy', ['ball', 'kite', 'swing', 'slide', 'jump rope', 'dice', 'chess', 'darts', 'bowling']),
+  ...P('Sports & Games', 'medium', ['skateboard', 'basketball', 'tennis', 'surfing', 'baseball', 'boxing', 'archery', 'trampoline', 'hula hoop', 'skiing']),
+  ...P('Sports & Games', 'hard', ['gymnastics', 'badminton', 'water polo', 'checkmate', 'tug of war']),
+
+  ...P('Places', 'easy', ['house', 'school', 'park', 'shop', 'farm', 'zoo', 'church', 'bridge', 'castle', 'tent']),
+  ...P('Places', 'medium', ['airport', 'lighthouse', 'igloo', 'greenhouse', 'windmill', 'skyscraper', 'stadium', 'hospital', 'library', 'aquarium']),
+  ...P('Places', 'hard', ['observatory', 'amphitheater', 'labyrinth', 'penthouse']),
+
+  ...P('Actions', 'easy', ['run', 'jump', 'swim', 'sleep', 'eat', 'sing', 'dance', 'cry', 'laugh', 'read', 'sit', 'throw', 'clap', 'wave']),
+  ...P('Actions', 'medium', ['juggle', 'tiptoe', 'sneeze', 'whisper', 'stretch', 'skateboard', 'snore', 'shiver', 'yawn', 'balance']),
+  ...P('Actions', 'hard', ['procrastinate', 'hibernate', 'levitate', 'meditate', 'improvise']),
+
+  ...P('Jobs', 'easy', ['doctor', 'chef', 'teacher', 'farmer', 'pilot', 'clown', 'nurse', 'baker', 'artist', 'singer']),
+  ...P('Jobs', 'medium', ['dentist', 'astronaut', 'firefighter', 'magician', 'lifeguard', 'plumber', 'detective', 'referee', 'librarian', 'scientist']),
+  ...P('Jobs', 'hard', ['archaeologist', 'entrepreneur', 'meteorologist', 'ventriloquist']),
+
+  ...P('Vehicles', 'easy', ['car', 'boat', 'bus', 'train', 'plane', 'bike', 'truck', 'ship', 'rocket', 'scooter']),
+  ...P('Vehicles', 'medium', ['helicopter', 'submarine', 'bicycle', 'tractor', 'ambulance', 'sailboat', 'motorcycle', 'canoe', 'hot air balloon']),
+  ...P('Vehicles', 'hard', ['hovercraft', 'zeppelin', 'monorail', 'gondola']),
+
+  ...P('Body', 'easy', ['eye', 'nose', 'hand', 'foot', 'ear', 'mouth', 'hair', 'tooth', 'heart', 'smile', 'thumb', 'knee']),
+  ...P('Body', 'medium', ['eyebrow', 'freckle', 'fingernail', 'shoulder', 'elbow', 'ankle', 'muscle', 'skeleton']),
+  ...P('Body', 'hard', ['metabolism', 'bloodstream', 'nervous system']),
+
+  ...P('Clothing', 'easy', ['hat', 'shoe', 'sock', 'shirt', 'dress', 'glove', 'scarf', 'belt', 'boot', 'ring']),
+  ...P('Clothing', 'medium', ['zipper', 'necklace', 'sunglasses', 'raincoat', 'backpack', 'mitten', 'bowtie', 'sandals', 'costume']),
+  ...P('Clothing', 'hard', ['tuxedo', 'kimono', 'wristwatch', 'suspenders']),
+
+  ...P('Abstract', 'medium', ['birthday', 'treasure', 'jackpot', 'nightmare', 'daydream', 'echo', 'shadow', 'gravity', 'silence', 'teamwork']),
+  ...P('Abstract', 'hard', ['nostalgia', 'serendipity', 'wanderlust', 'déjà vu', 'optimism', 'infinity', 'paradox', 'momentum', 'telepathy', 'zeitgeist', 'claustrophobia', 'vertigo']),
+];
+
+/** Distinct category names, in the order they first appear above. */
+export const PICTIONARY_CATEGORIES: string[] = [
+  ...new Set(PICTIONARY_WORDS.map((w) => w.category)),
+];
 
 /* ------------------------------------------------------------------ *
  * Animals — name, emoji, class, a quick fact
@@ -95,61 +127,163 @@ export const ANIMALS: Animal[] = [
 ];
 
 /* ------------------------------------------------------------------ *
- * Tarot — 78-card deck with brief upright / reversed meanings
+ * Tarot — full 78-card Rider–Waite deck with per-card meanings,
+ * keywords, element, astrology and a yes/no verdict. Traditional
+ * Golden Dawn astrological attributions; for entertainment/journaling.
  * ------------------------------------------------------------------ */
+export type TarotElement = 'Fire' | 'Water' | 'Air' | 'Earth';
+export type TarotVerdict = 'Yes' | 'No' | 'Maybe';
+
 export interface TarotCard {
   name: string;
   arcana: 'Major' | 'Minor';
   suit?: 'Wands' | 'Cups' | 'Swords' | 'Pentacles';
+  keywords: string[];
+  element: TarotElement;
+  astrology: string;
+  yesNo: TarotVerdict;
   upright: string;
   reversed: string;
+  love: string;
+  /** Public-domain Rider–Waite–Smith card image (in /tarot/). */
+  img: string;
 }
 
-const MAJOR: [string, string, string][] = [
-  ['The Fool', 'New beginnings, spontaneity, a leap of faith.', 'Recklessness, hesitation, fear of the unknown.'],
-  ['The Magician', 'Willpower, skill, manifesting your intent.', 'Manipulation, untapped talent, self-doubt.'],
-  ['The High Priestess', 'Intuition, mystery, the subconscious.', 'Secrets withheld, disconnection from instinct.'],
-  ['The Empress', 'Abundance, nurturing, creativity.', 'Dependence, creative block, neglect.'],
-  ['The Emperor', 'Structure, authority, stability.', 'Domination, rigidity, loss of control.'],
-  ['The Hierophant', 'Tradition, guidance, shared belief.', 'Rebellion, dogma, breaking convention.'],
-  ['The Lovers', 'Union, choice, alignment of values.', 'Disharmony, imbalance, misaligned choices.'],
-  ['The Chariot', 'Determination, control, forward drive.', 'Loss of direction, opposition, no discipline.'],
-  ['Strength', 'Courage, patience, gentle power.', 'Self-doubt, raw emotion, low energy.'],
-  ['The Hermit', 'Introspection, solitude, inner guidance.', 'Isolation, withdrawal, lost your way.'],
-  ['Wheel of Fortune', 'Change, cycles, turning points.', 'Bad luck, resistance to change, delay.'],
-  ['Justice', 'Fairness, truth, cause and effect.', 'Unfairness, dishonesty, avoiding accountability.'],
-  ['The Hanged Man', 'Surrender, new perspective, pause.', 'Stalling, indecision, needless sacrifice.'],
-  ['Death', 'Endings, transformation, transition.', 'Resistance to change, stagnation, holding on.'],
-  ['Temperance', 'Balance, moderation, patience.', 'Excess, imbalance, misalignment.'],
-  ['The Devil', 'Attachment, temptation, materialism.', 'Release, breaking free, reclaiming power.'],
-  ['The Tower', 'Sudden upheaval, revelation, chaos.', 'Averted disaster, fear of change, delay.'],
-  ['The Star', 'Hope, renewal, serene faith.', 'Discouragement, lost faith, disconnection.'],
-  ['The Moon', 'Illusion, intuition, the unconscious.', 'Confusion cleared, fear released, truth surfacing.'],
-  ['The Sun', 'Joy, success, vitality.', 'Temporary gloom, blocked positivity.'],
-  ['Judgement', 'Reckoning, awakening, renewal.', 'Self-doubt, ignoring the call, harsh judgement.'],
-  ['The World', 'Completion, wholeness, achievement.', 'Incompletion, loose ends, delayed closure.'],
+// sacred-texts RWS filename codes: suit + rank, e.g. cu02, waki, pe10.
+const SUIT_CODE: Record<NonNullable<TarotCard['suit']>, string> = {
+  Wands: 'wa', Cups: 'cu', Swords: 'sw', Pentacles: 'pe',
+};
+const RANK_CODE = ['ac', '02', '03', '04', '05', '06', '07', '08', '09', '10', 'pa', 'kn', 'qu', 'ki'];
+
+// [name, element, astrology, yesNo, keywords, upright, reversed, love]
+type MajorRow = [string, TarotElement, string, TarotVerdict, string, string, string, string];
+
+const MAJOR: MajorRow[] = [
+  ['The Fool', 'Air', 'Uranus', 'Yes', 'new beginnings, spontaneity, leap of faith, innocence', 'New beginnings, spontaneity and a leap of faith.', 'Recklessness, hesitation and fear of the unknown.', 'A carefree new romance — say yes to the adventure.'],
+  ['The Magician', 'Air', 'Mercury', 'Yes', 'willpower, manifestation, skill, resourcefulness', 'Willpower, skill and manifesting your intent.', 'Manipulation, untapped talent and self-doubt.', 'You have everything you need to make it work.'],
+  ['The High Priestess', 'Water', 'The Moon', 'Maybe', 'intuition, mystery, subconscious, inner voice', 'Intuition, mystery and the subconscious speaking.', 'Secrets withheld and disconnection from instinct.', 'Trust your gut; something is unspoken.'],
+  ['The Empress', 'Earth', 'Venus', 'Yes', 'abundance, nurturing, fertility, sensuality', 'Abundance, nurturing and blooming creativity.', 'Dependence, creative block and neglect.', 'A warm, sensual and fertile connection.'],
+  ['The Emperor', 'Fire', 'Aries', 'Yes', 'structure, authority, stability, protection', 'Structure, authority and steady stability.', 'Domination, rigidity and loss of control.', 'A committed, dependable partner.'],
+  ['The Hierophant', 'Earth', 'Taurus', 'Yes', 'tradition, guidance, commitment, belief', 'Tradition, guidance and shared belief.', 'Rebellion, dogma and breaking convention.', 'A conventional, long-term commitment — marriage energy.'],
+  ['The Lovers', 'Air', 'Gemini', 'Yes', 'union, choice, values, attraction', 'Union, choice and alignment of values.', 'Disharmony, imbalance and misaligned choices.', 'Deep connection and a meaningful choice in love.'],
+  ['The Chariot', 'Water', 'Cancer', 'Yes', 'determination, control, drive, willpower', 'Determination, control and forward drive.', 'Loss of direction, opposition and no discipline.', 'Push forward — the relationship needs momentum.'],
+  ['Strength', 'Fire', 'Leo', 'Yes', 'courage, patience, compassion, inner strength', 'Courage, patience and gentle power.', 'Self-doubt, raw emotion and low energy.', 'Lead with compassion, not force.'],
+  ['The Hermit', 'Earth', 'Virgo', 'No', 'introspection, solitude, guidance, searching', 'Introspection, solitude and inner guidance.', 'Isolation, withdrawal and losing your way.', 'A time for space and soul-searching, not romance.'],
+  ['Wheel of Fortune', 'Fire', 'Jupiter', 'Yes', 'change, cycles, luck, turning point', 'Change, cycles and fortunate turning points.', 'Bad luck, resistance to change and delay.', 'Fate is turning things in your favour.'],
+  ['Justice', 'Air', 'Libra', 'Yes', 'fairness, truth, cause and effect, accountability', 'Fairness, truth and cause and effect.', 'Unfairness, dishonesty and avoiding accountability.', 'Honesty and balance decide the outcome.'],
+  ['The Hanged Man', 'Water', 'Neptune', 'No', 'surrender, pause, new perspective, letting go', 'Surrender, a new perspective and a needed pause.', 'Stalling, indecision and needless sacrifice.', 'A relationship in limbo — wait and reflect.'],
+  ['Death', 'Water', 'Scorpio', 'No', 'endings, transformation, transition, release', 'Endings, transformation and transition.', 'Resistance to change, stagnation and holding on.', 'One chapter closes so another can begin.'],
+  ['Temperance', 'Fire', 'Sagittarius', 'Yes', 'balance, moderation, patience, harmony', 'Balance, moderation and patient harmony.', 'Excess, imbalance and misalignment.', 'A calm, well-balanced partnership.'],
+  ['The Devil', 'Earth', 'Capricorn', 'No', 'attachment, temptation, materialism, addiction', 'Attachment, temptation and materialism.', 'Release, breaking free and reclaiming power.', 'Intense chemistry — watch for unhealthy patterns.'],
+  ['The Tower', 'Fire', 'Mars', 'No', 'upheaval, revelation, chaos, sudden change', 'Sudden upheaval, revelation and chaos.', 'Averted disaster, fear of change and delay.', 'A shock that shakes the foundation of things.'],
+  ['The Star', 'Air', 'Aquarius', 'Yes', 'hope, renewal, faith, healing', 'Hope, renewal and serene faith.', 'Discouragement, lost faith and disconnection.', 'Healing and renewed hope after hard times.'],
+  ['The Moon', 'Water', 'Pisces', 'No', 'illusion, intuition, fear, the unconscious', 'Illusion, intuition and the unconscious.', 'Confusion clearing, fear released and truth surfacing.', 'Something is hidden — don’t trust appearances yet.'],
+  ['The Sun', 'Fire', 'The Sun', 'Yes', 'joy, success, vitality, positivity', 'Joy, success and radiant vitality.', 'Temporary gloom and blocked positivity.', 'Warmth, joy and a glowing relationship.'],
+  ['Judgement', 'Fire', 'Pluto', 'Yes', 'reckoning, awakening, renewal, absolution', 'Reckoning, awakening and renewal.', 'Self-doubt, ignoring the call and harsh judgement.', 'A second chance or meaningful reunion.'],
+  ['The World', 'Earth', 'Saturn', 'Yes', 'completion, wholeness, achievement, fulfilment', 'Completion, wholeness and achievement.', 'Incompletion, loose ends and delayed closure.', 'A relationship that feels whole and complete.'],
 ];
 
-const SUITS: { suit: TarotCard['suit']; theme: string; keyword: string }[] = [
-  { suit: 'Wands', theme: 'energy, passion and ambition', keyword: 'drive' },
-  { suit: 'Cups', theme: 'emotion, relationships and intuition', keyword: 'feeling' },
-  { suit: 'Swords', theme: 'thought, conflict and truth', keyword: 'intellect' },
-  { suit: 'Pentacles', theme: 'work, money and the material world', keyword: 'stability' },
-];
+// [rank, astrology, yesNo, keywords, upright, reversed, love]
+type MinorRow = [string, string, TarotVerdict, string, string, string, string];
 
-const RANKS = ['Ace', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Page', 'Knight', 'Queen', 'King'];
+interface SuitDef {
+  suit: NonNullable<TarotCard['suit']>;
+  element: TarotElement;
+  rows: MinorRow[];
+}
+
+const SUITS: SuitDef[] = [
+  {
+    suit: 'Wands', element: 'Fire',
+    rows: [
+      ['Ace', 'Fire (root of Fire)', 'Yes', 'inspiration, new energy, potential, creation', 'Inspiration and a spark of new creative energy.', 'Delays, false starts and lack of direction.', 'A passionate new spark.'],
+      ['Two', 'Mars in Aries', 'Maybe', 'planning, decisions, discovery, future', 'Planning, first steps and weighing your options.', 'Fear of change, playing safe and poor planning.', 'Deciding where things are headed.'],
+      ['Three', 'Sun in Aries', 'Yes', 'expansion, foresight, progress, growth', 'Expansion, foresight and ventures paying off.', 'Delays, obstacles and limited foresight.', 'Looking ahead together.'],
+      ['Four', 'Venus in Aries', 'Yes', 'celebration, home, harmony, milestone', 'Celebration, harmony and a joyful homecoming.', 'Transition, lack of harmony and cancelled plans.', 'A happy milestone, maybe moving in.'],
+      ['Five', 'Saturn in Leo', 'No', 'competition, conflict, tension, friction', 'Competition, friction and clashing energy.', 'Avoiding conflict, resolution and tension released.', 'Petty arguments to work through.'],
+      ['Six', 'Jupiter in Leo', 'Yes', 'victory, recognition, success, reward', 'Victory, recognition and public reward.', 'Ego, a fall from grace and no recognition.', 'Confidence and public commitment.'],
+      ['Seven', 'Mars in Leo', 'Maybe', 'defence, perseverance, challenge, courage', 'Standing your ground and persevering.', 'Overwhelm, giving up and yielding.', 'Defending the relationship.'],
+      ['Eight', 'Mercury in Sagittarius', 'Yes', 'speed, action, movement, momentum', 'Speed, movement and swift action.', 'Delays, frustration and slowing down.', 'Fast developments and messages of love.'],
+      ['Nine', 'Moon in Sagittarius', 'Maybe', 'resilience, grit, boundaries, persistence', 'Resilience, persistence and a last stand.', 'Exhaustion, defensiveness and paranoia.', 'Guarded, but hanging on.'],
+      ['Ten', 'Saturn in Sagittarius', 'No', 'burden, responsibility, strain, overload', 'Burden, responsibility and carrying too much.', 'Release, delegation and letting go.', 'Carrying too much weight alone.'],
+      ['Page', 'Fire signs (Aries · Leo · Sagittarius)', 'Yes', 'exploration, enthusiasm, free spirit, news', 'A free spirit bursting with enthusiasm and ideas.', 'Restlessness, hastiness and immaturity.', 'Flirty, playful new energy.'],
+      ['Knight', 'Fire signs (Aries · Leo · Sagittarius)', 'Yes', 'action, adventure, passion, impulsiveness', 'Bold action, adventure and charging ahead.', 'Recklessness, impatience and burning out.', 'A passionate, impulsive pursuit.'],
+      ['Queen', 'Fire signs (Aries · Leo · Sagittarius)', 'Yes', 'confidence, warmth, determination, charisma', 'Confidence, warmth and magnetic charisma.', 'Demanding, jealous and short-tempered.', 'A vibrant, self-assured partner.'],
+      ['King', 'Fire signs (Aries · Leo · Sagittarius)', 'Yes', 'leadership, vision, boldness, honour', 'Natural leadership, vision and bold direction.', 'Impulsiveness, domineering and high expectations.', 'A charismatic, driven partner.'],
+    ],
+  },
+  {
+    suit: 'Cups', element: 'Water',
+    rows: [
+      ['Ace', 'Water (root of Water)', 'Yes', 'new love, emotion, compassion, intuition', 'New love and overflowing emotional beginnings.', 'Blocked emotions, emptiness and repressed feelings.', 'A new romance blossoms.'],
+      ['Two', 'Venus in Cancer', 'Yes', 'partnership, union, attraction, harmony', 'Partnership, mutual attraction and union.', 'Disharmony, imbalance and broken communication.', 'A balanced, loving connection.'],
+      ['Three', 'Mercury in Cancer', 'Yes', 'friendship, joy, community, celebration', 'Friendship, celebration and community.', 'Gossip, overindulgence and isolation.', 'Celebrating love with friends.'],
+      ['Four', 'Moon in Cancer', 'No', 'apathy, contemplation, withdrawal, boredom', 'Apathy, contemplation and re-evaluation.', 'New awareness, acceptance and moving on.', 'Taking love for granted.'],
+      ['Five', 'Mars in Scorpio', 'No', 'loss, regret, grief, disappointment', 'Loss, regret and dwelling on disappointment.', 'Acceptance, recovery and moving forward.', 'Grief over what went wrong.'],
+      ['Six', 'Sun in Scorpio', 'Yes', 'nostalgia, memories, innocence, reunion', 'Nostalgia, sweet memories and reunions.', 'Stuck in the past and unrealistic nostalgia.', 'An old flame or reunion.'],
+      ['Seven', 'Venus in Scorpio', 'Maybe', 'choices, illusion, imagination, fantasy', 'Many choices, fantasy and illusion.', 'Clarity, decision and a reality check.', 'Too many options, wishful thinking.'],
+      ['Eight', 'Saturn in Pisces', 'Maybe', 'departure, withdrawal, seeking, meaning', 'Walking away to seek deeper meaning.', 'Fear of change, drifting and staying stuck.', 'Leaving what no longer fulfils you.'],
+      ['Nine', 'Jupiter in Pisces', 'Yes', 'contentment, satisfaction, wishes, gratitude', 'Contentment, satisfaction and wishes fulfilled.', 'Dissatisfaction, greed and unmet wishes.', 'Emotional fulfilment — a wish granted.'],
+      ['Ten', 'Mars in Pisces', 'Yes', 'happiness, family, harmony, belonging', 'Lasting happiness, harmony and family bliss.', 'A broken home, disharmony and misaligned values.', 'A happy, lasting relationship.'],
+      ['Page', 'Water signs (Cancer · Scorpio · Pisces)', 'Yes', 'creativity, intuition, sensitivity, messages', 'A sensitive dreamer open to intuitive messages.', 'Moodiness, escapism and emotional immaturity.', 'A sweet, heartfelt overture.'],
+      ['Knight', 'Water signs (Cancer · Scorpio · Pisces)', 'Yes', 'romance, charm, idealism, invitation', 'A romantic bringing charm and an invitation.', 'Moodiness, unrealistic ideals and jealousy.', 'A charming, romantic proposal.'],
+      ['Queen', 'Water signs (Cancer · Scorpio · Pisces)', 'Yes', 'compassion, empathy, nurturing, intuition', 'Deep compassion, empathy and emotional wisdom.', 'Insecurity, over-giving and martyrdom.', 'A caring, emotionally attuned partner.'],
+      ['King', 'Water signs (Cancer · Scorpio · Pisces)', 'Yes', 'emotional balance, diplomacy, calm, wisdom', 'Emotional balance, diplomacy and calm wisdom.', 'Moodiness, manipulation and emotional coldness.', 'A steady, emotionally mature partner.'],
+    ],
+  },
+  {
+    suit: 'Swords', element: 'Air',
+    rows: [
+      ['Ace', 'Air (root of Air)', 'Yes', 'clarity, truth, breakthrough, insight', 'Mental clarity, truth and breakthrough.', 'Confusion, clouded judgement and misinformation.', 'Honest truth cuts through.'],
+      ['Two', 'Moon in Libra', 'No', 'indecision, stalemate, avoidance, impasse', 'A stalemate and a difficult, avoided choice.', 'Indecision released, confusion and overload.', 'Avoiding a decision.'],
+      ['Three', 'Saturn in Libra', 'No', 'heartbreak, sorrow, hurt, betrayal', 'Heartbreak, grief and painful truth.', 'Recovery, forgiveness and releasing pain.', 'Heartache and betrayal.'],
+      ['Four', 'Jupiter in Libra', 'Maybe', 'rest, recovery, respite, contemplation', 'Rest, recovery and quiet contemplation.', 'Restlessness, burnout and stagnation.', 'A needed pause.'],
+      ['Five', 'Venus in Aquarius', 'No', 'conflict, defeat, tension, discord', 'Conflict, defeat and winning at all costs.', 'Reconciliation, making amends and moving on.', 'Arguments with no real winner.'],
+      ['Six', 'Mercury in Aquarius', 'Maybe', 'transition, recovery, moving on, change', 'Transition, moving on and calmer waters.', 'Resistance to change and unfinished business.', 'Moving past a rough patch.'],
+      ['Seven', 'Moon in Aquarius', 'No', 'deception, strategy, stealth, secrecy', 'Deception, strategy and acting alone.', 'Coming clean, conscience and owning up.', 'Dishonesty or secrecy.'],
+      ['Eight', 'Jupiter in Gemini', 'No', 'restriction, entrapment, limitation, powerlessness', 'Restriction and self-imposed limits.', 'Freedom, release and a new perspective.', 'Feeling stuck or powerless.'],
+      ['Nine', 'Mars in Gemini', 'No', 'anxiety, worry, fear, sleeplessness', 'Anxiety, worry and sleepless nights.', 'Hope, releasing worry and recovery.', 'Fear and overthinking.'],
+      ['Ten', 'Sun in Gemini', 'No', 'ending, ruin, betrayal, rock bottom', 'A painful ending and rock bottom.', 'Recovery, regeneration — the worst is over.', 'A painful but final ending.'],
+      ['Page', 'Air signs (Gemini · Libra · Aquarius)', 'Maybe', 'curiosity, vigilance, ideas, communication', 'A curious mind, alert and full of ideas.', 'Gossip, scattered energy and all talk.', 'Lots of talk, watch for mixed signals.'],
+      ['Knight', 'Air signs (Gemini · Libra · Aquarius)', 'Maybe', 'ambition, drive, haste, directness', 'Fast, direct action driven by ambition.', 'Recklessness, aggression and no follow-through.', 'A fast, blunt pursuit.'],
+      ['Queen', 'Air signs (Gemini · Libra · Aquarius)', 'Maybe', 'clarity, independence, honesty, boundaries', 'Clear-eyed honesty, independence and wit.', 'Coldness, bitterness and harsh words.', 'A sharp, independent partner.'],
+      ['King', 'Air signs (Gemini · Libra · Aquarius)', 'Maybe', 'intellect, authority, truth, logic', 'Intellectual authority, truth and clear judgement.', 'Manipulation, coldness and abuse of power.', 'A logical, principled partner.'],
+    ],
+  },
+  {
+    suit: 'Pentacles', element: 'Earth',
+    rows: [
+      ['Ace', 'Earth (root of Earth)', 'Yes', 'opportunity, prosperity, new venture, manifestation', 'A new opportunity, prosperity and manifestation.', 'Missed chance, scarcity mindset and delay.', 'A stable, promising start.'],
+      ['Two', 'Jupiter in Capricorn', 'Maybe', 'balance, adaptability, priorities, juggling', 'Balance, adaptability and juggling priorities.', 'Overwhelm, disorganisation and imbalance.', 'Balancing love with everything else.'],
+      ['Three', 'Mars in Capricorn', 'Yes', 'teamwork, collaboration, craft, skill', 'Teamwork, collaboration and skilled work.', 'Lack of teamwork, disorganisation and poor work.', 'Building something together.'],
+      ['Four', 'Sun in Capricorn', 'Maybe', 'security, control, stability, holding on', 'Security, control and holding on tight.', 'Greed, letting go and financial insecurity.', 'Fear of loss and guardedness.'],
+      ['Five', 'Mercury in Taurus', 'No', 'hardship, loss, insecurity, isolation', 'Hardship, insecurity and feeling left out.', 'Recovery, turning a corner and renewed faith.', 'Feeling unsupported.'],
+      ['Six', 'Moon in Taurus', 'Yes', 'generosity, sharing, support, charity', 'Generosity and balanced giving and receiving.', 'Strings attached, inequality and debt.', 'Balanced give and take.'],
+      ['Seven', 'Saturn in Taurus', 'Maybe', 'patience, investment, growth, assessment', 'Patience, the long view and assessing progress.', 'Impatience, no reward and poor investment.', 'Waiting for growth to pay off.'],
+      ['Eight', 'Sun in Virgo', 'Yes', 'diligence, mastery, craftsmanship, focus', 'Diligence, mastery and developing your skill.', 'Perfectionism, no motivation and cutting corners.', 'Working patiently on yourself.'],
+      ['Nine', 'Venus in Virgo', 'Yes', 'abundance, luxury, independence, self-sufficiency', 'Abundance, independence and self-sufficiency.', 'Overwork, dependence and showiness.', 'Enjoying life, independent and whole.'],
+      ['Ten', 'Mercury in Virgo', 'Yes', 'wealth, legacy, family, stability', 'Lasting wealth, legacy and family stability.', 'Financial loss, broken traditions and instability.', 'A lasting, secure partnership.'],
+      ['Page', 'Earth signs (Taurus · Virgo · Capricorn)', 'Yes', 'ambition, study, opportunity, diligence', 'A diligent student ready to learn and build.', 'Laziness, procrastination and missed chances.', 'A grounded, sincere start.'],
+      ['Knight', 'Earth signs (Taurus · Virgo · Capricorn)', 'Yes', 'reliability, routine, patience, commitment', 'Reliable, patient and methodical progress.', 'Boredom, stagnation and feeling stuck.', 'A dependable, if slow, courtship.'],
+      ['Queen', 'Earth signs (Taurus · Virgo · Capricorn)', 'Yes', 'nurturing, practicality, comfort, security', 'Practical nurturing, comfort and security.', 'Smothering, materialism and self-neglect.', 'A caring, providing partner.'],
+      ['King', 'Earth signs (Taurus · Virgo · Capricorn)', 'Yes', 'abundance, security, discipline, provider', 'Abundance, discipline and a steady provider.', 'Greed, stubbornness and materialism.', 'A secure, established partner.'],
+    ],
+  },
+];
 
 export const TAROT_DECK: TarotCard[] = [
-  ...MAJOR.map(([name, upright, reversed]) => ({
-    name, arcana: 'Major' as const, upright, reversed,
+  ...MAJOR.map(([name, element, astrology, yesNo, keywords, upright, reversed, love], i) => ({
+    name, arcana: 'Major' as const, element, astrology, yesNo,
+    keywords: keywords.split(', '), upright, reversed, love,
+    img: `/tarot/ar${String(i).padStart(2, '0')}.jpg`,
   })),
-  ...SUITS.flatMap(({ suit, theme, keyword }) =>
-    RANKS.map((rank) => ({
+  ...SUITS.flatMap(({ suit, element, rows }) =>
+    rows.map(([rank, astrology, yesNo, keywords, upright, reversed, love], i) => ({
       name: `${rank} of ${suit}`,
       arcana: 'Minor' as const,
-      suit,
-      upright: `A ${rank.toLowerCase()} of ${keyword} — ${theme}.`,
-      reversed: `Blocked or excessive ${keyword} around ${theme}.`,
+      suit, element, astrology, yesNo,
+      keywords: keywords.split(', '), upright, reversed, love,
+      img: `/tarot/${SUIT_CODE[suit]}${RANK_CODE[i]}.jpg`,
     }))
   ),
 ];
@@ -266,41 +400,84 @@ export const FAKEMON_SUFFIX = [
 /* ------------------------------------------------------------------ *
  * Pet names
  * ------------------------------------------------------------------ */
-export interface PetNameBank {
-  unisex: string[];
-  cutesy: string[];
-  tough: string[];
-  foodie: string[];
-  mythic: string[];
+// Each category carries masculine-leaning (m), feminine-leaning (f) and
+// neutral/unisex (u) name lists. Gender "any" draws from m+f+u, "boy" from
+// m+u, "girl" from f+u. Vibe categories put everything in u (gender-agnostic).
+export interface PetNameCategory {
+  label: string;
+  group: 'By pet' | 'By vibe';
+  m: string[];
+  f: string[];
+  u: string[];
 }
 
-export const PET_NAMES: PetNameBank = {
-  unisex: [
-    'Charlie', 'Bailey', 'Riley', 'Sam', 'Alex', 'Casey', 'Finley', 'Quinn', 'Rowan',
-    'Sky', 'River', 'Sage', 'Scout', 'Ash', 'Jordan', 'Frankie', 'Toby', 'Milo', 'Ollie',
-    'Remy', 'Winnie', 'Bear', 'Pepper', 'Shadow', 'Cricket', 'Juno', 'Marley', 'Sunny',
-  ],
-  cutesy: [
-    'Biscuit', 'Peanut', 'Buttons', 'Snickers', 'Cupcake', 'Waffles', 'Marshmallow',
-    'Pickles', 'Pumpkin', 'Bubbles', 'Noodle', 'Muffin', 'Jellybean', 'Cuddles',
-    'Sprinkles', 'Boo', 'Nibbles', 'Puddles', 'Coco', 'Honey', 'Peaches', 'Dumpling',
-  ],
-  tough: [
-    'Diesel', 'Bruno', 'Rex', 'Titan', 'Ace', 'Blade', 'Rocky', 'Zeus', 'Bandit',
-    'Ranger', 'Tank', 'Duke', 'Bruiser', 'Maverick', 'Boss', 'Rebel', 'Storm', 'Jax',
-    'Hunter', 'Fang', 'Brutus', 'Rogue', 'Chief', 'Colt',
-  ],
-  foodie: [
-    'Mochi', 'Miso', 'Basil', 'Olive', 'Ginger', 'Nacho', 'Waffle', 'Pretzel', 'Taco',
-    'Sushi', 'Kiwi', 'Mango', 'Espresso', 'Cocoa', 'Biscotti', 'Ramen', 'Churro',
-    'Cinnamon', 'Pepper', 'Saffron', 'Truffle', 'Wasabi',
-  ],
-  mythic: [
-    'Loki', 'Athena', 'Odin', 'Freya', 'Apollo', 'Luna', 'Thor', 'Nyx', 'Atlas',
-    'Hera', 'Orion', 'Selene', 'Zephyr', 'Draco', 'Phoenix', 'Nova', 'Onyx', 'Aurora',
-    'Cyrus', 'Isis', 'Ra', 'Juno', 'Titan', 'Echo',
-  ],
+export const PET_NAME_BANK: Record<string, PetNameCategory> = {
+  any: {
+    label: 'Any pet', group: 'By pet',
+    m: ['Charlie', 'Milo', 'Toby', 'Ollie', 'Cooper', 'Buddy', 'Leo', 'Max', 'Oscar', 'Teddy', 'Louie', 'Gus', 'Archie', 'Finn', 'Jasper'],
+    f: ['Bella', 'Lucy', 'Daisy', 'Luna', 'Molly', 'Ruby', 'Rosie', 'Willow', 'Nala', 'Poppy', 'Millie', 'Maggie', 'Coco', 'Winnie', 'Hazel'],
+    u: ['Bailey', 'Riley', 'Sam', 'Alex', 'Casey', 'Finley', 'Quinn', 'Rowan', 'Sky', 'River', 'Sage', 'Scout', 'Ash', 'Jordan', 'Frankie', 'Remy', 'Bear', 'Pepper', 'Shadow', 'Marley', 'Sunny'],
+  },
+  dog: {
+    label: 'Dog', group: 'By pet',
+    m: ['Rex', 'Duke', 'Rocky', 'Zeus', 'Bruno', 'Cooper', 'Buddy', 'Bear', 'Diesel', 'Jack', 'Bentley', 'Ranger', 'Tucker', 'Beau', 'Copper', 'Murphy', 'Winston', 'Boomer'],
+    f: ['Bella', 'Lucy', 'Daisy', 'Sadie', 'Molly', 'Maggie', 'Bailey', 'Roxy', 'Nala', 'Zoe', 'Lola', 'Penny', 'Gracie', 'Piper', 'Stella', 'Lily'],
+    u: ['Cocoa', 'Biscuit', 'Pepper', 'Scout', 'Shadow', 'Bandit', 'Rusty', 'Ginger', 'Buster', 'Peanut'],
+  },
+  cat: {
+    label: 'Cat', group: 'By pet',
+    m: ['Oliver', 'Leo', 'Milo', 'Simba', 'Felix', 'Tom', 'Jasper', 'Loki', 'Oscar', 'Salem', 'Gizmo', 'Smokey', 'Tiger', 'Boots'],
+    f: ['Luna', 'Chloe', 'Cleo', 'Nala', 'Willow', 'Mittens', 'Callie', 'Misty', 'Sophie', 'Bella', 'Ivy', 'Olive', 'Pearl', 'Nova'],
+    u: ['Ash', 'Ghost', 'Pumpkin', 'Marble', 'Socks', 'Whiskers', 'Pepper', 'Snickers', 'Onyx', 'Cinder'],
+  },
+  small: {
+    label: 'Rabbit / small pet', group: 'By pet',
+    m: ['Thumper', 'Nibbles', 'Hopper', 'Chip', 'Peanut', 'Biscuit', 'Waffles', 'Gizmo', 'Pip', 'Chester'],
+    f: ['Clover', 'Poppy', 'Daisy', 'Bunny', 'Marshmallow', 'Cinnabun', 'Honey', 'Willow', 'Pearl', 'Muffin'],
+    u: ['Cocoa', 'Snowball', 'Nugget', 'Cookie', 'Pebble', 'Fluff', 'Mochi', 'Sprout', 'Button', 'Cotton'],
+  },
+  bird: {
+    label: 'Bird', group: 'By pet',
+    m: ['Rio', 'Sunny', 'Kiwi', 'Charlie', 'Buddy', 'Blu', 'Mango', 'Chico', 'Skye', 'Zazu'],
+    f: ['Tweety', 'Coco', 'Lulu', 'Peaches', 'Sky', 'Iris', 'Goldie', 'Petunia', 'Dovey', 'Ruby'],
+    u: ['Pip', 'Echo', 'Feather', 'Pepper', 'Sunny', 'Cinnamon', 'Robin', 'Wren', 'Sparrow', 'Phoenix'],
+  },
+  reptile: {
+    label: 'Reptile', group: 'By pet',
+    m: ['Rex', 'Spike', 'Draco', 'Godzilla', 'Kaa', 'Rango', 'Toothless', 'Basil', 'Slinky', 'Monty'],
+    f: ['Medusa', 'Cleo', 'Nyx', 'Sahara', 'Jade', 'Ivy', 'Pixie', 'Willow', 'Ember', 'Lyra'],
+    u: ['Noodle', 'Pebbles', 'Sunny', 'Mango', 'Onyx', 'Sage', 'Cactus', 'Slither', 'Scales', 'Gecko'],
+  },
+  fish: {
+    label: 'Fish', group: 'By pet',
+    m: ['Finn', 'Nemo', 'Bubbles', 'Jaws', 'Neptune', 'Splash', 'Captain', 'Goldie', 'Moby', 'Gill'],
+    f: ['Coral', 'Pearl', 'Marina', 'Nori', 'Guppy', 'Sushi', 'Angel', 'Dory', 'Ariel', 'Wave'],
+    u: ['Fin', 'Blue', 'Ripple', 'Sunny', 'Mango', 'Bubbles', 'Aqua', 'Splash', 'Kelp', 'Tide'],
+  },
+  cutesy: {
+    label: 'Cute & sweet', group: 'By vibe', m: [], f: [],
+    u: ['Biscuit', 'Peanut', 'Buttons', 'Snickers', 'Cupcake', 'Waffles', 'Marshmallow', 'Pickles', 'Pumpkin', 'Bubbles', 'Noodle', 'Muffin', 'Jellybean', 'Cuddles', 'Sprinkles', 'Boo', 'Nibbles', 'Puddles', 'Coco', 'Honey', 'Peaches', 'Dumpling'],
+  },
+  tough: {
+    label: 'Tough & bold', group: 'By vibe', m: [], f: [],
+    u: ['Diesel', 'Bruno', 'Rex', 'Titan', 'Ace', 'Blade', 'Rocky', 'Zeus', 'Bandit', 'Ranger', 'Tank', 'Duke', 'Bruiser', 'Maverick', 'Boss', 'Rebel', 'Storm', 'Jax', 'Hunter', 'Fang', 'Brutus', 'Rogue', 'Chief', 'Colt'],
+  },
+  foodie: {
+    label: 'Foodie', group: 'By vibe', m: [], f: [],
+    u: ['Mochi', 'Miso', 'Basil', 'Olive', 'Ginger', 'Nacho', 'Waffle', 'Pretzel', 'Taco', 'Sushi', 'Kiwi', 'Mango', 'Espresso', 'Cocoa', 'Biscotti', 'Ramen', 'Churro', 'Cinnamon', 'Pepper', 'Saffron', 'Truffle', 'Wasabi'],
+  },
+  mythic: {
+    label: 'Mythic & cosmic', group: 'By vibe', m: [], f: [],
+    u: ['Loki', 'Athena', 'Odin', 'Freya', 'Apollo', 'Luna', 'Thor', 'Nyx', 'Atlas', 'Hera', 'Orion', 'Selene', 'Zephyr', 'Draco', 'Phoenix', 'Nova', 'Onyx', 'Aurora', 'Cyrus', 'Isis', 'Ra', 'Juno', 'Titan', 'Echo'],
+  },
 };
+
+/** Names for a category filtered by gender lean. any=m+f+u, boy=m+u, girl=f+u. */
+export function petNamePool(key: string, gender: 'any' | 'boy' | 'girl'): string[] {
+  const c = PET_NAME_BANK[key] ?? PET_NAME_BANK.any;
+  const base = gender === 'boy' ? [...c.m, ...c.u] : gender === 'girl' ? [...c.f, ...c.u] : [...c.m, ...c.f, ...c.u];
+  return [...new Set(base)]; // u overlaps m/f in some banks; dedupe
+}
 
 export const PET_TRAITS = [
   'playful', 'sleepy', 'grumpy', 'fluffy', 'tiny', 'majestic', 'chaotic', 'gentle',
@@ -325,6 +502,23 @@ export const GAMERTAG_NOUN = [
 export const GAMERTAG_SUFFIX = [
   'X', 'YT', 'TTV', 'HD', 'Pro', 'GG', 'FX', 'Zz', 'xX', '99', '007', '360', 'OP',
 ];
+
+/**
+ * Per-theme noun banks for the gamertag generator. Picking a theme swaps the
+ * noun pool (and folds in a few themed adjectives); "auto" uses the base banks
+ * above. Mirrors usernamegenerator.com's category set.
+ */
+export const GAMERTAG_THEMES: Record<string, { adj: string[]; noun: string[] }> = {
+  action:    { adj: ['Rapid', 'Turbo', 'Savage', 'Elite', 'Hyper'], noun: ['Striker', 'Gunner', 'Breaker', 'Blitz', 'Trooper', 'Commando', 'Ranger', 'Assault', 'Recon', 'Vanguard'] },
+  adventure: { adj: ['Bold', 'Wild', 'Roaming', 'Daring', 'Lost'],   noun: ['Wanderer', 'Nomad', 'Voyager', 'Pioneer', 'Trekker', 'Seeker', 'Pathfinder', 'Explorer', 'Drifter', 'Scout'] },
+  fantasy:   { adj: ['Mystic', 'Arcane', 'Ancient', 'Ethereal', 'Fabled'], noun: ['Wizard', 'Warlock', 'Paladin', 'Druid', 'Sorcerer', 'Dragon', 'Griffin', 'Mage', 'Elf', 'Enchanter'] },
+  historical:{ adj: ['Iron', 'Royal', 'Noble', 'Imperial', 'Ancient'], noun: ['Knight', 'Gladiator', 'Legionnaire', 'Samurai', 'Viking', 'Centurion', 'Crusader', 'Emperor', 'Sentinel', 'Warlord'] },
+  horror:    { adj: ['Cursed', 'Grim', 'Rotten', 'Undead', 'Sinister'], noun: ['Reaper', 'Wraith', 'Specter', 'Ghoul', 'Demon', 'Phantom', 'Butcher', 'Nightmare', 'Revenant', 'Zombie'] },
+  mythology: { adj: ['Divine', 'Titan', 'Olympian', 'Eternal', 'Celestial'], noun: ['Zeus', 'Odin', 'Hydra', 'Kraken', 'Titan', 'Valkyrie', 'Cyclops', 'Chimera', 'Fenrir', 'Cerberus'] },
+  nature:    { adj: ['Arctic', 'Feral', 'Wild', 'Verdant', 'Stormy'], noun: ['Wolf', 'Falcon', 'Bear', 'Panther', 'Raven', 'Cobra', 'Timber', 'Blizzard', 'Avalanche', 'Thorn'] },
+  scifi:     { adj: ['Cyber', 'Neon', 'Quantum', 'Neural', 'Void'], noun: ['Android', 'Cyborg', 'Nexus', 'Proton', 'Vector', 'Drone', 'Reactor', 'Nebula', 'Pulsar', 'Circuit'] },
+  strategy:  { adj: ['Silent', 'Calculating', 'Shadow', 'Prime', 'Master'], noun: ['Tactician', 'Overlord', 'Commander', 'Strategist', 'Sentinel', 'Architect', 'Marshal', 'General', 'Warden', 'Mastermind'] },
+};
 
 /* ------------------------------------------------------------------ *
  * Username themes — shared adjectives plus per-category noun banks.

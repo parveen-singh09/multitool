@@ -1,5 +1,9 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
+import { GAMERTAG_THEMES } from '../../lib/gendata';
+
+const LABELS: Record<string, string> = { scifi: 'Sci-fi' };
+const THEMES = [['auto', 'Any'], ...Object.keys(GAMERTAG_THEMES).map((k) => [k, LABELS[k] ?? k[0].toUpperCase() + k.slice(1)])];
 ---
 
 <ToolLayout slug="gamertag-generator">
@@ -13,6 +17,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </label>
       <button id="gt-gen" class="btn btn-primary ml-auto">Generate</button>
     </div>
+
+    <div class="flex flex-col gap-1.5">
+      <span class="text-sm text-ink-subtle">Theme</span>
+      <div id="gt-themes" class="flex flex-wrap gap-2">
+        {THEMES.map(([val, label], i) => (
+          <button type="button" data-theme={val} class:list={['chip', i === 0 && 'chip-on']}>{label}</button>
+        ))}
+      </div>
+    </div>
+
     <div class="flex flex-wrap items-center gap-4">
       <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="gt-leet" type="checkbox" class="accent-[#5e6ad2]" /> Leetspeak (3, 0, 1)</label>
       <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="gt-num" type="checkbox" class="accent-[#5e6ad2]" checked /> Add numbers</label>
@@ -20,21 +34,50 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </div>
 
     <div id="gt-out" class="grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
+
+    <div id="gt-saved-wrap" class="hidden flex-col gap-2 border-t border-hairline pt-4">
+      <div class="flex items-center gap-3">
+        <span class="text-sm font-medium text-ink">Saved ideas <span id="gt-count-badge" class="text-ink-subtle">(0)</span></span>
+        <button id="gt-download" class="btn ml-auto text-sm">Download</button>
+        <button id="gt-clear" class="btn text-sm">Clear all</button>
+      </div>
+      <div id="gt-saved" class="grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
       This free gamertag generator builds cool gaming usernames for Xbox, PlayStation
-      Network, Steam, Discord and Twitch. It mixes bold adjectives and nouns, optional
-      leetspeak, trailing numbers and streamer-style suffixes like YT and TTV. Add your
-      own keyword to weave your name into the handle. Generate a batch, then tap any tag
-      to copy it and check availability on your platform. Everything runs in your browser.
+      Network, Steam, Discord and Twitch. Pick a theme — action, fantasy, horror, sci-fi,
+      mythology and more — to shape the vibe, then mix in optional leetspeak, trailing
+      numbers and streamer-style suffixes like YT and TTV. Add your own keyword to weave
+      your name into the handle. Generate a batch, tap any tag to copy it, or star the ones
+      you like to build a saved list you can download as a text file. Everything runs in
+      your browser — no sign-up, nothing to install.
     </p>
   </div>
 </ToolLayout>
 
+<style>
+  .chip {
+    border: 1px solid var(--hairline, #23232a);
+    border-radius: 8px;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8125rem;
+    color: var(--ink-subtle, #a1a1aa);
+    background: transparent;
+    transition: all 0.12s;
+  }
+  .chip:hover { border-color: #35353f; color: #e4e4e7; }
+  .chip-on {
+    border-color: #5e6ad2;
+    color: #fff;
+    background: rgba(94, 106, 210, 0.14);
+  }
+</style>
+
 <script>
-  import { GAMERTAG_ADJ, GAMERTAG_NOUN, GAMERTAG_SUFFIX } from '../../lib/gendata';
+  import { GAMERTAG_ADJ, GAMERTAG_NOUN, GAMERTAG_SUFFIX, GAMERTAG_THEMES } from '../../lib/gendata';
   import { pick, randInt } from '../../lib/random';
 
   const $ = (id: string) => document.getElementById(id)!;
@@ -44,44 +87,128 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const numEl = $('gt-num') as HTMLInputElement;
   const sufEl = $('gt-suf') as HTMLInputElement;
   const out = $('gt-out')!;
+  const themesEl = $('gt-themes')!;
+  const savedWrap = $('gt-saved-wrap')!;
+  const savedEl = $('gt-saved')!;
+  const badge = $('gt-count-badge')!;
+
+  const KEY = 'gamertag-saved';
+  let theme = 'auto';
+  let saved: string[] = JSON.parse(localStorage.getItem(KEY) || '[]');
 
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
   const leet = (s: string) => s.replace(/[eosati]/gi, (c) => ({ e: '3', o: '0', s: '5', a: '4', t: '7', i: '1' } as any)[c.toLowerCase()]);
 
+  function banks() {
+    const t = GAMERTAG_THEMES[theme];
+    return t
+      ? { adj: [...GAMERTAG_ADJ, ...t.adj], noun: t.noun }
+      : { adj: GAMERTAG_ADJ, noun: GAMERTAG_NOUN };
+  }
+
   function one(): string {
+    const { adj, noun } = banks();
     const kw = wordEl.value.trim().replace(/[^A-Za-z0-9]/g, '');
-    const core = kw ? cap(kw) : cap(pick(GAMERTAG_ADJ));
-    const other = kw ? pick(GAMERTAG_NOUN) : pick(GAMERTAG_NOUN);
-    // Assemble as Adj+Noun or Keyword+Noun, occasionally reversed.
-    let tag = randInt(0, 1) === 0 ? core + other : (kw ? cap(pick(GAMERTAG_ADJ)) + core : other + core);
+    const core = kw ? cap(kw) : cap(pick(adj));
+    const other = pick(noun);
+    let tag = randInt(0, 1) === 0 ? core + other : kw ? cap(pick(adj)) + core : other + core;
     if (leetEl.checked) tag = leet(tag);
     if (sufEl.checked) tag += (randInt(0, 1) ? '_' : '') + pick(GAMERTAG_SUFFIX);
     if (numEl.checked) tag += String(randInt(2, 999));
     return tag;
   }
 
+  function persist() {
+    localStorage.setItem(KEY, JSON.stringify(saved));
+  }
+
+  function renderSaved() {
+    badge.textContent = `(${saved.length})`;
+    savedWrap.classList.toggle('hidden', saved.length === 0);
+    savedWrap.classList.toggle('flex', saved.length > 0);
+    savedEl.innerHTML = saved
+      .map(
+        (t) =>
+          `<div class="panel flex items-center gap-1 px-3 py-2 font-mono text-sm text-ink"><span class="flex-1 truncate">${t}</span><button data-rm="${t}" class="shrink-0 text-ink-subtle hover:text-ink" title="Remove">×</button></div>`
+      )
+      .join('');
+    savedEl.querySelectorAll<HTMLButtonElement>('[data-rm]').forEach((b) =>
+      b.addEventListener('click', () => {
+        saved = saved.filter((s) => s !== b.dataset.rm);
+        persist();
+        renderSaved();
+        renderStars();
+      })
+    );
+  }
+
+  function renderStars() {
+    out.querySelectorAll<HTMLButtonElement>('[data-star]').forEach((b) => {
+      b.textContent = saved.includes(b.dataset.star!) ? '★' : '☆';
+    });
+  }
+
   function generate() {
     const n = Math.max(6, Math.min(48, Number(countEl.value) || 18));
     const tags = new Set<string>();
     let guard = 0;
-    while (tags.size < n && guard++ < n * 20) tags.add(one());
+    while (tags.size < n && guard++ < n * 30) tags.add(one());
     out.innerHTML = [...tags]
       .map(
         (t) =>
-          `<button class="panel truncate px-3 py-2.5 text-center font-mono text-sm text-ink transition-colors hover:border-hairline-strong hover:bg-surface-2" data-n="${t}">${t}</button>`
+          `<div class="panel flex items-center gap-1 pl-3 pr-2 py-2.5 transition-colors hover:border-hairline-strong hover:bg-surface-2">
+             <button data-copy="${t}" class="flex-1 truncate text-left font-mono text-sm text-ink">${t}</button>
+             <button data-star="${t}" class="shrink-0 text-base text-[#5e6ad2]" title="Save">☆</button>
+           </div>`
       )
       .join('');
-    out.querySelectorAll<HTMLButtonElement>('button').forEach((b) =>
+    out.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((b) =>
       b.addEventListener('click', async () => {
-        await navigator.clipboard.writeText(b.dataset.n!);
+        await navigator.clipboard.writeText(b.dataset.copy!);
         const orig = b.textContent;
         b.textContent = 'Copied!';
         setTimeout(() => (b.textContent = orig), 1000);
       })
     );
+    out.querySelectorAll<HTMLButtonElement>('[data-star]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const t = b.dataset.star!;
+        saved = saved.includes(t) ? saved.filter((s) => s !== t) : [...saved, t];
+        persist();
+        renderSaved();
+        renderStars();
+      })
+    );
+    renderStars();
   }
+
+  themesEl.querySelectorAll<HTMLButtonElement>('[data-theme]').forEach((b) =>
+    b.addEventListener('click', () => {
+      theme = b.dataset.theme!;
+      themesEl.querySelectorAll('.chip').forEach((c) => c.classList.remove('chip-on'));
+      b.classList.add('chip-on');
+      generate();
+    })
+  );
+
+  $('gt-download').addEventListener('click', () => {
+    const blob = new Blob([saved.join('\n')], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'gamertags.txt';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  $('gt-clear').addEventListener('click', () => {
+    saved = [];
+    persist();
+    renderSaved();
+    renderStars();
+  });
 
   [wordEl, countEl, leetEl, numEl, sufEl].forEach((el) => el.addEventListener('input', generate));
   $('gt-gen').addEventListener('click', generate);
   generate();
+  renderSaved();
 </script>

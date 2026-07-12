@@ -20,7 +20,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
       This free random animal generator picks a creature at random and shows its name,
-      an emoji, the group it belongs to and a genuinely surprising fact. Filter to
+      a real photo, the group it belongs to and a genuinely surprising fact. Filter to
       mammals, birds, reptiles, amphibians, fish, insects or sea creatures, or pull a
       whole list at once — handy for classroom prompts, writing exercises, party games
       and "animal of the day" ideas. Everything runs in your browser.
@@ -40,6 +40,23 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const groups = ['All', ...Array.from(new Set(ANIMALS.map((a) => a.group))).sort()];
   groupEl.innerHTML = groups.map((g) => `<option value="${g}">${g}</option>`).join('');
 
+  // Real animal photos from Wikipedia's free CORS-enabled REST API. Cached per
+  // name so repeated draws never refetch. ponytail: emoji is the instant
+  // placeholder and the fallback, so a miss or offline just leaves the emoji.
+  const photoCache = new Map<string, Promise<string | null>>();
+  function photo(name: string): Promise<string | null> {
+    let p = photoCache.get(name);
+    if (!p) {
+      const title = encodeURIComponent(name.replace(/ /g, '_'));
+      p = fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${title}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => j?.thumbnail?.source ?? null)
+        .catch(() => null);
+      photoCache.set(name, p);
+    }
+    return p;
+  }
+
   function generate() {
     const g = groupEl.value;
     const pool = g === 'All' ? ANIMALS : ANIMALS.filter((a) => a.group === g);
@@ -47,9 +64,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const picks = sample(pool, n);
     out.innerHTML = picks
       .map(
-        (a) => `<div class="panel flex flex-col gap-2 p-5">
+        (a, i) => `<div class="panel flex flex-col gap-3 p-5">
           <div class="flex items-center gap-3">
-            <span class="text-4xl leading-none">${a.emoji}</span>
+            <span id="ra-pic-${i}" class="flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-md bg-surface-2 text-6xl leading-none">${a.emoji}</span>
             <div class="flex flex-col">
               <span class="text-lg font-semibold text-ink">${a.name}</span>
               <span class="text-[13px] text-ink-tertiary">${a.group}</span>
@@ -59,6 +76,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </div>`
       )
       .join('');
+
+    picks.forEach((a, i) => {
+      photo(a.name).then((src) => {
+        if (!src) return;
+        const slot = document.getElementById(`ra-pic-${i}`);
+        if (slot)
+          slot.innerHTML = `<img src="${src}" alt="${a.name}" loading="lazy" class="h-full w-full object-cover" />`;
+      });
+    });
   }
 
   [groupEl, countEl].forEach((el) => el.addEventListener('input', generate));

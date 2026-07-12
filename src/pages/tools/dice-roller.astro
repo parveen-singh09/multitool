@@ -3,33 +3,91 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
 <ToolLayout slug="dice-roller">
-  <div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-6">
+    <!-- Controls -->
     <div class="flex flex-wrap items-end gap-3">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Dice type
-        <select id="dr-sides" class="field w-28"><option>4</option><option>6</option><option>8</option><option>10</option><option>12</option><option selected>20</option><option>100</option></select>
+        <select id="dr-type" class="field w-32">
+          <option value="4">D4</option>
+          <option value="6" selected>D6</option>
+          <option value="8">D8</option>
+          <option value="10">D10</option>
+          <option value="12">D12</option>
+          <option value="20">D20</option>
+          <option value="100">D100</option>
+          <option value="custom">Custom…</option>
+        </select>
+      </label>
+      <label id="dr-sides-wrap" class="hidden flex-col gap-1 text-sm text-ink-subtle">Sides
+        <input id="dr-sides" type="number" min="2" max="100000" value="6" class="field w-24" />
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
-        <input id="dr-count" type="number" min="1" max="20" value="2" class="field w-24" />
+        <input id="dr-count" type="number" min="1" max="100" value="2" class="field w-24" />
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Modifier
         <input id="dr-mod" type="number" value="0" class="field w-24" />
       </label>
       <button id="dr-roll" class="btn btn-primary ml-auto">Roll</button>
+      <button id="dr-clear" class="btn btn-secondary">Clear</button>
     </div>
+
+    <!-- Dice -->
     <div id="dr-dice" class="flex flex-wrap gap-3"></div>
-    <div class="panel panel-lift flex items-center justify-between p-5">
-      <span class="text-sm text-ink-subtle">Total</span>
-      <span id="dr-total" class="font-mono text-3xl text-ink">0</span>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div class="panel panel-lift flex flex-col items-center gap-1 p-4">
+        <span id="dr-total" class="font-mono text-3xl text-ink">0</span>
+        <span class="text-[13px] text-ink-subtle">Total</span>
+      </div>
+      <div class="panel flex flex-col items-center gap-1 p-4">
+        <span id="dr-avg" class="font-mono text-3xl text-ink">0</span>
+        <span class="text-[13px] text-ink-subtle">Average</span>
+      </div>
+      <div class="panel flex flex-col items-center gap-1 p-4">
+        <span id="dr-min" class="font-mono text-3xl text-ink">0</span>
+        <span class="text-[13px] text-ink-subtle">Lowest</span>
+      </div>
+      <div class="panel flex flex-col items-center gap-1 p-4">
+        <span id="dr-max" class="font-mono text-3xl text-ink">0</span>
+        <span class="text-[13px] text-ink-subtle">Highest</span>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="flex flex-col gap-2">
+      <span class="text-sm text-ink-subtle">Roll history</span>
+      <div id="dr-history" class="flex min-h-[2.5rem] flex-col gap-1 font-mono text-[13px] text-ink-tertiary"></div>
     </div>
   </div>
 
+  <style>
+    @keyframes dr-tumble {
+      0%   { transform: rotate(0deg)   scale(1);    }
+      25%  { transform: rotate(-12deg) scale(1.08); }
+      50%  { transform: rotate(10deg)  scale(0.96); }
+      75%  { transform: rotate(-6deg)  scale(1.04); }
+      100% { transform: rotate(0deg)   scale(1);    }
+    }
+    .dr-rolling { animation: dr-tumble 0.12s linear infinite; }
+    @media (prefers-reduced-motion: reduce) {
+      .dr-rolling { animation: none; }
+    }
+  </style>
+
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free dice roller rolls any number of dice from D4 up to D20, plus a
-      percentile D100, with an optional modifier and a running total — everything a
-      board game or tabletop RPG needs when the physical dice have gone missing.
-      Each roll uses your browser's secure random source for fair, unbiased
-      results. Runs entirely in your browser.
+      This free dice roller rolls standard six-sided dice with real pip faces, plus
+      any polyhedral die from D4 to D100 and fully custom-sided dice — enough for
+      any board game or tabletop RPG when the physical dice have gone missing. Roll
+      up to 100 at once with an optional modifier, and read the total, average,
+      lowest and highest across every die as you go. A running roll history keeps
+      your last results in view.
+    </p>
+    <p>
+      Each die uses your browser's secure random source with rejection sampling, so
+      results are genuinely uniform and unbiased — no modulo skew toward low
+      numbers. Everything runs in your browser; nothing is uploaded.
     </p>
   </div>
 </ToolLayout>
@@ -38,21 +96,114 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   import { randInt } from '../../lib/random';
 
   const $ = (id: string) => document.getElementById(id)!;
+  const typeSel = $('dr-type') as HTMLSelectElement;
+  const sidesWrap = $('dr-sides-wrap')!;
+  const sidesInput = $('dr-sides') as HTMLInputElement;
   const diceEl = $('dr-dice')!;
-  const totalEl = $('dr-total')!;
+  const historyEl = $('dr-history')!;
+  const history: string[] = [];
 
-  function roll() {
-    const sides = Number(($('dr-sides') as HTMLSelectElement).value);
-    const count = Math.max(1, Math.min(20, Number(($('dr-count') as HTMLInputElement).value) || 1));
-    const mod = Number(($('dr-mod') as HTMLInputElement).value) || 0;
-    let sum = 0;
-    const rolls: number[] = [];
-    for (let i = 0; i < count; i++) { const r = randInt(1, sides); rolls.push(r); sum += r; }
-    diceEl.innerHTML = rolls.map((r) => `<div class="flex h-16 w-16 items-center justify-center rounded-lg border border-hairline bg-surface-2 font-mono text-2xl text-ink">${r}</div>`).join('');
-    totalEl.textContent = String(sum + mod) + (mod ? ` (${sum}${mod > 0 ? '+' : ''}${mod})` : '');
+  // Pip layout per d6 face: which of the 9 grid cells (1-9) hold a dot.
+  const PIPS: Record<number, number[]> = {
+    1: [5], 2: [1, 9], 3: [1, 5, 9], 4: [1, 3, 7, 9], 5: [1, 3, 5, 7, 9], 6: [1, 3, 4, 6, 7, 9],
+  };
+
+  const OUTER_D6 = 'grid h-16 w-16 grid-cols-3 place-items-center gap-0.5 rounded-lg border border-hairline bg-surface-2 p-2';
+  const OUTER_NUM = 'flex h-16 min-w-16 items-center justify-center rounded-lg border border-hairline bg-surface-2 px-2 font-mono text-2xl text-ink';
+
+  // Inner content of one die: pip grid for d6, plain number otherwise.
+  function dieInner(v: number, s: number): string {
+    if (s !== 6) return String(v);
+    const on = new Set(PIPS[v] || []);
+    return Array.from({ length: 9 }, (_, i) =>
+      `<span class="h-2 w-2 rounded-full ${on.has(i + 1) ? 'bg-ink' : ''}"></span>`
+    ).join('');
   }
 
-  ['dr-sides', 'dr-count', 'dr-mod'].forEach((id) => $(id).addEventListener('input', roll));
-  $('dr-roll').addEventListener('click', roll);
+  function sides(): number {
+    const raw = typeSel.value === 'custom' ? Number(sidesInput.value) : Number(typeSel.value);
+    return Math.max(2, Math.min(100000, Math.floor(raw) || 6));
+  }
+
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let animTimer = 0;
+
+  // Build die wrappers once, so tumbling only swaps inner faces on stable nodes
+  // (rebuilding innerHTML each tick would restart the CSS wobble every frame).
+  function layoutDice(vals: number[], s: number, rolling: boolean): void {
+    const base = s === 6 ? OUTER_D6 : OUTER_NUM;
+    const cls = rolling && !reduceMotion ? `${base} dr-rolling` : base;
+    diceEl.innerHTML = vals
+      .map((r) => `<div class="${cls}" title="${r}">${dieInner(r, s)}</div>`)
+      .join('');
+  }
+
+  // Swap only the inner faces of existing dice — keeps the animation running.
+  function updateFaces(vals: number[], s: number): void {
+    const nodes = diceEl.children;
+    for (let i = 0; i < vals.length && i < nodes.length; i++) {
+      const el = nodes[i] as HTMLElement;
+      el.innerHTML = dieInner(vals[i], s);
+      el.title = String(vals[i]);
+    }
+  }
+
+  function settle(rolls: number[], s: number, mod: number): void {
+    const sum = rolls.reduce((a, b) => a + b, 0);
+    const total = sum + mod;
+
+    layoutDice(rolls, s, false);
+    $('dr-total').textContent = String(total);
+    $('dr-avg').textContent = (sum / rolls.length).toFixed(2);
+    $('dr-min').textContent = String(Math.min(...rolls));
+    $('dr-max').textContent = String(Math.max(...rolls));
+
+    const modStr = mod ? ` ${mod > 0 ? '+' : '−'} ${Math.abs(mod)}` : '';
+    history.unshift(`${rolls.length}d${s}${modStr} → [${rolls.join(', ')}]${mod ? ` = ${total}` : ''}`);
+    history.splice(20);
+    historyEl.innerHTML = history.map((h) => `<div>${h}</div>`).join('');
+  }
+
+  function roll(animate = false) {
+    const s = sides();
+    const count = Math.max(1, Math.min(100, Math.floor(Number(($('dr-count') as HTMLInputElement).value)) || 1));
+    const mod = Math.floor(Number(($('dr-mod') as HTMLInputElement).value)) || 0;
+
+    const rolls: number[] = [];
+    for (let i = 0; i < count; i++) rolls.push(randInt(1, s));
+
+    clearInterval(animTimer);
+    if (!animate || reduceMotion) { settle(rolls, s, mod); return; }
+
+    // Tumble: build wobbling dice once, then flash random faces for ~500ms
+    // by swapping only inner content, then settle on the real result.
+    layoutDice(rolls, s, true);
+    const start = performance.now();
+    animTimer = window.setInterval(() => {
+      if (performance.now() - start >= 500) {
+        clearInterval(animTimer);
+        settle(rolls, s, mod);
+        return;
+      }
+      updateFaces(rolls.map(() => randInt(1, s)), s);
+    }, 70);
+  }
+
+  typeSel.addEventListener('change', () => {
+    const custom = typeSel.value === 'custom';
+    sidesWrap.classList.toggle('hidden', !custom);
+    sidesWrap.classList.toggle('flex', custom);
+    roll();
+  });
+  ['dr-sides', 'dr-count', 'dr-mod'].forEach((id) => $(id).addEventListener('input', () => roll()));
+  $('dr-roll').addEventListener('click', () => roll(true));
+  $('dr-clear').addEventListener('click', () => {
+    clearInterval(animTimer);
+    history.length = 0;
+    historyEl.innerHTML = '';
+    diceEl.innerHTML = '';
+    ['dr-total', 'dr-min', 'dr-max'].forEach((id) => ($(id).textContent = '0'));
+    $('dr-avg').textContent = '0';
+  });
   roll();
 </script>

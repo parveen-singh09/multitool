@@ -1,17 +1,32 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
+import { PET_NAME_BANK } from '../../lib/gendata';
+
+// Build grouped <option>s at build time from the bank.
+const groups = ['By pet', 'By vibe'] as const;
+const optionsByGroup = groups.map((g) => ({
+  group: g,
+  items: Object.entries(PET_NAME_BANK).filter(([, c]) => c.group === g),
+}));
 ---
 
 <ToolLayout slug="pet-name-generator">
   <div class="flex flex-col gap-5">
     <div class="flex flex-wrap items-end gap-4">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Style
-        <select id="pn-style" class="field w-44">
-          <option value="unisex">Classic / unisex</option>
-          <option value="cutesy">Cute &amp; sweet</option>
-          <option value="tough">Tough &amp; bold</option>
-          <option value="foodie">Foodie</option>
-          <option value="mythic">Mythic &amp; cosmic</option>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Category
+        <select id="pn-cat" class="field w-52">
+          {optionsByGroup.map(({ group, items }) => (
+            <optgroup label={group}>
+              {items.map(([key, c]) => <option value={key}>{c.label}</option>)}
+            </optgroup>
+          ))}
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Gender
+        <select id="pn-gender" class="field w-32">
+          <option value="any">Any</option>
+          <option value="boy">Boy</option>
+          <option value="girl">Girl</option>
         </select>
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
@@ -24,54 +39,95 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </div>
 
     <div id="pn-out" class="grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
+
+    <div id="pn-fav-wrap" class="hidden flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-medium text-ink">Favorites</h2>
+        <button id="pn-copy-fav" class="btn btn-secondary text-sm">Copy all</button>
+      </div>
+      <div id="pn-fav" class="grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free pet name generator serves up name ideas for dogs, cats, rabbits and
-      any small companion. Choose a vibe — classic and unisex, cute and sweet, tough
-      and bold, foodie, or mythic and cosmic — and generate a batch to shortlist. Turn
-      on "Add a personality trait" for playful combos like "Sleepy Biscuit". Tap any
-      name to copy it. Everything runs in your browser.
+      This free pet name generator serves up ideas for dogs, cats, rabbits, birds,
+      reptiles, fish and any small companion. Pick a category — by pet or by vibe
+      (cute, tough, foodie, mythic) — set a gender lean, and generate a batch to
+      shortlist. Turn on "Add a personality trait" for playful combos like
+      "Sleepy Biscuit".
+    </p>
+    <p>
+      Tap any name to save it to Favorites, then hit "Copy all" to grab your
+      shortlist at once. Everything runs in your browser — nothing is sent anywhere.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  import { PET_NAMES, PET_TRAITS } from '../../lib/gendata';
+  import { PET_TRAITS, petNamePool } from '../../lib/gendata';
   import { sample, pick } from '../../lib/random';
 
   const $ = (id: string) => document.getElementById(id)!;
-  const styleEl = $('pn-style') as HTMLSelectElement;
+  const catEl = $('pn-cat') as HTMLSelectElement;
+  const genderEl = $('pn-gender') as HTMLSelectElement;
   const countEl = $('pn-count') as HTMLInputElement;
   const traitEl = $('pn-trait') as HTMLInputElement;
-  const out = $('pn-out')!;
+  const out = $('pn-out');
+  const favWrap = $('pn-fav-wrap');
+  const favBox = $('pn-fav');
 
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  const favorites = new Set<string>();
 
-  function generate() {
-    const pool = (PET_NAMES as any)[styleEl.value] as string[];
-    const n = Math.max(4, Math.min(40, Number(countEl.value) || 16));
-    const names = sample(pool, Math.min(n, pool.length)).map((name) =>
-      traitEl.checked ? `${cap(pick(PET_TRAITS))} ${name}` : name
-    );
-    out.innerHTML = names
-      .map(
-        (name) =>
-          `<button class="panel px-3 py-2.5 text-center text-[15px] font-medium text-ink transition-colors hover:border-hairline-strong hover:bg-surface-2" data-n="${name}">${name}</button>`
-      )
-      .join('');
-    out.querySelectorAll<HTMLButtonElement>('button').forEach((b) =>
-      b.addEventListener('click', async () => {
-        await navigator.clipboard.writeText(b.dataset.n!);
-        const orig = b.textContent;
-        b.textContent = 'Copied!';
-        setTimeout(() => (b.textContent = orig), 1000);
+  const card = (name: string, faved: boolean) =>
+    `<button class="panel px-3 py-2.5 text-center text-[15px] font-medium text-ink transition-colors hover:border-hairline-strong hover:bg-surface-2${
+      faved ? ' border-[#5e6ad2]' : ''
+    }" data-n="${name}">${name}</button>`;
+
+  function renderFavorites() {
+    const has = favorites.size > 0;
+    favWrap.classList.toggle('hidden', !has);
+    favWrap.classList.toggle('flex', has);
+    if (!has) return;
+    favBox.innerHTML = [...favorites].map((n) => card(n, true)).join('');
+    favBox.querySelectorAll<HTMLButtonElement>('button').forEach((b) =>
+      b.addEventListener('click', () => {
+        favorites.delete(b.dataset.n!);
+        renderFavorites();
+        generate(); // refresh highlight state in the main grid
       })
     );
   }
 
-  [styleEl, countEl, traitEl].forEach((el) => el.addEventListener('input', generate));
+  function generate() {
+    const gender = genderEl.value as 'any' | 'boy' | 'girl';
+    const pool = petNamePool(catEl.value, gender);
+    const n = Math.max(4, Math.min(40, Number(countEl.value) || 16));
+    const names = sample(pool, Math.min(n, pool.length)).map((name) =>
+      traitEl.checked ? `${cap(pick(PET_TRAITS))} ${name}` : name
+    );
+    out.innerHTML = names.map((name) => card(name, favorites.has(name))).join('');
+    out.querySelectorAll<HTMLButtonElement>('button').forEach((b) =>
+      b.addEventListener('click', () => {
+        const name = b.dataset.n!;
+        if (favorites.has(name)) favorites.delete(name);
+        else favorites.add(name);
+        b.classList.toggle('border-[#5e6ad2]');
+        renderFavorites();
+      })
+    );
+  }
+
+  $('pn-copy-fav').addEventListener('click', async (e) => {
+    await navigator.clipboard.writeText([...favorites].join('\n'));
+    const btn = e.currentTarget as HTMLButtonElement;
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = orig), 1000);
+  });
+
+  [catEl, genderEl, countEl, traitEl].forEach((el) => el.addEventListener('input', generate));
   $('pn-gen').addEventListener('click', generate);
   generate();
 </script>

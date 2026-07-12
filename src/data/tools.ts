@@ -2555,11 +2555,11 @@ export const tools: Tool[] = [
   {
     slug: 'random-picker',
     name: 'Random Picker / Wheel Spinner',
-    tagline: 'Spin a wheel to pick from your list.',
+    tagline: 'Spin a wheel to pick a random winner.',
     description:
-      'Free online random picker and wheel spinner. Enter a list of names or options and spin a colorful wheel to pick a winner at random — great for giveaways, decisions and classrooms. Runs in your browser.',
+      'Free online wheel spinner and random name picker. Enter names or options, spin a colorful high-fidelity wheel with tick sounds and confetti, weight entries, remove winners, and go fullscreen. Fair, secure and runs entirely in your browser.',
     category: 'Generators',
-    keywords: ['random picker', 'wheel spinner', 'wheel of names', 'random name picker', 'spin the wheel'],
+    keywords: ['wheel spinner', 'random picker', 'wheel of names', 'random name picker', 'spin the wheel', 'wheel decide', 'picker wheel'],
     icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM12 2v10l7 7M12 12 5 19M12 12l7-7M12 12 5 5',
   },
   {
@@ -2634,12 +2634,12 @@ export const tools: Tool[] = [
   },
   {
     slug: 'recipe-generator',
-    name: 'Recipe Idea Generator',
+    name: 'Random Recipe Generator',
     tagline: 'Random meal ideas from ingredients.',
     description:
-      'Free online recipe idea generator. Get random meal ideas — a dish name, key ingredients and a simple method sketch — by cuisine and meal type, to break out of a cooking rut. Runs entirely in your browser.',
+      'Free random recipe generator. Get random meal ideas — a dish name, key ingredients and a simple method sketch — by cuisine and meal type, to break out of a cooking rut. Runs entirely in your browser.',
     category: 'Generators',
-    keywords: ['recipe generator', 'random recipe generator', 'meal idea generator', 'what to cook generator', 'dinner idea generator'],
+    keywords: ['random recipe generator', 'meal idea generator', 'what to cook generator', 'dinner idea generator', 'random meal generator'],
     icon: 'M7 3v8a3 3 0 0 0 6 0V3M10 11v10M17 3c-1.5 1-2 3-2 6s0 4 2 5v7',
   },
   {
@@ -2841,19 +2841,19 @@ export const tools: Tool[] = [
     name: 'Tarot Card Generator',
     tagline: 'Draw random tarot cards and readings.',
     description:
-      'Free online tarot card generator. Draw a single card or a three-card past-present-future spread with upright and reversed meanings from the full 78-card deck. Shuffled in your browser.',
+      'Free online tarot card generator. Draw a single card, ask Yes or No, or lay Past-Present-Future, five-card cross or Celtic Cross spreads. Each card shows its element, astrology, keywords, verdict and upright, reversed or love meaning from the full 78-card deck. Shuffled in your browser.',
     category: 'Generators',
-    keywords: ['tarot card generator', 'random tarot card', 'tarot reading online', 'three card tarot spread', 'daily tarot draw'],
+    keywords: ['tarot card generator', 'random tarot card', 'tarot reading online', 'yes or no tarot', 'celtic cross spread', 'love tarot reading', 'three card tarot spread', 'daily tarot draw'],
     icon: 'M7 3h7l4 4v14H7zM14 3v4h4M10 12l1.5 3 1.5-3M11.5 15v3',
   },
   {
     slug: 'pokemon-generator',
-    name: 'Pokémon Generator',
-    tagline: 'Draw a random Pokémon or invent a new one.',
+    name: 'Random Pokémon Generator',
+    tagline: 'Draw random Pokémon with HD artwork, stats and type specs.',
     description:
-      'Free Pokémon generator. Spin a random Kanto Pokémon with its number and types, or invent a brand-new fantasy creature name and type combo. Generated in your browser — nothing is uploaded.',
+      'Free random Pokémon generator. Roll one or a whole team with high-resolution official artwork, full base stats, types, abilities, height, weight and Pokédex entries. Filter by generation and type, with a shiny toggle. Runs in your browser on the open PokéAPI.',
     category: 'Generators',
-    keywords: ['pokemon generator', 'random pokemon generator', 'who am i pokemon', 'fakemon name generator', 'random kanto pokemon'],
+    keywords: ['random pokemon generator', 'pokemon picker', 'random pokemon', 'pokemon randomizer', 'shiny pokemon generator', 'pokemon team generator'],
     icon: 'M3 12h6a3 3 0 0 0 6 0h6M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 9a3 3 0 0 1 0 6',
   },
   {
@@ -3937,6 +3937,22 @@ export const tools: Tool[] = [
       'speed tracker app',
     ],
     icon: 'M4 15a8 8 0 0116 0M12 15l5-3M12 21v-2',
+  },
+  {
+    slug: 'recipe-idea-generator',
+    name: 'Recipe by Ingredients',
+    tagline: 'Pick what you have, see what you can cook.',
+    description:
+      'Free recipe by ingredients finder. Select the ingredients in your kitchen and instantly see recipes you can make right now, plus near-misses missing 1–2 items. Vegetarian & vegan filters. Runs entirely in your browser.',
+    category: 'Generators',
+    keywords: [
+      'recipe by ingredients',
+      'what can I make with these ingredients',
+      'cook with what you have',
+      'ingredient recipe finder',
+      'recipes from ingredients I have',
+    ],
+    icon: 'M6 3h12M8 3v5a4 4 0 008 0V3M12 12v9M9 21h6',
   },
 ];
 

@@ -1,5 +1,6 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
+import { PICTIONARY_CATEGORIES } from '../../lib/gendata';
 ---
 
 <ToolLayout slug="pictionary-word-generator">
@@ -13,13 +14,35 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <option value="mixed">Mixed</option>
         </select>
       </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Category
+        <select id="pw-cat" class="field w-48">
+          <option value="all" selected>All categories</option>
+          {PICTIONARY_CATEGORIES.map((c) => <option value={c}>{c}</option>)}
+        </select>
+      </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Words
         <input id="pw-count" type="number" min="1" max="12" value="1" class="field w-24" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Timer
+        <select id="pw-timer" class="field w-32">
+          <option value="0" selected>Off</option>
+          <option value="60">60 sec</option>
+          <option value="90">90 sec</option>
+          <option value="120">2 min</option>
+        </select>
       </label>
       <label class="flex items-center gap-2 self-end pb-2.5 text-sm text-ink-subtle">
         <input id="pw-hide" type="checkbox" class="accent-[#5e6ad2]" /> Hide until revealed
       </label>
       <button id="pw-gen" class="btn btn-primary ml-auto">New word</button>
+    </div>
+
+    <div id="pw-clock" class="hidden items-center justify-between gap-4 rounded-lg border border-border bg-surface-2 px-5 py-3">
+      <span id="pw-time" class="font-mono text-3xl font-semibold tabular-nums text-ink">1:00</span>
+      <div class="flex gap-2">
+        <button id="pw-toggle" class="btn">Pause</button>
+        <button id="pw-reset" class="btn">Reset</button>
+      </div>
     </div>
 
     <div id="pw-out" class="flex flex-col gap-3"></div>
@@ -29,67 +52,130 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p>
       This free Pictionary word generator draws random words to draw for Pictionary,
       charades and other party drawing games. Pick a difficulty — easy nouns, trickier
-      objects, or hard abstract concepts — or mix them all. Turn on "Hide until revealed"
-      so the drawer can flip each card in secret while the room waits. Generate a whole
-      round of words at once. Everything runs in your browser, so it works offline once
-      the page has loaded.
+      objects, or hard abstract concepts — or mix them all, and narrow to a single
+      category like animals, food or actions. Turn on the round timer to race the
+      clock, and switch on "Hide until revealed" so the drawer can flip each card in
+      secret while the room waits. Generate a whole round of words at once. Everything
+      runs in your browser, so it works offline once the page has loaded.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  import { PICTIONARY } from '../../lib/gendata';
+  import { PICTIONARY_WORDS, type PictionaryWord } from '../../lib/gendata';
   import { shuffle } from '../../lib/random';
 
   const $ = (id: string) => document.getElementById(id)!;
   const diffEl = $('pw-diff') as HTMLSelectElement;
+  const catEl = $('pw-cat') as HTMLSelectElement;
   const countEl = $('pw-count') as HTMLInputElement;
+  const timerEl = $('pw-timer') as HTMLSelectElement;
   const hideEl = $('pw-hide') as HTMLInputElement;
   const out = $('pw-out')!;
+  const clock = $('pw-clock')!;
+  const timeEl = $('pw-time')!;
+  const toggleBtn = $('pw-toggle') as HTMLButtonElement;
 
   const POINTS: Record<string, string> = { easy: '1 point', medium: '2 points', hard: '3 points' };
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-  function pool(diff: string): { word: string; tier: string }[] {
-    if (diff === 'mixed') {
-      return [
-        ...PICTIONARY.easy.map((word) => ({ word, tier: 'easy' })),
-        ...PICTIONARY.medium.map((word) => ({ word, tier: 'medium' })),
-        ...PICTIONARY.hard.map((word) => ({ word, tier: 'hard' })),
-      ];
-    }
-    return (PICTIONARY as any)[diff].map((word: string) => ({ word, tier: diff }));
+  function pool(): PictionaryWord[] {
+    const diff = diffEl.value;
+    const cat = catEl.value;
+    return PICTIONARY_WORDS.filter(
+      (w) => (diff === 'mixed' || w.tier === diff) && (cat === 'all' || w.category === cat),
+    );
   }
 
+  // ---- Timer ----
+  let remaining = 0;
+  let ticking = false;
+  let handle = 0;
+
+  function paint() {
+    const m = Math.floor(remaining / 60);
+    const s = remaining % 60;
+    timeEl.textContent = `${m}:${String(s).padStart(2, '0')}`;
+    timeEl.classList.toggle('text-[#e5484d]', remaining <= 10 && remaining > 0);
+  }
+
+  function stop() {
+    ticking = false;
+    clearInterval(handle);
+    toggleBtn.textContent = 'Resume';
+  }
+
+  function start() {
+    if (remaining <= 0) return;
+    ticking = true;
+    toggleBtn.textContent = 'Pause';
+    clearInterval(handle);
+    handle = window.setInterval(() => {
+      remaining--;
+      paint();
+      if (remaining <= 0) stop();
+    }, 1000);
+  }
+
+  function resetTimer() {
+    const secs = Number(timerEl.value) || 0;
+    clearInterval(handle);
+    if (secs <= 0) {
+      clock.classList.add('hidden');
+      clock.classList.remove('flex');
+      ticking = false;
+      return;
+    }
+    clock.classList.remove('hidden');
+    clock.classList.add('flex');
+    remaining = secs;
+    paint();
+    start();
+  }
+
+  toggleBtn.addEventListener('click', () => (ticking ? stop() : start()));
+  $('pw-reset').addEventListener('click', resetTimer);
+  timerEl.addEventListener('change', resetTimer);
+
+  // ---- Words ----
   function generate() {
     const n = Math.max(1, Math.min(12, Number(countEl.value) || 1));
-    const picks = shuffle(pool(diffEl.value)).slice(0, n);
+    const picks = shuffle(pool()).slice(0, n);
     const hide = hideEl.checked;
-    out.innerHTML = picks
-      .map(({ word, tier }) => {
-        const label = `${tier.charAt(0).toUpperCase() + tier.slice(1)} · ${POINTS[tier]}`;
-        if (hide) {
-          return `<button class="panel panel-lift flex items-center justify-between px-5 py-5 text-left transition-colors hover:bg-surface-2" data-word="${word}">
-            <span class="reveal text-2xl font-semibold text-ink-subtle">Tap to reveal</span>
-            <span class="text-[13px] text-ink-tertiary">${label}</span>
-          </button>`;
-        }
-        return `<div class="panel flex items-center justify-between px-5 py-5">
-          <span class="text-2xl font-semibold capitalize text-ink">${word}</span>
-          <span class="text-[13px] text-ink-tertiary">${label}</span>
-        </div>`;
-      })
-      .join('');
 
-    out.querySelectorAll<HTMLButtonElement>('button[data-word]').forEach((b) => {
-      b.addEventListener('click', () => {
-        const span = b.querySelector('.reveal')!;
-        span.textContent = b.dataset.word!;
-        span.className = 'reveal text-2xl font-semibold capitalize text-ink';
+    if (!picks.length) {
+      out.innerHTML = `<div class="panel px-5 py-5 text-ink-subtle">No words match that combination. Try "Mixed" or another category.</div>`;
+    } else {
+      out.innerHTML = picks
+        .map(({ word, tier, category }) => {
+          const label = `${category} · ${POINTS[tier]}`;
+          if (hide) {
+            return `<button class="panel panel-lift flex items-center justify-between px-5 py-5 text-left transition-colors hover:bg-surface-2" data-word="${word}">
+              <span class="reveal text-2xl font-semibold text-ink-subtle">Tap to reveal</span>
+              <span class="text-[13px] text-ink-tertiary">${label}</span>
+            </button>`;
+          }
+          return `<div class="panel flex items-center justify-between px-5 py-5">
+            <span class="text-2xl font-semibold capitalize text-ink">${word}</span>
+            <span class="text-[13px] text-ink-tertiary">${label}</span>
+          </div>`;
+        })
+        .join('');
+
+      out.querySelectorAll<HTMLButtonElement>('button[data-word]').forEach((b) => {
+        b.addEventListener('click', () => {
+          const span = b.querySelector('.reveal')!;
+          span.textContent = b.dataset.word!;
+          span.className = 'reveal text-2xl font-semibold capitalize text-ink';
+        });
       });
-    });
+    }
+
+    // A new word starts a fresh round if the timer is on.
+    if (Number(timerEl.value) > 0) resetTimer();
   }
 
-  [diffEl, countEl, hideEl].forEach((el) => el.addEventListener('input', generate));
+  [diffEl, catEl, countEl, hideEl].forEach((el) => el.addEventListener('input', generate));
   $('pw-gen').addEventListener('click', generate);
   generate();
 </script>

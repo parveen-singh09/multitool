@@ -3,114 +3,343 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
 <ToolLayout slug="random-picker">
-  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-    <div class="flex flex-col gap-3">
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,340px)_1fr]">
+    <!-- Controls -->
+    <div class="flex flex-col gap-4">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Options (one per line)
-        <textarea id="wp-items" class="field min-h-48 resize-y text-sm">Alice
+        <textarea id="wp-items" class="field min-h-56 resize-y font-mono text-sm" spellcheck="false">Alice
 Bob
 Charlie
 Dana
 Eli
 Farah</textarea>
       </label>
-      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="wp-remove" type="checkbox" class="accent-[#5e6ad2]" /> Remove winner after spin</label>
+      <p class="text-xs text-ink-tertiary">
+        Tip: add <code class="text-ink-subtle">*3</code> after an option to weight it (e.g. <code class="text-ink-subtle">Alice *3</code>).
+      </p>
+
+      <div class="flex flex-wrap gap-2">
+        <button id="wp-shuffle" class="btn btn-secondary text-sm">Shuffle</button>
+        <button id="wp-sort" class="btn btn-secondary text-sm">Sort A→Z</button>
+        <button id="wp-clear" class="btn btn-secondary text-sm">Clear</button>
+      </div>
+
+      <div class="flex flex-col gap-3 rounded-[var(--radius-md)] border border-hairline bg-surface-1 p-4">
+        <label class="flex items-center justify-between gap-3 text-sm text-ink-subtle">Spin duration
+          <span class="flex items-center gap-2">
+            <input id="wp-dur" type="range" min="2" max="12" step="1" value="5" class="accent-[#5e6ad2]" />
+            <span id="wp-dur-val" class="w-8 tabular-nums text-ink">5s</span>
+          </span>
+        </label>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="wp-remove" type="checkbox" class="accent-[#5e6ad2]" /> Remove winner after spin</label>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="wp-sound" type="checkbox" class="accent-[#5e6ad2]" checked /> Sound effects</label>
+      </div>
+
+      <p class="text-xs text-ink-tertiary"><span id="wp-count">0</span> options on the wheel</p>
     </div>
 
-    <div class="flex flex-col items-center gap-4">
-      <div class="relative">
-        <canvas id="wp-canvas" width="360" height="360" class="max-w-full"></canvas>
-        <div class="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-2xl" style="color:#5e6ad2">◀</div>
+    <!-- Wheel -->
+    <div class="flex flex-col items-center gap-5">
+      <div id="wp-stage" class="relative flex items-center justify-center">
+        <canvas id="wp-canvas" class="max-w-full cursor-pointer select-none" role="img" aria-label="Spinning wheel — click to spin"></canvas>
+        <!-- Pointer at the right edge, pointing inward -->
+        <div class="pointer-events-none absolute right-[-6px] top-1/2 -translate-y-1/2">
+          <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
+            <path d="M32 17 8 6.5v21z" fill="#5e6ad2" stroke="#010102" stroke-width="1.5" stroke-linejoin="round"></path>
+          </svg>
+        </div>
+        <!-- Center hub / spin button -->
+        <button id="wp-hub" class="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-canvas text-sm font-semibold text-ink shadow-lg ring-1 ring-hairline-strong transition hover:ring-primary" style="width:72px;height:72px" aria-label="Spin the wheel">Spin</button>
       </div>
-      <button id="wp-spin" class="btn btn-primary">Spin</button>
-      <p id="wp-winner" class="text-lg font-semibold text-ink" aria-live="polite"></p>
+
+      <div class="flex gap-2">
+        <button id="wp-spin" class="btn btn-primary">Spin the Wheel</button>
+        <button id="wp-full" class="btn btn-secondary" aria-label="Fullscreen">⤢</button>
+      </div>
+      <p class="text-sm text-ink-tertiary">Press <kbd class="rounded border border-hairline px-1.5 py-0.5 text-xs">Space</kbd> to spin</p>
+    </div>
+  </div>
+
+  <!-- Winner modal -->
+  <div id="wp-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-sm rounded-[var(--radius-lg)] border border-hairline-strong bg-surface-2 p-6 text-center shadow-2xl">
+      <p class="text-sm uppercase tracking-wide text-ink-subtle">Winner</p>
+      <p id="wp-winner" class="mt-2 break-words text-3xl font-bold text-ink" aria-live="polite"></p>
+      <div class="mt-6 flex flex-wrap justify-center gap-2">
+        <button id="wp-again" class="btn btn-primary">Spin again</button>
+        <button id="wp-remove-now" class="btn btn-secondary">Remove &amp; spin</button>
+        <button id="wp-close" class="btn btn-tertiary">Close</button>
+      </div>
     </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free random picker spins a colorful wheel to choose one option from your
-      list at random — perfect for giveaways, picking who goes first, classroom
-      participation and settling friendly arguments. Enter your options, hit spin,
-      and optionally remove the winner so you can keep drawing. The result uses your
-      browser's secure random source. Runs entirely in your browser.
+      This free wheel spinner (a.k.a. wheel of names or random name picker) spins a
+      colorful wheel to choose one option from your list at random — perfect for
+      giveaways, prize draws, picking who goes first, classroom participation and
+      settling friendly arguments. Enter your options, spin, and let the wheel decide.
+    </p>
+    <p>
+      Add <code>*3</code> after any option to give it triple the chance of winning.
+      Turn on <em>Remove winner after spin</em> to draw multiple winners without
+      repeats, adjust the spin duration, or go fullscreen for the classroom. Every
+      draw uses your browser's cryptographically secure random source, so it's
+      genuinely fair — and it all runs locally, nothing is ever uploaded.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  import { randInt, randFloat } from '../../lib/random';
+  import { randInt, randFloat, shuffle } from '../../lib/random';
 
   const $ = (id: string) => document.getElementById(id)!;
   const canvas = $('wp-canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
   const itemsEl = $('wp-items') as HTMLTextAreaElement;
-  const winnerEl = $('wp-winner')!;
-  let angle = 0, spinning = false;
+  const stage = $('wp-stage');
+  const modal = $('wp-modal');
+  const winnerEl = $('wp-winner');
+  const durVal = $('wp-dur-val');
+  const countEl = $('wp-count');
 
-  const COLORS = ['#5e6ad2', '#e05299', '#f5a623', '#27a644', '#4a9ee0', '#9b59b6', '#e07a5f', '#3aa99f'];
+  const COLORS = ['#5e6ad2', '#e05299', '#f5a623', '#27a644', '#4a9ee0', '#9b59b6', '#e07a5f', '#3aa99f', '#d64550', '#43a047'];
+  let angle = 0;
+  let spinning = false;
+  let size = 380; // logical px, responsive
 
-  function items(): string[] {
-    return itemsEl.value.split('\n').map((s) => s.trim()).filter(Boolean);
+  // ---- Options parsing (supports `label *N` weighting) ----
+  // ponytail: weight expands to N equal slices — correct probability, simplest geometry.
+  function parse(): { label: string; color: string }[] {
+    const raw = itemsEl.value.split('\n').map((s) => s.trim()).filter(Boolean);
+    const out: { label: string; color: string }[] = [];
+    raw.forEach((line, idx) => {
+      const m = line.match(/^(.*?)\s*\*\s*(\d+)\s*$/);
+      const label = ((m ? m[1] : line).trim()) || line;
+      const weight = m ? Math.min(50, Math.max(1, parseInt(m[2], 10))) : 1;
+      for (let w = 0; w < weight; w++) out.push({ label, color: COLORS[idx % COLORS.length] });
+    });
+    return out;
+  }
+
+  function labelCount(): number {
+    return itemsEl.value.split('\n').map((s) => s.trim()).filter(Boolean).length;
+  }
+
+  // ---- High-DPI sizing ----
+  function resize() {
+    const avail = stage.parentElement!.clientWidth || 380;
+    size = Math.max(260, Math.min(520, avail));
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(size * dpr);
+    canvas.height = Math.round(size * dpr);
+    canvas.style.width = size + 'px';
+    canvas.style.height = size + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
   }
 
   function draw() {
-    const list = items();
-    const cx = 180, cy = 180, r = 170;
-    ctx.clearRect(0, 0, 360, 360);
+    const list = parse();
+    const c = size / 2;
+    const r = c - 6;
+    ctx.clearRect(0, 0, size, size);
     if (!list.length) return;
     const seg = (Math.PI * 2) / list.length;
+
     for (let i = 0; i < list.length; i++) {
+      const a0 = angle + i * seg;
       ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, r, angle + i * seg, angle + (i + 1) * seg);
+      ctx.moveTo(c, c);
+      ctx.arc(c, c, r, a0, a0 + seg);
       ctx.closePath();
-      ctx.fillStyle = COLORS[i % COLORS.length];
+      ctx.fillStyle = list[i].color;
       ctx.fill();
-      // Label.
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(1,1,2,0.35)';
+      ctx.stroke();
+
+      // Label
       ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(angle + i * seg + seg / 2);
+      ctx.translate(c, c);
+      ctx.rotate(a0 + seg / 2);
       ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
       ctx.fillStyle = '#fff';
-      ctx.font = '600 15px Inter, system-ui, sans-serif';
-      ctx.fillText(list[i].slice(0, 16), r - 14, 5);
+      const fs = Math.max(11, Math.min(18, (seg * r) / 2.2));
+      ctx.font = `600 ${fs}px Satoshi, system-ui, sans-serif`;
+      const max = Math.max(4, Math.floor(r / (fs * 0.55)));
+      const text = list[i].label.length > max ? list[i].label.slice(0, max - 1) + '…' : list[i].label;
+      ctx.fillText(text, r - 14, 1);
       ctx.restore();
     }
-    ctx.beginPath(); ctx.arc(cx, cy, 24, 0, Math.PI * 2); ctx.fillStyle = '#010102'; ctx.fill();
+    // Outer ring
+    ctx.beginPath();
+    ctx.arc(c, c, r, 0, Math.PI * 2);
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#010102';
+    ctx.stroke();
   }
 
+  // ---- Tick sound (WebAudio, no assets) ----
+  let audioCtx: AudioContext | null = null;
+  function tick() {
+    if (!($('wp-sound') as HTMLInputElement).checked) return;
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.frequency.value = 900;
+      gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.05);
+    } catch { /* audio unavailable */ }
+  }
+
+  // ---- Confetti (DOM particles, no assets) ----
+  function confetti() {
+    for (let i = 0; i < 90; i++) {
+      const p = document.createElement('div');
+      p.style.cssText = `position:fixed;top:-10px;left:${randInt(0, 100)}vw;width:8px;height:8px;z-index:60;pointer-events:none;background:${COLORS[randInt(0, COLORS.length - 1)]};border-radius:${randInt(0, 1) ? '50%' : '1px'}`;
+      document.body.appendChild(p);
+      const dx = (randFloat() - 0.5) * 240;
+      const dy = 100 + randFloat() * 60;
+      const rot = randInt(-360, 360);
+      p.animate(
+        [
+          { transform: 'translate(0,0) rotate(0)', opacity: 1 },
+          { transform: `translate(${dx}px, ${dy}vh) rotate(${rot}deg)`, opacity: 0 },
+        ],
+        { duration: 2200 + randInt(0, 800), easing: 'cubic-bezier(.2,.6,.4,1)' },
+      ).onfinish = () => p.remove();
+    }
+  }
+
+  // ---- Spin ----
   function spin() {
-    const list = items();
+    const list = parse();
     if (spinning || list.length < 2) return;
-    spinning = true; winnerEl.textContent = '';
-    const target = randFloat() * Math.PI * 2;
-    const total = Math.PI * 2 * randInt(4, 7) + target;
-    const start = angle, t0 = performance.now(), dur = 4000;
+    spinning = true;
+
+    const dur = parseInt(($('wp-dur') as HTMLInputElement).value, 10) * 1000;
+    const seg = (Math.PI * 2) / list.length;
+
+    // Pick the winner first, then land the wheel on it (visual == result).
+    const winIdx = randInt(0, list.length - 1);
+    const jitter = (randFloat() - 0.5) * seg * 0.7;
+    const targetAngle = -(winIdx * seg + seg / 2) + jitter;
+    const turns = randInt(5, 8);
+    const norm = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    const delta = (((targetAngle - norm) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    const total = Math.PI * 2 * turns + delta;
+
+    const start = angle;
+    const t0 = performance.now();
+    let lastIdx = -1;
+
     function frame(now: number) {
       const t = Math.min(1, (now - t0) / dur);
-      const ease = 1 - Math.pow(1 - t, 3);
+      const ease = 1 - Math.pow(1 - t, 4); // easeOutQuart — long, satisfying deceleration
       angle = start + total * ease;
       draw();
+
+      const cur = Math.floor((((-angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) / seg);
+      if (cur !== lastIdx) { tick(); lastIdx = cur; }
+
       if (t < 1) requestAnimationFrame(frame);
       else {
         spinning = false;
-        // Pointer at 0 rad (right). Which segment is there?
-        const seg = (Math.PI * 2) / list.length;
-        const norm = ((-angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-        const idx = Math.floor(norm / seg) % list.length;
-        const winner = list[idx];
-        winnerEl.textContent = `🎉 ${winner}`;
-        if (($('wp-remove') as HTMLInputElement).checked) {
-          const remaining = list.filter((_, i) => i !== idx);
-          itemsEl.value = remaining.join('\n');
-          draw();
-        }
+        showWinner(list[winIdx].label);
+        startIdle();
       }
     }
     requestAnimationFrame(frame);
   }
 
-  itemsEl.addEventListener('input', draw);
+  // ---- Idle drift: slow continuous rotation when not spinning (~30s/turn) ----
+  let idleT = 0;
+  function idle(now: number) {
+    if (spinning) { idleT = 0; return; }
+    if (idleT) { angle += (now - idleT) * 0.00021; draw(); }
+    idleT = now;
+    requestAnimationFrame(idle);
+  }
+  function startIdle() { idleT = 0; requestAnimationFrame(idle); }
+
+  function showWinner(label: string) {
+    winnerEl.textContent = label;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    confetti();
+  }
+
+  function closeModal() {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  function removeLabel(label: string) {
+    const lines = itemsEl.value.split('\n');
+    const i = lines.findIndex((l) => {
+      const m = l.trim().match(/^(.*?)\s*\*\s*\d+\s*$/);
+      return (m ? m[1].trim() : l.trim()) === label;
+    });
+    if (i >= 0) lines.splice(i, 1);
+    itemsEl.value = lines.join('\n');
+    sync();
+  }
+
+  function sync() {
+    countEl.textContent = String(labelCount());
+    draw();
+  }
+
+  // ---- Wiring ----
   $('wp-spin').addEventListener('click', spin);
-  draw();
+  $('wp-hub').addEventListener('click', spin);
+  canvas.addEventListener('click', spin);
+  $('wp-again').addEventListener('click', () => { closeModal(); spin(); });
+  $('wp-close').addEventListener('click', closeModal);
+  $('wp-remove-now').addEventListener('click', () => {
+    removeLabel(winnerEl.textContent || '');
+    closeModal();
+    if (labelCount() >= 2) spin();
+  });
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+  $('wp-shuffle').addEventListener('click', () => {
+    itemsEl.value = shuffle(itemsEl.value.split('\n').map((s) => s.trim()).filter(Boolean)).join('\n');
+    sync();
+  });
+  $('wp-sort').addEventListener('click', () => {
+    itemsEl.value = itemsEl.value.split('\n').map((s) => s.trim()).filter(Boolean).sort((a, b) => a.localeCompare(b)).join('\n');
+    sync();
+  });
+  $('wp-clear').addEventListener('click', () => { itemsEl.value = ''; sync(); });
+
+  ($('wp-dur') as HTMLInputElement).addEventListener('input', (e) => {
+    durVal.textContent = (e.target as HTMLInputElement).value + 's';
+  });
+
+  $('wp-full').addEventListener('click', () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else stage.requestFullscreen?.();
+  });
+
+  itemsEl.addEventListener('input', sync);
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && document.activeElement !== itemsEl) {
+      e.preventDefault();
+      if (!modal.classList.contains('hidden')) { closeModal(); spin(); }
+      else spin();
+    }
+    if (e.key === 'Escape') closeModal();
+  });
+
+  window.addEventListener('resize', resize);
+  resize();
+  sync();
+  startIdle();
 </script>

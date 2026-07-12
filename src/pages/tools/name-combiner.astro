@@ -31,23 +31,64 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const $ = (id: string) => document.getElementById(id)!;
   const out = $('nc-out')!;
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+  const clean = (s: string) => s.trim().toLowerCase().replace(/[^a-z]/g, '');
 
-  function combos(a: string, b: string): string[] {
-    a = a.trim().toLowerCase().replace(/[^a-z]/g, '');
-    b = b.trim().toLowerCase().replace(/[^a-z]/g, '');
+  // Prefixes that read as "the start of" a name: up to first vowel group,
+  // up to first vowel, first half, and a short 2-char stub.
+  function heads(n: string): string[] {
+    const m = n.match(/^[^aeiou]*[aeiou]+/); // onset + first vowel cluster
+    const h = [];
+    if (m) h.push(m[0]);
+    const firstV = n.search(/[aeiou]/);
+    if (firstV > 0) h.push(n.slice(0, firstV + 1));
+    h.push(n.slice(0, Math.ceil(n.length / 2)));
+    h.push(n.slice(0, 2));
+    return h.filter((s) => s.length >= 1 && s.length < n.length + 1);
+  }
+
+  // Suffixes that read as "the end of" a name: from last vowel group,
+  // from last vowel, second half, and a short 3-char tail.
+  function tails(n: string): string[] {
+    const t = [];
+    const lastVGroup = n.search(/[aeiou]+[^aeiou]*$/);
+    if (lastVGroup >= 0) t.push(n.slice(lastVGroup));
+    const lastV = n.lastIndexOf(n.match(/[aeiou](?=[^aeiou]*$)/)?.[0] ?? '');
+    if (lastV > 0) t.push(n.slice(lastV));
+    t.push(n.slice(Math.floor(n.length / 2)));
+    t.push(n.slice(-3));
+    return t.filter((s) => s.length >= 1 && s.length < n.length + 1);
+  }
+
+  // Score a blend: prefer names that draw from both inputs and land near a
+  // pronounceable 5-9 char length; penalize verbatim copies of an input.
+  function score(w: string, a: string, b: string): number {
+    if (w === a || w === b) return -100;
+    let s = 0;
+    const lenPenalty = Math.abs(w.length - 7);
+    s -= lenPenalty;
+    if (w.startsWith(a.slice(0, 2)) && w.endsWith(b.slice(-2))) s += 3;
+    if (/[aeiou]/.test(w)) s += 2; // has a vowel — sayable
+    if (/([a-z])\1\1/.test(w)) s -= 4; // triple letters read as noise
+    return s;
+  }
+
+  function combos(rawA: string, rawB: string): string[] {
+    const a = clean(rawA), b = clean(rawB);
     if (!a || !b) return [];
     const set = new Set<string>();
-    const ha = Math.ceil(a.length / 2), hb = Math.floor(b.length / 2);
-    set.add(a.slice(0, ha) + b.slice(hb));
-    set.add(b.slice(0, Math.ceil(b.length / 2)) + a.slice(Math.floor(a.length / 2)));
-    set.add(a.slice(0, ha) + b);
-    set.add(a + b.slice(hb));
-    set.add(b.slice(0, hb || 1) + a);
-    // Blend on vowel boundaries.
-    const av = a.search(/[aeiou][^aeiou]*$/);
-    if (av > 0) set.add(a.slice(0, av) + b);
-    set.add(a.slice(0, 2) + b.slice(-3));
-    return [...set].filter((s) => s.length >= 3 && s.length <= 14).map(cap);
+    // Cross every head of one name with every tail of the other, both ways.
+    for (const [x, y] of [[a, b], [b, a]] as const) {
+      for (const h of heads(x))
+        for (const t of tails(y)) set.add(h + t);
+    }
+    // Overlap blends: if end of A shares a letter with start of B, splice there.
+    if (a.at(-1) === b[0]) set.add(a + b.slice(1));
+    if (b.at(-1) === a[0]) set.add(b + a.slice(1));
+    return [...set]
+      .filter((s) => s.length >= 4 && s.length <= 14 && score(s, a, b) > -6)
+      .sort((x, y) => score(y, a, b) - score(x, a, b))
+      .slice(0, 24)
+      .map(cap);
   }
 
   function generate() {
