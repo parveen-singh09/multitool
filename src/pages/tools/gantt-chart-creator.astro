@@ -4,14 +4,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="gantt-chart-creator">
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,420px)_1fr]">
-    <!-- LEFT: controls -->
+
     <div class="flex flex-col gap-4">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Project title
         <input id="gcc-title" class="field" type="text" value="Launch Plan" />
       </label>
 
-      <!-- tab strip -->
       <div class="flex flex-wrap gap-1 rounded-md bg-surface-1 p-1" role="tablist">
         <button class="gcc-tab btn btn-tertiary" data-tab="tasks" aria-selected="true">Tasks</button>
         <button class="gcc-tab btn btn-tertiary" data-tab="templates">Templates</button>
@@ -19,20 +18,17 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <button class="gcc-tab btn btn-tertiary" data-tab="calendar">Calendar</button>
       </div>
 
-      <!-- Tasks panel -->
       <section data-panel="tasks" class="flex flex-col gap-3">
         <div id="gcc-rows" class="flex max-h-[62vh] flex-col gap-3 overflow-y-auto pr-1"></div>
         <button id="gcc-add" class="btn btn-secondary self-start">Add task</button>
         <p id="gcc-cycle" class="hidden text-[13px]" style="color:#e5a23d" role="alert"></p>
       </section>
 
-      <!-- Templates panel -->
       <section data-panel="templates" class="hidden flex-col gap-4">
         <p class="text-sm text-ink-subtle">Pick a starting point. It replaces the current project.</p>
         <div id="gcc-templates" class="flex flex-col gap-4"></div>
       </section>
 
-      <!-- Style panel -->
       <section data-panel="style" class="hidden flex-col gap-4">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">
           Zoom
@@ -48,7 +44,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </label>
       </section>
 
-      <!-- Calendar panel -->
       <section data-panel="calendar" class="hidden flex-col gap-4">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">
           Project start
@@ -65,7 +60,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </section>
     </div>
 
-    <!-- RIGHT: preview + toolbar -->
     <div class="flex flex-col gap-3">
       <div class="flex flex-wrap gap-2">
         <button id="gcc-png" class="btn btn-primary">PNG</button>
@@ -132,7 +126,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const statusEl = $<HTMLParagraphElement>('gcc-status');
   const cycleEl = $<HTMLParagraphElement>('gcc-cycle');
 
-  // --- default project: bars, a dependency, progress and a milestone --------
   function defaultProject(): GanttProject {
     const t = (name: string, duration: number, over: Partial<Task> = {}): Task => ({
       id: newId(), name, start: '2026-01-05', duration, progress: 0, deps: [], outline: 0, ...over,
@@ -152,7 +145,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   let state: GanttProject = loadDraft() ?? defaultProject();
   let last: RenderResult | null = null;
 
-  // --- the single render path -----------------------------------------------
   let saveTimer = 0;
   function render(): void {
     state.title = titleEl.value;
@@ -562,11 +554,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   }
 
   $<HTMLButtonElement>('gcc-svg').addEventListener('click', () => {
-    if (last) download(new Blob([last.svg], { type: 'image/svg+xml' }), 'toolcities-gantt.svg');
+    if (last) download(new Blob([last.svg], { type: 'image/svg+xml' }), 'toolsilk-gantt.svg');
   });
   $<HTMLButtonElement>('gcc-png').addEventListener('click', async () => {
     const canvas = await rasterize();
-    canvas.toBlob((b) => b && download(b, 'toolcities-gantt.png'), 'image/png');
+    canvas.toBlob((b) => b && download(b, 'toolsilk-gantt.png'), 'image/png');
   });
   $<HTMLButtonElement>('gcc-copy').addEventListener('click', async () => {
     try {
@@ -592,20 +584,20 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const page = pdf.addPage([png.width / 2, png.height / 2]);
       page.drawImage(png, { x: 0, y: 0, width: png.width / 2, height: png.height / 2 });
       const bytes = await pdf.save();
-      download(new Blob([bytes.slice()], { type: 'application/pdf' }), 'toolcities-gantt.pdf');
+      download(new Blob([bytes.slice()], { type: 'application/pdf' }), 'toolsilk-gantt.pdf');
       setStatus('');
     } catch {
       setStatus('PDF export failed.');
     }
   });
   $<HTMLButtonElement>('gcc-json').addEventListener('click', () => {
-    download(new Blob([toJSON(state)], { type: 'application/json' }), 'toolcities-gantt.json');
+    download(new Blob([toJSON(state)], { type: 'application/json' }), 'toolsilk-gantt.json');
   });
   $<HTMLButtonElement>('gcc-csv').addEventListener('click', () => {
-    download(new Blob([toCSV(state)], { type: 'text/csv' }), 'toolcities-gantt.csv');
+    download(new Blob([toCSV(state)], { type: 'text/csv' }), 'toolsilk-gantt.csv');
   });
   $<HTMLButtonElement>('gcc-mpp').addEventListener('click', () => {
-    download(new Blob([toMSProjectXML(state)], { type: 'application/xml' }), 'toolcities-gantt.xml');
+    download(new Blob([toMSProjectXML(state)], { type: 'application/xml' }), 'toolsilk-gantt.xml');
   });
 
   // --- import (JSON / CSV / MS Project XML) -----------------------------------

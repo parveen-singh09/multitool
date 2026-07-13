@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="html-to-markdown-converter">
   <div class="flex flex-col gap-4">
-    <!-- Conversion options -->
+
     <div class="flex flex-wrap items-end gap-3">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Headings
@@ -133,7 +133,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     heading: string; bullet: string; code: string;
     emChar: string; link: string; gfm: boolean; strip: boolean;
   }
-  // Reference-link accumulator; reset per conversion when link style is 'referenced'.
+
   let refs: { text: string; url: string }[] = [];
   let markdown = '';
 
@@ -151,7 +151,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return out;
   }
 
-  // Collapse a table cell / inline context to a single line (Markdown cells can't span lines).
   function inlineText(el: Element, o: Opts): string {
     return childrenToMd(el, 0, o).replace(/\s*\n\s*/g, ' ').trim();
   }
@@ -163,7 +162,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       Array.from(tr.children)
         .filter((c) => /^(td|th)$/i.test(c.tagName))
         .map((c) => inlineText(c, o).replace(/\|/g, '\\|').replace(/\n/g, ' ') || ' ');
-    // First row with any <th>, else the first row, is the header.
+
     let headerIdx = rows.findIndex((r) => r.querySelector('th'));
     if (headerIdx < 0) headerIdx = 0;
     const header = cellsOf(rows[headerIdx]);
@@ -264,7 +263,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         const items = Array.from(el.children).filter((c) => c.tagName.toLowerCase() === 'li');
         const indent = '  '.repeat(depth);
         const rendered = items.map((li, idx) => {
-          // GFM task list: <li> starting with a checkbox input.
+
           const box = li.querySelector(':scope > input[type=checkbox], :scope > p > input[type=checkbox]');
           let marker = ordered ? `${start + idx}.` : o.bullet;
           if (o.gfm && box) marker = `${o.bullet} [${(box as HTMLInputElement).checked || box.hasAttribute('checked') ? 'x' : ' '}]`;
@@ -332,7 +331,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     rerender(); render();
   });
 
-  const SAMPLE = `<h1>Toolcities</h1>
+  const SAMPLE = `<h1>Toolsilk</h1>
 <p>A set of <strong>fast</strong>, <em>private</em> converters that run
 <a href="https://example.com" title="home">in your browser</a>.</p>
 <h2>Features</h2>

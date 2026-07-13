@@ -1,7 +1,4 @@
-// Config-driven schema.org JSON-LD generator. Each SchemaType declares its
-// form fields (+ repeatable groups) and a build() that maps values -> JSON-LD.
-// The page renders the form generically from this config, so adding a type is
-// data, not UI code.
+
 
 export type FieldType =
   | 'text'
@@ -19,9 +16,9 @@ export interface FieldDef {
   type: FieldType;
   placeholder?: string;
   options?: string[];
-  /** Half-width on desktop so two sit on a row. */
+
   half?: boolean;
-  /** Recommended by Google — surfaced in the validation hints. */
+
   recommended?: boolean;
 }
 
@@ -30,7 +27,7 @@ export interface GroupDef {
   label: string;
   addLabel: string;
   fields: FieldDef[];
-  /** Rows shown on first load. */
+
   initial?: number;
 }
 
@@ -44,7 +41,6 @@ export interface SchemaType {
 
 export type Vals = Record<string, any>;
 
-/** Recursively drop empty strings/null/undefined and empty objects/arrays. */
 export function clean(input: any): any {
   if (Array.isArray(input)) {
     return input.map(clean).filter((x) => !isEmpty(x));
@@ -64,7 +60,7 @@ function isEmpty(x: any): boolean {
   if (x == null || x === '') return true;
   if (Array.isArray(x)) return x.length === 0;
   if (typeof x === 'object') {
-    // Keep objects that carry more than a lone @type.
+
     const keys = Object.keys(x).filter((k) => k !== '@type');
     return keys.length === 0;
   }
@@ -73,8 +69,6 @@ function isEmpty(x: any): boolean {
 
 const g = (v: Vals, id: string): any[] => (Array.isArray(v[id]) ? v[id] : []);
 const has = (v: Vals, id: string) => v[id] != null && v[id] !== '';
-
-// Shared field fragments -----------------------------------------------------
 
 const AVAILABILITY = [
   'https://schema.org/InStock',
@@ -100,8 +94,6 @@ function postalAddress(v: Vals, p = ''): Record<string, any> {
     addressCountry: v[p + 'country'],
   };
 }
-
-// Schema type definitions -----------------------------------------------------
 
 export const SCHEMA_TYPES: SchemaType[] = [
   {
@@ -795,14 +787,12 @@ export function getSchemaType(id: string): SchemaType | undefined {
   return SCHEMA_TYPES.find((t) => t.id === id);
 }
 
-/** Build cleaned JSON-LD for a type from raw form values. */
 export function buildJsonLd(typeId: string, vals: Vals): Record<string, any> {
   const t = getSchemaType(typeId);
   if (!t) return {};
   return clean(t.build(vals));
 }
 
-/** Recommended fields left empty — surfaced as soft validation hints. */
 export function missingRecommended(typeId: string, vals: Vals): string[] {
   const t = getSchemaType(typeId);
   if (!t) return [];

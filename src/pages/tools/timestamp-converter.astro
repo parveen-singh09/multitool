@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="timestamp-converter">
   <div class="flex flex-col gap-6">
-    <!-- Live current Unix time -->
+
     <div class="panel panel-lift flex flex-wrap items-center justify-between gap-4 p-5">
       <div class="flex flex-col gap-2">
         <span class="text-[13px] text-ink-subtle">Current Unix time</span>
@@ -20,7 +20,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Smart input + timezone -->
     <div class="flex flex-col gap-3">
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto]">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">
@@ -48,10 +47,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </p>
     </div>
 
-    <!-- Output table -->
     <div id="ts-out" class="overflow-hidden rounded-md border border-hairline"></div>
 
-    <!-- Custom format -->
     <div class="flex flex-col gap-2">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle" for="ts-fmt">
         Custom format
@@ -68,13 +65,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </span>
     </div>
 
-    <!-- Multi-timezone strip -->
     <div class="flex flex-col gap-2">
       <span class="text-sm text-ink-subtle">Around the world</span>
       <div id="ts-world" class="grid grid-cols-1 gap-2 sm:grid-cols-2"></div>
     </div>
 
-    <!-- Code snippets -->
     <div class="flex flex-col gap-2">
       <div class="flex flex-wrap items-end justify-between gap-3">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle" for="ts-lang">
@@ -97,7 +92,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <pre class="hl-block field" style="margin:0;overflow:auto;white-space:pre"><code id="ts-code" class="hljs" style="background:transparent;padding:0"></code></pre>
     </div>
 
-    <!-- Batch conversion -->
     <div class="flex flex-col gap-2">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle" for="ts-batch-in">
         Batch convert — one timestamp or date per line
@@ -170,13 +164,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const p2 = (n: number) => String(n).padStart(2, '0');
   const p3 = (n: number) => String(n).padStart(3, '0');
 
-  // ---- Timezone list ----
   function zoneList(): string[] {
     try {
       // @ts-ignore - supportedValuesOf is newer than some lib.dom versions
       const all = Intl.supportedValuesOf?.('timeZone') as string[] | undefined;
       if (all && all.length) return all;
-    } catch { /* fall through */ }
+    } catch {  }
     return [
       'UTC', 'America/New_York', 'America/Chicago', 'America/Denver',
       'America/Los_Angeles', 'America/Sao_Paulo', 'Europe/London', 'Europe/Paris',
@@ -187,7 +180,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   const localZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
-  // ---- Parsing ----
   type Parse = { date: Date; source: string } | null;
 
   function detectUnit(digits: string): { ms: number; unit: string } {
@@ -202,7 +194,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   function parseInput(raw: string): Parse {
     const v = raw.trim();
     if (!v) return null;
-    // Pure integer (optionally signed) => Unix timestamp with unit detection.
+
     if (/^-?\d+$/.test(v)) {
       const neg = v.startsWith('-');
       const digits = v.replace('-', '');
@@ -347,7 +339,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const ms = secs * 1000;
     switch (lang) {
       case 'javascript':
-        return `// ${secs} = Unix seconds\nconst d = new Date(${secs} * 1000);\nconsole.log(d.toISOString());`;
+        return `
       case 'python':
         return `from datetime import datetime, timezone\n\nd = datetime.fromtimestamp(${secs}, tz=timezone.utc)\nprint(d.isoformat())`;
       case 'java':
@@ -523,7 +515,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const old = tgt.textContent;
       tgt.textContent = 'Copied!';
       setTimeout(() => { tgt.textContent = old; }, 1000);
-    } catch { /* clipboard blocked — ignore */ }
+    } catch 
   }
 
   function bindCopy(container: HTMLElement) {
@@ -626,14 +618,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     copyText(e.currentTarget as HTMLElement, nowEl.textContent!);
   });
 
-  // ---- Hydrate from URL / defaults ----
   const params = new URLSearchParams(window.location.search);
   const tzParam = params.get('tz');
   tzSel.value = tzParam && zones.includes(tzParam) ? tzParam : localZone;
 
   const tParam = params.get('t');
   if (tParam && /^-?\d+$/.test(tParam)) {
-    input.value = tParam; // ms epoch from a shared link
+    input.value = tParam; 
   } else {
     input.value = String(Math.floor(Date.now() / 1000));
   }

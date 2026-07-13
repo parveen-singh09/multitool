@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="receipt-generator">
   <div class="flex flex-col gap-5">
-    <!-- Style toggle -->
+
     <div class="flex flex-col gap-1 text-sm text-ink-subtle">Receipt style
       <div class="inline-flex w-fit rounded-md border border-hairline bg-surface-1 p-0.5">
         <button id="rc-style-thermal" type="button" class="rc-style rounded-sm px-4 py-1.5 text-[13px] font-medium">Thermal (POS)</button>
@@ -12,7 +12,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Logo -->
+
     <div class="flex items-center gap-4">
       <div id="rc-logo-preview" class="hidden h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-md border border-hairline bg-surface-1">
         <img id="rc-logo-img" class="max-h-full max-w-full object-contain" alt="Logo preview" />
@@ -49,7 +49,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </label>
     </div>
 
-    <!-- Accent color -->
+
     <div class="flex flex-col gap-2 text-sm text-ink-subtle">Accent color
       <div id="rc-accent" class="flex flex-wrap items-center gap-2"></div>
     </div>
@@ -62,7 +62,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div id="rc-items" class="flex flex-col gap-2"></div>
     </div>
 
-    <!-- Adjustments -->
+
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-4">
       <div class="flex flex-col gap-1 text-sm text-ink-subtle">Tax
         <div class="flex gap-2">
@@ -87,7 +87,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </label>
     </div>
 
-    <!-- Payment -->
+
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Payment method
         <input id="rc-pay" class="field" placeholder="Cash" list="rc-pay-list" />
@@ -115,7 +115,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <button id="rc-dl" class="btn btn-primary w-fit">Download PDF</button>
 
-    <!-- Live preview -->
+
     <div class="flex flex-col gap-2">
       <span class="text-sm text-ink-subtle">Preview</span>
       <div class="flex justify-center rounded-lg border border-hairline bg-surface-1 p-6">
@@ -162,15 +162,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   let style: 'thermal' | 'standard' = 'thermal';
   let logo: { bytes: Uint8Array; type: 'png' | 'jpg'; url: string } | null = null;
 
-  // The <select> value is the ISO code; symbolOf()/pdfPrefixOf() map it to the
-  // right prefix for the preview vs the PDF.
+
+
   ($('rc-currency') as HTMLSelectElement).innerHTML = CURRENCIES
     .map((c) => `<option value="${c.code}"${c.code === 'USD' ? ' selected' : ''}>${c.code} — ${c.name} (${c.symbol})</option>`)
     .join('');
   ($('rc-date') as HTMLInputElement).value = new Date().toISOString().slice(0, 10);
 
-  // Structured store / customer blocks (Razorpay-style). They compose into the
-  // multi-line string[] the receipt builder consumes, so pdfdoc.ts is untouched.
+
+
   renderParty($('rc-from'), {
     prefix: 'rc-from',
     companyPlaceholder: 'Store / business name',
@@ -190,14 +190,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     addressPlaceholder: 'Customer address',
   });
 
-  // Accent swatches — the document brand color. Standard receipts tint the
-  // RECEIPT title and Total line; thermal stays monochrome (POS convention).
+
+
   const ACCENTS = ['#5e6ad2', '#0f172a', '#0d9488', '#2563eb', '#dc2626', '#db2777', '#7c3aed', '#ea580c', '#16a34a', '#475569'];
   let accent = ACCENTS[0];
   const accentWrap = $('rc-accent');
 
-  // Build the swatch row once. Re-rendering on every color change would destroy
-  // the live <input type="color"> mid-drag, so we only restyle in place.
+
+
   accentWrap.innerHTML = ACCENTS.map((c) =>
     `<button type="button" class="rc-swatch h-7 w-7 rounded-full border-2 transition-transform" data-c="${c}" style="background:${c}" title="${c}"></button>`
   ).join('') +
@@ -385,7 +385,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const d = getData(false);
     const t = computeTotals(d);
     $('rc-total').textContent = money(t.total, d.currency);
-    // Change due indicator on the form.
+
     const changeEl = $('rc-change');
     if (d.amountPaid) {
       const change = d.amountPaid - t.total;

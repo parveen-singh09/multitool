@@ -1,22 +1,12 @@
-// Full ISO 4217 currency list shared by the invoice / receipt / PO generators.
-//
-// Each entry carries the pretty Unicode `symbol` (used everywhere in the HTML
-// preview — browser fonts render every glyph) and, where the symbol is safe in
-// the WinAnsi encoding pdf-lib's standard fonts use, a `pdf` override. When a
-// currency's symbol can't be represented by the standard PDF fonts (₹, ₩, ฿, …)
-// we fall back to the unambiguous ISO code (e.g. "INR 1299.00") rather than a
-// lossy transliteration — see `pdfPrefixOf`.
+
 
 export interface Currency {
-  code: string;    // ISO 4217 alpha code
-  name: string;    // English name
-  symbol: string;  // display symbol for the HTML preview
-  pdf?: string;    // WinAnsi-safe prefix for the PDF; omit to use `${code} `
+  code: string;    
+  name: string;    
+  symbol: string;  
+  pdf?: string;    
 }
 
-// WinAnsi (CP1252) contains only these currency glyphs: $ ¢ £ ¤ ¥ € — plus the
-// ASCII letters used in composite symbols (CA$, kr, zł→"zl" is NOT safe because
-// ł is outside CP1252). Anything else falls back to the ISO code in the PDF.
 export const CURRENCIES: Currency[] = [
   { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ' },
   { code: 'AFN', name: 'Afghan Afghani', symbol: '؋' },
@@ -177,7 +167,6 @@ export const CURRENCIES: Currency[] = [
 
 const BY_CODE = new Map(CURRENCIES.map((c) => [c.code, c]));
 
-/** Pretty Unicode symbol for the HTML preview (browser fonts render all). */
 export function symbolOf(code: string): string {
   return BY_CODE.get(code)?.symbol ?? `${code} `;
 }

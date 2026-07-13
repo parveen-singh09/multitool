@@ -1,12 +1,4 @@
-// Client-side music analysis engine. Pure DSP, no DOM — safe to import into
-// any tool script or a Web Worker. Everything runs on decoded PCM in the
-// browser, so audio is never uploaded.
-//
-// Provides: BPM (onset envelope + autocorrelation), musical key + mode
-// (Krumhansl-Schmuckler on a chroma/HPCP profile), Camelot code, integrated
-// loudness (ITU-R BS.1770 K-weighted LUFS) with true peak / RMS, spectral
-// descriptors (centroid, rolloff, flatness, zero-crossing rate), and derived
-// perceptual attributes (energy, danceability, valence/mood).
+
 
 export interface AnalysisResult {
   duration: number;
@@ -14,31 +6,30 @@ export interface AnalysisResult {
   channels: number;
   bpm: number;
   bpmConfidence: number;
-  beatGrid: number[]; // beat times (seconds), best-effort
-  key: string; // e.g. "F# minor"
-  keyRoot: string; // e.g. "F#"
+  beatGrid: number[]; 
+  key: string; 
+  keyRoot: string; 
   mode: 'major' | 'minor';
   keyConfidence: number;
-  camelot: string; // e.g. "11A"
-  chroma: number[]; // 12 pitch-class energies, normalized 0..1
-  loudnessLufs: number; // integrated LUFS (BS.1770)
-  peakDb: number; // sample peak in dBFS
-  rmsDb: number; // overall RMS in dBFS
-  dynamicRange: number; // crest-ish: peak - rms, dB
-  spectralCentroid: number; // Hz
-  spectralRolloff: number; // Hz (85%)
-  spectralFlatness: number; // 0..1 (tonal → noisy)
-  zeroCrossingRate: number; // per second
-  energy: number; // 0..1
-  danceability: number; // 0..1
-  valence: number; // 0..1 (musical positivity)
-  mood: string; // human label
+  camelot: string; 
+  chroma: number[]; 
+  loudnessLufs: number; 
+  peakDb: number; 
+  rmsDb: number; 
+  dynamicRange: number; 
+  spectralCentroid: number; 
+  spectralRolloff: number; 
+  spectralFlatness: number; 
+  zeroCrossingRate: number; 
+  energy: number; 
+  danceability: number; 
+  valence: number; 
+  mood: string; 
   emotions: { label: string; value: number }[];
 }
 
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
-// ---- FFT (in-place iterative radix-2, N a power of two) ----
 export function fft(re: Float32Array, im: Float32Array): void {
   const n = re.length;
   for (let i = 1, j = 0; i < n; i++) {
@@ -70,7 +61,6 @@ function hann(N: number): Float32Array {
   return w;
 }
 
-// Downmix all channels to a single mono Float32Array.
 function toMono(buf: AudioBuffer): Float32Array {
   const ch = buf.numberOfChannels;
   if (ch === 1) return buf.getChannelData(0).slice();
@@ -84,12 +74,11 @@ function toMono(buf: AudioBuffer): Float32Array {
   return out;
 }
 
-// ---- Short-time magnitude spectrogram over the whole signal ----
 interface Stft {
-  frames: Float32Array[]; // magnitude spectra (N/2 bins)
+  frames: Float32Array[]; 
   hop: number;
   N: number;
-  frameRate: number; // frames per second
+  frameRate: number; 
 }
 
 function computeStft(mono: Float32Array, sr: number, N = 2048, hop = 512): Stft {
@@ -107,12 +96,10 @@ function computeStft(mono: Float32Array, sr: number, N = 2048, hop = 512): Stft 
   return { frames, hop, N, frameRate: sr / hop };
 }
 
-// ---- BPM: spectral-flux onset envelope + autocorrelation ----
 function detectTempo(stft: Stft): { bpm: number; confidence: number } {
   const { frames, frameRate } = stft;
   if (frames.length < 4) return { bpm: 0, confidence: 0 };
 
-  // Spectral flux: sum of positive magnitude differences per frame.
   const flux = new Float32Array(frames.length);
   for (let f = 1; f < frames.length; f++) {
     let s = 0;
@@ -123,12 +110,10 @@ function detectTempo(stft: Stft): { bpm: number; confidence: number } {
     }
     flux[f] = s;
   }
-  // Normalize + subtract a local mean to sharpen onsets.
+
   const mean = flux.reduce((a, b) => a + b, 0) / flux.length;
   for (let i = 0; i < flux.length; i++) flux[i] = Math.max(0, flux[i] - mean);
 
-  // Autocorrelation over lags matching 50–210 BPM, with a tempo prior
-  // (log-Gaussian centered near 120 BPM) to bias octave choice.
   const minBpm = 50, maxBpm = 210;
   const minLag = Math.floor((60 / maxBpm) * frameRate);
   const maxLag = Math.ceil((60 / minBpm) * frameRate);
@@ -144,7 +129,6 @@ function detectTempo(stft: Stft): { bpm: number; confidence: number } {
   if (!bestLag) return { bpm: 0, confidence: 0 };
   let bpm = (60 * frameRate) / bestLag;
 
-  // Confidence: peak sharpness vs. the mean autocorrelation around it.
   let acAtPeak = 0, acMean = 0, cnt = 0;
   for (let i = bestLag; i < flux.length; i++) acAtPeak += flux[i] * flux[i - bestLag];
   for (let lag = minLag; lag <= maxLag; lag++) {
@@ -155,18 +139,16 @@ function detectTempo(stft: Stft): { bpm: number; confidence: number } {
   acMean /= Math.max(1, cnt);
   const confidence = acMean > 0 ? Math.max(0, Math.min(1, (acAtPeak / acMean - 1) / 3)) : 0;
 
-  // Fold into the musically common 70–180 range.
   while (bpm < 70) bpm *= 2;
   while (bpm > 180) bpm /= 2;
   return { bpm: Math.round(bpm * 10) / 10, confidence };
 }
 
-// ---- Chroma / HPCP profile over the whole track ----
 function computeChroma(stft: Stft, sr: number): number[] {
   const { frames, N } = stft;
   const chroma = new Array(12).fill(0);
   const binHz = sr / N;
-  // Ignore sub-bass rumble and content above ~5 kHz (harmonics get noisy).
+
   const kMin = Math.max(1, Math.floor(55 / binHz));
   const kMax = Math.min(frames[0]?.length ?? 0, Math.floor(5000 / binHz));
   for (const mag of frames) {
@@ -181,7 +163,6 @@ function computeChroma(stft: Stft, sr: number): number[] {
   return chroma.map((v) => v / max);
 }
 
-// Krumhansl-Schmuckler key profiles.
 const KS_MAJOR = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
 const KS_MINOR = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
 
@@ -214,7 +195,6 @@ function detectKey(chroma: number[]): { root: string; mode: 'major' | 'minor'; c
   return { root: best.root, mode: best.mode, confidence };
 }
 
-// Camelot wheel: circle-of-fifths position → code. Major = "B", minor = "A".
 const CAMELOT_MAJOR: Record<string, string> = {
   'C': '8B', 'G': '9B', 'D': '10B', 'A': '11B', 'E': '12B', 'B': '1B',
   'F#': '2B', 'C#': '3B', 'G#': '4B', 'D#': '5B', 'A#': '6B', 'F': '7B',
@@ -227,12 +207,10 @@ function toCamelot(root: string, mode: 'major' | 'minor'): string {
   return (mode === 'major' ? CAMELOT_MAJOR : CAMELOT_MINOR)[root] || '—';
 }
 
-// ---- ITU-R BS.1770 K-weighting biquad coefficients for arbitrary fs ----
-// Recomputed from the analog prototype so LUFS is correct off 48 kHz too.
 interface Biquad { b0: number; b1: number; b2: number; a1: number; a2: number; }
 
 function kWeightingFilters(fs: number): [Biquad, Biquad] {
-  // Stage 1: high-shelf (pre-filter). Analog design per BS.1770 / pyloudnorm.
+
   const db = 3.999843853973347;
   const f0 = 1681.974450955533;
   const Q = 0.7071752369554196;
@@ -247,7 +225,7 @@ function kWeightingFilters(fs: number): [Biquad, Biquad] {
     a1: (2 * (K * K - 1)) / a0_,
     a2: (1 - K / Q + K * K) / a0_,
   };
-  // Stage 2: high-pass (RLB).
+
   const f0b = 38.13547087602444;
   const Qb = 0.5003270373238773;
   const Kb = Math.tan((Math.PI * f0b) / fs);
@@ -274,17 +252,16 @@ function applyBiquad(x: Float32Array, bq: Biquad): Float32Array {
   return y;
 }
 
-// Integrated loudness with the two-stage gate (absolute -70 LUFS, relative -10 LU).
 function integratedLufs(buf: AudioBuffer): number {
   const fs = buf.sampleRate;
   const [shelf, hp] = kWeightingFilters(fs);
   const ch = buf.numberOfChannels;
-  // K-weight each channel.
+
   const weighted: Float32Array[] = [];
   for (let c = 0; c < ch; c++) weighted.push(applyBiquad(applyBiquad(buf.getChannelData(c), shelf), hp));
 
   const blockSec = 0.4;
-  const step = Math.floor(fs * blockSec * 0.25); // 75% overlap
+  const step = Math.floor(fs * blockSec * 0.25); 
   const blockLen = Math.floor(fs * blockSec);
   const loudness: number[] = [];
   for (let off = 0; off + blockLen <= weighted[0].length; off += step) {
@@ -293,25 +270,23 @@ function integratedLufs(buf: AudioBuffer): number {
       const d = weighted[c];
       let ms = 0;
       for (let i = 0; i < blockLen; i++) { const s = d[off + i]; ms += s * s; }
-      z += ms / blockLen; // channel weight 1.0 for L/R/mono
+      z += ms / blockLen; 
     }
     loudness.push(-0.691 + 10 * Math.log10(z + 1e-12));
   }
   if (!loudness.length) return -Infinity;
 
-  // Absolute gate at -70 LUFS.
   const gatedAbs = loudness.filter((l) => l > -70);
   if (!gatedAbs.length) return -Infinity;
   const meanEnergy = (arr: number[]) => arr.reduce((a, l) => a + Math.pow(10, (l + 0.691) / 10), 0) / arr.length;
   const absMean = -0.691 + 10 * Math.log10(meanEnergy(gatedAbs));
-  // Relative gate at absMean - 10 LU.
+
   const relThresh = absMean - 10;
   const gatedRel = gatedAbs.filter((l) => l > relThresh);
   if (!gatedRel.length) return absMean;
   return -0.691 + 10 * Math.log10(meanEnergy(gatedRel));
 }
 
-// ---- Spectral descriptors, averaged across frames ----
 function spectralFeatures(stft: Stft, sr: number) {
   const { frames, N } = stft;
   const binHz = sr / N;
@@ -321,11 +296,11 @@ function spectralFeatures(stft: Stft, sr: number) {
     for (let k = 0; k < mag.length; k++) { sum += mag[k]; wsum += mag[k] * k * binHz; }
     if (sum < 1e-6) continue;
     centroid += wsum / sum;
-    // 85% spectral rolloff.
+
     const target = 0.85 * sum; let acc = 0, rk = 0;
     for (let k = 0; k < mag.length; k++) { acc += mag[k]; if (acc >= target) { rk = k; break; } }
     rolloff += rk * binHz;
-    // Flatness: geometric mean / arithmetic mean.
+
     let logSum = 0, arith = 0, n2 = 0;
     for (let k = 1; k < mag.length; k++) { const m = mag[k] + 1e-9; logSum += Math.log(m); arith += m; n2++; }
     const geo = Math.exp(logSum / n2);
@@ -349,7 +324,6 @@ function rmsPeakDb(mono: Float32Array): { rmsDb: number; peakDb: number } {
   return { rmsDb: 20 * Math.log10(rms + 1e-9), peakDb: 20 * Math.log10(peak + 1e-9) };
 }
 
-// ---- Derived perceptual attributes (heuristic, 0..1) ----
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
 function deriveMood(opts: {
@@ -358,18 +332,17 @@ function deriveMood(opts: {
 }) {
   const { bpm, lufs, centroid, flatness, mode, sr } = opts;
   const nyq = sr / 2;
-  // Energy: driven by loudness and brightness.
-  const loudN = clamp01((lufs + 40) / 40); // -40 LUFS→0, 0→1
+
+  const loudN = clamp01((lufs + 40) / 40); 
   const brightN = clamp01(centroid / (nyq * 0.35));
   const energy = clamp01(0.6 * loudN + 0.25 * brightN + 0.15 * clamp01((bpm - 60) / 120));
-  // Danceability: steady, mid-tempo, punchy tracks score high.
+
   const tempoFit = Math.exp(-0.5 * Math.pow((bpm - 118) / 40, 2));
   const danceability = clamp01(0.55 * tempoFit + 0.25 * loudN + 0.2 * (1 - flatness));
-  // Valence: major mode, brightness, moderate-fast tempo read as "positive".
+
   const modeN = mode === 'major' ? 0.72 : 0.32;
   const valence = clamp01(0.45 * modeN + 0.3 * brightN + 0.25 * clamp01((bpm - 70) / 90));
 
-  // Emotion profile (roughly Russell's circumplex: valence × arousal).
   const arousal = energy;
   const emotions = [
     { label: 'Happy', value: clamp01(valence * 0.7 + arousal * 0.3) },
@@ -382,7 +355,6 @@ function deriveMood(opts: {
   return { energy, danceability, valence, mood, emotions };
 }
 
-// ---- Top-level analysis ----
 export function analyzeBuffer(buf: AudioBuffer): AnalysisResult {
   const sr = buf.sampleRate;
   const mono = toMono(buf);

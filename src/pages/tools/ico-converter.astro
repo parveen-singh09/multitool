@@ -91,7 +91,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <style>
   .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
-  /* Checkerboard so transparency is visible in the preview. */
+
   .ico-checker {
     background-image:
       linear-gradient(45deg, #16171a 25%, transparent 25%),
@@ -136,13 +136,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return Array.from(document.querySelectorAll<HTMLInputElement>('.ico-size:checked')).map((c) => Number(c.value)).sort((a, b) => a - b);
   }
 
-  // null = keep transparency; otherwise a CSS color to flatten onto.
   function currentBg(): string | null {
     if (bgSel.value === 'transparent') return null;
     return bgSel.value === 'custom' ? bgCustom.value : bgSel.value;
   }
 
-  // Render the source into a size×size canvas honoring the scaling mode + background.
   function renderCanvas(size: number): HTMLCanvasElement {
     const canvas = document.createElement('canvas');
     canvas.width = size; canvas.height = size;
@@ -176,19 +174,19 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     let offset = headerSize;
     const header = new ArrayBuffer(headerSize);
     const dv = new DataView(header);
-    dv.setUint16(0, 0, true); // reserved
-    dv.setUint16(2, 1, true); // type = icon
+    dv.setUint16(0, 0, true); 
+    dv.setUint16(2, 1, true); 
     dv.setUint16(4, count, true);
     sizes.forEach((s, i) => {
       const base = 6 + i * 16;
-      dv.setUint8(base, s >= 256 ? 0 : s);       // width (0 means 256)
-      dv.setUint8(base + 1, s >= 256 ? 0 : s);   // height
-      dv.setUint8(base + 2, 0);                  // palette
-      dv.setUint8(base + 3, 0);                  // reserved
-      dv.setUint16(base + 4, 1, true);           // color planes
-      dv.setUint16(base + 6, 32, true);          // bpp
-      dv.setUint32(base + 8, pngs[i].byteLength, true); // size
-      dv.setUint32(base + 12, offset, true);     // offset
+      dv.setUint8(base, s >= 256 ? 0 : s);       
+      dv.setUint8(base + 1, s >= 256 ? 0 : s);   
+      dv.setUint8(base + 2, 0);                  
+      dv.setUint8(base + 3, 0);                  
+      dv.setUint16(base + 4, 1, true);           
+      dv.setUint16(base + 6, 32, true);          
+      dv.setUint32(base + 8, pngs[i].byteLength, true); 
+      dv.setUint32(base + 12, offset, true);     
       offset += pngs[i].byteLength;
     });
     return new Blob([header, ...pngs], { type: 'image/x-icon' });
@@ -200,12 +198,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     a.download = name; a.href = url; a.click();
   }
 
-  // Standard favicon snippet, tailored to the sizes the user picked.
   function updateHtml() {
     const sizes = selectedSizes();
     const lines = ['<link rel="icon" type="image/x-icon" href="/favicon.ico">'];
     for (const s of sizes) {
-      if (s === 256) continue; // 256 is the ICO's job, not a PNG link
+      if (s === 256) continue; 
       lines.push(`<link rel="icon" type="image/png" sizes="${s}x${s}" href="/favicon-${s}x${s}.png">`);
     }
     lines.push('<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">');

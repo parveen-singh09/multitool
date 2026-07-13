@@ -74,7 +74,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const err = $('sp-error');
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
 
-  // Plot area leaves room for axes (left = freq, bottom = time, right = legend).
   const PAD = { l: 56, b: 28, t: 8, r: 64 };
   const plot = () => ({ x: PAD.l, y: PAD.t, w: canvas.width - PAD.l - PAD.r, h: canvas.height - PAD.t - PAD.b });
 
@@ -90,7 +89,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const freqScale = () => ($('sp-freqscale') as HTMLSelectElement).value;
   const floorDb = () => Number(($('sp-floor') as HTMLInputElement).value);
 
-  // Compact colormaps: piecewise-linear control points sampled for t in 0..1.
   const MAPS: Record<string, [number, number, number][]> = {
     viridis: [[68,1,84],[59,82,139],[33,145,140],[94,201,98],[253,231,37]],
     magma: [[0,0,4],[81,18,124],[183,55,121],[252,137,97],[252,253,191]],
@@ -110,7 +108,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const p = plot();
     ctx.fillStyle = '#8a8f98'; ctx.font = '11px ui-sans-serif, system-ui'; ctx.textBaseline = 'middle';
     const nyquist = sr / 2;
-    // Frequency axis (left)
+
     ctx.textAlign = 'right';
     const fTicks = freqScale() === 'log' ? [100, 500, 1000, 5000, 10000, 20000] : [0, 5000, 10000, 15000, 20000];
     for (const f of fTicks) {

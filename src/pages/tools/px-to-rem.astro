@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="px-to-rem">
   <div class="flex flex-col gap-6">
-    <!-- Settings -->
+
     <div class="flex flex-wrap items-end gap-x-6 gap-y-3">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Root font size (base)
@@ -37,7 +37,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <p id="pr-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
 
-    <!-- Single-value conversion -->
     <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Pixels (px)
@@ -73,7 +72,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </label>
     </div>
 
-    <!-- CSS snippet + live preview -->
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         CSS snippet
@@ -100,7 +98,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Batch / CSS conversion -->
     <div class="flex flex-col gap-3 border-t border-hairline pt-6">
       <div class="flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -140,7 +137,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Quick reference -->
     <div>
       <span class="text-[13px] text-ink-subtle">Quick reference</span>
       <div id="pr-table" class="mt-2 overflow-hidden rounded-md border border-hairline"></div>
@@ -188,7 +184,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const batchOut = document.getElementById('pr-batch-out')!;
   const batchUnit = document.getElementById('pr-batch-unit') as HTMLSelectElement;
 
-  // 1px = 0.75pt at the CSS reference of 96px per inch (72pt per inch).
   const PT_PER_PX = 0.75;
 
   function base(): number {
@@ -204,8 +199,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     errEl.classList.add('hidden');
   }
 
-  // Round per the precision selector. 'auto' trims to 5 decimals and drops
-  // trailing zeros; a fixed decimal count keeps trailing zeros (toFixed).
   function fmt(n: number): string {
     if (!isFinite(n)) return '';
     const p = precSel.value;
@@ -213,7 +206,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return n.toFixed(Number(p));
   }
 
-  // Convert a raw px number to the four dependent units.
   function setFromPx(v: number) {
     const b = base();
     rem.value = fmt(v / b);
@@ -273,7 +265,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </table>`;
   }
 
-  // --- Batch conversion: rewrite every `<number>px` in the pasted text. ---
   const PX_RX = /(-?\d*\.?\d+)px\b/gi;
   let batchResult = '';
 

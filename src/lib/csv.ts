@@ -1,53 +1,39 @@
-// A dependency-free CSV parser + serializer. Pure functions and a small state
-// machine — no DOM, no Node streams — so it runs unchanged in the browser, in
-// web/service workers, in Cloudflare Workers, and in Node.
-//
-// It is a feature superset of the npm `csv-parser` package (separator, quote,
-// escape, headers, mapHeaders, mapValues, skipLines, skipComments, maxRowBytes,
-// strict, newline) and adds things a Node-stream parser can't offer here:
-// synchronous whole-string parsing, an incremental push parser, a Web Streams
-// TransformStream, auto delimiter/newline detection, BOM stripping, optional
-// value casting/trimming, and a matching `stringify`.
+
 
 export type CsvRow = Record<string, string> | string[];
 
 export interface CsvOptions {
-  /** Field separator. Defaults to ',' unless `detect` finds another. Alias: `delimiter`. */
+
   separator?: string;
-  /** Alias for `separator`. */
+
   delimiter?: string;
-  /** Quote character used to wrap fields containing specials. Default `"`. */
+
   quote?: string;
-  /** Character that escapes a quote inside a quoted field. Default = `quote` (RFC-4180 doubling). */
+
   escape?: string;
-  /**
-   * Header handling:
-   *  - `true`  (default): treat the first data row as headers; rows become objects.
-   *  - `false`: no headers; rows become string[] arrays.
-   *  - `string[]`: use these as headers; the first row is data, not consumed.
-   */
+
   headers?: boolean | string[];
-  /** Transform or drop each header. Return a new name, or `null`/`false` to drop that column. */
+
   mapHeaders?: (args: { header: string; index: number }) => string | null | false | undefined;
-  /** Transform each cell value before it lands in the row. */
+
   mapValues?: (args: { header: string; index: number; value: string }) => unknown;
-  /** Explicit newline. Default: auto-detect (`\r\n`, `\n`, or `\r`). */
+
   newline?: string;
-  /** Skip this many raw lines before parsing begins. Default 0. */
+
   skipLines?: number;
-  /** Skip comment lines. `true` uses '#'; pass a string to use a custom prefix. Default false. */
+
   skipComments?: boolean | string;
-  /** Throw if a row's column count differs from the header count. Default false. */
+
   strict?: boolean;
-  /** Max bytes (UTF-16 code units here) allowed in a single row; throws if exceeded. */
+
   maxRowBytes?: number;
-  /** Trim leading/trailing whitespace from every unquoted field. Default false. */
+
   trim?: boolean;
-  /** Coerce numbers, booleans, and empty→'' into typed values (objects mode). Default false. */
+
   cast?: boolean;
-  /** Auto-detect the separator from the first line when `separator` is unset. Default true. */
+
   detect?: boolean;
-  /** Strip a leading UTF-8 BOM if present. Default true. */
+
   bom?: boolean;
 }
 
@@ -86,11 +72,8 @@ function resolve(text: string, opts: CsvOptions): Resolved {
   };
 }
 
-/* ─────────────────────── delimiter / newline detection ─────────────────────── */
-
 const COMMON_DELIMS = [',', ';', '\t', '|'];
 
-/** Guess the delimiter by counting candidates outside quotes on the first non-empty line. */
 export function detectDelimiter(text: string): string {
   const nl = /\r\n|\n|\r/;
   let line = '';
@@ -112,17 +95,12 @@ export function detectDelimiter(text: string): string {
   return best;
 }
 
-/* ─────────────────────────── core state machine ─────────────────────────── */
-
-// A push parser: feed it text with write(), call end() to flush. It handles
-// quoted fields, escaped quotes, embedded newlines, and mixed line endings. It
-// buffers only the current in-progress row, so it streams in constant memory.
 class Machine {
   private field = '';
   private row: string[] = [];
   private inQuotes = false;
-  private afterQuote = false; // just closed a quote; expecting sep, newline, or EOF
-  private pendingCR = false; // saw '\r'; decide \r vs \r\n on next char
+  private afterQuote = false; 
+  private pendingCR = false; 
   private rowChars = 0;
   private started = false;
 
@@ -133,22 +111,21 @@ class Machine {
     for (let i = 0; i < chunk.length; i++) {
       const c = chunk[i];
 
-      // Resolve a held CR now that we can see the following char.
       if (this.pendingCR) {
         this.pendingCR = false;
-        if (c === '\n') { continue; } // \r\n — the row was already emitted on \r
+        if (c === '\n') { continue; } 
       }
 
       if (this.inQuotes) {
         if (c === escape && escape !== quote) {
-          // Escape char: next char is literal.
+
           const next = chunk[i + 1];
           if (next !== undefined) { this.push(next); i++; }
-          else this.field += c; // trailing escape at chunk edge — keep literal
+          else this.field += c; 
           continue;
         }
         if (c === quote) {
-          if (chunk[i + 1] === quote) { this.push(quote); i++; } // doubled quote
+          if (chunk[i + 1] === quote) { this.push(quote); i++; } 
           else { this.inQuotes = false; this.afterQuote = true; }
           continue;
         }
@@ -172,7 +149,7 @@ class Machine {
 
   end(): void {
     if (this.pendingCR) this.pendingCR = false;
-    // Emit a final row only if there is content in progress.
+
     if (this.field !== '' || this.row.length > 0 || this.inQuotes) {
       this.endRow();
     }

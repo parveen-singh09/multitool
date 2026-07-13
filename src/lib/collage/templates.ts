@@ -1,25 +1,18 @@
-// Full pre-designed collage scenes (background + decorative text + stickers +
-// tilted photo frames), as opposed to the bare photo grids in layouts.ts.
-// All positions/sizes are NORMALIZED (0..1 of the canvas) so a template scales
-// to whatever canvas size is active. The editor builds Fabric objects from these
-// descriptors and leaves the photo slots fillable from the upload tray.
-//
-// Templates are GENERATED from reusable arrangements (slot layouts, 3-6 photos)
-// crossed with per-occasion themes — instead of hand-authoring every scene.
+
 
 export interface TplSlot {
-  x: number; y: number; w: number; h: number; // normalized frame box
-  angle?: number;        // tilt in degrees
-  frame?: string;        // matte/border color (the "polaroid" edge)
-  border?: number;       // border thickness as a fraction of the slot's short side (default 0.05)
-  radius?: number;       // corner radius, normalized to canvas width
+  x: number; y: number; w: number; h: number; 
+  angle?: number;        
+  frame?: string;        
+  border?: number;       
+  radius?: number;       
 }
 
 export interface TplText {
   text: string;
-  x: number; y: number;  // center, normalized
-  size: number;          // font size as a fraction of canvas height
-  family: string;        // must match a FONTS family
+  x: number; y: number;  
+  size: number;          
+  family: string;        
   color: string;
   angle?: number;
   weight?: 'normal' | 'bold';
@@ -29,15 +22,15 @@ export interface TplText {
 
 export interface TplDeco {
   svg: string;
-  x: number; y: number;  // center, normalized
-  size: number;          // as a fraction of canvas width
+  x: number; y: number;  
+  size: number;          
   angle?: number;
 }
 
 export interface TplBorder {
   color: string;
-  width: number;         // px at design scale, applied as fraction of canvas min-dimension
-  inset: number;         // normalized inset from each edge
+  width: number;         
+  inset: number;         
 }
 
 export interface Template {
@@ -51,9 +44,6 @@ export interface Template {
   deco: TplDeco[];
 }
 
-// ---------------------------------------------------------------------------
-// Decorative SVGs (viewBox 0 0 100 100), loaded like stickers by the editor.
-// ---------------------------------------------------------------------------
 const svg = (body: string) =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${body}</svg>`;
 

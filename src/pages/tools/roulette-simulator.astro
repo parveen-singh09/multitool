@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="roulette-simulator">
   <div class="flex flex-col gap-5">
-    <!-- Stat tiles -->
+
     <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
       <div class="panel panel-lift p-3"><div id="rs-balance" class="font-display text-xl font-semibold text-primary-hover">1,000</div><div class="mt-1 text-[13px] text-ink-subtle">Chips</div></div>
       <div class="panel p-3"><div id="rs-ontable" class="font-mono text-lg text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">On table</div></div>
@@ -13,7 +13,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </div>
 
     <div class="grid grid-cols-1 gap-5 lg:grid-cols-[240px_1fr]">
-      <!-- Wheel -->
+
       <div class="flex flex-col items-center gap-3">
         <div class="rs-wheel-box">
           <svg id="rs-wheel" viewBox="0 0 200 200" class="rs-wheel" aria-hidden="true"></svg>
@@ -29,19 +29,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </label>
       </div>
 
-      <!-- Felt + betting -->
       <div class="flex flex-col gap-4">
         <div id="rs-felt" class="rs-felt"></div>
 
         <p id="rs-msg" class="min-h-5 text-[13px] text-ink-subtle" role="status"></p>
 
-        <!-- Chip tray -->
         <div class="flex flex-wrap items-center gap-2">
           <span class="text-[13px] text-ink-subtle">Chip</span>
           <div id="rs-chips" class="flex flex-wrap gap-2"></div>
         </div>
 
-        <!-- Controls -->
         <div class="flex flex-wrap gap-2">
           <button id="rs-spin" class="btn btn-primary">Spin</button>
           <button id="rs-undo" class="btn btn-secondary">Undo</button>
@@ -54,13 +51,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Recent results strip -->
     <div class="panel panel-lift p-4">
       <div class="mb-2 text-[13px] text-ink-subtle">Recent</div>
       <div id="rs-recent" class="flex flex-wrap gap-1.5"><span class="text-[13px] text-ink-tertiary">No spins yet.</span></div>
     </div>
 
-    <!-- Hot / cold + history -->
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <div class="panel panel-lift p-4">
         <div class="mb-2 text-[13px] text-ink-subtle">Hot & cold (by count)</div>
@@ -106,7 +101,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     font-family: var(--font-mono, monospace); font-size: 20px; font-weight: 600; color: var(--color-ink, #f7f8f8); z-index: 1;
   }
 
-  /* Felt table */
   .rs-felt { position: relative; overflow-x: auto; padding-bottom: 4px; }
   .rs-grid {
     display: grid; gap: 2px; min-width: 520px;
@@ -127,14 +121,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   .rs-zerowrap { grid-column: 1; grid-row: 1 / span 3; display: flex; flex-direction: column; gap: 2px; }
   .rs-zerowrap .rs-cell { flex: 1; }
 
-  /* Inside-bet nodes (splits, streets, corners, six-lines, basket) */
   .rs-node {
     position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px;
     border-radius: 999px; background: transparent; cursor: pointer; z-index: 3;
   }
   .rs-node:hover { background: rgba(130,143,255,0.35); box-shadow: 0 0 0 1px var(--color-primary-hover, #828fff); }
 
-  /* Chip badge shown on any bet with money on it */
   .rs-chipbadge {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
     min-width: 22px; height: 22px; padding: 0 4px; border-radius: 999px;
@@ -143,7 +135,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   }
   .rs-node .rs-chipbadge { position: absolute; }
 
-  /* Chip tray buttons */
   .rs-chip {
     width: 40px; height: 40px; border-radius: 999px; font-size: 12px; font-weight: 700; color: #10121a;
     border: 2px dashed rgba(255,255,255,0.6); cursor: pointer; transition: transform 0.1s ease;
@@ -161,9 +152,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   const $ = (id: string) => document.getElementById(id)!;
 
-  // ---- state -------------------------------------------------------------
-  // chipLog is the single source of truth for chips placed this round; `bets`
-  // and the on-felt badges are derived from it. Undo = pop, Clear = empty.
   const CHIP_VALUES = [1, 5, 25, 100, 500];
   const CHIP_COLORS: Record<number, string> = { 1: '#e5e7eb', 5: '#ef4444', 25: '#22c55e', 100: '#38bdf8', 500: '#a78bfa' };
   const START = 1000;
@@ -176,17 +164,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   let selectedChip = 25;
   let autoplaying = false;
   let wheelRot = 0;
-  let chipLog: Placed[] = [];          // chips placed this round, in order
-  let lastRound: Placed[] = [];        // snapshot at last spin, for Rebet/Autoplay
-  const results: number[] = [];        // spun pockets, newest first
+  let chipLog: Placed[] = [];          
+  let lastRound: Placed[] = [];        
+  const results: number[] = [];        
   const counts = new Map<number, number>();
   const history: string[] = [];
-  const anchorMap = new Map<string, HTMLElement>();  // bet id -> felt element, rebuilt with the felt
+  const anchorMap = new Map<string, HTMLElement>();  
 
   const feltEl = $('rs-felt');
   const msg = $('rs-msg');
 
-  // Fold chipLog into per-bet totals: id -> { numbers, amount }.
   function deriveBets(): Map<string, { numbers: number[]; amount: number }> {
     const m = new Map<string, { numbers: number[]; amount: number }>();
     for (const p of chipLog) {
@@ -202,8 +189,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return t;
   }
 
-  // ---- felt construction -------------------------------------------------
-  // value at felt position (row 0..2 top→bottom, col 0..11 left→right)
   const val = (r: number, c: number) => c * 3 + (3 - r);
   const numCells: HTMLElement[][] = [[], [], []];
   let overlay: HTMLElement;
@@ -214,7 +199,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const grid = document.createElement('div');
     grid.className = 'rs-grid';
 
-    // Zero column (0, plus 00 for American).
     const zeroWrap = document.createElement('div');
     zeroWrap.className = 'rs-zerowrap';
     const zeros = variant === 'american' ? [0, 37] : [0];
@@ -224,7 +208,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }
     grid.appendChild(zeroWrap);
 
-    // 1–36 number cells.
     for (let r = 0; r < 3; r++) {
       for (let c = 0; c < 12; c++) {
         const n = val(r, c);
@@ -236,7 +219,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       }
     }
 
-    // Column bets (2:1) — right edge, one per row. Row r covers that felt row.
     for (let r = 0; r < 3; r++) {
       const nums: number[] = [];
       for (let c = 0; c < 12; c++) nums.push(val(r, c));
@@ -246,7 +228,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       grid.appendChild(cell);
     }
 
-    // Dozens (row 4).
     const dozens: Array<[string, number, number]> = [['1st 12', 1, 12], ['2nd 12', 13, 24], ['3rd 12', 25, 36]];
     dozens.forEach(([txt, lo, hi], i) => {
       const nums = range(lo, hi);

@@ -1,9 +1,4 @@
-// Themes (concrete hex — a standalone exported .svg can't read CSS vars),
-// layout orientations, and canvas size presets. The default "linear-dark" theme
-// uses DESIGN.md tokens so an exported chart matches the site: root box is the
-// one lavender accent, child boxes sit on surface-2, connectors use the strong
-// hairline. Other themes stay single-accent to honour the "no second chromatic
-// accent" rule per chart.
+
 
 import type { OrgTheme } from './types';
 
@@ -20,8 +15,6 @@ export function getTheme(id: string): OrgTheme {
   return ORG_THEMES.find((t) => t.id === id) ?? ORG_THEMES[0];
 }
 
-// Orientation of the tree. The layout engine computes a top-down tidy tree, then
-// transforms coordinates to realise the other three.
 export type Orientation = 'top-down' | 'bottom-up' | 'left-right' | 'right-left';
 
 export interface LayoutPreset {
@@ -44,12 +37,11 @@ export function getLayout(id: string): LayoutPreset {
 export interface SizePreset {
   id: string;
   label: string;
-  // Box dimensions + spacing in px. The canvas grows to fit the whole tree, so
-  // these tune the box/gap scale rather than a fixed frame.
+
   boxW: number;
   boxH: number;
-  gapX: number; // gap between sibling subtrees
-  gapY: number; // gap between levels
+  gapX: number; 
+  gapY: number; 
 }
 
 export const SIZE_PRESETS: SizePreset[] = [

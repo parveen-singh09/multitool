@@ -127,7 +127,6 @@ const FORMATS = [
     return n >>> 0;
   }
 
-  // Flexible parse: dotted IPv4, or a single value in decimal / 0x hex / 0o octal / 0b binary.
   function parseAny(raw: string): { n: number } | { err: string } {
     const s = raw.trim();
     if (!s) return { err: 'empty' };
@@ -156,7 +155,6 @@ const FORMATS = [
     else if (a < 224) { cls = 'C'; mask = '255.255.255.0 (/24)'; }
     else if (a < 240) { cls = 'D (multicast)'; mask = '—'; }
 
-    // IANA special-purpose ranges, most specific first.
     let type = 'Public';
     if (a === 0) type = 'This network (0.0.0.0/8)';
     else if (a === 10) type = 'Private (10.0.0.0/8)';

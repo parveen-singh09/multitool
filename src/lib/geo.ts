@@ -1,7 +1,4 @@
-// Country list + Indian state/UT list shared by the document generators'
-// structured address blocks. India leads the country list because the GST
-// fields (GSTIN, state) are India-centric; the state dropdown only applies
-// when India is the selected country.
+
 
 export const COUNTRIES: string[] = [
   'India',
@@ -58,8 +55,6 @@ export const COUNTRIES: string[] = [
   'South Korea',
 ];
 
-// The 28 states + 8 union territories of India, alphabetical — matches the
-// order Razorpay's generator uses (Andaman and Nicobar Islands first).
 export const INDIA_STATES: string[] = [
   'Andaman and Nicobar Islands',
   'Andhra Pradesh',

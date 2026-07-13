@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="weight-converter">
   <div id="wc-root" class="flex flex-col gap-5">
-    <!-- Converter row -->
+
     <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
       <div class="flex flex-col gap-1">
         <label class="text-sm text-ink-subtle" for="wc-from-val">From</label>
@@ -30,7 +30,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Precision / formatting controls -->
     <div class="flex flex-wrap items-end gap-4">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Decimal places
@@ -54,7 +53,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p id="wc-formula" class="text-[13px] text-ink-tertiary"></p>
     <p id="wc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
 
-    <!-- Convert to every unit -->
     <div>
       <p class="mb-2 flex items-center justify-between text-[13px] text-ink-subtle">
         <span id="wc-alllabel">1 Kilogram in every unit</span>
@@ -85,8 +83,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
-  // Self-contained weight/mass converter. Factors are grams-per-unit (base = gram),
-  // using exact SI-derived constants. Everything runs in-browser.
+
   const UNITS: Record<string, number> = {
     Microgram: 1e-6,
     Milligram: 1e-3,
@@ -127,16 +124,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return (value * UNITS[from]) / UNITS[to];
   }
 
-  // Format a number honoring the decimal-places and grouping controls.
   function fmt(n: number): string {
     if (!isFinite(n)) return '∞';
     if (n === 0) return '0';
     const abs = Math.abs(n);
     const dp = decimals.value;
-    // Extreme magnitudes stay in exponential — grouping/toFixed would be unreadable.
+
     if (abs >= 1e15 || abs < 1e-6) return n.toExponential(dp === 'auto' ? 6 : Number(dp));
     let num: number;
-    if (dp === 'auto') num = Math.round(n * 1e9) / 1e9; // trim floating noise
+    if (dp === 'auto') num = Math.round(n * 1e9) / 1e9; 
     else num = Number(n.toFixed(Number(dp)));
     if (!groupBox.checked) {
       return dp === 'auto' ? String(num) : num.toFixed(Number(dp));

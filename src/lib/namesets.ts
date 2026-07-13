@@ -1,7 +1,4 @@
-// Nationality name banks for the fake name generator. Each set has male (m)
-// and female (f) first names plus a shared surname list (last). All fictional,
-// commonly-occurring given/family names per culture — no real individuals.
-// Kept in its own module so a page importing one nationality tree-shakes the rest.
+
 
 export interface NameSet {
   label: string;

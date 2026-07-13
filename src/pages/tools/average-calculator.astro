@@ -60,7 +60,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const mean = sum / nums.length;
     const sorted = [...nums].sort((a, b) => a - b);
 
-    // median of a sorted slice
     const medianOf = (arr: number[]) => {
       const m = Math.floor(arr.length / 2);
       return arr.length % 2 ? arr[m] : (arr[m - 1] + arr[m]) / 2;
@@ -73,13 +72,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const modes = [...freq.entries()].filter(([, f]) => f === maxFreq).map(([n]) => n);
     const mode = maxFreq === 1 ? 'none' : modes.join(', ');
 
-    // variance / standard deviation
     const sqDiff = nums.reduce((a, b) => a + (b - mean) ** 2, 0);
     const popVar = sqDiff / nums.length;
     const popSd = Math.sqrt(popVar);
     const sampleSd = nums.length > 1 ? Math.sqrt(sqDiff / (nums.length - 1)) : NaN;
 
-    // quartiles — exclusive median-of-halves (Tukey) method
     const half = Math.floor(sorted.length / 2);
     const lower = sorted.slice(0, half);
     const upper = sorted.slice(sorted.length % 2 ? half + 1 : half);

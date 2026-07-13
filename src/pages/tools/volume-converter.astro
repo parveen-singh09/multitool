@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="volume-converter">
   <div id="vc-root" class="flex flex-col gap-6">
-    <!-- Converter -->
+
     <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
       <div class="flex flex-col gap-1">
         <label class="text-sm text-ink-subtle" for="vc-from-val">From</label>
@@ -41,7 +41,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Precision + formula -->
     <div class="flex flex-wrap items-center gap-3">
       <label class="flex items-center gap-2 text-[13px] text-ink-subtle">
         Decimals
@@ -60,7 +59,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <p id="vc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
 
-    <!-- Live preview + all-units breakdown -->
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-[auto_1fr]">
       <div class="panel panel-lift flex flex-col items-center gap-2 p-4">
         <svg id="vc-svg" width="110" height="150" viewBox="0 0 110 150" role="img" aria-label="Volume preview"></svg>
@@ -73,7 +71,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Common conversions -->
     <div>
       <p class="mb-2 text-[13px] text-ink-subtle">Common volume equivalents</p>
       <div id="vc-table" class="overflow-hidden rounded-md border border-hairline"></div>
@@ -109,14 +106,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
-  // Self-contained volume converter. Base unit: LITRE.
-  // No shared lib — the task scopes edits to this one file only.
-  // Volume is numeric, not code/data, so no syntax highlighting applies.
 
   type Group = 'Metric' | 'US customary' | 'Imperial (UK)';
   interface Unit { name: string; litres: number; group: Group; }
 
-  // litres per 1 of each unit (exact factors where they exist)
   const UNITS: Unit[] = [
     { name: 'Millilitre (mL)',        litres: 0.001,             group: 'Metric' },
     { name: 'Cubic centimetre (cc)',  litres: 0.001,             group: 'Metric' },
@@ -166,7 +159,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const svg = $('vc-svg');
   const svgLabel = $('vc-svg-label');
 
-  // ---- number formatting ----
   function fmt(n: number): string {
     if (!isFinite(n)) return n > 0 ? '∞' : '-∞';
     if (n === 0) return '0';
@@ -180,13 +172,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return s.includes('.') ? s.replace(/\.?0+$/, '') : s;
   }
 
-  // ---- input parsing: decimals, "3/4", and "1 1/2" mixed fractions ----
   function parseValue(raw: string): number {
     const t = raw.trim();
     if (t === '') return NaN;
     const plain = Number(t);
     if (!isNaN(plain)) return plain;
-    // mixed fraction:  whole  num/den   (e.g. "1 1/2")
+
     const mixed = t.match(/^(-?\d+)\s+(\d+)\s*\/\s*(\d+)$/);
     if (mixed) {
       const [, w, n, d] = mixed;
@@ -195,7 +186,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const sign = w.startsWith('-') ? -1 : 1;
       return sign * (Math.abs(Number(w)) + Number(n) / den);
     }
-    // simple fraction:  num/den   (e.g. "3/4")
+
     const frac = t.match(/^(-?\d+)\s*\/\s*(\d+)$/);
     if (frac) {
       const den = Number(frac[2]);
@@ -207,13 +198,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const toLitres = (v: number, unit: string) => v * BY_NAME[unit].litres;
   const fromLitres = (l: number, unit: string) => l / BY_NAME[unit].litres;
 
-  // ---- SVG beaker fill preview (log-scaled so any magnitude shows) ----
   function drawBeaker(litres: number) {
     if (!isFinite(litres) || litres < 0) { svg.innerHTML = ''; svgLabel.textContent = '—'; return; }
-    // Map litres to a 0..1 fill across ~8 decades (1 µL .. 100 kL) on a log scale.
+
     let frac = 0;
     if (litres > 0) {
-      const lo = -6, hi = 5; // log10 litres range
+      const lo = -6, hi = 5; 
       frac = Math.min(1, Math.max(0.02, (Math.log10(litres) - lo) / (hi - lo)));
     }
     const x = 20, w = 70, top = 12, bot = 138, h = bot - top;
@@ -337,9 +327,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       await navigator.clipboard.writeText(toVal.value);
       copyBtn.textContent = 'Copied!';
       setTimeout(() => (copyBtn.textContent = 'Copy'), 1400);
-    } catch {
-      /* clipboard blocked — no-op */
-    }
+    } catch 
   });
 
   fillUnits();

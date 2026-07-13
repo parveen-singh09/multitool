@@ -106,7 +106,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
-  // Grams per US customary cup (236.588 ml) for each ingredient, grouped for the dropdown.
+
   const GROUPS: { label: string; items: { name: string; gPerCup: number }[] }[] = [
     {
       label: 'Flour & grains',
@@ -165,18 +165,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     },
   ];
 
-  // Flat list with a synthetic "Custom" entry appended.
   const INGREDIENTS = GROUPS.flatMap((g) => g.items);
-  const CUSTOM = INGREDIENTS.length; // index sentinel for custom
+  const CUSTOM = INGREDIENTS.length; 
 
-  // Fixed volumes (ml). Cup standard is user-selectable; the rest are absolute.
   const TBSP_ML = 14.7867648;
   const TSP_ML = 4.92892159;
   const FLOZ_ML = 29.5735296;
-  const STICK_ML = 8 * TBSP_ML; // 1 stick butter = 8 tbsp = 1/2 US cup
+  const STICK_ML = 8 * TBSP_ML; 
   const OZ_G = 28.3495231;
   const LB_G = 453.59237;
-  const US_CUP_ML = 236.588; // reference cup the densities are measured against
+  const US_CUP_ML = 236.588; 
 
   const amountEl = document.getElementById('gc-amount') as HTMLInputElement;
   const fromEl = document.getElementById('gc-from') as HTMLSelectElement;
@@ -192,7 +190,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const refBody = document.getElementById('gc-ref')!;
   const refName = document.getElementById('gc-ref-name')!;
 
-  // Build grouped <optgroup> options + a Custom entry.
   ingredientEl.innerHTML =
     GROUPS.map(
       (g) =>
@@ -205,7 +202,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   ingredientEl.value = String(INGREDIENTS.findIndex((x) => x.name === 'All-purpose flour'));
 
   function activeDensity(): number {
-    // grams per US customary cup for the current selection
+
     if (Number(ingredientEl.value) === CUSTOM) return parseFloat(customEl.value) || 0;
     return INGREDIENTS[Number(ingredientEl.value)].gPerCup;
   }
@@ -229,7 +226,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return Math.round(n).toLocaleString();
   }
 
-  // Nearest common baking fraction for cup values.
   function asFraction(cups: number): string {
     const whole = Math.floor(cups);
     const frac = cups - whole;

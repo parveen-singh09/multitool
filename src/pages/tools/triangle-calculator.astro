@@ -38,7 +38,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p id="t-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
 
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <!-- Solved values -->
+
       <div class="flex flex-col gap-3">
         <div class="grid grid-cols-3 gap-2 text-center text-[13px]">
           <div class="panel p-3"><div id="o-a" class="font-mono text-ink">—</div><div class="mt-1 text-ink-subtle">a</div></div>
@@ -57,7 +57,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <p id="t-ambig" class="hidden text-[12px] text-ink-tertiary"></p>
       </div>
 
-      <!-- Diagram -->
       <div class="panel p-4">
         <svg id="t-diagram" viewBox="0 0 300 240" class="w-full" role="img" aria-label="Triangle diagram"></svg>
       </div>
@@ -93,7 +92,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return isNaN(n) ? NaN : n;
   }
 
-  // Convert an entered angle to degrees for internal math; and back for display.
   const toDeg = (a: number) => (unit === 'rad' ? a * DEG : a);
   const fromDeg = (a: number) => (unit === 'rad' ? a / DEG : a);
   const angleLabel = (deg: number) => (unit === 'rad' ? round(deg / DEG) + ' rad' : round(deg) + '°');
@@ -112,7 +110,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     let a = val('t-a'), b = val('t-b'), c = val('t-c');
     let A = val('t-A'), B = val('t-B'), C = val('t-C');
-    // angles → degrees internally
+
     if (A !== null && !isNaN(A)) A = toDeg(A);
     if (B !== null && !isNaN(B)) B = toDeg(B);
     if (C !== null && !isNaN(C)) C = toDeg(C);
@@ -128,7 +126,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     let ambig = '';
 
-    // If two angles known, the third follows from A+B+C = 180.
     if (angles >= 2) {
       const sum = (A || 0) + (B || 0) + (C || 0);
       if (A === null) A = 180 - (B! + C!);
@@ -142,41 +139,36 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     const rad = (d: number) => d / DEG;
 
-    // ---- Solve remaining sides/angles ----
     if (sides === 3) {
-      // SSS: law of cosines for each angle.
+
       const [x, y, z] = [a!, b!, c!];
       if (x + y <= z || x + z <= y || y + z <= x) { showError('These sides violate the triangle inequality.'); return; }
       A = Math.acos((y * y + z * z - x * x) / (2 * y * z)) * DEG;
       B = Math.acos((x * x + z * z - y * y) / (2 * x * z)) * DEG;
       C = 180 - A - B;
     } else if (angles >= 2) {
-      // ASA / AAS: one side + all angles → law of sines.
-      // Need a known side with its opposite angle to set the scale.
+
       const known = a !== null && a > 0 ? { s: a, ang: A! } : b !== null && b > 0 ? { s: b, ang: B! } : { s: c!, ang: C! };
       const k = known.s / Math.sin(rad(known.ang));
       if (a === null || a === 0) a = k * Math.sin(rad(A!));
       if (b === null || b === 0) b = k * Math.sin(rad(B!));
       if (c === null || c === 0) c = k * Math.sin(rad(C!));
     } else {
-      // Two sides + one angle.
-      // Determine if the angle is included (SAS) or opposite a side (SSA).
-      // Which side is missing?
+
       const missingSide = a === null || a === 0 ? 'a' : b === null || b === 0 ? 'b' : 'c';
       const knownAngle = A !== null && A > 0 ? 'A' : B !== null && B > 0 ? 'B' : 'C';
-      // Included angle is the one whose opposite side is the missing one (SAS).
+
       if (knownAngle.toLowerCase() === missingSide) {
-        // SAS: the known angle is between the two known sides → law of cosines.
+
         if (missingSide === 'a') { a = Math.sqrt(b! * b! + c! * c! - 2 * b! * c! * Math.cos(rad(A!))); }
         else if (missingSide === 'b') { b = Math.sqrt(a! * a! + c! * c! - 2 * a! * c! * Math.cos(rad(B!))); }
         else { c = Math.sqrt(a! * a! + b! * b! - 2 * a! * b! * Math.cos(rad(C!))); }
-        // now SSS-style for the remaining angles
+
         A = Math.acos((b! * b! + c! * c! - a! * a!) / (2 * b! * c!)) * DEG;
         B = Math.acos((a! * a! + c! * c! - b! * b!) / (2 * a! * c!)) * DEG;
         C = 180 - A - B;
       } else {
-        // SSA (ambiguous): two sides + a non-included angle → law of sines.
-        // Use the known angle with its opposite (known) side.
+
         const pair = A !== null && A > 0 && a !== null && a > 0 ? { ang: A, opp: a, other: b! > 0 ? b! : c!, otherName: b! > 0 ? 'B' : 'C' }
           : B !== null && B > 0 && b !== null && b > 0 ? { ang: B, opp: b, other: a! > 0 ? a! : c!, otherName: a! > 0 ? 'A' : 'C' }
           : { ang: C!, opp: c!, other: a! > 0 ? a! : b!, otherName: a! > 0 ? 'A' : 'B' };

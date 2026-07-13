@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="unit-converter">
   <div class="flex flex-col gap-5">
-    <!-- Category tabs -->
+
     <div class="flex flex-wrap gap-2" role="tablist" aria-label="Unit category">
       <button data-cat="length" class="uc-tab btn btn-secondary" aria-selected="true">Length</button>
       <button data-cat="weight" class="uc-tab btn btn-secondary" aria-selected="false">Weight</button>
@@ -20,7 +20,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <button data-cat="angle" class="uc-tab btn btn-secondary" aria-selected="false">Angle</button>
     </div>
 
-    <!-- From / swap / To -->
     <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
       <div class="flex flex-col gap-1">
         <label class="text-sm text-ink-subtle" for="uc-from-val">From</label>
@@ -42,7 +41,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Options: precision + formula -->
     <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-ink-subtle">
       <label class="flex items-center gap-2">
         Precision
@@ -60,13 +58,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <p id="uc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
 
-    <!-- Common conversions -->
     <div class="flex flex-col gap-2">
       <span class="eyebrow text-primary-hover">Common conversions</span>
       <div id="uc-presets" class="flex flex-wrap gap-2"></div>
     </div>
 
-    <!-- Live conversion table: the From value in every unit of the category -->
     <div class="flex flex-col gap-2">
       <span class="eyebrow text-primary-hover">Conversion table</span>
       <div class="panel overflow-hidden">
@@ -107,11 +103,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
-  // Factor-based units are relative to a base unit per category. Temperature is
-  // affine (scale + offset) so it's handled specially.
-  // ponytail: only temperature needs affine handling; every other category is a
-  // pure multiplicative factor. Add an offset field if a future category (e.g.
-  // some pressure gauges) needs one.
+
   type Cat = { units: Record<string, number>; unit?: string };
   const DATA: Record<string, Cat> = {
     length: { unit: 'm', units: { Nanometre: 1e-9, Micrometre: 1e-6, Millimetre: 0.001, Centimetre: 0.01, Metre: 1, Kilometre: 1000, Inch: 0.0254, Foot: 0.3048, Yard: 0.9144, Mile: 1609.344, 'Nautical mile': 1852 } },
@@ -128,7 +120,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     angle: { unit: 'rad', units: { Degree: 0.0174532925199433, Radian: 1, Gradian: 0.0157079632679, Arcminute: 0.000290888208666, Arcsecond: 0.0000048481368111, Turn: 6.28318530717959 } },
   };
 
-  // Popular presets → [category, fromUnit, toUnit, label]
   const PRESETS: [string, string, string, string][] = [
     ['length', 'Centimetre', 'Inch', 'cm → in'],
     ['length', 'Kilometre', 'Mile', 'km → mi'],

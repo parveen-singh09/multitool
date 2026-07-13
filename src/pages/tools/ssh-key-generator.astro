@@ -14,7 +14,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </select>
       </label>
       <label class="flex flex-1 flex-col gap-1 text-sm text-ink-subtle">Comment
-        <input id="ss-comment" class="field" value="user@toolcities" spellcheck="false" />
+        <input id="ss-comment" class="field" value="user@toolsilk" spellcheck="false" />
       </label>
       <button id="ss-gen" type="button" class="btn btn-primary">Generate key pair</button>
     </div>
@@ -64,7 +64,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   let dlName = 'id_ed25519';
 
-  // --- OpenSSH binary encoding helpers (work on Uint8Array) ---
   const concat = (parts: Uint8Array[]) => {
     const total = parts.reduce((n, p) => n + p.length, 0);
     const out = new Uint8Array(total);
@@ -73,7 +72,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return out;
   };
   const u32 = (n: number) => new Uint8Array([(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255]);
-  // SSH "string": 4-byte big-endian length prefix, then the bytes.
+
   const sshStr = (bytes: Uint8Array) => concat([u32(bytes.length), bytes]);
   const strBytes = (s: string) => new TextEncoder().encode(s);
   const b64 = (bytes: Uint8Array) => {
@@ -82,7 +81,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return btoa(bin);
   };
 
-  // OpenSSH public-key line: "ssh-ed25519 <base64(blob)> comment"
   const ed25519PublicKeyToOpenSSH = (pub: Uint8Array, comment: string) => {
     const blob = concat([sshStr(strBytes('ssh-ed25519')), sshStr(pub)]);
     return `ssh-ed25519 ${b64(blob)}${comment ? ' ' + comment : ''}`;

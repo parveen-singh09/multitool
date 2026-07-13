@@ -8,14 +8,13 @@ for (let y = 2026; y >= 1981; y--) YEARS.push(y);
 
 <ToolLayout slug="vin-generator">
   <div class="flex flex-col gap-6">
-    <!-- Tabs -->
+
     <div class="flex flex-wrap gap-2" role="tablist" id="vn-tabs">
       <button type="button" class="btn btn-primary" data-tab="generate" aria-selected="true">Generate</button>
       <button type="button" class="btn btn-secondary" data-tab="decode" aria-selected="false">Decode</button>
       <button type="button" class="btn btn-secondary" data-tab="validate" aria-selected="false">Validate</button>
     </div>
 
-    <!-- Generate -->
     <section data-pane="generate" class="flex flex-col gap-4">
       <div class="flex flex-wrap items-end gap-3">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">
@@ -43,7 +42,6 @@ for (let y = 2026; y >= 1981; y--) YEARS.push(y);
       <textarea id="vn-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated VINs"></textarea>
     </section>
 
-    <!-- Decode -->
     <section data-pane="decode" class="hidden flex-col gap-4">
       <div class="flex flex-wrap items-end gap-3">
         <label class="flex flex-1 flex-col gap-1 text-sm text-ink-subtle">
@@ -56,7 +54,6 @@ for (let y = 2026; y >= 1981; y--) YEARS.push(y);
       <div id="vn-dec-result" class="hidden flex-col gap-3"></div>
     </section>
 
-    <!-- Validate -->
     <section data-pane="validate" class="hidden flex-col gap-4">
       <p class="text-sm text-ink-subtle">Paste one VIN per line. Each is checked for length, character set, and the position-9 check digit.</p>
       <textarea id="vn-val-in" class="field min-h-40 resize-y font-mono text-[13px] uppercase"
@@ -89,7 +86,6 @@ for (let y = 2026; y >= 1981; y--) YEARS.push(y);
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
-  // --- Tabs ---
   const tabs = $('vn-tabs');
   const panes = document.querySelectorAll<HTMLElement>('[data-pane]');
   tabs.addEventListener('click', (e) => {
@@ -108,7 +104,6 @@ for (let y = 2026; y >= 1981; y--) YEARS.push(y);
     });
   });
 
-  // --- Generate ---
   const makeEl = $<HTMLSelectElement>('vn-make');
   const yearEl = $<HTMLSelectElement>('vn-year');
   const countEl = $<HTMLInputElement>('vn-count');
@@ -138,7 +133,6 @@ for (let y = 2026; y >= 1981; y--) YEARS.push(y);
     URL.revokeObjectURL(a.href);
   });
 
-  // --- Decode ---
   const decIn = $<HTMLInputElement>('vn-dec-in');
   const decResult = $('vn-dec-result');
   const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
@@ -179,7 +173,6 @@ for (let y = 2026; y >= 1981; y--) YEARS.push(y);
   $('vn-dec-btn').addEventListener('click', doDecode);
   decIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') doDecode(); });
 
-  // --- Validate ---
   const valIn = $<HTMLTextAreaElement>('vn-val-in');
   const valResult = $('vn-val-result');
   $('vn-val-btn').addEventListener('click', () => {

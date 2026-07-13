@@ -45,7 +45,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <button id="po-dl" class="btn btn-primary w-fit">Download PDF</button>
 
-    <!-- Live preview -->
     <div class="flex flex-col gap-2">
       <span class="text-sm text-ink-subtle">Preview</span>
       <div id="po-preview" class="rounded-lg border border-hairline bg-white p-8 text-[13px] text-[#08090a] shadow-lg"></div>
@@ -76,14 +75,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   ];
   ($('po-date') as HTMLInputElement).value = new Date().toISOString().slice(0, 10);
 
-  // Option value is the ISO code; symbolOf() drives the on-screen total,
-  // pdfPrefixOf() the WinAnsi-safe PDF prefix.
   ($('po-currency') as HTMLSelectElement).innerHTML = CURRENCIES
     .map((c) => `<option value="${c.code}"${c.code === 'USD' ? ' selected' : ''}>${c.code} — ${c.name} (${c.symbol})</option>`)
     .join('');
 
-  // Structured buyer / vendor blocks (Razorpay-style). They compose into the
-  // multi-line string[] the PDF builder consumes, so pdfdoc.ts is untouched.
   renderParty($('po-from'), {
     prefix: 'po-from',
     companyPlaceholder: 'Company Name',

@@ -1,31 +1,31 @@
-// Shared PDF builders for the document generators (invoice, receipt, PO).
-// pdf-lib is imported dynamically so it only loads on pages that export a PDF.
-// Everything runs client-side; no document ever leaves the browser.
+
+
+
 
 export interface LineItem { description: string; qty: number; price: number; }
 
 export interface DocData {
-  docType: string;          // "INVOICE", "RECEIPT", "PURCHASE ORDER"
+  docType: string;          
   number: string;
   date: string;
-  fromLabel: string;        // "From" / "Store" / "Buyer"
-  from: string[];           // multi-line block
-  toLabel: string;          // "Bill To" / "Customer" / "Vendor"
+  fromLabel: string;        
+  from: string[];           
+  toLabel: string;          
   to: string[];
   items: LineItem[];
   currency: string;
-  taxRate: number;          // percent, or flat amount when taxMode === 'flat'
+  taxRate: number;          
   notes?: string;
-  // Optional extras — all default to today's behavior so the receipt and PO
-  // tools that share this builder are unaffected.
+
+
   taxMode?: 'percent' | 'flat';
   discount?: { mode: 'percent' | 'flat'; value: number };
-  shipping?: number;                                   // flat amount
-  tip?: { mode: 'percent' | 'flat'; value: number };  // gratuity, added after tax
+  shipping?: number;                                   
+  tip?: { mode: 'percent' | 'flat'; value: number };  
   dueDate?: string;
-  terms?: string;                                      // payment terms line
+  terms?: string;                                      
   logo?: { bytes: Uint8Array; type: 'png' | 'jpg' };
-  accent?: string;                                     // #rrggbb brand color for the title + total line
+  accent?: string;                                     
 }
 
 export interface Totals {
@@ -37,12 +37,12 @@ export interface Totals {
   total: number;
 }
 
-// Receipt-specific data. Reuses the DocData math (computeTotals) but carries the
-// payment fields a receipt has and an invoice doesn't, plus the paper style.
+
+
 export interface ReceiptData extends DocData {
   style?: 'thermal' | 'standard';
-  paymentMethod?: string;   // "Cash", "Visa •••• 4242", …
-  amountPaid?: number;      // amount tendered; change = amountPaid - total
+  paymentMethod?: string;   
+  amountPaid?: number;      
   cashier?: string;
 }
 
@@ -50,13 +50,7 @@ export function subtotal(items: LineItem[]): number {
   return items.reduce((s, i) => s + i.qty * i.price, 0);
 }
 
-/**
- * Single source of truth for invoice/receipt math — the page's live preview/total
- * and the PDF both call this so the numbers can never diverge. Discount applies to
- * the subtotal; tax applies to the discounted amount; shipping then tip are added
- * last. Tip percent is computed off the discounted, pre-tax subtotal (standard
- * restaurant convention).
- */
+
 export function computeTotals(d: DocData): Totals {
   const sub = subtotal(d.items);
   let discount = 0;

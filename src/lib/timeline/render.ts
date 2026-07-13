@@ -1,19 +1,10 @@
-// The single render path: Timeline data -> SVG string. The preview injects this
-// string live; every export (SVG/PNG/PDF/clipboard) derives from the same string
-// so nothing can drift.
-//
-// SVG has no text auto-wrap, so we keep one offscreen 2D context purely for
-// measureText and emit <tspan> lines. We deliberately do NOT use <foreignObject>:
-// it renders blank when the SVG is drawn onto a canvas in some browsers, which
-// would silently break PNG/PDF/clipboard export.
+
 
 import type { Timeline, TimelineEvent, TimelineTheme, TLDate } from './types';
 import { formatDate } from './types';
 
 const FONT = 'Inter, system-ui, sans-serif';
 
-// Offscreen context for text measurement. Guarded so this module can still be
-// imported in a non-DOM context (it just won't wrap as tightly).
 let measureCtx: CanvasRenderingContext2D | null = null;
 function ctx(): CanvasRenderingContext2D | null {
   if (measureCtx) return measureCtx;
@@ -25,7 +16,7 @@ function ctx(): CanvasRenderingContext2D | null {
 
 function measure(text: string, px: number, weight = '400'): number {
   const c = ctx();
-  if (!c) return text.length * px * 0.55; // rough fallback
+  if (!c) return text.length * px * 0.55; 
   c.font = `${weight} ${px}px ${FONT}`;
   return c.measureText(text).width;
 }

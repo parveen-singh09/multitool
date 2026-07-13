@@ -1,13 +1,4 @@
-// The single render path: OrgChart + layout geometry -> SVG string, plus the
-// box geometry map for pointer hit-testing. The preview injects the string live;
-// every export (SVG/PNG/PDF) derives from the same string so nothing drifts.
-// Same discipline as the gantt tool's render.ts.
-//
-// SVG has no text auto-wrap, so we keep one offscreen 2D context purely for
-// measureText (name/title get single-line ellipsis truncation). Photos are drawn
-// with <image> + a <clipPath> circle — both rasterize correctly onto a canvas.
-// We deliberately avoid <foreignObject>: it renders blank when the SVG is drawn
-// onto a canvas in some browsers, which would silently break PNG/PDF export.
+
 
 import type { OrgChart, OrgTheme, Person } from './types';
 import { rootsOf } from './types';
@@ -16,7 +7,6 @@ import { layoutChart, type BoxGeom } from './layout';
 
 const FONT = 'Inter, system-ui, sans-serif';
 
-// --- offscreen text measurement (copied from gantt render) ------------------
 let measureCtx: CanvasRenderingContext2D | null = null;
 function ctx(): CanvasRenderingContext2D | null {
   if (measureCtx) return measureCtx;

@@ -1,19 +1,15 @@
-// Structured "party" address block (Razorpay-style) shared by the invoice and
-// receipt generators. Instead of one free-text textarea, each party is a set of
-// labelled fields — company, contact, tax id, address, country/state/city — that
-// compose back into the multi-line string[] the PDF builder (pdfdoc.ts) already
-// consumes. That keeps the PDF/preview code untouched: only the input UI changes.
+
 
 import { COUNTRIES, INDIA_STATES } from './geo';
 
 export interface PartyOptions {
-  prefix: string;            // id namespace, e.g. "iv-from"
-  companyLabel: string;      // "Company Name" / "Client Company"
+  prefix: string;            
+  companyLabel: string;      
   companyPlaceholder: string;
-  taxLabel: string;          // "GSTIN" / "Client GSTIN"
-  addressLabel: string;      // "Company Address" / "Client Address"
+  taxLabel: string;          
+  addressLabel: string;      
   addressPlaceholder: string;
-  contact?: boolean;         // show a Contact Person field (business side only)
+  contact?: boolean;         
   contactPlaceholder?: string;
   defaultCompany?: string;
   defaultAddress?: string;

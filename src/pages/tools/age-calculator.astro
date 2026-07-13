@@ -74,8 +74,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       return;
     }
 
-    // Robust Y/M/D via clamped month anchoring (avoids negative-day borrow errors
-    // for end-of-month pairs like Jan 31 -> Mar 1).
     const addMonthsClamped = (d: Date, m: number): Date => {
       const idx = d.getMonth() + m;
       const y = d.getFullYear() + Math.floor(idx / 12);
@@ -101,10 +99,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     minutesEl.textContent = (totalDays * 24 * 60).toLocaleString();
     secondsEl.textContent = (totalDays * 86400).toLocaleString();
 
-    // Day of the week born
     bornEl.textContent = start.toLocaleDateString(undefined, { weekday: 'long' });
 
-    // Next birthday relative to the "age at" date.
     let nextBday = new Date(end.getFullYear(), start.getMonth(), start.getDate());
     if (nextBday < end) nextBday = new Date(end.getFullYear() + 1, start.getMonth(), start.getDate());
     const daysToBday = Math.ceil((nextBday.getTime() - end.getTime()) / 86400000);

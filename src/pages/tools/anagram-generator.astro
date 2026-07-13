@@ -14,7 +14,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <button id="an-scramble" class="btn btn-secondary ml-auto">Scramble</button>
     </div>
 
-    <!-- Advanced options (full-anagram mode) -->
     <details id="an-opts" class="rounded-lg border border-hairline bg-surface-1 px-4 py-3">
       <summary class="cursor-pointer text-sm text-ink-subtle select-none">Advanced options</summary>
       <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -74,10 +73,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const summary = $('an-summary')!;
 
   const A = 'a'.charCodeAt(0);
-  const RESULT_CAP = 400; // stop after this many anagrams — keeps pathological inputs bounded
-  const STEP_CAP = 4_000_000; // recursion-node ceiling; bail with partial results if hit
+  const RESULT_CAP = 400; 
+  const STEP_CAP = 4_000_000; 
 
-  // 26-slot letter-count vector for a lowercased [a-z] string.
   function sig(s: string): Int32Array {
     const v = new Int32Array(26);
     for (let i = 0; i < s.length; i++) {
@@ -88,9 +86,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   }
   const clean = (s: string) => s.toLowerCase().replace(/[^a-z]/g, '');
 
-  // ── Dictionary ────────────────────────────────────────────────
   let WORDS: string[] = [];
-  let SIGS: Uint8Array; // flat 26-per-word letter counts
+  let SIGS: Uint8Array; 
   let dictReady: Promise<void> | null = null;
 
   function loadDict(): Promise<void> {
@@ -99,9 +96,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const res = await fetch('/squaredle-dict.txt.gz');
       if (!res.ok) throw new Error('dict fetch failed');
       const buf = new Uint8Array(await res.arrayBuffer());
-      // The dev server may transparently gunzip (Content-Encoding: gzip). Only
-      // run DecompressionStream when the bytes are actually still gzipped
-      // (magic 0x1f 0x8b); otherwise decode the already-plain bytes directly.
+
       const gzipped = buf[0] === 0x1f && buf[1] === 0x8b;
       let text: string;
       if (gzipped && 'DecompressionStream' in window) {
@@ -126,22 +121,18 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return dictReady;
   }
 
-  // ── State ─────────────────────────────────────────────────────
   let mode: 'full' | 'within' = 'full';
   let lastList: string[] = [];
 
   const titleCase = (s: string) =>
     s.replace(/\b[a-z]/g, (m) => m.toUpperCase());
 
-  // ── Full multi-word anagram search ────────────────────────────
   function fullAnagrams(pool: Int32Array): { results: string[]; capped: boolean } {
     const total = pool.reduce((a, b) => a + b, 0);
     const maxWords = Math.max(1, Math.min(6, parseInt(maxWordsEl.value) || 2));
     const minLen = Math.max(1, parseInt(minLenEl.value) || 1);
     const maxLen = parseInt(maxLenEl.value) || total;
 
-    // Candidate words: those that fit the pool and pass length filters.
-    // Store index (into SIGS) + length; sort by length desc for nicer output.
     const cand: { i: number; len: number; w: string }[] = [];
     for (let i = 0; i < WORDS.length; i++) {
       const w = WORDS[i];
@@ -167,7 +158,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         results.push(chosen.join(' '));
         return;
       }
-      if (chosen.length >= maxWords) return; // out of word budget with letters left
+      if (chosen.length >= maxWords) return; 
       for (let ci = start; ci < cand.length; ci++) {
         if (++steps > STEP_CAP) { capped = true; return; }
         const { i, len } = cand[ci];
@@ -180,7 +171,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         if (!fits) continue;
         for (let k = 0; k < 26; k++) remaining[k] -= SIGS[base + k];
         chosen.push(cand[ci].w);
-        recurse(ci, left - len); // ci (not ci+1) allows word repeats; start=ci dedups permutations
+        recurse(ci, left - len); 
         chosen.pop();
         for (let k = 0; k < 26; k++) remaining[k] += SIGS[base + k];
         if (results.length >= RESULT_CAP || capped) return;
@@ -190,7 +181,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return { results, capped };
   }
 
-  // ── Words-within (subset) search ──────────────────────────────
   function wordsWithin(pool: Int32Array, self: string): string[] {
     const total = pool.reduce((a, b) => a + b, 0);
     const minLen = Math.max(1, parseInt(minLenEl.value) || 1);
@@ -209,7 +199,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return hits;
   }
 
-  // ── Render ────────────────────────────────────────────────────
   function chip(w: string) {
     return `<span class="rounded-md border border-hairline bg-surface-1 px-2.5 py-1 text-[15px] text-ink">${w}</span>`;
   }

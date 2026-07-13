@@ -3,15 +3,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
 <ToolLayout slug="avatar-generator">
-  <!-- Mode toggle -->
+
   <div class="mb-6 flex gap-1 rounded-lg border border-hairline bg-surface-1 p-1">
     <button id="mode-char-btn" type="button" class="mode-tab flex-1 rounded-md px-3 py-2 text-sm font-medium">Character</button>
     <button id="mode-init-btn" type="button" class="mode-tab flex-1 rounded-md px-3 py-2 text-sm font-medium">Initials &amp; identicon</button>
   </div>
 
-  <!-- ===== Character builder ===== -->
   <div id="mode-character" class="grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr]">
-    <!-- Preview + actions -->
+
     <div class="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
       <div class="panel panel-lift flex aspect-square items-center justify-center overflow-hidden p-3">
         <div id="av-preview" class="h-full w-full [&>svg]:h-full [&>svg]:w-full"></div>
@@ -40,11 +39,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Controls -->
     <div id="av-controls" class="flex flex-col gap-3"></div>
   </div>
 
-  <!-- ===== Initials & identicon (original) ===== -->
   <div id="mode-initials" class="hidden grid-cols-1 gap-6 md:grid-cols-2">
     <div class="flex flex-col gap-3">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Name or seed
@@ -97,7 +94,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   type Dict = Record<string, any>;
 
-  // ---- Option data (mirrors the Avataaars schema) ----
   const HATS = new Set(['hat', 'hijab', 'turban', 'winterHat1', 'winterHat02', 'winterHat03', 'winterHat04']);
   const TOPS = ['none', 'shortFlat', 'shortRound', 'shortWaved', 'shortCurly', 'theCaesar', 'theCaesarAndSidePart', 'sides', 'shaggy', 'shaggyMullet', 'frizzle', 'dreads01', 'dreads02', 'bob', 'bun', 'curly', 'curvy', 'dreads', 'frida', 'fro', 'froBand', 'longButNotTooLong', 'miaWallace', 'shavedSides', 'straight01', 'straight02', 'straightAndStrand', 'bigHair', 'hat', 'hijab', 'turban', 'winterHat1', 'winterHat02', 'winterHat03', 'winterHat04'];
   const EYEBROWS = ['default', 'defaultNatural', 'flatNatural', 'raisedExcited', 'raisedExcitedNatural', 'upDown', 'upDownNatural', 'angry', 'angryNatural', 'frownNatural', 'sadConcerned', 'sadConcernedNatural', 'unibrowNatural'];
@@ -113,7 +109,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const CLOTHES = ['262e33', '3c4f5c', '5199e4', '25557c', '65c9ff', '929598', 'e6e6e6', 'b1e2ff', 'a7ffc4', 'ffafb9', 'ff488e', 'ff5c5c', 'ffffb1', 'ffffff'];
   const BG = ['b6e3f4', 'c0aede', 'd1d4f9', 'ffd5dc', 'ffdfbf', '65c9ff', 'a7ffc4', 'ffafb9', 'ff5c5c', 'ffffb1', 'e6e6e6', '262e33'];
 
-  // ---- State ----
   const state: Dict = {
     top: 'shortFlat', hairColor: '2c1b18', hatColor: '262e33',
     accessories: 'none', accessoriesColor: '262e33',
@@ -136,7 +131,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
   }
 
-  // Turn our flat state into DiceBear options.
   function toOpts(s: Dict): Dict {
     const o: Dict = {
       eyes: [s.eyes], eyebrows: [s.eyebrows], mouth: [s.mouth],
@@ -144,16 +138,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       clothing: [s.clothing], clothesColor: [s.clothesColor], clothingGraphic: [s.clothingGraphic],
       radius: RADIUS[s.shape],
     };
-    // Top / bald
+
     if (s.top === 'none') { o.topProbability = 0; }
     else { o.top = [s.top]; o.topProbability = 100; if (isHat(s.top)) o.hatColor = [s.hatColor]; else o.hairColor = [s.hairColor]; }
-    // Accessories
+
     if (s.accessories === 'none') { o.accessoriesProbability = 0; }
     else { o.accessories = [s.accessories]; o.accessoriesProbability = 100; o.accessoriesColor = [s.accessoriesColor]; }
-    // Facial hair
+
     if (s.facialHair === 'none') { o.facialHairProbability = 0; }
     else { o.facialHair = [s.facialHair]; o.facialHairProbability = 100; o.facialHairColor = [s.facialHairColor]; }
-    // Background
+
     if (s.bgType === 'transparent') { o.backgroundColor = ['transparent']; }
     else if (s.bgType === 'gradient') { o.backgroundColor = [s.bgColor, lighten(s.bgColor, 0.45)]; o.backgroundType = ['gradientLinear']; }
     else { o.backgroundColor = [s.bgColor]; o.backgroundType = ['solid']; }
@@ -175,7 +169,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       .replace(/^./, (c) => c.toUpperCase());
   }
 
-  // ---- Picker groups ----
   interface StyleGroup { kind: 'style'; key: string; label: string; opts: string[]; visible?: () => boolean; }
   interface ColorGroup { kind: 'color'; key: string; label: string; opts: string[]; visible?: () => boolean; }
   type Group = StyleGroup | ColorGroup;
@@ -199,12 +192,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   ];
 
   const controls = $('av-controls');
-  // Map of key -> {details, grid} for updates
+
   const built: Dict = {};
 
   function thumbSvg(g: Group, value: string): string {
-    // Render a mini avatar forcing this one attribute; for the clothingGraphic
-    // group, also force graphicShirt so the print is visible.
+
     const s = { ...state, [g.key]: value };
     if (g.key === 'clothingGraphic') s.clothing = 'graphicShirt';
     return svgFor(s);

@@ -91,13 +91,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div id="ba-delta" class="mt-2 text-sm text-ink-muted"></div>
     </div>
 
-    <!-- Per-factor impact breakdown -->
     <div class="panel p-5">
       <div class="mb-3 text-sm text-ink-muted">What's moving your number</div>
       <div id="ba-breakdown" class="flex flex-col gap-2 text-sm"></div>
     </div>
 
-    <!-- Improvement tips tied to worst factors -->
     <div id="ba-tips-wrap" class="hidden panel p-5">
       <div class="mb-3 text-sm text-ink-muted">Where you'd gain the most</div>
       <ul id="ba-tips" class="flex flex-col gap-2 text-sm text-ink-subtle"></ul>
@@ -126,7 +124,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     'ba-alcohol': 'Alcohol', 'ba-stress': 'Stress', 'ba-bmi': 'Body weight (BMI)',
     'ba-social': 'Social wellbeing', 'ba-rhr': 'Resting heart rate', 'ba-family': 'Family longevity',
   };
-  // Tip shown when a factor is adding years (value above threshold).
+
   const TIPS: Record<string, string> = {
     'ba-exercise': 'Aim for at least 150 minutes of moderate activity a week.',
     'ba-sleep': 'Target 7–9 hours of sleep on a consistent schedule.',
@@ -164,11 +162,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       factors.push({ id, value: v });
     }
 
-    // Bound the swing so it stays plausible.
     delta = Math.max(-15, Math.min(18, delta));
     const bio = Math.max(1, Math.round((age + delta) * 10) / 10);
 
-    // Breakdown, sorted by magnitude (biggest movers first).
     const nonZero = factors.filter((f) => f.value !== 0).sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
     breakdownEl.innerHTML = nonZero.length
       ? nonZero

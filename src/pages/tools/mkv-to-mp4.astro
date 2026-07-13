@@ -1,13 +1,6 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
-// A self-contained MKV → MP4 converter. It intentionally does NOT use the
-// shared MediaConverter component because MKV → MP4 has a killer feature the
-// shared always-re-encode path can't offer: fast stream copy (remux). MKV and
-// MP4 are both containers, so when the MKV already holds an MP4-compatible
-// codec (H.264/H.265/AV1) we copy the streams into MP4 in seconds, losslessly,
-// instead of a multi-minute libx264 re-encode. Re-encode mode stays available
-// for maximum compatibility, resizing, rotation, volume and audio control.
-// Everything runs client-side via the shared ffmpeg.wasm core — no uploads.
+
 ---
 
 <ToolLayout slug="mkv-to-mp4">
@@ -20,10 +13,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </label>
 
     <div id="mc-panel" class="hidden flex-col gap-4">
-      <!-- File list -->
+
       <div id="mc-files" class="flex flex-col gap-2"></div>
 
-      <!-- Mode -->
       <div class="panel flex flex-col gap-4 p-4">
         <div class="flex flex-col gap-2">
           <span class="eyebrow text-ink-subtle">Conversion mode</span>
@@ -45,7 +37,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           </div>
         </div>
 
-        <!-- Re-encode options -->
         <div id="mc-encode-opts" class="hidden flex-col gap-4">
           <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <label class="flex flex-col gap-1 text-sm text-ink-subtle">Quality
@@ -102,7 +93,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           </div>
         </div>
 
-        <!-- Trim (both modes) -->
         <details class="group">
           <summary class="cursor-pointer select-none text-[13px] text-ink-subtle hover:text-ink">Trim options</summary>
           <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -165,24 +155,21 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     scale: number;
     fps: number;
     rotate: number;
-    audio: string; // kbps as string, or 'mute'
-    volume: number; // percent, 0 = unset
+    audio: string; 
+    volume: number; 
     trimStart: number;
     trimEnd: number;
   }
 
-  // The single non-trivial piece: turning options into ffmpeg args. Kept pure
-  // so the dev-only self-check below can exercise it.
   function buildArgs(o: Opts, input: string, output: string): string[] {
     const start = o.trimStart > 0 ? o.trimStart : 0;
     const args: string[] = [];
-    if (start > 0) args.push('-ss', String(start)); // fast seek before -i
+    if (start > 0) args.push('-ss', String(start)); 
     args.push('-i', input);
     if (o.trimEnd > start) args.push('-to', String(o.trimEnd - start));
 
     if (o.mode === 'copy') {
-      // Map first video + any audio, copy codecs. Subtitles/data are dropped —
-      // MKV subtitle formats rarely survive a raw copy into MP4.
+
       args.push('-map', '0:v:0?', '-map', '0:a?', '-c', 'copy', '-movflags', '+faststart', output);
       return args;
     }

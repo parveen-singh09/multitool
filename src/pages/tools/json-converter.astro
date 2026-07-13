@@ -128,7 +128,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   let rawOutput = '';
 
   const EXT: Record<string, string> = { json: 'json', yaml: 'yaml', xml: 'xml', toml: 'toml', csv: 'csv', tsv: 'tsv' };
-  // Format value → highlight.js language id. csv/tsv have no grammar (plaintext); toml → hljs 'ini'.
+
   const HL_LANG: Record<string, string> = { json: 'json', yaml: 'yaml', xml: 'xml', toml: 'ini', csv: 'plaintext', tsv: 'plaintext' };
 
   function getIndent(): string | number {
@@ -136,7 +136,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return v === 'tab' ? '\t' : Number(v);
   }
 
-  // XML → JSON via the browser DOMParser (DOM-only, so it lives here not in the lib).
   function xmlToJson(text: string): Json {
     const doc = new DOMParser().parseFromString(text, 'application/xml');
     const pe = doc.querySelector('parsererror');
@@ -176,20 +175,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return obj;
   }
 
-  // JSON → TOML. No lib serializer exists, so it's inlined here.
-  // ponytail: covers the common shape (top-level object, nested [tables],
-  // [[arrays-of-tables]], inline arrays/tables). Datetimes stay strings; add a
-  // real datetime type if a caller needs unquoted TOML dates.
   function tomlKey(k: string): string {
     return /^[A-Za-z0-9_-]+$/.test(k) ? k : JSON.stringify(k);
   }
   function tomlValue(v: Json): string {
-    if (v === null) return '""'; // TOML has no null; emptiest safe representation
+    if (v === null) return '""'; 
     if (typeof v === 'string') return JSON.stringify(v);
     if (typeof v === 'number') return Number.isFinite(v) ? String(v) : JSON.stringify(String(v));
     if (typeof v === 'boolean') return String(v);
     if (Array.isArray(v)) return '[' + v.map(tomlValue).join(', ') + ']';
-    // Inline table for a nested object appearing in an array/inline context.
+
     return '{ ' + Object.entries(v).map(([k, val]) => `${tomlKey(k)} = ${tomlValue(val)}`).join(', ') + ' }';
   }
   function isPlainObj(v: Json): v is { [k: string]: Json } {

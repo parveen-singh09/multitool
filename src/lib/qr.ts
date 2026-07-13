@@ -1,7 +1,5 @@
-// QR rendering + payload building beyond what the `qrcode` lib draws.
-// The lib only emits flat black squares; we pull its raw module matrix and
-// render custom dot/eye shapes, gradients and a center logo ourselves, and
-// share the geometry between a canvas sink (PNG) and an SVG-string sink.
+
+
 import QRCode from 'qrcode';
 
 export type EC = 'L' | 'M' | 'Q' | 'H';
@@ -14,20 +12,20 @@ export interface QRPaint {
   fg: string;
   gradient: GradientType;
   gradTo: string;
-  gradRotation: number; // degrees, linear only
+  gradRotation: number; 
 }
 
 export interface QROptions {
   ec: EC;
-  margin: number; // quiet-zone in modules
+  margin: number; 
   dot: DotStyle;
   eyeFrame: EyeFrame;
   eyeBall: EyeBall;
   paint: QRPaint;
-  eyeColor: string | null; // null = use body color
-  bg: string | null; // null = transparent
+  eyeColor: string | null; 
+  bg: string | null; 
   logo: HTMLImageElement | null;
-  logoRatio: number; // 0..0.4 fraction of QR width
+  logoRatio: number; 
 }
 
 export const DEFAULT_OPTIONS: QROptions = {
@@ -42,8 +40,6 @@ export const DEFAULT_OPTIONS: QROptions = {
   logo: null,
   logoRatio: 0.22,
 };
-
-// ---- payload builders ------------------------------------------------------
 
 const esc = (s: string) => s.replace(/([\\;,:"])/g, '\\$1');
 

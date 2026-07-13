@@ -78,12 +78,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
-  // Self-contained power converter. The shared UnitConverter component only
-  // exposes 6 units and no precision/copy, so this page carries its own richer
-  // engine (log units dBm/dBW, ~20 units, precision control) inline.
+
   type Unit = { name: string; group: string; factor?: number; log?: 'dBm' | 'dBW' };
 
-  // Base unit = watt. Linear units store a factor; dBm/dBW are logarithmic.
   const UNITS: Unit[] = [
     { name: 'Milliwatt (mW)', group: 'SI', factor: 0.001 },
     { name: 'Watt (W)', group: 'SI', factor: 1 },
@@ -122,7 +119,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const table = document.getElementById('pc-table') as HTMLElement;
   const err = document.getElementById('pc-error') as HTMLElement;
 
-  // watts <-> unit. Log units are referenced to 1 mW (dBm) or 1 W (dBW).
   function toBase(v: number, u: Unit): number {
     if (u.log === 'dBm') return Math.pow(10, v / 10) / 1000;
     if (u.log === 'dBW') return Math.pow(10, v / 10);
@@ -142,7 +138,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (!isFinite(n)) return n > 0 ? '∞' : '-∞';
     const p = precision.value;
     if (p !== 'auto') return n.toFixed(Number(p));
-    // Auto: significant figures without trailing noise.
+
     if (n === 0) return '0';
     const abs = Math.abs(n);
     if (abs >= 1e15 || abs < 1e-6) return n.toExponential(6);

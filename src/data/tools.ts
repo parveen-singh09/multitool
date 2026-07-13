@@ -1,5 +1,4 @@
-// Central tool registry. Drives the home grid, dynamic routes, sitemap,
-// and per-tool SEO. Each tool is a "district" in ToolCities.
+
 
 import { UNIT_CATEGORIES } from '../lib/units';
 import { MEDIA_CONVERSIONS } from '../lib/media';
@@ -13,21 +12,22 @@ export type ToolCategory =
   | 'Generators'
   | 'Security'
   | 'PDF'
-  | 'Audio & Video';
+  | 'Audio & Video'
+  | 'Device & Sensors';
 
 export interface Tool {
   slug: string;
   name: string;
-  /** Short tagline for cards. */
+
   tagline: string;
-  /** Longer meta description (~150 chars) for the tool page. */
+
   description: string;
   category: ToolCategory;
-  /** SEO keywords targeted by this tool page. */
+
   keywords: string[];
-  /** Simple line-icon path drawn on a 24x24 viewbox. */
+
   icon: string;
-  /** Hide the tagline in the tool page header (still used for cards & SEO). */
+
   hideTagline?: boolean;
 }
 
@@ -195,7 +195,6 @@ export const tools: Tool[] = [
     icon: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z',
   },
 
-  // ---- Text ----
   {
     slug: 'text-diff',
     name: 'Text Diff Checker',
@@ -245,7 +244,6 @@ export const tools: Tool[] = [
     icon: 'M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1',
   },
 
-  // ---- Developer ----
   {
     slug: 'regex-tester',
     name: 'Regex Tester',
@@ -348,7 +346,6 @@ export const tools: Tool[] = [
     icon: 'M4 17l6-6-6-6M20 17l-6-6 6-6',
   },
 
-  // ---- Image ----
   {
     slug: 'image-resizer',
     name: 'Image Resizer',
@@ -414,7 +411,6 @@ export const tools: Tool[] = [
     icon: 'M12 3a9 9 0 1 0 0 18 3 3 0 0 0 0-6h-1a2 2 0 0 1 0-4h2a4 4 0 0 0 0-8ZM7.5 12a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z',
   },
 
-  // ---- Generators ----
   {
     slug: 'uuid-generator',
     name: 'UUID Generator',
@@ -450,7 +446,6 @@ export const tools: Tool[] = [
     icon: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2ZM8.5 8.5h.01M15.5 8.5h.01M8.5 15.5h.01M15.5 15.5h.01M12 12h.01',
   },
 
-  // ---- Converters ----
   {
     slug: 'unit-converter',
     name: 'Unit Converter',
@@ -468,7 +463,6 @@ export const tools: Tool[] = [
     icon: 'M4 7h16M4 7l3-3M4 7l3 3M20 17H4M20 17l-3-3M20 17l-3 3',
   },
 
-  // ---- Calculators ----
   {
     slug: 'percentage-calculator',
     name: 'Percentage Calculator',
@@ -502,7 +496,6 @@ export const tools: Tool[] = [
     icon: 'M8 3v4M16 3v4M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM12 12v4M10 14h4',
   },
 
-  // ---- Calculators: Financial ----
   {
     slug: 'loan-calculator',
     name: 'Loan Calculator',
@@ -594,7 +587,6 @@ export const tools: Tool[] = [
     icon: 'M9 14l6-6M9.5 9h.01M14.5 14h.01M5 3h14a1 1 0 0 1 1 1v17l-3-2-3 2-3-2-3 2V4a1 1 0 0 1 1-1Z',
   },
 
-  // ---- Calculators: Health & Fitness ----
   {
     slug: 'bmi-calculator',
     name: 'BMI Calculator',
@@ -676,7 +668,6 @@ export const tools: Tool[] = [
     icon: 'M12 2a7 7 0 0 0-4 12.7V21a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-6.3A7 7 0 0 0 12 2ZM12 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z',
   },
 
-  // ---- Calculators: Math ----
   {
     slug: 'scientific-calculator',
     name: 'Scientific Calculator',
@@ -738,7 +729,6 @@ export const tools: Tool[] = [
     icon: 'M6 6h12v12H6zM3 9h3M3 15h3M18 9h3M18 15h3M9 3v3M15 3v3M9 18v3M15 18v3',
   },
 
-  // ---- Calculators: Everyday / Date & Time ----
   {
     slug: 'date-difference-calculator',
     name: 'Date Difference Calculator',
@@ -780,7 +770,6 @@ export const tools: Tool[] = [
     icon: 'M22 10 12 5 2 10l10 5 10-5ZM6 12v5c0 1 3 3 6 3s6-2 6-3v-5M22 10v6',
   },
 
-  // ---- Calculators: Fitness Standards ----
   {
     slug: 'aft-calculator',
     name: 'AFT Calculator',
@@ -802,7 +791,6 @@ export const tools: Tool[] = [
     icon: 'M12 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM8 8h8l-1 6H9zM9 14l-2 8M15 14l2 8',
   },
 
-  // ---- Calculators: AP Exam Scores ----
   {
     slug: 'ap-lang-calculator',
     name: 'AP Lang Score Calculator',
@@ -824,7 +812,6 @@ export const tools: Tool[] = [
     icon: 'M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6M10 10h.01M14 10h.01',
   },
 
-  // ---- Calculators: Health & Medical ----
   {
     slug: 'biological-age-calculator',
     name: 'Biological Age Calculator',
@@ -856,7 +843,6 @@ export const tools: Tool[] = [
     icon: 'M9 3h6M10 3v5l-3 8a3 3 0 0 0 3 4h4a3 3 0 0 0 3-4l-3-8V3M8 14h8',
   },
 
-  // ---- Calculators: Finance & Value ----
   {
     slug: 'texas-paycheck-calculator',
     name: 'Texas Paycheck Calculator',
@@ -908,7 +894,6 @@ export const tools: Tool[] = [
     icon: 'M7 10 3 14l4 4M17 6l4 4-4 4M3 14h13M8 10h13',
   },
 
-  // ---- Calculators: Finance (added) ----
   {
     slug: 'retirement-calculator',
     name: 'Retirement Calculator',
@@ -980,7 +965,6 @@ export const tools: Tool[] = [
     icon: 'M4 20L20 4M8 6a2 2 0 1 1-.01 0M16 18a2 2 0 1 1-.01 0',
   },
 
-  // ---- Calculators: Health & Fitness (added) ----
   {
     slug: 'macro-calculator',
     name: 'Macro Calculator',
@@ -1042,7 +1026,6 @@ export const tools: Tool[] = [
     icon: 'M12 2a7 7 0 0 0-4 12.7V21a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-6.3A7 7 0 0 0 12 2ZM12 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z',
   },
 
-  // ---- Calculators: Math (added) ----
   {
     slug: 'quadratic-calculator',
     name: 'Quadratic Equation Calculator',
@@ -1084,7 +1067,6 @@ export const tools: Tool[] = [
     icon: 'M4 20h16L4 4zM4 16h4v4',
   },
 
-  // ---- Calculators: Everyday / School (added) ----
   {
     slug: 'grade-calculator',
     name: 'Grade Calculator',
@@ -1116,7 +1098,6 @@ export const tools: Tool[] = [
     icon: 'M5 21V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v15M4 21h12M6 8h8M16 9l3 2v6a2 2 0 0 1-2 2',
   },
 
-  // ---- Text / Numerology ----
   {
     slug: 'gematria-calculator',
     name: 'Gematria Calculator',
@@ -1128,7 +1109,6 @@ export const tools: Tool[] = [
     icon: 'M4 7V5h16v2M9 5v14M7 19h4M14 9h6l-6 8h6',
   },
 
-  // ---- Converters: Units (data lives in src/lib/units.ts) ----
   ...UNIT_CATEGORIES.map((c): Tool => ({
     slug: c.slug,
     name: c.name,
@@ -1139,7 +1119,6 @@ export const tools: Tool[] = [
     icon: c.icon,
   })),
 
-  // ---- Converters: Color ----
   {
     slug: 'hex-to-rgb',
     name: 'HEX to RGB Converter',
@@ -1201,7 +1180,6 @@ export const tools: Tool[] = [
     icon: 'M4 4h16v16H4zM4 12h16M12 4v16',
   },
 
-  // ---- Converters: Numbers ----
   {
     slug: 'binary-converter',
     name: 'Binary Converter',
@@ -1263,7 +1241,6 @@ export const tools: Tool[] = [
     icon: 'M3 3v18h18M7 15l3-4 3 2 4-6M18 7h2v2',
   },
 
-  // ---- Text & Data ----
   {
     slug: 'json-converter',
     name: 'JSON to XML / YAML / CSV',
@@ -1325,7 +1302,6 @@ export const tools: Tool[] = [
     icon: 'M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14',
   },
 
-  // ---- Converters: Date & Time ----
   {
     slug: 'timezone-converter',
     name: 'Time Zone Converter',
@@ -1347,7 +1323,6 @@ export const tools: Tool[] = [
     icon: 'M8 3v4M16 3v4M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM8 13h3M8 17h5',
   },
 
-  // ---- Developer / CSS ----
   {
     slug: 'px-to-rem',
     name: 'PX to REM Converter',
@@ -1439,7 +1414,6 @@ export const tools: Tool[] = [
     icon: 'M4 3h16l-1.5 17L12 22l-6.5-2zM8 8h8l-.5 5L12 14l-3.5-1',
   },
 
-  // ---- Converters: Everyday sizes ----
   {
     slug: 'shoe-size-converter',
     name: 'Shoe & Clothing Size Converter',
@@ -1471,7 +1445,6 @@ export const tools: Tool[] = [
     icon: 'M3 5h18v14H3zM7 9h6v6H7z',
   },
 
-  // ---- Image: format converters (canvas-based, no upload) ----
   {
     slug: 'jpg-to-png',
     name: 'JPG to PNG Converter',
@@ -1573,7 +1546,6 @@ export const tools: Tool[] = [
     icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M7 8l-2 2 2 2',
   },
 
-  // ---- Text: voice ----
   {
     slug: 'speech-to-text',
     name: 'Speech to Text',
@@ -1585,7 +1557,6 @@ export const tools: Tool[] = [
     icon: 'M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3ZM5 11a7 7 0 0 0 14 0M12 18v3M8 21h8',
   },
 
-  // ---- Converters: live rates (fetch public data — see privacy policy) ----
   {
     slug: 'currency-converter',
     name: 'Currency Converter',
@@ -1608,7 +1579,6 @@ export const tools: Tool[] = [
     icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM9 8h4a2 2 0 0 1 0 4H9m0 0h4.5a2 2 0 0 1 0 4H9m0-8V6m0 12v-2m2-10v2m0 8v2',
   },
 
-  // ---- PDF (pdf-lib / pdf.js, all client-side) ----
   {
     slug: 'image-to-pdf',
     name: 'Image to PDF Converter',
@@ -1700,7 +1670,6 @@ export const tools: Tool[] = [
     icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h5M8 17h8',
   },
 
-  // ---- Image: format converters needing decode/vectorize libs ----
   {
     slug: 'heic-to-jpg',
     name: 'HEIC to JPG Converter',
@@ -1732,7 +1701,6 @@ export const tools: Tool[] = [
     icon: 'M12 3l9 5v8l-9 5-9-5V8zM12 3v18M3 8l9 5 9-5',
   },
 
-  // ---- Audio & Video: straight format conversions (data in src/lib/media.ts) ----
   ...MEDIA_CONVERSIONS.map((c): Tool => ({
     slug: c.slug,
     name: c.name,
@@ -1743,7 +1711,6 @@ export const tools: Tool[] = [
     icon: c.icon,
   })),
 
-  // ---- Audio & Video: special tools (custom UI) ----
   {
     slug: 'video-to-gif',
     name: 'Video to GIF Converter',
@@ -1805,9 +1772,6 @@ export const tools: Tool[] = [
     icon: 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z',
   },
 
-  // ================= Generators mega-expansion =================
-
-  // ---- Batch 1: IDs & codes ----
   {
     slug: 'upc-generator',
     name: 'UPC Code Generator',
@@ -1929,7 +1893,6 @@ export const tools: Tool[] = [
     icon: 'M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1ZM7 12h4M15 12h2',
   },
 
-  // ---- Batch 2: Secrets & security ----
   {
     slug: 'passphrase-generator',
     name: 'Passphrase Generator',
@@ -2041,7 +2004,6 @@ export const tools: Tool[] = [
     icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM9 12l2 2 4-4',
   },
 
-  // ---- Batch 3: Fake / test data ----
   {
     slug: 'fake-name-generator',
     name: 'Fake Name Generator',
@@ -2143,7 +2105,6 @@ export const tools: Tool[] = [
     icon: 'M4 4h16v16H4zM4 9h16M4 14h16M9 4v16M15 4v16',
   },
 
-  // ---- Batch 4: CSS & design ----
   {
     slug: 'box-shadow-generator',
     name: 'Box Shadow Generator',
@@ -2245,7 +2206,6 @@ export const tools: Tool[] = [
     icon: 'M4 4h4v4H4zM12 4h4v4h-4zM8 8h4v4H8zM16 8h4v4h-4zM4 12h4v4H4zM12 12h4v4h-4z',
   },
 
-  // ---- Batch 5: Image generators (canvas) ----
   {
     slug: 'favicon-generator',
     name: 'Favicon Generator',
@@ -2327,7 +2287,6 @@ export const tools: Tool[] = [
     icon: 'M3 6h18v12H3zM7 10a2 2 0 1 1 0 .01M12 10h5M12 14h5M6 14h3',
   },
 
-  // ---- Batch 6: SEO & config ----
   {
     slug: 'meta-tag-generator',
     name: 'Meta Tag Generator',
@@ -2459,7 +2418,6 @@ export const tools: Tool[] = [
     icon: 'M8 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-2M9 12l2 2 4-4',
   },
 
-  // ---- Batch 7: Writing & naming ----
   {
     slug: 'hashtag-generator',
     name: 'Hashtag Generator',
@@ -2581,7 +2539,6 @@ export const tools: Tool[] = [
     icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21a8 8 0 0 1 16 0M9 8h.01',
   },
 
-  // ---- Batch 8: Random & fun ----
   {
     slug: 'random-string-generator',
     name: 'Random String Generator',
@@ -2743,7 +2700,6 @@ export const tools: Tool[] = [
     icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM8 10h.01M16 10h.01M8 15c1 1.5 2.5 2 4 2s3-.5 4-2',
   },
 
-  // ---- Batch 9: Documents ----
   {
     slug: 'invoice-generator',
     name: 'Invoice Generator',
@@ -2815,7 +2771,6 @@ export const tools: Tool[] = [
     icon: 'M6 2h9l5 5v15H6zM14 2v6h6M9 13h6M9 17h4',
   },
 
-  // ---- Batch 10: Media ----
   {
     slug: 'audio-tone-generator',
     name: 'Audio Tone Generator',
@@ -2967,7 +2922,6 @@ export const tools: Tool[] = [
     icon: 'M5 5h14v14H5zM9 10h.01M15 10h.01M9 15h6',
   },
 
-  // ─── Validators ───────────────────────────────────────────────
   {
     slug: 'email-validator',
     name: 'Email Validator',
@@ -3019,7 +2973,6 @@ export const tools: Tool[] = [
     icon: 'M10 8l-4 4 4 4M14 8l4 4-4 4',
   },
 
-  // ─── Formatters ───────────────────────────────────────────────
   {
     slug: 'xml-formatter',
     name: 'XML Formatter',
@@ -3091,7 +3044,6 @@ export const tools: Tool[] = [
     icon: 'M4 6h16v12H4zM7 15V9l3 3 3-3v6M17 9v6m-2-2l2 2 2-2',
   },
 
-  // ─── Converters (data formats) ────────────────────────────────
   {
     slug: 'yaml-to-json-converter',
     name: 'YAML to JSON Converter',
@@ -3163,7 +3115,6 @@ export const tools: Tool[] = [
     icon: 'M4 6h16M12 6v13M7 19h10',
   },
 
-  // ─── Parsers ──────────────────────────────────────────────────
   {
     slug: 'url-parser',
     name: 'URL Parser',
@@ -3225,7 +3176,6 @@ export const tools: Tool[] = [
     icon: 'M12 7v5l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z',
   },
 
-  // ─── Analyzers ────────────────────────────────────────────────
   {
     slug: 'text-analyzer',
     name: 'Text Analyzer',
@@ -3287,7 +3237,6 @@ export const tools: Tool[] = [
     icon: 'M4 19V5m0 14h16M8 17V9m4 8V6m4 11v-5',
   },
 
-  // ─── Checkers ─────────────────────────────────────────────────
   {
     slug: 'palindrome-checker',
     name: 'Palindrome Checker',
@@ -3369,14 +3318,13 @@ export const tools: Tool[] = [
     icon: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   },
 
-  // ─── Testers ──────────────────────────────────────────────────
   {
     slug: 'typing-speed-tester',
     name: 'Typing Speed Tester',
     tagline: 'Measure your words per minute.',
     description:
       'Free typing speed tester. Type a sample passage and get your words-per-minute, accuracy and error count in real time. Everything runs in your browser — no sign-up needed.',
-    category: 'Text',
+    category: 'Device & Sensors',
     keywords: ['typing speed tester', 'typing test', 'wpm test', 'words per minute test', 'typing speed check'],
     icon: 'M4 7h16v10H4zM7 10h.01M11 10h.01M15 10h.01M8 14h8',
   },
@@ -3386,7 +3334,7 @@ export const tools: Tool[] = [
     tagline: 'How fast are your reflexes?',
     description:
       'Free reaction time tester. Wait for the color to change, then click as fast as you can to measure your reaction time in milliseconds over several rounds. Runs in your browser.',
-    category: 'Text',
+    category: 'Device & Sensors',
     keywords: ['reaction time tester', 'reaction time test', 'reflex test', 'reaction speed test', 'human benchmark'],
     icon: 'M12 7v5l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z',
   },
@@ -3396,7 +3344,7 @@ export const tools: Tool[] = [
     tagline: 'Measure your clicks per second (CPS).',
     description:
       'Free click speed tester. Click as fast as you can within a set time to measure your clicks per second (CPS), with a live counter and your best score. Runs in your browser.',
-    category: 'Text',
+    category: 'Device & Sensors',
     keywords: ['click speed tester', 'cps test', 'clicks per second', 'click speed test', 'click test'],
     icon: 'M9 3v6m-4-2l3 3M3 9h6m3 3l7 3-3 1-1 3-3-7z',
   },
@@ -3406,7 +3354,7 @@ export const tools: Tool[] = [
     tagline: 'Test any display end to end, right in your browser.',
     description:
       'Free screen tester. Cycle full-screen solid colors and gradients to spot dead or stuck pixels and check backlight uniformity on any display. Runs entirely in your browser.',
-    category: 'Image',
+    category: 'Device & Sensors',
     keywords: ['screen tester', 'dead pixel test', 'monitor test', 'stuck pixel checker', 'screen color test'],
     icon: 'M4 5h16v11H4zM9 20h6M12 16v4',
   },
@@ -3431,7 +3379,6 @@ export const tools: Tool[] = [
     icon: 'M3 6h18v12H3zM6 9h.01M10 9h.01M14 9h.01M18 9h.01M8 13h8',
   },
 
-  // ─── Estimators ───────────────────────────────────────────────
   {
     slug: 'reading-time-estimator',
     name: 'Reading Time Estimator',
@@ -3493,7 +3440,6 @@ export const tools: Tool[] = [
     icon: 'M12 3v18M8 7h6a2 2 0 0 1 0 4H9a2 2 0 0 0 0 4h7',
   },
 
-  // ─── Predictors ───────────────────────────────────────────────
   {
     slug: 'gender-predictor',
     name: 'Gender Predictor',
@@ -3555,7 +3501,6 @@ export const tools: Tool[] = [
     icon: 'M4 8h16v11H4zM9 8V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M4 13h16',
   },
 
-  // ─── Simulators ───────────────────────────────────────────────
   {
     slug: 'probability-simulator',
     name: 'Probability Simulator',
@@ -3607,7 +3552,6 @@ export const tools: Tool[] = [
     icon: 'M4 19V5m0 14h16M7 16l3-3 3 1 4-5M18 6h3v3',
   },
 
-  // ─── Makers ───────────────────────────────────────────────────
   {
     slug: 'collage-maker',
     name: 'Collage Maker',
@@ -3669,7 +3613,6 @@ export const tools: Tool[] = [
     icon: 'M5 5h10l4 4v10H5zM15 5v4h4',
   },
 
-  // ─── Creators ─────────────────────────────────────────────────
   {
     slug: 'email-signature-creator',
     name: 'Email Signature Creator',
@@ -3731,7 +3674,6 @@ export const tools: Tool[] = [
     icon: 'M7 10a2 2 0 1 0 0-.01M17 10a2 2 0 1 0 0-.01M5 20v-3a3 3 0 0 1 3-3M19 20v-3a3 3 0 0 0-3-3M12 14a3 3 0 0 0-3 3v3h6v-3a3 3 0 0 0-3-3z',
   },
 
-  // ─── Downloaders (client-side only) ───────────────────────────
   {
     slug: 'svg-downloader',
     name: 'SVG Downloader',
@@ -3958,7 +3900,7 @@ export const tools: Tool[] = [
     tagline: 'Download, upload, ping, jitter & bufferbloat.',
     description:
       'Free internet speed test with multi-stream download and upload measurement for accurate gigabit results. Measures ping, jitter, latency under load and a bufferbloat grade, detects your ISP, IP and test server, and rates your connection for calls, streaming and gaming. Runs entirely in your browser against Cloudflare’s global edge.',
-    category: 'Developer',
+    category: 'Device & Sensors',
     keywords: [
       'internet speed test',
       'bandwidth test',
@@ -3978,7 +3920,7 @@ export const tools: Tool[] = [
     tagline: 'Live speed from your device’s GPS — km/h, mph, knots & more.',
     description:
       'Free GPS speedometer. See your live speed, top speed, average speed, trip distance, altitude and compass heading straight from your device’s GPS, on an animated dial and large digital readout. Switch between km/h, mph, knots and m/s, set a speed-limit alert, and use HUD windshield mode with keep-awake. Runs entirely in your browser — no location data is uploaded.',
-    category: 'Calculators',
+    category: 'Device & Sensors',
     keywords: [
       'gps speedometer',
       'speedometer online',
@@ -4017,6 +3959,7 @@ export const categories: ToolCategory[] = [
   'Calculators',
   'Generators',
   'Security',
+  'Device & Sensors',
 ];
 
 export function getTool(slug: string): Tool | undefined {

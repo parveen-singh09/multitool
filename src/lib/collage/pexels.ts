@@ -1,15 +1,11 @@
-// Pexels stock-photo client. This is the ONLY network feature in the collage
-// editor — everything else runs locally. The key ships client-side via
-// PUBLIC_PEXELS_KEY (static site, no server to proxy through) so it is public;
-// that is acceptable for a free rate-limited Pexels key.
-// ponytail: single fetch helper, no SDK. If no key is set, hasPexels() is false
-// and the editor hides the Stock panel entirely.
+
+
 const KEY = import.meta.env.PUBLIC_PEXELS_KEY as string | undefined;
 
 export interface StockPhoto {
   id: number;
-  thumb: string; // small preview for the grid
-  full: string; // large image to place on the canvas
+  thumb: string; 
+  full: string; 
   photographer: string;
   photographerUrl: string;
 }

@@ -83,20 +83,18 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const actualWeight = Number($('crcl-weight').value);
     const heightCm = Number($('crcl-height').value);
     const bwMode = (document.getElementById('crcl-bw') as HTMLSelectElement).value;
-    let scr = Number($('crcl-scr').value); // mg/dL after conversion
+    let scr = Number($('crcl-scr').value); 
 
     const valueEl = document.getElementById('crcl-value')!;
     const stageEl = document.getElementById('crcl-stage')!;
     const bsaEl = document.getElementById('crcl-bsa')!;
     const wtUsedEl = document.getElementById('crcl-wtused')!;
 
-    // SI µmol/L → mg/dL: divide by 88.42
     if (unit === 'si') scr = scr / 88.42;
 
     const clear = () => { valueEl.textContent = '—'; stageEl.textContent = ''; bsaEl.textContent = '—'; wtUsedEl.textContent = '—'; };
     if (!(age > 0) || !(actualWeight > 0) || !(scr > 0)) { clear(); return; }
 
-    // Devine ideal body weight (needs height); adjusted = IBW + 0.4(actual − IBW).
     const inchesOver5ft = Math.max(0, heightCm / 2.54 - 60);
     const ibw = (male ? 50 : 45.5) + 2.3 * inchesOver5ft;
     let weight = actualWeight;
@@ -105,7 +103,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       else if (bwMode === 'adjusted') weight = ibw + 0.4 * (actualWeight - ibw);
     }
 
-    // Cockcroft-Gault: ((140 − age) × weight) / (72 × Scr), ×0.85 if female.
     let crcl = ((140 - age) * weight) / (72 * scr);
     if (!male) crcl *= 0.85;
 
@@ -117,7 +114,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     stageEl.style.color = color;
     wtUsedEl.textContent = weight.toFixed(1) + ' kg';
 
-    // BSA normalization (Du Bois) needs height + actual weight.
     if (heightCm > 0) {
       const bsa = 0.007184 * Math.pow(heightCm, 0.725) * Math.pow(actualWeight, 0.425);
       bsaEl.textContent = (crcl * 1.73 / bsa).toFixed(1);
@@ -138,7 +134,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       document.getElementById('crcl-scr-label')!.textContent =
         unit === 'metric' ? 'Serum creatinine (mg/dL)' : 'Serum creatinine (µmol/L)';
       const scrEl = $('crcl-scr');
-      // Convert the displayed value so the estimate is stable across the toggle.
+
       const cur = Number(scrEl.value);
       if (cur > 0) scrEl.value = unit === 'si' ? (cur * 88.42).toFixed(0) : (cur / 88.42).toFixed(2);
       calc();

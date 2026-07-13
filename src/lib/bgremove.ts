@@ -1,12 +1,4 @@
-// In-browser background removal with the RMBG-1.4 model via onnxruntime-web.
-// Lazy-loaded (ORT wasm + ~44 MB quantized model) so pages stay light until the
-// user actually removes a background. Nothing is uploaded — inference is local,
-// self-hosted wasm, single-threaded (no SharedArrayBuffer / COOP-COEP needed).
-//
-// RMBG-1.4 preprocessing (must match the original BriaRMBG utils exactly, else
-// the net sees out-of-distribution input): resize to 1024x1024 bilinear, scale
-// to [0,1], then normalize (x - 0.5) / 1.0  → values in [-0.5, 0.5], CHW order.
-// Output is a single-channel matte; min-max normalize to [0,1] for the alpha.
+
 
 const BASE = '/onnx';
 const SIZE = 1024;

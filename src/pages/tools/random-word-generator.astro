@@ -85,7 +85,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const msg = $('rw-msg') as HTMLParagraphElement;
   const out = $('rw-out') as HTMLTextAreaElement;
 
-  // "All" pool = every distinct common word we ship, deduped.
   const ALL = [...new Set([...WORDS, ...WORDS5, ...NOUNS, ...VERBS, ...ADJECTIVES])];
 
   function bank(): string[] {
@@ -95,8 +94,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return ALL;
   }
 
-  // ponytail: vowel-group heuristic — counts vowel runs, drops a silent trailing
-  // 'e', floors at 1. Wrong on some words (queue, area) but fine for a word game.
   function syllables(w: string): number {
     const m = w.toLowerCase().replace(/e$/, '').match(/[aeiouy]+/g);
     return Math.max(1, m ? m.length : 1);
@@ -130,7 +127,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }
     msg.classList.add('hidden');
 
-    // Draw without repeats until the pool is exhausted, then allow repeats.
     const list: string[] = [];
     let deck = shuffle(pool);
     for (let i = 0; i < n; i++) {

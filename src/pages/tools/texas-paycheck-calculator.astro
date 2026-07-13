@@ -10,7 +10,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </div>
 
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <!-- Salary inputs -->
+
       <label id="tx-salary-wrap" class="flex flex-col gap-1 text-sm text-ink-subtle">Gross pay
         <span class="flex gap-2">
           <input id="tx-gross" type="number" min="0" class="field" value="2500" inputmode="decimal" />
@@ -18,7 +18,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </span>
       </label>
 
-      <!-- Hourly inputs -->
       <div id="tx-hourly-wrap" class="hidden grid-cols-3 gap-2 sm:col-span-2">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">Hourly rate<input id="tx-rate" type="number" min="0" step="0.01" class="field" value="25" inputmode="decimal" /></label>
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">Hours / period<input id="tx-hours" type="number" min="0" step="0.5" class="field" value="80" inputmode="decimal" /></label>
@@ -90,7 +89,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
   const sel = (id: string) => document.getElementById(id) as unknown as HTMLSelectElement;
 
-  // 2025 federal tax brackets (annual taxable income).
   const BRACKETS: Record<string, [number, number][]> = {
     single: [
       [11925, 0.1], [48475, 0.12], [103350, 0.22], [197300, 0.24],
@@ -105,11 +103,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       [250500, 0.32], [626350, 0.35], [Infinity, 0.37],
     ],
   };
-  // 2025 standard deduction.
+
   const STD: Record<string, number> = { single: 15000, married: 30000, head: 22500 };
 
   const SS_RATE = 0.062;
-  const SS_WAGE_BASE = 176100; // 2025
+  const SS_WAGE_BASE = 176100; 
   const MEDI_RATE = 0.0145;
   const ADDL_MEDI_RATE = 0.009;
   const ADDL_MEDI_THRESHOLD: Record<string, number> = { single: 200000, married: 250000, head: 200000 };
@@ -145,7 +143,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const childCredit = (Number($('tx-children').value) || 0) * 2000;
     const otherDepCredit = (Number($('tx-otherdep').value) || 0) * 500;
 
-    // Gross per period from the chosen mode.
     let gross: number;
     if (payType === 'hourly') {
       const rate = Number($('tx-rate').value) || 0;
@@ -178,8 +175,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       medicare += (ficaWages - ADDL_MEDI_THRESHOLD[status]) * ADDL_MEDI_RATE;
     }
 
-    // Federal income tax: taxable = gross - pretax + other income - standard deduction,
-    // then subtract W-4 dependent credits (floored at 0), plus any extra withholding.
     const taxable = Math.max(0, annualGross - annualPretax + otherIncome - STD[status]);
     const fedAnnual = Math.max(0, federalTax(taxable, status) - childCredit - otherDepCredit) + extra * periods;
 

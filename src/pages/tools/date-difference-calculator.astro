@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="date-difference-calculator">
   <div class="flex flex-col gap-6">
-    <!-- Difference between two dates -->
+
     <div class="panel panel-lift flex flex-col gap-3 p-5">
       <p class="text-sm text-ink">Difference between two dates</p>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -29,7 +29,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Add / subtract from a date -->
     <div class="panel panel-lift flex flex-col gap-3 p-5">
       <p class="text-sm text-ink">Add or subtract from a date</p>
       <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
@@ -62,12 +61,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
   const err = document.getElementById('dd-error')!;
 
-  // Count Mon–Fri between two dates. Inclusive of both endpoints when `inc` set.
   function businessDays(a: Date, b: Date, inc: boolean): number {
     let count = 0;
     const cur = new Date(a);
     const end = new Date(b);
-    if (!inc) cur.setDate(cur.getDate() + 1); // exclusive of start; end excluded below
+    if (!inc) cur.setDate(cur.getDate() + 1); 
     while (cur < end || (inc && cur <= end)) {
       const wd = cur.getDay();
       if (wd !== 0 && wd !== 6) count++;
@@ -85,8 +83,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const inclusive = (document.getElementById('dd-inclusive') as HTMLInputElement).checked;
     const days = Math.round((b.getTime() - a.getTime()) / 86400000) + (inclusive ? 1 : 0);
 
-    // Calendar Y/M/D breakdown via clamped month anchoring (avoids negative-day
-    // borrow errors for end-of-month pairs like Jan 31 -> Mar 1).
     const addMonthsClamped = (dt: Date, months: number): Date => {
       const idx = dt.getMonth() + months;
       const yy = dt.getFullYear() + Math.floor(idx / 12);

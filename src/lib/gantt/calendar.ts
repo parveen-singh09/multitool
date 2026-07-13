@@ -1,16 +1,7 @@
-// Working-time calendar math. Durations are in WORKING days, so every date
-// calculation has to skip weekends (and any holidays). The scheduler works in
-// integer working-day indices; this module is the only place that converts
-// between an ISO date and its working-day index.
-//
-// Convention (nailed here because render, interop and the scheduler all depend
-// on it): a task of duration D >= 1 starting on working day S finishes on the
-// LAST working day inclusive, i.e. finish = addWorkingDays(start, D - 1). A
-// milestone (D = 0) finishes on its start.
+
 
 import type { Calendar } from './types';
 
-// Sun..Sat, Mon–Fri working. index 0 = Sunday.
 export const DEFAULT_CALENDAR: Calendar = {
   workdays: [false, true, true, true, true, true, false],
   holidays: [],
@@ -18,8 +9,6 @@ export const DEFAULT_CALENDAR: Calendar = {
 
 const DAY = 86400000;
 
-// Parse an ISO YYYY-MM-DD as a UTC midnight timestamp (UTC avoids DST shifts
-// that could nudge a date across midnight).
 function ts(iso: string): number {
   const [y, m, d] = iso.split('-').map(Number);
   return Date.UTC(y, (m || 1) - 1, d || 1);

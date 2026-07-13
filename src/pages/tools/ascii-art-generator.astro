@@ -36,21 +36,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 <script>
   import figlet from 'figlet/browser';
 
-  // Every FIGfont figlet ships (same corpus as patorjk's TAAG). Vite turns each
-  // match into a lazily-loaded chunk, so listing all of them costs nothing up
-  // front — a font's data is only fetched the first time it's selected.
   const FONT_MODULES = import.meta.glob(
     '/node_modules/figlet/importable-fonts/*.js',
   ) as Record<string, () => Promise<{ default: string }>>;
 
-  // path -> font name (strip directory and .js extension).
   const FONTS: Record<string, () => Promise<{ default: string }>> = {};
   for (const [path, loader] of Object.entries(FONT_MODULES)) {
     const name = path.split('/').pop()!.replace(/\.js$/, '');
     FONTS[name] = loader;
   }
 
-  // Surface the well-known fonts first; the rest follow alphabetically.
   const POPULAR = [
     'Standard', 'ANSI Shadow', 'ANSI Regular', 'ANSI Compact', 'Slant',
     'Small', 'Small Slant', 'Shadow', 'Big', 'Doom', 'Banner3', '3D-ASCII',
@@ -65,7 +60,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const styleEl = document.getElementById('aa-style') as HTMLSelectElement;
   const out = document.getElementById('aa-out') as HTMLElement;
 
-  // Populate the font picker: a "Popular" group, then all fonts A–Z.
   function addOptions(label: string, names: string[]) {
     if (!names.length) return;
     const group = document.createElement('optgroup');

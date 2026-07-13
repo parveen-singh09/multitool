@@ -1,10 +1,5 @@
-// Static data banks for the fun / naming generators.
-// Plain named exports so each tool page tree-shakes only the banks it imports.
-// All lists are self-contained — the tools run fully in the browser.
 
-/* ------------------------------------------------------------------ *
- * Pictionary
- * ------------------------------------------------------------------ */
+
 export type PictionaryTier = 'easy' | 'medium' | 'hard';
 
 export interface PictionaryWord {
@@ -13,12 +8,9 @@ export interface PictionaryWord {
   category: string;
 }
 
-// Compact tagger: one category + tier for a run of words.
 const P = (category: string, tier: PictionaryTier, words: string[]): PictionaryWord[] =>
   words.map((word) => ({ word, tier, category }));
 
-// ~350 words across 12 categories × 3 difficulty tiers. Every word is
-// drawable — no proper nouns that only some players would know.
 export const PICTIONARY_WORDS: PictionaryWord[] = [
   ...P('Animals', 'easy', ['cat', 'dog', 'fish', 'bird', 'cow', 'pig', 'duck', 'bee', 'ant', 'frog', 'snake', 'spider', 'horse', 'sheep', 'mouse']),
   ...P('Animals', 'medium', ['elephant', 'kangaroo', 'octopus', 'penguin', 'jellyfish', 'flamingo', 'hedgehog', 'squirrel', 'dolphin', 'butterfly', 'crocodile', 'peacock']),
@@ -68,14 +60,10 @@ export const PICTIONARY_WORDS: PictionaryWord[] = [
   ...P('Abstract', 'hard', ['nostalgia', 'serendipity', 'wanderlust', 'déjà vu', 'optimism', 'infinity', 'paradox', 'momentum', 'telepathy', 'zeitgeist', 'claustrophobia', 'vertigo']),
 ];
 
-/** Distinct category names, in the order they first appear above. */
 export const PICTIONARY_CATEGORIES: string[] = [
   ...new Set(PICTIONARY_WORDS.map((w) => w.category)),
 ];
 
-/* ------------------------------------------------------------------ *
- * Animals — name, emoji, class, a quick fact
- * ------------------------------------------------------------------ */
 export interface Animal {
   name: string;
   emoji: string;
@@ -126,11 +114,6 @@ export const ANIMALS: Animal[] = [
   { name: 'Puffin', emoji: '🐧', group: 'Bird', fact: 'Can hold a dozen small fish crosswise in its beak at once.' },
 ];
 
-/* ------------------------------------------------------------------ *
- * Tarot — full 78-card Rider–Waite deck with per-card meanings,
- * keywords, element, astrology and a yes/no verdict. Traditional
- * Golden Dawn astrological attributions; for entertainment/journaling.
- * ------------------------------------------------------------------ */
 export type TarotElement = 'Fire' | 'Water' | 'Air' | 'Earth';
 export type TarotVerdict = 'Yes' | 'No' | 'Maybe';
 
@@ -145,17 +128,15 @@ export interface TarotCard {
   upright: string;
   reversed: string;
   love: string;
-  /** Public-domain Rider–Waite–Smith card image (in /tarot/). */
+
   img: string;
 }
 
-// sacred-texts RWS filename codes: suit + rank, e.g. cu02, waki, pe10.
 const SUIT_CODE: Record<NonNullable<TarotCard['suit']>, string> = {
   Wands: 'wa', Cups: 'cu', Swords: 'sw', Pentacles: 'pe',
 };
 const RANK_CODE = ['ac', '02', '03', '04', '05', '06', '07', '08', '09', '10', 'pa', 'kn', 'qu', 'ki'];
 
-// [name, element, astrology, yesNo, keywords, upright, reversed, love]
 type MajorRow = [string, TarotElement, string, TarotVerdict, string, string, string, string];
 
 const MAJOR: MajorRow[] = [
@@ -183,7 +164,6 @@ const MAJOR: MajorRow[] = [
   ['The World', 'Earth', 'Saturn', 'Yes', 'completion, wholeness, achievement, fulfilment', 'Completion, wholeness and achievement.', 'Incompletion, loose ends and delayed closure.', 'A relationship that feels whole and complete.'],
 ];
 
-// [rank, astrology, yesNo, keywords, upright, reversed, love]
 type MinorRow = [string, string, TarotVerdict, string, string, string, string];
 
 interface SuitDef {

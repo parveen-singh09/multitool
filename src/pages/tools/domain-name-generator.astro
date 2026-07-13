@@ -108,14 +108,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const statusEl = $('dn-status')!;
   const out = $('dn-out')!;
 
-  // Core TLDs the base name is checked against.
   const TLDS = [
     'com', 'io', 'app', 'dev', 'co', 'net', 'org', 'ai', 'xyz', 'tech',
     'online', 'store', 'site', 'me', 'info', 'biz', 'cloud', 'digital',
     'studio', 'design', 'agency', 'space', 'live', 'world', 'shop', 'club',
     'pro', 'tv', 'gg', 'sh',
   ];
-  // Fallback affixes used when the remote name service is unavailable.
+
   const PREFIX = [
     'get', 'try', 'go', 'my', 'the', 'join', 'use', 'best', 'top', 'pro',
     'super', 'smart', 'quick', 'easy', 'meta', 'nova', 'hey', 'with', 'on',
@@ -127,14 +126,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     'works', 'stack', 'space', 'yard', 'craft',
   ];
   const MAX = 60;
-  // AI generate keeps searching until it finds this many available domains…
+
   const TARGET = 30;
-  // …but never fires more than this many AI requests, and never DNS-checks
-  // more than this many names in a single run — both hard runaway backstops.
+
   const MAX_ROUNDS = 5;
   const MAX_CHECK = 300;
 
-  // Which TLDs the filter currently includes.
   const active = new Set<string>(['com', 'net', 'org', 'ai', 'io']);
 
   type State = 'checking' | 'free' | 'taken' | 'error';
@@ -143,8 +140,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     word: string;
     style: string;
     syllables: number;
-    prefixLen: number; // 0 = no prefix
-    suffixLen: number; // 0 = no suffix
+    prefixLen: number; 
+    suffixLen: number; 
   }
 
   function readSettings(): Settings {
@@ -167,15 +164,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     techy: 'modern techy / startup-flavored words',
   };
 
-  /** Turn settings into the generation prompt. `exclude` are labels already tried. */
   function buildPrompt(s: Settings, exclude: string[] = []): string {
     const w = s.word;
-    // Every name must contain the literal keyword — this is the anchor, not a theme.
+
     const parts = [
       `Generate 24 brandable domain name ideas. Every single name MUST contain the exact word "${w}" as a literal substring — do not replace it with synonyms or themed words.`,
     ];
     const style = STYLE_HINT[s.style] ?? 'brandable';
-    // Describe exactly how the added letters attach to the keyword.
+
     if (s.prefixLen && s.suffixLen) {
       parts.push(`Build each name as: a ~${s.prefixLen}-letter prefix, then "${w}", then a ~${s.suffixLen}-letter suffix (e.g. "go${w}ify").`);
     } else if (s.prefixLen) {
@@ -213,14 +209,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const seen = new Set<string>();
     for (const item of arr) {
       if (typeof item !== 'string') continue;
-      // Strip any TLD the model tacked on, keep letters/digits only.
+
       const label = item.split('.')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
       if (label.length >= 2 && label.length <= 30) seen.add(label);
     }
     return [...seen];
   }
 
-  /** Ask the name service for labels. Throws on any failure so the caller can fall back. */
   async function aiNames(s: Settings, exclude: string[] = []): Promise<string[]> {
     const content = await aiChat(
       [
@@ -229,14 +224,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       ],
       { temperature: 0.9 },
     );
-    // Hard guarantee: the model is told to keep the keyword, but it drifts — so
-    // drop any name that doesn't actually contain the literal word.
+
     const names = parseNames(content).filter((n) => n.includes(s.word));
     if (!names.length) throw new Error('no names parsed');
     return names;
   }
 
-  /** Algorithmic fallback name labels (the original behaviour). */
   function fallbackNames(s: Settings): string[] {
     const w = s.word;
     const labels = new Set<string>([w]);
@@ -552,7 +545,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (active.has(tld)) active.delete(tld);
     else active.add(tld);
     renderChips();
-    recheck(); // TLD change only re-expands — no new request.
+    recheck(); 
   });
   $('dn-all').addEventListener('click', () => {
     TLDS.forEach((t) => active.add(t));
@@ -566,8 +559,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   });
   renderChips();
 
-  // Name-building runs on the buttons and on Enter — not on every keystroke,
-  // since each AI run can cost a request. Enter uses the plain (local) path.
   $('dn-gen').addEventListener('click', () => generateLocal());
   $('dn-ai-gen').addEventListener('click', () => generateAi());
   moreEl.addEventListener('click', () => showMoreAi());
@@ -575,11 +566,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if ((e as KeyboardEvent).key === 'Enter') generateLocal();
   });
 
-  // ponytail self-check: dev-only, the one non-trivial pure bit is the parser.
   if (import.meta.env.DEV) {
     console.assert(JSON.stringify(parseNames('```json\n["Pixel","pixel.com","a b","zz"]\n```')) === JSON.stringify(['pixel', 'zz']), 'parseNames should clean, dedupe, strip TLDs');
     console.assert(parseNames('not json').length === 0, 'parseNames tolerates junk');
   }
 
-  generateLocal(); // initial paint uses the local path — no request on load.
+  generateLocal(); 
 </script>

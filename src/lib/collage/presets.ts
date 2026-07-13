@@ -1,4 +1,4 @@
-// Canvas size presets for the collage editor. Width/height in px.
+
 export interface SizePreset {
   id: string;
   label: string;

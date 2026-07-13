@@ -51,7 +51,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   let mode: 'add' | 'remove' | 'rate' = 'add';
   const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
 
-  // US state base (statewide) sales-tax rates, %. Local county/city rates add on top.
   const STATE_RATES: [string, number][] = [
     ['Alabama', 4], ['Alaska', 0], ['Arizona', 5.6], ['Arkansas', 6.5], ['California', 7.25],
     ['Colorado', 2.9], ['Connecticut', 6.35], ['Delaware', 0], ['Florida', 6], ['Georgia', 4],
@@ -74,7 +73,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const a = Number(amount.value) || 0;
     let net: number, tax: number, gross: number, r: number;
     if (mode === 'rate') {
-      // Derive the rate from before-tax amount + total paid.
+
       const total = Number(totalEl.value) || 0;
       net = a; gross = total; tax = gross - net;
       r = net > 0 ? tax / net : 0;
@@ -99,7 +98,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         t.classList.toggle('btn-secondary', !active);
       });
       label.textContent = mode === 'add' ? 'Amount (before tax)' : mode === 'remove' ? 'Amount (with tax)' : 'Amount (before tax)';
-      // In find-rate mode swap the rate input for the total-paid input.
+
       document.getElementById('st-rate-wrap')!.classList.toggle('hidden', mode === 'rate');
       document.getElementById('st-rate-wrap')!.classList.toggle('flex', mode !== 'rate');
       document.getElementById('st-total-wrap')!.classList.toggle('hidden', mode !== 'rate');

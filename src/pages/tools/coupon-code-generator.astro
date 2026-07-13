@@ -109,7 +109,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return s.match(/.{1,4}/g)?.join('-') ?? s;
   }
 
-  // Build one code body from the pattern (# = random char) or from length.
   function body(ab: string): string {
     const pat = patternEl.value;
     if (pat.includes('#')) {
@@ -121,7 +120,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return s;
   }
 
-  // How many random positions the code has → size of the unique space.
   function slots(): number {
     const pat = patternEl.value;
     if (pat.includes('#')) return (pat.match(/#/g) || []).length;
@@ -141,8 +139,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       out.value = '';
       return;
     }
-    // Unique-space check: alphabet^slots must cover the requested count.
-    // Cap the exponent math so huge patterns don't overflow to Infinity noise.
+
     const space = Math.pow(ab.length, Math.min(slots(), 40));
     if (space < n) {
       errEl.textContent = `Can't make ${n} unique codes — only ${Math.floor(space)} are possible with this length and character set.`;

@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="meme-generator">
   <div class="flex flex-col gap-4">
-    <!-- Source row: upload dropzone + template gallery toggle -->
+
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
       <label id="mm-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-6 text-center transition-colors hover:bg-surface-2">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
@@ -18,7 +18,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </button>
     </div>
 
-    <!-- Template gallery (hidden until toggled) -->
     <div id="mm-tpl" class="panel panel-lift hidden flex-col gap-3 p-4">
       <div class="flex items-center gap-2">
         <input id="mm-tpl-search" class="field" placeholder="Search popular templates…" />
@@ -27,9 +26,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div id="mm-tpl-grid" class="grid max-h-72 grid-cols-3 gap-2 overflow-auto sm:grid-cols-4 md:grid-cols-5"></div>
     </div>
 
-    <!-- Editor (hidden until an image is loaded) -->
     <div id="mm-panel" class="hidden flex-col gap-4">
-      <!-- Toolbar -->
+
       <div class="flex flex-wrap items-center gap-2">
         <button id="mm-add-text" type="button" class="btn btn-secondary">+ Text</button>
         <button id="mm-add-sticker" type="button" class="btn btn-secondary">+ Sticker</button>
@@ -44,12 +42,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <button id="mm-redo" type="button" class="btn btn-secondary" title="Redo (Ctrl+Shift+Z)" disabled>Redo</button>
       </div>
 
-      <!-- Canvas -->
       <div class="flex justify-center overflow-auto rounded-lg border border-hairline bg-surface-2 p-4">
         <canvas id="mm-canvas" class="max-w-full touch-none" style="cursor:default"></canvas>
       </div>
 
-      <!-- Selected-layer inspector -->
       <div id="mm-inspect" class="panel panel-lift hidden flex-col gap-3 p-4">
         <div class="flex items-center justify-between">
           <span id="mm-insp-title" class="eyebrow text-primary-hover">Text layer</span>
@@ -61,7 +57,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           </div>
         </div>
 
-        <!-- Text controls -->
         <div id="mm-text-ctrls" class="flex flex-col gap-3">
           <textarea id="mm-t-text" rows="2" class="field resize-y" placeholder="Enter text…"></textarea>
           <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -109,7 +104,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           </div>
         </div>
 
-        <!-- Sticker controls -->
         <div id="mm-sticker-ctrls" class="hidden flex-col gap-3">
           <div id="mm-emoji-grid" class="flex flex-wrap gap-1"></div>
           <label class="btn btn-secondary w-fit cursor-pointer">Upload image sticker
@@ -127,7 +121,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </div>
       </div>
 
-      <!-- Add-space (white bands) -->
       <div class="panel panel-lift flex flex-col gap-3 p-4">
         <span class="eyebrow text-ink-subtle">Add white space</span>
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -140,7 +133,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </div>
       </div>
 
-      <!-- Download -->
       <div class="flex flex-wrap items-center gap-2">
         <button id="mm-dl-png" type="button" class="btn btn-primary">Download PNG</button>
         <button id="mm-dl-jpg" type="button" class="btn btn-secondary">Download JPEG</button>
@@ -180,30 +172,29 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </style>
 
 <script>
-  // ---- Types -----------------------------------------------------------
+
   type Align = 'left' | 'center' | 'right';
   interface TextLayer {
     id: string; type: 'text';
     text: string;
-    cx: number; cy: number;      // center as fraction of canvas w/h
-    boxW: number;                // wrap width as fraction of canvas w
-    fontFrac: number;            // font size as fraction of canvas h
+    cx: number; cy: number;      
+    boxW: number;                
+    fontFrac: number;            
     fontFamily: string;
-    fill: string; stroke: string; strokeW: number; // strokeW in px @ fontPx=100 basis
+    fill: string; stroke: string; strokeW: number; 
     bold: boolean; italic: boolean; upper: boolean;
     align: Align; rotation: number; opacity: number;
   }
   interface StickerLayer {
     id: string; type: 'sticker';
     kind: 'emoji' | 'image';
-    emoji?: string; img?: HTMLImageElement; aspect: number; // h/w
+    emoji?: string; img?: HTMLImageElement; aspect: number; 
     cx: number; cy: number;
-    widthFrac: number;           // sticker width as fraction of canvas w
+    widthFrac: number;           
     rotation: number; opacity: number;
   }
   type Layer = TextLayer | StickerLayer;
 
-  // ---- DOM helpers -----------------------------------------------------
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
   const fileInput = $<HTMLInputElement>('mm-file');
   const drop = $('mm-drop');
@@ -214,12 +205,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const textCtrls = $('mm-text-ctrls');
   const stickerCtrls = $('mm-sticker-ctrls');
 
-  // ---- State -----------------------------------------------------------
   let img: HTMLImageElement | null = null;
-  let baseW = 0, baseH = 0;         // capped draw dimensions of the base image
-  let rotation = 0;                 // 0|90|180|270 of base image
+  let baseW = 0, baseH = 0;         
+  let rotation = 0;                 
   let flipH = false, flipV = false;
-  let padTop = 0, padBottom = 0;    // white space as fraction of image draw height
+  let padTop = 0, padBottom = 0;    
   let layers: Layer[] = [];
   let selectedId: string | null = null;
   const MAX_SIDE = 2400;

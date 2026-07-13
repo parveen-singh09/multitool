@@ -10,7 +10,7 @@ console.log(greet("world"));`;
 
 <ToolLayout slug="code-snippet-generator">
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,340px)_1fr]">
-    <!-- Controls -->
+
     <div class="flex flex-col gap-4">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Code
         <div class="hl-edit field p-0" style="height:14rem;resize:vertical;overflow:hidden">
@@ -94,7 +94,6 @@ console.log(greet("world"));`;
       </div>
     </div>
 
-    <!-- Preview + export -->
     <div class="flex flex-col items-center gap-4">
       <div class="flex w-full items-center justify-center overflow-auto rounded-lg border border-hairline bg-surface-2 p-4" style="background-image:linear-gradient(45deg,#0000 46%,#ffffff08 46% 54%,#0000 54%),linear-gradient(45deg,#0000 46%,#ffffff08 46% 54%,#0000 54%);background-size:20px 20px;background-position:0 0,10px 10px">
         <canvas id="cd-canvas" class="max-w-full rounded-md"></canvas>
@@ -146,7 +145,7 @@ console.log(greet("world"));`;
 
   type Theme = {
     fg: string; win: string; winFg: string; num: string;
-    // token role colors
+
     keyword: string; string: string; number: string; comment: string;
     fn: string; builtin: string; variable: string; property: string;
     tag: string; type: string; punctuation: string;
@@ -209,7 +208,6 @@ console.log(greet("world"));`;
     },
   };
 
-  // hljs class -> theme role. First matching class on an element wins.
   function roleColor(cls: string, t: Theme): string | null {
     const c = ' ' + cls + ' ';
     const has = (k: string) => c.includes(' hljs-' + k + ' ') || c.includes(' hljs-' + k);
@@ -227,7 +225,6 @@ console.log(greet("world"));`;
 
   type Run = { text: string; color: string };
 
-  // Highlight code and flatten hljs's nested spans into colored runs per line.
   function tokenize(html: string, t: Theme): Run[][] {
     const root = document.createElement('div');
     root.innerHTML = html;
@@ -255,8 +252,6 @@ console.log(greet("world"));`;
     return lines;
   }
 
-  // Background presets: solid strings or [angle, ...stops] gradients. null = transparent.
-  // Brand presets mirror competitor "partner" gradients (Vercel, Cloudflare, …).
   const BACKGROUNDS: (string | [number, ...string[]] | null)[] = [
     [135, '#ff9a9e', '#fecfef'],
     [135, '#a18cd1', '#fbc2eb'],
@@ -265,8 +260,8 @@ console.log(greet("world"));`;
     [135, '#5ee7df', '#b490ca'],
     [135, '#667eea', '#764ba2'],
     [135, '#0d1117', '#1f2547'],
-    null, // transparent
-    // Brand presets
+    null, 
+
     [135, '#000000', '#3a3a3a'],
     [135, '#f6821f', '#faae40'],
     [140, '#3ecf8e', '#164e3b'],
@@ -297,7 +292,6 @@ console.log(greet("world"));`;
 
   let currentLang = 'javascript';
 
-  // Last computed layout, reused for SVG export so it matches the canvas exactly.
   type PRun = { text: string; color: string; x: number };
   let layout: {
     theme: Theme; cw: number; ch: number; winW: number; winH: number;
@@ -320,7 +314,6 @@ console.log(greet("world"));`;
     const lineHeight = Math.round(fontSize * 1.6);
     const scale = +($('cd-scale') as HTMLSelectElement).value;
 
-    // Highlight (auto-detect updates the language label).
     const langSel = ($('cd-lang') as HTMLSelectElement).value;
     let res;
     if (langSel === 'auto') {

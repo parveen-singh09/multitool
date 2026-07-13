@@ -1,5 +1,4 @@
-// Shared color-conversion helpers used by the color tool pages.
-// Pure functions, no DOM — safe to import into any client script.
+
 
 export interface RGB { r: number; g: number; b: number; }
 export interface HSL { h: number; s: number; l: number; }
@@ -111,7 +110,6 @@ export function parseRgb(str: string): RGB | null {
   return { r: clamp(+m[1]), g: clamp(+m[2]), b: clamp(+m[3]) };
 }
 
-// The 148 CSS named colors (CSS Color Module Level 4).
 export const CSS_COLORS: Record<string, string> = {
   aliceblue: '#f0f8ff', antiquewhite: '#faebd7', aqua: '#00ffff', aquamarine: '#7fffd4',
   azure: '#f0ffff', beige: '#f5f5dc', bisque: '#ffe4c4', black: '#000000',
@@ -152,7 +150,6 @@ export const CSS_COLORS: Record<string, string> = {
   white: '#ffffff', whitesmoke: '#f5f5f5', yellow: '#ffff00', yellowgreen: '#9acd32',
 };
 
-// Nearest CSS color name to an arbitrary RGB, by squared Euclidean distance.
 export function nearestColorName(rgb: RGB): { name: string; hex: string; exact: boolean } {
   let best = '', bestHex = '', bestD = Infinity;
   for (const [name, hex] of Object.entries(CSS_COLORS)) {

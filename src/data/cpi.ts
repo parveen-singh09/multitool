@@ -1,6 +1,5 @@
-// US Consumer Price Index for All Urban Consumers (CPI-U), annual average.
-// Source: U.S. Bureau of Labor Statistics, series CUUR0000SA0 (1982-84 = 100).
-// Fetched from the BLS public API. Update yearly when the new annual average posts.
+
+
 export const CPI_U: Record<number, number> = {
   1913: 9.9, 1914: 10.0, 1915: 10.1, 1916: 10.9, 1917: 12.8, 1918: 15.1, 1919: 17.3,
   1920: 20.0, 1921: 17.9, 1922: 16.8, 1923: 17.1, 1924: 17.1, 1925: 17.5, 1926: 17.7,

@@ -57,7 +57,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const lifePathEl = document.getElementById('lnp-lifepath')!;
   const luckyEl = document.getElementById('lnp-lucky')!;
 
-  // Reduce a number to a single digit, preserving master numbers 11, 22, 33.
   function reduce(n: number): number {
     while (n > 9 && n !== 11 && n !== 22 && n !== 33) {
       n = String(n).split('').reduce((a, d) => a + Number(d), 0);
@@ -65,7 +64,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return n;
   }
 
-  // Deterministic string hash (FNV-1a style).
   function hash(str: string): number {
     let h = 2166136261;
     for (let i = 0; i < str.length; i++) {
@@ -78,7 +76,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   function calc() {
     err.classList.add('hidden');
     const name = nameEl.value.trim().toLowerCase();
-    const date = dateEl.value; // yyyy-mm-dd
+    const date = dateEl.value; 
 
     if (!name || !date) {
       lifePathEl.textContent = '—';
@@ -86,7 +84,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       return;
     }
 
-    // Life-path number from birth date digits.
     const digits = date.replace(/\D/g, '');
     if (!digits) {
       err.textContent = 'Enter a valid birth date.';
@@ -96,7 +93,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const digitSum = digits.split('').reduce((a, d) => a + Number(d), 0);
     lifePathEl.textContent = String(reduce(digitSum));
 
-    // Lucky numbers from a stable hash of name + date.
     const seed = hash(`${name}|${date}`);
     const lucky: number[] = [];
     let cursor = seed;

@@ -1,7 +1,7 @@
-// Built-in animated GIF templates — original, copyright-safe animated backdrops
-// generated on the fly (no network, no bundled assets). Each returns per-frame
-// canvases in the same shape the decoder produces, so the page can push them
-// straight into its frame model and caption them like any other source.
+
+
+
+
 
 export interface TemplateFrame {
   canvas: HTMLCanvasElement;
@@ -23,7 +23,7 @@ function frame(): { c: HTMLCanvasElement; x: CanvasRenderingContext2D } {
   return { c, x: c.getContext('2d')! };
 }
 
-// Deterministic pseudo-random so a template looks the same every time.
+
 function mulberry32(seed: number) {
   let a = seed >>> 0;
   return () => {

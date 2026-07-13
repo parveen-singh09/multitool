@@ -1,8 +1,5 @@
-// Shared ffmpeg.wasm loader. Loads the self-hosted single-thread core once
-// and reuses the instance across every audio/video tool. Single-thread core
-// avoids SharedArrayBuffer, so no COOP/COEP response headers are required —
-// the tools work on any static host. The ~31 MB core is fetched from the same
-// origin (public/ffmpeg), never a third party.
+
+
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 

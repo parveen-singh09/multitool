@@ -1,11 +1,7 @@
-// Shared text-generation helper for the browser-side generator tools.
-// Uses a PUBLIC_ key that ships in the bundle (same pattern as the repo's
-// Klipy/Pexels keys) so there's no per-user login. Fine for a rate-limited /
-// free-tier key; front it with a server route if you ever attach billing.
+
 
 const KEY = (import.meta.env.PUBLIC_AI_API_KEY as string | undefined) ?? '';
-// Model is env-overridable — model names churn. This is the confirmed-stable
-// default from the endpoint docs.
+
 const MODEL = (import.meta.env.PUBLIC_AI_MODEL as string | undefined) || 'gemini-flash-latest';
 
 export const hasAI = KEY.length > 0;
@@ -15,11 +11,6 @@ export interface ChatMsg {
   content: string;
 }
 
-/**
- * Map OpenAI-style messages to a generateContent request body.
- * System messages fold into `system_instruction`; user/assistant map to the
- * `user`/`model` roles (the API has no "assistant").
- */
 export function toRequestBody(messages: ChatMsg[], temperature?: number): Record<string, unknown> {
   const sys = messages.filter((m) => m.role === 'system').map((m) => m.content).join('\n');
   const contents = messages
@@ -31,11 +22,6 @@ export function toRequestBody(messages: ChatMsg[], temperature?: number): Record
   return body;
 }
 
-/**
- * One-shot chat completion against the REST endpoint. Returns the reply text;
- * throws on missing key, HTTP error, or empty reply so callers can fall back
- * to their local generator.
- */
 export async function aiChat(messages: ChatMsg[], opts: { temperature?: number } = {}): Promise<string> {
   if (!hasAI) throw new Error('no api key');
   const res = await fetch(

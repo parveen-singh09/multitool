@@ -1,12 +1,11 @@
-// Autosave the working timeline to localStorage so a reload restores the draft.
-// ponytail: separate file only to keep the page script readable.
+
 
 import type { Timeline } from './types';
 
-const KEY = 'toolcities:timeline-creator';
+const KEY = 'toolsilk:timeline-creator';
 
 export function saveDraft(tl: Timeline): void {
-  try { localStorage.setItem(KEY, JSON.stringify(tl)); } catch { /* quota/private mode */ }
+  try { localStorage.setItem(KEY, JSON.stringify(tl)); } catch {  }
 }
 
 export function loadDraft(): Timeline | null {

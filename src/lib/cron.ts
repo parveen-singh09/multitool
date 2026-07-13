@@ -1,6 +1,4 @@
-// Shared 5-field cron engine: parse a field to its value set, describe an
-// expression in plain English, and compute the next N run times. Used by both
-// the cron parser and the cron generator so the schedule logic lives once.
+
 
 export interface FieldSpec { min: number; max: number; name: string; }
 
@@ -25,7 +23,6 @@ function aliasValue(token: string, fieldIndex: number): number | null {
   return null;
 }
 
-// Parse one field into a sorted set of allowed numbers. Throws on error.
 export function parseField(field: string, index: number): Set<number> {
   const { min, max, name } = SPECS[index];
   const out = new Set<number>();

@@ -1,28 +1,21 @@
-// Org chart data model. The whole tool renders from a single `OrgChart`; the
-// layout engine turns it into box geometry and every export derives from the
-// SVG that geometry produces. Same discipline as the gantt tool.
-//
-// People are a FLAT array with a `managerId` reference (null = a root). This is
-// the shape a CSV "Reports To" column maps onto directly, makes re-parenting a
-// one-field change (set managerId), and makes cycle detection a simple ancestor
-// walk — no nested-children bookkeeping to keep in sync.
+
 
 export interface Person {
   id: string;
   name: string;
-  title?: string; // job title, shown under the name
-  dept?: string; // department / team label (optional)
-  managerId: string | null; // id of the person this reports to; null = root
-  photo?: string; // data URL (image stays in the browser; inlined into exported SVG)
-  color?: string; // per-box hex override for the accent bar
+  title?: string; 
+  dept?: string; 
+  managerId: string | null; 
+  photo?: string; 
+  color?: string; 
 }
 
 export interface OrgChart {
   title: string;
   themeId: string;
-  layoutId: string; // see LAYOUTS in presets.ts
+  layoutId: string; 
   sizeId: string;
-  logo?: string; // data URL, drawn top-left of the chart
+  logo?: string; 
   people: Person[];
 }
 
@@ -30,13 +23,13 @@ export interface OrgTheme {
   id: string;
   label: string;
   bg: string;
-  box: string; // normal box fill
-  boxRoot: string; // root/top box fill (the one lavender accent by default)
-  border: string; // box border + connector color
-  ink: string; // primary text (name)
-  inkSubtle: string; // secondary text (title/dept)
-  inkRoot: string; // text on the root box
-  // Concrete hex only — a standalone exported .svg can't read CSS variables.
+  box: string; 
+  boxRoot: string; 
+  border: string; 
+  ink: string; 
+  inkSubtle: string; 
+  inkRoot: string; 
+
 }
 
 export function newId(): string {

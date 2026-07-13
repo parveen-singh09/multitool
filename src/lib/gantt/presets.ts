@@ -1,8 +1,4 @@
-// Themes (concrete hex — a standalone exported .svg can't read CSS vars), canvas
-// size presets, and zoom levels. The default "linear-dark" theme uses DESIGN.md
-// tokens so an exported chart matches the site. Critical bars use a warm red so
-// the critical path reads at a glance without introducing a second brand accent
-// on the marketing chrome (the chart is content, not chrome).
+
 
 import type { GanttTheme, ZoomLevel } from './types';
 
@@ -21,8 +17,8 @@ export function getTheme(id: string): GanttTheme {
 export interface SizePreset {
   id: string;
   label: string;
-  w: number; // design width in px; height grows to fit rows
-  h: number; // baseline / minimum height
+  w: number; 
+  h: number; 
 }
 
 export const SIZE_PRESETS: SizePreset[] = [
@@ -36,7 +32,6 @@ export function getSize(id: string): SizePreset {
   return SIZE_PRESETS.find((s) => s.id === id) ?? SIZE_PRESETS[0];
 }
 
-// Pixels per WORKING day at each zoom. render.ts uses this to space the axis.
 export const ZOOM_PX_PER_DAY: Record<ZoomLevel, number> = {
   day: 26,
   week: 9,

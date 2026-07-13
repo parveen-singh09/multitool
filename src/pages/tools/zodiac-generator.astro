@@ -39,7 +39,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     color: string; day: string; nums: string; match: string;
   };
 
-  // Ordered by end date within the year; the trailing Capricorn closes the year.
   const SIGNS: Sign[] = [
     { name: 'Capricorn', sym: '♑', el: 'Earth', mode: 'Cardinal', pol: 'Negative', planet: 'Saturn', range: 'Dec 22 – Jan 19', endM: 1, endD: 19, traits: 'Disciplined, responsible, ambitious', strengths: 'Patient, driven, practical, loyal', weaknesses: 'Rigid, pessimistic, work-obsessed', color: 'Brown', day: 'Saturday', nums: '4, 8, 13, 22', match: 'Taurus, Virgo, Pisces, Scorpio' },
     { name: 'Aquarius', sym: '♒', el: 'Air', mode: 'Fixed', pol: 'Positive', planet: 'Uranus', range: 'Jan 20 – Feb 18', endM: 2, endD: 18, traits: 'Independent, original, humanitarian', strengths: 'Inventive, open-minded, idealistic', weaknesses: 'Aloof, stubborn, unpredictable', color: 'Electric blue', day: 'Saturday', nums: '4, 7, 11, 22', match: 'Gemini, Libra, Aries, Sagittarius' },
@@ -65,7 +64,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     Monkey: 'Clever, curious, playful', Rooster: 'Observant, hardworking, honest',
     Dog: 'Loyal, honest, protective', Pig: 'Generous, diligent, compassionate',
   };
-  // Chinese five-element phase by the last digit of the year.
+
   const ELEMENTS = ['Metal', 'Metal', 'Water', 'Water', 'Wood', 'Wood', 'Fire', 'Fire', 'Earth', 'Earth'];
 
   const ELEMENT_META: Record<string, { emoji: string; note: string }> = {
@@ -85,12 +84,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return SIGNS[0];
   }
 
-  // Days from a (month, day) to a sign's end boundary, for cusp detection.
   function daysToEnd(m: number, d: number, s: Sign) {
     const cum = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
     const doy = (mm: number, dd: number) => cum[mm - 1] + dd;
     let diff = doy(s.endM, s.endD) - doy(m, d);
-    if (diff < 0) diff += 365; // wrap Dec→Jan (Capricorn)
+    if (diff < 0) diff += 365; 
     return diff;
   }
 

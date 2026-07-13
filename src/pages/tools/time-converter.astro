@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="time-converter">
   <div id="tc-root" class="flex flex-col gap-5">
-    <!-- Precision + quick presets -->
+
     <div class="flex flex-wrap items-end justify-between gap-3">
       <div class="flex flex-wrap items-end gap-2">
         <span class="text-[13px] text-ink-subtle">Popular:</span>
@@ -27,7 +27,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </label>
     </div>
 
-    <!-- From / swap / To -->
     <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
       <div class="flex flex-col gap-1">
         <label class="text-sm text-ink-subtle" for="tc-from-val">From</label>
@@ -56,13 +55,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p id="tc-formula" class="text-[13px] text-ink-tertiary"></p>
     <p id="tc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
 
-    <!-- Humanized breakdown -->
     <div class="panel p-4">
       <p class="eyebrow mb-2 text-ink-subtle">Human-readable breakdown</p>
       <p id="tc-human" class="font-mono text-[15px] text-ink"></p>
     </div>
 
-    <!-- All units at once -->
     <div>
       <p class="mb-2 text-[13px] text-ink-subtle">
         <span id="tc-allhead">1 Hour</span> in every unit
@@ -93,10 +90,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
-  // Self-contained time/duration converter. Kept in-page (not the shared
-  // UnitConverter) so it can offer a richer unit set, precision control, an
-  // all-units grid and a humanized breakdown without touching shared libs.
-  // Factors are seconds-per-unit.
+
   const UNITS: [string, number][] = [
     ['Nanosecond', 1e-9],
     ['Microsecond', 1e-6],
@@ -130,9 +124,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const allHead = document.getElementById('tc-allhead') as HTMLElement;
   const allTable = document.getElementById('tc-all') as HTMLElement;
 
-  // Format a number: auto uses significant rounding + grouping; a fixed
-  // precision uses that many decimals. Tiny/huge magnitudes fall back to
-  // exponential so we never print a screen of zeros.
   function fmt(n: number): string {
     if (!isFinite(n)) return '∞';
     if (n === 0) return '0';
@@ -154,8 +145,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return (value * FACTOR[from]) / FACTOR[to];
   }
 
-  // Split a duration (in seconds) into y / d / h / m / s (+ ms remainder).
-  // 365-day years and no months, so the parts never overlap or ambiguate.
   function humanize(totalSeconds: number): string {
     if (!isFinite(totalSeconds)) return '∞';
     if (totalSeconds === 0) return '0 seconds';
@@ -250,9 +239,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       await navigator.clipboard.writeText(toVal.value);
       copy.textContent = 'Copied!';
       setTimeout(() => (copy.textContent = 'Copy'), 1400);
-    } catch {
-      /* clipboard blocked; ignore */
-    }
+    } catch 
   });
 
   document.querySelectorAll<HTMLButtonElement>('[data-preset]').forEach((b) => {

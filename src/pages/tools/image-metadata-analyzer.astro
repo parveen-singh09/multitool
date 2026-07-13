@@ -31,19 +31,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <div class="panel p-4"><div id="ima-name" class="truncate font-mono text-lg text-ink" title="">—</div><div class="mt-1 text-[13px] text-ink-subtle">File name</div></div>
       </div>
 
-      <!-- Camera summary (populated when EXIF present) -->
       <div id="ima-camera" class="hidden">
         <h2 class="mb-2 font-display text-sm font-semibold text-ink">Camera</h2>
         <div id="ima-camera-grid" class="grid grid-cols-2 gap-3 sm:grid-cols-4"></div>
       </div>
 
-      <!-- Copyright & authorship (populated when present) -->
       <div id="ima-copyright" class="hidden">
         <h2 class="mb-2 font-display text-sm font-semibold text-ink">Copyright &amp; authorship</h2>
         <div id="ima-copyright-grid" class="grid grid-cols-1 gap-3 sm:grid-cols-2"></div>
       </div>
 
-      <!-- GPS location -->
       <div id="ima-gps" class="hidden">
         <h2 class="mb-2 font-display text-sm font-semibold text-ink">Location</h2>
         <div class="panel flex flex-col gap-3 p-4">
@@ -56,7 +53,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </div>
       </div>
 
-      <!-- Full metadata table -->
       <div id="ima-meta" class="hidden">
         <div class="mb-2 flex items-center justify-between gap-2">
           <h2 class="font-display text-sm font-semibold text-ink">All metadata (<span id="ima-meta-count">0</span>)</h2>
@@ -75,7 +71,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         No embedded EXIF, GPS, IPTC or XMP metadata found in this file.
       </div>
 
-      <!-- Metadata removal -->
       <div class="ima-img-only panel panel-lift flex flex-col gap-3 p-4">
         <div>
           <h2 class="font-display text-sm font-semibold text-ink">Remove metadata</h2>
@@ -123,8 +118,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   let currentFile: File | null = null;
 
-  // Sniff the real type from magic bytes — browsers often leave f.type empty
-  // (URL loads with no Content-Type, HEIC, RAW, etc.). Returns '' if unknown.
   function sniffType(buf: ArrayBuffer): string {
     const b = new Uint8Array(buf.slice(0, 16));
     const ascii = (n: number) => String.fromCharCode(...b.slice(0, n));
@@ -146,8 +139,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return '';
   }
 
-  // Flatten a standalone XMP/RDF sidecar (.xmp) into a flat prop map. exifr only
-  // reads XMP embedded in an image container, so bare sidecars need the DOM.
   function parseXmp(xml: string): Record<string, any> | null {
     let doc: Document;
     try { doc = new DOMParser().parseFromString(xml, 'application/xml'); } catch { return null; }
@@ -157,10 +148,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (tk) out.XMPToolkit = tk;
 
     const value = (el: Element): string | null => {
-      // rdf:Seq / Bag / Alt → join list items (e.g. tone-curve points)
+
       const container = Array.from(el.children).find((c) => /^(Seq|Bag|Alt)$/.test(c.localName || ''));
       if (container) return Array.from(container.children).map((li) => (li.textContent || '').trim()).join(' | ');
-      // Structured value (nested rdf:Description) → flatten its attributes
+
       const desc = Array.from(el.children).find((c) => c.localName === 'Description');
       if (desc) {
         return Array.from(desc.attributes)
@@ -260,7 +251,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const link = document.getElementById('ima-gps-map') as HTMLAnchorElement;
     link.href = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}`;
 
-    // Embedded map — OSM's export iframe needs a small bbox around the point
     const d = 0.008;
     const frame = document.getElementById('ima-gps-frame') as HTMLIFrameElement;
     frame.src = `https://www.openstreetmap.org/export/embed.html?bbox=${lon - d}%2C${lat - d}%2C${lon + d}%2C${lat + d}&layer=mapnik&marker=${lat}%2C${lon}`;
@@ -429,7 +419,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           makerNote: true, userComment: true,
           mergeOutput: false, translateKeys: true, translateValues: true, reviveValues: true,
         } as any) || {};
-      } catch { /* not an exifr container — fall through to XMP/RDF sidecar parse */ }
+      } catch 
 
       // exifr can't read a standalone .xmp/.rdf sidecar — parse the RDF/XML ourselves
       const looksXmp = /rdf\+xml|xml/.test(sniffed) || /\.(xmp|rdf)$/i.test(f.name);

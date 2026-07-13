@@ -1,21 +1,7 @@
-// USMC Physical Fitness Test (PFT) scoring standards.
-// Transcribed from operationmilitarykids.org/marine-corps-pft-standards, which
-// publishes six point tiers per event (100, 90, 75, 60, 50, 40) rather than a
-// value for every point. Scoring therefore INTERPOLATES between the two anchors
-// that bracket a raw result, so scores are continuous while the on-page table
-// shows the exact published tier values for verification.
-//
-// Column order per row (after the leading Points value): 10 data cells =
-//   5 age groups x [Male, Female], in order: 17-20, 21-25, 26-30, 31-35, 36-40
-// A null cell corresponds to an "N/A" blank in the source.
-//
-// Raw units: pull-ups / push-ups in reps (higher is better); plank and 3-mile
-// run stored as "mm:ss" strings (plank: longer hold = higher; run: faster = higher).
-//
-// The source covers ages 17-40 only; brackets 41+ are intentionally omitted.
+
 
 export type Cell = number | string | null;
-export type Dir = 'high' | 'low'; // high: bigger raw is better; low: faster time is better
+export type Dir = 'high' | 'low'; 
 
 export interface EventStd {
   key: string;
@@ -24,8 +10,8 @@ export interface EventStd {
   unit: string;
   dir: Dir;
   isTime: boolean;
-  max: number; // point cap for this event (push-ups cap at 70; others 100)
-  // rows[i][0] = points; rows[i][1..10] = data cells (see column order above)
+  max: number; 
+
   rows: Cell[][];
 }
 
@@ -33,11 +19,8 @@ export const AGE_GROUPS = ['17–20', '21–25', '26–30', '31–35', '36–40'
 
 export type Sex = 'male' | 'female';
 
-// ===========================================================================
-// Pull-ups — reps (higher is better), up to 100 points
-// ===========================================================================
 const PULLUP_ROWS: Cell[][] = [
-  // pts  17M 17F  21M 21F  26M 26F  31M 31F  36M 36F
+
   [100, 20, 7, 23, 11, 23, 12, 23, 11, 21, 10],
   [90, 17, 6, 20, 9, 20, 10, 20, 9, 19, 8],
   [75, 13, 4, 16, 6, 16, 7, 16, 6, 15, 6],
@@ -46,11 +29,8 @@ const PULLUP_ROWS: Cell[][] = [
   [40, 4, null, 5, null, 5, null, 5, null, 5, null],
 ];
 
-// ===========================================================================
-// Push-ups — reps (higher is better), CAPPED at 70 points
-// ===========================================================================
 const PUSHUP_ROWS: Cell[][] = [
-  // pts  17M  17F   21M  21F   26M  26F   31M  31F   36M  36F
+
   [100, null, null, null, null, null, null, null, null, null, null],
   [90, null, null, null, null, null, null, null, null, null, null],
   [75, 65, null, 64, null, 65, null, 67, null, null, null],
@@ -59,11 +39,8 @@ const PUSHUP_ROWS: Cell[][] = [
   [40, 42, 19, 40, 18, 39, 18, 43, 16, 34, 14],
 ];
 
-// ===========================================================================
-// Plank — forearm hold mm:ss (longer is better). Same for all groups + sexes.
-// ===========================================================================
 const PLANK_ROWS: Cell[][] = [
-  // pts   17M     17F     21M     21F     26M     26F     31M     31F     36M     36F
+
   [100, '3:45', '3:45', '3:45', '3:45', '3:45', '3:45', '3:45', '3:45', '3:45', '3:45'],
   [90, '3:20', '3:20', '3:20', '3:20', '3:20', '3:20', '3:20', '3:20', '3:20', '3:20'],
   [75, '2:41', '2:41', '2:41', '2:41', '2:41', '2:41', '2:41', '2:41', '2:41', '2:41'],
@@ -72,11 +49,8 @@ const PLANK_ROWS: Cell[][] = [
   [40, '1:10', '1:10', '1:10', '1:10', '1:10', '1:10', '1:10', '1:10', '1:10', '1:10'],
 ];
 
-// ===========================================================================
-// 3-Mile Run — time mm:ss (faster is better)
-// ===========================================================================
 const RUN_ROWS: Cell[][] = [
-  // pts    17M      17F      21M      21F      26M      26F      31M      31F      36M      36F
+
   [100, '18:00', '21:00', '18:00', '21:00', '18:00', '21:00', '18:00', '21:00', '18:00', '21:00'],
   [90, '19:40', '22:40', '19:40', '22:40', '19:40', '22:40', '19:40', '22:50', '19:50', '22:50'],
   [75, '22:00', '25:10', '22:00', '25:10', '22:10', '25:10', '22:20', '25:20', '22:30', '25:30'],
@@ -98,20 +72,16 @@ export const RUN: EventStd = {
   key: 'run', label: '3-Mile Run', shortLabel: '3-mile run', unit: 'time', dir: 'low', isTime: true, max: 100, rows: RUN_ROWS,
 };
 
-// Data-cell column index for a given age group + sex.
-// row = [points, 17M, 17F, 21M, 21F, ...] -> 1 + ageIndex*2 + (female ? 1 : 0)
 export function colIndex(ageIndex: number, sex: Sex): number {
   return 1 + ageIndex * 2 + (sex === 'female' ? 1 : 0);
 }
 
-// "mm:ss" (or "m:ss") -> total seconds. Plain numbers pass through.
 export function timeToSec(v: string): number {
   const m = v.trim().match(/^(\d+):(\d{1,2})$/);
   if (!m) return Number(v);
   return Number(m[1]) * 60 + Number(m[2]);
 }
 
-// total seconds -> "m:ss"
 export function secToTime(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = sec % 60;

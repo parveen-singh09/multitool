@@ -1,7 +1,4 @@
-// Compact common-word list for the passphrase generator (Diceware-style).
-// ~380 short, easy-to-type, unambiguous English words. Not the official EFF
-// list, but large enough that a 5-word passphrase has ~48 bits of entropy
-// (380^5 ≈ 7.9e12). All lowercase, 3–7 letters, no homophones of digits.
+
 
 export const WORDS = (
   'able acid aged also arch army atom aunt away axis baby back bald ball band ' +

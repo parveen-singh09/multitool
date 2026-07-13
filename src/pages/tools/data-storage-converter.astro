@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="data-storage-converter">
   <div id="ds-root" class="flex flex-col gap-6">
-    <!-- Quick two-way convert (MB → GB style) -->
+
     <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
       <div class="flex flex-col gap-1">
         <label class="text-sm text-ink-subtle" for="ds-from-val">From</label>
@@ -33,13 +33,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p id="ds-formula" class="text-[13px] text-ink-tertiary"></p>
     <p id="ds-error" class="hidden text-[13px] text-[#e5484d]"></p>
 
-    <!-- Presets -->
     <div class="flex flex-col gap-2">
       <p class="text-[13px] text-ink-subtle">Quick conversions</p>
       <div id="ds-presets" class="flex flex-wrap gap-2"></div>
     </div>
 
-    <!-- Controls -->
     <div class="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-hairline pt-4">
       <div class="flex items-center gap-2">
         <label class="text-[13px] text-ink-subtle" for="ds-precision">Decimal places</label>
@@ -58,7 +56,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <button id="ds-copy-all" type="button" class="btn btn-secondary ml-auto h-9 px-3">Copy all</button>
     </div>
 
-    <!-- All-units table -->
     <div>
       <p class="mb-2 text-[13px] text-ink-subtle">Value in every unit</p>
       <div id="ds-table" class="overflow-hidden rounded-md border border-hairline"></div>
@@ -79,9 +76,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
-  // Self-contained data-storage converter. Base unit = byte.
-  // Three families kept explicitly separate: network bits, SI decimal bytes,
-  // IEC binary bytes. ponytail: inline units, no shared-lib dependency to extend.
+
   type Group = 'bit' | 'si' | 'iec';
   interface Unit { id: string; label: string; group: Group; bytes: number }
 
@@ -138,9 +133,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       .join('');
   }
 
-  // Format a number to the chosen decimal places, trimming trailing zeros and
-  // falling back to exponential for values that would otherwise render as 0 or
-  // lose all significance.
   function fmt(n: number): string {
     if (!isFinite(n)) return n < 0 ? '-∞' : '∞';
     if (n === 0) return '0';
@@ -162,9 +154,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   function parseInput(): number | null {
     const raw = fromVal.value.trim().replace(/,/g, '');
-    if (raw === '') return NaN; // empty = neutral, not an error
+    if (raw === '') return NaN; 
     const v = Number(raw);
-    if (!isFinite(v)) return null; // invalid
+    if (!isFinite(v)) return null; 
     if (v < 0) return null;
     return v;
   }
@@ -236,9 +228,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const prev = btn.textContent;
       btn.textContent = 'Copied';
       setTimeout(() => { btn.textContent = prev; }, 1200);
-    } catch {
-      /* clipboard unavailable — silently ignore */
-    }
+    } catch 
   }
 
   // Presets: [value, fromId, toId]

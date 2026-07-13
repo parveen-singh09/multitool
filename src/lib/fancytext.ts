@@ -1,7 +1,4 @@
-// Fancy / stylish text engine used by the nickname generator.
-// Turns plain ASCII into Unicode font variants + decorated symbol frames.
-// Pure functions, no deps — every style works from copy/paste alone (no fonts
-// to install), which is the whole point of these Unicode tricks.
+
 
 const UP = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const LO = 'abcdefghijklmnopqrstuvwxyz';
@@ -9,11 +6,6 @@ const DG = '0123456789';
 
 type Overrides = Record<string, string>;
 
-/**
- * Offset each ASCII letter/digit to a contiguous Unicode block.
- * `overrides` patches the holes in the Math-Alphanumeric blocks where a few
- * codepoints live in the older "Letterlike Symbols" block instead.
- */
 function offsetMap(
   upStart: number | null,
   loStart: number | null,
@@ -33,7 +25,6 @@ function offsetMap(
       .join('');
 }
 
-/** Map from an explicit ordered target alphabet (must be full A-Z / a-z). */
 function tableMap(upTable: string, loTable = upTable) {
   const up = [...upTable];
   const lo = [...loTable];
@@ -48,7 +39,6 @@ function tableMap(upTable: string, loTable = upTable) {
       .join('');
 }
 
-/** Append a combining mark to every non-space char (strike / underline / slash). */
 function combine(mark: string) {
   return (text: string) => [...text].map((ch) => (ch === ' ' ? ch : ch + mark)).join('');
 }
@@ -69,12 +59,10 @@ function upsideDown(text: string) {
   return [...text.toLowerCase()].map((ch) => FLIP[ch] ?? ch).reverse().join('');
 }
 
-// Math-Alphanumeric hole patches (letters that live in Letterlike Symbols).
 const SCRIPT_O: Overrides = { B: 'ℬ', E: 'ℰ', F: 'ℱ', H: 'ℋ', I: 'ℐ', L: 'ℒ', M: 'ℳ', R: 'ℛ', e: 'ℯ', g: 'ℊ', o: 'ℴ' };
 const FRAKTUR_O: Overrides = { C: 'ℭ', H: 'ℌ', I: 'ℑ', R: 'ℜ', Z: 'ℨ' };
 const DBL_O: Overrides = { C: 'ℂ', H: 'ℍ', N: 'ℕ', P: 'ℙ', Q: 'ℚ', R: 'ℝ', Z: 'ℤ' };
 
-// ── Font styles ────────────────────────────────────────────────────────────
 export interface FontStyle {
   id: string;
   name: string;
@@ -112,10 +100,6 @@ export const FONT_STYLES: FontStyle[] = [
   { id: 'wide', name: 'Aesthetic', apply: (t) => [...t].join(' ') },
 ];
 
-// ── Decorative frames ────────────────────────────────────────────────────────
-// `{}` is the placeholder for the styled/plain name. Mix of gaming (꧁꧂),
-// hearts, arrows, sparkles and bracket art — the stuff people put on PUBG /
-// Free Fire / Discord handles.
 export const FRAMES: string[] = [
   '꧁༺ {} ༻꧂', '꧁☬ {} ☬꧂', '༺ {} ༻', '⚡{}⚡', '★彡 {} 彡★', '๛ {}', '꧁ᶜᴿᴬᶻᵞ {} ꧂',
   '▄︻デ {} ══━一', '☠ {} ☠', '♛ {} ♛', '⚔️ {} ⚔️', '☬ {} ☬', '༒ {} ༒', '⸸ {} ⸸',
@@ -130,7 +114,6 @@ export function decorate(name: string): string[] {
   return FRAMES.map((f) => f.replace('{}', name));
 }
 
-/** All font variants of a name as {name,value} rows. */
 export function fontVariants(text: string): { name: string; value: string }[] {
   return FONT_STYLES.map((s) => ({ name: s.name, value: s.apply(text) }));
 }

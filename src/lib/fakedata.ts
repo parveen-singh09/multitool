@@ -1,6 +1,4 @@
-// Static data banks for the fake-data, naming and writing generators.
-// Plain arrays so bundlers tree-shake per page. All fictional — any
-// resemblance to real people, companies or addresses is coincidental.
+
 
 export const FIRST_NAMES_M = [
   'James', 'John', 'Robert', 'Michael', 'William', 'David', 'Richard', 'Joseph',
@@ -65,7 +63,6 @@ export const EMAIL_DOMAINS = [
   'placeholder.dev', 'noreply.co',
 ];
 
-// Company name building blocks.
 export const COMPANY_ADJ = [
   'Global', 'Prime', 'Peak', 'Apex', 'Bright', 'Blue', 'North', 'Pioneer', 'Summit',
   'Vertex', 'Nova', 'Quantum', 'Silver', 'Iron', 'Rapid', 'Clear', 'Nimbus', 'Orbit',
@@ -76,7 +73,6 @@ export const COMPANY_NOUN = [
 ];
 export const COMPANY_SUFFIX = ['Inc', 'LLC', 'Ltd', 'Co', 'Corp', 'Group', 'Partners'];
 
-// Generic word banks for writing tools.
 export const ADJECTIVES = [
   'silent', 'ancient', 'golden', 'crimson', 'hidden', 'wandering', 'frozen', 'gentle',
   'restless', 'brave', 'quiet', 'wild', 'distant', 'radiant', 'shattered', 'velvet',
@@ -156,7 +152,6 @@ export const VERBS = [
 
 export const TLDS = ['com', 'io', 'app', 'dev', 'co', 'net', 'org', 'ai', 'xyz', 'tech', 'studio', 'works'];
 
-// Lorem words for JSON/CSV mock text.
 export const LOREM_WORDS = (
   'lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor ' +
   'incididunt ut labore et dolore magna aliqua enim ad minim veniam quis nostrud ' +

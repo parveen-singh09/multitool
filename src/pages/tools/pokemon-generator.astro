@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="pokemon-generator">
   <div class="flex flex-col gap-7">
-    <!-- Controls -->
+
     <div class="flex flex-wrap items-end justify-center gap-3">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
         <input id="pk-count" type="number" min="1" max="50" value="1" class="field w-24" />
@@ -36,7 +36,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <p id="pk-status" class="h-5 text-center text-sm text-ink-tertiary" aria-live="polite"></p>
 
-    <!-- Results -->
     <div id="pk-grid" class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"></div>
   </div>
 
@@ -57,7 +56,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <style is:global>
-  /* pk- prefix; global so innerHTML-injected cards pick these up. */
+
   .pk-card {
     display: flex;
     flex-direction: column;
@@ -70,7 +69,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     overflow: hidden;
   }
   .pk-card::before {
-    /* Soft type-colored glow behind the artwork. --pk-accent set per card. */
+
     content: '';
     position: absolute;
     inset: -40% 0 auto 0;
@@ -124,9 +123,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const shinyEl = $('pk-shiny') as HTMLInputElement;
 
   const API = 'https://pokeapi.co/api/v2';
-  const MAX_DEX = 1025; // national dex ids covered by official artwork
+  const MAX_DEX = 1025; 
 
-  // Canonical type list + brand colors (used for badges and card glow).
   const TYPE_COLORS: Record<string, string> = {
     normal: '#9fa19f', fire: '#ff9d55', water: '#5090d6', electric: '#f4d23c',
     grass: '#63bc5a', ice: '#73cec0', fighting: '#ce4069', poison: '#ab6ac8',
@@ -138,14 +136,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     hp: 'HP', attack: 'ATK', defense: 'DEF',
     'special-attack': 'SpA', 'special-defense': 'SpD', speed: 'SPD',
   };
-  // Emoji per type — native <option> can't hold an <img>, but renders emoji fine.
+
   const TYPE_EMOJI: Record<string, string> = {
     normal: '⚪', fire: '🔥', water: '💧', electric: '⚡', grass: '🍃', ice: '❄️',
     fighting: '🥊', poison: '☠️', ground: '🏜️', flying: '🕊️', psychic: '🔮',
     bug: '🐛', rock: '🪨', ghost: '👻', dragon: '🐉', dark: '🌙', steel: '⚙️', fairy: '🧚',
   };
 
-  // Populate the type dropdown from the color map (alphabetical, capitalized).
   for (const t of Object.keys(TYPE_COLORS).sort()) {
     const opt = document.createElement('option');
     opt.value = t;
@@ -270,7 +267,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         grid.innerHTML = '';
         return;
       }
-      // Distinct picks when the pool allows, else with replacement.
+
       const ids = pool.length >= n
         ? sample(pool, n)
         : Array.from({ length: n }, () => pool[randInt(0, pool.length - 1)]);

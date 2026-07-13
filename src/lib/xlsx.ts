@@ -1,10 +1,4 @@
-// Minimal Office Open XML (.xlsx) builder. A .xlsx is a ZIP of XML parts;
-// we emit one worksheet with inline string / number cells. This preserves
-// tabular data (rows × columns), NOT original PDF layout, merged cells,
-// styling or formulas — honest fidelity for PDF→Excel table extraction.
-//
-// ponytail: single sheet, inline strings. Add a shared string table or
-// multiple sheets here if a tool needs them.
+
 
 import { makeZip } from './zip';
 
@@ -20,7 +14,6 @@ function xmlEscape(s: string): string {
     .replace(/'/g, '&apos;');
 }
 
-// Column index (0-based) → spreadsheet letter (A, B, …, Z, AA, AB, …).
 export function colLetter(i: number): string {
   let s = '';
   i += 1;
@@ -32,7 +25,6 @@ export function colLetter(i: number): string {
   return s;
 }
 
-// A finite number → numeric cell; everything else → inline string cell.
 function cell(ref: string, value: string | number): string {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return `<c r="${ref}"><v>${value}</v></c>`;
@@ -65,10 +57,6 @@ const WORKBOOK_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
 </Relationships>`;
 
-/**
- * Build a .xlsx Blob from a 2D array of rows. Cell values that are finite
- * numbers become numeric cells; everything else becomes text.
- */
 export function makeXlsx(rows: (string | number)[][]): Blob {
   const rowXml = rows
     .map((row, r) => {

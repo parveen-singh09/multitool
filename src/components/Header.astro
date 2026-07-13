@@ -1,5 +1,6 @@
 ---
 import Logo from './Logo.astro';
+import ToolSearch from './ToolSearch.astro';
 import { categories } from '../data/tools';
 ---
 
@@ -8,19 +9,19 @@ import { categories } from '../data/tools';
     <div class="flex items-center gap-2">
       <button
         id="sidebar-toggle-btn"
-        class="btn btn-secondary p-2 cursor-pointer"
+        class="btn btn-tertiary p-2 cursor-pointer"
         aria-label="Toggle sidebar"
         title="Toggle sidebar"
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect width="18" height="18" x="3" y="3" rx="2" />
-          <path d="M9 3v18" />
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="6" x2="20" y2="6" />
+          <line x1="4" y1="12" x2="20" y2="12" />
+          <line x1="4" y1="18" x2="20" y2="18" />
         </svg>
       </button>
       <Logo />
     </div>
 
-    <!-- Desktop nav -->
     <div class="hidden items-center gap-1 lg:flex">
       <a href="/" class="btn btn-tertiary">Home</a>
       <a href="/#tools" class="btn btn-tertiary">All Tools</a>
@@ -30,7 +31,7 @@ import { categories } from '../data/tools';
     <div class="hidden items-center gap-2 md:flex">
       <button
         type="button"
-        class="theme-toggle btn btn-secondary"
+        class="theme-toggle btn btn-tertiary"
         aria-label="Toggle color theme"
         title="Toggle light / dark theme"
       >
@@ -41,10 +42,9 @@ import { categories } from '../data/tools';
           <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
         </svg>
       </button>
-      <a href="/#tools" class="btn btn-primary">Browse tools</a>
+      <ToolSearch variant="compact" id="tool-search-header" />
     </div>
 
-    <!-- Mobile toggle -->
     <button
       id="nav-toggle"
       class="btn btn-secondary md:hidden"
@@ -60,18 +60,17 @@ import { categories } from '../data/tools';
     </button>
   </nav>
 
-  <!-- Mobile drawer is now fully handled by the shadcn sidebar sheet -->
 </header>
 
 <style>
-  /* Show the icon for the theme you'd switch TO: sun in dark, moon in light. */
+
   .theme-toggle .icon-moon { display: none; }
   :global(html[data-theme='light']) .theme-toggle .icon-sun { display: none; }
   :global(html[data-theme='light']) .theme-toggle .icon-moon { display: inline; }
 </style>
 
 <script>
-  // Dispatch custom event to toggle the sidebar
+
   const dispatchToggle = () => {
     window.dispatchEvent(new CustomEvent('toggle-sidebar'));
   };
@@ -79,7 +78,6 @@ import { categories } from '../data/tools';
   document.getElementById('sidebar-toggle-btn')?.addEventListener('click', dispatchToggle);
   document.getElementById('nav-toggle')?.addEventListener('click', dispatchToggle);
 
-  // Theme toggle — flip data-theme, persist, and update theme-color meta.
   const root = document.documentElement;
   const themeMeta = document.querySelector('meta[name="theme-color"]');
   const applyMeta = (theme: string) =>

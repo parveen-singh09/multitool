@@ -1,29 +1,23 @@
-// Timeline data model + date parsing. The whole tool renders from a single
-// `Timeline` object; every export derives from the SVG that model produces.
-//
-// Dates DON'T go through the JS Date object: it can't parse "44 BC" or years
-// < 100 reliably. Instead parseDate() pulls year/month/day out with a regex and
-// computes a single numeric `sort` key (BC years are negative) that orders every
-// event — ancient to modern — with one comparison.
+
 
 export interface TLDate {
-  raw: string;      // exactly what the user typed
-  year: number;     // negative = BC/BCE
-  month?: number;   // 1-12
-  day?: number;     // 1-31
-  sort: number;     // single comparable key: year + (month-1)/12 + (day-1)/372
+  raw: string;      
+  year: number;     
+  month?: number;   
+  day?: number;     
+  sort: number;     
 }
 
 export interface TimelineEvent {
   id: string;
   start: TLDate;
-  end?: TLDate;         // present => range/period bar; absent => point event
-  displayDate?: string; // free-text label overriding the auto-formatted date
+  end?: TLDate;         
+  displayDate?: string; 
   title: string;
   desc?: string;
-  group?: string;       // swimlane / category label
-  color?: string;       // per-event accent (#hex) overriding the theme accent
-  media?: string;       // optional image URL
+  group?: string;       
+  color?: string;       
+  media?: string;       
 }
 
 export interface TimelineTheme {
@@ -34,7 +28,7 @@ export interface TimelineTheme {
   ink: string;
   inkSubtle: string;
   accent: string;
-  // Concrete hex only — a standalone exported .svg can't read CSS variables.
+
 }
 
 export type TimelineLayout = 'vertical' | 'horizontal' | 'alternating';
@@ -47,14 +41,10 @@ export interface Timeline {
   events: TimelineEvent[];
 }
 
-// 372 = 31 * 12, so day fractions can never spill into the next month's slot.
 function sortKey(year: number, month?: number, day?: number): number {
   return year + ((month ?? 1) - 1) / 12 + ((day ?? 1) - 1) / 372;
 }
 
-// Accepts: "2024", "2024-03", "2024-03-15", "March 2024", "44 BC", "800 BCE",
-// "3/15/2024", "2024 Q1" (quarter -> first month of quarter). Returns null when
-// there's no year to anchor on.
 export function parseDate(raw: string): TLDate | null {
   const s = raw.trim();
   if (!s) return null;
@@ -62,7 +52,6 @@ export function parseDate(raw: string): TLDate | null {
   const bc = /\b(bc|bce)\b/i.test(s);
   const sign = bc ? -1 : 1;
 
-  // Quarter: "2024 Q1" .. "2024 Q4"
   const q = s.match(/(\d{1,4})\s*q\s*([1-4])/i);
   if (q) {
     const year = sign * parseInt(q[1], 10);
@@ -70,7 +59,6 @@ export function parseDate(raw: string): TLDate | null {
     return { raw, year, month, sort: sortKey(year, month) };
   }
 
-  // ISO-ish: YYYY, YYYY-MM, YYYY-MM-DD
   const iso = s.match(/^(\d{1,6})(?:-(\d{1,2}))?(?:-(\d{1,2}))?/);
   const monthName = MONTHS.findIndex((m) => new RegExp(`\\b${m}`, 'i').test(s));
 

@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="regex-tester">
   <div class="flex flex-col gap-4">
-    <!-- Flavor -->
+
     <div class="flex flex-col gap-1 text-sm text-ink-subtle">
       <label for="re-flavor">Flavor</label>
       <select id="re-flavor" class="field w-full sm:w-64">
@@ -19,7 +19,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <p id="re-flavornote" class="text-[12px] text-ink-tertiary"></p>
     </div>
 
-    <!-- Pattern + flags -->
     <div class="flex flex-col gap-1 text-sm text-ink-subtle">
       <span class="flex items-center justify-between">
         Pattern
@@ -33,37 +32,31 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </span>
     </div>
 
-    <!-- Flag toggles -->
     <div id="re-flagchips" class="flex flex-wrap gap-2"></div>
 
-    <!-- Test string -->
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">
       Test string
-      <textarea id="re-input" class="field min-h-40 resize-y font-mono text-[13px]" spellcheck="false">Contact us at hello@toolcities.com or support@example.org today.
+      <textarea id="re-input" class="field min-h-40 resize-y font-mono text-[13px]" spellcheck="false">Contact us at hello@toolsilk.com or support@example.org today.
 Ping ada@dev.io and grace@compute.net for access.</textarea>
     </label>
 
     <p id="re-status" class="text-[13px] text-ink-subtle" aria-live="polite"></p>
 
-    <!-- Highlighted matches -->
     <div>
       <span class="text-[13px] text-ink-subtle">Highlighted matches</span>
       <div id="re-output" class="panel panel-lift mt-2 min-h-24 whitespace-pre-wrap break-words p-4 font-mono text-[13px] leading-relaxed"></div>
     </div>
 
-    <!-- Tabs -->
     <div class="mt-2 flex gap-1 border-b border-hairline">
       <button data-tab="matches" class="re-tab -mb-px border-b-2 px-3 py-2 text-[13px]">Match details</button>
       <button data-tab="substitution" class="re-tab -mb-px border-b-2 px-3 py-2 text-[13px]">Substitution</button>
       <button data-tab="explain" class="re-tab -mb-px border-b-2 px-3 py-2 text-[13px]">Explanation</button>
     </div>
 
-    <!-- Match details -->
     <div id="tab-matches" class="re-panel">
       <div id="re-matches"></div>
     </div>
 
-    <!-- Substitution -->
     <div id="tab-substitution" class="re-panel hidden">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Replacement <span class="text-ink-tertiary">($1, $&lt;name&gt;, $&amp;, $`, $')</span>
@@ -75,12 +68,10 @@ Ping ada@dev.io and grace@compute.net for access.</textarea>
       </div>
     </div>
 
-    <!-- Explanation -->
     <div id="tab-explain" class="re-panel hidden">
       <div id="re-explain" class="panel mt-1 p-2"></div>
     </div>
 
-    <!-- Quick reference -->
     <details class="panel mt-2 p-4 text-[13px] text-ink-subtle">
       <summary class="cursor-pointer text-ink select-none">Quick reference</summary>
       <div id="re-cheat" class="mt-3 grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2 md:grid-cols-3"></div>
@@ -147,11 +138,6 @@ Ping ada@dev.io and grace@compute.net for access.</textarea>
   const esc = (s: string) =>
     s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-  // ---- Flavors ----
-  // The tester executes patterns with the browser's JS engine. Other flavors are
-  // approximated: we adapt the flag set + named-group syntax and warn on features
-  // the target engine doesn't support. ponytail: real per-engine execution would
-  // need a WASM build per flavor; approximation covers the common cases.
   const FLAG_LABELS: Record<string, string> = {
     g: 'global — find all matches',
     i: 'ignore case',
@@ -166,11 +152,11 @@ Ping ada@dev.io and grace@compute.net for access.</textarea>
 
   interface Flavor {
     label: string;
-    flags: string;              // flags this engine offers (g always added internally)
-    note: string;               // one-line caveat shown under the picker
-    noLookaround?: boolean;     // RE2-family: no lookahead/lookbehind
-    noBackref?: boolean;        // RE2-family: no backreferences
-    pyNames?: boolean;          // Python (?P<name>) / (?P=name) syntax
+    flags: string;              
+    note: string;               
+    noLookaround?: boolean;     
+    noBackref?: boolean;        
+    pyNames?: boolean;          
   }
   const FLAVORS: Record<string, Flavor> = {
     js:     { label: 'JavaScript', flags: 'gimsuyd', note: 'Native — runs on your browser’s JS engine.' },
@@ -186,7 +172,6 @@ Ping ada@dev.io and grace@compute.net for access.</textarea>
     return FLAVORS[flavorEl.value] ?? FLAVORS.js;
   }
 
-  // ---- Flag toggle chips (rebuilt per flavor) ----
   let flagBoxes: HTMLInputElement[] = [];
   function renderFlagChips() {
     const f = curFlavor();
@@ -213,7 +198,7 @@ Ping ada@dev.io and grace@compute.net for access.</textarea>
   function onFlavorChange() {
     const f = curFlavor();
     flavorNote.textContent = f.note;
-    // Drop any flags the new flavor doesn't offer.
+
     flagsEl.value = flagsEl.value.split('').filter((fl) => f.flags.includes(fl)).join('');
     renderFlagChips();
     syncChipsFromText();
@@ -221,7 +206,6 @@ Ping ada@dev.io and grace@compute.net for access.</textarea>
   }
   flavorEl.addEventListener('change', onFlavorChange);
 
-  // ---- Tabs ----
   const tabs = Array.from(document.querySelectorAll('.re-tab')) as HTMLButtonElement[];
   function selectTab(name: string) {
     tabs.forEach((t) => {
@@ -233,22 +217,18 @@ Ping ada@dev.io and grace@compute.net for access.</textarea>
   tabs.forEach((t) => t.addEventListener('click', () => selectTab(t.dataset.tab!)));
   selectTab('matches');
 
-  // ---- Match colors (alternating) ----
   const MATCH_COLORS = ['#5e6ad2', '#7a7fad', '#828fff'];
 
-  // Translate a pattern from its source flavor into something the JS engine accepts.
   function toJsPattern(src: string, f: Flavor): string {
     if (f.pyNames) {
-      // Python: (?P<name>…) -> (?<name>…), (?P=name) -> \k<name>
+
       src = src.replace(/\(\?P<([^>]+)>/g, '(?<$1>').replace(/\(\?P=([A-Za-z_]\w*)\)/g, '\\k<$1>');
     }
-    // x (extended) mode: JS has no equivalent, so strip unescaped whitespace and
-    // # comments here to approximate it, rather than leave them as literals.
+
     if (flagsEl.value.includes('x')) src = stripExtended(src);
     return src;
   }
 
-  // Remove insignificant whitespace and # comments outside char classes / escapes.
   function stripExtended(src: string): string {
     let out = '', inClass = false;
     for (let i = 0; i < src.length; i++) {
@@ -265,7 +245,6 @@ Ping ada@dev.io and grace@compute.net for access.</textarea>
     return out;
   }
 
-  // Warn (not fatal) about features the target engine lacks.
   function flavorWarning(src: string, f: Flavor): string {
     if (f.noLookaround && /\(\?<?[=!]/.test(src)) return `${f.label} has no lookahead/lookbehind support.`;
     if (f.noBackref && /\\[1-9]|\\k<[^>]+>/.test(src)) return `${f.label} has no backreference support.`;

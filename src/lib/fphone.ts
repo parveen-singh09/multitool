@@ -1,15 +1,4 @@
-// Fake phone number generator. The country list comes from libphonenumber
-// (~245 countries) so every calling code and flag is covered. For 16
-// well-known countries we draw the national number from a reserved / fictional
-// range (US/CA 555-01xx, UK 07700 900xxx, …) so it can never dial a real
-// person; for the rest we take libphonenumber's example number, keep a valid
-// prefix and randomise the tail so the length and leading digits stay plausible.
-// Every number is formatted by libphonenumber, so national / international /
-// E.164 styles are always correct. Numbers are fictional test data.
-//
-// ponytail: reserved ranges only exist for the 16 in RESERVED — elsewhere the
-// subscriber digits are randomised over a real example number. Add a country
-// to RESERVED to give it a reserved range instead.
+
 
 import { randInt } from './random';
 import {
@@ -20,8 +9,6 @@ import examples from 'libphonenumber-js/mobile/examples';
 
 const d = (n: number) => String(randInt(0, 10 ** n - 1)).padStart(n, '0');
 
-// Reserved / fictional national-number generators (digits only) for countries
-// that have an official test range. Numbers here are intentionally invalid.
 const RESERVED: Record<string, () => string> = {
   US: () => `${randInt(200, 989)}55501${d(2)}`,
   CA: () => `${randInt(200, 989)}55501${d(2)}`,

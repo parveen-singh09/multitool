@@ -25,7 +25,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div class="panel p-5 text-center"><div id="ln-total" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total repayment</div></div>
     </div>
 
-    <!-- Principal vs interest split -->
     <div class="flex flex-col gap-2">
       <div class="flex h-4 overflow-hidden rounded-full bg-surface-3">
         <span id="ln-bar-p" class="transition-[width] duration-300" style="width:0;background:#5e6ad2" title="Principal"></span>
@@ -37,10 +36,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Payoff note when extra payment is set -->
     <div id="ln-payoff" class="hidden panel p-4 text-center text-[13px] text-ink-muted"></div>
 
-    <!-- Amortization schedule (yearly) -->
     <details class="panel p-0">
       <summary class="cursor-pointer list-none px-5 py-4 text-sm font-medium text-ink hover:text-primary-hover">
         <span class="inline-flex items-center gap-2">▸ Amortization schedule (by year)</span>
@@ -86,8 +83,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
   const money0 = (n: number) => Math.round(n).toLocaleString();
 
-  // Iterate months from a fixed base payment + optional extra. Returns total
-  // interest, months to payoff, and per-year principal/interest/balance rows.
   function amortize(P: number, r: number, base: number, extra: number) {
     let bal = P, totalInterest = 0, month = 0, yrP = 0, yrI = 0;
     const yearsArr: { principal: number; interest: number; balance: number }[] = [];
@@ -126,7 +121,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     intEl.textContent = money(totalInterest);
     totEl.textContent = money(P + totalInterest);
 
-    // split bar
     const total = P + totalInterest;
     document.getElementById('ln-bar-p')!.style.width = `${(P / total) * 100}%`;
     document.getElementById('ln-bar-i')!.style.width = `${(totalInterest / total) * 100}%`;

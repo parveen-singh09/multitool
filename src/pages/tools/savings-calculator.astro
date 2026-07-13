@@ -42,7 +42,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <p id="sv-note" class="hidden text-[13px] text-ink-muted"></p>
 
-    <!-- Growth chart -->
     <div class="panel p-5">
       <div class="mb-3 text-sm text-ink-muted">Balance over time</div>
       <svg id="sv-chart" viewBox="0 0 320 120" class="w-full" preserveAspectRatio="none" role="img" aria-label="Savings balance over time"></svg>
@@ -70,10 +69,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const SVGNS = 'http://www.w3.org/2000/svg';
   let mode: 'goal' | 'project' = 'goal';
 
-  // Simulate month-by-month, applying interest per the compounding frequency, and
-  // capture the balance at each year boundary for the chart.
   function simulate(have: number, monthly: number, annualRate: number, months: number, perYear: number) {
-    // Effective monthly growth factor from the chosen compounding frequency.
+
     const monthlyFactor = perYear === 12 ? 1 + annualRate / 12 : Math.pow(1 + annualRate / perYear, perYear / 12);
     let balance = have;
     const points: number[] = [have];
@@ -95,7 +92,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (!(n > 0)) { primaryEl.textContent = '—'; interestEl.textContent = '—'; return; }
 
     const monthlyFactor = perYear === 12 ? 1 + annualRate / 12 : Math.pow(1 + annualRate / perYear, perYear / 12);
-    const r = monthlyFactor - 1; // effective monthly rate
+    const r = monthlyFactor - 1; 
 
     if (mode === 'goal') {
       const goal = Number($('sv-goal').value);

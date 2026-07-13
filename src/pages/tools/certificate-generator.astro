@@ -18,7 +18,7 @@ const templates = [
 <ToolLayout slug="certificate-generator">
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
     <div class="flex flex-col gap-4">
-      <!-- Template picker -->
+
       <div class="flex flex-col gap-2">
         <span class="text-sm text-ink-subtle">Template</span>
         <div id="ce-templates" class="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -35,7 +35,6 @@ const templates = [
         </div>
       </div>
 
-      <!-- Custom template upload -->
       <div class="flex flex-col gap-2">
         <span class="text-sm text-ink-subtle">Custom template</span>
         <div class="flex flex-wrap items-center gap-2">
@@ -142,7 +141,7 @@ const templates = [
 
   let currentTpl = 'classic';
   let customImg: HTMLImageElement | null = null;
-  // Track whether the user has manually picked an accent so template switches can update it.
+
   let accentTouched = false;
 
   function activeAccent(tpl: Template): string {
@@ -191,7 +190,7 @@ const templates = [
         ctx.lineWidth = 2; ctx.strokeRect(46, 30, W - 76, H - 60);
         break;
       case 'band':
-        // Drawn separately in draw() before the title.
+
         break;
       case 'none':
       default:
@@ -207,15 +206,13 @@ const templates = [
     const borderSel = v('ce-border');
     const border: Border = borderSel === 'template' ? tpl.border : (borderSel as Border);
 
-    // Background.
     if (customImg) {
-      // Stretch the artwork to fill the certificate exactly — no crop, no dimming.
+
       ctx.drawImage(customImg, 0, 0, W, H);
     } else {
       ctx.fillStyle = tpl.bg; ctx.fillRect(0, 0, W, H);
     }
 
-    // Text colors (custom uses dark neutral text on the light panel).
     const titleColor = customImg ? accent : tpl.titleColor;
     const subColor = customImg ? '#666666' : tpl.subColor;
     const nameColor = customImg ? '#111111' : tpl.nameColor;
@@ -225,7 +222,7 @@ const templates = [
     const family = customImg ? 'Georgia, "Times New Roman", serif' : tpl.family;
 
     let titleY = 175;
-    // Border / band.
+
     if (!customImg) {
       if (border === 'band') {
         ctx.fillStyle = accent;
@@ -236,12 +233,12 @@ const templates = [
     }
 
     ctx.textAlign = 'center';
-    // Over custom artwork, a soft shadow keeps text readable without dimming the image.
+
     if (customImg) {
       ctx.shadowColor = 'rgba(255,255,255,0.85)';
       ctx.shadowBlur = 8;
     }
-    // Title.
+
     ctx.fillStyle = border === 'band' && !customImg ? tpl.titleColor : titleColor;
     ctx.font = `700 46px ${family}`;
     ctx.fillText(v('ce-title'), W / 2, titleY);

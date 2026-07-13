@@ -1,10 +1,6 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 
-// Launcher tiles — each maps to a test id handled in the fullscreen runner below.
-// ponytail: this list and the client `tests` array below are kept in sync by `id`.
-// One file, two arrays — not worth an abstraction; just keep ids matching.
-// icon: inline 24×24 stroke SVG (currentColor) — no icon-lib dependency.
 const tests = [
   { id: 'solid', name: 'Solid colors', desc: 'Dead & stuck pixels, backlight bleed.', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/>' },
   { id: 'gradient', name: 'Gradients', desc: 'Banding & smooth tonal reproduction.', icon: '<defs><linearGradient id="g1" x1="0" x2="1"><stop offset="0" stop-color="currentColor" stop-opacity="0"/><stop offset="1" stop-color="currentColor"/></linearGradient></defs><rect x="3" y="6" width="18" height="12" rx="2" fill="url(#g1)" stroke="none"/>' },
@@ -102,30 +98,28 @@ const tests = [
 </ToolLayout>
 
 <script>
-  // ---- Fullscreen screen-test runner. Canvas draws every pattern; a small ----
-  // ---- HTML overlay shows the active test, its options and nav hints.     ----
 
   type Ctx = CanvasRenderingContext2D;
   interface Test {
     id: string;
     name: string;
-    // What to look for while the test is on screen — shown in the overlay.
+
     look: string;
-    // variants: how many press-to-cycle states (colors, gray levels, pages…)
+
     variants: (s: State) => number;
     variantLabel: (s: State) => string;
-    // optional numeric knob adjusted with +/-
+
     option?: { label: string; get: (s: State) => number; set: (s: State, v: number) => void };
     draw: (ctx: Ctx, w: number, h: number, s: State) => void;
     animated?: boolean;
   }
   interface State {
     variant: number;
-    steps: number; // gradient steps
-    speed: number; // response px/s
-    gray: number; // uniformity/gamma level 0..255
-    fontPt: number; // sharpness/text size
-    t: number; // animation clock (ms)
+    steps: number; 
+    speed: number; 
+    gray: number; 
+    fontPt: number; 
+    t: number; 
   }
 
   const COLORS: { css: string; name: string }[] = [
@@ -151,10 +145,9 @@ const tests = [
     { css: '255,255,0', name: 'Yellow' },
   ];
 
-  // Rolling refresh-rate estimate, fed by the animated display-info frame clock.
   let fpsPrev = 0;
   let fpsEst = 0;
-  // True per-frame parity for the pixel-inversion test (toggled each draw call).
+
   let invFrame = 0;
 
   const tests: Test[] = [
@@ -173,7 +166,7 @@ const tests = [
       id: 'gradient',
       name: 'Gradients',
       look: 'The ramp should fade smoothly. Distinct vertical bands mean banding; a color tint means the channels are unbalanced.',
-      variants: () => GRAD_EDGES.length * 2, // smooth + stepped per edge
+      variants: () => GRAD_EDGES.length * 2, 
       variantLabel: (s) =>
         `${GRAD_EDGES[Math.floor(s.variant / 2)].name} · ${s.variant % 2 ? `stepped ×${s.steps}` : 'smooth'}`,
       option: { label: 'Steps', get: (s) => s.steps, set: (s, v) => (s.steps = clamp(v, 2, 256)) },

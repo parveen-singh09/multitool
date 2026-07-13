@@ -132,7 +132,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   let mode: 'encode' | 'decode' = 'encode';
   let rawOutput = '';
 
-  // Encodings we can *encode* to (TextEncoder only does UTF-8, the rest are inlined below).
   const ENCODE_OPTS: [string, string][] = [
     ['utf-8', 'UTF-8'],
     ['utf-16le', 'UTF-16 LE'],
@@ -142,7 +141,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     ['ascii', 'ASCII (7-bit)'],
     ['iso-8859-1', 'Latin-1 (ISO-8859-1)'],
   ];
-  // Decoding uses the browser's native TextDecoder, which supports far more charsets.
+
   const DECODE_OPTS: [string, string][] = [
     ['utf-8', 'UTF-8'],
     ['utf-16le', 'UTF-16 LE'],
@@ -171,14 +170,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (prev && opts.some(([v]) => v === prev)) encSel.value = prev;
   }
 
-  // ---- Encode: text → byte array (Uint8Array) for a given encoding label. ----
   function encodeText(text: string, label: string): Uint8Array {
     if (label === 'utf-8') return new TextEncoder().encode(text);
     if (label === 'utf-16le' || label === 'utf-16be') {
       const be = label === 'utf-16be';
       const out: number[] = [];
       for (let i = 0; i < text.length; i++) {
-        const c = text.charCodeAt(i); // UTF-16 code unit — surrogate pairs handled naturally
+        const c = text.charCodeAt(i); 
         if (be) out.push((c >> 8) & 0xff, c & 0xff);
         else out.push(c & 0xff, (c >> 8) & 0xff);
       }
@@ -194,7 +192,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       }
       return Uint8Array.from(out);
     }
-    // ascii (7-bit) and iso-8859-1 (8-bit) map code points directly; out-of-range → '?'.
+
     const max = label === 'ascii' ? 0x7f : 0xff;
     return Uint8Array.from(Array.from(text, (ch) => {
       const c = ch.codePointAt(0)!;
@@ -202,7 +200,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }));
   }
 
-  // BOM bytes for the current encoding (only meaningful for the Unicode families).
   function bomFor(label: string): number[] {
     switch (label) {
       case 'utf-8': return [0xef, 0xbb, 0xbf];
@@ -214,7 +211,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }
   }
 
-  // ---- Format a byte array into the chosen textual representation. ----
   function formatBytes(bytes: Uint8Array, text: string): string {
     const fmt = fmtSel.value;
     const sep = sepSel.value === '\\n' ? '\n' : sepSel.value;
@@ -225,7 +221,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       return btoa(bin);
     }
     if (fmt === 'cp') {
-      // Code points describe the text itself, not the encoded bytes.
+
       return Array.from(text, (ch) => 'U+' + ch.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0')).join(sep || ' ');
     }
     const r = Number(fmt);
@@ -239,7 +235,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }).join(sep);
   }
 
-  // ---- Decode: parse the byte text back into a Uint8Array, then TextDecoder. ----
   function parseBytes(raw: string): Uint8Array {
     const fmt = fmtSel.value;
     if (fmt === 'base64') {
@@ -247,7 +242,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       return Uint8Array.from(bin, (c) => c.charCodeAt(0));
     }
     if (fmt === 'cp') {
-      // Code points → characters → re-encode to bytes with the chosen encoding.
+
       const cps = raw.replace(/U\+/gi, '').split(/[\s,]+/).filter(Boolean);
       const chars = cps.map((c) => {
         const n = parseInt(c, 16);

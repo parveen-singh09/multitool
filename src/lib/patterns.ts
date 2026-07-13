@@ -1,9 +1,4 @@
-// Pattern data and rendering engine ported from Toshinaki/svgpm
-// (https://github.com/Toshinaki/svgpm), an MIT-licensed JavaScript port of
-// pattern.monster (https://pattern.monster/). 310 patterns + 129 color palettes.
-// The upstream engine's trailing `.replace("#","%23")` (which only encoded the
-// first "#") is dropped here; encode at the data-URI boundary with
-// encodeURIComponent instead so multi-hex-color output survives.
+
 
 export type PatternMode = 'stroke-join' | 'stroke' | 'fill';
 export type JoinMode = 'square' | 'rounded';
@@ -50,8 +45,6 @@ const DEFAULT_CONFIG: PatternConfig = {
   moveTop: 0,
 };
 
-// Build a tiling SVG for a pattern + config. Returns raw SVG markup; wrap with a
-// data URI (encodeURIComponent) before using as a CSS background-image.
 export function generateSVG(pattern: Pattern, config: Partial<PatternConfig> = {}): string {
   const cfg: PatternConfig = { ...DEFAULT_CONFIG, ...config };
   const maxColors = pattern.path.split('~').length + 1;
@@ -129,7 +122,6 @@ export function generateSVG(pattern: Pattern, config: Partial<PatternConfig> = {
 const randInt = (min: number, max: number) => Math.round(Math.random() * (max - min) + min);
 const randAngle = () => Math.floor(Math.random() * 37) * 5;
 
-// A random 5-color palette from PALETTES, shuffled.
 export function randomPalette(): string[] {
   const src = PALETTES[randInt(0, PALETTES.length - 1)].slice();
   for (let i = src.length - 1; i > 0; i--) {
@@ -139,7 +131,6 @@ export function randomPalette(): string[] {
   return src;
 }
 
-// Random config bounded by the selected pattern's limits.
 export function randomConfig(pattern: Pattern): Partial<PatternConfig> {
   const s = randInt(0, Math.floor(pattern.maxSpacing[0] / 3));
   return {

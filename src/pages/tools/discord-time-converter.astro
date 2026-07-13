@@ -80,7 +80,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
-  // Populate timezone list from the runtime's IANA database; fall back to local only.
   let zones: string[] = [];
   try { zones = (Intl as any).supportedValuesOf('timeZone'); } catch { zones = [localTz]; }
   if (!zones.includes(localTz)) zones.unshift(localTz);
@@ -112,7 +111,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   const pad = (n: number) => String(n).padStart(2, '0');
 
-  // Offset (ms) between the given instant's wall clock in `tz` and true UTC.
   function tzOffsetMs(tz: string, date: Date): number {
     const dtf = new Intl.DateTimeFormat('en-US', {
       timeZone: tz, hourCycle: 'h23',
@@ -125,7 +123,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return asUTC - date.getTime();
   }
 
-  // Wall-clock fields interpreted in `tz` → unix seconds. Two passes handle DST edges.
   function zonedToUnix(y: number, mo: number, da: number, h: number, mi: number, s: number, tz: string): number {
     const wallAsUTC = Date.UTC(y, mo - 1, da, h, mi, s);
     let ts = wallAsUTC - tzOffsetMs(tz, new Date(wallAsUTC));
@@ -133,7 +130,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return Math.floor(ts / 1000);
   }
 
-  // unix seconds → the wall-clock parts as they read in `tz`.
   function unixToZonedParts(unixSec: number, tz: string) {
     const dtf = new Intl.DateTimeFormat('en-US', {
       timeZone: tz, hourCycle: 'h23',
@@ -146,7 +142,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   }
 
   function showOffset() {
-    const off = tzOffsetMs(tzEl.value, new Date(unix * 1000)) / 60000; // minutes east of UTC (positive = ahead)
+    const off = tzOffsetMs(tzEl.value, new Date(unix * 1000)) / 60000; 
     const sign = off >= 0 ? '+' : '-';
     const a = Math.abs(off);
     offsetEl.textContent = `UTC${sign}${pad(Math.floor(a / 60))}:${pad(a % 60)}`;

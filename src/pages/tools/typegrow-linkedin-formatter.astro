@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="typegrow-linkedin-formatter">
   <div class="flex flex-col gap-5">
-    <!-- Style toolbar -->
+
     <div class="flex flex-col gap-3">
       <div class="flex flex-wrap items-center gap-2">
         <span class="eyebrow w-full text-ink-subtle">Text styles</span>
@@ -48,7 +48,6 @@ Here's the full story of how we built it 👇
 https://medium.com/how-we-built-it</textarea>
     </label>
 
-    <!-- Preview controls -->
     <div class="flex flex-wrap items-center gap-3">
       <div class="eyebrow text-ink-subtle">Preview</div>
       <div id="tg-view" class="inline-flex rounded-full border border-hairline bg-canvas p-0.5" role="tablist" aria-label="Preview device">
@@ -65,9 +64,8 @@ https://medium.com/how-we-built-it</textarea>
       <button id="tg-copy" class="btn btn-primary">Copy formatted</button>
     </div>
 
-    <!-- Preview stage -->
     <div class="rounded-xl border border-hairline bg-surface-2/40 p-5 sm:p-8">
-      <!-- Desktop feed card -->
+
       <div id="tg-desktop" class="mx-auto max-w-[555px]">
         <div class="li-card">
           <div class="li-head">
@@ -128,7 +126,6 @@ https://medium.com/how-we-built-it</textarea>
         </div>
       </div>
 
-      <!-- Phone frame -->
       <div id="tg-phone" class="hidden">
         <div class="li-phone">
           <div class="li-phone-notch"></div>
@@ -209,7 +206,7 @@ https://medium.com/how-we-built-it</textarea>
 </ToolLayout>
 
 <style>
-  /* Segmented device toggle (dark chrome, matches design system) */
+
   .tg-seg {
     display: inline-flex;
     align-items: center;
@@ -228,7 +225,6 @@ https://medium.com/how-we-built-it</textarea>
     color: var(--color-ink);
   }
 
-  /* ---- Authentic LinkedIn post card (light UI, mimics the real feed) ---- */
   .li-card {
     background: #ffffff;
     color: rgba(0, 0, 0, 0.9);
@@ -281,7 +277,6 @@ https://medium.com/how-we-built-it</textarea>
     margin-top: 1px;
   }
 
-  /* + Follow — blue text button, top-right */
   .li-follow {
     flex-shrink: 0;
     display: inline-flex;
@@ -308,7 +303,7 @@ https://medium.com/how-we-built-it</textarea>
     word-break: break-word;
   }
   .li-body-phone { font-size: 14px; }
-  /* Auto-detected @mentions, #hashtags and links render blue + semibold */
+
   .li-body .li-link {
     color: #0a66c2;
     font-weight: 600;
@@ -320,7 +315,6 @@ https://medium.com/how-we-built-it</textarea>
   }
   .li-body .li-morelink:hover { color: #0a66c2; text-decoration: underline; }
 
-  /* ---- Article / link preview card ---- */
   .li-linkcard {
     display: flex;
     align-items: stretch;
@@ -365,7 +359,6 @@ https://medium.com/how-we-built-it</textarea>
   .li-linkcard-domain { font-size: 12px; color: rgba(0, 0, 0, 0.55); }
   .li-card-phone .li-linkcard-thumb { width: 84px; }
 
-  /* ---- Engagement bar: icon + inline count, reaction cluster at right ---- */
   .li-engage {
     display: flex;
     align-items: center;
@@ -393,7 +386,7 @@ https://medium.com/how-we-built-it</textarea>
     align-items: center;
     padding-right: 4px;
   }
-  /* Reaction badges — colored circle + white glyph, like the real feed */
+
   .li-react {
     width: 20px;
     height: 20px;
@@ -414,7 +407,6 @@ https://medium.com/how-we-built-it</textarea>
   .li-engage-phone .li-react { width: 17px; height: 17px; }
   .li-engage-phone .li-react svg { width: 10px; height: 10px; }
 
-  /* ---- Phone frame ---- */
   .li-phone {
     position: relative;
     width: 340px;
@@ -456,8 +448,6 @@ https://medium.com/how-we-built-it</textarea>
   .li-phone-status-icons { display: inline-flex; align-items: center; gap: 5px; }
   .li-card-phone { border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
 
-  /* In light theme the dark stage background would wash the card out; keep the
-     card authentic regardless of site theme. */
   :global(html[data-theme='light']) .li-card { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15); }
 </style>
 
@@ -468,14 +458,10 @@ https://medium.com/how-we-built-it</textarea>
   const desktopWrap = document.getElementById('tg-desktop')!;
   const phoneWrap = document.getElementById('tg-phone')!;
 
-  // Track per-view expanded state (keyed by the element).
   const expanded = new WeakSet<HTMLElement>();
 
   type Style = { map?: Record<string, string>; marks?: string[]; transform?: (s: string) => string };
 
-  // Build a letter/digit map from ASCII into a contiguous Unicode alphabet range,
-  // then patch the code points that live outside the range (Unicode scatters a few
-  // "mathematical" letters into the Letterlike Symbols block).
   function buildAlphabet(
     upperStart: number,
     lowerStart: number,
@@ -504,7 +490,6 @@ https://medium.com/how-we-built-it</textarea>
   const monospace = buildAlphabet(0x1d670, 0x1d68a, 0x1d7f6);
   const fullwidth = buildAlphabet(0xff21, 0xff41, 0xff10);
 
-  // Script and doublestruck scatter several letters into Letterlike Symbols.
   const script = buildAlphabet(0x1d49c, 0x1d4b6, undefined, {
     B: 'ℬ', E: 'ℰ', F: 'ℱ', H: 'ℋ', I: 'ℐ', L: 'ℒ',
     M: 'ℳ', R: 'ℛ', e: 'ℯ', g: 'ℊ', o: 'ℴ',
@@ -549,7 +534,6 @@ https://medium.com/how-we-built-it</textarea>
       .join('');
   }
 
-  // Normalise mathematical alphabets and strip combining marks back to plain ASCII.
   function toPlain(text: string): string {
     return text.normalize('NFKD').replace(/[̀-ͯ]/g, '');
   }
@@ -574,7 +558,7 @@ https://medium.com/how-we-built-it</textarea>
     const region = hasSelection ? value.slice(start, end) : value;
     const lines = region.split('\n');
     let n = 1;
-    // For descending we count down from the number of non-empty lines.
+
     let remaining = lines.filter((l) => l.replace(/^\s*([•\-→▸▾✅☐]|\d+\.)\s*/, '').trim()).length;
     const marked = lines
       .map((line) => {

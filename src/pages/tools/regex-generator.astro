@@ -77,7 +77,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 <script>
   type Recognizer = { id: string; label: string; source: string; group: string };
 
-  // Order matters: more specific patterns first so the longest/best match wins.
   const RECOGNIZERS: Recognizer[] = [
     { id: 'isodt',   label: 'ISO date-time', group: 'datetime', source: String.raw`\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?` },
     { id: 'date',    label: 'Date',          group: 'date',     source: String.raw`\d{4}-\d{2}-\d{2}` },
@@ -96,12 +95,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   ];
   const STICKY = RECOGNIZERS.map((r) => ({ ...r, re: new RegExp(r.source, 'y') }));
 
-  type Option = Recognizer | null; // null = match literally
+  type Option = Recognizer | null; 
   type Token = { start: number; end: number; text: string; options: Option[]; sel: number };
 
   const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-  /** Tokenize sample: recognized spans (with all recognizers matching that exact span) + coalesced literals. */
   function tokenize(text: string): Token[] {
     const tokens: Token[] = [];
     let litStart = -1;
@@ -113,7 +111,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     };
     let i = 0;
     while (i < text.length) {
-      // Find every recognizer matching at exactly i, and the longest match length.
+
       const hits: { r: Recognizer; len: number }[] = [];
       let maxLen = 0;
       for (const r of STICKY) {
@@ -124,7 +122,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           if (m[0].length > maxLen) maxLen = m[0].length;
         }
       }
-      // Options = recognizers matching the longest span, plus a literal fallback.
+
       const opts = hits.filter((h) => h.len === maxLen).map((h) => h.r as Option);
       if (opts.length) {
         flushLit(i);
@@ -140,7 +138,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return tokens;
   }
 
-  /** Build the regex source from token selections. */
   function build(tokens: Token[], named: boolean, anchor: boolean): string {
     const used = new Map<string, number>();
     let out = '';

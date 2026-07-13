@@ -9,6 +9,7 @@ import {
   Sparkles,
   Shield,
   Video,
+  Gauge,
   ChevronRight,
   Home,
   BookOpen,
@@ -46,16 +47,15 @@ const categoryIcons: Record<string, React.ComponentType<any>> = {
   Security: Shield,
   PDF: FileText,
   "Audio & Video": Video,
+  "Device & Sensors": Gauge,
 };
 
 export function AppSidebar({ currentPath }: AppSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
 
-  // Normalize path by stripping trailing slashes for active tab comparisons
   const normalizedPath = currentPath.replace(/\/$/, "");
 
-  // Initialize and update open/closed categories when searchQuery or path changes
   useEffect(() => {
     const nextOpen: Record<string, boolean> = {};
     categories.forEach((cat) => {
@@ -83,14 +83,10 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
     <Sidebar className="border-r border-sidebar-border bg-sidebar">
       {/* Brand logo header */}
       <SidebarHeader className="border-b border-sidebar-border/50 px-5 py-3.5 flex h-14 items-center justify-between">
-        <a href="/" className="inline-flex items-center gap-2 no-underline" aria-label="ToolCities home">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <rect x="3" y="10" width="5" height="11" rx="1.2" fill="#5e6ad2" />
-            <rect x="9.5" y="5" width="5" height="16" rx="1.2" fill="#828fff" />
-            <rect x="16" y="13" width="5" height="8" rx="1.2" fill="#5e6ad2" />
-          </svg>
+        <a href="/" className="inline-flex items-center gap-2 no-underline" aria-label="ToolSilk home">
+          <img src="/favicon.svg" width="20" height="20" alt="" aria-hidden="true" className="rounded-[5px]" />
           <span className="font-display font-semibold text-[15px] tracking-[-0.01em] text-ink">
-            Tool<span className="text-ink-subtle">Cities</span>
+            Tool<span className="text-ink-subtle">Silk</span>
           </span>
         </a>
       </SidebarHeader>
@@ -134,7 +130,7 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
 
         {/* Categories Tree */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-semibold text-ink-subtle px-3 py-1">Districts & Tools</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-xs font-semibold text-ink-subtle px-3 py-1">Tools</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {categories.map((category) => {

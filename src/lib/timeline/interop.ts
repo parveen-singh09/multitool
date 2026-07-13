@@ -1,11 +1,8 @@
-// Import/export. Native JSON is our own Timeline shape. TimelineJS is the
-// de-facto interchange format (Knight Lab) — its dates are {year,month,day}
-// objects (1-based month/day, both optional), so we're lenient on parse.
+
 
 import type { Timeline, TimelineEvent, TLDate } from './types';
 import { formatDate } from './types';
 
-// --- native JSON ------------------------------------------------------------
 export function toJSON(tl: Timeline): string {
   return JSON.stringify(tl, null, 2);
 }

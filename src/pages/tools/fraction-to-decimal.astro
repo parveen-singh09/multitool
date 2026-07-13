@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="fraction-to-decimal">
   <div class="flex flex-col gap-6">
-    <!-- Fraction → decimal -->
+
     <div class="flex flex-col gap-3">
       <span class="eyebrow text-primary-hover">Fraction → decimal &amp; percent</span>
       <div class="flex flex-wrap items-center gap-3">
@@ -47,7 +47,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </details>
     </div>
 
-    <!-- Decimal → fraction -->
     <div class="border-t border-hairline pt-5">
       <span class="eyebrow text-primary-hover">Decimal → fraction</span>
       <div class="mt-3 flex flex-wrap items-center gap-3">
@@ -60,7 +59,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <p class="mt-2 text-[13px] text-ink-tertiary">Repeating decimals: enter with a trailing “…”, e.g. <span class="font-mono">0.333…</span></p>
     </div>
 
-    <!-- Common fractions reference / presets -->
     <div class="border-t border-hairline pt-5">
       <span class="eyebrow text-primary-hover">Common fractions</span>
       <p class="mt-1 text-[13px] text-ink-tertiary">Tap any fraction to load it above.</p>
@@ -111,12 +109,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a);
 
-  // trim trailing zeros from a fixed-notation number string
   const trim = (s: string) => s.indexOf('.') >= 0 ? s.replace(/\.?0+$/, '') : s;
 
-  // Exact long division. numer, denom are non-negative integers, denom > 0.
-  // Returns integer part, fractional digits, and where the repeating cycle starts (-1 = terminating).
-  // ponytail: CAP bounds the cycle scan; denominators with cycles longer than this truncate (add BigInt path if that ever matters).
   function longDivide(numer: number, denom: number) {
     const intPart = Math.floor(numer / denom);
     let rem = numer % denom;
@@ -134,7 +128,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return { intPart, digits, repeatStart, truncated: rem !== 0 && repeatStart === -1 };
   }
 
-  // plain-text exact decimal using (block) notation for repeats, e.g. "0.(3)"
   function exactPlain(sign: number, numer: number, denom: number): string {
     const { intPart, digits, repeatStart } = longDivide(numer, denom);
     const s = sign < 0 ? '-' : '';
@@ -145,7 +138,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return s + intPart + '.' + nonRep + '(' + rep + ')';
   }
 
-  // HTML exact decimal, repeating block rendered with an overline
   function exactHtml(sign: number, numer: number, denom: number): string {
     const { intPart, digits, repeatStart, truncated } = longDivide(numer, denom);
     const s = sign < 0 ? '-' : '';
@@ -173,7 +165,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }
 
     const sign = (w < 0 || (w === 0 && n < 0) || (w === 0 && n === 0 && d < 0)) ? -1 : 1;
-    // exact combined improper fraction: |w|*|d| + |n|  over |d|
+
     const aw = Math.abs(w), an = Math.abs(n), ad = Math.abs(d);
     const numer = aw * ad + an;
     const value = (numer / ad) * sign;
@@ -189,7 +181,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       lastDecPlain = fixed;
     }
 
-    // percent (rounded sensibly; 4 more places than decimals, capped)
     const pctVal = value * 100;
     if (mode === 'exact') {
       lastPctPlain = trim(pctVal.toFixed(10));
@@ -199,7 +190,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }
     pct.textContent = lastPctPlain + '%';
 
-    // simplified fraction note
     const g = gcd(an, ad) || 1;
     const sn = (sign < 0 ? -an : an) / g;
     const sd = ad / g;

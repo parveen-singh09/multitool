@@ -1,13 +1,4 @@
-// The scheduling engine: resolve every task's dates from its anchor date,
-// duration and dependencies. Critical-path method (CPM) — topological sort,
-// forward pass (early start/finish), backward pass (late start/finish + slack),
-// critical = zero slack. All arithmetic runs on integer WORKING-DAY indices
-// (via calendar.ts), so the passes are plain integer max/min; ISO is touched
-// only at entry (read anchors) and exit (write resolved dates).
-//
-// Dependency cycles are detected and BROKEN (the offending edges are dropped and
-// reported) so the passes always terminate — the whole reason cycle handling
-// exists. Summary tasks are never scheduled; their span rolls up from children.
+
 
 import type { GanttProject, Dependency } from './types';
 import { isSummary, childrenOf } from './types';
@@ -16,9 +7,9 @@ import { toIndex, fromIndex } from './calendar';
 export interface ScheduledTask {
   id: string;
   startIdx: number;
-  endIdx: number; // inclusive last working-day index
-  start: string; // ISO
-  end: string; // ISO
+  endIdx: number; 
+  start: string; 
+  end: string; 
   slack: number;
   critical: boolean;
   isSummary: boolean;
@@ -28,7 +19,7 @@ export interface ScheduledTask {
 
 export interface Scheduled {
   byId: Map<string, ScheduledTask>;
-  ordered: ScheduledTask[]; // in tasks[] display order
+  ordered: ScheduledTask[]; 
   projectStartIdx: number;
   projectFinishIdx: number;
   cycleEdges: { pred: string; succ: string }[];
@@ -36,17 +27,16 @@ export interface Scheduled {
 
 interface Node {
   id: string;
-  anchor: number; // start-no-earlier-than, in working-day indices
-  dur: number; // working days; 0 = milestone
-  deps: Dependency[]; // predecessors (already filtered to existing leaf preds)
+  anchor: number; 
+  dur: number; 
+  deps: Dependency[]; 
 }
 
 export function schedule(p: GanttProject): Scheduled {
   const epoch = p.start;
   const cal = p.calendar;
-  const idx0 = 0; // project start is index 0 by definition of the epoch
+  const idx0 = 0; 
 
-  // Leaf tasks only — summaries roll up afterward.
   const leafIdx = p.tasks.map((_, i) => i).filter((i) => !isSummary(p.tasks, i));
   const leafIds = new Set(leafIdx.map((i) => p.tasks[i].id));
 
@@ -54,12 +44,11 @@ export function schedule(p: GanttProject): Scheduled {
   for (const i of leafIdx) {
     const t = p.tasks[i];
     const anchor = Math.max(idx0, toIndex(t.start, epoch, cal));
-    // Keep only predecessors that exist and are themselves leaves.
+
     const deps = t.deps.filter((d) => leafIds.has(d.pred) && d.pred !== t.id);
     nodes.set(t.id, { id: t.id, anchor, dur: Math.max(0, t.duration), deps });
   }
 
-  // --- build successor lists + in-degree for Kahn's topo sort ---------------
   const succ = new Map<string, { succ: string; type: Dependency['type']; lag: number }[]>();
   const indeg = new Map<string, number>();
   for (const id of nodes.keys()) { succ.set(id, []); indeg.set(id, 0); }
@@ -72,10 +61,9 @@ export function schedule(p: GanttProject): Scheduled {
 
   const { order, cycleEdges } = topoSort(nodes, succ, indeg);
 
-  // --- forward pass: early start (ES) / early finish (EF) -------------------
   const ES = new Map<string, number>();
   const EF = new Map<string, number>();
-  const active = new Set(order); // nodes reachable after cycle-breaking
+  const active = new Set(order); 
   for (const id of order) {
     const n = nodes.get(id)!;
     let es = n.anchor;
@@ -98,7 +86,6 @@ export function schedule(p: GanttProject): Scheduled {
 
   const projectFinishIdx = order.length ? Math.max(...order.map((id) => EF.get(id)!)) : idx0;
 
-  // --- backward pass: late start (LS) / late finish (LF) / slack ------------
   const LS = new Map<string, number>();
   const LF = new Map<string, number>();
   for (let k = order.length - 1; k >= 0; k--) {
@@ -111,13 +98,13 @@ export function schedule(p: GanttProject): Scheduled {
       lf = Infinity;
       for (const s of outs) {
         const sLS = LS.get(s.succ)!, sLF = LF.get(s.succ)!;
-        // Inverse of the forward relation: an upper bound on this task.
+
         let cand: number;
         switch (s.type) {
-          case 'FS': cand = sLS - 1 - s.lag; break;            // LF <= succ.LS - 1 - lag
-          case 'SS': cand = (sLS - s.lag) + span; break;        // LS <= succ.LS - lag
-          case 'FF': cand = sLF - s.lag; break;                 // LF <= succ.LF - lag
-          case 'SF': cand = (sLF - s.lag) + span; break;        // LS <= succ.LF - lag
+          case 'FS': cand = sLS - 1 - s.lag; break;            
+          case 'SS': cand = (sLS - s.lag) + span; break;        
+          case 'FF': cand = sLF - s.lag; break;                 
+          case 'SF': cand = (sLF - s.lag) + span; break;        
         }
         lf = Math.min(lf, cand);
       }
@@ -126,7 +113,6 @@ export function schedule(p: GanttProject): Scheduled {
     LS.set(id, n.dur === 0 ? lf : lf - n.dur + 1);
   }
 
-  // --- assemble leaf results ------------------------------------------------
   const byId = new Map<string, ScheduledTask>();
   for (const i of leafIdx) {
     const t = p.tasks[i];
@@ -147,14 +133,13 @@ export function schedule(p: GanttProject): Scheduled {
     });
   }
 
-  // --- roll summaries up from their children --------------------------------
   for (let i = 0; i < p.tasks.length; i++) {
     if (!isSummary(p.tasks, i)) continue;
     const t = p.tasks[i];
     const kids = childrenOf(p.tasks, i).map((j) => byId.get(p.tasks[j].id)).filter(Boolean) as ScheduledTask[];
     const startIdx = kids.length ? Math.min(...kids.map((k) => k.startIdx)) : idx0;
     const endIdx = kids.length ? Math.max(...kids.map((k) => k.endIdx)) : startIdx;
-    // Duration-weighted mean progress.
+
     let num = 0, den = 0;
     for (const k of kids) { const w = Math.max(1, k.endIdx - k.startIdx + 1); num += k.progress * w; den += w; }
     byId.set(t.id, {
@@ -173,9 +158,6 @@ function clampPct(n: number): number {
   return Math.max(0, Math.min(100, Math.round(n || 0)));
 }
 
-// Kahn's topological sort. If the graph has cycles, some nodes never reach
-// in-degree 0; we drop the incoming edges among those nodes (recording them as
-// cycleEdges) and continue, guaranteeing termination.
 function topoSort(
   nodes: Map<string, Node>,
   succ: Map<string, { succ: string; type: Dependency['type']; lag: number }[]>,
@@ -198,9 +180,7 @@ function topoSort(
       }
     }
     if (order.length >= nodes.size) break;
-    // Stuck: everything left is in a cycle. Pick the leftover with the smallest
-    // remaining in-degree, drop one incoming edge from an already-processed or
-    // other stuck node, and re-seed. Deterministic (no Math.random).
+
     let victim = '';
     let best = Infinity;
     for (const [id, d] of indeg) {
@@ -208,7 +188,7 @@ function topoSort(
       if (d < best) { best = d; victim = id; }
     }
     if (!victim) break;
-    // Record and remove every incoming edge to `victim` from a not-yet-done node.
+
     for (const [pid, outs] of succ) {
       if (pid === victim) continue;
       for (const s of outs) {
@@ -224,11 +204,6 @@ function topoSort(
   return { order, cycleEdges };
 }
 
-// ---------------------------------------------------------------------------
-// ponytail: self-check on the CPM passes — forward/backward, critical path,
-// slack, milestone, lag, and cycle-no-hang. Run:
-//   npx tsx src/lib/gantt/schedule.ts
-// ---------------------------------------------------------------------------
 declare const process: any;
 if (typeof process !== 'undefined' && process.argv?.[1]?.endsWith('schedule.ts')) {
   const assert = (c: boolean, m: string) => { if (!c) throw new Error('FAIL: ' + m); };
@@ -238,7 +213,6 @@ if (typeof process !== 'undefined' && process.argv?.[1]?.endsWith('schedule.ts')
   });
   const base = { title: 'T', start: '2026-01-05', zoom: 'week' as const, themeId: 'x', sizeId: 'y', calendar: DEFAULT_CALENDAR };
 
-  // Diamond DAG: A(5) -> B(3), A -> C(2), B&C -> D(1). Mon 2026-01-05 start.
   const proj: GanttProject = { ...base, tasks: [
     mk({ id: 'A', duration: 5 }),
     mk({ id: 'B', duration: 3, deps: [{ pred: 'A', type: 'FS', lag: 0 }] }),
@@ -256,14 +230,12 @@ if (typeof process !== 'undefined' && process.argv?.[1]?.endsWith('schedule.ts')
   assert(g('A').slack === 0 && g('C').slack === 1, 'slack: A=0, C=1');
   assert(s.projectFinishIdx === g('D').endIdx, 'project finish = D end');
 
-  // Lag: B with FS lag 2 starts 2 working days later than lag 0.
   const lagProj: GanttProject = { ...base, tasks: [
     mk({ id: 'A', duration: 5 }),
     mk({ id: 'B', duration: 3, deps: [{ pred: 'A', type: 'FS', lag: 2 }] }),
   ] };
   assert(schedule(lagProj).byId.get('B')!.start === '2026-01-14', 'FS lag 2 pushes B two working days');
 
-  // Milestone: M(0) FS after A -> lands the working day after A finishes.
   const msProj: GanttProject = { ...base, tasks: [
     mk({ id: 'A', duration: 5 }),
     mk({ id: 'M', duration: 0, deps: [{ pred: 'A', type: 'FS', lag: 0 }] }),
@@ -271,7 +243,6 @@ if (typeof process !== 'undefined' && process.argv?.[1]?.endsWith('schedule.ts')
   const ms = schedule(msProj).byId.get('M')!;
   assert(ms.isMilestone && ms.start === ms.end && ms.start === '2026-01-12', 'milestone is a point after A');
 
-  // Cycle: A->B->A. Must terminate, report an edge, still resolve both.
   const cyc: GanttProject = { ...base, tasks: [
     mk({ id: 'A', duration: 2, deps: [{ pred: 'B', type: 'FS', lag: 0 }] }),
     mk({ id: 'B', duration: 2, deps: [{ pred: 'A', type: 'FS', lag: 0 }] }),
@@ -280,7 +251,6 @@ if (typeof process !== 'undefined' && process.argv?.[1]?.endsWith('schedule.ts')
   assert(cs.cycleEdges.length >= 1, 'cycle detected and reported');
   assert(!!cs.byId.get('A') && !!cs.byId.get('B'), 'cyclic tasks still resolve (no hang, no throw)');
 
-  // Summary rollup: parent spans its two children; progress is weighted.
   const sumProj: GanttProject = { ...base, tasks: [
     mk({ id: 'P', outline: 0 }),
     mk({ id: 'A', outline: 1, duration: 4, progress: 100 }),

@@ -23,7 +23,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </div>
 
     <div id="ma-results" class="hidden flex-col gap-5">
-      <!-- Primary metric tiles -->
+
       <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
         <div class="panel panel-lift flex flex-col gap-1 p-4">
           <span class="text-xs text-ink-tertiary">Tempo</span>
@@ -47,7 +47,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </div>
       </div>
 
-      <!-- Perceptual meters + chroma wheel -->
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div class="panel p-4">
           <div class="eyebrow mb-3">Feel</div>
@@ -61,7 +60,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </div>
       </div>
 
-      <!-- Genre / auto-tagging (lazy ML model) -->
       <div class="panel p-4">
         <div class="flex items-center justify-between gap-3">
           <div class="eyebrow">Genre &amp; tags</div>
@@ -86,19 +84,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </div>
       </div>
 
-      <!-- Emotion breakdown -->
       <div class="panel p-4">
         <div class="eyebrow mb-3">Emotional profile</div>
         <div id="ma-emotions" class="flex flex-col gap-2.5"></div>
       </div>
 
-      <!-- Technical detail -->
       <div class="panel p-4">
         <div class="eyebrow mb-3">Signal detail</div>
         <div id="ma-tech" class="grid grid-cols-2 gap-x-6 gap-y-2 font-mono text-[13px] sm:grid-cols-3"></div>
       </div>
 
-      <!-- Plain-language summary -->
       <div class="panel p-4">
         <div class="eyebrow mb-2">Summary</div>
         <p id="ma-summary" class="text-sm leading-relaxed text-ink-muted"></p>
@@ -152,8 +147,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (on) el.classList.add(disp); else el.classList.remove(disp);
   }
 
-  // Kept around so the (lazy) genre model can run on the same decoded audio
-  // without re-decoding when the user clicks "Detect genre".
   let currentBuffer: AudioBuffer | null = null;
 
   async function decodeToBuffer(data: ArrayBuffer): Promise<AudioBuffer> {
@@ -165,8 +158,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }
   }
 
-  // For very long tracks, analyze a representative window (drop the first/last
-  // few seconds of intro/outro) to keep it fast without hurting accuracy.
   function trimForAnalysis(buf: AudioBuffer): AudioBuffer {
     const maxSec = 120;
     if (buf.duration <= maxSec) return buf;

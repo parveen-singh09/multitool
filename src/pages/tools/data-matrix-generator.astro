@@ -1,18 +1,17 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 
-// bwip-js datamatrix `version` values (square + rectangular)
 const squares = ['10x10','12x12','14x14','16x16','18x18','20x20','22x22','24x24','26x26','32x32','36x36','40x40','44x44','48x48','52x52','64x64','72x72','80x80','88x88','96x96','104x104','120x120','132x132','144x144'];
 const rects = ['8x18','8x32','12x26','12x36','16x36','16x48'];
 ---
 
 <ToolLayout slug="data-matrix-generator">
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_20rem]">
-    <!-- Left: content + options -->
+
     <div class="flex flex-col gap-5">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Data to encode
-        <textarea id="dm-text" class="field min-h-24 resize-y font-mono text-[13px]" placeholder="Enter text or numbers…" spellcheck="false">TOOLCITIES-2026</textarea>
+        <textarea id="dm-text" class="field min-h-24 resize-y font-mono text-[13px]" placeholder="Enter text or numbers…" spellcheck="false">TOOLSILK-2026</textarea>
       </label>
 
       <div class="panel p-4">
@@ -60,7 +59,6 @@ const rects = ['8x18','8x32','12x26','12x36','16x36','16x48'];
       </div>
     </div>
 
-    <!-- Right: preview + download -->
     <div class="flex flex-col gap-4">
       <div class="panel panel-lift dm-checker flex aspect-square w-full items-center justify-center p-6">
         <canvas id="dm-canvas" class="max-h-full max-w-full rounded-sm" aria-label="Data Matrix preview"></canvas>
@@ -91,7 +89,7 @@ const rects = ['8x18','8x32','12x26','12x36','16x36','16x48'];
 </ToolLayout>
 
 <style>
-  /* checkerboard so a transparent code is visible in the preview */
+
   .dm-checker {
     background-image:
       linear-gradient(45deg, var(--color-surface-3) 25%, transparent 25%),
@@ -111,8 +109,6 @@ const rects = ['8x18','8x32','12x26','12x36','16x36','16x48'];
   const err = $('dm-error');
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
 
-  // Build bwip-js options from the current control state. `scale` lets the PNG
-  // export render sharper than the on-screen preview.
   function opts(scale: number): RenderOpts {
     const o: RenderOpts = {
       bcid: $<HTMLSelectElement>('dm-mode').value,
@@ -154,7 +150,7 @@ const rects = ['8x18','8x32','12x26','12x36','16x36','16x48'];
     .forEach((el) => el.addEventListener('input', debounced));
 
   $('dm-png').addEventListener('click', async () => {
-    // always export crisp: render offscreen at high module size
+
     try {
       const out = document.createElement('canvas');
       await toCanvas(out, opts(16));

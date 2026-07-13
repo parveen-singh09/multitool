@@ -112,13 +112,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
   const sel = (id: string) => document.getElementById(id) as unknown as HTMLSelectElement;
 
-  // Live data, filled in by fetchLive()
-  let platUsdPerOzt: number | null = null; // platinum spot, USD per troy ounce
-  let rates: Record<string, number> = { USD: 1 }; // currency code -> units per 1 USD
+  let platUsdPerOzt: number | null = null; 
+  let rates: Record<string, number> = { USD: 1 }; 
 
-  const OZT_G = 31.1034768; // grams in one troy ounce
+  const OZT_G = 31.1034768; 
 
-  // Short label per quote-unit value (grams-per-unit) for the status line.
   const UNIT_SHORT: Record<string, string> = {
     '31.1034768': 'ozt',
     '1': 'g',
@@ -127,40 +125,34 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     '1000': 'kg',
   };
 
-  // Conventional precious-metal quote unit per market (grams per quoted unit).
-  // Anything not listed defaults to the troy ounce used internationally.
   const QUOTE_UNIT_BY_CCY: Record<string, number> = {
-    INR: 10, // India quotes per 10 g
-    AED: 1, SAR: 1, QAR: 1, OMR: 1, KWD: 1, BHD: 1, JOD: 1, // Gulf: per gram
-    PKR: 11.6638038, NPR: 11.6638038, // per tola
-    LKR: 1, BDT: 1, EGP: 1, TRY: 1, // per gram
+    INR: 10, 
+    AED: 1, SAR: 1, QAR: 1, OMR: 1, KWD: 1, BHD: 1, JOD: 1, 
+    PKR: 11.6638038, NPR: 11.6638038, 
+    LKR: 1, BDT: 1, EGP: 1, TRY: 1, 
   };
 
-  // Domestic premium over international spot (import duty + local tax/VAT/GST +
-  // typical dealer markup), as a %. Applied automatically per currency — the
-  // user never types a duty rate. No free feed carries landed retail prices, so
-  // these are built-in market estimates; markets not listed use DEFAULT_PREMIUM.
-  const DEFAULT_PREMIUM = 3; // generic dealer margin where no local data applies
+  const DEFAULT_PREMIUM = 3; 
   const PREMIUM_BY_CCY: Record<string, number> = {
-    // South Asia — high duty + tax
+
     INR: 15, PKR: 8, NPR: 13, BDT: 12, LKR: 11, BTN: 15, MVR: 5, AFN: 6,
-    // Gulf / low-tax Middle East
+
     AED: 1, SAR: 1, QAR: 1, OMR: 1, KWD: 1, BHD: 1, JOD: 2, YER: 4,
     IQD: 5, IRR: 6, LBP: 6, ILS: 2,
-    // Deep spot markets — near-zero premium
+
     USD: 0, EUR: 0, GBP: 0, CHF: 1, JPY: 1, HKD: 1, SGD: 1,
-    // Europe (VAT-exempt on investment gold, small dealer margin)
+
     NOK: 2, SEK: 2, DKK: 2, PLN: 2, CZK: 2, HUF: 3, RON: 3, BGN: 3,
     ISK: 3, TRY: 8, RUB: 6, UAH: 8, RSD: 4,
-    // East / SE Asia
+
     CNY: 3, TWD: 2, KRW: 3, MYR: 3, THB: 2, IDR: 6, PHP: 5, VND: 6, MMK: 8,
     KHR: 6, LAK: 8, MNT: 6, MOP: 1, BND: 2,
-    // Oceania
+
     AUD: 2, NZD: 2,
-    // Americas
+
     CAD: 1, MXN: 4, BRL: 6, ARS: 10, CLP: 4, COP: 5, PEN: 4, UYU: 4,
     BOB: 5, PYG: 5, VES: 12, DOP: 5, JMD: 6, TTD: 4,
-    // Africa
+
     ZAR: 3, EGP: 8, NGN: 8, KES: 6, GHS: 7, MAD: 4, TND: 5, DZD: 7,
     ETB: 8, TZS: 6, UGX: 6, ZMW: 6, XOF: 5, XAF: 5,
   };
@@ -169,7 +161,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return PREMIUM_BY_CCY[code] ?? DEFAULT_PREMIUM;
   }
 
-  // Full ISO 4217 list so the dropdown is populated before any fetch.
   const CURRENCIES =
     'AED AFN ALL AMD ANG AOA ARS AUD AWG AZN BAM BBD BDT BGN BHD BIF BMD BND BOB BRL BSD BTN BWP BYN BZD CAD CDF CHF CLP CNY COP CRC CUP CVE CZK DJF DKK DOP DZD EGP ERN ETB EUR FJD FKP FOK GBP GEL GGP GHS GIP GMD GNF GTQ GYD HKD HNL HRK HTG HUF IDR ILS IMP INR IQD IRR ISK JMD JOD JPY KES KGS KHR KID KMF KRW KWD KYD KZT LAK LBP LKR LRD LSL LYD MAD MDL MGA MKD MMK MNT MOP MRU MUR MVR MWK MXN MYR MZN NAD NGN NIO NOK NPR NZD OMR PAB PEN PGK PHP PKR PLN PYG QAR RON RSD RUB RWF SAR SBD SCR SDG SEK SGD SHP SLE SLL SOS SRD SSP STN SYP SZL THB TJS TMT TND TOP TRY TTD TVD TWD TZS UAH UGX USD UYU UZS VES VND VUV WST XAF XCD XDR XOF XPF YER ZAR ZMW ZWL'.split(
       ' '
@@ -199,9 +190,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     try {
       const n = names?.of(code);
       if (n && n !== code) label = `${code} — ${n}`;
-    } catch {
-      /* keep code */
-    }
+    } catch 
     const sym = currencySymbol(code);
     return sym ? `${label} (${sym})` : label;
   }

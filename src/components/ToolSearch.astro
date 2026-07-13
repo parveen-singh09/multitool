@@ -1,8 +1,6 @@
 ---
-// Instant client-side tool search.
-// - On the home page (where #tools grid exists) it filters cards live.
-// - On any other page it navigates to /?q=<term>#tools on submit.
-// Multiple instances (hero + header) stay in sync via [data-tool-search-input].
+import { tools } from '../data/tools';
+
 interface Props {
   variant?: 'hero' | 'compact';
   id?: string;
@@ -10,6 +8,17 @@ interface Props {
 }
 const { variant = 'hero', id, class: className = '' } = Astro.props;
 const inputId = id ?? `tool-search-${variant}`;
+
+// Dropdown index only needed for the compact (header) variant.
+const toolIndex =
+  variant === 'compact'
+    ? tools.map((t) => ({
+        n: t.name,
+        s: t.slug,
+        c: t.category,
+        k: (t.keywords ?? []).join(' '),
+      }))
+    : null;
 ---
 
 <form
@@ -36,10 +45,30 @@ const inputId = id ?? `tool-search-${variant}`;
       placeholder={variant === 'hero' ? 'Search 28 tools…' : 'Search tools…'}
       autocomplete="off"
       aria-label="Search tools by name or keyword"
+      role={variant === 'compact' ? 'combobox' : undefined}
+      aria-expanded={variant === 'compact' ? 'false' : undefined}
+      aria-controls={variant === 'compact' ? `${inputId}-results` : undefined}
+      aria-autocomplete={variant === 'compact' ? 'list' : undefined}
       data-tool-search-input
     />
+    {variant === 'compact' && (
+      <ul
+        id={`${inputId}-results`}
+        class="search-results hidden"
+        role="listbox"
+        data-tool-search-results
+      />
+    )}
   </div>
 </form>
+
+{toolIndex && (
+  <script
+    type="application/json"
+    data-tool-search-index
+    set:html={JSON.stringify(toolIndex)}
+  />
+)}
 
 <style>
   .sr-only {
@@ -50,9 +79,45 @@ const inputId = id ?? `tool-search-${variant}`;
     white-space: nowrap; border: 0;
   }
   .tool-search--hero { width: 100%; max-width: 30rem; margin-inline: auto; }
-  .tool-search--compact { width: 14rem; }
-  /* Hide native search clear button for a cleaner look */
+  .tool-search--compact { width: 16rem; }
+  .tool-search--compact .field { padding-block: 0.3rem; }
+
   .tool-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+
+  .search-results {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    right: 0;
+    z-index: 60;
+    max-height: 20rem;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0.25rem;
+    list-style: none;
+    background-color: var(--color-surface-1);
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-md);
+    box-shadow: 0 12px 32px rgb(0 0 0 / 0.45);
+  }
+  .search-results:empty { display: none; }
+  .search-results :global(li) {
+    padding: 0.5rem 0.625rem;
+    border-radius: var(--radius-sm);
+    color: var(--color-ink);
+    font-size: 0.875rem;
+    line-height: 1.3;
+    cursor: pointer;
+  }
+  .search-results :global(li[aria-selected='true']),
+  .search-results :global(li:hover) {
+    background-color: var(--color-surface-2);
+  }
+  .search-results :global(li .cat) {
+    display: block;
+    color: var(--color-ink-tertiary);
+    font-size: 0.75rem;
+  }
 </style>
 
 <script>
@@ -74,7 +139,7 @@ const inputId = id ?? `tool-search-${variant}`;
         card.classList.toggle('hidden', !match);
         if (match) visible++;
       });
-      // Hide category sections that have no visible cards.
+
       grid.querySelectorAll<HTMLElement>('[data-category-section]').forEach((sec) => {
         const anyVisible = sec.querySelectorAll('[data-tool-card]:not(.hidden)').length > 0;
         sec.classList.toggle('hidden', !anyVisible);
@@ -93,6 +158,107 @@ const inputId = id ?? `tool-search-${variant}`;
       inputs.forEach((i) => {
         if (i !== from) i.value = value;
       });
+    }
+
+    // Autocomplete dropdown (compact/header variant only).
+    type Entry = { n: string; s: string; c: string; k: string };
+    let index: Entry[] = [];
+    try {
+      const raw = document.querySelector('[data-tool-search-index]')?.textContent;
+      if (raw) index = JSON.parse(raw) as Entry[];
+    } catch (_) {}
+
+    function setupDropdown(input: HTMLInputElement) {
+      const list = document.getElementById(
+        `${input.id}-results`,
+      ) as HTMLUListElement | null;
+      if (!list || !index.length) return;
+
+      let active = -1;
+      let items: Entry[] = [];
+
+      const close = () => {
+        list.replaceChildren();
+        list.classList.add('hidden');
+        input.setAttribute('aria-expanded', 'false');
+        active = -1;
+      };
+
+      const setActive = (i: number) => {
+        const lis = list.querySelectorAll('li');
+        lis.forEach((li) => li.setAttribute('aria-selected', 'false'));
+        active = i;
+        if (i >= 0 && lis[i]) {
+          lis[i].setAttribute('aria-selected', 'true');
+          lis[i].scrollIntoView({ block: 'nearest' });
+        }
+      };
+
+      const go = (slug: string) => {
+        window.location.href = `/tools/${slug}`;
+      };
+
+      const render = (raw: string) => {
+        const q = norm(raw);
+        if (!q) return close();
+        const terms = q.split(/\s+/).filter(Boolean);
+        // Match each term at a word start, so "dom" doesn't hit "ran*dom*".
+        const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const res = terms.map((t) => new RegExp(`\\b${esc(t)}`, 'i'));
+        items = index
+          .filter((t) => {
+            const hay = `${t.n} ${t.c} ${t.k}`;
+            return res.every((re) => re.test(hay));
+          })
+          // Name matches rank above keyword-only matches.
+          .sort((a, b) => {
+            const an = res.every((re) => re.test(a.n)) ? 0 : 1;
+            const bn = res.every((re) => re.test(b.n)) ? 0 : 1;
+            return an - bn;
+          })
+          .slice(0, 8);
+        if (!items.length) return close();
+        list.replaceChildren(
+          ...items.map((t) => {
+            const li = document.createElement('li');
+            li.setAttribute('role', 'option');
+            li.setAttribute('aria-selected', 'false');
+            li.dataset.slug = t.s;
+            li.textContent = t.n;
+            const cat = document.createElement('span');
+            cat.className = 'cat';
+            cat.textContent = t.c;
+            li.appendChild(cat);
+            li.addEventListener('mousedown', (e) => {
+              e.preventDefault();
+              go(t.s);
+            });
+            return li;
+          }),
+        );
+        list.classList.remove('hidden');
+        input.setAttribute('aria-expanded', 'true');
+        active = -1;
+      };
+
+      input.addEventListener('input', () => render(input.value));
+      input.addEventListener('focus', () => {
+        if (input.value.trim()) render(input.value);
+      });
+      input.addEventListener('keydown', (e) => {
+        if (list.classList.contains('hidden')) return;
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setActive(Math.min(active + 1, items.length - 1));
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setActive(Math.max(active - 1, 0));
+        } else if (e.key === 'Enter' && active >= 0) {
+          e.preventDefault();
+          go(items[active].s);
+        }
+      });
+      input.addEventListener('blur', () => setTimeout(close, 120));
     }
 
     inputs.forEach((input) => {
@@ -118,6 +284,8 @@ const inputId = id ?? `tool-search-${variant}`;
           e.preventDefault();
         }
       });
+
+      if (document.getElementById(`${input.id}-results`)) setupDropdown(input);
     });
 
     // Prefill + apply from ?q= on load (home page deep-link from header search).

@@ -1,23 +1,20 @@
-// Field-type registry for the test-data generator (generatedata.com-style).
-// Each column picks a FieldType; a run resolves ONE Locale (shared by every
-// row) and maps each column's gen() per row. Columns are independent — no
-// cross-field correlation, matching generatedata.com.
+
 
 import { randInt, randFloat, pick, randString, luhnCheckDigit, UNAMBIGUOUS } from './random';
 import type { Locale } from './locales';
 import { email as mkEmail, username as mkUsername, uuid as mkUuid, companyName } from './fakegen';
 
 export interface FieldCtx {
-  row: number;    // 1-based row index
-  locale: Locale; // resolved once per Generate run
-  opts: string;   // raw options string from the inline input (may be empty)
+  row: number;    
+  locale: Locale; 
+  opts: string;   
 }
 
 export interface FieldType {
   key: string;
   label: string;
   group: string;
-  needsOpts?: 'range' | 'date' | 'list'; // shows an inline options input + placeholder
+  needsOpts?: 'range' | 'date' | 'list'; 
   placeholder?: string;
   gen: (c: FieldCtx) => string | number | boolean;
 }
@@ -25,14 +22,13 @@ export interface FieldType {
 const TITLES_M = ['Mr', 'Dr', 'Prof'];
 const TITLES_F = ['Ms', 'Mrs', 'Miss', 'Dr'];
 const PW_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%';
-const CC_PREFIX = ['4', '51', '52', '53', '54', '55', '37', '6011']; // Visa/MC/Amex/Discover-ish
+const CC_PREFIX = ['4', '51', '52', '53', '54', '55', '37', '6011']; 
 const CURRENCIES = ['$', '€', '£', '¥'];
 
 function firstNameOf(l: Locale): string {
   return pick(randInt(0, 1) ? l.firstM : l.firstF);
 }
 
-// Two "min,max" numbers from opts, with fallbacks.
 function range(opts: string, dMin: number, dMax: number): [number, number] {
   const [a, b] = opts.split(',').map((s) => Number(s.trim()));
   const min = Number.isFinite(a) ? a : dMin;
@@ -40,7 +36,6 @@ function range(opts: string, dMin: number, dMax: number): [number, number] {
   return min <= max ? [min, max] : [max, min];
 }
 
-// ISO date between two "YYYY-MM-DD" bounds (defaults: 1970-01-01 .. today).
 function dateBetween(opts: string): string {
   const [a, b] = opts.split(',').map((s) => s.trim());
   const lo = Date.parse(a);
@@ -59,7 +54,6 @@ function ageDob(): { age: number; dob: string } {
   return { age, dob: d.toISOString().slice(0, 10) };
 }
 
-// A Luhn-valid card number for the given prefix, padded to 16 digits.
 function creditCard(): string {
   const prefix = pick(CC_PREFIX);
   let body = prefix;
@@ -73,7 +67,7 @@ const LOREM = (
 ).split(' ');
 
 export const FIELD_TYPES: FieldType[] = [
-  // ---- Basics ----
+
   { key: 'increment', label: 'Auto-increment', group: 'Basics', needsOpts: 'range', placeholder: 'start (e.g. 1)',
     gen: (c) => (Number(c.opts.trim()) || 1) + c.row - 1 },
   { key: 'constant', label: 'Constant', group: 'Basics', needsOpts: 'list', placeholder: 'literal value',
@@ -83,7 +77,6 @@ export const FIELD_TYPES: FieldType[] = [
   { key: 'lorem', label: 'Lorem text', group: 'Basics', needsOpts: 'range', placeholder: 'words (e.g. 6)',
     gen: (c) => { const n = Math.max(1, Number(c.opts.trim()) || 6); let s = ''; for (let i = 0; i < n; i++) s += (i ? ' ' : '') + pick(LOREM); return s; } },
 
-  // ---- Person ----
   { key: 'firstName', label: 'First name', group: 'Person', gen: (c) => firstNameOf(c.locale) },
   { key: 'lastName', label: 'Last name', group: 'Person', gen: (c) => pick(c.locale.last) },
   { key: 'fullName', label: 'Full name', group: 'Person', gen: (c) => `${firstNameOf(c.locale)} ${pick(c.locale.last)}` },

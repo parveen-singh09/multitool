@@ -112,15 +112,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const enc = new TextEncoder();
   let mode: 'encode' | 'decode' = 'encode';
 
-  // Charsets the browser can only decode, not encode (no reverse map possible
-  // from single bytes). Encode falls back to UTF-8 with a note.
   const MULTIBYTE = new Set([
     'shift_jis', 'euc-jp', 'iso-2022-jp', 'gbk', 'gb18030', 'big5', 'euc-kr', 'utf-16le', 'utf-16be',
   ]);
 
-  // Build a char→byte map by decoding every single byte through TextDecoder,
-  // then inverting it — gives us a legacy single-byte encoder for free.
-  // ponytail: single-byte only; multibyte encode isn't natively invertible.
   const revMapCache = new Map<string, Map<string, number>>();
   function reverseMap(cs: string): Map<string, number> {
     let m = revMapCache.get(cs);
@@ -135,8 +130,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return m;
   }
 
-  // Encode text to bytes in the chosen charset. UTF-8/ASCII/auto use the native
-  // encoder; single-byte legacy charsets use the inverted decode map.
   function textToBytes(str: string): Uint8Array {
     const cs = optCharset.value;
     if (cs === 'auto' || cs === 'utf-8' || cs === 'us-ascii' || MULTIBYTE.has(cs)) {
@@ -152,8 +145,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return out;
   }
 
-  // Decode bytes to text using the chosen charset. Auto = UTF-8, falling back
-  // to Windows-1252 (maps every byte, never throws) when UTF-8 is invalid.
   function bytesToText(bytes: Uint8Array): string {
     const cs = optCharset.value;
     if (cs === 'auto') {
@@ -163,11 +154,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         return new TextDecoder('windows-1252').decode(bytes);
       }
     }
-    // fatal only takes effect for utf-8/utf-16; legacy decoders never throw.
+
     return new TextDecoder(cs, { fatal: true }).decode(bytes);
   }
 
-  const toUrlSafe = (s: string) => s.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const toUrlSafe = (s: string) => s.replace(/\+/g, '-').replace(/\
   const fromUrlSafe = (s: string) => s.replace(/-/g, '+').replace(/_/g, '/');
   const wrap76 = (s: string) => s.replace(/.{76}/g, '$&\n');
 
@@ -183,7 +174,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   function b64ToText(b64: string): string {
     let s = b64.replace(/\s+/g, '');
     if (optUrlSafe.checked || /[-_]/.test(s)) s = fromUrlSafe(s);
-    if (s.length % 4) s += '='.repeat(4 - (s.length % 4)); // tolerate missing padding
+    if (s.length % 4) s += '='.repeat(4 - (s.length % 4)); 
     const bin = atob(s);
     const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
     return bytesToText(bytes);

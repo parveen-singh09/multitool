@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="dice-roller">
   <div class="flex flex-col gap-6">
-    <!-- Controls -->
+
     <div class="flex flex-wrap items-end gap-3">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Dice type
         <select id="dr-type" class="field w-32">
@@ -31,10 +31,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <button id="dr-clear" class="btn btn-secondary">Clear</button>
     </div>
 
-    <!-- Dice -->
     <div id="dr-dice" class="flex flex-wrap gap-3"></div>
 
-    <!-- Stats -->
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
       <div class="panel panel-lift flex flex-col items-center gap-1 p-4">
         <span id="dr-total" class="font-mono text-3xl text-ink">0</span>
@@ -54,7 +52,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- History -->
     <div class="flex flex-col gap-2">
       <span class="text-sm text-ink-subtle">Roll history</span>
       <div id="dr-history" class="flex min-h-[2.5rem] flex-col gap-1 font-mono text-[13px] text-ink-tertiary"></div>
@@ -103,7 +100,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const historyEl = $('dr-history')!;
   const history: string[] = [];
 
-  // Pip layout per d6 face: which of the 9 grid cells (1-9) hold a dot.
   const PIPS: Record<number, number[]> = {
     1: [5], 2: [1, 9], 3: [1, 5, 9], 4: [1, 3, 7, 9], 5: [1, 3, 5, 7, 9], 6: [1, 3, 4, 6, 7, 9],
   };
@@ -111,7 +107,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const OUTER_D6 = 'grid h-16 w-16 grid-cols-3 place-items-center gap-0.5 rounded-lg border border-hairline bg-surface-2 p-2';
   const OUTER_NUM = 'flex h-16 min-w-16 items-center justify-center rounded-lg border border-hairline bg-surface-2 px-2 font-mono text-2xl text-ink';
 
-  // Inner content of one die: pip grid for d6, plain number otherwise.
   function dieInner(v: number, s: number): string {
     if (s !== 6) return String(v);
     const on = new Set(PIPS[v] || []);
@@ -128,8 +123,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let animTimer = 0;
 
-  // Build die wrappers once, so tumbling only swaps inner faces on stable nodes
-  // (rebuilding innerHTML each tick would restart the CSS wobble every frame).
   function layoutDice(vals: number[], s: number, rolling: boolean): void {
     const base = s === 6 ? OUTER_D6 : OUTER_NUM;
     const cls = rolling && !reduceMotion ? `${base} dr-rolling` : base;

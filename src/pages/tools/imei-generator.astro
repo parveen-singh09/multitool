@@ -71,11 +71,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 <script>
   import { luhnCheckDigit, luhnValid, randInt, pick } from '../../lib/random';
 
-  // Per-brand model lists. A few TACs are verified-real (kept from known
-  // devices); the rest use the brand's real 8-digit reporting-body prefix with
-  // a filler tail — enough to produce a Luhn-valid IMEI that reads as that
-  // brand. ponytail: models are curated by name, not a full GSMA dump; the
-  // build() call below derives a TAC for any model that lacks a verified one.
   const B = {
     Apple: '35',
     Samsung: '35',
@@ -91,8 +86,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     Realme: '86',
   } as const;
 
-  // Derive a stable 8-digit TAC for a model with no verified TAC: brand prefix
-  // + digits hashed from the model name so the same model always maps the same.
   function tacFor(brand: keyof typeof B, model: string): string {
     let h = 0;
     for (let i = 0; i < model.length; i++) h = (h * 31 + model.charCodeAt(i)) >>> 0;
@@ -160,7 +153,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     ],
   };
 
-  // Verified-real TACs override the derived one where we know it.
   const REAL_TAC: Record<string, string> = {
     'iPhone 15 Pro Max': '35692798', 'iPhone 15': '35388621',
     'iPhone 14 Pro': '35316511', 'iPhone 13': '35347618', 'iPhone 12': '35367210',
@@ -195,14 +187,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   function currentTac(): string {
     const t = modelEl.value;
     if (t) return t;
-    // Random: plausible 8-digit TAC from a real reporting-body prefix.
+
     let tac = pick(RBI);
     while (tac.length < 8) tac += randInt(0, 9);
     return tac;
   }
 
   function fmt(digits: string): string {
-    // GSMA-style visual grouping: TAC(8) serial(6) check/svn(1-2).
+
     if (!spacedEl.checked) return digits;
     return `${digits.slice(0, 8)} ${digits.slice(8, 14)} ${digits.slice(14)}`;
   }

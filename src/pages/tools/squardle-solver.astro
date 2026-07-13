@@ -86,29 +86,26 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const gray = new Set(grayEl.value.toLowerCase().replace(/[^a-z]/g, '').split(''));
     const yellowLetters = [...new Set(yellow.split(''))];
 
-    // A gray letter that is also green/yellow means "no more of this letter" —
-    // so only exclude a gray letter if it's not required elsewhere.
     const required = new Set([...green.filter(Boolean), ...yellowLetters]);
 
     const matches = WORDS5.filter((w) => {
-      // Green positions.
+
       for (let i = 0; i < 5; i++) if (green[i] && w[i] !== green[i]) return false;
-      // Yellow: must contain, but not at an excluded/known-green position.
+
       for (const y of yellowLetters) {
         if (!w.includes(y)) return false;
       }
-      // Yellow position exclusions (advanced) + yellow can't sit on its own green slot.
+
       for (let i = 0; i < 5; i++) {
         if (nopos[i] && nopos[i].includes(w[i])) return false;
       }
-      // Gray: exclude the letter entirely, unless it's required elsewhere.
+
       for (const ch of w) {
         if (gray.has(ch) && !required.has(ch)) return false;
       }
       return true;
     });
 
-    // Rank by sum of positional letter frequency (distinct letters weighted).
     const freq: Record<string, number> = {};
     for (const w of matches) for (const ch of new Set(w.split(''))) freq[ch] = (freq[ch] || 0) + 1;
     const score = (w: string) => [...new Set(w.split(''))].reduce((a, ch) => a + (freq[ch] || 0), 0);

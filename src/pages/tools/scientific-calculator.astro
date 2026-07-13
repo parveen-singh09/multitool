@@ -48,20 +48,19 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const exprEl = document.getElementById('sc-expr') as HTMLInputElement;
   const resultEl = document.getElementById('sc-result')!;
 
-  let memory = 0; // M+/M−/MR/MC store
-  let ans = 0; // last successful result, recalled via "Ans"
+  let memory = 0; 
+  let ans = 0; 
 
   const angleMode = () =>
     (document.querySelector('input[name="sc-angle"]:checked') as HTMLInputElement).value;
 
-  // ---- Tokenizer ----
   type Tok = { t: 'num' | 'op' | 'fn' | 'lp' | 'rp' | 'const' | 'post'; v: string };
   const FUNCS = ['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'sinh', 'cosh', 'tanh', 'log', 'ln', 'sqrt', 'abs'];
   const CONSTS: Record<string, number> = { pi: Math.PI, e: Math.E };
 
   const factorial = (n: number): number => {
-    if (n < 0 || !Number.isInteger(n)) return NaN; // integers only
-    if (n > 170) return Infinity; // overflows double past 170!
+    if (n < 0 || !Number.isInteger(n)) return NaN; 
+    if (n > 170) return Infinity; 
     let f = 1;
     for (let i = 2; i <= n; i++) f *= i;
     return f;
@@ -97,7 +96,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return toks;
   }
 
-  // ---- Shunting-yard to RPN, handling unary minus ----
   const prec: Record<string, number> = { '+': 2, '-': 2, '*': 3, '/': 3, '%': 3, '^': 4, 'u-': 5 };
   const rightAssoc = new Set(['^', 'u-']);
 
@@ -107,10 +105,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     let prev: Tok | null = null;
     for (const tok of toks) {
       if (tok.t === 'num' || tok.t === 'const') { out.push(tok); }
-      else if (tok.t === 'post') { out.push(tok); } // postfix (!) applies to the operand already output
+      else if (tok.t === 'post') { out.push(tok); } 
       else if (tok.t === 'fn') { stack.push(tok); }
       else if (tok.t === 'op') {
-        // Detect unary minus/plus.
+
         const unary = tok.v === '-' && (!prev || prev.t === 'op' || prev.t === 'lp');
         const op = unary ? { t: 'op' as const, v: 'u-' } : tok;
         if (!(tok.v === '+' && (!prev || prev.t === 'op' || prev.t === 'lp'))) {
@@ -172,7 +170,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return st[0];
   }
 
-  // Live evaluation (does not commit to Ans/history — that happens on "=").
   function evaluate(): number | null {
     const src = exprEl.value.trim();
     if (!src) { resultEl.textContent = '0'; resultEl.style.color = ''; return null; }

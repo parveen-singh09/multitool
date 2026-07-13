@@ -1,7 +1,4 @@
-// .gitignore templates for the generator tool. Each entry is one selectable
-// preset; `build()` combines any set, de-duplicating identical patterns across
-// sections (the thing gitignore.io does NOT do — pick Node + React + Next and
-// you'd otherwise get node_modules/ three times).
+
 
 export interface GiTemplate {
   id: string;
@@ -11,7 +8,7 @@ export interface GiTemplate {
 }
 
 export const TEMPLATES: GiTemplate[] = [
-  // ── Languages ──────────────────────────────────────────────────────────
+
   { id: 'node', name: 'Node', group: 'Languages', body:
     'node_modules/\nnpm-debug.log*\nyarn-debug.log*\nyarn-error.log*\npnpm-debug.log*\n.npm\n.pnpm-store/\n*.tsbuildinfo\ndist/\nbuild/\ncoverage/\n.cache/' },
   { id: 'python', name: 'Python', group: 'Languages', body:
@@ -41,7 +38,6 @@ export const TEMPLATES: GiTemplate[] = [
   { id: 'scala', name: 'Scala', group: 'Languages', body:
     '*.class\n*.log\ntarget/\n.bloop/\n.metals/\n.bsp/\nproject/project/\nproject/target/' },
 
-  // ── Frameworks ─────────────────────────────────────────────────────────
   { id: 'react', name: 'React', group: 'Frameworks', body:
     'node_modules/\nbuild/\ndist/\ncoverage/\n.eslintcache' },
   { id: 'nextjs', name: 'Next.js', group: 'Frameworks', body:
@@ -65,7 +61,6 @@ export const TEMPLATES: GiTemplate[] = [
   { id: 'flutter', name: 'Flutter', group: 'Frameworks', body:
     '.dart_tool/\n.flutter-plugins\n.flutter-plugins-dependencies\nbuild/\n.pub-cache/\nios/Pods/\nandroid/.gradle/' },
 
-  // ── Tools ──────────────────────────────────────────────────────────────
   { id: 'docker', name: 'Docker', group: 'Tools', body:
     'docker-compose.override.yml\n*.env\n.docker/' },
   { id: 'terraform', name: 'Terraform', group: 'Tools', body:
@@ -81,7 +76,6 @@ export const TEMPLATES: GiTemplate[] = [
   { id: 'logs', name: 'Logs & temp', group: 'Tools', body:
     '*.log\nlogs/\n*.tmp\n*.temp\n*.bak\n*.swp\n*~' },
 
-  // ── Editors ────────────────────────────────────────────────────────────
   { id: 'vscode', name: 'VS Code', group: 'Editors', body:
     '.vscode/*\n!.vscode/settings.json\n!.vscode/tasks.json\n!.vscode/launch.json\n!.vscode/extensions.json\n*.code-workspace\n.history/' },
   { id: 'jetbrains', name: 'JetBrains', group: 'Editors', body:
@@ -93,7 +87,6 @@ export const TEMPLATES: GiTemplate[] = [
   { id: 'sublime', name: 'Sublime Text', group: 'Editors', body:
     '*.sublime-workspace\n*.tmlanguage.cache\n*.tmPreferences.cache\n*.stTheme.cache' },
 
-  // ── OS ─────────────────────────────────────────────────────────────────
   { id: 'macos', name: 'macOS', group: 'OS', body:
     '.DS_Store\n.AppleDouble\n.LSOverride\n._*\n.Spotlight-V100\n.Trashes\n.DocumentRevisions-V100\n.fseventsd' },
   { id: 'windows', name: 'Windows', group: 'OS', body:
@@ -102,12 +95,6 @@ export const TEMPLATES: GiTemplate[] = [
     '*~\n.fuse_hidden*\n.directory\n.Trash-*\n.nfs*' },
 ];
 
-/**
- * Combine selected templates into one .gitignore. Patterns are de-duplicated
- * globally (first occurrence wins) so overlapping stacks don't repeat lines;
- * comments/blank lines are kept per-section. Sections are emitted in the order
- * templates appear in TEMPLATES for stable output.
- */
 export function build(ids: string[]): string {
   const set = new Set(ids);
   const seen = new Set<string>();
@@ -119,7 +106,7 @@ export function build(ids: string[]): string {
     for (const raw of t.body.split('\n')) {
       const pat = raw.trim();
       if (pat && !pat.startsWith('#')) {
-        if (seen.has(pat)) continue; // ponytail: exact-string dedup, not glob-equivalence
+        if (seen.has(pat)) continue; 
         seen.add(pat);
       }
       lines.push(raw);

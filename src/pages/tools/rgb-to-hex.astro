@@ -2,10 +2,6 @@
 import ToolLayout from '../../layouts/ToolLayout.astro';
 import ColorFormats from '../../components/ColorFormats.astro';
 
-// Primary RGB channel inputs for this page. ColorFormats (below) handles the
-// full multi-format sync + picker + shades + nearest name; this panel adds the
-// channel sliders / 0-255 spinboxes, an alpha channel (RGBA + #RRGGBBAA), and
-// hex output formatting that ColorFormats doesn't cover.
 const channels = [
   { id: 'r', label: 'R', max: 255 },
   { id: 'g', label: 'G', max: 255 },
@@ -136,11 +132,10 @@ const channels = [
   const hexOut = $('rh-hex'), rgbaOut = $('rh-rgba');
   const upper = $('rh-upper'), short = $('rh-short'), hash = $('rh-hash');
 
-  let syncing = false; // guard against feedback loops with ColorFormats
+  let syncing = false; 
 
   const byte = (n: number) => clamp(Math.round(n)).toString(16).padStart(2, '0');
 
-  // Collapse #rrggbb(aa) to #rgb(a) only when every byte has matching nibbles.
   function shorten(hex: string): string {
     const h = hex.replace(/^#/, '');
     if (h.length !== 6 && h.length !== 8) return hex;
@@ -158,7 +153,6 @@ const channels = [
     return hex;
   }
 
-  // Read current channel values from the panel, clamping and flagging bad entry.
   function readRgb(): { r: number; g: number; b: number; a: number } {
     let bad = '';
     const get = (el: HTMLInputElement, max: number, name: string) => {

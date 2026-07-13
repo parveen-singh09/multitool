@@ -1,7 +1,6 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 
-// 2–36, with the common ones labelled.
 const names: Record<number, string> = { 2: 'binary', 8: 'octal', 10: 'decimal', 16: 'hex' };
 const baseOptions = Array.from({ length: 35 }, (_, i) => {
   const b = i + 2;
@@ -118,9 +117,6 @@ const commonBases = [
 
   type Value = { neg: boolean; int: bigint; fracNum: bigint; fracDen: bigint };
 
-  // Arbitrary-precision parse. BigInt has no radix parser, so build it digit by
-  // digit. Tolerates a sign, a matching 0x/0b/0o prefix, digit separators
-  // (space/underscore/comma) and one fractional point.
   function parseVal(raw: string, base: number): Value | null {
     let s = raw.trim().toLowerCase().replace(/[_,\s]/g, '');
     let neg = false;
@@ -129,14 +125,14 @@ const commonBases = [
     else if (base === 2 && s.startsWith('0b')) s = s.slice(2);
     else if (base === 8 && s.startsWith('0o')) s = s.slice(2);
     const dot = s.indexOf('.');
-    if (dot >= 0 && s.indexOf('.', dot + 1) !== -1) return null; // more than one point
+    if (dot >= 0 && s.indexOf('.', dot + 1) !== -1) return null; 
     const ip = dot >= 0 ? s.slice(0, dot) : s;
     const fp = dot >= 0 ? s.slice(dot + 1) : '';
     if (ip === '' && fp === '') return null;
     const B = BigInt(base);
     let int = 0n;
     for (const ch of ip) {
-      const d = parseInt(ch, 36); // 0–35, NaN for non-alphanumerics
+      const d = parseInt(ch, 36); 
       if (isNaN(d) || d >= base) return null;
       int = int * B + BigInt(d);
     }
@@ -147,13 +143,12 @@ const commonBases = [
       fracNum = fracNum * B + BigInt(d);
       fracDen *= B;
     }
-    if (int === 0n && fracNum === 0n) neg = false; // no "-0"
+    if (int === 0n && fracNum === 0n) neg = false; 
     return { neg, int, fracNum, fracDen };
   }
 
   const DIGITS = '0123456789abcdefghijklmnopqrstuvwxyz';
 
-  // Group a digit string: integer part from the right, fraction from the left.
   function group(str: string, base: number): string {
     const size = base === 2 || base === 16 ? 4 : 3;
     const neg = str[0] === '-';
@@ -175,7 +170,7 @@ const commonBases = [
   }
 
   function toStr(v: Value, base: number, places: number): string {
-    let s = v.int.toString(base); // BigInt radix output, lowercase, unsigned
+    let s = v.int.toString(base); 
     if (v.fracNum > 0n && places > 0) {
       const B = BigInt(base);
       let num = v.fracNum;

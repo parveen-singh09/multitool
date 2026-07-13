@@ -1,11 +1,5 @@
 import { format, type SqlLanguage } from 'sql-formatter';
 
-// Dialect-aware SQL validation. The real syntax check is delegated to
-// sql-formatter's per-dialect tokenizer/parser (it throws on malformed SQL);
-// on top of that we layer cheap structural lint notes. It's a validator +
-// linter, not a database engine — it flags well-formedness, not table/column
-// existence. Everything is pure so it runs in the browser and in a node check.
-
 export interface Issue {
   level: 'error' | 'warning';
   msg: string;
@@ -17,7 +11,6 @@ export interface Result {
   statementCount: number;
 }
 
-// Dialects sql-formatter understands, in menu order. Matches sql-formatter.astro.
 export const DIALECTS: { value: SqlLanguage; label: string }[] = [
   { value: 'sql', label: 'Standard SQL' },
   { value: 'mysql', label: 'MySQL' },
@@ -42,9 +35,6 @@ export const DIALECTS: { value: SqlLanguage; label: string }[] = [
 
 const lineAt = (s: string, i: number) => s.slice(0, i).split('\n').length;
 
-// Strip string literals, quoted identifiers and comments, flagging any left
-// unterminated. Returns the "code" skeleton (quoted spans → spaces) so the
-// structural checks don't trip over keywords or commas inside literals.
 function scan(sql: string): { code: string; issues: Issue[] } {
   const issues: Issue[] = [];
   let code = '';

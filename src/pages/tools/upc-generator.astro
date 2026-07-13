@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="upc-generator">
   <div class="grid gap-6 lg:grid-cols-[1fr_320px]">
-    <!-- Preview + output -->
+
     <div class="flex flex-col gap-4">
       <div id="up-stage" class="flex min-h-[220px] items-center justify-center overflow-auto rounded-md border border-hairline bg-white p-6">
         <canvas id="up-canvas" class="max-w-full"></canvas>
@@ -24,15 +24,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Controls -->
     <div class="flex flex-col gap-4">
-      <!-- Mode tabs -->
+
       <div class="flex rounded-md border border-hairline p-0.5 text-sm">
         <button id="up-mode-single" type="button" class="mode-tab flex-1 rounded-[5px] px-3 py-1.5">Single</button>
         <button id="up-mode-batch" type="button" class="mode-tab flex-1 rounded-[5px] px-3 py-1.5">Batch</button>
       </div>
 
-      <!-- Single input -->
       <div id="up-single-pane" class="flex flex-col gap-2">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">
           First 11 digits
@@ -41,7 +39,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <button id="up-rand" type="button" class="btn btn-secondary self-start">Randomize</button>
       </div>
 
-      <!-- Batch input -->
       <div id="up-batch-pane" class="hidden flex-col gap-3">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">
           Codes (one 11- or 12-digit code per line)
@@ -64,7 +61,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
       <div class="h-px bg-hairline"></div>
 
-      <!-- Shared style controls -->
       <div class="grid grid-cols-2 gap-3">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">
           Scale <span id="up-scale-v" class="text-ink-tertiary">3</span>
@@ -165,14 +161,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
   const noHash = (c: string) => c.replace('#', '');
 
-  /** First 11 digits of a raw string → full valid 12-digit UPC-A, or null. */
   function toUpc(raw: string): string | null {
     const p = raw.replace(/\D/g, '').slice(0, 11);
     if (p.length !== 11) return null;
     return p + gtinCheckDigit(p);
   }
 
-  /** Shared bwip-js options for one code. */
   function opts(code: string): RenderOpts {
     return {
       bcid: 'upca',
@@ -200,9 +194,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     } catch { setErr('Could not render barcode.'); }
   }
 
-  // Render every batch code onto stacked offscreen canvases, then composite
-  // them into one tall sheet canvas. ponytail: single-column stack, good enough
-  // for a print sheet — add a column count control if users ask.
   async function drawBatch() {
     const codes = batchTextEl.value.split('\n').map(toUpc).filter(Boolean) as string[];
     if (!codes.length) { setErr('Enter at least one 11- or 12-digit code.'); fullEl.textContent = ''; return; }

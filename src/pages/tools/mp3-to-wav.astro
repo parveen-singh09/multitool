@@ -3,15 +3,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
 <ToolLayout slug="mp3-to-wav">
-  <!--
-    ponytail: self-contained converter rather than the shared <MediaConverter>.
-    The shared component/buildArgs (which I can't edit here) has no volume,
-    reverse or preset support — the three things freeconvert.com offers that we
-    were missing. This page reuses the heavy shared libs (ffmpeg, zip) and keeps
-    every feature the shared one had (batch, drag-drop, bit depth, sample rate,
-    channels, normalize, trim, fade, per-file + ZIP download, preview) and adds
-    the missing ones. Calibration knobs left exposed: volume %, quick presets.
-  -->
+
   <div id="mc-root" class="flex flex-col gap-4">
     <label id="mc-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
@@ -21,7 +13,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </label>
 
     <div id="mc-panel" class="hidden flex-col gap-4">
-      <!-- Quick presets -->
+
       <div class="flex flex-wrap items-center gap-2">
         <span class="text-[13px] text-ink-tertiary">Presets:</span>
         <button type="button" class="preset btn btn-tertiary" data-codec="pcm_s16le" data-rate="44100" data-ch="2">CD · 16-bit 44.1 kHz</button>
@@ -30,10 +22,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <button type="button" class="preset btn btn-tertiary" data-codec="pcm_s16le" data-rate="16000" data-ch="1">Voice · 16-bit 16 kHz mono</button>
       </div>
 
-      <!-- File list -->
       <div id="mc-files" class="flex flex-col gap-2"></div>
 
-      <!-- Options -->
       <div class="panel flex flex-col gap-4 p-4">
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <label class="flex flex-col gap-1 text-sm text-ink-subtle">Bit depth
@@ -78,7 +68,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           </label>
         </div>
 
-        <!-- Advanced (trim + fades) -->
         <details class="group">
           <summary class="cursor-pointer select-none text-[13px] text-ink-subtle hover:text-ink">Trim &amp; fade options</summary>
           <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -352,7 +341,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     fileInput.value = '';
   });
 
-  // Quick presets set the option controls; user can still tweak afterwards.
   document.querySelectorAll<HTMLButtonElement>('.preset').forEach((btn) => {
     btn.addEventListener('click', () => {
       (($('mc-codec') as HTMLSelectElement)).value = btn.dataset.codec!;
@@ -367,8 +355,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files; if (f?.length) addFiles(f); });
   goBtn.addEventListener('click', convertAll);
 
-  // ponytail: one runnable check for the non-trivial arg builder. Runs only with
-  // ?selftest so real users never pay for it. Throws (visible in console) on drift.
   if (location.search.includes('selftest')) {
     const j = (a: string[]) => a.join(' ');
     console.assert(

@@ -49,7 +49,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div id="xf-stats" class="hidden flex flex-wrap gap-2 text-[12px]"></div>
 
-    <!-- Tree view -->
     <div id="xf-view-wrap" class="hidden flex flex-col gap-2">
       <div class="flex items-center gap-2">
         <div class="eyebrow">Tree view</div>
@@ -112,7 +111,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     viewWrap.classList.add('hidden');
   }
 
-  // ---- Well-formedness check via the browser's XML parser ----
   function parseXml(xml: string): { ok: true; doc: Document } | { ok: false; msg: string } {
     const doc = new DOMParser().parseFromString(xml, 'application/xml');
     const err = doc.querySelector('parsererror');
@@ -120,7 +118,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return { ok: true, doc };
   }
 
-  // Firefox/Chrome error strings both carry "line N" and "column N".
   function lineColFromError(msg: string): { line: number; col: number } | null {
     const line = msg.match(/line\s*:?\s*(\d+)/i);
     const col = msg.match(/column\s*:?\s*(\d+)/i);
@@ -174,7 +171,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       }
       case TEXT: return pad + escText((node as Text).data.trim());
       case CDATA: return pad + `<![CDATA[${(node as CDATASection).data}]]>`;
-      case COMMENT: return pad + `<!--${(node as Comment).data}-->`;
+      case COMMENT: return pad + ``;
       case PI: return pad + `<?${(node as ProcessingInstruction).target} ${(node as ProcessingInstruction).data}?>`;
       default: return '';
     }

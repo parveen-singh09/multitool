@@ -1,9 +1,6 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
-// This tool inlines its own richer video converter (batch, instant remux,
-// rotate/flip, audio-copy, presets) rather than the shared MediaConverter,
-// which is capped at one video file and a fixed audio track. It still reuses
-// the shared ffmpeg.wasm loader and ZIP encoder — everything runs in-browser.
+
 ---
 
 <ToolLayout slug="mov-to-mp4">
@@ -16,10 +13,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </label>
 
     <div id="mc-panel" class="hidden flex-col gap-4">
-      <!-- File queue -->
+
       <div id="mc-files" class="flex flex-col gap-2"></div>
 
-      <!-- Presets -->
       <div class="flex flex-wrap items-center gap-2">
         <span class="text-[13px] text-ink-subtle">Preset</span>
         <button type="button" class="btn btn-tertiary mc-preset" data-preset="remux" style="min-height:32px;padding:4px 12px;font-size:13px">Instant (remux)</button>
@@ -29,7 +25,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <button type="button" class="btn btn-tertiary mc-preset" data-preset="small" style="min-height:32px;padding:4px 12px;font-size:13px">Smallest</button>
       </div>
 
-      <!-- Options -->
       <div class="panel flex flex-col gap-4 p-4">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">Mode
           <select id="mc-mode" class="field">
@@ -250,9 +245,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     batchDl.classList.toggle('hidden', !(doneCount > 1));
   }
 
-  // Build ffmpeg args for one job. Kept inline (not the shared buildArgs) because
-  // remux, rotate and flip aren't in the shared option set and the lib is
-  // off-limits for edits.
   function buildJobArgs(job: Job, inName: string, outName: string): string[] {
     const start = num('mc-trimstart');
     const end = num('mc-trimend');
@@ -375,7 +367,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     job.actionsEl.appendChild(pv);
   }
 
-  // Presets set the individual controls; users can still tweak afterwards.
   const PRESETS: Record<string, { mode: string; crf?: string; scale?: string; audio?: string }> = {
     remux: { mode: 'remux' },
     high: { mode: 'encode', crf: '20', scale: '0', audio: '192' },

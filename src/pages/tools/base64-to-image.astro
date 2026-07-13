@@ -119,8 +119,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (m) { wrap.classList.add('hidden'); wrap.classList.remove('flex'); dlBtn.disabled = copyUri.disabled = true; }
   }
 
-  // Sniff the image type from decoded bytes (magic numbers) — more reliable than
-  // any declared type. Returns '' when nothing matches.
   function detectMime(bytes: Uint8Array): string {
     const b = bytes;
     if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'image/png';
@@ -152,13 +150,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const m = raw.match(/^data:([^;,]+)?(;base64)?,(.*)$/s);
       if (!m) { setErr('That does not look like a valid data URI.'); return; }
       declaredType = m[1] || '';
-      isUrlEncoded = !m[2]; // no ";base64" → percent-encoded payload (common for SVG)
+      isUrlEncoded = !m[2]; 
       b64 = m[3].replace(/\s/g, '');
     } else {
       b64 = raw.replace(/\s/g, '');
     }
 
-    // URL-encoded (non-base64) data URIs: pass through untouched, trust declared type.
     if (isUrlEncoded) {
       currentType = declaredType || 'image/svg+xml';
       currentUri = raw.replace(/^(data:[^,]*,)([\s\S]*)$/, (_x, h, p) => h + p.replace(/\s/g, ''));
@@ -173,7 +170,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const bytes = new Uint8Array(Math.min(bin.length, 32));
     for (let i = 0; i < bytes.length; i++) bytes[i] = bin.charCodeAt(i);
 
-    // Priority: sniffed bytes > type declared in the data URI > dropdown fallback.
     currentType = detectMime(bytes) || declaredType || typeSel.value;
     currentUri = `data:${currentType};base64,${b64}`;
     await load(currentUri, bin.length, currentType);

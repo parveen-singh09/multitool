@@ -1,8 +1,4 @@
-// Data table for the straight audio/video format-conversion tools. Each entry
-// drives a page via MediaConverter.astro and registers itself in the tool
-// registry. Options (bitrate, sample rate, channels, trim, fade, normalize)
-// are collected in the UI and turned into ffmpeg CLI args by buildArgs().
-// Special tools (gif, compressors, speed/pitch) have their own pages.
+
 
 export type OutFamily = 'mp3' | 'aac' | 'ogg' | 'wav' | 'video';
 
@@ -13,61 +9,55 @@ export interface MediaConversion {
   description: string;
   keywords: string[];
   icon: string;
-  /** 'audio' or 'video' — controls the accept filter and preview element. */
+
   kind: 'audio' | 'video';
-  /** File input accept attribute. */
+
   accept: string;
-  /** Output file extension (no dot). */
+
   ext: string;
-  /** Output MIME for preview/blob. */
+
   mime: string;
-  /** Output codec family — selects the quality control set and encoder args. */
+
   out: OutFamily;
-  /** One-line "about" body continuation ("This free X ..."). */
+
   about: string;
-  /** Rough note about speed (video re-encodes are slow single-thread). */
+
   slow?: boolean;
 }
 
-/** Options collected from the converter UI, shared across all conversions. */
 export interface ConvertOptions {
-  /** Format-specific quality token (see buildArgs). Audio only. */
+
   quality?: string;
-  /** Output sample rate in Hz; 0 keeps the source rate. Audio only. */
+
   sampleRate?: number;
-  /** Output channels: 0 keep, 1 mono, 2 stereo. */
+
   channels?: number;
-  /** Trim start in seconds (0 = from the beginning). */
+
   trimStart?: number;
-  /** Trim end in seconds (0 = to the end). */
+
   trimEnd?: number;
-  /** EBU R128 loudness normalization. Audio only. */
+
   normalize?: boolean;
-  /** Fade in / out length in seconds (0 = none). Audio only. */
+
   fadeIn?: number;
   fadeOut?: number;
-  /** Total output duration in seconds, used to time the fade-out. */
+
   duration?: number;
-  /** Video: H.264 CRF quality (lower = better). */
+
   crf?: number;
-  /** Video: cap the width in px (height auto, even); 0 keeps the source. */
+
   scale?: number;
-  /** Video: output frame rate; 0 keeps the source. */
+
   fps?: number;
-  /** Video: drop the audio track. */
+
   mute?: boolean;
-  /** Video: audio bitrate in kbps. */
+
   audioBitrate?: number;
 }
 
 const AUDIO_ICON = 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z';
 const VIDEO_ICON = 'M4 5h16v14H4zM10 9l5 3-5 3z';
 
-/**
- * Build ffmpeg args for a conversion from the shared option set. Input seeking
- * (-ss) goes before -i for a fast seek; -to bounds the end. An -af filter chain
- * carries fade and loudnorm; sample rate and channels use -ar/-ac.
- */
 export function buildArgs(conv: MediaConversion, o: ConvertOptions, input: string, output: string): string[] {
   const pre: string[] = [];
   const start = o.trimStart && o.trimStart > 0 ? o.trimStart : 0;
@@ -75,8 +65,6 @@ export function buildArgs(conv: MediaConversion, o: ConvertOptions, input: strin
   pre.push('-i', input);
   if (o.trimEnd && o.trimEnd > start) pre.push('-to', String(o.trimEnd - start));
 
-  // Video conversions (mov/mkv/avi/wmv → mp4): H.264 + AAC, with optional
-  // quality, downscale, frame-rate cap and mute.
   if (conv.out === 'video') {
     const v: string[] = [];
     v.push('-c:v', 'libx264', '-preset', 'veryfast', '-crf', String(o.crf ?? 23), '-pix_fmt', 'yuv420p');
@@ -88,8 +76,6 @@ export function buildArgs(conv: MediaConversion, o: ConvertOptions, input: strin
     return [...pre, ...v, output];
   }
 
-  // Audio filter chain (fades, normalize). Fade-out is timed from the output
-  // duration (trimmed length if trimming, else the source duration).
   const outDur = o.trimEnd && o.trimEnd > start ? o.trimEnd - start : (o.duration || 0) - start;
   const af: string[] = [];
   if (o.fadeIn && o.fadeIn > 0) af.push(`afade=t=in:st=0:d=${o.fadeIn}`);

@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="unicode-converter">
   <div class="flex flex-col gap-4">
-    <!-- Options -->
+
     <div class="flex flex-wrap items-end gap-3">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Output format
@@ -51,7 +51,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div id="uc-status" class="hidden rounded-md border px-3 py-2 text-sm" role="status"></div>
 
-    <!-- Encode: text/emoji → chosen format -->
     <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
       <div class="flex flex-col gap-1 text-sm text-ink-subtle">
         <span class="flex items-center justify-between">
@@ -75,7 +74,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Per-character breakdown -->
     <details id="uc-table-wrap" class="border-t border-hairline pt-4">
       <summary class="cursor-pointer text-sm text-ink-subtle">Character breakdown</summary>
       <div class="mt-3 overflow-auto" style="max-height:20rem">
@@ -97,7 +95,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </details>
 
-    <!-- Decode: any encoded form → text -->
     <div class="border-t border-hairline pt-4">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         <span class="flex items-center justify-between">
@@ -154,7 +151,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const decErr = document.getElementById('uc-dec-err')!;
   let rawOutput = '';
 
-  // Format value → highlight.js language id and the label shown above the pane.
   const FORMATS: Record<string, { label: string; lang: string; list: boolean }> = {
     codepoint: { label: 'U+ code points', lang: 'plaintext', list: true },
     decimal: { label: 'Decimal numbers', lang: 'plaintext', list: true },
@@ -173,10 +169,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     url: { label: 'URL percent-encoding', lang: 'plaintext', list: false },
   };
 
-  // Common code point → HTML named entity. Curated set (the ones browsers and
-  // authors actually use); anything else falls back to a numeric hex entity.
-  // ponytail: curated common map, not the full HTML5 named-character list —
-  // extend the map if a caller needs an exotic named entity.
   const NAMED: Record<number, string> = {
     34: 'quot', 38: 'amp', 39: 'apos', 60: 'lt', 62: 'gt', 160: 'nbsp',
     161: 'iexcl', 162: 'cent', 163: 'pound', 164: 'curren', 165: 'yen',
@@ -263,7 +255,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       if (/\p{M}/u.test(c)) return 'Mark';
       if (/\p{Z}/u.test(c)) return 'Separator';
       if (/\p{C}/u.test(c)) return 'Control';
-    } catch { /* \p{} unsupported — leave blank */ }
+    } catch 
     return 'Other';
   }
 
@@ -367,7 +359,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     s = ta.value;
     // Percent-encoded UTF-8.
     if (/%[0-9a-fA-F]{2}/.test(s)) {
-      try { s = decodeURIComponent(s); } catch { /* leave as-is */ }
+      try { s = decodeURIComponent(s); } catch 
     }
     // Bare number lists ("1F600 61 62" or "0x61,0x62") — only when the whole
     // string is nothing but hex tokens, so real text is never misread.

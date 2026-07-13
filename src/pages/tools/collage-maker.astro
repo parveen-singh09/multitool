@@ -20,7 +20,7 @@ const TABS = [
 
 <ToolLayout slug="collage-maker">
   <div class="flex flex-col gap-4">
-    <!-- Top bar: canvas size + history + export -->
+
     <div class="panel flex flex-wrap items-center gap-2 p-3">
       <select id="cm-size" class="field max-w-[16rem]">
         {SIZE_PRESETS.map((p) => (
@@ -46,7 +46,7 @@ const TABS = [
     </div>
 
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-[300px_1fr]">
-      <!-- Left rail -->
+
       <div class="panel flex flex-col overflow-hidden p-0">
         <div class="flex flex-wrap gap-1 border-b border-hairline p-2">
           {TABS.map((t, i) => (
@@ -59,7 +59,7 @@ const TABS = [
           ))}
         </div>
         <div class="max-h-[70vh] overflow-y-auto p-3">
-          <!-- Photos -->
+
           <section class="cm-panel" data-panel="photos">
             <div class="flex flex-col gap-1 text-sm text-ink-subtle">
               Add photos
@@ -74,7 +74,6 @@ const TABS = [
             <div id="cm-tray" class="mt-3 grid grid-cols-3 gap-2"></div>
           </section>
 
-          <!-- Templates -->
           <section class="cm-panel hidden" data-panel="templates">
             <p class="mb-3 text-[12px] text-ink-tertiary">
               Pick a themed design. Its photo frames fill from your uploaded photos in order — add photos in the Photos tab first, then click a template.
@@ -98,7 +97,6 @@ const TABS = [
             ))}
           </section>
 
-          <!-- Background -->
           <section class="cm-panel hidden flex-col gap-3" data-panel="background">
             <label class="flex items-center justify-between text-sm text-ink-subtle">
               Solid color
@@ -122,7 +120,6 @@ const TABS = [
             <button id="cm-bg-clear" class="btn">Clear background image</button>
           </section>
 
-          <!-- Text -->
           <section class="cm-panel hidden flex-col gap-3" data-panel="text">
             <button id="cm-add-text" class="btn btn-primary">Add text</button>
             <label class="flex flex-col gap-1 text-sm text-ink-subtle">
@@ -147,7 +144,6 @@ const TABS = [
             <p class="text-[12px] text-ink-tertiary">Double-click text on the canvas to edit it.</p>
           </section>
 
-          <!-- Stickers -->
           <section class="cm-panel hidden" data-panel="stickers">
             <div class="mb-3">
               <p class="mb-1 text-[12px] font-medium text-ink-subtle">Custom sticker</p>
@@ -175,7 +171,6 @@ const TABS = [
             ))}
           </section>
 
-          <!-- Shapes -->
           <section class="cm-panel hidden flex-col gap-3" data-panel="shapes">
             <div id="cm-shapes" class="grid grid-cols-2 gap-2">
               {SHAPES.map((sh) => (
@@ -196,7 +191,6 @@ const TABS = [
             </label>
           </section>
 
-          <!-- Doodle -->
           <section class="cm-panel hidden flex-col gap-3" data-panel="draw">
             <button id="cm-draw-toggle" class="btn btn-secondary">Enable drawing</button>
             <label class="flex items-center justify-between text-sm text-ink-subtle">
@@ -209,7 +203,6 @@ const TABS = [
             </label>
           </section>
 
-          <!-- Stock -->
           <section class="cm-panel hidden flex-col gap-3" data-panel="stock">
             <div id="cm-stock-off" class="hidden text-[13px] text-ink-subtle">
               Stock photo search is not configured. Add a free Pexels API key as <code>PUBLIC_PEXELS_KEY</code> to enable it.
@@ -226,7 +219,6 @@ const TABS = [
           </section>
         </div>
 
-        <!-- Layer controls -->
         <div class="flex flex-wrap gap-1 border-t border-hairline p-2">
           <button id="cm-forward" class="btn px-2 py-1 text-[12px]" title="Bring forward">↑</button>
           <button id="cm-back" class="btn px-2 py-1 text-[12px]" title="Send back">↓</button>
@@ -236,7 +228,6 @@ const TABS = [
         </div>
       </div>
 
-      <!-- Canvas stage -->
       <div id="cm-stage" class="panel flex items-center justify-center overflow-auto p-4">
         <div class="inline-block shadow-lg">
           <canvas id="cm-canvas" aria-label="Collage canvas"></canvas>
@@ -277,14 +268,12 @@ const TABS = [
   const showErr = (m: string) => { err.textContent = m; err.classList.remove('hidden'); };
   const clearErr = () => err.classList.add('hidden');
 
-  // --- Canvas setup ---
   let W = 1080, H = 1080;
   const canvasEl = $('cm-canvas') as HTMLCanvasElement;
   const canvas = new fabric.Canvas(canvasEl, { backgroundColor: '#0f1011', preserveObjectStacking: true });
 
-  // Fit the on-screen canvas to the stage while keeping the real export size.
   function fitCanvas() {
-    canvas.setDimensions({ width: W, height: H }); // internal (export) size
+    canvas.setDimensions({ width: W, height: H }); 
     const stageW = ($('cm-stage') as HTMLElement)?.clientWidth;
     const maxW = Math.min(720, stageW ? stageW - 32 : 640);
     const maxH = 620;
@@ -771,7 +760,7 @@ const TABS = [
     const format = ($('cm-format') as HTMLSelectElement).value as 'png' | 'jpeg';
     const url = canvas.toDataURL({ format, quality: 0.92, multiplier: 1 });
     const a = document.createElement('a');
-    a.href = url; a.download = `toolcities-collage.${format === 'jpeg' ? 'jpg' : 'png'}`; a.click();
+    a.href = url; a.download = `toolsilk-collage.${format === 'jpeg' ? 'jpg' : 'png'}`; a.click();
   });
 
   // --- Tabs ---

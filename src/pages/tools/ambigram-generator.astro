@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="ambigram-generator">
   <div class="flex flex-col gap-6">
-    <!-- Words -->
+
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <label class="flex flex-col gap-1.5 text-sm text-ink-subtle">Word
         <input id="am-a" class="field" value="love" spellcheck="false" maxlength="20" autocomplete="off" />
@@ -14,7 +14,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </label>
     </div>
 
-    <!-- Controls -->
     <div class="flex flex-wrap items-end gap-x-5 gap-y-4">
       <label class="flex flex-col gap-1.5 text-sm text-ink-subtle">Font
         <select id="am-font" class="field w-48"></select>
@@ -53,13 +52,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Stage -->
     <div class="am-stage panel panel-lift">
       <canvas id="am-canvas" class="am-canvas" aria-label="Ambigram preview"></canvas>
     </div>
     <p class="-mt-2 text-center text-[13px] text-ink-tertiary">Turn your screen (or the page) 180° — the word reads the same, or as the second word.</p>
 
-    <!-- Letter pairing aid -->
     <div class="flex flex-col gap-3">
       <div class="flex items-center justify-between">
         <span class="text-sm text-ink-subtle">Letter pairs — each column must read as its partner upside-down</span>
@@ -168,9 +165,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const ctx = canvas.getContext('2d')!;
   const pairsEl = $('am-pairs');
 
-  // Populate fonts, grouped by style the way makeambigrams groups its cuts.
-  // We can't ship its proprietary 676-glyph fonts, so each group maps to the
-  // real project fonts that read best for that ambigram style.
   const FONT_GROUPS: { label: string; fonts: string[] }[] = [
     { label: 'Script', fonts: ['Lobster', 'Great Vibes', 'Pacifico', 'Satisfy', 'Dancing Script'] },
     { label: 'Heavy', fonts: ['Anton', 'Abril Fatface', 'Righteous', 'Bebas Neue'] },
@@ -192,9 +186,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (og.childElementCount) fontEl.appendChild(og);
   }
 
-  // Letters that read as a given letter after a 180° rotation. Only the
-  // solid, widely-agreed pairs — everything else is flagged "needs lettering".
-  // ponytail: static map, the honest set; extend if a font proves more pairs.
   const ROT: Record<string, string> = {
     o: 'o', s: 's', x: 'x', z: 'z', l: 'l', i: 'i',
     n: 'u', u: 'n', d: 'p', p: 'd', b: 'q', q: 'b',
@@ -218,7 +209,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     render();
   }
 
-  // Fit a font size so the word spans ~86% of width; caps at the user's size.
   function fitFont(c: CanvasRenderingContext2D, word: string, family: string, track: number, want: number, w: number) {
     let fs = want;
     c.font = `600 ${fs}px ${family}`;
@@ -366,7 +356,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       if (s.k != null) { trackEl.value = String(s.k); $('am-track-v').textContent = `${s.k}px`; }
       ghostEl.checked = s.g !== false;
       await ensureFont(fontEl.value);
-    } catch { /* bad hash — ignore */ }
+    } catch 
   }
 
   /* ---------- wire up ---------- */

@@ -1,12 +1,9 @@
-// Data pool for the Compliment & Insult generator.
-// Five tones, each with 50 compliments and 50 playful insults. Sentences are
-// written in the second person ("You ...") so an optional recipient name can be
-// prepended as "Alex, you ...". All insults are kept good-natured / banter-safe.
+
 
 export interface Tone {
   id: string;
   label: string;
-  /** Short blurb shown under the selector. */
+
   hint: string;
 }
 
@@ -544,7 +541,6 @@ export const INSULTS: Record<string, string[]> = {
   ],
 };
 
-// Self-check: every tone has exactly 50 of each, and ids line up.
 export function _selfCheck(): void {
   for (const t of TONES) {
     const c = COMPLIMENTS[t.id]?.length ?? 0;

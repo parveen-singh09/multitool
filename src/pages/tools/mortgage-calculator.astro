@@ -50,7 +50,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div class="mt-1 text-[13px] text-ink-subtle">Estimated monthly payment</div>
     </div>
 
-    <!-- Monthly breakdown: donut + component tiles -->
     <div class="panel p-5">
       <div class="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
         <svg id="mg-donut" viewBox="0 0 42 42" class="h-32 w-32 shrink-0" role="img" aria-label="Monthly payment breakdown">
@@ -62,7 +61,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Payoff summary -->
     <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
       <div class="panel p-4"><div id="mg-totint" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total interest</div></div>
       <div class="panel p-4"><div id="mg-totpaid" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total of payments</div></div>
@@ -70,7 +68,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div class="panel p-4"><div id="mg-saved" class="font-mono text-lg text-success">—</div><div class="mt-1 text-[13px] text-ink-subtle">Interest saved (extra)</div></div>
     </div>
 
-    <!-- Amortization schedule (yearly) -->
     <details class="panel p-0">
       <summary class="cursor-pointer list-none px-5 py-4 text-sm font-medium text-ink hover:text-primary-hover">
         <span class="inline-flex items-center gap-2">▸ Amortization schedule (by year)</span>
@@ -113,7 +110,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   let downMode: 'dollar' | 'pct' = 'dollar';
 
-  // Donut/legend colors — greyscale ladder + one lavender accent for P&I (design keeps color scarce).
   const COMP = [
     { key: 'pi', label: 'Principal & interest', color: '#5e6ad2' },
     { key: 'tax', label: 'Property tax', color: '#8a8f98' },
@@ -127,19 +123,17 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return downMode === 'pct' ? (price * v) / 100 : v;
   }
 
-  // Run the amortization loop. Returns total interest, months to payoff, and
-  // per-year aggregates. PMI is charged while balance/price > 0.80.
   function amortize(principal: number, monthlyRate: number, basePI: number, extra: number, price: number, pmiMonthly: number) {
     let bal = principal;
     let totalInterest = 0;
     let month = 0;
     const years: { principal: number; interest: number; balance: number }[] = [];
     let yrP = 0, yrI = 0;
-    const maxMonths = 1200; // 100-year hard cap so a bad rate/payment combo can't loop forever
+    const maxMonths = 1200; 
     while (bal > 0.005 && month < maxMonths) {
       const interest = bal * monthlyRate;
       let principalPaid = basePI - interest + extra;
-      if (principalPaid <= 0) break; // payment doesn't cover interest — never pays off
+      if (principalPaid <= 0) break; 
       if (principalPaid > bal) principalPaid = bal;
       bal -= principalPaid;
       totalInterest += interest;
@@ -161,7 +155,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const r = Number(el['mg-rate'].value) / 12 / 100;
     const extra = Math.max(0, Number(el['mg-extra'].value) || 0);
 
-    // down-payment hint
     const hint = document.getElementById('mg-down-hint')!;
     hint.textContent = price > 0
       ? downMode === 'pct'

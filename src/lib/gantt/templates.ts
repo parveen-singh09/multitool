@@ -1,11 +1,4 @@
-// Ready-made projects. Mirrors the timeline template gallery: authored consts +
-// TEMPLATES / templateGroups() / getTemplate() / templateToProject(). Every task
-// uses working-day durations and real FS dependencies so loading a template
-// immediately demonstrates auto-scheduling, the critical path and rollups.
-//
-// Within a template, tasks carry short local ids ('a','b',…) and deps reference
-// those ids. templateToProject() regenerates fresh unique ids and rewrites the
-// dependency references, so loading a template twice never aliases ids.
+
 
 import type { GanttProject, Task, Dependency, ZoomLevel } from './types';
 import { newId } from './types';
@@ -23,8 +16,6 @@ export interface GanttTemplate {
   tasks: Task[];
 }
 
-// Concise task builder. deps: array of predecessor local-ids (FS lag 0) or full
-// Dependency objects.
 function e(
   id: string, name: string, duration: number,
   opts: { deps?: (string | Dependency)[]; outline?: number; progress?: number; group?: string; assignee?: string; color?: string } = {},
@@ -39,7 +30,7 @@ function e(
   };
 }
 
-const START = '2026-01-05'; // a Monday
+const START = '2026-01-05'; 
 
 export const TEMPLATES: GanttTemplate[] = [
   {
@@ -163,8 +154,6 @@ export function getTemplate(id: string): GanttTemplate | undefined {
   return TEMPLATES.find((t) => t.id === id);
 }
 
-// Turn a template into a fresh GanttProject: new unique ids, dep references
-// rewritten to match.
 export function templateToProject(t: GanttTemplate): GanttProject {
   const idMap = new Map<string, string>();
   for (const task of t.tasks) idMap.set(task.id, newId());

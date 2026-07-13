@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="slot-machine-simulator">
   <div class="flex flex-col gap-5">
-    <!-- Stat tiles -->
+
     <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
       <div class="panel panel-lift p-3"><div id="sm-credits" class="font-display text-xl font-semibold text-primary-hover">1,000</div><div class="mt-1 text-[13px] text-ink-subtle">Credits</div></div>
       <div class="panel p-3"><div id="sm-lastwin" class="font-mono text-lg text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Last win</div></div>
@@ -12,7 +12,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div class="panel p-3"><div id="sm-rtp" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Return</div></div>
     </div>
 
-    <!-- Reels -->
     <div class="panel panel-lift relative p-4 sm:p-6">
       <div id="sm-fsbanner" class="sm-fsbanner" hidden></div>
       <div id="sm-grid" class="sm-grid" aria-label="Slot reels"></div>
@@ -21,7 +20,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <p id="sm-msg" class="min-h-5 text-center text-[13px] text-ink-subtle" role="status" aria-live="polite">Set your bet and hit Spin.</p>
 
-    <!-- Controls -->
     <div class="flex flex-wrap items-end justify-center gap-3">
       <div class="flex flex-col gap-1 text-sm text-ink-subtle">Bet per line
         <div class="flex items-center gap-1">
@@ -41,7 +39,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </div>
 
     <div class="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_260px]">
-      <!-- Paytable -->
+
       <div class="panel panel-lift p-4">
         <div class="mb-2 text-[13px] text-ink-subtle">Paytable — pays × your line bet, left to right on 10 lines</div>
         <div id="sm-paytable" class="grid grid-cols-1 gap-x-6 gap-y-1 font-mono text-[13px] text-ink-muted sm:grid-cols-2"></div>
@@ -52,7 +50,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </div>
       </div>
 
-      <!-- Session stats + recent wins -->
       <div class="flex flex-col gap-3">
         <div class="panel panel-lift p-4">
           <div class="mb-2 text-[13px] text-ink-subtle">Session</div>
@@ -137,20 +134,19 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   let wagered = 0;
   let returned = 0;
   let biggest = 0;
-  let freeSpins = 0;         // remaining free spins
-  let freeWon = 0;           // credits won across the current free-spin run
+  let freeSpins = 0;         
+  let freeWon = 0;           
   let autoplaying = false;
   let turbo = false;
-  let busy = false;          // a spin animation is in flight
+  let busy = false;          
 
   const gridEl = $('sm-grid');
   const msg = $('sm-msg');
   const winlineEl = $('sm-winline');
-  const cells: HTMLElement[][] = [];   // cells[reel][row]
+  const cells: HTMLElement[][] = [];   
 
-  // Build the 5×3 grid of cells (column-major so index math matches grid[reel][row]).
   for (let reel = 0; reel < 5; reel++) cells.push([]);
-  // DOM order must be row-major for CSS grid, but we keep a column-major lookup.
+
   const initial: Sym[][] = [['🍒','🔔','⭐'],['🍋','💎','🍒'],['🔔','7️⃣','🍋'],['⭐','🍒','🔔'],['💎','🍋','⭐']];
   for (let row = 0; row < 3; row++) {
     for (let reel = 0; reel < 5; reel++) {

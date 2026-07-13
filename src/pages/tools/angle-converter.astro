@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="angle-converter">
   <div id="ac-root" class="flex flex-col gap-6">
-    <!-- Converter -->
+
     <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
       <div class="flex flex-col gap-1">
         <label class="text-sm text-ink-subtle" for="ac-from-val">From</label>
@@ -41,7 +41,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Precision + formula -->
     <div class="flex flex-wrap items-center gap-3">
       <label class="flex items-center gap-2 text-[13px] text-ink-subtle">
         Decimals
@@ -60,7 +59,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <p id="ac-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
 
-    <!-- Live preview + all-units breakdown -->
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-[auto_1fr]">
       <div class="panel panel-lift flex flex-col items-center gap-2 p-4">
         <svg id="ac-svg" width="150" height="150" viewBox="0 0 150 150" role="img" aria-label="Angle preview"></svg>
@@ -73,7 +71,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Common conversions -->
     <div>
       <p class="mb-2 text-[13px] text-ink-subtle">Common angle equivalents</p>
       <div id="ac-table" class="overflow-hidden rounded-md border border-hairline"></div>
@@ -109,10 +106,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
-  // Self-contained angle converter. Base unit: DEGREE (makes DMS + preview simple).
-  // No shared lib — the task scopes edits to this file only.
 
-  // degrees per 1 of each unit
   const UNITS: Record<string, number> = {
     'Degree (°)': 1,
     'Radian (rad)': 180 / Math.PI,
@@ -147,7 +141,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const svg = $('ac-svg');
   const svgLabel = $('ac-svg-label');
 
-  // ---- number formatting ----
   function fmt(n: number): string {
     if (!isFinite(n)) return n > 0 ? '∞' : '-∞';
     if (n === 0) return '0';
@@ -161,13 +154,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return s.includes('.') ? s.replace(/\.?0+$/, '') : s;
   }
 
-  // ---- DMS parsing (degrees only) ----
-  // Accepts: 12°30'15.5"  |  12 30 15  |  -12°30'  |  12d 30m 15s  |  plain number
   function parseDegreesDMS(raw: string): number {
     const t = raw.trim();
     if (t === '') return NaN;
     const plain = Number(t);
-    if (!isNaN(plain)) return plain; // ordinary decimal
+    if (!isNaN(plain)) return plain; 
     const sign = /^-/.test(t) ? -1 : 1;
     const nums = t.replace(/[^0-9.\-]+/g, ' ').trim().split(/\s+/).map(Number);
     if (nums.some(isNaN) || nums.length === 0 || nums.length > 3) return NaN;
@@ -175,7 +166,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return sign * (d + m / 60 + s / 3600);
   }
 
-  // ---- degrees -> D M S string ----
   function toDMS(deg: number): string {
     if (!isFinite(deg)) return '—';
     const sign = deg < 0 ? '-' : '';
@@ -183,7 +173,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     let d = Math.floor(a);
     let m = Math.floor((a - d) * 60);
     let s = (a - d - m / 60) * 3600;
-    // fix rounding creep at the second boundary
+
     if (Math.round(s * 1e6) / 1e6 >= 60) { s -= 60; m += 1; }
     if (m >= 60) { m -= 60; d += 1; }
     const sStr = trimZeros((Math.round(s * 100) / 100).toFixed(2));
@@ -353,9 +343,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       await navigator.clipboard.writeText(toVal.value);
       copyBtn.textContent = 'Copied!';
       setTimeout(() => (copyBtn.textContent = 'Copy'), 1400);
-    } catch {
-      /* clipboard blocked — no-op */
-    }
+    } catch 
   });
 
   fillUnits();

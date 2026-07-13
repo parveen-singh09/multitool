@@ -1,37 +1,30 @@
-// Recipe matcher data + logic for the Recipe Idea Generator (a Supercook-style
-// "cook with what you have" tool). Everything runs in the browser: pick the
-// ingredients in your kitchen, and we surface recipes you can make now plus
-// near-misses (missing 1–2 items). No server, no accounts.
-//
-// Ingredients are normalized to lowercase slugs so the matcher is pure set math.
+
 
 export type Diet = 'vegetarian' | 'vegan';
 
 export interface Ingredient {
-  /** Canonical slug, e.g. "chicken-breast". */
+
   id: string;
-  /** Display label. */
+
   name: string;
-  /** Picker group. */
+
   group: string;
 }
 
 export interface Recipe {
   id: string;
   name: string;
-  /** Short blurb shown under the title. */
+
   blurb: string;
-  /** Required ingredient ids (staples excluded — see STAPLES). */
+
   need: string[];
   diets: Diet[];
-  /** Rough hands-on time in minutes. */
+
   minutes: number;
-  /** 3–5 terse steps. */
+
   steps: string[];
 }
 
-// Assumed on-hand when the "I have basic staples" toggle is on. These never
-// count against a recipe's missing list. Mirrors Supercook's pantry defaults.
 export const STAPLES = new Set([
   'salt',
   'pepper',
@@ -43,10 +36,8 @@ export const STAPLES = new Set([
   'flour',
 ]);
 
-// Ingredient catalog, grouped for the picker. Keep ids stable — recipes
-// reference them.
 export const INGREDIENTS: Ingredient[] = [
-  // Vegetables
+
   { id: 'onion', name: 'Onion', group: 'Vegetables' },
   { id: 'garlic', name: 'Garlic', group: 'Vegetables' },
   { id: 'tomato', name: 'Tomato', group: 'Vegetables' },
@@ -69,7 +60,6 @@ export const INGREDIENTS: Ingredient[] = [
   { id: 'cabbage', name: 'Cabbage', group: 'Vegetables' },
   { id: 'jalapeno', name: 'Jalapeño', group: 'Vegetables' },
 
-  // Proteins
   { id: 'chicken-breast', name: 'Chicken breast', group: 'Proteins' },
   { id: 'ground-beef', name: 'Ground beef', group: 'Proteins' },
   { id: 'egg', name: 'Eggs', group: 'Proteins' },
@@ -84,7 +74,6 @@ export const INGREDIENTS: Ingredient[] = [
   { id: 'tuna', name: 'Canned tuna', group: 'Proteins' },
   { id: 'lentils', name: 'Lentils', group: 'Proteins' },
 
-  // Dairy & eggs
   { id: 'milk', name: 'Milk', group: 'Dairy' },
   { id: 'cheese', name: 'Cheese', group: 'Dairy' },
   { id: 'parmesan', name: 'Parmesan', group: 'Dairy' },
@@ -95,7 +84,6 @@ export const INGREDIENTS: Ingredient[] = [
   { id: 'mozzarella', name: 'Mozzarella', group: 'Dairy' },
   { id: 'feta', name: 'Feta', group: 'Dairy' },
 
-  // Grains & starches
   { id: 'rice', name: 'Rice', group: 'Grains' },
   { id: 'pasta', name: 'Pasta', group: 'Grains' },
   { id: 'bread', name: 'Bread', group: 'Grains' },
@@ -105,7 +93,6 @@ export const INGREDIENTS: Ingredient[] = [
   { id: 'quinoa', name: 'Quinoa', group: 'Grains' },
   { id: 'breadcrumbs', name: 'Breadcrumbs', group: 'Grains' },
 
-  // Pantry
   { id: 'soy-sauce', name: 'Soy sauce', group: 'Pantry' },
   { id: 'tomato-sauce', name: 'Tomato sauce', group: 'Pantry' },
   { id: 'tomato-paste', name: 'Tomato paste', group: 'Pantry' },
@@ -128,7 +115,6 @@ export const INGREDIENTS: Ingredient[] = [
   { id: 'mustard', name: 'Mustard', group: 'Pantry' },
   { id: 'sesame-oil', name: 'Sesame oil', group: 'Pantry' },
 
-  // Staples (shown so users can uncheck if they don't have them)
   { id: 'salt', name: 'Salt', group: 'Staples' },
   { id: 'pepper', name: 'Black pepper', group: 'Staples' },
   { id: 'olive-oil', name: 'Olive oil', group: 'Staples' },
@@ -843,23 +829,14 @@ export const RECIPES: Recipe[] = [
   },
 ];
 
-// ---- Matching ----
-
 export interface Match {
   recipe: Recipe;
-  /** Non-staple required ids the user has. */
+
   have: string[];
-  /** Non-staple required ids the user is missing. */
+
   missing: string[];
 }
 
-/**
- * Rank recipes against the user's pantry.
- * @param owned      set of ingredient ids the user selected
- * @param useStaples treat STAPLES as always-owned
- * @param diet       optional diet filter
- * @param maxMissing only return recipes missing at most this many ingredients
- */
 export function matchRecipes(
   owned: Set<string>,
   useStaples: boolean,
@@ -876,14 +853,12 @@ export function matchRecipes(
       if (owned.has(id) || (useStaples && STAPLES.has(id))) have.push(id);
       else missing.push(id);
     }
-    // Skip recipes where the user owns nothing relevant — no point showing a
-    // "missing everything" card.
+
     if (have.length === 0) continue;
     if (missing.length > maxMissing) continue;
     results.push({ recipe, have, missing });
   }
 
-  // Sort: fewest missing first, then most matched, then quickest.
   results.sort(
     (a, b) =>
       a.missing.length - b.missing.length ||

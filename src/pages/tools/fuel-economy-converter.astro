@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="fuel-economy-converter">
   <div id="fe-root" class="flex flex-col gap-5">
-    <!-- Primary from → to conversion -->
+
     <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
       <div class="flex flex-col gap-1">
         <label class="text-sm text-ink-subtle" for="fe-from-val">From</label>
@@ -30,7 +30,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Options -->
     <div class="flex flex-wrap items-end gap-3">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Decimals
@@ -53,7 +52,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p id="fe-formula" class="text-[13px] text-ink-tertiary"></p>
     <p id="fe-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
 
-    <!-- Live: value expressed in every unit at once -->
     <div>
       <p class="mb-2 text-[13px] text-ink-subtle">All units <span id="fe-all-caption" class="text-ink-tertiary"></span></p>
       <div id="fe-table" class="overflow-hidden rounded-md border border-hairline"></div>
@@ -88,32 +86,28 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
-  // Fuel economy converter — all math inlined here (self-contained, client-side).
-  // Base unit: km/L. Each unit is either an "efficiency" unit (distance per
-  // fuel, higher = better: value * k = km/L) or a "consumption" unit (fuel per
-  // distance, lower = better: km/L = k / value, a reciprocal relationship).
+
   type Kind = 'eff' | 'cons';
   interface Unit { label: string; short: string; kind: Kind; k: number; }
 
-  // Exact constants: 1 mile = 1.609344 km, US gal = 3.785411784 L, imp gal = 4.54609 L.
   const UNITS: Unit[] = [
-    { label: 'MPG (US)',        short: 'US MPG',       kind: 'eff',  k: 1.609344 / 3.785411784 },   // 0.42514370…
-    { label: 'MPG (Imperial)',  short: 'imp MPG',      kind: 'eff',  k: 1.609344 / 4.54609 },        // 0.35400619…
+    { label: 'MPG (US)',        short: 'US MPG',       kind: 'eff',  k: 1.609344 / 3.785411784 },   
+    { label: 'MPG (Imperial)',  short: 'imp MPG',      kind: 'eff',  k: 1.609344 / 4.54609 },        
     { label: 'km/L',            short: 'km/L',         kind: 'eff',  k: 1 },
     { label: 'mi/L',            short: 'mi/L',         kind: 'eff',  k: 1.609344 },
     { label: 'L/100km',         short: 'L/100km',      kind: 'cons', k: 100 },
-    { label: 'gal(US)/100mi',   short: 'US gal/100mi', kind: 'cons', k: 100 * 1.609344 / 3.785411784 },  // 42.5143…
-    { label: 'gal(Imp)/100mi',  short: 'imp gal/100mi',kind: 'cons', k: 100 * 1.609344 / 4.54609 },       // 35.4006…
+    { label: 'gal(US)/100mi',   short: 'US gal/100mi', kind: 'cons', k: 100 * 1.609344 / 3.785411784 },  
+    { label: 'gal(Imp)/100mi',  short: 'imp gal/100mi',kind: 'cons', k: 100 * 1.609344 / 4.54609 },       
   ];
   const byLabel = (l: string) => UNITS.find((u) => u.label === l)!;
 
   function toKmPerL(value: number, u: Unit): number {
     if (u.kind === 'eff') return value * u.k;
-    return value <= 0 ? Infinity : u.k / value; // consumption → efficiency
+    return value <= 0 ? Infinity : u.k / value; 
   }
   function fromKmPerL(kpl: number, u: Unit): number {
     if (u.kind === 'eff') return kpl / u.k;
-    return kpl <= 0 ? Infinity : u.k / kpl; // efficiency → consumption
+    return kpl <= 0 ? Infinity : u.k / kpl; 
   }
   function convert(value: number, from: Unit, to: Unit): number {
     return fromKmPerL(toKmPerL(value, from), to);
@@ -133,7 +127,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const table = $<HTMLElement>('fe-table');
   const allCaption = $<HTMLElement>('fe-all-caption');
 
-  // Format with either significant-figure auto mode or fixed decimals.
   function fmt(n: number): string {
     if (!isFinite(n)) return '∞';
     if (n === 0) return '0';
@@ -153,7 +146,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   }
 
   function buildPresets() {
-    // Common real-world economy figures across the popular units.
+
     const chips: Array<[string, number, string]> = [
       ['30 US MPG', 30, 'MPG (US)'],
       ['40 US MPG', 40, 'MPG (US)'],
@@ -235,7 +228,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       await navigator.clipboard.writeText(toVal.value);
       copyBtn.textContent = 'Copied!';
       setTimeout(() => (copyBtn.textContent = 'Copy'), 1400);
-    } catch { /* clipboard blocked; ignore */ }
+    } catch 
   });
 
   fillUnits();

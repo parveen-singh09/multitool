@@ -1,8 +1,8 @@
-# ToolCities — Progress
+# ToolSilk — Progress
 
-**ToolCities** is a multitool website: a "city" of fast, privacy-first online tools that run 100% in the browser — no sign-up, no uploads, no tracking. Built with Astro 7 + Tailwind v4, styled with the Linear-inspired dark design system in [DESIGN.md](DESIGN.md).
+**ToolSilk** is a multitool website: a suite of fast, privacy-first online tools that run 100% in the browser — no sign-up, no uploads, no tracking. Built with Astro 7 + Tailwind v4, styled with the Linear-inspired dark design system in [DESIGN.md](DESIGN.md).
 
-- Domain: `toolcities.com` (set as `site` in [astro.config.mjs](astro.config.mjs))
+- Domain: `toolsilk.com` (set as `site` in [astro.config.mjs](astro.config.mjs))
 - Design: near-black canvas `#010102`, lavender accent `#5e6ad2` (used scarcely), Inter + JetBrains Mono, four-step surface ladder.
 
 ## Current state (2026-07-04)

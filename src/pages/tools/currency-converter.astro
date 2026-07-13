@@ -131,7 +131,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     ZWG: 'Zimbabwean Gold', ZWL: 'Zimbabwean Dollar (2009–2024)',
   };
 
-  // Currency symbols. Codes without a distinct glyph fall back to the code itself.
   const SYMBOLS: Record<string, string> = {
     AED: 'د.إ', AFN: '؋', AMD: '֏', AOA: 'Kz', ARS: '$', AUD: 'A$', AWG: 'ƒ', AZN: '₼',
     BAM: 'KM', BBD: '$', BDT: '৳', BOB: 'Bs', BRL: 'R$', BSD: '$', BWP: 'P', BYN: 'Br',
@@ -166,11 +165,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const chartMsg = document.getElementById('cu-chart-msg')!;
   const stats = document.getElementById('cu-stats')!;
 
-  // rates are stored relative to USD (er-api base). rates['USD'] = 1.
   let rates: Record<string, number> = {};
   let lastUpdate = '';
-  let dp = 4;               // decimal places for the result
-  let period = '1M';        // active history window
+  let dp = 4;               
+  let period = '1M';        
 
   const dpFmt = (n: number) => new Intl.NumberFormat(undefined, { maximumFractionDigits: dp }).format(n);
   const fmt = (n: number) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 4 }).format(n);
@@ -178,7 +176,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   function fillSelects() {
     const codes = Object.keys(NAMES);
-    // show the symbol prefix only when it's a distinct glyph (not just the code again)
+
     const opts = codes.map((c) => {
       const s = sym(c);
       const prefix = s !== c ? `${s} ` : '';
@@ -239,7 +237,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }
   }
 
-  // ---- Rate history chart (ECB series via Frankfurter; ~30 currencies) ----
   const PERIODS: Record<string, number> = { '1W': 7, '1M': 30, '6M': 182, '1Y': 365, '5Y': 1825 };
 
   function renderPeriods() {

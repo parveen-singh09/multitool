@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="color-blindness-tester">
   <div class="flex flex-col gap-8">
-    <!-- Test picker -->
+
     <nav class="flex flex-wrap gap-2" role="tablist" aria-label="Color vision tests">
       <button class="cb-tab btn btn-secondary inline-flex items-center gap-2" role="tab" aria-selected="true" data-test="plate">
         <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="#1a1a24"/><circle cx="7" cy="8" r="2" fill="#c56b52"/><circle cx="12" cy="7" r="1.8" fill="#5e8f4f"/><circle cx="9.5" cy="12" r="2" fill="#c98b53"/><circle cx="13" cy="12" r="1.6" fill="#6a9457"/><circle cx="6" cy="12" r="1.5" fill="#b06048"/></svg>
@@ -28,7 +28,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </button>
     </nav>
 
-    <!-- Plate test -->
     <section class="cb-panel flex flex-col gap-4" data-test="plate">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <h2 class="font-display text-lg font-semibold text-ink">Color vision plate test</h2>
@@ -60,7 +59,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <div class="panel panel-lift ml-auto p-3 text-center"><span id="cb-progress" class="font-display text-lg font-semibold text-primary-hover">0</span> <span class="text-[13px] text-ink-subtle">/ <span id="cb-progress-total">14</span> plates</span></div>
       </div>
 
-      <!-- Results report (hidden until complete) -->
       <div id="cb-report" class="panel panel-lift hidden flex-col gap-4 p-5">
         <div class="flex flex-wrap items-baseline justify-between gap-2">
           <div>
@@ -83,7 +81,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </section>
 
-    <!-- D-15 hue arrangement -->
     <section class="cb-panel hidden flex-col gap-4" data-test="d15">
       <h2 class="font-display text-lg font-semibold text-ink">Hue arrangement (D-15)</h2>
       <p class="text-[13px] text-ink-subtle">
@@ -111,7 +108,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </section>
 
-    <!-- Anomaloscope -->
     <section class="cb-panel hidden flex-col gap-4" data-test="anomalo">
       <h2 class="font-display text-lg font-semibold text-ink">Anomaloscope (Rayleigh match)</h2>
       <p class="text-[13px] text-ink-subtle">
@@ -142,7 +138,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </section>
 
-    <!-- Cambridge Landolt-C -->
     <section class="cb-panel hidden flex-col gap-4" data-test="cambridge">
       <h2 class="font-display text-lg font-semibold text-ink">Cambridge colour test (Landolt-C)</h2>
       <p class="text-[13px] text-ink-subtle">
@@ -175,7 +170,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </section>
 
-    <!-- Farnsworth Lantern -->
     <section class="cb-panel hidden flex-col gap-4" data-test="lantern">
       <h2 class="font-display text-lg font-semibold text-ink">Farnsworth lantern test</h2>
       <p class="text-[13px] text-ink-subtle">
@@ -242,43 +236,37 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 <script>
   const $ = (id: string) => document.getElementById(id)!;
 
-  // ── Plate test ─────────────────────────────────────────────
   type Axis = 'control' | 'protan' | 'deutan' | 'rg' | 'tritan';
   interface Plate {
-    figure: number | string;             // hidden digit, or a shape key
+    figure: number | string;             
     axis: Axis;
-    fig: [number, number, number][];      // figure dot colors (variants)
-    bg: [number, number, number][];       // background dot colors (variants)
+    fig: [number, number, number][];      
+    bg: [number, number, number][];       
     choices: (number | string)[];
   }
 
-  // Colour families. Each plate controls a luminance cue and a hue cue
-  // independently (see about text). Figure/background are matched under one
-  // luminosity function so the relevant deficiency loses the digit while other
-  // vision keeps a brightness edge — that asymmetry is what separates protan
-  // from deutan. Colours are defensible approximations, not calibrated.
   const DIGIT_PLATES: Plate[] = [
-    // Control — pure brightness, neutral hue. Everyone reads these.
+
     { figure: 5, axis: 'control',
       fig: [[64, 64, 74], [72, 70, 80], [58, 58, 68]],
       bg: [[188, 188, 198], [196, 196, 204], [180, 182, 192]],
       choices: [2, 5, 8, 3] },
-    // Protan-diagnostic — L_prot matched, L_norm differs. Protan vanishes.
+
     { figure: 2, axis: 'protan',
       fig: [[205, 95, 75], [213, 104, 84], [197, 88, 68]],
       bg: [[65, 118, 55], [74, 126, 62], [58, 110, 48]],
       choices: [7, 2, 1, 6] },
-    // Deutan-diagnostic — L_norm matched, L_prot differs. Deutan vanishes.
+
     { figure: 7, axis: 'deutan',
       fig: [[200, 110, 85], [208, 118, 94], [192, 102, 78]],
       bg: [[105, 158, 95], [114, 166, 103], [98, 150, 88]],
       choices: [7, 4, 1, 9] },
-    // Classic red-green vanishing — presence + severity.
+
     { figure: 8, axis: 'rg',
       fig: [[198, 108, 82], [210, 120, 92], [188, 98, 72]],
       bg: [[112, 152, 92], [124, 162, 102], [104, 142, 84]],
       choices: [3, 8, 6, 0] },
-    // Tritan — blue vs green/yellow, matched under L_norm.
+
     { figure: 6, axis: 'tritan',
       fig: [[92, 132, 204], [102, 140, 210], [84, 124, 196]],
       bg: [[96, 150, 96], [106, 158, 104], [88, 142, 88]],
@@ -295,7 +283,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       fig: [[204, 120, 96], [214, 130, 106], [194, 110, 86]],
       bg: [[124, 158, 104], [136, 168, 114], [116, 148, 96]],
       choices: [2, 5, 9, 4] },
-    // Control #2.
+
     { figure: 9, axis: 'control',
       fig: [[70, 66, 60], [78, 74, 68], [62, 60, 54]],
       bg: [[196, 192, 182], [204, 200, 190], [188, 184, 176]],
@@ -354,8 +342,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       choices: [6, 5, 0, 8] },
   ];
 
-  // Shapes mode reuses the exact colour families — only the hidden target and
-  // the answer buttons change. Cycle the shapes across the same plates.
   const SHAPE_KEYS = ['circle', 'triangle', 'square', 'diamond', 'cross', 'heart', 'star'];
   const SHAPE_GLYPH: Record<string, string> = {
     circle: '●', triangle: '▲', square: '■', diamond: '◆', cross: '✚', heart: '♥', star: '★',
@@ -374,8 +360,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const progressEl = $('cb-progress');
   const promptWordEl = $('cb-prompt-word');
 
-  // 5x7 pixel font for digits, plus 7x7 bitmaps for shapes. inGlyph reads the
-  // grid size from each bitmap, so digits and shapes share one draw path.
   const glyphs: Record<number | string, string[]> = {
     0: ['01110', '10001', '10011', '10101', '11001', '10001', '01110'],
     1: ['00100', '01100', '00100', '00100', '00100', '00100', '01110'],
@@ -397,7 +381,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   };
 
   function inGlyph(figure: number | string, nx: number, ny: number): boolean {
-    // nx, ny normalized 0..1 across the plate. Map to the bitmap grid centered.
+
     const g = glyphs[figure];
     const rows = g.length, cols = g[0].length;
     const gx = (nx - 0.2) / 0.6;
@@ -408,10 +392,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return g[row][col] === '1';
   }
 
-  // ── Test state ─────────────────────────────────────────────
   interface Answer { axis: Axis; correct: boolean; sawNothing: boolean; }
   type Difficulty = 'easy' | 'medium' | 'hard';
-  const TEST_SIZE = 15;   // plates shown per run, sampled from the full stock
+  const TEST_SIZE = 15;   
   let plates: Plate[] = [];
   let mode: 'digits' | 'shapes' = 'digits';
   let difficulty: Difficulty = 'easy';
@@ -419,10 +402,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   let answered = false;
   let answers: Answer[] = [];
 
-  // Difficulty knobs. `blend` fades the figure palette toward the background so
-  // the digit is genuinely harder to resolve; `choices` sets how many options
-  // appear (more options = less chance of a lucky guess). Easy keeps the
-  // original, clinically-legible contrast.
   const DIFF: Record<Difficulty, { blend: number; choices: number }> = {
     easy:   { blend: 0.0,  choices: 4 },
     medium: { blend: 0.28, choices: 6 },
@@ -432,7 +411,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   function drawPlate() {
     const plate = plates[plateIndex];
     const blend = DIFF[difficulty].blend;
-    // Mean background colour, used as the fade target on harder levels.
+
     const bgMean: [number, number, number] = [
       plate.bg.reduce((s, c) => s + c[0], 0) / plate.bg.length,
       plate.bg.reduce((s, c) => s + c[1], 0) / plate.bg.length,
@@ -457,8 +436,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const isFig = inGlyph(plate.figure, nx, ny);
       const pal = isFig ? plate.fig : plate.bg;
       let c = pal[Math.floor(Math.random() * pal.length)];
-      // Harder levels fade the figure toward the mean background colour,
-      // lowering the contrast the digit rides on for everyone.
+
       if (isFig && blend > 0) {
         c = [
           Math.round(c[0] + (bgMean[0] - c[0]) * blend),

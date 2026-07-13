@@ -1,6 +1,5 @@
-// Bundled stickers as inline SVG strings, grouped. No network, no icon lib.
-// Each sticker is a self-contained SVG the editor loads into Fabric via
-// loadSVGFromString. viewBox is 0 0 100 100 for all.
+
+
 export interface Sticker {
   id: string;
   label: string;

@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="invoice-generator">
   <div class="flex flex-col gap-5">
-    <!-- Logo -->
+
     <div class="flex items-center gap-4">
       <div id="iv-logo-preview" class="hidden h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-md border border-hairline bg-surface-1">
         <img id="iv-logo-img" class="max-h-full max-w-full object-contain" alt="Logo preview" />
@@ -51,7 +51,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div id="iv-items" class="flex flex-col gap-2"></div>
     </div>
 
-    <!-- Adjustments -->
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
       <div class="flex flex-col gap-1 text-sm text-ink-subtle">Tax
         <div class="flex gap-2">
@@ -80,7 +79,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <button id="iv-dl" class="btn btn-primary w-fit">Download PDF</button>
 
-    <!-- Live preview -->
     <div class="flex flex-col gap-2">
       <span class="text-sm text-ink-subtle">Preview</span>
       <div id="iv-preview" class="rounded-lg border border-hairline bg-white p-8 text-[13px] text-[#08090a] shadow-lg"></div>
@@ -116,16 +114,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   ];
   let logo: { bytes: Uint8Array; type: 'png' | 'jpg'; url: string } | null = null;
 
-  // Populate currency dropdown. Option value is the ISO code; symbolOf() /
-  // pdfPrefixOf() map it to the right prefix for the preview vs the PDF.
   ($('iv-currency') as HTMLSelectElement).innerHTML = CURRENCIES
     .map((c) => `<option value="${c.code}"${c.code === 'USD' ? ' selected' : ''}>${c.code} — ${c.name} (${c.symbol})</option>`)
     .join('');
 
   ($('iv-date') as HTMLInputElement).value = new Date().toISOString().slice(0, 10);
 
-  // Structured From / Bill To blocks (Razorpay-style). They compose into the
-  // multi-line string[] the PDF builder consumes, so pdfdoc.ts is untouched.
   renderParty($('iv-from'), {
     prefix: 'iv-from',
     companyPlaceholder: 'Company Name',
@@ -255,7 +249,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   wireParty('iv-from', update);
   wireParty('iv-to', update);
 
-  // Logo upload.
   $('iv-logo').addEventListener('change', async (e) => {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;

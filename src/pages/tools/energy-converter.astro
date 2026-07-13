@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="energy-converter">
   <div id="ec-root" class="flex flex-col gap-6">
-    <!-- Converter -->
+
     <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
       <div class="flex flex-col gap-1">
         <label class="text-sm text-ink-subtle" for="ec-from-val">From</label>
@@ -30,7 +30,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Controls -->
     <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
       <label class="flex items-center gap-2 text-[13px] text-ink-subtle">
         Precision
@@ -53,13 +52,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p id="ec-error" class="hidden text-[13px]" style="color:#e5484d" role="alert" aria-live="polite"></p>
     <p id="ec-formula" class="text-[13px] text-ink-tertiary"></p>
 
-    <!-- Quick presets -->
     <div>
       <p class="mb-2 text-[13px] text-ink-subtle">Common conversions</p>
       <div id="ec-presets" class="flex flex-wrap gap-2"></div>
     </div>
 
-    <!-- Value in every unit -->
     <div>
       <div class="mb-2 flex items-center justify-between">
         <p class="text-[13px] text-ink-subtle">Value in every unit</p>
@@ -89,8 +86,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
-  // Factors relative to the base unit: 1 joule. Inlined here so this page can
-  // offer a richer unit set than the shared converter without touching the lib.
+
   const UNITS: Record<string, number> = {
     Joule: 1,
     Kilojoule: 1000,
@@ -112,7 +108,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   };
   const NAMES = Object.keys(UNITS);
 
-  // Symbols for the compact formula line.
   const SYM: Record<string, string> = {
     Joule: 'J', Kilojoule: 'kJ', Megajoule: 'MJ', Gigajoule: 'GJ',
     Calorie: 'cal', Kilocalorie: 'kcal', 'Watt-hour': 'Wh', 'Kilowatt-hour': 'kWh',
@@ -147,7 +142,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return (value * UNITS[from]) / UNITS[to];
   }
 
-  // Format one number honouring the precision + grouping controls.
   function fmt(n: number): string {
     if (!isFinite(n)) return n > 0 ? '∞' : '-∞';
     if (n === 0) return '0';
@@ -155,7 +149,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const abs = Math.abs(n);
     let out: string;
     if (mode === 'auto') {
-      // Adaptive: exponential for extreme magnitudes, else trim to 9 sig-ish figures.
+
       if (abs >= 1e15 || abs < 1e-6) return n.toExponential(6);
       out = String(Math.round(n * 1e9) / 1e9);
     } else {

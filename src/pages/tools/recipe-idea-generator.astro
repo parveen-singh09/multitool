@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="recipe-idea-generator">
   <div class="flex flex-col gap-6">
-    <!-- Ingredient search + picker -->
+
     <div class="flex flex-col gap-3">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">What's in your kitchen?
         <input id="rg-search" class="field" placeholder="Search ingredients (e.g. chicken, rice, tomato)" spellcheck="false" autocomplete="off" />
@@ -12,7 +12,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div id="rg-picker" class="flex flex-col gap-4"></div>
     </div>
 
-    <!-- Selected ingredients + controls -->
     <div class="flex flex-col gap-3 border-t border-hairline pt-4">
       <div class="flex items-center justify-between">
         <span class="text-[13px] font-medium uppercase tracking-wide text-ink-tertiary">Your ingredients</span>
@@ -43,7 +42,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Results -->
     <div class="flex flex-col gap-4 border-t border-hairline pt-4">
       <p id="rg-summary" class="text-sm text-ink-subtle"></p>
       <div id="rg-results" class="grid gap-4 sm:grid-cols-2"></div>
@@ -88,7 +86,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const summaryEl = $('rg-summary');
   const resultsEl = $('rg-results');
 
-  const STORE = 'toolcities:recipe-pantry';
+  const STORE = 'toolsilk:recipe-pantry';
   const owned = new Set<string>(load());
 
   function load(): string[] {
@@ -103,14 +101,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     try {
       localStorage.setItem(STORE, JSON.stringify([...owned]));
     } catch {
-      /* storage may be unavailable; matching still works this session */
+
     }
   }
 
   const esc = (s: string) =>
     s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
-  // Group ingredients for the picker, staples last.
   const GROUPS = [...new Set(INGREDIENTS.map((i) => i.group))];
 
   function renderPicker() {

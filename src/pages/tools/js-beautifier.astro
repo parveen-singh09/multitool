@@ -124,7 +124,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     status.style.color = ok ? '#27a644' : '#e08585';
   }
 
-  // ---- Lazy-loaded engines ----
   let prettier: any = null;
   let prettierPlugins: any[] = [];
   let hljs: any = null;
@@ -147,7 +146,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return loading;
   }
 
-  // ---- Tokenizer (shared by minify + fallback beautify) ----
   function tokenize(src: string): { t: 'code' | 'str' | 'comment'; v: string }[] {
     const out: { t: 'code' | 'str' | 'comment'; v: string }[] = [];
     let i = 0;
@@ -191,7 +189,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return out.trim();
   }
 
-  // Fallback re-indenter when Prettier can't parse (partial snippets).
   function fallbackBeautify(src: string): string {
     const ind = indentInfo().unit;
     const toks = tokenize(src);
@@ -226,7 +223,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         semi: semiChk.checked,
       })).replace(/\n$/, '');
     } catch (e) {
-      // Prettier throws on invalid/partial code — fall back to the token re-indenter.
+
       showStatus(`Formatted with fallback (Prettier couldn't parse: ${(e as Error).message.split('\n')[0]})`, false);
       return fallbackBeautify(src);
     }
@@ -367,7 +364,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     line-height: 1.55;
   }
 
-  /* Highlighted input: transparent textarea layered over a mirrored <pre>. */
   .jb-edit-wrap {
     position: relative;
     font-family: var(--font-mono, ui-monospace, monospace);
@@ -425,5 +421,5 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     overflow-wrap: anywhere;
     word-break: break-word;
   }
-  /* .hl-block token palette now lives in global.css (shared across tools). */
+
 </style>

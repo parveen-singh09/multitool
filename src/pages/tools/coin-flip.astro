@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="coin-flip">
   <div class="flex flex-col items-center gap-7">
-    <!-- Coin: click it, press space, or use the button. -->
+
     <div id="cf-stage" class="cf-stage" role="button" tabindex="0" aria-label="Flip the coin">
       <div id="cf-coin" class="cf-coin">
         <div class="cf-face cf-heads"><span id="cf-heads-label">Heads</span></div>
@@ -12,7 +12,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Grid of individual coins for multi-flips; each lands on its own result. -->
     <div id="cf-grid" class="cf-grid hidden" role="button" tabindex="0" aria-label="Flip all coins"></div>
 
     <p id="cf-result" class="h-6 text-center text-lg font-semibold text-ink" aria-live="polite"></p>
@@ -26,7 +25,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <button id="cf-sound" class="btn btn-secondary" aria-pressed="true" title="Toggle sound">🔊 Sound</button>
     </div>
 
-    <!-- Editable side labels — decide what heads/tails mean. -->
     <div class="flex flex-wrap items-end justify-center gap-3">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Heads =
         <input id="cf-heads-name" type="text" maxlength="24" value="Heads" class="field w-40" />
@@ -60,8 +58,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <style is:global>
-  /* Global so dynamically-injected mini-coins (built via innerHTML, which skips
-     Astro's scope attribute) still pick up these styles. cf- prefix avoids leaks. */
+
   .cf-stage {
     perspective: 800px;
     cursor: pointer;
@@ -97,7 +94,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   }
   .cf-tails { transform: rotateY(180deg); }
 
-  /* .hidden must beat .cf-grid's display:grid (equal specificity, source order). */
   .cf-stage.hidden, .cf-grid.hidden { display: none; }
   .cf-grid {
     display: flex;
@@ -131,12 +127,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const tailsName = $('cf-tails-name') as HTMLInputElement;
 
   let heads = 0, tails = 0;
-  let turns = 0; // accumulated rotation (deg); grows so the coin always spins forward
+  let turns = 0; 
   let soundOn = true;
   let busy = false;
   const recent: string[] = [];
 
-  // Short WebAudio tick — no asset, lazily created on first use.
   let audioCtx: AudioContext | null = null;
   function ding() {
     if (!soundOn) return;
@@ -152,7 +147,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       osc.connect(gain).connect(audioCtx.destination);
       osc.start(t);
       osc.stop(t + 0.2);
-    } catch { /* audio unavailable — ignore */ }
+    } catch {  }
   }
 
   function labels() {
@@ -162,7 +157,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     $('cf-tails-label').textContent = t;
     $('cf-heads-cap').textContent = h;
     $('cf-tails-cap').textContent = t;
-    // Keep any on-screen mini-coins in sync while editing.
+
     grid.querySelectorAll<HTMLElement>('.cf-heads span').forEach((s) => (s.textContent = h));
     grid.querySelectorAll<HTMLElement>('.cf-tails span').forEach((s) => (s.textContent = t));
     return { h, t };

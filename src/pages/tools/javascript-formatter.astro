@@ -103,7 +103,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     status.style.color = ok ? '#27a644' : '#e08585';
   }
 
-  // Lazy-load Prettier only when the user actually formats — keeps the tool light.
   let prettier: any = null;
   let plugins: any[] = [];
   let loading: Promise<void> | null = null;
@@ -121,9 +120,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return loading;
   }
 
-  // Fallback re-indenter for code Prettier can't parse (partial snippets).
-  // Walks char by char, tracking strings/comments so braces inside them don't
-  // affect depth. Insert newlines around { } and after ;.
   function fallbackBeautify(code: string, unit: string): string {
     const src = code.replace(/\r\n/g, '\n');
     let out = '';
@@ -247,7 +243,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       })).replace(/\n$/, '');
       return { text, fell_back: false };
     } catch {
-      // Prettier throws on invalid/partial code — fall back to the re-indenter.
+
       return { text: fallbackBeautify(code, unit), fell_back: true };
     }
   }
@@ -292,8 +288,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         continue;
       }
       if (/\s/.test(c)) {
-        // Collapse whitespace, but keep a space between word chars so tokens
-        // don't merge (e.g. `return x` must not become `returnx`).
+
         let j = i;
         while (j < n && /\s/.test(src[j])) j++;
         const prev = out[out.length - 1] || '';

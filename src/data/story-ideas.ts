@@ -1,12 +1,12 @@
-// 200 hand-written story ideas for the story generator. Dealt from a shuffled
-// deck (see story-generator.astro) so none repeats until all 200 are seen.
+
+
 export interface StoryIdea {
   premise: string;
   genre: string;
 }
 
 export const STORY_IDEAS: StoryIdea[] = [
-  // Mystery
+
   { premise: 'A retired detective receives a birthday card every year from a killer she never caught, and this year the card arrives a week early.', genre: 'Mystery' },
   { premise: 'The only witness to a museum theft is a blind piano tuner who insists the thief was humming a song that has never been recorded.', genre: 'Mystery' },
   { premise: 'A woman inherits her estranged sister\'s apartment and finds a wall of photographs of herself, taken over twenty years she cannot remember.', genre: 'Mystery' },
@@ -21,7 +21,6 @@ export const STORY_IDEAS: StoryIdea[] = [
   { premise: 'The lighthouse log records a ship arriving every night at 3 a.m., but no ship has docked in this harbor for a decade.', genre: 'Mystery' },
   { premise: 'A detective who solves cases by smell loses his sense of smell the same week the city\'s hardest case lands on his desk.', genre: 'Mystery' },
 
-  // Science fiction
   { premise: 'On a generation ship three centuries adrift, the captain discovers the destination planet was reached and abandoned generations ago.', genre: 'Science fiction' },
   { premise: 'A memory-transplant technician recognizes his own childhood in a stranger\'s implanted memories.', genre: 'Science fiction' },
   { premise: 'Humanity receives a signal from deep space that turns out to be its own broadcast, returned with the mistakes corrected.', genre: 'Science fiction' },
@@ -36,7 +35,6 @@ export const STORY_IDEAS: StoryIdea[] = [
   { premise: 'A translator of dead languages is hired to decode a transmission that is clearly a lullaby, and clearly meant for her.', genre: 'Science fiction' },
   { premise: 'A city runs entirely on the dreams of its sleeping residents, and one insomniac is about to bankrupt it.', genre: 'Science fiction' },
 
-  // Fantasy
   { premise: 'An exiled queen returns to find her kingdom under permanent winter and her name erased from every history but a child\'s bedtime story.', genre: 'Fantasy' },
   { premise: 'A mapmaker discovers that the borders he draws become real overnight, and someone has been drawing over his work.', genre: 'Fantasy' },
   { premise: 'The last dragon offers to grant one wish to whoever can tell it something it does not already know.', genre: 'Fantasy' },
@@ -51,7 +49,6 @@ export const STORY_IDEAS: StoryIdea[] = [
   { premise: 'A boy raised by librarian-monks learns that the forbidden book at the abbey\'s heart is a mirror.', genre: 'Fantasy' },
   { premise: 'A wandering healer can cure any wound by taking it into her own body, and she has just met a plague.', genre: 'Fantasy' },
 
-  // Literary drama
   { premise: 'Three siblings return to sell their childhood home and discover their father left each of them a different, contradictory letter.', genre: 'Literary drama' },
   { premise: 'A translator spends her life rendering other people\'s love letters and has never written one of her own.', genre: 'Literary drama' },
   { premise: 'A retired teacher runs into the student whose life he ruined with a single sentence forty years ago.', genre: 'Literary drama' },
@@ -66,7 +63,6 @@ export const STORY_IDEAS: StoryIdea[] = [
   { premise: 'A war photographer moves to a town so quiet he no longer knows what to point his camera at.', genre: 'Literary drama' },
   { premise: 'A daughter learns her mother has been secretly taking painting classes for thirty years and never showed anyone the work.', genre: 'Literary drama' },
 
-  // Thriller
   { premise: 'A woman gets into her rideshare and realizes the driver knows her destination before she gives it.', genre: 'Thriller' },
   { premise: 'An air traffic controller is told by an anonymous voice that one of the planes on his screen is not really there.', genre: 'Thriller' },
   { premise: 'A whistleblower has forty-eight hours to release the files, and everyone who could help her has just changed their phone number.', genre: 'Thriller' },
@@ -81,7 +77,6 @@ export const STORY_IDEAS: StoryIdea[] = [
   { premise: 'A courier is paid an absurd sum to deliver an empty briefcase, and the fee doubles every hour he keeps it closed.', genre: 'Thriller' },
   { premise: 'A jury sequestered in a hotel realizes the trial they are deciding is a rehearsal for a crime not yet committed.', genre: 'Thriller' },
 
-  // Magical realism
   { premise: 'In a town where it rains once a decade, a woman who can smell the coming rain is treated as a saint and a threat.', genre: 'Magical realism' },
   { premise: 'A baker\'s bread takes on the mood of whoever eats it, and the whole town is quietly turning into the baker.', genre: 'Magical realism' },
   { premise: 'A man\'s shadow begins running errands for him, and does them better.', genre: 'Magical realism' },
@@ -96,7 +91,6 @@ export const STORY_IDEAS: StoryIdea[] = [
   { premise: 'The river that runs through town carries away one bad memory per person per year, and this year it has run dry.', genre: 'Magical realism' },
   { premise: 'A woman\'s houseplants flower only when she tells the truth, and she has just started a new job.', genre: 'Magical realism' },
 
-  // Adventure
   { premise: 'A disgraced cartographer is hired to map an island that appears on no chart and disappears at high tide.', genre: 'Adventure' },
   { premise: 'A deep-sea diver finds a sunken city with the lights still on and something still paying the bill.', genre: 'Adventure' },
   { premise: 'Two rival treasure hunters are chained together by a booby trap and must escape the tomb before either can claim the prize.', genre: 'Adventure' },
@@ -111,7 +105,6 @@ export const STORY_IDEAS: StoryIdea[] = [
   { premise: 'A brother and sister inherit a boat and a coded logbook that promises the location of the harbor their father never reached.', genre: 'Adventure' },
   { premise: 'A mountaineer summits a peak that isn\'t supposed to exist and finds a flag planted by someone who left no name.', genre: 'Adventure' },
 
-  // Horror
   { premise: 'A night-shift nurse notices that the patients in the empty wing are still ordering meals.', genre: 'Horror' },
   { premise: 'A family moves into a house where every mirror shows the room exactly one second in the future.', genre: 'Horror' },
   { premise: 'A podcast about a small-town disappearance keeps recording a fourth voice in a room with three people.', genre: 'Horror' },
@@ -126,7 +119,6 @@ export const STORY_IDEAS: StoryIdea[] = [
   { premise: 'A remote research station\'s only rule is to never answer the radio before it finishes its second ring.', genre: 'Horror' },
   { premise: 'A woman starts finding her own handwriting in books she has never opened, warning her about tonight.', genre: 'Horror' },
 
-  // Noir
   { premise: 'A private eye in a rain-soaked city is hired to find a woman who has hired three other detectives to find him.', genre: 'Noir' },
   { premise: 'A washed-up boxer takes a job as a bodyguard for the man who threw the fight that ended his career.', genre: 'Noir' },
   { premise: 'A dame walks into a bar with a photograph of the bartender\'s funeral, dated next Friday.', genre: 'Noir' },
@@ -141,7 +133,6 @@ export const STORY_IDEAS: StoryIdea[] = [
   { premise: 'A femme fatale hires a hitman to kill her, then keeps changing the date so he\'ll stay in her life.', genre: 'Noir' },
   { premise: 'A stolen painting keeps turning up in the background of crime-scene photos across the city.', genre: 'Noir' },
 
-  // Fairy tale
   { premise: 'A miller\'s daughter is promised she can spin sorrow into gold, but each thread costs her a happy memory.', genre: 'Fairy tale' },
   { premise: 'A prince cursed to speak only in questions must win a kingdom that trusts nothing but answers.', genre: 'Fairy tale' },
   { premise: 'A girl trades her reflection to a witch for a year of beauty and must win it back before her wedding day.', genre: 'Fairy tale' },
@@ -156,7 +147,6 @@ export const STORY_IDEAS: StoryIdea[] = [
   { premise: 'A boy who can talk to bridges is sent to ask the oldest one why it will no longer let anyone cross.', genre: 'Fairy tale' },
   { premise: 'A baker leaves out bread for the forest each night until the forest leaves something back that must be fed.', genre: 'Fairy tale' },
 
-  // Dystopian
   { premise: 'Citizens are ranked by how well they sleep, and an insomniac is about to fall off the bottom of the list.', genre: 'Dystopian' },
   { premise: 'A government archivist is ordered to delete a war that half the population still remembers living through.', genre: 'Dystopian' },
   { premise: 'Words cost money to speak, and a mute girl becomes the wealthiest person in a city that has stopped talking.', genre: 'Dystopian' },
@@ -171,7 +161,6 @@ export const STORY_IDEAS: StoryIdea[] = [
   { premise: 'The state has outlawed silence, and a composer is arrested for writing a piece with a single rest in it.', genre: 'Dystopian' },
   { premise: 'A city runs on volunteered years of life, and a young clerk discovers the donation box has no bottom.', genre: 'Dystopian' },
 
-  // Cozy mystery
   { premise: 'The owner of a seaside bookshop solves a poisoning using nothing but the marginal notes in the victim\'s library returns.', genre: 'Cozy mystery' },
   { premise: 'A retired schoolteacher\'s knitting circle realizes their newest member is stitching a map to a decades-old robbery.', genre: 'Cozy mystery' },
   { premise: 'The village baker notices that whoever is stealing pies always leaves the exact change plus a cryptic note.', genre: 'Cozy mystery' },
@@ -186,7 +175,6 @@ export const STORY_IDEAS: StoryIdea[] = [
   { premise: 'The town\'s beloved postman retires and leaves a final letter revealing which secrets he chose never to deliver.', genre: 'Cozy mystery' },
   { premise: 'A village clockmaker is asked to repair a grandfather clock that has been chiming thirteen at the hour of an old disappearance.', genre: 'Cozy mystery' },
 
-  // Historical fiction
   { premise: 'A codebreaker in a wartime bunker realizes the enemy transmission she is decoding was written by her missing brother.', genre: 'Historical fiction' },
   { premise: 'A seamstress to the royal court sews secret messages into the hems of gowns worn to enemy banquets.', genre: 'Historical fiction' },
   { premise: 'A lighthouse keeper on the eve of a great war must decide whether to guide home a ship flying the wrong flag.', genre: 'Historical fiction' },
@@ -201,7 +189,6 @@ export const STORY_IDEAS: StoryIdea[] = [
   { premise: 'Two soldiers on opposite sides of a frozen front share a single unexploded shell and a single deck of cards.', genre: 'Historical fiction' },
   { premise: 'A clockmaker is commissioned to build a timepiece for a king who wants it to run one hour slow, and never learns why.', genre: 'Historical fiction' },
 
-  // Romance
   { premise: 'Two rival food-truck owners are forced to share a single parking spot for the whole summer.', genre: 'Romance' },
   { premise: 'A wedding planner falls for the groom\'s brother while planning the wedding of the woman who once left her at the altar.', genre: 'Romance' },
   { premise: 'A grumpy lighthouse keeper and the cheerful cartographer sent to decommission his lighthouse are snowed in together.', genre: 'Romance' },
@@ -216,7 +203,6 @@ export const STORY_IDEAS: StoryIdea[] = [
   { premise: 'A pilot and an air traffic controller fall in love over the radio and swear never to meet in person.', genre: 'Romance' },
   { premise: 'Two rival tour guides in the same tiny town keep stealing each other\'s groups and, slowly, each other\'s hearts.', genre: 'Romance' },
 
-  // Fable
   { premise: 'A greedy fox convinces the forest to store all its warmth in one place for winter, then guards the only door.', genre: 'Fable' },
   { premise: 'A tortoise who has won every race is challenged by a hare who only wants to run beside someone.', genre: 'Fable' },
   { premise: 'A river and a mountain argue over which shaped the valley, until a small bird points out neither made the nest.', genre: 'Fable' },

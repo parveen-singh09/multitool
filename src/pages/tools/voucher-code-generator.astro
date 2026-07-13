@@ -120,7 +120,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const blocks = () => Math.max(1, Math.min(8, Number(blocksEl.value) || 3));
   const blen = () => Math.max(2, Math.min(8, Number(blenEl.value) || 4));
 
-  // Build one code body: pattern-driven (# = random char) or blocks joined by separator.
   function body(ab: string): string {
     const pat = patternEl.value;
     if (pat.includes('#')) return pat.replace(/#/g, () => ab[randInt(0, ab.length - 1)]);
@@ -129,7 +128,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return parts.join(sepEl.value);
   }
 
-  // Number of random positions → size of the unique space.
   function slots(): number {
     const pat = patternEl.value;
     if (pat.includes('#')) return (pat.match(/#/g) || []).length;
@@ -147,7 +145,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       out.value = '';
       return;
     }
-    // Cap the exponent so huge patterns don't overflow to Infinity noise.
+
     const space = Math.pow(ab.length, Math.min(slots(), 40));
     if (space < n) {
       errEl.textContent = `Can't make ${n} unique codes — only ${Math.floor(space)} are possible with this length and character set.`;

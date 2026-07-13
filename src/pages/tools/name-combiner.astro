@@ -33,10 +33,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
   const clean = (s: string) => s.trim().toLowerCase().replace(/[^a-z]/g, '');
 
-  // Prefixes that read as "the start of" a name: up to first vowel group,
-  // up to first vowel, first half, and a short 2-char stub.
   function heads(n: string): string[] {
-    const m = n.match(/^[^aeiou]*[aeiou]+/); // onset + first vowel cluster
+    const m = n.match(/^[^aeiou]*[aeiou]+/); 
     const h = [];
     if (m) h.push(m[0]);
     const firstV = n.search(/[aeiou]/);
@@ -46,8 +44,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return h.filter((s) => s.length >= 1 && s.length < n.length + 1);
   }
 
-  // Suffixes that read as "the end of" a name: from last vowel group,
-  // from last vowel, second half, and a short 3-char tail.
   function tails(n: string): string[] {
     const t = [];
     const lastVGroup = n.search(/[aeiou]+[^aeiou]*$/);
@@ -59,16 +55,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return t.filter((s) => s.length >= 1 && s.length < n.length + 1);
   }
 
-  // Score a blend: prefer names that draw from both inputs and land near a
-  // pronounceable 5-9 char length; penalize verbatim copies of an input.
   function score(w: string, a: string, b: string): number {
     if (w === a || w === b) return -100;
     let s = 0;
     const lenPenalty = Math.abs(w.length - 7);
     s -= lenPenalty;
     if (w.startsWith(a.slice(0, 2)) && w.endsWith(b.slice(-2))) s += 3;
-    if (/[aeiou]/.test(w)) s += 2; // has a vowel — sayable
-    if (/([a-z])\1\1/.test(w)) s -= 4; // triple letters read as noise
+    if (/[aeiou]/.test(w)) s += 2; 
+    if (/([a-z])\1\1/.test(w)) s -= 4; 
     return s;
   }
 
@@ -76,12 +70,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const a = clean(rawA), b = clean(rawB);
     if (!a || !b) return [];
     const set = new Set<string>();
-    // Cross every head of one name with every tail of the other, both ways.
+
     for (const [x, y] of [[a, b], [b, a]] as const) {
       for (const h of heads(x))
         for (const t of tails(y)) set.add(h + t);
     }
-    // Overlap blends: if end of A shares a letter with start of B, splice there.
+
     if (a.at(-1) === b[0]) set.add(a + b.slice(1));
     if (b.at(-1) === a[0]) set.add(b + a.slice(1));
     return [...set]

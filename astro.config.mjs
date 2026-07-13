@@ -10,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://toolcities.com',
+  site: 'https://toolsilk.com',
   integrations: [sitemap(), react()],
   vite: {
     plugins: [tailwindcss()],

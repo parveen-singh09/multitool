@@ -1,17 +1,10 @@
-// Minimal Office Open XML (.docx) builder. A .docx is a ZIP of XML parts;
-// for text extraction output we only need three parts — content-types, the
-// package relationships, and the document body. Paragraphs are plain text
-// runs. This preserves text and paragraph breaks, NOT original layout,
-// fonts or positioning — honest fidelity for PDF→Word text extraction.
-//
-// ponytail: text-only OOXML. Add tables/styles here if a tool needs them.
+
 
 import { makeZip } from './zip';
 
 const enc = new TextEncoder();
 const bytes = (s: string) => enc.encode(s);
 
-/** Escape a string for use in XML text/attribute content. */
 export function xmlEscape(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -33,8 +26,6 @@ const RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
 </Relationships>`;
 
-// A single paragraph. Empty text still emits an empty paragraph (blank line).
-// xml:space="preserve" keeps leading/trailing spaces in the run.
 function paragraph(text: string): string {
   if (!text) return '<w:p/>';
   return `<w:p><w:r><w:t xml:space="preserve">${xmlEscape(text)}</w:t></w:r></w:p>`;

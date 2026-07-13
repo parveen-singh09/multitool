@@ -1,45 +1,37 @@
-// Gantt data model. The whole tool renders from a single `GanttProject`; the
-// scheduler resolves dates and every export derives from the SVG that model
-// produces.
-//
-// Dates are stored as ISO `YYYY-MM-DD` strings (what <input type=date>, CSV and
-// MS Project XML all speak). Durations are in WORKING days. The scheduler
-// converts to integer working-day indices for its passes, then writes ISO back
-// — same idea as the timeline tool's numeric `sort` key: compute the numeric
-// form for the algorithm, keep the human form in the model.
 
-export type DepType = 'FS' | 'SS' | 'FF' | 'SF'; // finish-start is the default
+
+export type DepType = 'FS' | 'SS' | 'FF' | 'SF'; 
 
 export interface Dependency {
-  pred: string; // predecessor task id
+  pred: string; 
   type: DepType;
-  lag: number; // working days; may be negative
+  lag: number; 
 }
 
 export interface Task {
   id: string;
   name: string;
-  start: string; // ISO; a "start no earlier than" anchor — the scheduler may push it later
-  duration: number; // WORKING days. 0 => milestone. Ignored for summary tasks.
-  progress: number; // 0..100
-  deps: Dependency[]; // predecessors
-  outline: number; // 0 = top level; deeper = child. Summary is inferred positionally.
+  start: string; 
+  duration: number; 
+  progress: number; 
+  deps: Dependency[]; 
+  outline: number; 
   assignee?: string;
-  group?: string; // swimlane label (optional)
-  color?: string; // per-task hex override
-  // `end` is never stored — always derived (start + duration over the calendar).
+  group?: string; 
+  color?: string; 
+
 }
 
 export interface Calendar {
-  workdays: boolean[]; // length 7, index 0=Sunday .. 6=Saturday; true = working
-  holidays: string[]; // ISO dates that are non-working even when a workday
+  workdays: boolean[]; 
+  holidays: string[]; 
 }
 
 export type ZoomLevel = 'day' | 'week' | 'month';
 
 export interface GanttProject {
   title: string;
-  start: string; // ISO project start; the earliest any task can begin
+  start: string; 
   zoom: ZoomLevel;
   themeId: string;
   sizeId: string;
@@ -54,13 +46,13 @@ export interface GanttTheme {
   grid: string;
   ink: string;
   inkSubtle: string;
-  bar: string; // normal task bar
-  barCritical: string; // critical-path bar
-  progress: string; // progress-fill overlay
-  summary: string; // summary/rollup bar
-  milestone: string; // diamond fill
-  today: string; // today marker line
-  // Concrete hex only — a standalone exported .svg can't read CSS variables.
+  bar: string; 
+  barCritical: string; 
+  progress: string; 
+  summary: string; 
+  milestone: string; 
+  today: string; 
+
 }
 
 export function newId(): string {

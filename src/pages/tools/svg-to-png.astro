@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="svg-to-png">
   <div class="flex flex-col gap-4">
-    <!-- File drop / picker -->
+
     <label id="sp-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-6 text-center transition-colors hover:bg-surface-2">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
       <span class="text-sm text-ink">Choose an SVG file or drop it here</span>
@@ -12,7 +12,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <input id="sp-file" type="file" accept="image/svg+xml,.svg" class="sr-only" />
     </label>
 
-    <!-- Options -->
     <div class="flex flex-wrap items-end gap-x-4 gap-y-3">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Width (px)
@@ -47,7 +46,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div id="sp-status" class="hidden rounded-md border px-3 py-2 text-sm" role="status"></div>
 
-    <!-- Source (editable, highlighted) + preview -->
     <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
       <div class="flex flex-col gap-1 text-sm text-ink-subtle">
         <span class="flex items-center justify-between">
@@ -116,10 +114,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const statusEl = document.getElementById('sp-status')!;
   const err = document.getElementById('sp-error')!;
 
-  const MAX_DIM = 16000; // ponytail: canvas guard; raise if a caller needs bigger exports
+  const MAX_DIM = 16000; 
   let blob: Blob | null = null;
   let baseName = 'image';
-  let intrinsicW = 512, intrinsicH = 512; // aspect source from the current SVG
+  let intrinsicW = 512, intrinsicH = 512; 
 
   const fmtSize = (n: number) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`;
   const clampDim = (n: number) => Math.max(1, Math.min(MAX_DIM, Math.round(n)));
@@ -170,7 +168,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       intrinsicW = Math.max(1, Math.round(s.w));
       intrinsicH = Math.max(1, Math.round(s.h));
       if (!wIn.value || !hIn.value) { wIn.value = String(intrinsicW); hIn.value = String(intrinsicH); }
-    } catch { /* leave prior dims; convert() surfaces the parse error */ }
+    } catch 
   }
 
   async function convert() {
@@ -221,7 +219,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }, 'image/png');
   }
 
-  function runConvert() { convert().catch(() => { /* error already shown */ }); }
+  function runConvert() { convert().catch(() => ); }
 
   // Editable highlighted SVG source (XML). Re-derive intrinsic size, then render.
   const rerender = wireInput(input, inHl, () => 'xml', () => { refreshIntrinsic(); runConvert(); });

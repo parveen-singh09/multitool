@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="json-to-csv-converter">
   <div class="flex flex-col gap-4">
-    <!-- Options toolbar -->
+
     <div class="panel flex flex-col gap-3 p-3">
       <div class="flex flex-wrap items-end gap-3">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">
@@ -48,7 +48,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Action bar -->
     <div class="flex flex-wrap items-center gap-2">
       <button id="j2c-copy" type="button" class="btn btn-secondary">Copy CSV</button>
       <button id="j2c-download" type="button" class="btn btn-secondary">Download</button>
@@ -127,17 +126,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   let csvOut = '';
 
-  /* ── parsing: JSON, then fall back to JSON Lines / NDJSON ── */
   function parseInput(raw: string): Json {
     try {
       return JSON.parse(raw) as Json;
     } catch (jsonErr) {
-      // Try NDJSON: one JSON value per non-empty line.
+
       const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter((l) => l !== '');
       if (lines.length > 1) {
         try {
           return lines.map((l) => JSON.parse(l) as Json);
-        } catch { /* fall through to the original JSON error */ }
+        } catch {  }
       }
       throw jsonErr;
     }
@@ -149,7 +147,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return delimSel.value;
   }
 
-  /* ── flatten one record into a flat map of column → value ── */
   function flatten(value: Json, prefix: string, deep: boolean, out: { [k: string]: Json }) {
     if (value !== null && typeof value === 'object') {
       const entries = Array.isArray(value)

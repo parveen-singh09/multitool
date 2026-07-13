@@ -74,9 +74,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const OID_EXT_REQ = '1.2.840.113549.1.9.14';
   const OID_SAN = '2.5.29.17';
 
-  // Hand-build an Ed25519 PKCS#10 CSR (RFC 8410): the CertificationRequestInfo
-  // is signed directly with Ed25519, and both the SubjectPublicKeyInfo and the
-  // signature algorithm use OID 1.3.101.112 with no parameters.
   const buildEd25519Csr = (forge: any, subjectAttrs: any[], sans: string[], pub: any, priv: any) => {
     const asn1 = forge.asn1;
     const tmp = forge.pki.createCertificationRequest();
@@ -132,10 +129,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return forge.pem.encode({ type: 'CERTIFICATE REQUEST', body: asn1.toDer(csr).getBytes() });
   };
 
-  // Unencrypted PKCS#8 (RFC 8410) PEM for an Ed25519 private key.
   const ed25519PrivateKeyToPem = (forge: any, seed: Uint8Array) => {
     const asn1 = forge.asn1;
-    // CurvePrivateKey ::= OCTET STRING wrapping the 32-byte seed
+
     const inner = asn1.toDer(asn1.create(
       asn1.Class.UNIVERSAL, asn1.Type.OCTETSTRING, false,
       forge.util.binary.raw.encode(seed))).getBytes();

@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="barcode-generator">
   <div class="grid gap-6 lg:grid-cols-[1fr_320px]">
-    <!-- Preview -->
+
     <div class="flex flex-col gap-4">
       <div id="bg-stage" class="flex min-h-[220px] items-center justify-center rounded-md border border-hairline bg-white p-6">
         <canvas id="bg-canvas" class="max-w-full"></canvas>
@@ -17,7 +17,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Controls -->
     <div class="flex flex-col gap-4">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Barcode type
@@ -86,12 +85,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 <script>
   import { toCanvas, toSVG, type RenderOpts } from '../../lib/barcode';
 
-  // Curated symbologies. `linear` gates the bar-height + human-readable-text
-  // controls (2D codes ignore both). `example` seeds valid sample data on switch.
   type Sym = { bcid: string; name: string; linear: boolean; example: string };
   const GROUPS: { label: string; items: Sym[] }[] = [
     { label: 'Linear', items: [
-      { bcid: 'code128', name: 'Code 128', linear: true, example: 'TOOLCITIES-2026' },
+      { bcid: 'code128', name: 'Code 128', linear: true, example: 'TOOLSILK-2026' },
       { bcid: 'code39', name: 'Code 39', linear: true, example: 'CODE39' },
       { bcid: 'code93', name: 'Code 93', linear: true, example: 'CODE93' },
       { bcid: 'code11', name: 'Code 11', linear: true, example: '01234567' },
@@ -118,15 +115,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       { bcid: 'databarexpanded', name: 'GS1 DataBar Expanded', linear: true, example: '(01)93712345678904' },
     ]},
     { label: '2D', items: [
-      { bcid: 'qrcode', name: 'QR Code', linear: false, example: 'https://toolcities.com' },
+      { bcid: 'qrcode', name: 'QR Code', linear: false, example: 'https://toolsilk.com' },
       { bcid: 'microqrcode', name: 'Micro QR Code', linear: false, example: '12345' },
-      { bcid: 'datamatrix', name: 'Data Matrix', linear: false, example: 'TOOLCITIES-2026' },
-      { bcid: 'pdf417', name: 'PDF417', linear: false, example: 'TOOLCITIES-2026' },
-      { bcid: 'micropdf417', name: 'MicroPDF417', linear: false, example: 'TOOLCITIES' },
-      { bcid: 'azteccode', name: 'Aztec Code', linear: false, example: 'TOOLCITIES-2026' },
-      { bcid: 'maxicode', name: 'MaxiCode', linear: false, example: 'TOOLCITIES' },
-      { bcid: 'dotcode', name: 'DotCode', linear: false, example: 'TOOLCITIES' },
-      { bcid: 'hanxin', name: 'Han Xin Code', linear: false, example: 'TOOLCITIES' },
+      { bcid: 'datamatrix', name: 'Data Matrix', linear: false, example: 'TOOLSILK-2026' },
+      { bcid: 'pdf417', name: 'PDF417', linear: false, example: 'TOOLSILK-2026' },
+      { bcid: 'micropdf417', name: 'MicroPDF417', linear: false, example: 'TOOLSILK' },
+      { bcid: 'azteccode', name: 'Aztec Code', linear: false, example: 'TOOLSILK-2026' },
+      { bcid: 'maxicode', name: 'MaxiCode', linear: false, example: 'TOOLSILK' },
+      { bcid: 'dotcode', name: 'DotCode', linear: false, example: 'TOOLSILK' },
+      { bcid: 'hanxin', name: 'Han Xin Code', linear: false, example: 'TOOLSILK' },
     ]},
     { label: 'Postal', items: [
       { bcid: 'onecode', name: 'USPS Intelligent Mail', linear: false, example: '01234567094987654321' },
@@ -156,7 +153,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const canvas = $<HTMLCanvasElement>('bg-canvas');
   const err = $<HTMLElement>('bg-error');
 
-  // Build grouped <select>.
   for (const g of GROUPS) {
     const og = document.createElement('optgroup');
     og.label = g.label;

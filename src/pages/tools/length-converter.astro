@@ -1,11 +1,6 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 
-// Self-contained length converter. Superset of the shared UnitConverter
-// (from/to + swap + formula + reference table) plus: all-units-at-once
-// output, precision control, feet+inches compound readout, preset quick
-// conversions, batch (multi-line) conversion, and copy buttons.
-// All math runs in-browser. Factors are metres per unit.
 const UNITS: Record<string, number> = {
   Ångström: 1e-10,
   Nanometre: 1e-9,
@@ -44,7 +39,7 @@ const PRESETS = [
 
 <ToolLayout slug="length-converter">
   <div id="lc-root" class="flex flex-col gap-4" data-units={JSON.stringify(UNITS)} data-presets={JSON.stringify(PRESETS)}>
-    <!-- Primary converter -->
+
     <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
       <div class="flex flex-col gap-1">
         <label class="text-sm text-ink-subtle" for="lc-from-val">From</label>
@@ -76,7 +71,6 @@ const PRESETS = [
     <p id="lc-formula" class="text-[13px] text-ink-tertiary"></p>
     <p id="lc-compound" class="text-[13px] text-ink-subtle"></p>
 
-    <!-- Precision -->
     <div class="flex flex-wrap items-center gap-2">
       <label class="text-[13px] text-ink-subtle" for="lc-precision">Precision</label>
       <select id="lc-precision" class="field h-9 w-auto py-1 text-[13px]">
@@ -93,13 +87,11 @@ const PRESETS = [
       </label>
     </div>
 
-    <!-- Preset quick conversions -->
     <div class="flex flex-col gap-2">
       <p class="text-[13px] text-ink-subtle">Quick conversions</p>
       <div id="lc-presets" class="flex flex-wrap gap-2"></div>
     </div>
 
-    <!-- All units at once -->
     <div>
       <div class="mb-2 flex items-center justify-between">
         <p class="text-[13px] text-ink-subtle">All units</p>
@@ -108,7 +100,6 @@ const PRESETS = [
       <div id="lc-table" class="overflow-hidden rounded-md border border-hairline"></div>
     </div>
 
-    <!-- Batch conversion -->
     <details class="rounded-md border border-hairline">
       <summary class="cursor-pointer select-none px-3 py-2 text-[13px] text-ink-subtle">Batch convert (one value per line)</summary>
       <div class="flex flex-col gap-2 border-t border-hairline p-3">
@@ -162,7 +153,6 @@ const PRESETS = [
 
   const convert = (v: number, from: string, to: string) => (v * UNITS[from]) / UNITS[to];
 
-  // Format a number honouring the precision + separators controls.
   function fmt(n: number): string {
     if (!isFinite(n)) return '∞';
     if (n === 0) return '0';
@@ -170,7 +160,7 @@ const PRESETS = [
     let out: string;
     if (p === 'auto') {
       const abs = Math.abs(n);
-      if (abs >= 1e15 || abs < 1e-6) return n.toExponential(6); // sep skipped in sci form
+      if (abs >= 1e15 || abs < 1e-6) return n.toExponential(6); 
       out = String(Math.round(n * 1e9) / 1e9);
     } else {
       const d = Number(p);
@@ -188,7 +178,6 @@ const PRESETS = [
     return out;
   }
 
-  // Parse the input: allows a leading number with optional separators.
   function parseVal(raw: string): number | null {
     const s = raw.trim().replace(/,/g, '');
     if (s === '') return null;
@@ -203,7 +192,7 @@ const PRESETS = [
     const abs = Math.abs(totalInches);
     let ft = Math.floor(abs / 12);
     let inch = abs - ft * 12;
-    // guard floating error pushing inches to 12
+
     if (Math.round(inch * 100) / 100 >= 12) { ft += 1; inch = 0; }
     return `${neg}${ft} ft ${Math.round(inch * 100) / 100} in`;
   }

@@ -1,6 +1,5 @@
-// Shape factory for the collage editor. Returns Fabric objects ready to add.
-// Kept as a thin factory over Fabric primitives — no custom geometry beyond
-// the polygon-based star/heart/arrow.
+
+
 import * as fabric from 'fabric';
 
 export type ShapeId =
@@ -37,7 +36,6 @@ function polygon(points: { x: number; y: number }[], fill: string) {
   });
 }
 
-// star: n-point star inside a 120px box
 function starPoints(spikes: number, outer: number, inner: number) {
   const pts: { x: number; y: number }[] = [];
   const cx = outer;

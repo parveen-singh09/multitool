@@ -12,7 +12,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </label>
 
     <div id="vg-panel" class="hidden flex-col gap-4">
-      <!-- Video preview + scrubber -->
+
       <div class="panel flex flex-col gap-3 p-3">
         <div id="vg-stage" class="relative mx-auto w-fit max-w-full overflow-hidden rounded-md">
           <video id="vg-video" controls class="block max-h-90 w-auto max-w-full rounded-md bg-black"></video>
@@ -34,7 +34,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </div>
       </div>
 
-      <!-- Text overlays -->
       <div class="panel flex flex-col gap-3 p-3">
         <div class="flex flex-wrap items-center gap-2">
           <span class="text-sm text-ink">Text</span>
@@ -114,19 +113,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <style>
   .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
-  /* Dual-handle range: two stacked sliders, transparent tracks so both thumbs show. */
+
   .vg-range { -webkit-appearance:none; appearance:none; width:100%; height:100%; background:transparent; pointer-events:none; margin:0; }
   .vg-range::-webkit-slider-thumb { -webkit-appearance:none; pointer-events:auto; width:16px; height:16px; border-radius:9999px; background:var(--color-primary); border:2px solid var(--color-ink); cursor:pointer; }
   .vg-range::-moz-range-thumb { pointer-events:auto; width:16px; height:16px; border-radius:9999px; background:var(--color-primary); border:2px solid var(--color-ink); cursor:pointer; }
   .vg-range::-webkit-slider-runnable-track { height:4px; border-radius:9999px; }
   .vg-range::-moz-range-track { height:4px; border-radius:9999px; background:var(--color-surface-3); }
 
-  /* Text layer: container units so preview font-size tracks the rendered video size,
-     matching the exact fraction-of-height used when rendering the output PNG. */
   #vg-textlayer { container-type:size; }
-  /* :global — the boxes are created in JS (createElement), so they never carry
-     Astro's scope attribute. Scoped .vg-text rules would not match them, which
-     would leave pointer-events at the parent's `none` and make the box unclickable. */
+
   :global(.vg-text) {
     position:absolute; pointer-events:auto; cursor:move; white-space:pre;
     line-height:1.25; user-select:none; touch-action:none; max-width:100%;
@@ -136,7 +131,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   :global(.vg-text.vg-stroke) { -webkit-text-stroke:0.06em rgba(0,0,0,0.85); paint-order:stroke fill; }
   :global(.vg-text.vg-bg) { background:rgba(0,0,0,0.6); padding:0.25em; border-radius:0.15em; }
 
-  /* Crop overlay: a movable/resizable box; the huge box-shadow dims everything outside it. */
   #vg-crop {
     position:absolute; cursor:move; touch-action:none;
     outline:1px solid var(--color-primary); outline-offset:-1px;
@@ -180,7 +174,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   let duration = 0;
   let outUrl = '';
   let videoUrl = '';
-  // Crop rect in % of the frame; only used when the Crop checkbox is on.
+
   const crop = { x: 10, y: 10, w: 80, h: 80 };
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
   const fmtSize = (n: number) => n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(2)} MB`;

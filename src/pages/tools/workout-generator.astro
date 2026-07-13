@@ -84,7 +84,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return MOVES[focus];
   }
 
-  // ponytail: local fallback when the remote service is unavailable or returns bad output.
   function localPlan(): Plan {
     const s = settings();
     const [sets, baseReps] = REPS[s.level];
@@ -114,8 +113,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       ${plan.notes ? `<p class="mt-2 text-[13px] text-ink-tertiary">${plan.notes}</p>` : ''}`;
   }
 
-  // Plan service (browser-side, PUBLIC_ key — no per-user login).
-  // The reply sometimes wraps JSON in ```json fences — strip them before parsing.
   const parsePlan = (text: string): Plan => JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, '').trim());
 
   type ChatMsg = { role: 'system' | 'user' | 'assistant'; content: string };

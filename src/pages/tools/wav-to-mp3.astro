@@ -1,12 +1,4 @@
 ---
-// Self-contained WAV → MP3 converter. It intentionally does NOT use the shared
-// MediaConverter component: this tool extends the shared feature set with volume
-// adjust, reverse, and ID3 metadata tagging (title/artist/album/year/genre) that
-// the shared buildArgs pipeline doesn't expose. Everything the shared component
-// already did is preserved here — batch, bitrate presets (VBR/CBR), sample rate,
-// channels, EBU normalize, trim, fade in/out, per-file preview, individual +
-// ZIP download, drag-drop, progress. All conversion runs client-side via the
-// shared ffmpeg.wasm core; files never leave the browser.
 import ToolLayout from '../../layouts/ToolLayout.astro';
 import { getConversion } from '../../lib/media';
 
@@ -23,10 +15,9 @@ const conv = getConversion('wav-to-mp3')!;
     </label>
 
     <div id="mc-panel" class="hidden flex-col gap-4">
-      <!-- File list -->
+
       <div id="mc-files" class="flex flex-col gap-2"></div>
 
-      <!-- Options -->
       <div class="panel flex flex-col gap-4 p-4">
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <label class="flex flex-col gap-1 text-sm text-ink-subtle">Quality
@@ -69,7 +60,6 @@ const conv = getConversion('wav-to-mp3')!;
           </label>
         </div>
 
-        <!-- Trim, fade, volume, reverse -->
         <details class="group">
           <summary class="cursor-pointer select-none text-[13px] text-ink-subtle hover:text-ink">Trim, fade &amp; volume</summary>
           <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -95,7 +85,6 @@ const conv = getConversion('wav-to-mp3')!;
           <p class="mt-2 text-xs text-ink-tertiary">Applies to every file in the queue. Volume 100% = unchanged; 200% doubles, 50% halves. Leave blank to keep the full length and original loudness.</p>
         </details>
 
-        <!-- ID3 metadata tags -->
         <details class="group">
           <summary class="cursor-pointer select-none text-[13px] text-ink-subtle hover:text-ink">MP3 tags (ID3)</summary>
           <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -157,8 +146,8 @@ const conv = getConversion('wav-to-mp3')!;
   import { makeZip } from '../../lib/zip';
 
   const root = document.getElementById('mc-root') as HTMLElement;
-  const EXT = root.dataset.ext!;         // "mp3"
-  const MIME = root.dataset.mime!;       // "audio/mpeg"
+  const EXT = root.dataset.ext!;         
+  const MIME = root.dataset.mime!;       
 
   const $ = (id: string) => document.getElementById(id);
   const fileInput = $('mc-file') as HTMLInputElement;
@@ -185,8 +174,7 @@ const conv = getConversion('wav-to-mp3')!;
     done: boolean;
   }
   let jobs: Job[] = [];
-  // The ffmpeg progress hook is attached once and reads this live reference so
-  // it always tracks whichever job is currently encoding.
+
   let current: Job | null = null;
 
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
@@ -364,7 +352,7 @@ const conv = getConversion('wav-to-mp3')!;
     dl.textContent = 'Download';
     dl.addEventListener('click', () => job.outData && download(job.outData, job.outName!));
     job.actionsEl.appendChild(dl);
-    // Inline preview toggle (audio player for the converted MP3).
+
     const pv = document.createElement('button');
     pv.className = 'btn btn-tertiary';
     pv.style.minHeight = '28px'; pv.style.padding = '2px 10px'; pv.style.fontSize = '12px';

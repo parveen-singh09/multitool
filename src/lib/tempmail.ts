@@ -1,7 +1,5 @@
-// Disposable inbox client for the mail.tm public API. Open CORS, no API key,
-// real mail delivery — so the "fake email generator" is an actual receiving
-// inbox, not just dead @example.com strings. Rate limit is 30 req / 60s, so
-// the page polls on an ~8s interval.
+
+
 const BASE = 'https://api.mail.tm';
 
 export interface Domain { domain: string; isActive: boolean; }

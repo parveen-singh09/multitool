@@ -1,12 +1,4 @@
-// The single render path: GanttProject + Scheduled -> SVG string, plus a
-// geometry map for pointer hit-testing. The preview injects the string live;
-// every export (SVG/PNG/PDF/clipboard) derives from the same string so nothing
-// drifts. Same discipline as the timeline tool's render.ts.
-//
-// SVG has no text auto-wrap, so we keep one offscreen 2D context purely for
-// measureText (task labels get single-line ellipsis truncation). We deliberately
-// avoid <foreignObject>: it renders blank when the SVG is drawn onto a canvas in
-// some browsers, which would silently break PNG/PDF/clipboard export.
+
 
 import type { GanttProject, GanttTheme, ZoomLevel } from './types';
 import type { Scheduled } from './schedule';
@@ -15,7 +7,6 @@ import { ZOOM_PX_PER_DAY, type SizePreset } from './presets';
 
 const FONT = 'Inter, system-ui, sans-serif';
 
-// --- offscreen text measurement (copied from timeline render) ---------------
 let measureCtx: CanvasRenderingContext2D | null = null;
 function ctx(): CanvasRenderingContext2D | null {
   if (measureCtx) return measureCtx;

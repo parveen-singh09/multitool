@@ -1,17 +1,14 @@
-// Privacy policy generator. Pure functions — build a Markdown policy from
-// a plain form object. No network, everything runs client-side.
+
 
 export interface Service {
   id: string;
   name: string;
-  /** Sentence describing use, inserted under "Third-party services". */
+
   blurb: string;
-  /** Link to the provider's own privacy policy. */
+
   url: string;
 }
 
-// Common third-party services people embed. Each contributes one disclosure
-// line plus a link to the vendor's policy.
 export const SERVICES: Service[] = [
   { id: 'ga', name: 'Google Analytics', blurb: 'a web analytics service that tracks and reports website traffic', url: 'https://policies.google.com/privacy' },
   { id: 'gads', name: 'Google AdSense', blurb: 'an advertising service that uses cookies to serve ads based on your prior visits', url: 'https://policies.google.com/technologies/ads' },
@@ -38,7 +35,7 @@ export interface PolicyData {
   contactEmail: string;
   entityType: 'company' | 'person';
   country: string;
-  effectiveDate: string; // ISO yyyy-mm-dd
+  effectiveDate: string; 
   collectsPII: boolean;
   usesCookies: boolean;
   gdpr: boolean;
@@ -65,7 +62,7 @@ export const DEFAULTS: PolicyData = {
 
 function fmtDate(iso: string): string {
   if (!iso) return '[Effective Date]';
-  // Parse as local date; avoid TZ shift from `new Date('yyyy-mm-dd')` (UTC).
+
   const [y, m, d] = iso.split('-').map(Number);
   if (!y || !m || !d) return '[Effective Date]';
   return new Date(y, m - 1, d).toLocaleDateString('en-US', {
@@ -73,7 +70,6 @@ function fmtDate(iso: string): string {
   });
 }
 
-/** Build the policy as Markdown. Missing fields fall back to bracketed placeholders. */
 export function generatePolicy(data: PolicyData): string {
   const name = data.entityName.trim() || '[Your Company / Name]';
   const site = data.siteName.trim() || '[Website Name]';

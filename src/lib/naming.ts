@@ -1,8 +1,4 @@
-// Keyword-driven company/brand name generator engine.
-// Turns user keywords into brandable name ideas across several naming styles
-// (the same families Namelix exposes: brandable, compound, evocative, short,
-// alternate spelling, real words). All randomness comes from ./random which is
-// crypto-backed, so nothing is predictable and nothing touches a server.
+
 
 import { randInt, pick, shuffle } from './random';
 import { COMPANY_NOUN, NOUNS, ADJECTIVES } from './fakedata';
@@ -16,7 +12,6 @@ export type NameStyle =
   | 'alternate'
   | 'real';
 
-/** 0 = stay close to the keyword, 1 = balanced, 2 = highly inventive. */
 export type Randomness = 0 | 1 | 2;
 
 export interface NameIdea {
@@ -27,7 +22,7 @@ export interface NameIdea {
 const PREFIX = ['Get', 'Go', 'Neo', 'Meta', 'Hyper', 'Sky', 'Nova', 'Zen', 'Pro', 'Peak', 'Up', 'Ever', 'Well'];
 const SUFFIX = ['ly', 'ify', 'io', 'ora', 'ora', 'sy', 'zy', 'ia', 'ify', 'able', 'ora', 'io', 'wise', 'r', 'go', 'io'];
 const BRAND_SUFFIX = ['ify', 'ly', 'io', 'ora', 'ify', 'sy', 'wave', 'flow', 'zen', 'ade', 'ora', 'ia'];
-// Evocative pairing words: short, logo-friendly, brandable.
+
 const PAIR = [
   'Forge', 'Spark', 'Loop', 'Grid', 'Pulse', 'Nest', 'Craft', 'Mint', 'Drift', 'Bloom',
   'Peak', 'Wave', 'Nova', 'Flux', 'Lift', 'Beam', 'Path', 'Hive', 'Sage', 'Bolt',
@@ -37,12 +32,10 @@ const SYLL = ['va', 'lo', 'ze', 'ny', 'ra', 'mi', 'ko', 'ta', 'lu', 'da', 'qui',
 const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 const clean = (s: string) => s.trim().toLowerCase().replace(/[^a-z]/g, '');
 
-/** Drop interior vowels for a modern, terse look (keeps the first letter). */
 function dropVowels(w: string): string {
   return w.replace(/[aeiou]/g, (m, i) => (i === 0 ? m : ''));
 }
 
-/** Playful alternate spelling: c→k, s→z, x→ex, doubled trailing consonant, etc. */
 function alternateSpelling(w: string): string {
   const swaps: Array<[RegExp, string]> = [
     [/c/g, 'k'],
@@ -54,11 +47,10 @@ function alternateSpelling(w: string): string {
   ];
   const [re, to] = pick(swaps);
   let out = w.replace(re, to);
-  if (out === w) out = w.endsWith('y') ? w.slice(0, -1) + 'i' : w + w.slice(-1); // guarantee a change
+  if (out === w) out = w.endsWith('y') ? w.slice(0, -1) + 'i' : w + w.slice(-1); 
   return out;
 }
 
-/** One brandable coinage: keyword fused with a prefix, suffix, or syllable. */
 function brandable(kw: string, r: Randomness): string {
   const roll = randInt(0, r === 0 ? 1 : 3);
   if (roll === 0) return cap(kw) + pick(BRAND_SUFFIX);
@@ -67,7 +59,7 @@ function brandable(kw: string, r: Randomness): string {
     const nv = dropVowels(kw);
     return cap(nv.length >= 3 ? nv : kw) + pick(SUFFIX);
   }
-  // High-randomness invented coinage: syllable + keyword stem + suffix.
+
   const stem = kw.slice(0, Math.max(3, kw.length - randInt(0, 2)));
   return cap(pick(SYLL)) + stem + (randInt(0, 1) ? pick(SUFFIX) : '');
 }

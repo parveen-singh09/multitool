@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="wmv-converter">
   <div id="wc-root" class="flex flex-col gap-4">
-    <!-- Drop zone -->
+
     <label id="wc-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
       <span class="text-sm text-ink">Choose WMV files or drop them here</span>
@@ -17,12 +17,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </p>
 
     <div id="wc-panel" class="hidden flex-col gap-4">
-      <!-- File list -->
+
       <div id="wc-files" class="flex flex-col gap-2"></div>
 
-      <!-- Options -->
       <div class="panel flex flex-col gap-4 p-4">
-        <!-- Output format + core video controls -->
+
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <label class="flex flex-col gap-1 text-sm text-ink-subtle">Convert to
             <select id="wc-format" class="field">
@@ -65,7 +64,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           </label>
         </div>
 
-        <!-- Transform + audio -->
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <label class="flex flex-col gap-1 text-sm text-ink-subtle" data-group="rotate">Rotate
             <select id="wc-rotate" class="field">
@@ -90,7 +88,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           </label>
         </div>
 
-        <!-- Advanced: trim + fade -->
         <details class="group">
           <summary class="cursor-pointer select-none text-[13px] text-ink-subtle hover:text-ink">Trim &amp; fade options</summary>
           <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -146,9 +143,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   import { getFFmpeg, fetchFile } from '../../lib/ffmpeg';
   import { makeZip } from '../../lib/zip';
 
-  // Per-format output metadata + the ffmpeg codec/container knobs. WMV's native
-  // video codec never fits an MP4/MKV/MOV container by stream copy, so every
-  // path re-encodes — there's deliberately no "remux" option to mislead with.
   type Fmt = 'mp4' | 'webm' | 'mkv' | 'mov' | 'gif' | 'mp3';
   const FORMATS: Record<Fmt, { ext: string; mime: string; label: string; audioOnly?: boolean; noAudio?: boolean }> = {
     mp4:  { ext: 'mp4',  mime: 'video/mp4' },
@@ -159,7 +153,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     mp3:  { ext: 'mp3',  mime: 'audio/mpeg', audioOnly: true },
   } as any;
 
-  // Quality → CRF per codec (lower = better). VP9 uses a different useful range.
   const CRF_H264: Record<string, number> = { high: 18, balanced: 23, smaller: 28, smallest: 32 };
   const CRF_VP9: Record<string, number>  = { high: 24, balanced: 31, smaller: 37, smallest: 45 };
   const MP3_KBPS: Record<string, string> = { high: '256', balanced: '192', smaller: '128', smallest: '96' };
@@ -269,8 +262,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     batchDl.classList.toggle('hidden', !(doneCount > 1));
   }
 
-  // Compose the video filter chain shared by re-encode paths: rotate → flip →
-  // scale (cap width, keep even height). Returns '' when nothing to apply.
   function videoFilters(scale: number, rotate: number, flip: string): string[] {
     const f: string[] = [];
     if (rotate === 90) f.push('transpose=1');
@@ -282,7 +273,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return f;
   }
 
-  // Build the full ffmpeg argument list for one job from the current UI options.
   function buildArgs(inName: string, outName: string, duration: number): string[] {
     const fmt = curFmt();
     const qual = ($('wc-crf') as HTMLSelectElement).value;
@@ -302,7 +292,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     pre.push('-i', inName);
     if (trimEnd > trimStart) pre.push('-to', String(trimEnd - trimStart));
 
-    // Audio filter chain (volume + fades), reused by audio-capable formats.
     const outDur = trimEnd > trimStart ? trimEnd - trimStart : (duration || 0) - trimStart;
     const af: string[] = [];
     if (volPct > 0 && volPct !== 100) af.push(`volume=${(volPct / 100).toFixed(3)}`);
@@ -449,8 +438,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     fileInput.value = '';
   });
 
-  // Changing the target format resets completed results so they re-run in the
-  // new format, and refreshes which controls are relevant.
   formatSel.addEventListener('change', () => {
     syncControls();
     jobs.forEach((j) => {

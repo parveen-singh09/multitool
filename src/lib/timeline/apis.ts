@@ -1,11 +1,9 @@
-// Smart auto-fill from public, keyless, CORS-open APIs. Both calls are wrapped
-// so a network/CORS failure or an outage returns [] and the page shows a
-// non-blocking inline message instead of crashing. No retry loop.
+
 
 import type { TimelineEvent } from './types';
 import { parseDate } from './types';
 
-const MAX = 30; // keep payloads sane — these feeds can be large
+const MAX = 30; 
 
 function ev(date: string, title: string, desc?: string, media?: string): TimelineEvent {
   return {
@@ -32,14 +30,12 @@ export async function onThisDay(month: number, day: number, lang = 'en'): Promis
         const page = it.pages?.[0];
         return ev(String(it.year), it.text ?? 'Event', undefined, page?.thumbnail?.source);
       })
-      .filter((e) => e.start); // drop anything with an unparseable year
+      .filter((e) => e.start); 
   } catch {
     return [];
   }
 }
 
-// Nager.Date public holidays. Path order is Year/CountryCode.
-// GET https://date.nager.at/api/v4/Holidays/{year}/{CC}
 export async function holidays(countryCode: string, year: number): Promise<TimelineEvent[]> {
   const cc = countryCode.trim().toUpperCase();
   const url = `https://date.nager.at/api/v4/Holidays/${year}/${cc}`;

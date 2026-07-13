@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="sku-generator">
   <div class="flex flex-col gap-5">
-    <!-- Segment builder -->
+
     <div class="flex flex-col gap-2">
       <div class="flex items-center justify-between">
         <span class="text-sm font-medium text-ink">Pattern segments</span>
@@ -17,7 +17,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div id="sk-segs" class="flex flex-col gap-2"></div>
     </div>
 
-    <!-- Options -->
     <div class="flex flex-wrap items-center gap-4 border-t border-[var(--border)] pt-4">
       <label class="flex items-center gap-2 text-sm text-ink-subtle">Separator
         <select id="sk-sep" class="field w-24">
@@ -46,13 +45,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </label>
     </div>
 
-    <!-- Live preview -->
     <div class="flex items-center gap-2 rounded-[var(--radius)] bg-surface-1 px-3 py-2 text-sm">
       <span class="text-ink-subtle">Pattern</span>
       <code id="sk-pattern" class="font-mono text-ink"></code>
     </div>
 
-    <!-- Actions -->
     <div class="flex flex-wrap items-center gap-3">
       <button id="sk-gen" class="btn btn-primary">Generate</button>
       <button id="sk-add" class="btn btn-secondary">Add to list</button>
@@ -64,7 +61,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Results -->
     <div id="sk-results" class="overflow-hidden rounded-[var(--radius)] border border-[var(--border)]"></div>
   </div>
 
@@ -112,24 +108,21 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const applyCase = (s: string) =>
     caseEl.value === 'upper' ? s.toUpperCase() : caseEl.value === 'lower' ? s.toLowerCase() : s;
 
-  // Clean one raw value into an SKU-safe token, capped to `max` chars (0 = no cap).
   const clean = (s: string, max: number) => {
     let t = applyCase(s.trim()).replace(/[^A-Za-z0-9]/g, '');
     if (max > 0) t = t.slice(0, max);
     return t;
   };
 
-  // Split a segment's raw input on commas into cleaned, non-empty tokens.
   const tokens = (seg: Seg) =>
     seg.value.split(',').map((v) => clean(v, seg.max)).filter(Boolean);
 
-  // Cartesian product of every segment's token list.
   function combos(): string[] {
     const sep = sepEl.value;
     let acc: string[][] = [[]];
     for (const seg of segs) {
       const toks = tokens(seg);
-      if (toks.length === 0) continue; // empty segment is skipped
+      if (toks.length === 0) continue; 
       const next: string[][] = [];
       for (const a of acc) for (const t of toks) next.push([...a, t]);
       acc = next;

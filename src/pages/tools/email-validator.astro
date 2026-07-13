@@ -59,7 +59,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const riskyEl = document.getElementById('ev-risky')!;
   const invalidEl = document.getElementById('ev-invalid')!;
 
-  // Robust, practical email syntax check (local-part + domain).
   const EMAIL_RE =
     /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 
@@ -72,7 +71,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     'outllok.com': 'outlook.com', 'iclod.com': 'icloud.com', 'iclould.com': 'icloud.com',
   };
 
-  // Common throwaway/disposable domains. Not exhaustive — covers the popular ones.
   const DISPOSABLE = new Set([
     'mailinator.com', 'guerrillamail.com', '10minutemail.com', 'tempmail.com',
     'temp-mail.org', 'throwawaymail.com', 'yopmail.com', 'trashmail.com',
@@ -102,8 +100,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return fix ? email.slice(0, at + 1) + fix : null;
   }
 
-  // DNS-over-HTTPS MX lookup via Google's public resolver (CORS-enabled JSON API).
-  // Cache per domain so a bulk list of the same domain fetches once.
   const mxCache = new Map<string, Promise<{ mx: boolean; a: boolean }>>();
   async function lookupDomain(domain: string): Promise<{ mx: boolean; a: boolean }> {
     if (mxCache.has(domain)) return mxCache.get(domain)!;

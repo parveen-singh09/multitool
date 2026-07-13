@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="timezone-converter">
   <div class="flex flex-col gap-5">
-    <!-- Controls -->
+
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Date &amp; time
@@ -45,7 +45,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div id="tz-error" class="hidden rounded-md border px-3 py-2 text-sm" role="alert"
       style="border-color:#e5484d;color:#e5484d"></div>
 
-    <!-- Converted list -->
     <div>
       <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
         <span class="text-[13px] text-ink-subtle">Converted times</span>
@@ -88,7 +87,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
-  // Full IANA list from the browser, with a curated fallback for older engines.
+
   const FALLBACK = [
     'UTC', 'America/Los_Angeles', 'America/Denver', 'America/Chicago', 'America/New_York',
     'America/Sao_Paulo', 'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Moscow',
@@ -96,12 +95,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     'Asia/Shanghai', 'Asia/Singapore', 'Asia/Tokyo', 'Asia/Seoul', 'Australia/Sydney',
     'Pacific/Auckland', 'Pacific/Honolulu',
   ];
-  // ponytail: Intl.supportedValuesOf is in every current browser; fallback covers ancient ones.
+
   const ZONES: string[] = (() => {
     try {
       const all = (Intl as any).supportedValuesOf?.('timeZone') as string[] | undefined;
       if (all && all.length) return all.includes('UTC') ? all : ['UTC', ...all];
-    } catch { /* fall through */ }
+    } catch {  }
     return FALLBACK;
   })();
   const ZONESET = new Set(ZONES);
@@ -123,7 +122,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   let source = local;
   const targets = new Set<string>();
 
-  // ---- State from URL ?t=&from=&zones= then localStorage, else sensible defaults ----
   const params = new URLSearchParams(location.search);
   function seedTargets(zones: string[]) {
     targets.clear();
@@ -156,10 +154,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         from: source, fmt: fmtEl.value, secs: secsEl.checked, biz: bizEl.checked,
         zones: Array.from(targets),
       }));
-    } catch { /* storage may be blocked */ }
+    } catch {  }
   }
 
-  // ---- Time math (DST-correct via the offset the zone reports) ----
   function zonedToUtc(y: number, mo: number, d: number, h: number, mi: number, zone: string): Date {
     const guess = Date.UTC(y, mo - 1, d, h, mi);
     const offset = tzOffsetMs(new Date(guess), zone);

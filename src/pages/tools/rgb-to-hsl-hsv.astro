@@ -2,8 +2,6 @@
 import ToolLayout from '../../layouts/ToolLayout.astro';
 import ColorFormats from '../../components/ColorFormats.astro';
 
-// Channel-slider definitions (label, id, max, and an accent tint so each
-// track reads like its channel — the RapidTables-style direct manipulation).
 const rgbChannels = [
   { id: 'r', label: 'R', max: 255, accent: '#ef4444' },
   { id: 'g', label: 'G', max: 255, accent: '#22c55e' },
@@ -19,8 +17,6 @@ const hslChannels = [
 <ToolLayout slug="rgb-to-hsl-hsv">
   <ColorFormats focus="hsl" />
 
-  <!-- Interactive channel sliders + harmonies: extends the shared converter
-       above by driving the same fields, so every readout stays in sync. -->
   <div class="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
     <div class="panel rounded-lg p-4">
       <div class="mb-3 flex items-center justify-between">
@@ -64,7 +60,6 @@ const hslChannels = [
     </div>
   </div>
 
-  <!-- Color harmonies (complementary / analogous / triadic): click to load. -->
   <div class="mt-6">
     <span class="text-[13px] text-ink-subtle">Color harmonies</span>
     <div id="cf-harmony" class="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"></div>
@@ -105,15 +100,11 @@ const hslChannels = [
 
     const currentRgb = (): RGB => hexToRgb(picker.value) || { r: 0, g: 0, b: 0 };
 
-    // Push a color into the shared converter by writing a field and firing
-    // its own input handler — reuses all existing conversion + render logic.
     function loadRgb(rgb: RGB) {
       hexIn.value = rgbToHex(rgb);
       hexIn.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
-    // Reflect the current color onto sliders, value readouts and harmonies.
-    // Setting .value on a range doesn't fire input, so no feedback loop.
     function sync() {
       const rgb = currentRgb();
       const hsl = rgbToHsl(rgb);

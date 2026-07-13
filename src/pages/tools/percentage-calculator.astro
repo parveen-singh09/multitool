@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="percentage-calculator">
   <div class="flex flex-col gap-5">
-    <!-- What is X% of Y -->
+
     <div class="panel panel-lift flex flex-col gap-3 p-5">
       <p class="text-sm text-ink">What is <span class="text-ink-subtle">X%</span> of <span class="text-ink-subtle">Y</span>?</p>
       <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
@@ -14,7 +14,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- X is what % of Y -->
     <div class="panel panel-lift flex flex-col gap-3 p-5">
       <p class="text-sm text-ink"><span class="text-ink-subtle">X</span> is what percent of <span class="text-ink-subtle">Y</span>?</p>
       <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
@@ -24,7 +23,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Percentage change -->
     <div class="panel panel-lift flex flex-col gap-3 p-5">
       <p class="text-sm text-ink">Percentage change from <span class="text-ink-subtle">A</span> to <span class="text-ink-subtle">B</span></p>
       <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
@@ -34,7 +32,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- X is Y% of what -->
     <div class="panel panel-lift flex flex-col gap-3 p-5">
       <p class="text-sm text-ink"><span class="text-ink-subtle">X</span> is <span class="text-ink-subtle">Y%</span> of what?</p>
       <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
@@ -44,7 +41,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Increase / decrease by percent -->
     <div class="panel panel-lift flex flex-col gap-3 p-5">
       <p class="text-sm text-ink">Increase or decrease a number by a percent</p>
       <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
@@ -55,7 +51,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Percentage difference (symmetric) -->
     <div class="panel panel-lift flex flex-col gap-3 p-5">
       <p class="text-sm text-ink">Percentage difference between <span class="text-ink-subtle">A</span> and <span class="text-ink-subtle">B</span></p>
       <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
@@ -81,16 +76,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const round = (n: number) => Math.round(n * 100) / 100;
 
   function calc() {
-    // 1: X% of Y
+
     document.getElementById('p1-out')!.textContent =
       String(round((Number($('p1-x').value) / 100) * Number($('p1-y').value)));
 
-    // 2: X is what % of Y
     const y2 = Number($('p2-y').value);
     document.getElementById('p2-out')!.textContent =
       (y2 === 0 ? '—' : round((Number($('p2-x').value) / y2) * 100) + '%');
 
-    // 3: % change A -> B
     const a = Number($('p3-a').value);
     const b = Number($('p3-b').value);
     const outEl = document.getElementById('p3-out')!;
@@ -101,18 +94,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       outEl.style.color = change >= 0 ? 'var(--color-success)' : '#e5484d';
     }
 
-    // 4: X is Y% of what → base = X / (Y/100)
     const y4 = Number($('p4-y').value);
     document.getElementById('p4-out')!.textContent =
       y4 === 0 ? '—' : String(round(Number($('p4-x').value) / (y4 / 100)));
 
-    // 5: increase/decrease N by P%
     const n5 = Number($('p5-n').value);
     const p5 = Number($('p5-p').value);
     const sign = ($('p5-op') as unknown as HTMLSelectElement).value === 'dec' ? -1 : 1;
     document.getElementById('p5-out')!.textContent = String(round(n5 * (1 + (sign * p5) / 100)));
 
-    // 6: symmetric percentage difference = |a-b| / ((a+b)/2)
     const a6 = Number($('p6-a').value);
     const b6 = Number($('p6-b').value);
     const avg = (a6 + b6) / 2;

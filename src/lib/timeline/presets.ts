@@ -1,6 +1,4 @@
-// Themes (concrete hex — a standalone exported .svg can't read CSS vars) and
-// canvas size presets. The default "Linear dark" theme uses the DESIGN.md tokens
-// so an exported timeline matches the site's look.
+
 
 import type { TimelineTheme } from './types';
 
@@ -20,8 +18,8 @@ export function getTheme(id: string): TimelineTheme | undefined {
 export interface SizePreset {
   id: string;
   label: string;
-  w: number;   // design width in px; height grows to fit content
-  h: number;   // baseline / minimum height
+  w: number;   
+  h: number;   
 }
 
 export const SIZE_PRESETS: SizePreset[] = [

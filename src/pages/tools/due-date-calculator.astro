@@ -46,7 +46,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div class="panel p-4"><div id="dd-conc" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Est. conception</div></div>
     </div>
 
-    <!-- Milestones -->
     <div class="panel p-5">
       <div class="mb-3 text-sm text-ink-muted">Milestones</div>
       <div id="dd-milestones" class="flex flex-col gap-2 text-sm"></div>
@@ -77,20 +76,19 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (!$('dd-in').value) return;
     const input = new Date($('dd-in').value + 'T00:00:00');
 
-    // Derive the LMP-equivalent start date (day 0 of a 280-day gestation).
     let lmp: Date;
     if (method === 'conception') {
-      lmp = addDays(input, -14); // conception ≈ LMP + 14
+      lmp = addDays(input, -14); 
     } else if (method === 'ivf') {
       const embryoAge = Number(sel('dd-ivf-day').value);
-      // transfer date corresponds to conception + embryoAge; LMP = transfer − embryoAge − 14
+
       lmp = addDays(input, -(embryoAge + 14));
     } else if (method === 'ultrasound') {
       const gaDays = Number($('dd-us-w').value) * 7 + Number($('dd-us-d').value);
-      lmp = addDays(input, -gaDays); // scan date minus gestational age = LMP
+      lmp = addDays(input, -gaDays); 
     } else {
       const adjust = (Number($('dd-cycle').value) || 28) - 28;
-      lmp = addDays(input, -adjust); // normalize cycle so +280 works below
+      lmp = addDays(input, -adjust); 
     }
 
     const due = addDays(lmp, 280);

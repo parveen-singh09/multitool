@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="random-picker">
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,340px)_1fr]">
-    <!-- Controls -->
+
     <div class="flex flex-col gap-4">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Options (one per line)
         <textarea id="wp-items" class="field min-h-56 resize-y font-mono text-sm" spellcheck="false">Alice
@@ -38,17 +38,16 @@ Farah</textarea>
       <p class="text-xs text-ink-tertiary"><span id="wp-count">0</span> options on the wheel</p>
     </div>
 
-    <!-- Wheel -->
     <div class="flex flex-col items-center gap-5">
       <div id="wp-stage" class="relative flex items-center justify-center">
         <canvas id="wp-canvas" class="max-w-full cursor-pointer select-none" role="img" aria-label="Spinning wheel — click to spin"></canvas>
-        <!-- Pointer at the right edge, pointing inward -->
+
         <div class="pointer-events-none absolute right-[-6px] top-1/2 -translate-y-1/2">
           <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
             <path d="M32 17 8 6.5v21z" fill="#5e6ad2" stroke="#010102" stroke-width="1.5" stroke-linejoin="round"></path>
           </svg>
         </div>
-        <!-- Center hub / spin button -->
+
         <button id="wp-hub" class="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-canvas text-sm font-semibold text-ink shadow-lg ring-1 ring-hairline-strong transition hover:ring-primary" style="width:72px;height:72px" aria-label="Spin the wheel">Spin</button>
       </div>
 
@@ -60,7 +59,6 @@ Farah</textarea>
     </div>
   </div>
 
-  <!-- Winner modal -->
   <div id="wp-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
     <div class="w-full max-w-sm rounded-[var(--radius-lg)] border border-hairline-strong bg-surface-2 p-6 text-center shadow-2xl">
       <p class="text-sm uppercase tracking-wide text-ink-subtle">Winner</p>
@@ -106,10 +104,8 @@ Farah</textarea>
   const COLORS = ['#5e6ad2', '#e05299', '#f5a623', '#27a644', '#4a9ee0', '#9b59b6', '#e07a5f', '#3aa99f', '#d64550', '#43a047'];
   let angle = 0;
   let spinning = false;
-  let size = 380; // logical px, responsive
+  let size = 380; 
 
-  // ---- Options parsing (supports `label *N` weighting) ----
-  // ponytail: weight expands to N equal slices — correct probability, simplest geometry.
   function parse(): { label: string; color: string }[] {
     const raw = itemsEl.value.split('\n').map((s) => s.trim()).filter(Boolean);
     const out: { label: string; color: string }[] = [];
@@ -126,7 +122,6 @@ Farah</textarea>
     return itemsEl.value.split('\n').map((s) => s.trim()).filter(Boolean).length;
   }
 
-  // ---- High-DPI sizing ----
   function resize() {
     const avail = stage.parentElement!.clientWidth || 380;
     size = Math.max(260, Math.min(520, avail));
@@ -159,7 +154,6 @@ Farah</textarea>
       ctx.strokeStyle = 'rgba(1,1,2,0.35)';
       ctx.stroke();
 
-      // Label
       ctx.save();
       ctx.translate(c, c);
       ctx.rotate(a0 + seg / 2);
@@ -195,7 +189,7 @@ Farah</textarea>
       osc.connect(gain).connect(audioCtx.destination);
       osc.start();
       osc.stop(audioCtx.currentTime + 0.05);
-    } catch { /* audio unavailable */ }
+    } catch 
   }
 
   // ---- Confetti (DOM particles, no assets) ----

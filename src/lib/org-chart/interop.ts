@@ -1,20 +1,10 @@
-// Import/export. Native JSON is our own OrgChart shape. CSV is the format HR
-// systems (Workday, BambooHR, a spreadsheet) export: one row per person with a
-// "Reports To" column naming their manager. The indented-outline importer keeps
-// the original tool's muscle memory — paste a tab/space-indented role list and
-// it becomes a chart.
-//
-// CSV manager resolution is by NAME (that's what a "Reports To" column holds).
-// Names are matched case-insensitively; a blank / unresolved manager makes the
-// person a root. Duplicate names resolve to the first match — documented, not
-// silently wrong.
+
 
 import type { OrgChart, Person } from './types';
 import { newId } from './types';
 
 const DEFAULTS = { themeId: 'linear-dark', layoutId: 'top-down', sizeId: 'comfortable' };
 
-// --- native JSON ------------------------------------------------------------
 export function toJSON(c: OrgChart): string {
   return JSON.stringify(c, null, 2);
 }
@@ -106,7 +96,6 @@ function csvCell(v: string): string {
   return /[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
 }
 
-// Minimal RFC-4180 CSV parser (handles quoted cells, doubled quotes, CRLF/LF).
 function parseCSV(text: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [], cell = '', inQuotes = false;
@@ -118,16 +107,13 @@ function parseCSV(text: string): string[][] {
     } else if (c === '"') inQuotes = true;
     else if (c === ',') { row.push(cell); cell = ''; }
     else if (c === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
-    else if (c === '\r') { /* skip; \n handles the break */ }
+    else if (c === '\r') {  }
     else cell += c;
   }
   if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
   return rows;
 }
 
-// --- indented outline (the original tool's input, now an import path) -------
-// Each level of leading whitespace (tabs expand to 2 spaces) nests a person
-// under the one above. A line may be "Name" or "Name, Title" or "Name | Title".
 export function fromOutline(text: string): OrgChart {
   const lines = text.split('\n').filter((l) => l.trim() !== '');
   const people: Person[] = [];

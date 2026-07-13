@@ -62,7 +62,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
-  // Pride flag stripe palettes (top to bottom).
+
   const FLAGS: { name: string; colors: string[] }[] = [
     { name: 'Rainbow (6-color)', colors: ['#e40303', '#ff8c00', '#ffed00', '#008026', '#004dff', '#750787'] },
     { name: 'Progress', colors: ['#e40303', '#ff8c00', '#ffed00', '#008026', '#004dff', '#750787', '#ffffff', '#ffafc7', '#74d7ee', '#613915', '#000000'] },
@@ -101,7 +101,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   let img: HTMLImageElement | null = null;
   const SIZE = 512;
-  let offX = 0, offY = 0; // pan offset in canvas px, relative to center
+  let offX = 0, offY = 0; 
 
   function drawPlaceholder() {
     ctx.fillStyle = '#141516';
@@ -123,7 +123,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     ctx.clearRect(0, 0, SIZE, SIZE);
 
-    // Flag background sits behind the photo.
     if (style === 'background') {
       const per = SIZE / stripes.length;
       stripes.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(0, i * per, SIZE, per + 1); });
@@ -134,7 +133,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const scale = base * z;
       const w = img.width * scale, h = img.height * scale;
       ctx.save();
-      // Background style leaves a margin so the flag shows around the photo.
+
       if (style === 'background') {
         const inset = SIZE * (0.5 - s);
         ctx.beginPath();
@@ -175,7 +174,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       ctx.restore();
     }
 
-    // Circle crop: knock out everything outside the inscribed circle.
     if (circle.checked) {
       ctx.save();
       ctx.globalCompositeOperation = 'destination-in';
@@ -204,7 +202,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const f = e.dataTransfer?.files?.[0]; if (f) handleFile(f);
   });
 
-  // Drag-to-reposition on the canvas (pointer coords → canvas px).
   let dragging = false, lastX = 0, lastY = 0;
   const toCanvas = (e: PointerEvent) => {
     const r = canvas.getBoundingClientRect();

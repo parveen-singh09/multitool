@@ -4,14 +4,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="org-chart-creator">
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,420px)_1fr]">
-    <!-- LEFT: controls -->
+
     <div class="flex flex-col gap-4">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Chart title
         <input id="occ-title" class="field" type="text" value="Org chart" />
       </label>
 
-      <!-- tab strip -->
       <div class="flex flex-wrap gap-1 rounded-md bg-surface-1 p-1" role="tablist">
         <button class="occ-tab btn btn-tertiary" data-tab="people" aria-selected="true">People</button>
         <button class="occ-tab btn btn-tertiary" data-tab="templates">Templates</button>
@@ -19,19 +18,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <button class="occ-tab btn btn-tertiary" data-tab="import">Import</button>
       </div>
 
-      <!-- People panel -->
       <section data-panel="people" class="flex flex-col gap-3">
         <div id="occ-rows" class="flex max-h-[62vh] flex-col gap-3 overflow-y-auto pr-1"></div>
         <button id="occ-add" class="btn btn-secondary self-start">Add person</button>
       </section>
 
-      <!-- Templates panel -->
       <section data-panel="templates" class="hidden flex-col gap-4">
         <p class="text-sm text-ink-subtle">Pick a starting point. It replaces the current chart.</p>
         <div id="occ-templates" class="flex flex-col gap-4"></div>
       </section>
 
-      <!-- Style panel -->
       <section data-panel="style" class="hidden flex-col gap-4">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">
           Theme
@@ -55,7 +51,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </div>
       </section>
 
-      <!-- Import panel -->
       <section data-panel="import" class="hidden flex-col gap-5">
         <div class="flex flex-col gap-2">
           <span class="text-sm text-ink-subtle">Indented role list</span>
@@ -72,7 +67,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </section>
     </div>
 
-    <!-- RIGHT: preview + toolbar -->
     <div class="flex flex-col gap-3">
       <div class="flex flex-wrap gap-2">
         <button id="occ-png" class="btn btn-primary">PNG</button>
@@ -150,7 +144,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   let last: RenderResult | null = null;
   let selectedId: string | null = null;
 
-  // --- undo/redo: bounded full-state JSON snapshots (mirrors collage-maker) ---
   const undoStack: string[] = [];
   const redoStack: string[] = [];
   let restoring = false;
@@ -187,7 +180,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     $<HTMLButtonElement>('occ-redo').disabled = redoStack.length === 0;
   }
 
-  // --- the single render path -------------------------------------------------
   let saveTimer = 0;
   function render(): void {
     state.title = titleEl.value;
@@ -200,11 +192,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   function person(id: string): Person | undefined { return state.people.find((p) => p.id === id); }
 
-  // --- editor rows ------------------------------------------------------------
   function renderRows(): void {
     rowsEl.innerHTML = '';
-    // Show rows in tree order (root first, then each subtree) so the list mirrors
-    // the chart. Depth drives the indent.
+
     for (const { p, depth } of orderedPeople()) {
       rowsEl.appendChild(personRow(p, depth));
     }
@@ -217,7 +207,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       childrenOf(state.people, p.id).forEach((c) => visit(c, depth + 1));
     };
     rootsOf(state.people).forEach((r) => visit(r, 0));
-    // Any people not reached (shouldn't happen — orphans are roots) get appended.
+
     if (out.length < state.people.length) {
       const seen = new Set(out.map((o) => o.p.id));
       state.people.forEach((p) => { if (!seen.has(p.id)) out.push({ p, depth: 0 }); });
@@ -606,12 +596,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   }
 
   $<HTMLButtonElement>('occ-svg').addEventListener('click', () => {
-    if (last) download(new Blob([last.svg], { type: 'image/svg+xml' }), 'toolcities-org-chart.svg');
+    if (last) download(new Blob([last.svg], { type: 'image/svg+xml' }), 'toolsilk-org-chart.svg');
   });
   $<HTMLButtonElement>('occ-png').addEventListener('click', async () => {
     try {
       const canvas = await rasterize();
-      canvas.toBlob((b) => b && download(b, 'toolcities-org-chart.png'), 'image/png');
+      canvas.toBlob((b) => b && download(b, 'toolsilk-org-chart.png'), 'image/png');
     } catch { setStatus('PNG export failed.'); }
   });
   $<HTMLButtonElement>('occ-pdf').addEventListener('click', async () => {
@@ -626,15 +616,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const page = pdf.addPage([png.width / 2, png.height / 2]);
       page.drawImage(png, { x: 0, y: 0, width: png.width / 2, height: png.height / 2 });
       const bytes = await pdf.save();
-      download(new Blob([bytes.slice()], { type: 'application/pdf' }), 'toolcities-org-chart.pdf');
+      download(new Blob([bytes.slice()], { type: 'application/pdf' }), 'toolsilk-org-chart.pdf');
       setStatus('');
     } catch { setStatus('PDF export failed.'); }
   });
   $<HTMLButtonElement>('occ-json').addEventListener('click', () => {
-    download(new Blob([toJSON(state)], { type: 'application/json' }), 'toolcities-org-chart.json');
+    download(new Blob([toJSON(state)], { type: 'application/json' }), 'toolsilk-org-chart.json');
   });
   $<HTMLButtonElement>('occ-csv-dl').addEventListener('click', () => {
-    download(new Blob([toCSV(state)], { type: 'text/csv' }), 'toolcities-org-chart.csv');
+    download(new Blob([toCSV(state)], { type: 'text/csv' }), 'toolsilk-org-chart.csv');
   });
 
   // --- import file (JSON / CSV) -----------------------------------------------

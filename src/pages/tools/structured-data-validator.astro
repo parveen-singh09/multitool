@@ -49,7 +49,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const status = document.getElementById('sd-status')!;
   const results = document.getElementById('sd-results')!;
 
-  // Required + recommended props per common schema.org type (Google's guidance, simplified).
   const SPECS: Record<string, { required: string[]; recommended: string[] }> = {
     Product: { required: ['name'], recommended: ['image', 'description', 'offers', 'aggregateRating', 'review', 'brand', 'sku'] },
     Offer: { required: ['price', 'priceCurrency'], recommended: ['availability', 'url', 'priceValidUntil'] },
@@ -78,7 +77,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     HowTo: { required: ['name', 'step'], recommended: ['image', 'totalTime', 'estimatedCost'] },
   };
 
-  // The Google rich result each type can unlock — shown as an eligibility badge.
   const RICH: Record<string, string> = {
     Product: 'Product snippet', Offer: 'Product snippet', AggregateOffer: 'Product snippet',
     Recipe: 'Recipe', Article: 'Article', NewsArticle: 'Article', BlogPosting: 'Article',
@@ -88,7 +86,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     WebSite: 'Sitelinks search box', HowTo: 'How-to',
   };
 
-  // Enum value sets (bare tokens; full schema.org URLs are normalised before lookup).
   const ENUMS: Record<string, string[]> = {
     availability: ['InStock', 'OutOfStock', 'PreOrder', 'Discontinued', 'BackOrder', 'LimitedAvailability', 'SoldOut', 'InStoreOnly', 'OnlineOnly', 'PreSale'],
     condition: ['NewCondition', 'UsedCondition', 'RefurbishedCondition', 'DamagedCondition'],
@@ -97,7 +94,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     employment: ['FULL_TIME', 'PART_TIME', 'CONTRACTOR', 'TEMPORARY', 'INTERN', 'VOLUNTEER', 'PER_DIEM', 'OTHER'],
   };
 
-  // Expected value format per property name — applied to any item, top-level or nested.
   const FMT: Record<string, string> = {
     url: 'url', logo: 'url', image: 'url', thumbnailUrl: 'url', contentUrl: 'url', embedUrl: 'url', sameAs: 'url',
     datePublished: 'date', dateModified: 'date', datePosted: 'date', validThrough: 'date', uploadDate: 'date', priceValidUntil: 'date',
@@ -113,21 +109,20 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?)?$/.test(s);
   const isDuration = (s: string) => /^P(?=[\dT])(\d+Y)?(\d+M)?(\d+W)?(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+S)?)?$/.test(s);
 
-  // Validate one property's value against its expected format; return an error msg or null.
   function fmtError(prop: string, val: any): string | null {
     const kind = FMT[prop];
     if (!kind) return null;
     for (const raw of Array.isArray(val) ? val : [val]) {
-      if (raw && typeof raw === 'object') continue; // nested objects handled by recursion
+      if (raw && typeof raw === 'object') continue; 
       const s = String(raw).trim();
       if (s === '') continue;
-      if (kind === 'url' && !/^https?:\/\//i.test(s)) return `"${prop}" should be an absolute URL (got "${trunc(s)}").`;
+      if (kind === 'url' && !/^https?:\/\
       if (kind === 'date' && !isDate(s)) return `"${prop}" should be an ISO 8601 date, e.g. 2024-01-31 (got "${trunc(s)}").`;
       if (kind === 'duration' && !isDuration(s)) return `"${prop}" should be an ISO 8601 duration, e.g. PT30M (got "${trunc(s)}").`;
       if (kind === 'number' && isNaN(Number(s))) return `"${prop}" should be numeric (got "${trunc(s)}").`;
       if (kind.startsWith('enum:')) {
         const set = ENUMS[kind.slice(5)];
-        const norm = s.replace(/^https?:\/\/schema\.org\//i, '').replace(/.*\//, '');
+        const norm = s.replace(/^https?:\/\/schema\.org\
         if (!set.includes(norm)) return `"${prop}" = "${trunc(s)}" is not a recognised value (expected e.g. ${set.slice(0, 3).join(', ')}…).`;
       }
     }
@@ -144,9 +139,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   function extractBlocks(text: string): string[] {
     const t = text.trim();
     if (!t) return [];
-    // If it looks like raw JSON, use as-is.
+
     if (t.startsWith('{') || t.startsWith('[')) return [t];
-    // Otherwise pull ld+json script blocks from HTML.
+
     const blocks: string[] = [];
     const re = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
     let m;
@@ -154,7 +149,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return blocks;
   }
 
-  // Flatten @graph and arrays into a list of typed items.
   function collectItems(parsed: any): any[] {
     const items: any[] = [];
     const walk = (node: any) => {
@@ -178,9 +172,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return v !== undefined && v !== null && !(typeof v === 'string' && v.trim() === '') && !(Array.isArray(v) && v.length === 0);
   }
 
-  // Validate one node against its type spec + value formats, then recurse into
-  // any nested typed objects. `top` gates the "unknown type" warning to the
-  // outermost item so nested untyped/unknown objects don't spam warnings.
   function checkNode(item: any, issues: { level: string; msg: string }[], top: boolean) {
     if (!item || typeof item !== 'object') return;
     const label = typeName(item);
@@ -199,14 +190,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }
     if (!matched && top) issues.push({ level: 'warning', msg: `No property rules known for "${label}" — checked structure and values only.` });
 
-    // Value-format checks for scalar properties on this node.
     for (const key of Object.keys(item)) {
       if (key.startsWith('@')) continue;
       const err = fmtError(key, item[key]);
       if (err) issues.push({ level: 'error', msg: err });
     }
 
-    // bestRating/worstRating sanity: ratingValue must sit within the range.
     if (hasProp(item, 'ratingValue')) {
       const rv = Number(item.ratingValue);
       const best = hasProp(item, 'bestRating') ? Number(item.bestRating) : 5;

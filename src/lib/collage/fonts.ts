@@ -1,6 +1,5 @@
-// Curated font list for the Text panel. Each entry maps a display label to a
-// CSS font-family and a lazy @fontsource loader. Fonts load locally (no Google
-// Fonts network call). System fonts have no loader.
+
+
 export interface FontDef {
   label: string;
   family: string;
@@ -32,21 +31,19 @@ export const FONTS: FontDef[] = [
 
 const loaded = new Set<string>();
 
-// Loads the @fontsource package for `family` (once) and waits for the browser
-// to have the face ready, so Fabric re-renders with the real glyphs.
 export async function ensureFont(family: string): Promise<void> {
   const def = FONTS.find((f) => f.family === family);
-  if (!def?.load) return; // system font — already available
+  if (!def?.load) return; 
   if (!loaded.has(family)) {
     await def.load();
     loaded.add(family);
   }
-  // First family token, stripped of fallbacks/quotes, for document.fonts.load.
+
   const name = family.split(',')[0].replace(/['"]/g, '').trim();
   try {
     await document.fonts.load(`24px "${name}"`);
     await document.fonts.ready;
   } catch {
-    /* font load best-effort; fall back to whatever renders */
+
   }
 }

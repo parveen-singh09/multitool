@@ -83,7 +83,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const input = document.getElementById('pnv-in') as HTMLInputElement;
   const country = document.getElementById('pnv-country') as HTMLSelectElement;
 
-  // libphonenumber's full country list (~245), sorted by localized name.
   let regionNames: Intl.DisplayNames | undefined;
   try {
     regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
@@ -95,8 +94,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     .map((code) => ({ code, name: nameOf(code), cc: getCountryCallingCode(code as CountryCode) }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  // Hidden <select> stays the source of truth — everything downstream reads
-  // country.value, so the custom flag dropdown just drives it.
   country.append(
     ...COUNTRIES.map((o) => {
       const el = document.createElement('option');
@@ -114,7 +111,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const search = document.getElementById('pnv-country-search') as HTMLInputElement;
   const list = document.getElementById('pnv-country-list')!;
 
-  // One <li> per country, with a flag image (hidden if it fails to load).
   const rows = COUNTRIES.map((o) => {
     const li = document.createElement('li');
     li.role = 'option';

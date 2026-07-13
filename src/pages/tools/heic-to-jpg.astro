@@ -88,17 +88,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const fmtSize = (n: number) => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(2) + ' MB';
 
   qEl.addEventListener('input', () => (qval.textContent = qEl.value + '%'));
-  // PNG is lossless — hide the quality control when it has no effect.
+
   const syncQuality = () => qwrap.style.display = fmtEl.value === 'image/png' ? 'none' : 'flex';
   fmtEl.addEventListener('change', syncQuality);
   syncQuality();
 
-  // Each item caches its decoded PNG so re-encoding on option changes is instant (no HEIC re-decode).
   type Item = { file: File; decoded?: Blob; name?: string; blob?: Blob; w?: number; h?: number; url?: string; error?: boolean };
   const items: Item[] = [];
 
-  // Minimal STORE-method (uncompressed) ZIP — no dependency needed for a few images.
-  // ponytail: store only + zeroed mod-time; add DEFLATE only if archives get large.
   function crc32(buf: Uint8Array) {
     let crc = 0xffffffff;
     for (let i = 0; i < buf.length; i++) {
@@ -130,10 +127,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     parts.push(u32(0x06054b50), u16(0), u16(0), u16(entries.length), u16(entries.length), u32(cdSize), u32(cdStart), u16(0));
     return new Blob(parts, { type: 'application/zip' });
   }
-  // self-check: known CRC32 of "123456789" is 0xCBF43926.
+
   if (crc32(new TextEncoder().encode('123456789')) !== 0xcbf43926) console.error('crc32 self-check failed');
 
-  // Decode HEIC → re-encode via canvas so format/quality/resize/metadata-strip all apply uniformly.
   async function reencode(srcBlob: Blob, fmt: string, quality: number, maxDim: number) {
     const img = await createImageBitmap(srcBlob);
     let { width, height } = img;

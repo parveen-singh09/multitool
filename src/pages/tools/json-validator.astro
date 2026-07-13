@@ -94,7 +94,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return indentSel.value === 'tab' ? '\t' : Number(indentSel.value);
   }
 
-  // ---- Line-number gutter (kept in sync with content + scroll) ----
   function syncGutter() {
     const n = input.value.split('\n').length;
     const nums = Array.from({ length: n }, (_, i) => i + 1).join('\n');
@@ -103,7 +102,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   }
   input.addEventListener('scroll', syncGutter);
 
-  // Try to derive a 0-based character position from the parser message.
   function positionFromError(msg: string, text: string): number | null {
     const posMatch = msg.match(/position (\d+)/i);
     if (posMatch) return Math.min(Number(posMatch[1]), text.length);
@@ -127,9 +125,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return { line, col };
   }
 
-  // Multi-line context: ±2 lines around the error, with a mini gutter, the bad
-  // line tinted, and a caret under the offending column. Built via DOM so
-  // untrusted input is never interpolated into innerHTML.
   function renderCaret(text: string, line: number, col: number) {
     caret.replaceChildren();
     const lines = text.split('\n');
@@ -264,8 +259,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </script>
 
 <style>
-  /* Line-number gutter overlaid on the shared .hl-edit editor. Numbers align
-     because the gutter shares the editor's font, size and 1.55 line-height. */
+
   .jv-editor > pre.hl-block,
   .jv-editor > textarea {
     padding-left: 3.25rem;
@@ -291,7 +285,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     color: #e08585;
     background: color-mix(in srgb, #d14d4d 12%, transparent);
   }
-  /* Copy button floats top-right inside the preview panel. */
+
   #jv-preview { padding-top: 2.75rem; }
   .jv-copy-btn {
     position: absolute;

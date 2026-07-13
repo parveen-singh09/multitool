@@ -1,27 +1,22 @@
-// Per-nationality name + address data banks for the user-profile generator.
-// All fictional. Phone/postcode use each country's real *format* with random
-// digits (reserved/fictional ranges where a real number could collide).
-//
-// Each locale supplies name banks, a city list, a street/postcode/phone
-// pattern, and a region label. Address assembly lives in fakegen.ts.
+
 
 import { randInt, pick } from './random';
 
 export interface Locale {
-  key: string;      // ISO-3166 alpha-2, lowercase (randomuser.me "nat" code)
-  label: string;    // Human name, e.g. "United States"
-  flag: string;     // Emoji flag
+  key: string;      
+  label: string;    
+  flag: string;     
   firstM: readonly string[];
   firstF: readonly string[];
   last: readonly string[];
   cities: readonly string[];
   streets: readonly string[];
-  streetTypes: readonly string[]; // empty => street name already complete
-  regions: readonly string[];     // state/province/county names
-  regionLabel: string;            // "State" | "Province" | "County" | "Region"
-  phone: () => string;            // country-format number, random digits
-  postcode: () => string;         // country-format postal code
-  // Compose a street line from a house number + street + type.
+  streetTypes: readonly string[]; 
+  regions: readonly string[];     
+  regionLabel: string;            
+  phone: () => string;            
+  postcode: () => string;         
+
   streetLine: (num: number, street: string, type: string) => string;
 }
 

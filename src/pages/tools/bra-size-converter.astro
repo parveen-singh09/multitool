@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="bra-size-converter">
   <div class="flex flex-col gap-6">
-    <!-- Known-size converter -->
+
     <div class="flex flex-col gap-3">
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">
@@ -27,7 +27,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <p class="text-[13px] text-ink-tertiary">Enter band and cup together, e.g. <span class="font-mono">34C</span>, <span class="font-mono">75C</span> or <span class="font-mono">90D</span>. Don't know your size? Use the measurement calculator below.</p>
     </div>
 
-    <!-- Measurement calculator -->
     <div class="panel p-4">
       <span class="eyebrow text-ink-subtle">Find my size from measurements</span>
       <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-[1fr_1fr_auto_auto]">
@@ -55,7 +54,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <p id="br-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
 
-    <!-- Equivalents -->
     <div>
       <div class="flex items-center justify-between">
         <span class="text-[13px] text-ink-subtle">Equivalent sizes</span>
@@ -65,7 +63,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <p class="mt-2 text-[12px] text-ink-tertiary">Tap any card to copy that size.</p>
     </div>
 
-    <!-- Sister sizes -->
     <div id="br-sister-wrap" class="hidden">
       <span class="text-[13px] text-ink-subtle">Sister sizes <span class="text-ink-tertiary">(same cup volume, different band — shown in your selected region)</span></span>
       <div id="br-sister" class="mt-2 flex flex-wrap gap-2"></div>
@@ -94,22 +91,19 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
-  // Index-aligned size tables. Each region shares a common index space:
-  //   band index → one step per 5cm / 2 inches; cup index → one step per 2cm / 1 inch.
-  // So the same [bandIdx, cupIdx] pair names the equivalent size in every region.
-  const US_BANDS = [28, 30, 32, 34, 36, 38, 40, 42, 44];          // inches
-  const EU_BANDS = [60, 65, 70, 75, 80, 85, 90, 95, 100];         // cm
-  const FR_BANDS = EU_BANDS.map((b) => b + 15);                   // FR/ES/BE = EU + 15
-  const AU_BANDS = US_BANDS.map((b) => b - 22);                   // dress size: 34 → 12
-  const IT_BANDS = EU_BANDS.map((b) => b / 5 - 12);               // 60 → 0, 75 → 3
 
-  // Cup ladders (index aligned). US, UK diverge from DD upward; EU/JP stay single-letter.
+  const US_BANDS = [28, 30, 32, 34, 36, 38, 40, 42, 44];          
+  const EU_BANDS = [60, 65, 70, 75, 80, 85, 90, 95, 100];         
+  const FR_BANDS = EU_BANDS.map((b) => b + 15);                   
+  const AU_BANDS = US_BANDS.map((b) => b - 22);                   
+  const IT_BANDS = EU_BANDS.map((b) => b / 5 - 12);               
+
   const CUPS_US = ['AA', 'A', 'B', 'C', 'D', 'DD', 'DDD', 'G', 'H', 'I', 'J'];
   const CUPS_UK = ['AA', 'A', 'B', 'C', 'D', 'DD', 'E', 'F', 'FF', 'G', 'GG'];
   const CUPS_EU = ['AA', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
 
   type Region = { label: string; bands: number[]; cups: string[] };
-  // AU follows UK cups; IT/JP follow EU cups. ponytail: common simplification, brands vary anyway.
+
   const REGIONS: Record<string, Region> = {
     US: { label: 'US / CA', bands: US_BANDS, cups: CUPS_US },
     UK: { label: 'UK', bands: US_BANDS, cups: CUPS_UK },
@@ -137,13 +131,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   function clearOut() { result.innerHTML = ''; sisterWrap.classList.add('hidden'); copyBtn.classList.add('hidden'); }
 
   function parse(raw: string): { band: number; cup: string } | null {
-    // Allow 1–3 digit bands (Italy uses 0–8) and 1–3 letter cups.
+
     const m = raw.trim().toUpperCase().match(/^(\d{1,3})\s*([A-K]{1,3})$/);
     if (!m) return null;
     return { band: Number(m[1]), cup: m[2] };
   }
 
-  // Resolve a typed size in `region` to the shared [bandIdx, cupIdx], or null if unknown.
   function toIndices(regionKey: string, band: number, cup: string): { bandIdx: number; cupIdx: number } | null {
     const r = REGIONS[regionKey];
     const bandIdx = r.bands.indexOf(band);

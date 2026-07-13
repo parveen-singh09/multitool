@@ -24,7 +24,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <p id="rn-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
 
-    <!-- Place-value breakdown: how the numeral decomposes, like the tables competitors show. -->
     <div id="rn-breakdown" class="hidden flex-col gap-2">
       <span class="eyebrow text-ink-tertiary">Breakdown</span>
       <div class="panel flex flex-wrap items-center gap-2 p-3 font-mono text-sm">
@@ -45,7 +44,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <p class="text-[13px] text-ink-tertiary">A bar over a numeral (a vinculum, shown here as a combining overline, e.g. <span class="font-mono">V̄</span> = 5,000) multiplies it by 1,000 for values above 3,999.</p>
 
-    <!-- Date → Roman numerals. Top competitors only link out to a separate page; this is inline. -->
     <div class="flex flex-col gap-3 border-t pt-4" style="border-color:var(--color-hairline)">
       <span class="eyebrow text-ink-tertiary">Date to Roman numerals</span>
       <div class="flex flex-wrap items-end gap-3">
@@ -123,9 +121,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     [5, 'V'], [4, 'IV'], [1, 'I'],
   ];
 
-  // Decompose n into ordered Roman segments with their numeric values (drives both
-  // the numeral string and the breakdown table). Segments ≥ 4000 get an overlined
-  // (×1000) form via a combining macron on each character.
   function segments(n: number): { sym: string; val: number }[] {
     const out: { sym: string; val: number }[] = [];
     let thousands = Math.floor(n / 1000);
@@ -155,7 +150,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const v = vals[s[i]];
       if (v < prev) total -= v; else { total += v; prev = v; }
     }
-    // round-trip validation to reject malformed numerals like IIII or VX
+
     if (toRoman(total).replace(/̄/g, '') !== s) return null;
     return total;
   }

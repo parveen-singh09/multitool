@@ -1,27 +1,24 @@
-// Shared unit-conversion engine. Imported by the client script in
-// UnitConverter.astro and by any page that needs the category metadata.
-// Linear categories store a factor to a base unit; temperature and fuel
-// economy are non-linear and handled by explicit functions.
+
 
 export interface UnitCategory {
-  /** URL slug of the dedicated tool page. */
+
   slug: string;
-  /** Display label + <h1>. */
+
   name: string;
-  /** Card tagline. */
+
   tagline: string;
-  /** ~150-char meta description. */
+
   description: string;
   keywords: string[];
-  /** 24x24 line-icon path. */
+
   icon: string;
-  /** Linear units: name -> factor relative to the base unit. */
+
   units?: Record<string, number>;
-  /** Non-linear engine key. */
+
   special?: 'temp' | 'fuel';
-  /** Default "from" unit label. */
+
   from?: string;
-  /** Default "to" unit label. */
+
   to?: string;
 }
 
@@ -284,7 +281,7 @@ export const UNIT_CATEGORIES: UnitCategory[] = [
     from: 'Degree',
     to: 'Radian',
     units: {
-      // base unit: radian
+
       Radian: 1,
       Degree: 0.0174532925199433,
       Gradian: 0.015707963267949,
@@ -304,7 +301,7 @@ export const UNIT_CATEGORIES: UnitCategory[] = [
     from: 'Megahertz (MHz)',
     to: 'Hertz (Hz)',
     units: {
-      // base unit: hertz
+
       'Hertz (Hz)': 1,
       'Kilohertz (kHz)': 1e3,
       'Megahertz (MHz)': 1e6,
@@ -344,10 +341,8 @@ export function getCategory(slug: string): UnitCategory | undefined {
   return UNIT_CATEGORIES.find((c) => c.slug === slug);
 }
 
-// ---- Non-linear engines ----
-
 export function tempTo(base: number, unit: string): number {
-  // base is Celsius
+
   switch (unit) {
     case 'Fahrenheit': return base * 9 / 5 + 32;
     case 'Kelvin': return base + 273.15;
@@ -356,7 +351,7 @@ export function tempTo(base: number, unit: string): number {
   }
 }
 export function tempFrom(value: number, unit: string): number {
-  // returns Celsius
+
   switch (unit) {
     case 'Fahrenheit': return (value - 32) * 5 / 9;
     case 'Kelvin': return value - 273.15;
@@ -366,14 +361,13 @@ export function tempFrom(value: number, unit: string): number {
 }
 export const TEMP_UNITS = ['Celsius', 'Fahrenheit', 'Kelvin', 'Rankine'];
 
-// Fuel economy — convert everything through km/L as the base.
 export const FUEL_UNITS = ['MPG (US)', 'MPG (Imperial)', 'km/L', 'L/100km'];
 export function fuelToKmPerL(value: number, unit: string): number {
   switch (unit) {
-    case 'MPG (US)': return value * 0.4251437075; // mi/gal(US) -> km/L
-    case 'MPG (Imperial)': return value * 0.4251437 * 1.20095; // via imperial gallon
+    case 'MPG (US)': return value * 0.4251437075; 
+    case 'MPG (Imperial)': return value * 0.4251437 * 1.20095; 
     case 'L/100km': return value === 0 ? Infinity : 100 / value;
-    default: return value; // km/L
+    default: return value; 
   }
 }
 export function fuelFromKmPerL(kmPerL: number, unit: string): number {

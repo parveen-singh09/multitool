@@ -1,6 +1,4 @@
-// Fake-record builders shared by the fake-data generators (name, address,
-// profile, mock JSON, CSV). All values are fictional and use reserved/test
-// ranges where a real value could otherwise collide with a person.
+
 
 import { randInt, pick, randFloat, randHex } from './random';
 import { getLocale, type Locale } from './locales';

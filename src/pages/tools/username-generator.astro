@@ -11,7 +11,7 @@ const TYPES = [
 
 <ToolLayout slug="username-generator">
   <div class="flex flex-col gap-5">
-    <!-- Type presets -->
+
     <div class="flex flex-wrap gap-2" role="tablist" aria-label="Username type">
       {TYPES.map((t, i) => (
         <button
@@ -23,7 +23,6 @@ const TYPES = [
       ))}
     </div>
 
-    <!-- Theme + keyword -->
     <div class="flex flex-wrap items-end gap-4">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Theme
         <select id="un-theme" class="field w-40">
@@ -38,13 +37,11 @@ const TYPES = [
       </label>
     </div>
 
-    <!-- Length slider -->
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">
       <span>Max length: <span id="un-len-val" class="font-mono text-ink">18</span></span>
       <input id="un-len" type="range" min="6" max="30" value="18" class="w-full max-w-md accent-[#5e6ad2]" />
     </label>
 
-    <!-- Advanced toggles -->
     <div class="flex flex-wrap items-center gap-4">
       <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="un-num" type="checkbox" class="accent-[#5e6ad2]" checked /> Add numbers</label>
       <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="un-leet" type="checkbox" class="accent-[#5e6ad2]" /> Leetify (3, 0, 1…)</label>
@@ -62,7 +59,6 @@ const TYPES = [
 
     <div id="un-out" class="grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
 
-    <!-- Availability: updates to the last-tapped username -->
     <div id="un-avail" class="hidden flex-wrap items-center gap-2 border-t border-hairline pt-4 text-sm text-ink-subtle">
       <span>Check <span id="un-avail-name" class="font-mono text-ink"></span> on:</span>
       <a data-site="youtube.com/@" target="_blank" rel="noopener noreferrer" class="chip">YouTube</a>
@@ -148,19 +144,16 @@ const TYPES = [
   const leetMap: Record<string, string> = { e: '3', o: '0', s: '5', a: '4', t: '7', i: '1' };
   const leet = (s: string) => s.replace(/[eosati]/gi, (c) => leetMap[c.toLowerCase()] ?? c);
 
-  // Noun bank for the selected theme (All => union of every theme).
   function nouns(): string[] {
     const t = themeEl.value;
     if (t === 'All' || !USERNAME_THEMES[t]) return Object.values(USERNAME_THEMES).flat();
     return USERNAME_THEMES[t];
   }
 
-  // Build one raw (pre-length, pre-leet) username for the active type.
   function core(maxLen: number): string {
     const kw = clean(wordEl.value.trim());
     const noun = pick(nouns());
 
-    // Random-characters mode: keyword (or short base) + filler to length.
     if (randEl.checked) {
       const base = kw ? kw : cap(pick(USERNAME_ADJ));
       const fill = Math.max(3, maxLen - base.length);
@@ -175,7 +168,7 @@ const TYPES = [
     }
 
     if (type === 'social') {
-      // lowercase, handle-style with . or _ separators
+
       const a = kw ? kw.toLowerCase() : pick(USERNAME_ADJ).toLowerCase();
       const sep = pick(['', '.', '_']);
       return `${a}${sep}${noun.toLowerCase()}`;

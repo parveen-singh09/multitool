@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="area-converter">
   <div id="ac-root" class="flex flex-col gap-6">
-    <!-- Primary from / to converter -->
+
     <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
       <div class="flex flex-col gap-1">
         <label class="text-sm text-ink-subtle" for="ac-from-val">From</label>
@@ -32,7 +32,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Precision control -->
     <div class="flex flex-wrap items-center gap-3">
       <label class="text-sm text-ink-subtle" for="ac-precision">Decimal places</label>
       <select id="ac-precision" class="field w-auto">
@@ -53,7 +52,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p id="ac-error" class="hidden text-[13px] text-primary-hover" role="alert" aria-live="polite"></p>
     <p id="ac-formula" class="text-[13px] text-ink-tertiary"></p>
 
-    <!-- Convert all units at once -->
     <div>
       <div class="mb-2 flex items-center justify-between">
         <p class="text-[13px] text-ink-subtle">All units at once</p>
@@ -77,10 +75,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
-  // Self-contained area converter. Units are factors to the base unit
-  // (square metre). All land units below are exact definitions so results
-  // hold at any precision. ponytail: inline data — page-specific, richer
-  // than the shared units.ts list which this page intentionally supersedes.
+
   const UNITS: Record<string, number> = {
     'Square millimetre (mm²)': 1e-6,
     'Square centimetre (cm²)': 1e-4,
@@ -118,14 +113,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const allLabel = $('ac-all-label') as HTMLElement;
 
   function parseInput(raw: string): number {
-    // Accept commas as thousands separators and surrounding whitespace.
+
     const cleaned = raw.trim().replace(/,/g, '');
     if (cleaned === '') return NaN;
     return Number(cleaned);
   }
 
-  // Format a number: honour the precision selector, else pick sensible
-  // significant figures without trailing noise. Optionally group thousands.
   function fmt(n: number): string {
     if (!isFinite(n)) return n > 0 ? '∞' : '-∞';
     if (n === 0) return '0';
@@ -133,12 +126,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     let out: string;
     const abs = Math.abs(n);
     if (p === 'auto') {
-      if (abs >= 1e15 || abs < 1e-6) return n.toExponential(6); // exp form: skip grouping
+      if (abs >= 1e15 || abs < 1e-6) return n.toExponential(6); 
       out = String(Math.round(n * 1e9) / 1e9);
     } else {
       const d = Number(p);
-      // Respect the chosen precision literally; only escape to exponential for
-      // magnitudes where toFixed loses digits.
+
       if (abs >= 1e16) return n.toExponential(Math.min(d, 10) || 6);
       out = n.toFixed(d);
     }
@@ -241,7 +233,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       ta.style.opacity = '0';
       document.body.appendChild(ta);
       ta.select();
-      try { document.execCommand('copy'); } catch { /* ignore */ }
+      try { document.execCommand('copy'); } catch 
       document.body.removeChild(ta);
     }
     const prev = btn.getAttribute('title');

@@ -1,7 +1,6 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 
-// value → curlconverter export name. Grouped for the <optgroup> UI below.
 const LANG_GROUPS: { label: string; opts: [string, string, string][] }[] = [
   { label: 'JavaScript', opts: [
     ['javascript', 'fetch', 'toJavaScript'],
@@ -72,7 +71,6 @@ const LANG_GROUPS: { label: string; opts: [string, string, string][] }[] = [
   ]},
 ];
 
-// Quick-start examples — one click loads a representative curl command.
 const PRESETS: { label: string; cmd: string }[] = [
   { label: 'GET', cmd: 'curl https://api.example.com/users' },
   { label: 'POST JSON', cmd: `curl -X POST https://api.example.com/users -H 'Content-Type: application/json' -d '{"name":"Ada","age":36}'` },
@@ -173,8 +171,6 @@ const PRESETS: { label: string; cmd: string }[] = [
   const err = document.getElementById('ct-error')!;
   const STORE = 'curl-to-code:lang';
 
-  // Language value → highlight.js id. base = value before '-' (e.g. node-axios →
-  // node); only the mismatches are listed, the rest map to their own name.
   const HL: Record<string, string> = {
     node: 'javascript', objc: 'objectivec', cfml: 'xml',
     httpie: 'bash', wget: 'bash', ansible: 'yaml', har: 'json',
@@ -184,7 +180,6 @@ const PRESETS: { label: string; cmd: string }[] = [
     return HL[base] ?? base;
   }
 
-  // Language value → download file extension (keyed by the base before '-').
   const EXT: Record<string, string> = {
     javascript: 'js', node: 'js', python: 'py', php: 'php', java: 'java',
     ruby: 'rb', go: 'go', rust: 'rs', csharp: 'cs', c: 'c', swift: 'swift',
@@ -194,7 +189,6 @@ const PRESETS: { label: string; cmd: string }[] = [
     http: 'http', json: 'json', har: 'har',
   };
 
-  // curlconverter is loaded lazily; the shared highlight helper loads hljs itself.
   let cc: Record<string, (s: string) => unknown> | null = null;
   let loading: Promise<void> | null = null;
   function ensureEngine(): Promise<void> {
@@ -216,7 +210,7 @@ const PRESETS: { label: string; cmd: string }[] = [
     if (!output.textContent) output.textContent = 'Loading converter…';
     try {
       await ensureEngine();
-      // Warn variants return [code, warnings]; fall back to the plain fn if absent.
+
       const warnFn = (cc as any)[fn + 'Warn'] ?? (cc as any)[fn];
       const res = warnFn(input.value);
       const [code, warnings] = Array.isArray(res) ? res : [res, []];
@@ -236,11 +230,8 @@ const PRESETS: { label: string; cmd: string }[] = [
     }
   }
 
-  // Highlighted, editable curl input (bash grammar). rerender() re-colors after a
-  // programmatic value assignment, which does not fire an 'input' event.
   const rerender = wireInput(input, inHl, () => 'bash', run);
 
-  // Restore last-used language.
   const saved = localStorage.getItem(STORE);
   if (saved && [...langSel.options].some((o) => o.value === saved)) langSel.value = saved;
 

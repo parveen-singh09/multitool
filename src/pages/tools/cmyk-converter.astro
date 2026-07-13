@@ -2,7 +2,6 @@
 import ToolLayout from '../../layouts/ToolLayout.astro';
 import ColorFormats from '../../components/ColorFormats.astro';
 
-// CMYK channels for the dedicated slider panel below the all-formats converter.
 const CHANNELS = [
   { key: 'c', label: 'Cyan',    dot: '#00aeef' },
   { key: 'm', label: 'Magenta', dot: '#ec008c' },
@@ -15,8 +14,6 @@ const CHANNELS = [
   <div class="flex flex-col gap-6">
     <ColorFormats focus="cmyk" />
 
-    <!-- Dedicated CMYK sliders: the signature control competitors offer.
-         Stays in two-way sync with the all-formats converter above. -->
     <div class="panel flex flex-col gap-4 rounded-lg p-4">
       <div class="flex items-baseline justify-between gap-3">
         <span class="eyebrow text-ink-subtle">CMYK sliders</span>
@@ -69,10 +66,7 @@ const CHANNELS = [
 </ToolLayout>
 
 <script>
-  // Bridge the CMYK slider panel to the shared ColorFormats converter via its
-  // #cf-cmyk field. We write + dispatch 'input' to drive the whole converter,
-  // and poll the field to reflect changes made from the picker / other formats
-  // (that component updates fields programmatically without firing events).
+
   const cmykField = document.getElementById('cf-cmyk') as HTMLInputElement | null;
   const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-chan]'));
   const outEl = document.getElementById('ck-out');
@@ -135,7 +129,7 @@ const CHANNELS = [
         await navigator.clipboard.writeText(outEl?.textContent || cmykField.value);
         const old = btn.textContent; btn.textContent = 'Copied!';
         setTimeout(() => (btn.textContent = old), 1400);
-      } catch { /* clipboard unavailable */ }
+      } catch 
     });
 
     document.getElementById('ck-reset')?.addEventListener('click', () => {

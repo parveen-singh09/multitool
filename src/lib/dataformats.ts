@@ -1,24 +1,18 @@
-// Shared data-format parsing helpers used by the converter tool pages.
-// Pure functions, no DOM — safe to import into any client script.
-// These are minimal, self-contained parsers (no npm packages); they cover the
-// common subset of each format rather than the full specification.
+
 
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 
-/* ────────────────────────── scalar coercion ────────────────────────── */
-
-// Interpret an unquoted YAML/TOML-style scalar token into a JSON value.
 export function coerceScalar(raw: string): Json {
   const t = raw.trim();
   if (t === '' || t === '~' || t === 'null' || t === 'Null' || t === 'NULL') return null;
   if (t === 'true' || t === 'True' || t === 'TRUE') return true;
   if (t === 'false' || t === 'False' || t === 'FALSE') return false;
-  // Quoted string — strip and unescape.
+
   if ((t.startsWith('"') && t.endsWith('"') && t.length >= 2) ||
       (t.startsWith("'") && t.endsWith("'") && t.length >= 2)) {
     return unquote(t);
   }
-  // Number (int or float, no leading zeros ambiguity for our purposes).
+
   if (/^[+-]?\d+$/.test(t)) {
     const n = Number(t);
     if (Number.isSafeInteger(n)) return n;
@@ -30,12 +24,11 @@ export function coerceScalar(raw: string): Json {
   return t;
 }
 
-// Remove surrounding quotes and unescape a quoted scalar.
 export function unquote(t: string): string {
   const q = t[0];
   const body = t.slice(1, -1);
-  if (q === "'") return body.replace(/''/g, "'"); // single quotes: only '' escape
-  // double quotes: standard backslash escapes
+  if (q === "'") return body.replace(/''/g, "'"); 
+
   return body.replace(/\\(["\\/nrtbf]|u[0-9a-fA-F]{4})/g, (_m, esc: string) => {
     switch (esc[0]) {
       case 'n': return '\n';
@@ -52,8 +45,6 @@ export function unquote(t: string): string {
   });
 }
 
-/* ─────────────────────────────── YAML ──────────────────────────────── */
-
 interface YamlLine {
   indent: number;
   content: string;
@@ -61,8 +52,6 @@ interface YamlLine {
   lineNo: number;
 }
 
-// Minimal YAML parser: nested maps, lists, scalars, quoted strings,
-// numbers/bools/null, and inline flow collections ([..] / {..}).
 export function parseYaml(text: string): Json {
   const lines: YamlLine[] = [];
   const src = text.replace(/\r\n?/g, '\n').split('\n');
@@ -91,7 +80,6 @@ function stripYamlComment(line: string): string {
   return line;
 }
 
-// Parse a block of YAML lines at a given indent; returns [value, nextIndex].
 function parseYamlBlock(lines: YamlLine[], start: number, indent: number): [Json, number] {
   if (start >= lines.length) return [null, start];
   const first = lines[start];
@@ -111,12 +99,12 @@ function parseYamlList(lines: YamlLine[], start: number, indent: number): [Json[
     if (!(line.content === '-' || line.content.startsWith('- '))) break;
     const rest = line.content === '-' ? '' : line.content.slice(2).trim();
     if (rest === '') {
-      // Nested block on following lines.
+
       const [val, next] = parseYamlBlock(lines, i + 1, lines[i + 1]?.indent ?? indent + 1);
       arr.push(val);
       i = next;
     } else if (/^[^:\s"'{[][^:]*:(\s|$)/.test(rest) || /^["'].*["']\s*:/.test(rest)) {
-      // Inline map item beginning on the dash line: "- key: value".
+
       const itemIndent = line.indent + 2;
       const synthetic: YamlLine[] = [{ ...line, indent: itemIndent, content: rest }];
       let j = i + 1;
@@ -178,17 +166,16 @@ function splitYamlKey(line: YamlLine): { key: string; rest: string } {
 function parseYamlScalar(token: string): Json {
   const t = token.trim();
   if (t.startsWith('[') || t.startsWith('{')) return parseYamlFlow(t);
-  if (t === '|' || t === '>') return ''; // block scalar indicators unsupported → empty
+  if (t === '|' || t === '>') return ''; 
   return coerceScalar(t);
 }
 
-// Parse inline flow collections like [1, 2, "x"] or {a: 1, b: 2}.
 function parseYamlFlow(t: string): Json {
-  // Reuse JSON where possible by normalising unquoted keys/values.
+
   try {
     return JSON.parse(t) as Json;
   } catch {
-    // Fallback: naive split honouring nesting.
+
     if (t.startsWith('[')) {
       const inner = t.slice(1, -1).trim();
       if (inner === '') return [];
@@ -395,8 +382,6 @@ function yamlScalar(v: Json): string {
   if (typeof v === 'string') return /[:#\-{}[\],&*!|>'"%@`]|^\s|\s$|^$|^(true|false|null|~)$|^[+-]?\d/.test(v) ? JSON.stringify(v) : v;
   return String(v);
 }
-
-/* ─────────────────────────── JSON → XML ────────────────────────────── */
 
 const xmlEsc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 

@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="color-converter">
   <div class="flex flex-col gap-6">
-    <!-- Picker + live preview -->
+
     <div class="flex flex-col gap-4 sm:flex-row sm:items-stretch">
       <input id="cc-picker" type="color" value="#5e6ad2" class="h-28 w-28 shrink-0 cursor-pointer rounded-lg border border-hairline bg-surface-1" aria-label="Color picker" />
       <div id="cc-preview" class="panel flex flex-1 items-end justify-between rounded-lg p-3" style="background:#5e6ad2">
@@ -13,14 +13,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Alpha -->
     <label class="flex items-center gap-3 text-[13px] text-ink-subtle">
       <span class="w-14 shrink-0">Alpha</span>
       <input id="cc-alpha" type="range" min="0" max="1" step="0.01" value="1" class="flex-1 accent-primary" aria-label="Alpha channel" />
       <span id="cc-alpha-val" class="w-12 shrink-0 text-right font-mono text-ink">1</span>
     </label>
 
-    <!-- Format fields -->
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <label class="flex flex-col gap-1">
         <span class="text-[13px] text-ink-subtle">HEX</span>
@@ -72,13 +70,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <p id="cc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
     </div>
 
-    <!-- Harmonies -->
     <div>
       <span class="eyebrow text-primary-hover">Color harmonies</span>
       <div id="cc-harmonies" class="mt-3 flex flex-col gap-4"></div>
     </div>
 
-    <!-- Tints & shades -->
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div>
         <span class="text-[13px] text-ink-subtle">Tints (toward white)</span>
@@ -143,7 +139,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const clamp = (n: number, min = 0, max = 255) => Math.min(max, Math.max(min, n));
   const round = Math.round;
 
-  // ---- Full CSS named colors (CSS Color Module 4) for exact + nearest matching.
   const NAMED: Record<string, string> = {
     aliceblue:'#f0f8ff',antiquewhite:'#faebd7',aqua:'#00ffff',aquamarine:'#7fffd4',azure:'#f0ffff',
     beige:'#f5f5dc',bisque:'#ffe4c4',black:'#000000',blanchedalmond:'#ffebcd',blue:'#0000ff',
@@ -190,7 +185,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return { name: best.name, exact: bestD === 0 };
   }
 
-  // ---- Conversions
   function hexToRgba(hex: string): RGBA | null {
     let h = hex.trim().replace(/^#/, '');
     if (h.length === 3 || h.length === 4) h = h.split('').map((c) => c + c).join('');
@@ -277,15 +271,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     };
   }
 
-  // ---- Parsers (each returns RGBA or null)
   const nums = (s: string) => (s.match(/-?\d*\.?\d+/g) || []).map(Number);
 
   function parseAny(str: string): RGBA | null {
     const s = str.trim().toLowerCase();
     if (!s) return null;
-    // named
+
     if (NAMED[s]) return hexToRgba(NAMED[s]);
-    // functional
+
     if (s.startsWith('rgb')) {
       const n = nums(s);
       if (n.length < 3) return null;
@@ -300,7 +293,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (s.startsWith('hsv') || s.startsWith('hsb')) {
       const n = nums(s);
       if (n.length < 3) return null;
-      // hsv → hsl for reuse
+
       const h = n[0], sv = clamp(n[1], 0, 100) / 100, v = clamp(n[2], 0, 100) / 100;
       const l = v * (1 - sv / 2);
       const sl = l === 0 || l === 1 ? 0 : (v - l) / Math.min(l, 1 - l);
@@ -312,11 +305,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       if (n.length < 4) return null;
       return { ...cmykToRgb(clamp(n[0], 0, 100), clamp(n[1], 0, 100), clamp(n[2], 0, 100), clamp(n[3], 0, 100)), a: 1 };
     }
-    // hex (with or without #)
+
     return hexToRgba(s);
   }
 
-  // ---- Render
   let current: RGBA = { r: 94, g: 106, b: 210, a: 1 };
 
   function fmtRgb({ r, g, b, a }: RGBA) {

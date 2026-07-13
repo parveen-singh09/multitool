@@ -122,7 +122,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
-  // CoinGecko coin id -> [symbol, name]. 100 major coins.
+
   const COINS: Record<string, [string, string]> = {
     bitcoin: ['BTC', 'Bitcoin'], ethereum: ['ETH', 'Ethereum'], tether: ['USDT', 'Tether'],
     ripple: ['XRP', 'XRP'], binancecoin: ['BNB', 'BNB'], solana: ['SOL', 'Solana'],
@@ -160,7 +160,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     'dash': ['DASH', 'Dash'],
   };
 
-  // ISO 4217 currency codes. 166 world currencies; names via Intl.DisplayNames.
+
   const FIAT_CODES: string[] = [
     'USD','EUR','GBP','JPY','CNY','INR','AUD','CAD','CHF','HKD','SGD','SEK','KRW','NOK','NZD',
     'MXN','ZAR','BRL','DKK','PLN','TWD','THB','MYR','RUB','SAR','AED','TRY','IDR','CZK','ILS',
@@ -192,33 +192,33 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const tableLabel = document.getElementById('cr-table-label')!;
   const err = document.getElementById('cr-error')!;
 
-  // Selected CoinGecko id for the custom cryptocurrency dropdown (the "from" coin).
+
   let fromId = 'bitcoin';
-  // Which side the user last edited, so the other side is the computed output.
+
   let lastEdited: 'from' | 'to' = 'from';
 
-  // USD price of one coin, keyed by CoinGecko id.
+
   let coinUsd: Record<string, number> = {};
-  // 24h price change %, keyed by CoinGecko id.
+
   let coinChg: Record<string, number> = {};
-  // Icon URL for one coin, keyed by CoinGecko id.
+
   let coinImg: Record<string, string> = {};
-  // Units of currency per 1 USD, keyed by ISO code.
+
   let fx: Record<string, number> = {};
 
-  // A "to" target is either a crypto coin (id prefixed "c:") or a fiat ISO code.
+
   const isCoinTarget = (v: string) => v.startsWith('c:');
   const targetCoinId = (v: string) => v.slice(2);
-  // USD value of one unit of the current target (coin or fiat), or undefined.
+
   function targetUsdPerUnit(v: string): number | undefined {
     if (isCoinTarget(v)) {
       const p = coinUsd[targetCoinId(v)];
-      return p ? p : undefined; // price of 1 target coin in USD
+      return p ? p : undefined; 
     }
     const r = fx[v];
-    return r ? 1 / r : undefined; // 1 fiat unit in USD
+    return r ? 1 / r : undefined; 
   }
-  // Human label + symbol for the current target, for the rate line.
+
   const targetSym = (v: string) => (isCoinTarget(v) ? COINS[targetCoinId(v)]?.[0] ?? v : v);
 
   let ccyName: { of: (c: string) => string | undefined };
@@ -232,10 +232,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const fmt = (n: number, max = 6) =>
     new Intl.NumberFormat(undefined, { maximumFractionDigits: max }).format(n);
 
-  // Round to 8 significant-ish decimals without scientific notation.
+
   const round8 = (n: number) => Math.round(n * 1e8) / 1e8;
 
-  // Coin icon <img>; empty string when no icon is known so layout stays stable.
+
   const iconImg = (id: string, size = 16) => {
     const src = coinImg[id];
     if (!src) return '';
@@ -286,7 +286,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   const escRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-  // Filter the coin listbox by the search box (matches symbol or name).
+
   function filterCoins() {
     const q = fromSearch.value.trim().toLowerCase();
     let firstVisible: HTMLElement | null = null;
@@ -299,7 +299,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (firstVisible) setActive(firstVisible);
   }
 
-  // Reflect the selected coin in the trigger button (icon + name).
+
   function updateFromTrigger() {
     const entry = COINS[fromId];
     if (!entry) return;
@@ -438,7 +438,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   toVal.addEventListener('input', () => { lastEdited = 'to'; convert(); });
   toSel.addEventListener('change', () => { convert(); renderTable(); });
 
-  // Amount presets set the "from" amount.
+
   document.querySelectorAll<HTMLButtonElement>('.cr-preset').forEach((b) =>
     b.addEventListener('click', () => {
       fromVal.value = b.dataset.amt ?? '1';
@@ -447,18 +447,18 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }),
   );
 
-  // Swap: the current "to" target becomes the "from" coin (when it is a coin),
-  // otherwise just flip the amounts and keep the value the user sees.
+
+
   swapBtn.addEventListener('click', () => {
     const tgt = toSel.value;
     if (isCoinTarget(tgt)) {
-      // from-coin <-> to-coin: exchange both sides.
+
       const newFrom = targetCoinId(tgt);
       toSel.value = 'c:' + fromId;
-      selectFrom(newFrom); // updates trigger + converts
+      selectFrom(newFrom); 
     } else {
-      // from is a coin, to is fiat — can't make a coin the target's "from",
-      // so just move the computed amount into the from box and recompute.
+
+
       const t = toVal.value;
       fromVal.value = t;
       lastEdited = 'from';
@@ -467,7 +467,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     renderTable();
   });
 
-  // Copy the result value to the clipboard.
+
   copyBtn.addEventListener('click', async () => {
     if (!toVal.value) return;
     try {
@@ -475,10 +475,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const orig = copyBtn.getAttribute('title');
       copyBtn.setAttribute('title', 'Copied!');
       setTimeout(() => copyBtn.setAttribute('title', orig ?? 'Copy result'), 1200);
-    } catch { /* clipboard unavailable */ }
+    } catch {  }
   });
 
-  // --- Custom cryptocurrency dropdown interaction ---
+
   const isOpen = () => !fromPanel.classList.contains('hidden');
 
   fromTrigger.addEventListener('click', () => (isOpen() ? closeList() : openList()));
@@ -490,8 +490,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   fromSearch.addEventListener('input', filterCoins);
 
-  // Roving highlight for keyboard users; tracks the "active" option separately
-  // from the committed selection. Only visible (unfiltered) options participate.
+
+
   const options = () =>
     Array.from(fromList.querySelectorAll<HTMLElement>('li[data-id]')).filter(
       (li) => !li.classList.contains('hidden'),
@@ -512,7 +512,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }
   });
 
-  // Keyboard navigation lives on the search box (which holds focus when open).
+
   fromSearch.addEventListener('keydown', (e) => {
     const opts = options();
     const cur = activeEl();

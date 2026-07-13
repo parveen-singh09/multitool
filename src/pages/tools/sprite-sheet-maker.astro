@@ -118,7 +118,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   .ssm-range::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:16px; height:16px; border-radius:9999px; background:#5e6ad2; border:none; cursor:pointer; }
   .ssm-range::-moz-range-thumb { width:16px; height:16px; border-radius:9999px; background:#5e6ad2; border:none; cursor:pointer; }
   .ssm-range:focus-visible { outline:2px solid rgba(94,105,209,0.5); outline-offset:2px; }
-  /* Thumbs are created in JS, so they miss Astro's scoping attribute — style them globally. */
+
   :global(.ssm-thumb) { position:relative; width:56px; height:56px; flex:0 0 auto; border:1px solid #23252a; border-radius:6px; background:#0f1011; display:flex; align-items:center; justify-content:center; cursor:grab; overflow:hidden; }
   :global(.ssm-thumb img) { max-width:100%; max-height:100%; object-fit:contain; image-rendering:pixelated; }
   :global(.ssm-thumb.dragging) { opacity:0.4; }
@@ -157,7 +157,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const ctx = canvas.getContext('2d')!;
   const animCtx = animCanvas.getContext('2d')!;
 
-  const PNG_NAME = 'toolcities-sprite-sheet.png';
+  const PNG_NAME = 'toolsilk-sprite-sheet.png';
 
   let frames: Frame[] = [];
   let placements: Placement[] = [];
@@ -190,7 +190,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }
   }
 
-  // Slice an existing sheet into cols×rows equal cells, each becomes a frame.
   function splitSheet(file: File, cols: number, rows: number) {
     err.classList.add('hidden');
     const reader = new FileReader();
@@ -420,7 +419,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         sourceSize: { w: p.w, h: p.h },
       };
     });
-    return { frames: frameMap, meta: { app: 'toolcities.com sprite sheet maker', image: PNG_NAME, format: 'RGBA8888', size: { w: canvas.width, h: canvas.height }, scale: '1' } };
+    return { frames: frameMap, meta: { app: 'toolsilk.com sprite sheet maker', image: PNG_NAME, format: 'RGBA8888', size: { w: canvas.width, h: canvas.height }, scale: '1' } };
   }
 
   function buildCss() {
@@ -454,11 +453,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   });
   document.getElementById('ssm-dl-json')!.addEventListener('click', () => {
     if (!needFrames()) return;
-    downloadBlob(new Blob([JSON.stringify(buildAtlas(), null, 2)], { type: 'application/json' }), 'toolcities-sprite-sheet.json');
+    downloadBlob(new Blob([JSON.stringify(buildAtlas(), null, 2)], { type: 'application/json' }), 'toolsilk-sprite-sheet.json');
   });
   document.getElementById('ssm-dl-css')!.addEventListener('click', () => {
     if (!needFrames()) return;
-    downloadBlob(new Blob([buildCss()], { type: 'text/css' }), 'toolcities-sprite-sheet.css');
+    downloadBlob(new Blob([buildCss()], { type: 'text/css' }), 'toolsilk-sprite-sheet.css');
   });
   document.getElementById('ssm-dl-zip')!.addEventListener('click', async () => {
     if (!needFrames()) return;
@@ -466,10 +465,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const enc = new TextEncoder();
     const zip = makeZip([
       { name: PNG_NAME, data: png },
-      { name: 'toolcities-sprite-sheet.json', data: enc.encode(JSON.stringify(buildAtlas(), null, 2)) },
-      { name: 'toolcities-sprite-sheet.css', data: enc.encode(buildCss()) },
+      { name: 'toolsilk-sprite-sheet.json', data: enc.encode(JSON.stringify(buildAtlas(), null, 2)) },
+      { name: 'toolsilk-sprite-sheet.css', data: enc.encode(buildCss()) },
     ]);
-    downloadBlob(zip, 'toolcities-sprite-sheet.zip');
+    downloadBlob(zip, 'toolsilk-sprite-sheet.zip');
   });
 
   // ---- Animation preview ----

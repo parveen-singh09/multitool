@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="frequency-converter">
   <div id="fc-root" class="flex flex-col gap-6">
-    <!-- Converter -->
+
     <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
       <div class="flex flex-col gap-1">
         <label class="text-sm text-ink-subtle" for="fc-from-val">From</label>
@@ -41,7 +41,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Precision + formula -->
     <div class="flex flex-wrap items-center gap-3">
       <label class="flex items-center gap-2 text-[13px] text-ink-subtle">
         Decimals
@@ -60,7 +59,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <p id="fc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
 
-    <!-- Derived physics readouts + all-units breakdown -->
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div class="panel panel-lift overflow-hidden">
         <div class="border-b border-hairline px-4 py-2 text-[13px] text-ink-subtle">Physical properties of this frequency</div>
@@ -73,7 +71,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Common frequency reference table -->
     <div>
       <p class="mb-2 text-[13px] text-ink-subtle">Common real-world frequencies</p>
       <div id="fc-table" class="overflow-x-auto rounded-md border border-hairline"></div>
@@ -114,14 +111,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
-  // Self-contained frequency converter. Base unit: HERTZ.
-  // No shared lib — the task scopes edits to this file only.
 
   const TAU = 2 * Math.PI;
-  const C_LIGHT = 299792458;   // m/s, speed of light in vacuum
-  const V_SOUND = 343;         // m/s, speed of sound in 20 °C air
+  const C_LIGHT = 299792458;   
+  const V_SOUND = 343;         
 
-  // hertz per 1 of each unit
   const UNITS: Record<string, number> = {
     'Hertz (Hz)': 1,
     'Kilohertz (kHz)': 1e3,
@@ -152,7 +146,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const breakdown = $('fc-breakdown');
   const table = $('fc-table');
 
-  // ---- number formatting ----
   function fmt(n: number): string {
     if (!isFinite(n)) return n > 0 ? '∞' : n < 0 ? '-∞' : '—';
     if (n === 0) return '0';
@@ -167,8 +160,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return s.includes('.') ? s.replace(/\.?0+$/, '') : s;
   }
 
-  // ---- SI auto-scaler: pick the entry whose factor the value clears ----
-  // table sorted descending by factor; returns "<value/factor> <suffix>".
   function scale(value: number, table: [number, string][]): string {
     if (!isFinite(value)) return '—';
     const abs = Math.abs(value);
@@ -337,9 +328,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       await navigator.clipboard.writeText(toVal.value);
       copyBtn.textContent = 'Copied!';
       setTimeout(() => (copyBtn.textContent = 'Copy'), 1400);
-    } catch {
-      /* clipboard blocked — no-op */
-    }
+    } catch 
   });
 
   fillUnits();

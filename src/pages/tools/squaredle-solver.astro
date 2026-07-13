@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="squaredle-solver">
   <div class="flex flex-col gap-6">
-    <!-- Controls -->
+
     <div class="flex flex-wrap items-end gap-3">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Rows
         <input id="sq-rows" type="number" min="2" max="10" value="4" class="field w-20" />
@@ -30,9 +30,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       blocked / empty cell. You can also paste a whole grid — one row per line — into any box.
     </p>
 
-    <!-- Grid + results -->
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-[auto_1fr]">
-      <!-- Board -->
+
       <div class="flex flex-col gap-3">
         <div id="sq-grid" class="inline-grid select-none gap-1.5" aria-label="Letter grid"></div>
         <div class="flex items-center gap-3 text-[13px] text-ink-subtle">
@@ -40,7 +39,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </div>
       </div>
 
-      <!-- Results -->
       <div class="flex flex-col gap-3">
         <div class="flex flex-wrap items-center gap-3">
           <div class="panel px-3 py-2 text-center">
@@ -97,17 +95,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const exampleBtn = document.getElementById('sq-example')!;
   const copyBtn = document.getElementById('sq-copy') as HTMLButtonElement;
 
-  const CELL = 52; // px
+  const CELL = 52; 
 
   type Trie = { [k: string]: Trie | boolean } & { $?: boolean };
   let trie: Trie | null = null;
   let loadingDict: Promise<Trie> | null = null;
 
-  // { word -> path[[r,c]...] }
   let solutions = new Map<string, [number, number][]>();
   let activeWord: string | null = null;
 
-  // ── Grid rendering ─────────────────────────────────────────────
   function clampSize() {
     let r = Math.min(10, Math.max(2, parseInt(rowsEl.value) || 4));
     let c = Math.min(10, Math.max(2, parseInt(colsEl.value) || 4));

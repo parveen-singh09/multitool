@@ -4,9 +4,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="htaccess-generator">
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-    <!-- Controls -->
+
     <div class="flex flex-col gap-3">
-      <!-- Redirects -->
+
       <details class="ha-sec" open>
         <summary>Redirects &amp; HTTPS</summary>
         <div class="ha-body">
@@ -24,7 +24,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </div>
       </details>
 
-      <!-- Error pages -->
       <details class="ha-sec">
         <summary>Custom error pages</summary>
         <div class="ha-body ha-fields">
@@ -36,7 +35,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </div>
       </details>
 
-      <!-- Caching / compression -->
       <details class="ha-sec">
         <summary>Caching &amp; compression</summary>
         <div class="ha-body">
@@ -60,7 +58,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </div>
       </details>
 
-      <!-- Access control -->
       <details class="ha-sec">
         <summary>Access &amp; blocking</summary>
         <div class="ha-body">
@@ -83,7 +80,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </div>
       </details>
 
-      <!-- Password protection -->
       <details class="ha-sec">
         <summary>Password protection</summary>
         <div class="ha-body">
@@ -108,7 +104,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </div>
       </details>
 
-      <!-- Directory & misc -->
       <details class="ha-sec">
         <summary>Directory &amp; security</summary>
         <div class="ha-body">
@@ -125,7 +120,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </details>
     </div>
 
-    <!-- Output -->
     <div class="flex flex-col gap-2 lg:sticky lg:top-6 self-start">
       <label class="text-sm text-ink-subtle">.htaccess</label>
       <pre class="hl-block field min-h-72 max-h-[70vh]" style="resize:vertical;overflow:auto"><code id="ha-out" class="hljs" style="background:transparent;padding:0"></code></pre>
@@ -173,7 +167,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const out = $('ha-out') as HTMLElement;
   let rawOutput = '';
 
-  // Read a parametric field's value by data-k / data-f.
   const field = (k: string, f: string): string => {
     const el = document.querySelector<HTMLInputElement>(`.ha-in[data-k="${k}"][data-f="${f}"]`);
     if (!el) return '';
@@ -185,7 +178,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     minutes: 60, hours: 3600, days: 86400, weeks: 604800, months: 2592000, years: 31536000,
   };
 
-  // Each builder returns a block or '' to skip. Keyed by checkbox data-k.
   const BUILD: Record<string, () => string> = {
     https: () => `# Force HTTPS\n<IfModule mod_rewrite.c>\n  RewriteEngine On\n  RewriteCond %{HTTPS} off\n  RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]\n</IfModule>`,
     www: () => `# Force www\n<IfModule mod_rewrite.c>\n  RewriteEngine On\n  RewriteCond %{HTTP_HOST} !^www\\. [NC]\n  RewriteRule ^(.*)$ https://www.%{HTTP_HOST}%{REQUEST_URI} [L,R=301]\n</IfModule>`,
@@ -228,7 +220,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const rule = img
         ? `  RewriteRule \\.(${exts.join('|')})$ ${img} [NC,R,L]`
         : `  RewriteRule \\.(${exts.join('|')})$ - [NC,F,L]`;
-      return `# Prevent hotlinking\n<IfModule mod_rewrite.c>\n  RewriteEngine On\n  RewriteCond %{HTTP_REFERER} !^$\n  RewriteCond %{HTTP_REFERER} !^https?://(www\\.)?${esc} [NC]\n${rule}\n</IfModule>`;
+      return `# Prevent hotlinking\n<IfModule mod_rewrite.c>\n  RewriteEngine On\n  RewriteCond %{HTTP_REFERER} !^$\n  RewriteCond %{HTTP_REFERER} !^https?:
     },
     badbots: () => `# Block bad bots\n<IfModule mod_rewrite.c>\n  RewriteEngine On\n  RewriteCond %{HTTP_USER_AGENT} (ahrefs|semrush|mj12bot|dotbot|petalbot|blexbot|scrapy|python-requests|masscan|nikto|sqlmap) [NC]\n  RewriteRule ^ - [F,L]\n</IfModule>`,
     protect: () => {

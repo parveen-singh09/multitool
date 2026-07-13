@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="word-cloud-maker">
   <div class="flex flex-col gap-4">
-    <!-- Preview (top) -->
+
     <div class="flex flex-col gap-3">
       <div class="panel flex items-center justify-center p-4" style="min-height:320px">
         <canvas
@@ -22,9 +22,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Controls (bottom) -->
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <!-- Text -->
+
       <div class="panel flex flex-col gap-3 p-4">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">
           Text
@@ -47,7 +46,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </div>
       </div>
 
-      <!-- Word list editor -->
       <div class="panel flex flex-col gap-2 p-4">
         <div class="flex items-center justify-between">
           <span class="text-sm text-ink">Word list</span>
@@ -73,7 +71,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </div>
       </div>
 
-      <!-- Style -->
       <div class="panel grid grid-cols-2 gap-3 p-4">
         <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">
           Font
@@ -124,7 +121,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <input id="wcm-imagefile" type="file" accept="image/*" class="field py-1 text-[12px]" />
         </label>
 
-        <!-- Symbol / emoji picker -->
         <div id="wcm-symbol-wrap" class="col-span-2 hidden flex-col gap-2 text-[13px] text-ink-subtle">
           <div class="flex items-center gap-2">
             <span>Type any emoji or character</span>
@@ -135,7 +131,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
             class="grid max-h-40 grid-cols-8 gap-1 overflow-y-auto rounded-md border border-hairline p-1"></div>
         </div>
 
-        <!-- Draw-your-own shape -->
         <div id="wcm-draw-wrap" class="col-span-2 hidden flex-col gap-2 text-[13px] text-ink-subtle">
           <span>Draw a shape — words fill what you paint</span>
           <canvas id="wcm-draw-canvas" width="320" height="200"
@@ -151,7 +146,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </div>
       </div>
 
-      <!-- Layout -->
       <div class="panel grid grid-cols-1 gap-3 p-4">
         <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">
           Orientation
@@ -257,8 +251,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     mono: ['#2a2a30', '#45454f', '#5f5f6b', '#7a7a86', '#33333a'],
   };
 
-  // Any emoji/character renders as a silhouette mask via the system emoji font,
-  // so this grid is just quick picks — the input accepts anything.
   const SYMBOLS = (
     '❤ ⭐ ★ ✿ ❄ ☁ ☀ ☂ ⚡ ✔ ✚ ● ▲ ■ ♦ ♠ ♣ ♥ ' +
     '🐱 🐶 🦋 🐝 🐟 🦄 🐘 🦖 🌵 🌲 🌳 🍀 🌺 🌻 🌸 🍁 ' +
@@ -275,9 +267,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     on: boolean;
   }
 
-  // The live word list. Rebuilt from text on "recount"; edited in place otherwise.
   let entries: Entry[] = [];
-  // Loaded mask image, if the user picked a custom shape.
+
   let maskImg: HTMLImageElement | null = null;
 
   function setError(msg: string) {
@@ -298,8 +289,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       if (skip && STOPWORDS.has(t)) continue;
       freq.set(t, (freq.get(t) || 0) + 1);
     }
-    // No cap — wordcloud2 (drawOutOfBound:false, shrinkToFit:true) lays down as
-    // many words as the shape/layout has room for and stops when it runs out.
+
     return [...freq.entries()]
       .sort((a, b) => b[1] - a[1])
       .map(([word, weight]) => ({ word, weight, on: true }));
@@ -708,21 +698,18 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     downloadBlob(new Blob([csv], { type: 'text/csv' }), 'word-cloud.csv');
   }
 
-  // ---- wiring -----------------------------------------------------------
-  // populate fonts
   for (const f of FONTS) {
     const o = document.createElement('option');
     o.value = f.family.split(',')[0].replace(/['"]/g, '').trim();
     o.textContent = f.label;
-    // store the full family (with fallbacks) for the loader
+
     o.dataset.family = f.family;
     fontEl.appendChild(o);
   }
-  // default to Anton (bold display face reads well in clouds) if present
+
   const antonOpt = [...fontEl.options].find((o) => o.textContent === 'Anton');
   if (antonOpt) fontEl.value = antonOpt.value;
 
-  // table edits (event delegation)
   rowsEl.addEventListener('input', (e) => {
     const t = e.target as HTMLInputElement;
     const i = parseInt(t.dataset.i || '-1');

@@ -1,7 +1,6 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 
-// Shape categories: each has variants (cycled with ‹ ›) and its own color.
 const categories = [
   { key: 'eyes', label: 'Eyes', icon: '👀' },
   { key: 'brows', label: 'Eyebrows', icon: '🤨' },
@@ -16,7 +15,7 @@ const categories = [
   { key: 'clothes', label: 'Clothes', icon: '👕' },
   { key: 'accessory', label: 'Accessory', icon: '👓' },
 ];
-// Color-only parts: no shapes, just a color picker.
+
 const colorParts = [
   { key: 'skin', label: 'Skin', icon: '✋' },
 ];
@@ -24,7 +23,7 @@ const colorParts = [
 
 <ToolLayout slug="square-face-generator">
   <div class="grid grid-cols-1 items-start gap-6 md:grid-cols-[minmax(0,1fr)_340px]">
-    <!-- Preview (right, sticky so it stays in view) -->
+
     <div class="order-1 flex flex-col items-center gap-4 md:order-2 md:sticky md:top-6">
       <div id="sf-preview" class="w-full max-w-[340px]"></div>
       <div class="flex items-center justify-center gap-2">
@@ -42,7 +41,6 @@ const colorParts = [
       <p id="sf-status" class="text-[13px] text-ink-tertiary" aria-live="polite"></p>
     </div>
 
-    <!-- Controls (left, two-column grid to reduce scrolling) -->
     <div class="order-2 grid grid-cols-1 gap-2 sm:grid-cols-2 md:order-1">
       {categories.map((c) => (
         <div class="flex items-center justify-between gap-2 rounded-lg border border-hairline px-2.5 py-1.5">
@@ -80,9 +78,6 @@ const colorParts = [
 <script>
   const $ = (id: string) => document.getElementById(id)!;
 
-  // Feature libraries. Each entry is { name, svg }. svg is drawn on a 240×240 viewBox and uses
-  // {{C}} as a placeholder for that part's chosen color. Face box: x 44→196, y 52→204.
-  // Eyes cy≈120 (cx 96/144). Nose cy≈148. Mouth cy≈172. Brows cy≈100. Beard = lower jaw.
   const eyes = [
     { name: 'Dots', svg: `<circle cx="96" cy="120" r="7" fill="{{C}}"/><circle cx="144" cy="120" r="7" fill="{{C}}"/>` },
     { name: 'Round', svg: `<circle cx="96" cy="120" r="13" fill="#fff" stroke="{{C}}" stroke-width="3"/><circle cx="144" cy="120" r="13" fill="#fff" stroke="{{C}}" stroke-width="3"/><circle cx="98" cy="122" r="6" fill="{{C}}"/><circle cx="146" cy="122" r="6" fill="{{C}}"/>` },
@@ -228,8 +223,6 @@ const colorParts = [
     { name: 'Face paint', svg: `<path d="M88 108 l16 24 -16 4 z" fill="{{C}}" opacity="0.7"/><path d="M152 108 l-16 24 16 4 z" fill="{{C}}" opacity="0.7"/>` },
   ];
 
-  // Hats sit in the top band. Local y<52 is clipped off (transform translate(-60,-72) scale(1.5)),
-  // so everything here stays within local y 52→95.
   const hat = [
     { name: 'None', svg: `` },
     { name: 'Cap', svg: `<path d="M52 74 q0 -22 68 -22 q68 0 68 22 z" fill="{{C}}"/><path d="M118 72 h60 q8 0 6 8 q-30 5 -64 2 z" fill="{{C}}"/>` },
@@ -244,7 +237,6 @@ const colorParts = [
     { name: 'Halo', svg: `<ellipse cx="120" cy="60" rx="34" ry="9" fill="none" stroke="{{C}}" stroke-width="6"/>` },
   ];
 
-  // Clothes fill the bottom band (neck/shoulders y≈188→210), inside the square clip.
   const clothes = [
     { name: 'None', svg: `` },
     { name: 'Crew', svg: `<path d="M44 210 v-16 q0 -12 24 -14 q14 12 52 12 q38 0 52 -12 q24 2 24 14 v16 z" fill="{{C}}"/>` },
@@ -259,7 +251,7 @@ const colorParts = [
   ];
 
   const libs: Record<string, { name: string; svg: string }[]> = { eyes, brows, nose, mouth, hair, bangs, sidehair, beard, cheeks, hat, clothes, accessory };
-  // Layering order back-to-front (accessory on top). Clothes behind the face band, hat over the hair.
+
   const ORDER = ['clothes', 'hair', 'sidehair', 'bangs', 'brows', 'eyes', 'nose', 'cheeks', 'mouth', 'beard', 'hat', 'accessory'];
 
   const state: {
@@ -276,13 +268,12 @@ const colorParts = [
   };
 
   const DARK = '#1f1f27';
-  // Palettes used only by Randomize for the "colorful" parts.
+
   const skins = ['#f2c9a0', '#e8b98c', '#d19a6a', '#a9714b', '#8d5524', '#f7d7c4', '#c7f0c2', '#bcd4ff'];
   const hairColors = ['#3a2b22', '#5b3d2e', '#8a5a2b', '#d6a94b', '#c0392b', '#2c2c34', '#7d5fff', '#e0e0e6'];
   const cheekColors = ['#e78f8f', '#f0a6a6', '#d98b6b', '#b5651d', '#8a5a2b'];
   const clothesColors = ['#5e6ad2', '#c0392b', '#2c7a4b', '#d6a94b', '#2c2c34', '#7d5fff', '#e0e0e6', '#e07b39'];
 
-  // Build the full SVG markup for the current state.
   function buildSvg(): string {
     const parts = ORDER
       .map((cat) => libs[cat][state.variant[cat]].svg.replaceAll('{{C}}', state.color[cat]))

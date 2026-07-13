@@ -1,9 +1,7 @@
-// Serialize an array of plain objects to JSON / CSV / XML / YAML for the
-// data generators. Objects may nest; CSV flattens with dotted keys.
+
 
 type Row = Record<string, unknown>;
 
-/** Flatten nested objects to dotted keys: {a:{b:1}} -> {'a.b':1}. */
 function flatten(obj: Row, prefix = '', out: Row = {}): Row {
   for (const [k, v] of Object.entries(obj)) {
     const key = prefix ? `${prefix}.${k}` : k;
@@ -33,7 +31,7 @@ function xmlEscape(s: string): string {
 }
 
 function xmlNode(key: string, val: unknown, indent: string): string {
-  // Keys are known-safe identifiers here; still guard against a leading digit.
+
   const tag = /^[A-Za-z_]/.test(key) ? key : `_${key}`;
   if (val && typeof val === 'object' && !Array.isArray(val)) {
     const inner = Object.entries(val as Row)

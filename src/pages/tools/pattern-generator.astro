@@ -4,13 +4,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="pattern-generator">
   <div class="flex flex-col gap-5">
-    <!-- Mode toggle -->
+
     <div class="flex flex-wrap gap-2">
       <button id="pt-mode-lib" class="mode-chip" aria-pressed="true">Pattern library</button>
       <button id="pt-mode-custom" class="mode-chip" aria-pressed="false">Custom image</button>
     </div>
 
-    <!-- LIBRARY MODE -->
     <div id="pt-lib" class="flex flex-col gap-4">
       <div>
         <div class="mb-2 flex items-center justify-between gap-3">
@@ -23,7 +22,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <p id="pt-empty" class="mt-2 hidden text-[13px] text-ink-subtle">No patterns match that search.</p>
       </div>
 
-      <!-- Colors -->
       <div class="flex flex-col gap-1 text-sm text-ink-subtle">
         <div class="flex items-center justify-between">
           <span>Colors</span>
@@ -32,7 +30,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <div id="pt-colors" class="flex flex-wrap gap-2"></div>
       </div>
 
-      <!-- Sliders -->
       <div class="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">Stroke: <span id="pt-stroke-v" class="text-ink">1</span>
           <input id="pt-stroke" type="range" min="0.5" max="10" step="0.5" value="1" class="w-full accent-[#5e6ad2]" />
@@ -58,7 +55,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- CUSTOM IMAGE MODE -->
     <div id="pt-custom" class="hidden flex-col gap-4">
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">Tile size: <span id="pt-csize-v" class="text-ink">120</span>
@@ -73,17 +69,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </label>
     </div>
 
-    <!-- Aspect ratio (shared) -->
     <div class="flex flex-col gap-1 text-sm text-ink-subtle">Size
       <div id="pt-ratios" class="flex flex-wrap gap-2"></div>
     </div>
 
-    <!-- Preview (shared) -->
     <div class="flex min-h-64 items-center justify-center overflow-hidden rounded-lg border border-hairline p-4">
       <div id="pt-preview" class="rounded-md"></div>
     </div>
 
-    <!-- Export (shared) -->
     <div class="flex flex-wrap gap-2">
       <button id="pt-dl" class="btn btn-primary">Download SVG</button>
       <button id="pt-copycss" class="btn btn-secondary">Copy CSS</button>
@@ -191,11 +184,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const $ = (id: string) => document.getElementById(id)!;
   const preview = $('pt-preview');
 
-  // ---- Shared state ----
   type Mode = 'library' | 'custom';
   let mode: Mode = 'library';
 
-  // Library state: selected pattern + a live config the controls mutate.
   let pattern: Pattern = PATTERNS[0];
   let colors: string[] = PALETTES[0].slice();
   const cfg = (): Partial<PatternConfig> => ({
@@ -213,15 +204,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     moveTop: 0,
   });
 
-  // Custom-image state: data URI of the uploaded tile (empty until chosen).
   let customImg = '';
 
-  // Aspect-ratio presets: [label, w, h]
   const RATIOS: [string, number, number][] = [
     ['1:1', 1, 1], ['2:1', 2, 1], ['1:2', 1, 2], ['3:4', 3, 4], ['4:3', 4, 3],
     ['9:16', 9, 16], ['16:9', 16, 9], ['4:5', 4, 5], ['5:4', 5, 4],
   ];
-  const LONG_EDGE = 1200; // px on the longer side of exported artwork
+  const LONG_EDGE = 1200; 
   let ratio: [string, number, number] = RATIOS[0];
 
   function dims(): { w: number; h: number } {
@@ -235,13 +224,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
   }
 
-  // The pattern SVG for the current pattern + config, sized to fill its element.
   function libSvg(): string {
     return generateSVG(pattern, cfg());
   }
 
-  // Fixed-size artwork for download/copy at the current aspect ratio: swap the
-  // engine's `width='100%' height='100%'` for explicit pixel dims.
   function libArtwork(): string {
     const { w, h } = dims();
     return libSvg().replace(
@@ -250,11 +236,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     );
   }
 
-  // ---- Rendering ----
   function render() {
     const [, rw, rh] = ratio;
     const parent = preview.parentElement as HTMLElement;
-    const availW = Math.max(0, parent.clientWidth - 32); // p-4 = 16px each side
+    const availW = Math.max(0, parent.clientWidth - 32); 
     const availH = 360;
     let w = availW;
     let h = (w * rh) / rw;

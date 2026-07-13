@@ -1,7 +1,4 @@
-// Ready-made timelines. Mirrors the collage template gallery: authored consts +
-// TEMPLATES / templateGroups() / getTemplate() helpers. Every event uses a real
-// parseable date so loading a template immediately demonstrates auto-sorting and
-// range bars.
+
 
 import type { Timeline, TimelineEvent, TimelineLayout } from './types';
 import { parseDate } from './types';
@@ -18,7 +15,7 @@ export interface TimelineTemplate {
 }
 
 let seq = 0;
-// Concise event builder: e(date, title, desc?, end?) -> TimelineEvent.
+
 function e(date: string, title: string, desc?: string, end?: string): TimelineEvent {
   const start = parseDate(date)!;
   return {

@@ -1,18 +1,4 @@
-// Genre / auto-tagging via the MSD-MusiCNN model, run in-browser with
-// onnxruntime-web. Everything is lazy-loaded on demand (the ORT wasm runtime
-// ~10 MB + the 3 MB model) so the analyzer page stays light until the user
-// explicitly asks for genre detection. Nothing is uploaded — inference is local.
-//
-// The model (Essentia export) expects a very specific input: a log-compressed
-// mel-spectrogram patch of shape [187 frames, 96 mel bands] computed on audio
-// resampled to 16 kHz. We reproduce Essentia's `TensorflowInputMusiCNN`
-// preprocessing exactly, otherwise the network sees out-of-distribution input
-// and predictions become meaningless:
-//   frameSize 512, hopSize 256, Hann window (not normalized)
-//   magnitude spectrum → 96 Slaney-mel bands, 0–8000 Hz, unit-area normalized
-//   compression: log10(10000 · mel + 1)
-// Patches of 187 frames are classified independently and their sigmoid outputs
-// averaged over the track.
+
 
 import { fft } from './audio-analysis';
 
@@ -25,16 +11,15 @@ const TARGET_SR = 16000;
 
 export interface GenrePrediction {
   label: string;
-  value: number; // 0..1
+  value: number; 
 }
 export interface GenreResult {
-  genres: GenrePrediction[]; // musical style tags, sorted desc
-  moods: GenrePrediction[]; // mood / descriptive tags
-  eras: GenrePrediction[]; // decade tags
-  all: GenrePrediction[]; // everything, sorted desc
+  genres: GenrePrediction[]; 
+  moods: GenrePrediction[]; 
+  eras: GenrePrediction[]; 
+  all: GenrePrediction[]; 
 }
 
-// Tags that are decades or moods rather than genres — split out for the UI.
 const ERA_TAGS = new Set(['60s', '70s', '80s', '90s', '00s', 'oldies']);
 const MOOD_TAGS = new Set([
   'beautiful', 'chillout', 'Mellow', 'chill', 'party', 'sexy', 'catchy',
@@ -59,7 +44,7 @@ export async function loadGenreModel(onProgress?: (note: string) => void): Promi
   loadingPromise = (async () => {
     onProgress?.('Loading the genre model (~13 MB, first use only)…');
     const ort = await import('onnxruntime-web');
-    // Self-hosted single-thread wasm — no SharedArrayBuffer, no COOP/COEP needed.
+
     ort.env.wasm.numThreads = 1;
     ort.env.wasm.wasmPaths = `${BASE}/`;
     ortMod = ort;

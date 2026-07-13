@@ -1,7 +1,6 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 
-// Grouped so related transforms sit together in the UI.
 const modes = [
   { id: 'sentence', label: 'Sentence case' },
   { id: 'lower', label: 'lower case' },
@@ -103,14 +102,13 @@ const modes = [
 
   const words = (s: string) => s.match(/[A-Za-z0-9]+/g) || [];
 
-  // Small words kept lowercase in Title Case unless first/last (AP-ish).
   const SMALL = new Set([
     'a','an','and','as','at','but','by','en','for','if','in','nor','of','on',
     'or','per','the','to','v','vs','via','with',
   ]);
 
   const titleCase = (s: string) =>
-    // Operate per line so titles on separate lines each capitalize correctly.
+
     s.split('\n').map((line) => {
       const toks = line.match(/[A-Za-z0-9']+|[^A-Za-z0-9']+/g) || [];
       const wordIdx: number[] = [];
@@ -129,10 +127,10 @@ const modes = [
   const converters: Record<string, (s: string) => string> = {
     upper: (s) => s.toUpperCase(),
     lower: (s) => s.toLowerCase(),
-    // Capitalize the first letter of every word, keep the rest lowercase.
+
     capitalize: (s) => s.replace(/[A-Za-z0-9]+/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()),
     title: titleCase,
-    // First letter of each sentence uppercased; rest lowercased.
+
     sentence: (s) =>
       s.toLowerCase().replace(/(^\s*[a-z])|([.!?]\s*[a-z])|(\n\s*[a-z])/g, (c) => c.toUpperCase()),
     alternate: (s) => {
@@ -157,7 +155,7 @@ const modes = [
     const v = input.value;
     charsEl.textContent = String(v.length);
     wordsEl.textContent = String((v.match(/\S+/g) || []).length);
-    // Count sentence-terminating runs; fall back to 0 for empty/whitespace.
+
     sentencesEl.textContent = String((v.match(/[^\s.!?][^.!?]*[.!?]+/g) || []).length);
     linesEl.textContent = String(v ? v.split('\n').length : 0);
   }

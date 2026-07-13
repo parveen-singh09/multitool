@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="internet-speed-test">
   <div class="flex flex-col gap-6">
-    <!-- Connection info -->
+
     <div id="st-conn" class="panel flex flex-wrap items-center justify-center gap-x-6 gap-y-2 px-4 py-3 text-[13px] text-ink-subtle">
       <span class="flex items-center gap-1.5">
         <span class="text-ink-tertiary">ISP</span>
@@ -20,16 +20,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </span>
     </div>
 
-    <!-- Speedometer gauge -->
     <div class="panel panel-lift flex flex-col items-center gap-3 p-6">
       <svg id="st-gauge" viewBox="0 0 300 180" class="w-full max-w-md" role="img" aria-label="Speed gauge">
-        <!-- track -->
+
         <path id="st-track" fill="none" stroke="#23252a" stroke-width="14" stroke-linecap="round" />
-        <!-- active arc -->
+
         <path id="st-arc" fill="none" stroke="#5e6ad2" stroke-width="14" stroke-linecap="round" />
-        <!-- tick labels are injected by script -->
+
         <g id="st-ticks" font-size="10" fill="#62666d" font-family="var(--font-mono)"></g>
-        <!-- needle -->
+
         <line id="st-needle" x1="150" y1="150" x2="150" y2="55" stroke="#f7f8f8" stroke-width="3" stroke-linecap="round" />
         <circle cx="150" cy="150" r="6" fill="#f7f8f8" />
       </svg>
@@ -45,7 +44,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <button id="st-start" class="btn btn-primary mt-1">Start test</button>
     </div>
 
-    <!-- Result tiles -->
     <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-3">
       <div class="panel p-4">
         <div id="st-down" class="font-mono text-lg tabular-nums text-ink">—</div>
@@ -73,19 +71,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Connection quality verdict -->
     <div id="st-verdict" class="panel hidden flex-col gap-2 p-4">
       <div class="text-[13px] font-medium text-ink-subtle">Your connection is good for</div>
       <div id="st-verdict-rows" class="flex flex-col gap-1.5"></div>
     </div>
 
-    <!-- Actions -->
     <div id="st-actions" class="hidden flex-wrap items-center gap-3">
       <button id="st-copy" class="btn btn-secondary text-[13px]">Copy result</button>
       <span id="st-copied" class="hidden text-[13px] text-[color:var(--color-success)]">Copied</span>
     </div>
 
-    <!-- Recent tests -->
     <div id="st-history-wrap" class="panel hidden flex-col gap-2 p-4">
       <div class="flex items-center justify-between">
         <div class="text-[13px] font-medium text-ink-subtle">Recent tests</div>
@@ -164,11 +159,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const WARN = '#d99a2b';
   const BAD = '#e5484d';
 
-  // ---- Gauge geometry: 240° arc from 150° (bottom-left) sweeping clockwise ----
   const CX = 150, CY = 150, R = 95;
-  const START_ANGLE = 150; // degrees
-  const SWEEP = 240; // degrees total
-  // Non-linear scale so the common 0–100 Mbps range fills most of the dial.
+  const START_ANGLE = 150; 
+  const SWEEP = 240; 
+
   const SCALE_STOPS = [0, 10, 25, 50, 100, 250, 500, 1000];
 
   function polar(angleDeg: number, r = R) {
@@ -280,17 +274,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       ip = m.ip || '';
       colo = (m.colo || '').toUpperCase();
       loc = m.loc || '';
-    } catch {
-      /* trace unreachable — leave placeholders */
-    }
+    } catch 
     // Enrichment: /meta returns ISP name + city in a real browser. Degrade gracefully.
     try {
       const meta = await (await fetch(META, { cache: 'no-store' })).json();
       isp = meta.asOrganization || meta.isp || '';
       city = meta.city || '';
-    } catch {
-      /* meta gated/blocked — trace-only is fine */
-    }
+    } catch 
     if (ip) $('st-ip').textContent = ip;
     if (isp) $('st-isp').textContent = isp;
     const place = COLO[colo] || city || loc;
@@ -305,9 +295,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       try {
         await fetch(DOWN + '0', { cache: 'no-store' });
         times.push(performance.now() - t0);
-      } catch {
-        /* skip failed probe */
-      }
+      } catch 
     }
     if (!times.length) throw new Error('no latency');
     times.sort((a, b) => a - b);
@@ -381,9 +369,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         try {
           await fetch(DOWN + '0', { cache: 'no-store' });
           if (performance.now() - start > WARMUP_MS) latencies.push(performance.now() - t0);
-        } catch {
-          /* ignore */
-        }
+        } catch 
         await sleep(250);
       }
     })();
@@ -463,7 +449,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   }
 
   // ---- History (localStorage) ----
-  const HKEY = 'toolcities-speedtest-history';
+  const HKEY = 'toolsilk-speedtest-history';
   function loadHistory(): (Result & { t: number })[] {
     try {
       return JSON.parse(localStorage.getItem(HKEY) || '[]');
@@ -476,9 +462,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     list.unshift({ ...r, t: Date.now() });
     try {
       localStorage.setItem(HKEY, JSON.stringify(list.slice(0, 10)));
-    } catch {
-      /* storage full/blocked — non-fatal */
-    }
+    } catch 
     renderHistory();
   }
   function renderHistory() {
@@ -514,7 +498,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const server = $('st-server').textContent;
     const isp = $('st-isp').textContent;
     const text =
-      `Internet Speed Test — toolcities.com\n` +
+      `Internet Speed Test — toolsilk.com\n` +
       `Download: ${r.down.toFixed(2)} Mbps\n` +
       `Upload:   ${r.up.toFixed(2)} Mbps\n` +
       `Ping:     ${r.ping.toFixed(0)} ms (idle) / ${r.loaded.toFixed(0)} ms (under load)\n` +
@@ -599,9 +583,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   $('st-clear').addEventListener('click', () => {
     try {
       localStorage.removeItem(HKEY);
-    } catch {
-      /* ignore */
-    }
+    } catch 
     renderHistory();
   });
   startBtn.addEventListener('click', runTest);

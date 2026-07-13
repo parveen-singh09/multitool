@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="color-palette-generator">
   <div class="flex flex-col gap-4">
-    <!-- Toolbar -->
+
     <div class="flex flex-wrap items-center gap-2">
       <label class="flex items-center gap-2 text-sm text-ink-subtle">Harmony
         <select id="cp-mode" class="field w-44">
@@ -43,7 +43,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Swatches -->
     <div id="cp-swatches" class="grid gap-2" style="grid-template-columns:repeat(5,minmax(0,1fr))"></div>
 
     <p class="text-[13px] text-ink-tertiary">
@@ -88,7 +87,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   interface Swatch { hex: string; locked: boolean; }
   let colors: Swatch[] = [];
   let history: Swatch[][] = [];
-  let hpos = -1; // pointer into history
+  let hpos = -1; 
 
   const clampHsl = (h: number, s: number, l: number) => ({
     h: ((h % 360) + 360) % 360,
@@ -100,20 +99,18 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return rgbToHex(hslToRgb(c));
   };
 
-  // Readable text color over a background, via perceived luminance.
   function textOn(hex: string): string {
     const c = hexToRgb(hex) || { r: 0, g: 0, b: 0 };
     const L = (0.299 * c.r + 0.587 * c.g + 0.114 * c.b) / 255;
     return L > 0.6 ? '#0b0b0c' : '#ffffff';
   }
 
-  // Build a fresh palette of `n` colors for a mode, seeded from an optional base HSL.
   function build(n: number, mode: string, base: { h: number; s: number; l: number } | null): string[] {
     const b = base || { h: randInt(0, 359), s: randInt(55, 80), l: randInt(45, 65) };
     const out: string[] = [];
     const center = (n - 1) / 2;
     for (let i = 0; i < n; i++) {
-      const t = i / Math.max(1, n - 1); // 0..1 ramp
+      const t = i / Math.max(1, n - 1); 
       switch (mode) {
         case 'analogous':
           out.push(hslHex(b.h + (i - center) * 28, b.s + randInt(-6, 6), b.l + (i - center) * 6));
@@ -133,7 +130,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         case 'tetradic':
           out.push(hslHex(b.h + (i % 4) * 90, b.s + randInt(-8, 8), 42 + t * 26));
           break;
-        default: // auto — pleasant randoms
+        default: 
           out.push(hslHex(randInt(0, 359), randInt(50, 82), randInt(40, 72)));
       }
     }
@@ -149,7 +146,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     commit();
   }
 
-  // Push current state to history + sync URL, then render.
   function commit() {
     history = history.slice(0, hpos + 1);
     history.push(colors.map((c) => ({ ...c })));

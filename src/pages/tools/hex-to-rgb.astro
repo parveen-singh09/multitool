@@ -2,8 +2,6 @@
 import ToolLayout from '../../layouts/ToolLayout.astro';
 import ColorFormats from '../../components/ColorFormats.astro';
 
-// Additional output formats rendered below the shared all-formats converter.
-// Values are filled client-side from whatever color is active in ColorFormats.
 const extraFormats = [
   { id: 'rgb-norm', label: 'RGB (0–1 normalized)' },
   { id: 'rgb-pct', label: 'RGB (0%–100%)' },
@@ -27,12 +25,10 @@ const harmonies = [
 <ToolLayout slug="hex-to-rgb">
   <ColorFormats focus="rgb" />
 
-  <!-- Extended formats & color tools (beyond the core synced fields above) -->
   <div class="mt-6 flex flex-col gap-8">
-    <!-- Validation message: shown when the HEX field holds an unparseable value -->
+
     <p id="xf-err" class="hidden rounded-md border border-hairline-strong bg-surface-2 px-3 py-2 text-[14px] text-ink-muted" role="status" aria-live="polite"></p>
 
-    <!-- Alpha / opacity -->
     <section class="flex flex-col gap-2">
       <div class="flex items-center justify-between">
         <span class="text-[13px] text-ink-subtle">Alpha / opacity</span>
@@ -43,7 +39,6 @@ const harmonies = [
       <p class="text-[12px] text-ink-tertiary">Feeds the RGBA and 8-digit HEX outputs below. Leave at 100% for a fully opaque color.</p>
     </section>
 
-    <!-- Extended formats grid -->
     <section class="flex flex-col gap-3">
       <div class="flex items-center justify-between gap-3">
         <span class="eyebrow text-primary-hover">More formats</span>
@@ -62,7 +57,6 @@ const harmonies = [
       </div>
     </section>
 
-    <!-- Per-channel breakdown -->
     <section class="flex flex-col gap-3">
       <span class="eyebrow text-primary-hover">Channel breakdown</span>
       <div class="overflow-x-auto rounded-md border border-hairline bg-surface-1">
@@ -81,7 +75,6 @@ const harmonies = [
       </div>
     </section>
 
-    <!-- WCAG contrast -->
     <section class="flex flex-col gap-3">
       <span class="eyebrow text-primary-hover">Contrast &amp; luminance</span>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -107,7 +100,6 @@ const harmonies = [
       <p class="text-[12px] text-ink-tertiary">WCAG 2.1 contrast ratios for this color used as text. AA needs 4.5:1 (3:1 for large text); AAA needs 7:1.</p>
     </section>
 
-    <!-- Color harmonies -->
     <section class="flex flex-col gap-3">
       <span class="eyebrow text-primary-hover">Color harmonies</span>
       <div class="flex flex-col gap-3">
@@ -164,7 +156,6 @@ const harmonies = [
   const toHex2 = (n: number) => clamp(Math.round(n)).toString(16).padStart(2, '0');
   const stripZero = (n: number) => String(parseFloat(n.toFixed(3)));
 
-  // sRGB relative luminance (WCAG 2.1).
   function luminance({ r, g, b }: RGB): number {
     const lin = [r, g, b].map((v) => {
       const s = v / 255;

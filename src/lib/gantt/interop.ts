@@ -1,19 +1,10 @@
-// Import/export. Native JSON is our own GanttProject shape. CSV is a flat task
-// list for spreadsheets. MS Project XML is the interchange format onlinegantt
-// and desktop MS Project both read — the differentiator here.
-//
-// The non-obvious MS Project encodings (nail these — the self-check covers them):
-//   - Duration is ISO-8601 hours at 8h/working-day: 5 days => PT40H0M0S.
-//   - PredecessorLink Type is 0=FF, 1=FS, 2=SF, 3=SS  (FS is 1, NOT 0).
-//   - LinkLag is in tenth-minutes at 8h/day: lagDays * 4800.
-//   - OutlineLevel is 1-based; our `outline` is 0-based.
+
 
 import type { GanttProject, Task, Dependency, DepType } from './types';
 import { newId } from './types';
 import { DEFAULT_CALENDAR, finishOf } from './calendar';
 import { schedule } from './schedule';
 
-// --- native JSON ------------------------------------------------------------
 export function toJSON(p: GanttProject): string {
   return JSON.stringify(p, null, 2);
 }
@@ -135,7 +126,6 @@ function csvCell(v: string): string {
   return /[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
 }
 
-// Minimal RFC-4180 CSV parser (handles quoted cells, doubled quotes, CRLF/LF).
 function parseCSV(text: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [], cell = '', inQuotes = false;
@@ -148,17 +138,16 @@ function parseCSV(text: string): string[][] {
     } else if (c === '"') inQuotes = true;
     else if (c === ',') { row.push(cell); cell = ''; }
     else if (c === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
-    else if (c === '\r') { /* skip; \n handles the break */ }
+    else if (c === '\r') {  }
     else cell += c;
   }
   if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
   return rows;
 }
 
-// --- MS Project XML ---------------------------------------------------------
 const TYPE_TO_NUM: Record<DepType, number> = { FF: 0, FS: 1, SF: 2, SS: 3 };
 const NUM_TO_TYPE: Record<number, DepType> = { 0: 'FF', 1: 'FS', 2: 'SF', 3: 'SS' };
-const LAG_PER_DAY = 4800; // tenth-minutes per working day at 8h/day
+const LAG_PER_DAY = 4800; 
 
 function xmlEsc(s: string): string {
   return s.replace(/[&<>"]/g, (c) => (c === '&' ? '&amp;' : c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&quot;'));

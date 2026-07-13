@@ -17,9 +17,9 @@ const types = [
 
 <ToolLayout slug="qr-code-generator">
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_20rem]">
-    <!-- Left: content + design -->
+
     <div class="flex flex-col gap-5">
-      <!-- Content type tabs -->
+
       <div class="flex flex-wrap gap-1 rounded-md border border-hairline p-1" role="tablist" aria-label="Content type">
         {types.map((t, i) => (
           <button
@@ -31,11 +31,10 @@ const types = [
         ))}
       </div>
 
-      <!-- Content fields (one block per type, toggled) -->
       <div id="fields" class="flex flex-col gap-3">
         <div data-fields="url">
           <label class="flex flex-col gap-1 text-sm text-ink-subtle">Website URL
-            <input data-f="url" class="field" placeholder="example.com" value="https://toolcities.com" />
+            <input data-f="url" class="field" placeholder="example.com" value="https://toolsilk.com" />
           </label>
         </div>
 
@@ -126,7 +125,6 @@ const types = [
         </div>
       </div>
 
-      <!-- Design controls -->
       <div class="panel p-4">
         <div class="mb-3 font-display text-sm font-medium text-ink">Design</div>
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -187,7 +185,6 @@ const types = [
       </div>
     </div>
 
-    <!-- Right: preview + download -->
     <div class="flex flex-col gap-4">
       <div class="panel panel-lift qr-checker flex aspect-square w-full items-center justify-center p-6">
         <canvas id="qr-canvas" class="h-full w-full max-w-xs rounded-md" aria-label="QR code preview"></canvas>
@@ -207,7 +204,7 @@ const types = [
 </ToolLayout>
 
 <style>
-  /* checkerboard so a transparent QR is visible in the preview */
+
   .qr-checker {
     background-image:
       linear-gradient(45deg, var(--color-surface-3) 25%, transparent 25%),
@@ -278,7 +275,7 @@ const types = [
   const payload = () => buildPayload(activeType, collectFields());
 
   function render() {
-    // gradient-end swatch only when a gradient is chosen
+
     $('grad-to-wrap').hidden = $<HTMLSelectElement>('opt-gradient').value === 'none';
     try {
       renderToCanvas(canvas, payload(), currentOptions(), 1024);
@@ -287,7 +284,6 @@ const types = [
     }
   }
 
-  // tab switching
   tabs.forEach((tab) => {
     tab.addEventListener('click', () => {
       activeType = tab.dataset.type!;
@@ -297,13 +293,11 @@ const types = [
     });
   });
 
-  // any content input re-renders
   document.getElementById('fields')!.addEventListener('input', render);
   ['opt-dot', 'opt-eye-frame', 'opt-eye-ball', 'opt-gradient', 'opt-fg', 'opt-grad-to', 'opt-bg', 'opt-transparent', 'opt-eye-color', 'opt-ec', 'opt-logo-size'].forEach(
     (id) => $(id).addEventListener('input', render)
   );
 
-  // logo upload
   $<HTMLInputElement>('opt-logo').addEventListener('change', (e) => {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
@@ -322,13 +316,12 @@ const types = [
     render();
   });
 
-  // downloads
   $('dl-png').addEventListener('click', () => {
     const size = Number($<HTMLSelectElement>('opt-size').value);
     const out = document.createElement('canvas');
     renderToCanvas(out, payload(), currentOptions(), size);
     const link = document.createElement('a');
-    link.download = 'toolcities-qr.png';
+    link.download = 'toolsilk-qr.png';
     link.href = out.toDataURL('image/png');
     link.click();
   });
@@ -339,12 +332,12 @@ const types = [
       const blob = new Blob([svg], { type: 'image/svg+xml' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.download = 'toolcities-qr.svg';
+      link.download = 'toolsilk-qr.svg';
       link.href = url;
       link.click();
       URL.revokeObjectURL(url);
     };
-    // inline the logo as a data URL so the SVG is self-contained
+
     if (opts.logo && !opts.logo.src.startsWith('data:')) {
       const c = document.createElement('canvas');
       c.width = opts.logo.naturalWidth;

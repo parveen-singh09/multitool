@@ -1,18 +1,14 @@
-// Ready-made org charts. Mirrors the gantt template gallery: authored consts +
-// templateGroups() / getTemplate() / templateToChart(). Within a template,
-// people carry short local ids ('a','b',…) and managerId references those ids;
-// templateToChart() regenerates fresh unique ids and rewrites the references, so
-// loading a template twice never aliases ids.
+
 
 import type { OrgChart, Person } from './types';
 import { newId } from './types';
 
 interface TplPerson {
-  id: string; // local id, unique within the template
+  id: string; 
   name: string;
   title?: string;
   dept?: string;
-  managerId: string | null; // local id of the manager, or null for the root
+  managerId: string | null; 
 }
 
 export interface OrgTemplate {
@@ -198,8 +194,6 @@ export function getTemplate(id: string): OrgTemplate | undefined {
   return TEMPLATES.find((t) => t.id === id);
 }
 
-// Turn a template into a fresh OrgChart: new unique ids, manager references
-// rewritten to match.
 export function templateToChart(t: OrgTemplate): OrgChart {
   const idMap = new Map<string, string>();
   for (const person of t.people) idMap.set(person.id, newId());

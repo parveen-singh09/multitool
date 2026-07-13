@@ -98,7 +98,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
   const isLossy = () => fmtEl.value === 'image/jpeg' || fmtEl.value === 'image/webp' || fmtEl.value === 'application/pdf';
-  // JPEG and PDF (embeds JPEG) have no alpha, so a background matte matters there.
+
   const needsMatte = () => fmtEl.value === 'image/jpeg' || fmtEl.value === 'application/pdf';
 
   function syncUI() {
@@ -114,7 +114,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   function baseName(name: string) { return name.replace(/\.[^.]+$/, '') || 'image'; }
 
-  // Decode one file into one or more page canvases. TIFF -> every IFD; other images -> single page.
   async function decodeFile(file: File): Promise<Page[]> {
     const base = baseName(file.name);
     if (/\.tif{1,2}$/i.test(file.name) || file.type === 'image/tiff') {
@@ -133,7 +132,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         return { canvas, base, page: i + 1, pages: ifds.length };
       });
     }
-    // Ordinary image -> load via <img> so we can re-encode (incl. to TIFF).
+
     const url = URL.createObjectURL(file);
     try {
       const canvas = await new Promise<HTMLCanvasElement>((res, rej) => {

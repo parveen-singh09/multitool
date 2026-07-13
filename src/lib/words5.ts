@@ -1,6 +1,4 @@
-// Common English 5-letter words for the Squardle / word-grid solvers.
-// Curated from frequent-word lists — large enough for pattern matching without
-// bloating the bundle. All lowercase, exactly 5 letters.
+
 
 export const WORDS5 = (
   'about above abuse actor acute admit adopt adult after again agent agree ahead ' +

@@ -4,14 +4,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="timeline-creator">
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-    <!-- LEFT: controls -->
+
     <div class="flex flex-col gap-4">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Timeline title
         <input id="tlc-title" class="field" type="text" value="Company Roadmap" />
       </label>
 
-      <!-- tab strip -->
       <div class="flex flex-wrap gap-1 rounded-md bg-surface-1 p-1" role="tablist">
         <button class="tlc-tab btn btn-tertiary" data-tab="events" aria-selected="true">Events</button>
         <button class="tlc-tab btn btn-tertiary" data-tab="templates">Templates</button>
@@ -19,19 +18,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <button class="tlc-tab btn btn-tertiary" data-tab="autofill">Auto-fill</button>
       </div>
 
-      <!-- Events panel -->
       <section data-panel="events" class="flex flex-col gap-3">
         <div id="tlc-rows" class="flex max-h-[60vh] flex-col gap-3 overflow-y-auto pr-1"></div>
         <button id="tlc-add" class="btn btn-secondary self-start">Add event</button>
       </section>
 
-      <!-- Templates panel -->
       <section data-panel="templates" class="hidden flex-col gap-4">
         <p class="text-sm text-ink-subtle">Pick a starting point. It replaces the current events.</p>
         <div id="tlc-templates" class="flex flex-col gap-4"></div>
       </section>
 
-      <!-- Style panel -->
       <section data-panel="style" class="hidden flex-col gap-4">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">
           Layout
@@ -51,7 +47,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </label>
       </section>
 
-      <!-- Auto-fill panel -->
       <section data-panel="autofill" class="hidden flex-col gap-5">
         <div class="panel flex flex-col gap-3 p-4">
           <span class="text-sm font-medium text-ink">On this day in history</span>
@@ -75,7 +70,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </section>
     </div>
 
-    <!-- RIGHT: preview + toolbar -->
     <div class="flex flex-col gap-3 lg:sticky lg:top-24 lg:self-start">
       <div class="flex flex-wrap gap-2">
         <button id="tlc-png" class="btn btn-primary">PNG</button>
@@ -364,12 +358,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   }
 
   $<HTMLButtonElement>('tlc-svg').addEventListener('click', () => {
-    download(new Blob([lastSVG], { type: 'image/svg+xml' }), 'toolcities-timeline.svg');
+    download(new Blob([lastSVG], { type: 'image/svg+xml' }), 'toolsilk-timeline.svg');
   });
 
   $<HTMLButtonElement>('tlc-png').addEventListener('click', async () => {
     const canvas = await rasterize();
-    canvas.toBlob((b) => b && download(b, 'toolcities-timeline.png'), 'image/png');
+    canvas.toBlob((b) => b && download(b, 'toolsilk-timeline.png'), 'image/png');
   });
 
   $<HTMLButtonElement>('tlc-copy').addEventListener('click', async () => {
@@ -397,7 +391,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const page = pdf.addPage([png.width / 2, png.height / 2]);
       page.drawImage(png, { x: 0, y: 0, width: png.width / 2, height: png.height / 2 });
       const bytes = await pdf.save();
-      download(new Blob([bytes.slice()], { type: 'application/pdf' }), 'toolcities-timeline.pdf');
+      download(new Blob([bytes.slice()], { type: 'application/pdf' }), 'toolsilk-timeline.pdf');
       setStatus('');
     } catch {
       setStatus('PDF export failed.');
@@ -405,12 +399,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   });
 
   $<HTMLButtonElement>('tlc-json').addEventListener('click', () => {
-    download(new Blob([toJSON(state)], { type: 'application/json' }), 'toolcities-timeline.json');
+    download(new Blob([toJSON(state)], { type: 'application/json' }), 'toolsilk-timeline.json');
   });
 
   $<HTMLButtonElement>('tlc-tljs').addEventListener('click', () => {
     const json = JSON.stringify(toTimelineJS(state), null, 2);
-    download(new Blob([json], { type: 'application/json' }), 'toolcities-timeline.timelinejs.json');
+    download(new Blob([json], { type: 'application/json' }), 'toolsilk-timeline.timelinejs.json');
   });
 
   // --- import (native JSON or TimelineJS) -----------------------------------

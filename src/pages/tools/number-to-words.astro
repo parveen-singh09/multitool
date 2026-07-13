@@ -4,7 +4,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="number-to-words">
   <div class="flex flex-col gap-5">
-    <!-- Controls -->
+
     <div class="flex flex-wrap gap-4 text-sm text-ink-subtle">
       <label class="flex flex-col gap-1">
         Direction
@@ -55,20 +55,17 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <label class="flex items-center gap-2"><input id="nw-batch" type="checkbox" class="accent-[#5e6ad2]" /> Batch mode (one per line)</label>
     </div>
 
-    <!-- Input -->
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">
       <span id="nw-in-label">Number</span>
       <input id="nw-num" type="text" class="field font-mono" placeholder="1234.56" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" />
       <textarea id="nw-num-multi" class="field font-mono" rows="5" placeholder="1234.56&#10;42&#10;1000000" spellcheck="false" autocomplete="off" hidden></textarea>
     </label>
 
-    <!-- Examples -->
     <div class="flex flex-wrap items-center gap-2 text-[13px] text-ink-tertiary">
       <span>Try:</span>
       <div id="nw-examples" class="flex flex-wrap gap-2"></div>
     </div>
 
-    <!-- Output -->
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">
       <span id="nw-out-label">In words</span>
       <div class="flex gap-2">
@@ -133,11 +130,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
     'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
   const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
-  // Short (international) scale — extends well past the quintillions to beat digit caps.
+
   const SHORT = ['', 'thousand', 'million', 'billion', 'trillion', 'quadrillion', 'quintillion',
     'sextillion', 'septillion', 'octillion', 'nonillion', 'decillion', 'undecillion', 'duodecillion',
     'tredecillion', 'quattuordecillion', 'quindecillion'];
-  // Indian scale after the first (rightmost) group of 3, then groups of 2.
+
   const INDIAN = ['', 'thousand', 'lakh', 'crore', 'arab', 'kharab', 'neel', 'padma', 'shankh'];
 
   const CURRENCIES: Record<string, { major: [string, string]; minor: [string, string] }> = {
@@ -167,13 +164,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return s.trim();
   }
 
-  // Convert an integer digit string using the selected number system. Safe for any length.
   function intToWords(digits: string): string {
     let s = digits.replace(/^0+(?=\d)/, '');
     if (s === '0' || s === '') return 'zero';
 
     if (systemEl.value === 'indian') {
-      // rightmost 3 digits, then groups of 2
+
       const groups: number[] = [];
       groups.push(Number(s.slice(-3)));
       s = s.slice(0, -3);
@@ -188,7 +184,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       return parts.join(' ').trim();
     }
 
-    // short scale: groups of 3
     const groups: number[] = [];
     while (s.length) { groups.unshift(Number(s.slice(-3))); s = s.slice(0, -3); }
     const parts: string[] = [];
@@ -200,7 +195,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return parts.join(' ').trim();
   }
 
-  // Turn a cardinal phrase into its ordinal form (transform only the final word).
   const ORD_ONES: Record<string, string> = {
     zero: 'zeroth', one: 'first', two: 'second', three: 'third', five: 'fifth',
     eight: 'eighth', nine: 'ninth', twelve: 'twelfth',
@@ -208,7 +202,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   function ordinalize(words: string): string {
     const tokens = words.split(' ');
     let last = tokens[tokens.length - 1];
-    // handle hyphenated tail like "twenty-one"
+
     const dash = last.lastIndexOf('-');
     let prefix = '';
     if (dash >= 0) { prefix = last.slice(0, dash + 1); last = last.slice(dash + 1); }
@@ -221,11 +215,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   }
 
   function readDecimals(decPart: string): string {
-    // "point four five" style
+
     return 'point ' + decPart.split('').map((d) => ONES[Number(d)]).join(' ');
   }
 
-  // ---- number -> words for one entry ----
   function numberToWords(raw0: string): string {
     const raw = raw0.trim().replace(/[, _]/g, '').replace(/^[$£€₹]/, '');
     if (!raw) return '';

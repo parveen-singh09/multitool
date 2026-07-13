@@ -1,9 +1,6 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 
-// Template gallery. Each entry is a distinct designed layout + palette, not a
-// color swap — the swatch preview is rendered live on a mini-canvas by the
-// client script so the grid mirrors what you'll download.
 const templates = [
   { id: 'bar-left',    name: 'Accent Bar' },
   { id: 'top-band',    name: 'Header Band' },
@@ -22,7 +19,7 @@ const templates = [
 
 <ToolLayout slug="business-card-generator">
   <div class="flex flex-col gap-6">
-    <!-- Template gallery -->
+
     <div class="flex flex-col gap-2">
       <span class="text-sm text-ink-subtle">Template</span>
       <div id="bc-templates" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -45,7 +42,7 @@ const templates = [
     </div>
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-      <!-- Controls -->
+
       <div class="flex flex-col gap-4">
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label class="flex flex-col gap-1 text-sm text-ink-subtle">Full name
@@ -55,7 +52,7 @@ const templates = [
             <input id="bc-title" class="field" value="Product Designer" />
           </label>
           <label class="flex flex-col gap-1 text-sm text-ink-subtle">Company
-            <input id="bc-company" class="field" value="ToolCities" />
+            <input id="bc-company" class="field" value="ToolSilk" />
           </label>
           <label class="flex flex-col gap-1 text-sm text-ink-subtle">Tagline / slogan
             <input id="bc-tagline" class="field" value="Tools for makers" />
@@ -64,10 +61,10 @@ const templates = [
             <input id="bc-phone" class="field" value="(555) 010-1234" />
           </label>
           <label class="flex flex-col gap-1 text-sm text-ink-subtle">Email
-            <input id="bc-email" class="field" value="jane@toolcities.com" />
+            <input id="bc-email" class="field" value="jane@toolsilk.com" />
           </label>
           <label class="flex flex-col gap-1 text-sm text-ink-subtle">Website
-            <input id="bc-web" class="field" value="toolcities.com" />
+            <input id="bc-web" class="field" value="toolsilk.com" />
           </label>
           <label class="flex flex-col gap-1 text-sm text-ink-subtle">Address
             <input id="bc-address" class="field" value="San Francisco, CA" />
@@ -88,7 +85,6 @@ const templates = [
           </label>
         </div>
 
-        <!-- Logo + background upload -->
         <div class="flex flex-col gap-2">
           <span class="text-sm text-ink-subtle">Logo &amp; background</span>
           <div class="flex flex-wrap items-center gap-2">
@@ -109,7 +105,6 @@ const templates = [
           </p>
         </div>
 
-        <!-- Background-mode panel controls -->
         <div class="flex flex-col gap-2">
           <label class="flex flex-col gap-1 text-sm text-ink-subtle">
             <span class="flex items-center justify-between">Panel opacity <span id="bc-opacity-val" class="text-ink-tertiary">82%</span></span>
@@ -121,16 +116,14 @@ const templates = [
           </p>
         </div>
 
-        <!-- QR toggle -->
         <label class="flex items-center gap-2 text-sm text-ink-muted">
           <input id="bc-qr" type="checkbox" class="h-4 w-4 accent-primary" checked />
           Add a contact QR code (vCard) on the back
         </label>
       </div>
 
-      <!-- Preview -->
       <div class="flex flex-col items-center gap-4">
-        <!-- Side toggle -->
+
         <div class="inline-flex rounded-full border border-hairline bg-canvas p-1">
           <button id="bc-side-front" type="button" class="rounded-full px-4 py-1.5 text-[13px] font-medium text-ink transition-colors">Front</button>
           <button id="bc-side-back" type="button" class="rounded-full px-4 py-1.5 text-[13px] font-medium text-ink-subtle transition-colors">Back</button>
@@ -176,11 +169,11 @@ const templates = [
 
   interface Template {
     id: Layout;
-    bg: string;      // card background
-    ink: string;     // primary text (name)
-    sub: string;     // secondary text (contacts / meta)
-    accent: string;  // default accent (overridable)
-    onAccent: string;// text drawn on top of accent fills
+    bg: string;      
+    ink: string;     
+    sub: string;     
+    accent: string;  
+    onAccent: string;
     font: 'sans' | 'serif' | 'mono';
   }
 
@@ -210,7 +203,6 @@ const templates = [
 
   const canvas = $('bc-canvas') as HTMLCanvasElement;
 
-  // ---- State ----
   let currentTpl: Layout = 'bar-left';
   let side: 'front' | 'back' = 'front';
   let accentTouched = false;
@@ -220,14 +212,12 @@ const templates = [
   let qrImg: HTMLImageElement | null = null;
   let qrKey = '';
 
-  // Background-image mode: free-form white legibility panel + draggable logos.
   interface Rect { x: number; y: number; w: number; h: number; }
   let panelOpacity = 0.82;
   let panelRect: Rect = { x: 60, y: 60, w: 930, h: 480 };
   let logoRect: Rect = { x: 770, y: 90, w: 180, h: 90 };
   let logoRectBack: Rect = { x: 440, y: 90, w: 170, h: 80 };
-  // Until the user drags the back logo, keep it centered above the heading so it
-  // tracks the layout's center (which shifts when the QR is shown/hidden).
+
   let logoBackTouched = false;
 
   interface CardData {
@@ -247,7 +237,6 @@ const templates = [
     return FONTS[sel === 'template' ? t.font : sel];
   };
 
-  // ---- Helpers ----
   function initials(name: string): string {
     const parts = name.split(/\s+/).filter(Boolean);
     if (!parts.length) return '?';
@@ -255,14 +244,12 @@ const templates = [
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 
-  // Draw an image contained within a box, preserving aspect ratio.
   function drawContain(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
     const r = Math.min(w / img.width, h / img.height);
     const dw = img.width * r, dh = img.height * r;
     ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
   }
 
-  // Draw an image covering a box (crop overflow).
   function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
     const r = Math.max(w / img.width, h / img.height);
     const dw = img.width * r, dh = img.height * r;
@@ -276,15 +263,13 @@ const templates = [
     return [d.phone, d.email, d.web, d.address].filter(Boolean);
   }
 
-  // ---- Front renderers (base coordinate space is always 1050 × 600) ----
   function drawFront(ctx: CanvasRenderingContext2D, tpl: Template, accent: string, font: string) {
     const W = 1050, H = 600, d = data();
     ctx.clearRect(0, 0, W, H);
 
-    // Full-bleed uploaded background wins the canvas; text gets a legibility panel.
     if (bgImg) {
       drawCover(ctx, bgImg, 0, 0, W, H);
-      // Stretchable / draggable white legibility panel.
+
       const p = panelRect;
       ctx.fillStyle = `rgba(255,255,255,${panelOpacity})`;
       ctx.fillRect(p.x, p.y, p.w, p.h);
@@ -346,7 +331,7 @@ const templates = [
   function frontBarLeft(ctx: CanvasRenderingContext2D, t: Template, accent: string, font: string, d: CardData) {
     ctx.fillStyle = accent; ctx.fillRect(0, 0, 26, 600);
     const x = 100;
-    if (maybeLogo(ctx, x, 70, 120, 60)) { /* logo drawn */ }
+    if (maybeLogo(ctx, x, 70, 120, 60)) 
     ctx.textAlign = 'left';
     ctx.fillStyle = t.ink; ctx.font = `700 66px ${font}`;
     ctx.fillText(d.name, x, 210);
@@ -428,7 +413,7 @@ const templates = [
     ctx.fillStyle = accent; ctx.fillRect(1050 - sw, 0, sw, 600);
     // Left: name block.
     ctx.textAlign = 'left';
-    if (maybeLogo(ctx, 80, 80, 130, 70)) { /* logo */ }
+    if (maybeLogo(ctx, 80, 80, 130, 70)) 
     ctx.fillStyle = t.ink; ctx.font = `700 60px ${font}`;
     ctx.fillText(d.name, 80, 300);
     ctx.fillStyle = accent; ctx.font = `500 30px ${font}`;
@@ -443,7 +428,7 @@ const templates = [
     // bg already dark
     ctx.fillStyle = accent; ctx.fillRect(0, 0, 1050, 8);
     ctx.textAlign = 'left';
-    if (maybeLogo(ctx, 90, 80, 120, 60)) { /* logo */ }
+    if (maybeLogo(ctx, 90, 80, 120, 60)) 
     ctx.fillStyle = t.ink; ctx.font = `700 68px ${font}`;
     ctx.fillText(d.name, 90, 240);
     ctx.fillStyle = accent; ctx.font = `500 30px ${font}`;
@@ -453,7 +438,7 @@ const templates = [
 
   function frontMinimal(ctx: CanvasRenderingContext2D, t: Template, accent: string, font: string, d: CardData) {
     ctx.textAlign = 'left';
-    if (maybeLogo(ctx, 90, 80, 110, 55)) { /* logo */ }
+    if (maybeLogo(ctx, 90, 80, 110, 55)) 
     ctx.fillStyle = t.ink; ctx.font = `500 54px ${font}`;
     ctx.fillText(d.name, 90, 200);
     ctx.fillStyle = t.sub; ctx.font = `400 26px ${font}`;
@@ -468,7 +453,7 @@ const templates = [
 
   function frontStripe(ctx: CanvasRenderingContext2D, t: Template, accent: string, font: string, d: CardData) {
     ctx.textAlign = 'left';
-    if (maybeLogo(ctx, 90, 70, 120, 60)) { /* logo */ }
+    if (maybeLogo(ctx, 90, 70, 120, 60)) 
     ctx.fillStyle = t.ink; ctx.font = `700 64px ${font}`;
     ctx.fillText(d.name, 90, 250);
     ctx.fillStyle = t.sub; ctx.font = `500 30px ${font}`;
@@ -519,7 +504,7 @@ const templates = [
     g.addColorStop(1, accent);
     ctx.fillStyle = g; ctx.fillRect(0, 0, 1050, 600);
     ctx.textAlign = 'left';
-    if (maybeLogo(ctx, 90, 80, 120, 60)) { /* logo */ }
+    if (maybeLogo(ctx, 90, 80, 120, 60)) 
     ctx.fillStyle = t.ink; ctx.font = `700 66px ${font}`;
     ctx.fillText(d.name, 90, 250);
     ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.font = `500 30px ${font}`;

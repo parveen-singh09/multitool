@@ -1,45 +1,35 @@
-// Locale-coherent fake address + identity data for the fake address generator.
-// Each country pairs a name set (from namesets.ts) with real city/region names,
-// locale street pools, and correct postal + phone formats so a generated record
-// reads like a plausible address for that country. Everything is fictional:
-// house numbers, postal codes and phones are randomised (phones use each
-// country's reserved/fictional test range where one exists).
-//
-// ponytail: ~16 countries covering the name sets we ship. Add a country by
-// adding one COUNTRY entry + (optionally) a matching name set; the page and
-// generator pick it up automatically.
+
 
 import { randInt, pick } from './random';
 import { NAME_SETS, type NameSetKey } from './namesets';
 
 export interface City {
   city: string;
-  region: string;      // state / province / prefecture / county
-  regionAbbr?: string; // shown when the format uses an abbreviation (US, CA, AU)
+  region: string;      
+  regionAbbr?: string; 
 }
 
 export interface Country {
-  code: string;        // ISO-3166 alpha-2
+  code: string;        
   name: string;
-  flag: string;        // emoji flag
+  flag: string;        
   nameSet: NameSetKey;
-  dialCode: string;    // e.g. +1
+  dialCode: string;    
   streets: readonly string[];
   streetTypes: readonly string[];
   cities: readonly City[];
-  /** Assemble the street line (house number + street). */
+
   street: () => string;
-  /** Locale postal / ZIP code. */
+
   postal: () => string;
-  /** Locale phone number in national display format. */
+
   phone: () => string;
-  /** Rough [minLat, maxLat, minLng, maxLng] for plausible coordinates. */
+
   bbox: [number, number, number, number];
   currency: string;
   timezone: string;
 }
 
-// Shared generic pools reused where a country has no distinct convention.
 const GEN_STREETS = [
   'Main', 'Oak', 'Pine', 'Maple', 'Cedar', 'Elm', 'Park', 'Hill', 'Lake', 'River',
   'Church', 'Spring', 'Highland', 'Ridge', 'Sunset', 'Willow', 'Forest', 'Union',
@@ -57,7 +47,6 @@ const upper = (n: number) => {
   return s;
 };
 
-// House-number + "Street Type" (US/UK/AU/CA style).
 function numStreet(streets: readonly string[], types: readonly string[]): string {
   return `${randInt(1, 9999)} ${pick(streets)} ${pick(types)}`;
 }

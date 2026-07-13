@@ -52,7 +52,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div id="pep-doses" class="text-center text-sm text-ink-muted"></div>
 
-    <!-- Weekly schedule helper -->
     <div class="panel p-5">
       <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
         At <input id="pep-perweek" type="number" min="0" step="1" class="field w-20" value="7" inputmode="numeric" /> doses per week,
@@ -60,7 +59,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <!-- Reverse: solve water volume for a target units-per-dose -->
     <div class="panel p-5">
       <div class="mb-3 text-sm text-ink-muted">Reverse: how much water for a target draw?</div>
       <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
@@ -105,21 +103,20 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     let dose = Number($('pep-dose').value) || 0;
     const doseUnit = sel('pep-dose-unit').value;
     const syringeEl = sel('pep-syringe');
-    const unitsPerMl = Number(syringeEl.value); // scale: units per mL (100 or 40)
+    const unitsPerMl = Number(syringeEl.value); 
     const opt = syringeEl.options[syringeEl.selectedIndex];
-    const barrelUnits = Number(opt.getAttribute('data-cap')) || unitsPerMl; // barrel capacity in units
+    const barrelUnits = Number(opt.getAttribute('data-cap')) || unitsPerMl; 
 
     if (!(amountMg > 0) || !(waterMl > 0) || !(dose > 0)) {
       setDash();
       return;
     }
 
-    // Work in micrograms.
     const doseMcg = doseUnit === 'mg' ? dose * 1000 : dose;
     const totalMcg = amountMg * 1000;
-    const concMcgPerMl = totalMcg / waterMl; // mcg per mL
-    const volumeMl = doseMcg / concMcgPerMl; // mL to draw
-    const drawUnits = volumeMl * unitsPerMl; // syringe units
+    const concMcgPerMl = totalMcg / waterMl; 
+    const volumeMl = doseMcg / concMcgPerMl; 
+    const drawUnits = volumeMl * unitsPerMl; 
     const mcgPerUnit = concMcgPerMl / unitsPerMl;
 
     document.getElementById('pep-units')!.textContent = drawUnits.toFixed(1);
@@ -148,10 +145,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       weeklyEl.textContent = '—';
     }
 
-    // Reverse: water needed so the dose draws to a target number of units.
     const targetUnits = Number($('pep-target-units').value) || 0;
     const twEl = document.getElementById('pep-target-water')!;
-    // drawUnits = doseMcg × water × unitsPerMl / totalMcg → water = targetUnits × totalMcg / (doseMcg × unitsPerMl)
+
     twEl.textContent = targetUnits > 0 ? `${((targetUnits * totalMcg) / (doseMcg * unitsPerMl)).toFixed(2)} mL` : '—';
   }
 
