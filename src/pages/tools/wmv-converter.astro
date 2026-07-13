@@ -1,15 +1,472 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
-import MediaConverter from '../../components/MediaConverter.astro';
 ---
 
 <ToolLayout slug="wmv-converter">
-  <MediaConverter slug="wmv-converter" />
+  <div id="wc-root" class="flex flex-col gap-4">
+    <!-- Drop zone -->
+    <label id="wc-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose WMV files or drop them here</span>
+      <span class="text-[13px] text-ink-tertiary">Batch supported · converted in your browser — never uploaded, no size limit</span>
+      <input id="wc-file" type="file" accept=".wmv,video/x-ms-wmv,video/*" multiple class="sr-only" />
+    </label>
+
+    <p class="text-[13px] text-ink-tertiary">
+      Video re-encoding runs entirely in your browser and is CPU-intensive — expect roughly real-time speed, so a few minutes for a few minutes of footage.
+    </p>
+
+    <div id="wc-panel" class="hidden flex-col gap-4">
+      <!-- File list -->
+      <div id="wc-files" class="flex flex-col gap-2"></div>
+
+      <!-- Options -->
+      <div class="panel flex flex-col gap-4 p-4">
+        <!-- Output format + core video controls -->
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle">Convert to
+            <select id="wc-format" class="field">
+              <option value="mp4" selected>MP4 · H.264</option>
+              <option value="webm">WebM · VP9</option>
+              <option value="mkv">MKV · H.264</option>
+              <option value="mov">MOV · H.264</option>
+              <option value="gif">GIF (animated)</option>
+              <option value="mp3">MP3 (audio only)</option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle" data-group="quality">Quality
+            <select id="wc-crf" class="field">
+              <option value="high">High (larger)</option>
+              <option value="balanced" selected>Balanced</option>
+              <option value="smaller">Smaller</option>
+              <option value="smallest">Smallest</option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle" data-group="scale">Resolution
+            <select id="wc-scale" class="field">
+              <option value="0" selected>Keep original</option>
+              <option value="3840">2160p (4K)</option>
+              <option value="2560">1440p</option>
+              <option value="1920">1080p</option>
+              <option value="1280">720p</option>
+              <option value="854">480p</option>
+              <option value="640">360p</option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle" data-group="fps">Frame rate
+            <select id="wc-fps" class="field">
+              <option value="0" selected>Keep original</option>
+              <option value="60">60 fps</option>
+              <option value="30">30 fps</option>
+              <option value="24">24 fps</option>
+              <option value="15">15 fps</option>
+              <option value="10">10 fps</option>
+            </select>
+          </label>
+        </div>
+
+        <!-- Transform + audio -->
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle" data-group="rotate">Rotate
+            <select id="wc-rotate" class="field">
+              <option value="0" selected>None</option>
+              <option value="90">90° clockwise</option>
+              <option value="180">180°</option>
+              <option value="270">90° counter-clockwise</option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle" data-group="flip">Flip
+            <select id="wc-flip" class="field">
+              <option value="none" selected>None</option>
+              <option value="h">Horizontal</option>
+              <option value="v">Vertical</option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle" data-group="volume">Volume (%)
+            <input id="wc-volume" type="number" min="0" max="1000" step="5" placeholder="100" class="field" />
+          </label>
+          <label class="flex items-center gap-2 pt-6 text-sm text-ink-subtle" data-group="mute">
+            <input id="wc-mute" type="checkbox" class="accent-[#5e6ad2]" /> Remove audio
+          </label>
+        </div>
+
+        <!-- Advanced: trim + fade -->
+        <details class="group">
+          <summary class="cursor-pointer select-none text-[13px] text-ink-subtle hover:text-ink">Trim &amp; fade options</summary>
+          <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">Trim start (s)
+              <input id="wc-trimstart" type="number" min="0" step="0.5" placeholder="0" class="field" />
+            </label>
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">Trim end (s)
+              <input id="wc-trimend" type="number" min="0" step="0.5" placeholder="end" class="field" />
+            </label>
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle" data-group="fade">Fade in (s)
+              <input id="wc-fadein" type="number" min="0" step="0.5" placeholder="0" class="field" />
+            </label>
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle" data-group="fade">Fade out (s)
+              <input id="wc-fadeout" type="number" min="0" step="0.5" placeholder="0" class="field" />
+            </label>
+          </div>
+          <p class="mt-2 text-xs text-ink-tertiary">Trim and fade apply to every file in the queue. Leave blank to keep the full length.</p>
+        </details>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <button id="wc-go" class="btn btn-primary">Convert to MP4</button>
+        <button id="wc-clear" class="btn btn-secondary">Clear</button>
+        <span id="wc-summary" class="text-[13px] text-ink-subtle"></span>
+      </div>
+
+      <div id="wc-batch-dl" class="hidden">
+        <button id="wc-zip" class="btn btn-primary">Download all as ZIP</button>
+      </div>
+    </div>
+
+    <p id="wc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free WMV to MP4 converter re-encodes Windows Media WMV video into MP4 (H.264 + AAC) so it plays on phones, Macs and the web. All processing happens locally in your browser using an
-      in-page media engine, so your files are never uploaded to any server.
+      This free WMV converter re-encodes Windows Media WMV video into MP4 (H.264), WebM (VP9), MKV, MOV, an animated GIF, or extracts the audio as MP3 — all in your browser using an in-page media engine, so your files are never uploaded to any server and there is no file-size limit.
+    </p>
+    <p>
+      Unlike upload-based sites that cap free files at 1&nbsp;GB and process them on a remote cloud, everything here stays on your device. Queue as many files as you like and batch-convert them at once, then download each result or grab them all in a single ZIP.
+    </p>
+    <p>
+      Fine-tune every conversion: pick a quality level, downscale up to 4K resolution, cap the frame rate, rotate or flip the picture, adjust the volume or remove the audio track entirely, trim to a start and end point, and add fades. Sensible defaults mean you can also just drop a file and click convert. Preview each result inline before you save it.
     </p>
   </div>
 </ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  import { getFFmpeg, fetchFile } from '../../lib/ffmpeg';
+  import { makeZip } from '../../lib/zip';
+
+  // Per-format output metadata + the ffmpeg codec/container knobs. WMV's native
+  // video codec never fits an MP4/MKV/MOV container by stream copy, so every
+  // path re-encodes — there's deliberately no "remux" option to mislead with.
+  type Fmt = 'mp4' | 'webm' | 'mkv' | 'mov' | 'gif' | 'mp3';
+  const FORMATS: Record<Fmt, { ext: string; mime: string; label: string; audioOnly?: boolean; noAudio?: boolean }> = {
+    mp4:  { ext: 'mp4',  mime: 'video/mp4' },
+    webm: { ext: 'webm', mime: 'video/webm' },
+    mkv:  { ext: 'mkv',  mime: 'video/x-matroska' },
+    mov:  { ext: 'mov',  mime: 'video/quicktime' },
+    gif:  { ext: 'gif',  mime: 'image/gif', noAudio: true },
+    mp3:  { ext: 'mp3',  mime: 'audio/mpeg', audioOnly: true },
+  } as any;
+
+  // Quality → CRF per codec (lower = better). VP9 uses a different useful range.
+  const CRF_H264: Record<string, number> = { high: 18, balanced: 23, smaller: 28, smallest: 32 };
+  const CRF_VP9: Record<string, number>  = { high: 24, balanced: 31, smaller: 37, smallest: 45 };
+  const MP3_KBPS: Record<string, string> = { high: '256', balanced: '192', smaller: '128', smallest: '96' };
+
+  const $ = (id: string) => document.getElementById(id);
+  const root = $('wc-root') as HTMLElement;
+  const fileInput = $('wc-file') as HTMLInputElement;
+  const drop = $('wc-drop')!;
+  const panel = $('wc-panel')!;
+  const filesEl = $('wc-files')!;
+  const goBtn = $('wc-go') as HTMLButtonElement;
+  const clearBtn = $('wc-clear') as HTMLButtonElement;
+  const summary = $('wc-summary')!;
+  const batchDl = $('wc-batch-dl')!;
+  const zipBtn = $('wc-zip') as HTMLButtonElement;
+  const err = $('wc-error')!;
+  const formatSel = $('wc-format') as HTMLSelectElement;
+
+  interface Job {
+    file: File;
+    duration: number;
+    row: HTMLElement;
+    statusEl: HTMLElement;
+    bar: HTMLElement;
+    actionsEl: HTMLElement;
+    outUrl?: string;
+    outData?: Uint8Array;
+    outName?: string;
+    outMime?: string;
+    done: boolean;
+  }
+  let jobs: Job[] = [];
+  let current: Job | null = null;
+
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+  const fmtSize = (n: number) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`;
+  const num = (id: string) => { const v = Number(($(id) as HTMLInputElement)?.value); return Number.isFinite(v) && v > 0 ? v : 0; };
+  const curFmt = () => formatSel.value as Fmt;
+  const outNameFor = (f: File) => f.name.replace(/\.[^.]+$/, '') + '.' + FORMATS[curFmt()].ext;
+
+  // Show/hide option groups per selected format and relabel the convert button.
+  function syncControls() {
+    const fmt = curFmt();
+    const meta = FORMATS[fmt];
+    const show = (group: string, on: boolean) =>
+      root.querySelectorAll<HTMLElement>(`[data-group="${group}"]`).forEach((el) => el.classList.toggle('hidden', !on));
+    const isVideo = !meta.audioOnly;
+    show('quality', fmt !== 'gif'); // gif quality is fixed via palette
+    show('scale', isVideo);
+    show('fps', isVideo);
+    show('rotate', isVideo);
+    show('flip', isVideo);
+    show('volume', !meta.noAudio);
+    show('mute', !meta.noAudio && !meta.audioOnly);
+    show('fade', !meta.noAudio);
+    goBtn.textContent = 'Convert to ' + fmt.toUpperCase();
+  }
+
+  // Read the source media duration so fade-out timing and trim defaults work.
+  function probeDuration(file: File): Promise<number> {
+    return new Promise((resolve) => {
+      const el = document.createElement('video');
+      el.preload = 'metadata';
+      const url = URL.createObjectURL(file);
+      el.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(isFinite(el.duration) ? el.duration : 0); };
+      el.onerror = () => { URL.revokeObjectURL(url); resolve(0); };
+      el.src = url;
+    });
+  }
+
+  function addFiles(list: FileList | File[]) {
+    setErr('');
+    const arr = Array.from(list).filter((f) => f.size > 0);
+    if (!arr.length) { setErr('No readable files were selected.'); return; }
+    for (const file of arr) {
+      const row = document.createElement('div');
+      row.className = 'panel flex flex-col gap-2 p-3';
+      const top = document.createElement('div');
+      top.className = 'flex flex-wrap items-center gap-2';
+      const name = document.createElement('span');
+      name.className = 'text-[13px] text-ink truncate';
+      name.textContent = `${file.name} · ${fmtSize(file.size)}`;
+      const statusEl = document.createElement('span');
+      statusEl.className = 'text-xs text-ink-tertiary ml-auto';
+      const actionsEl = document.createElement('span');
+      actionsEl.className = 'flex items-center gap-2';
+      top.append(name, statusEl, actionsEl);
+      const barWrap = document.createElement('div');
+      barWrap.className = 'h-1 w-full overflow-hidden rounded-full bg-surface-3';
+      const bar = document.createElement('div');
+      bar.className = 'h-full w-0 rounded-full transition-all';
+      bar.style.background = 'var(--color-primary)';
+      barWrap.appendChild(bar);
+      row.append(top, barWrap);
+      filesEl.appendChild(row);
+      const job: Job = { file, duration: 0, row, statusEl, bar, actionsEl, done: false };
+      jobs.push(job);
+      probeDuration(file).then((d) => (job.duration = d));
+    }
+    panel.classList.remove('hidden'); panel.classList.add('flex');
+    refreshSummary();
+  }
+
+  function refreshSummary() {
+    const doneCount = jobs.filter((j) => j.done).length;
+    summary.textContent = jobs.length ? `${jobs.length} file${jobs.length === 1 ? '' : 's'}${doneCount ? ` · ${doneCount} done` : ''}` : '';
+    batchDl.classList.toggle('hidden', !(doneCount > 1));
+  }
+
+  // Compose the video filter chain shared by re-encode paths: rotate → flip →
+  // scale (cap width, keep even height). Returns '' when nothing to apply.
+  function videoFilters(scale: number, rotate: number, flip: string): string[] {
+    const f: string[] = [];
+    if (rotate === 90) f.push('transpose=1');
+    else if (rotate === 270) f.push('transpose=2');
+    else if (rotate === 180) f.push('transpose=1', 'transpose=1');
+    if (flip === 'h') f.push('hflip');
+    else if (flip === 'v') f.push('vflip');
+    if (scale > 0) f.push(`scale='min(${scale},iw)':-2`);
+    return f;
+  }
+
+  // Build the full ffmpeg argument list for one job from the current UI options.
+  function buildArgs(inName: string, outName: string, duration: number): string[] {
+    const fmt = curFmt();
+    const qual = ($('wc-crf') as HTMLSelectElement).value;
+    const scale = Number(($('wc-scale') as HTMLSelectElement).value);
+    const fps = Number(($('wc-fps') as HTMLSelectElement).value);
+    const rotate = Number(($('wc-rotate') as HTMLSelectElement).value);
+    const flip = ($('wc-flip') as HTMLSelectElement).value;
+    const mute = ($('wc-mute') as HTMLInputElement).checked;
+    const volPct = num('wc-volume');
+    const trimStart = num('wc-trimstart');
+    const trimEnd = num('wc-trimend');
+    const fadeIn = num('wc-fadein');
+    const fadeOut = num('wc-fadeout');
+
+    const pre: string[] = [];
+    if (trimStart > 0) pre.push('-ss', String(trimStart));
+    pre.push('-i', inName);
+    if (trimEnd > trimStart) pre.push('-to', String(trimEnd - trimStart));
+
+    // Audio filter chain (volume + fades), reused by audio-capable formats.
+    const outDur = trimEnd > trimStart ? trimEnd - trimStart : (duration || 0) - trimStart;
+    const af: string[] = [];
+    if (volPct > 0 && volPct !== 100) af.push(`volume=${(volPct / 100).toFixed(3)}`);
+    if (fadeIn > 0) af.push(`afade=t=in:st=0:d=${fadeIn}`);
+    if (fadeOut > 0 && outDur > 0) af.push(`afade=t=out:st=${Math.max(0, outDur - fadeOut).toFixed(3)}:d=${fadeOut}`);
+
+    // GIF: single-pass split → palettegen → paletteuse for clean colors.
+    if (fmt === 'gif') {
+      const chain = videoFilters(scale > 0 ? scale : 480, rotate, flip);
+      chain.unshift(`fps=${fps > 0 ? fps : 15}`);
+      // insert lanczos scaling flag by rewriting the scale entry if present
+      const vf = chain.map((c) => c.startsWith('scale=') ? c + ':flags=lanczos' : c).join(',');
+      const filter = `${vf ? vf + ',' : ''}split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse`;
+      return [...pre, '-vf', filter, '-loop', '0', outName];
+    }
+
+    // MP3: audio only.
+    if (fmt === 'mp3') {
+      const a: string[] = ['-vn', '-c:a', 'libmp3lame', '-b:a', MP3_KBPS[qual] + 'k'];
+      if (af.length) a.push('-af', af.join(','));
+      return [...pre, ...a, outName];
+    }
+
+    // Video re-encode (mp4 / mkv / mov / webm).
+    const v: string[] = [];
+    const vf = videoFilters(scale, rotate, flip);
+    if (vf.length) v.push('-vf', vf.join(','));
+    if (fps > 0) v.push('-r', String(fps));
+    if (fmt === 'webm') {
+      v.push('-c:v', 'libvpx-vp9', '-crf', String(CRF_VP9[qual]), '-b:v', '0', '-row-mt', '1');
+      if (mute) v.push('-an');
+      else { v.push('-c:a', 'libopus', '-b:a', '128k'); if (af.length) v.push('-af', af.join(',')); }
+    } else {
+      v.push('-c:v', 'libx264', '-preset', 'veryfast', '-crf', String(CRF_H264[qual]), '-pix_fmt', 'yuv420p');
+      if (mute) v.push('-an');
+      else { v.push('-c:a', 'aac', '-b:a', '192k'); if (af.length) v.push('-af', af.join(',')); }
+      if (fmt === 'mp4' || fmt === 'mov') v.push('-movflags', '+faststart');
+    }
+    return [...pre, ...v, outName];
+  }
+
+  function download(data: Uint8Array, name: string, mime: string) {
+    const blob = new Blob([data as BlobPart], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  async function convertAll() {
+    const pending = jobs.filter((j) => !j.done);
+    if (!pending.length) return;
+    setErr(''); goBtn.disabled = true; clearBtn.disabled = true;
+    const fmt = curFmt();
+    const meta = FORMATS[fmt];
+    try {
+      const ff = await getFFmpeg({
+        onDownload: (n) => { if (n) summary.textContent = n; },
+        onProgress: (r) => { if (current) current.bar.style.width = Math.min(100, Math.round(r * 100)) + '%'; },
+      });
+      for (const job of pending) {
+        current = job;
+        job.bar.style.width = '0%';
+        job.statusEl.style.color = '';
+        job.statusEl.textContent = 'Converting…';
+        const inName = 'in_' + Math.random().toString(36).slice(2) + '.' + (job.file.name.split('.').pop() || 'wmv');
+        const outName = 'out.' + meta.ext;
+        try {
+          await ff.writeFile(inName, await fetchFile(job.file));
+          await ff.exec(buildArgs(inName, outName, job.duration));
+          const data = (await ff.readFile(outName)) as Uint8Array;
+          if (!data || data.length === 0) throw new Error('empty output — the codec may not support these options');
+          try { await ff.deleteFile(inName); await ff.deleteFile(outName); } catch {}
+          job.outData = data;
+          job.outName = outNameFor(job.file);
+          job.outMime = meta.mime;
+          job.done = true;
+          job.bar.style.width = '100%';
+          job.statusEl.textContent = fmtSize(data.length);
+          job.statusEl.style.color = 'var(--color-success)';
+          renderActions(job);
+        } catch (e) {
+          try { await ff.deleteFile(inName); } catch {}
+          job.statusEl.textContent = 'Failed';
+          job.statusEl.style.color = '#e5484d';
+          throw e;
+        }
+        refreshSummary();
+      }
+    } catch (e) {
+      const msg = (e as Error).message || String(e);
+      setErr(`Conversion failed: ${msg}. Try a different output format or simpler options — some source files use codecs the in-browser engine can't decode.`);
+    } finally {
+      goBtn.disabled = false; clearBtn.disabled = false;
+    }
+  }
+
+  function renderActions(job: Job) {
+    job.actionsEl.replaceChildren();
+    const dl = document.createElement('button');
+    dl.className = 'btn btn-secondary';
+    dl.style.minHeight = '28px'; dl.style.padding = '2px 10px'; dl.style.fontSize = '12px';
+    dl.textContent = 'Download';
+    dl.addEventListener('click', () => job.outData && download(job.outData, job.outName!, job.outMime!));
+    job.actionsEl.appendChild(dl);
+
+    const pv = document.createElement('button');
+    pv.className = 'btn btn-tertiary';
+    pv.style.minHeight = '28px'; pv.style.padding = '2px 10px'; pv.style.fontSize = '12px';
+    pv.textContent = 'Preview';
+    let shown = false;
+    let holder: HTMLElement | null = null;
+    pv.addEventListener('click', () => {
+      if (shown) { holder?.remove(); holder = null; shown = false; pv.textContent = 'Preview'; return; }
+      const mime = job.outMime!;
+      const blob = new Blob([job.outData as BlobPart], { type: mime });
+      job.outUrl && URL.revokeObjectURL(job.outUrl);
+      job.outUrl = URL.createObjectURL(blob);
+      holder = document.createElement('div');
+      holder.className = 'mt-1';
+      holder.innerHTML = mime.startsWith('video/')
+        ? `<video src="${job.outUrl}" controls class="max-h-80 w-auto max-w-full rounded-md"></video>`
+        : mime.startsWith('image/')
+        ? `<img src="${job.outUrl}" alt="Converted GIF preview" class="max-h-80 w-auto max-w-full rounded-md" />`
+        : `<audio src="${job.outUrl}" controls class="w-full"></audio>`;
+      job.row.appendChild(holder);
+      shown = true; pv.textContent = 'Hide';
+    });
+    job.actionsEl.appendChild(pv);
+  }
+
+  zipBtn.addEventListener('click', () => {
+    const done = jobs.filter((j) => j.done && j.outData);
+    if (!done.length) return;
+    const zip = makeZip(done.map((j) => ({ name: j.outName!, data: j.outData! })));
+    const url = URL.createObjectURL(zip);
+    const a = document.createElement('a'); a.href = url; a.download = 'wmv-converter-output.zip'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  });
+
+  clearBtn.addEventListener('click', () => {
+    jobs.forEach((j) => { j.outUrl && URL.revokeObjectURL(j.outUrl); j.row.remove(); });
+    jobs = []; refreshSummary(); setErr('');
+    panel.classList.add('hidden'); panel.classList.remove('flex');
+    fileInput.value = '';
+  });
+
+  // Changing the target format resets completed results so they re-run in the
+  // new format, and refreshes which controls are relevant.
+  formatSel.addEventListener('change', () => {
+    syncControls();
+    jobs.forEach((j) => {
+      j.done = false; j.outData = undefined; j.bar.style.width = '0%';
+      j.statusEl.textContent = ''; j.statusEl.style.color = '';
+      j.actionsEl.replaceChildren();
+      j.outUrl && URL.revokeObjectURL(j.outUrl); j.outUrl = undefined;
+    });
+    refreshSummary();
+  });
+
+  fileInput.addEventListener('change', () => fileInput.files && addFiles(fileInput.files));
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files; if (f?.length) addFiles(f); });
+  goBtn.addEventListener('click', convertAll);
+
+  syncControls();
+</script>

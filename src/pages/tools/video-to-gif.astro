@@ -14,9 +14,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div id="vg-panel" class="hidden flex-col gap-4">
       <!-- Video preview + scrubber -->
       <div class="panel flex flex-col gap-3 p-3">
-        <div id="vg-stage" class="relative mx-auto w-fit max-w-full">
+        <div id="vg-stage" class="relative mx-auto w-fit max-w-full overflow-hidden rounded-md">
           <video id="vg-video" controls class="block max-h-90 w-auto max-w-full rounded-md bg-black"></video>
           <div id="vg-textlayer" class="pointer-events-none absolute inset-0 overflow-hidden rounded-md"></div>
+          <div id="vg-crop" class="hidden">
+            <span id="vg-crop-handle" class="vg-crop-handle" aria-label="Resize crop"></span>
+          </div>
         </div>
         <div class="flex flex-col gap-2">
           <div class="relative h-8">
@@ -49,6 +52,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">FPS
           <select id="vg-fps" class="field w-24"><option>10</option><option selected>15</option><option>20</option><option>25</option><option>30</option></select>
         </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Speed
+          <select id="vg-speed" class="field w-28"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1× (normal)</option><option value="1.5">1.5×</option><option value="2">2×</option><option value="3">3×</option><option value="4">4×</option></select>
+        </label>
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">Colors
           <select id="vg-colors" class="field w-28"><option value="256" selected>256 (best)</option><option value="128">128</option><option value="64">64 (small)</option><option value="32">32 (tiny)</option></select>
         </label>
@@ -65,6 +71,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </label>
         <label class="flex items-center gap-2 pb-2.5 text-sm text-ink-subtle"><input id="vg-reverse" type="checkbox" class="accent-primary" /> Reverse</label>
         <label class="flex items-center gap-2 pb-2.5 text-sm text-ink-subtle" title="Play forward then backward"><input id="vg-boomerang" type="checkbox" class="accent-primary" /> Boomerang</label>
+        <label class="flex items-center gap-2 pb-2.5 text-sm text-ink-subtle" title="Drag the box on the preview to crop"><input id="vg-crop-on" type="checkbox" class="accent-primary" /> Crop</label>
       </div>
 
       <div class="flex flex-wrap items-center gap-3">
@@ -95,10 +102,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       start and end, then set the width, frame rate, color count and smoothing.
       Add text captions and drag them anywhere on the frame — pick the size,
       color, bold weight and an optional background box, and the text is burned
-      right into the GIF. Reverse the clip or make a boomerang that plays forward
-      then back, choose how many times it loops, and see an estimated file size
-      before you render. A two-pass palette keeps colors clean. Everything runs
-      in your browser with an in-page media engine, so your video is never uploaded.
+      right into the GIF. Drag a crop box to keep just the part of the frame you
+      want, speed the clip up or slow it down, reverse it or make a boomerang that
+      plays forward then back, choose how many times it loops, and see an estimated
+      file size and output dimensions before you render. A two-pass palette keeps
+      colors clean. Everything runs in your browser with an in-page media engine,
+      so your video is never uploaded.
     </p>
   </div>
 </ToolLayout>
@@ -126,6 +135,18 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   :global(.vg-text:hover), :global(.vg-text.vg-active) { outline-color:var(--color-primary); }
   :global(.vg-text.vg-stroke) { -webkit-text-stroke:0.06em rgba(0,0,0,0.85); paint-order:stroke fill; }
   :global(.vg-text.vg-bg) { background:rgba(0,0,0,0.6); padding:0.25em; border-radius:0.15em; }
+
+  /* Crop overlay: a movable/resizable box; the huge box-shadow dims everything outside it. */
+  #vg-crop {
+    position:absolute; cursor:move; touch-action:none;
+    outline:1px solid var(--color-primary); outline-offset:-1px;
+    box-shadow:0 0 0 9999px rgba(0,0,0,0.5);
+  }
+  .vg-crop-handle {
+    position:absolute; right:-6px; bottom:-6px; width:14px; height:14px;
+    border-radius:9999px; background:var(--color-primary);
+    border:2px solid var(--color-ink); cursor:nwse-resize; touch-action:none;
+  }
 </style>
 
 <script>
@@ -151,10 +172,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const preview = $('vg-preview') as HTMLImageElement;
   const err = $('vg-error');
 
+  const cropBox = $('vg-crop');
+  const cropHandle = $('vg-crop-handle');
+  const cropOn = $('vg-crop-on') as HTMLInputElement;
+
   let file: File | null = null;
   let duration = 0;
   let outUrl = '';
   let videoUrl = '';
+  // Crop rect in % of the frame; only used when the Crop checkbox is on.
+  const crop = { x: 10, y: 10, w: 80, h: 80 };
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
   const fmtSize = (n: number) => n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(2)} MB`;
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}.${String(Math.floor((s % 1) * 10))}`;
@@ -312,9 +339,67 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const w = Number(($('vg-width') as HTMLInputElement).value) || 480;
     const vw = video.videoWidth || 16;
     const vh = video.videoHeight || 9;
-    const h = Math.max(2, Math.round((w * vh) / vw));
+    // Output aspect follows the crop rect when cropping, else the full frame.
+    const ar = cropOn.checked ? (vw * crop.w) / (vh * crop.h) : vw / vh;
+    const h = Math.max(2, Math.round(w / ar));
     return { w, h };
   }
+
+  // Keep the text layer aligned to the visible output region so overlay % stay
+  // pixel-accurate: it covers the crop rect when cropping, else the whole frame.
+  function syncTextLayer() {
+    const on = cropOn.checked;
+    textLayer.style.left = on ? crop.x + '%' : '';
+    textLayer.style.top = on ? crop.y + '%' : '';
+    textLayer.style.width = on ? crop.w + '%' : '';
+    textLayer.style.height = on ? crop.h + '%' : '';
+    textLayer.style.right = on ? 'auto' : '';
+    textLayer.style.bottom = on ? 'auto' : '';
+  }
+
+  function syncCropBox() {
+    cropBox.style.left = crop.x + '%';
+    cropBox.style.top = crop.y + '%';
+    cropBox.style.width = crop.w + '%';
+    cropBox.style.height = crop.h + '%';
+  }
+
+  // Move (drag body) or resize (drag handle) the crop rect, clamped to 0–100.
+  function attachCropDrag() {
+    const grab = (e: PointerEvent, mode: 'move' | 'resize') => {
+      e.preventDefault(); e.stopPropagation();
+      const layer = video.getBoundingClientRect();
+      const sx = e.clientX, sy = e.clientY;
+      const o = { ...crop };
+      const move = (ev: PointerEvent) => {
+        const dx = ((ev.clientX - sx) / layer.width) * 100;
+        const dy = ((ev.clientY - sy) / layer.height) * 100;
+        if (mode === 'move') {
+          crop.x = Math.min(100 - crop.w, Math.max(0, o.x + dx));
+          crop.y = Math.min(100 - crop.h, Math.max(0, o.y + dy));
+        } else {
+          crop.w = Math.min(100 - crop.x, Math.max(5, o.w + dx));
+          crop.h = Math.min(100 - crop.y, Math.max(5, o.h + dy));
+        }
+        syncCropBox(); syncTextLayer(); updateEstimate();
+      };
+      const up = () => {
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+      };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+    };
+    cropBox.addEventListener('pointerdown', (e) => grab(e as PointerEvent, 'move'));
+    cropHandle.addEventListener('pointerdown', (e) => grab(e as PointerEvent, 'resize'));
+  }
+  attachCropDrag();
+
+  cropOn.addEventListener('change', () => {
+    cropBox.classList.toggle('hidden', !cropOn.checked);
+    if (cropOn.checked) syncCropBox();
+    syncTextLayer(); renderBoxes(); updateEstimate();
+  });
 
   // Draw all active text onto a transparent PNG at the output resolution.
   async function buildOverlayPng(outW: number, outH: number): Promise<Blob> {
@@ -376,22 +461,23 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   function updateEstimate() {
     const dur = Math.max(0, endSec() - startSec());
     const fps = Number(($('vg-fps') as HTMLSelectElement).value) || 15;
-    const width = Number(($('vg-width') as HTMLInputElement).value) || 480;
     const colors = Number(($('vg-colors') as HTMLSelectElement).value) || 256;
+    const speed = Number(($('vg-speed') as HTMLSelectElement).value) || 1;
     const boomerang = ($('vg-boomerang') as HTMLInputElement).checked;
-    const frames = Math.max(1, Math.round(dur * fps)) * (boomerang ? 2 : 1);
-    const height = width * 0.56; // assume ~16:9 for the estimate
+    const outDur = dur / speed; // speed changes playback length
+    const frames = Math.max(1, Math.round(outDur * fps)) * (boomerang ? 2 : 1);
+    const { w, h } = outputDims();
     // Rough GIF bytes: frames × pixels × bits-per-pixel(from palette)/8 × LZW factor.
     const bpp = Math.log2(colors) / 8;
-    const bytes = frames * width * height * bpp * 0.5;
-    estimate.textContent = dur > 0 ? `~${frames} frames · est. ${fmtSize(bytes)}` : '';
+    const bytes = frames * w * h * bpp * 0.5;
+    estimate.textContent = dur > 0 ? `~${frames} frames · ${w}×${h} · est. ${fmtSize(bytes)}` : '';
   }
 
   rStart.addEventListener('input', () => { refreshClip(); video.currentTime = startSec(); });
   rEnd.addEventListener('input', () => { refreshClip(); video.currentTime = endSec(); });
   $('vg-set-start').addEventListener('click', () => { rStart.value = String((video.currentTime / duration) * 100); refreshClip(); });
   $('vg-set-end').addEventListener('click', () => { rEnd.value = String((video.currentTime / duration) * 100); refreshClip(); });
-  ['vg-width', 'vg-fps', 'vg-colors', 'vg-boomerang'].forEach((id) => $(id).addEventListener('input', updateEstimate));
+  ['vg-width', 'vg-fps', 'vg-colors', 'vg-boomerang', 'vg-speed'].forEach((id) => $(id).addEventListener('input', updateEstimate));
 
   function pick(f: File) {
     file = f; setErr('');
@@ -424,7 +510,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const loop = ($('vg-loop') as HTMLSelectElement).value;
     const reverse = ($('vg-reverse') as HTMLInputElement).checked;
     const boomerang = ($('vg-boomerang') as HTMLInputElement).checked;
+    const speed = Number(($('vg-speed') as HTMLSelectElement).value) || 1;
     const hasText = activeTexts().length > 0;
+    // Source-stream prefix applied before fps/scale: optional retime + crop.
+    // setpts=PTS/speed changes clip length; crop uses source-pixel fractions.
+    const speedF = speed !== 1 ? `setpts=PTS/${speed},` : '';
+    const cropF = cropOn.checked
+      ? `crop=iw*${(crop.w / 100).toFixed(4)}:ih*${(crop.h / 100).toFixed(4)}:iw*${(crop.x / 100).toFixed(4)}:ih*${(crop.y / 100).toFixed(4)},`
+      : '';
+    const pre = speedF + cropF;
     try {
       const ff = await getFFmpeg({
         onProgress: (r) => { bar.style.width = Math.min(100, Math.round(r * 100)) + '%'; },
@@ -443,7 +537,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         await ff.writeFile('overlay.png', await fetchFile(png));
         cleanup.push('overlay.png');
         // Shared processing chain: fps + scale + text overlay + optional reverse/boomerang.
-        let proc = `[0:v]fps=${fps},scale=${outW}:${outH}:flags=lanczos[b0];[b0][1:v]overlay=0:0`;
+        let proc = `[0:v]${pre}fps=${fps},scale=${outW}:${outH}:flags=lanczos[b0];[b0][1:v]overlay=0:0`;
         if (boomerang) proc += `,split[sa][sb];[sb]reverse[sr];[sa][sr]concat`;
         else if (reverse) proc += `,reverse`;
         proc += `[proc]`;
@@ -456,7 +550,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           '-filter_complex', `${proc};[proc][2:v]paletteuse=dither=${dither}[o]`, '-map', '[o]', '-loop', loop, 'out.gif']);
       } else {
         // No text: original single-filter path (keeps auto height via scale=-1).
-        let chain = `fps=${fps},scale=${outW}:-1:flags=lanczos`;
+        let chain = `${pre}fps=${fps},scale=${outW}:-1:flags=lanczos`;
         if (boomerang) chain += `,split[a][b];[b]reverse[r];[a][r]concat`;
         else if (reverse) chain += `,reverse`;
         await ff.exec(['-ss', String(start), '-t', String(dur), '-i', inName, '-vf', `${chain},palettegen=max_colors=${colors}`, 'palette.png']);

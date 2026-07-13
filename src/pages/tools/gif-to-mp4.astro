@@ -6,9 +6,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   <div class="flex flex-col gap-4">
     <label id="gm-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-      <span class="text-sm text-ink">Choose a GIF or drop it here</span>
-      <span class="text-[13px] text-ink-tertiary">Converted in your browser — never uploaded</span>
-      <input id="gm-file" type="file" accept="image/gif,.gif" class="sr-only" />
+      <span class="text-sm text-ink">Choose an animated image or drop it here</span>
+      <span class="text-[13px] text-ink-tertiary">GIF, WebP, APNG or MNG — converted in your browser, never uploaded</span>
+      <input id="gm-file" type="file" accept="image/gif,.gif,image/webp,.webp,.apng,.png,.mng" class="sr-only" />
     </label>
 
     <div id="gm-panel" class="hidden flex-col gap-4">
@@ -17,6 +17,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
 
       <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Output
+          <select id="gm-fmt" class="field w-48">
+            <option value="mp4" selected>MP4 · H.264 (universal)</option>
+            <option value="webm">WebM · VP9 (keeps transparency)</option>
+          </select>
+        </label>
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">Quality
           <select id="gm-crf" class="field w-44">
             <option value="18">High (larger)</option>
@@ -27,9 +33,19 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">Frame rate
           <select id="gm-fps" class="field w-36">
             <option value="0" selected>Keep original</option>
+            <option value="60">60 fps</option>
             <option value="30">30 fps</option>
             <option value="25">25 fps</option>
             <option value="15">15 fps</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Size
+          <select id="gm-scale" class="field w-40">
+            <option value="0" selected>Original</option>
+            <option value="1080">Max 1080p</option>
+            <option value="720">Max 720p</option>
+            <option value="480">Max 480p</option>
+            <option value="320">Max 320p</option>
           </select>
         </label>
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">Repeat
@@ -38,16 +54,17 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
             <option value="2">2 times</option>
             <option value="3">3 times</option>
             <option value="5">5 times</option>
+            <option value="10">10 times</option>
           </select>
         </label>
-        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Background
+        <label id="gm-bg-wrap" class="flex flex-col gap-1 text-sm text-ink-subtle">Background
           <input id="gm-bg" type="color" value="#ffffff" class="field h-10 w-16 cursor-pointer p-1" />
         </label>
       </div>
-      <p class="text-xs text-ink-tertiary">MP4 has no transparency — transparent areas are filled with the background color. MP4 also has no loop flag, so repeats are baked into the clip.</p>
+      <p id="gm-hint" class="text-xs text-ink-tertiary">MP4 has no transparency — transparent areas are filled with the background color. MP4 also has no loop flag, so repeats are baked into the clip.</p>
 
       <div class="flex flex-wrap items-center gap-3">
-        <button id="gm-go" class="btn btn-primary">Convert to MP4</button>
+        <button id="gm-go" class="btn btn-primary">Convert</button>
       </div>
 
       <div id="gm-progwrap" class="hidden flex-col gap-1">
@@ -57,9 +74,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div id="gm-result" class="hidden flex-col gap-3">
         <div class="flex flex-wrap items-center gap-3">
           <span id="gm-info" class="text-[13px]" style="color:var(--color-success)"></span>
-          <button id="gm-download" class="btn btn-primary">Download MP4</button>
+          <button id="gm-download" class="btn btn-primary">Download</button>
         </div>
-        <div class="panel flex justify-center overflow-hidden p-4"><video id="gm-preview" controls loop class="max-h-96 w-auto max-w-full rounded-md"></video></div>
+        <div class="panel flex justify-center overflow-hidden p-4"><video id="gm-preview" controls autoplay loop muted playsinline class="max-h-96 w-auto max-w-full rounded-md"></video></div>
       </div>
     </div>
     <p id="gm-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
@@ -69,11 +86,19 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p>
       This free GIF to MP4 converter turns animated GIFs into MP4 video, which is
       typically a fraction of the size for the same animation — ideal for
-      websites and messaging. Choose the quality, set a frame rate, repeat the
-      animation a few times and pick a background color for any transparent
-      areas. The output uses H.264 with a compatibility tweak so it plays on all
-      devices. Everything runs in your browser with an in-page media engine, so
-      your GIF is never uploaded to a server.
+      websites and messaging. It also accepts animated WebP, APNG and MNG, so you
+      have one tool for every animated image. Choose the quality, set a frame rate
+      (up to 60 fps), cap the resolution (1080p down to 320p), repeat the
+      animation and pick a background color for any transparent areas.
+    </p>
+    <p>
+      Need transparency? Switch the output to WebM (VP9) and the animation keeps
+      its alpha channel instead of flattening onto a solid color — something most
+      free converters push you to a separate tool for. The MP4 output uses H.264
+      with a compatibility tweak (yuv420p, faststart) so it plays on every device
+      and streams instantly. Everything runs in your browser with an in-page media
+      engine, so your file is never uploaded to a server and there are no
+      watermarks, sign-ups, or file-size caps beyond your own memory.
     </p>
   </div>
 </ToolLayout>
@@ -99,48 +124,93 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const preview = $('gm-preview') as HTMLVideoElement;
   const err = $('gm-error');
 
+  const fmtSel = $('gm-fmt') as HTMLSelectElement;
+  const bgWrap = $('gm-bg-wrap');
+  const hint = $('gm-hint');
+
   let file: File | null = null;
   let outUrl = '';
+  let outExt = 'mp4';
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
   const fmtSize = (n: number) => n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(2)} MB`;
 
-  function pick(f: File) { file = f; fname.textContent = `${f.name} · ${fmtSize(f.size)}`; panel.classList.remove('hidden'); panel.classList.add('flex'); result.classList.add('hidden'); setErr(''); }
+  // WebM (VP9) keeps alpha, so the background picker + transparency note only
+  // make sense for MP4. Toggle them with the output format.
+  function syncFormatUI() {
+    const webm = fmtSel.value === 'webm';
+    bgWrap.classList.toggle('hidden', webm);
+    hint.textContent = webm
+      ? 'WebM keeps transparency. It has no loop flag either, so repeats are baked into the clip. WebM plays in modern browsers but not natively in every player.'
+      : 'MP4 has no transparency — transparent areas are filled with the background color. MP4 also has no loop flag, so repeats are baked into the clip.';
+  }
+  fmtSel.addEventListener('change', syncFormatUI);
+  syncFormatUI();
+
+  const ACCEPT = ['gif', 'webp', 'apng', 'png', 'mng'];
+  function pick(f: File) {
+    const ext = (f.name.split('.').pop() || '').toLowerCase();
+    if (!ACCEPT.includes(ext) && !/^image\//.test(f.type)) {
+      setErr(`"${f.name}" is not a supported animated image. Use GIF, WebP, APNG or MNG.`);
+      return;
+    }
+    file = f; fname.textContent = `${f.name} · ${fmtSize(f.size)}`;
+    panel.classList.remove('hidden'); panel.classList.add('flex'); result.classList.add('hidden'); setErr('');
+  }
 
   async function convert() {
     if (!file) return;
     setErr(''); goBtn.disabled = true;
     progWrap.classList.remove('hidden'); progWrap.classList.add('flex'); result.classList.add('hidden'); bar.style.width = '0%';
+    const fmt = fmtSel.value;
     const crf = ($('gm-crf') as HTMLSelectElement).value;
     const fps = Number(($('gm-fps') as HTMLSelectElement).value);
+    const maxH = Number(($('gm-scale') as HTMLSelectElement).value) || 0;
     const loop = Number(($('gm-loop') as HTMLSelectElement).value) || 1;
     const bg = ($('gm-bg') as HTMLInputElement).value.replace('#', '0x');
+    const inName = 'in.' + ((file.name.split('.').pop() || 'gif').toLowerCase());
+    outExt = fmt === 'webm' ? 'webm' : 'mp4';
+    const outName = 'out.' + outExt;
     try {
       const ff = await getFFmpeg({
         onProgress: (r) => { bar.style.width = Math.min(100, Math.round(r * 100)) + '%'; },
         onDownload: (n) => { if (n) statusEl.textContent = n; },
       });
       statusEl.textContent = 'Converting…';
-      await ff.writeFile('in.gif', await fetchFile(file));
-      // Flatten any transparency onto a background of the chosen color: build a
-      // color source, size it to the GIF with scale2ref, overlay, then force
-      // even dimensions + yuv420p for broad H.264 compatibility.
-      const pre = fps ? `fps=${fps},` : '';
-      const complex =
-        `color=c=${bg}[bg];` +
-        `[bg][0:v]scale2ref[bg][v];` +
-        `[bg][v]overlay=shortest=1,${pre}scale=trunc(iw/2)*2:trunc(ih/2)*2,format=yuv420p`;
+      await ff.writeFile(inName, await fetchFile(file));
+
+      // Build the filter chain. fps/scale are optional; scale caps the height
+      // (keeping aspect) and forces even dimensions for codec compatibility.
+      const steps: string[] = [];
+      if (fps) steps.push(`fps=${fps}`);
+      if (maxH) steps.push(`scale=-2:'min(${maxH},ih)'`);
+
+      let complex: string, codecArgs: string[];
+      if (fmt === 'webm') {
+        // Keep alpha through VP9. No background flatten, keep even dims.
+        steps.push('scale=trunc(iw/2)*2:trunc(ih/2)*2');
+        complex = `[0:v]${steps.join(',')},format=yuva420p`;
+        codecArgs = ['-c:v', 'libvpx-vp9', '-pix_fmt', 'yuva420p', '-crf', crf, '-b:v', '0', '-row-mt', '1'];
+      } else {
+        // Flatten transparency onto the chosen color, then yuv420p for H.264.
+        const pre = steps.length ? steps.join(',') + ',' : '';
+        complex =
+          `color=c=${bg}[bg];` +
+          `[bg][0:v]scale2ref[bg][v];` +
+          `[bg][v]overlay=shortest=1,${pre}scale=trunc(iw/2)*2:trunc(ih/2)*2,format=yuv420p`;
+        codecArgs = ['-c:v', 'libx264', '-crf', crf, '-preset', 'veryfast', '-movflags', '+faststart'];
+      }
+
       // -stream_loop repeats the decoded input (loop-1 extra plays) to bake in repeats.
-      const args = ['-stream_loop', String(loop - 1), '-i', 'in.gif',
-        '-filter_complex', complex, '-c:v', 'libx264', '-crf', crf, '-preset', 'veryfast',
-        '-movflags', '+faststart', 'out.mp4'];
+      const args = ['-stream_loop', String(loop - 1), '-i', inName,
+        '-filter_complex', complex, ...codecArgs, outName];
       await ff.exec(args);
-      const data = await ff.readFile('out.mp4');
-      const blob = new Blob([data as BlobPart], { type: 'video/mp4' });
+      const data = await ff.readFile(outName);
+      const blob = new Blob([data as BlobPart], { type: fmt === 'webm' ? 'video/webm' : 'video/mp4' });
       if (outUrl) URL.revokeObjectURL(outUrl);
       outUrl = URL.createObjectURL(blob);
-      try { await ff.deleteFile('in.gif'); await ff.deleteFile('out.mp4'); } catch {}
+      try { await ff.deleteFile(inName); await ff.deleteFile(outName); } catch {}
       preview.src = outUrl;
-      info.textContent = `Done — ${fmtSize(blob.size)} MP4 (was ${fmtSize(file.size)})`;
+      info.textContent = `Done — ${fmtSize(blob.size)} ${outExt.toUpperCase()} (was ${fmtSize(file.size)})`;
       progWrap.classList.add('hidden');
       result.classList.remove('hidden'); result.classList.add('flex');
     } catch (e) { progWrap.classList.add('hidden'); setErr('Could not convert: ' + (e as Error).message); }
@@ -149,7 +219,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   $('gm-download').addEventListener('click', () => {
     if (!outUrl || !file) return;
-    const a = document.createElement('a'); a.href = outUrl; a.download = file.name.replace(/\.[^.]+$/, '') + '.mp4'; a.click();
+    const a = document.createElement('a'); a.href = outUrl; a.download = file.name.replace(/\.[^.]+$/, '') + '.' + outExt; a.click();
   });
 
   fileInput.addEventListener('change', () => fileInput.files?.[0] && pick(fileInput.files[0]));

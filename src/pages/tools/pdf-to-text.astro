@@ -6,37 +6,79 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   <div class="flex flex-col gap-4">
     <label id="pt-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-      <span class="text-sm text-ink">Choose a PDF or drop it here</span>
-      <span class="text-[13px] text-ink-tertiary">Text extracted in your browser — never uploaded</span>
-      <input id="pt-file" type="file" accept="application/pdf" class="sr-only" />
+      <span class="text-sm text-ink">Choose PDFs or drop them here</span>
+      <span class="text-[13px] text-ink-tertiary">Multiple files welcome — text is extracted in your browser, never uploaded</span>
+      <input id="pt-file" type="file" accept="application/pdf" multiple class="sr-only" />
     </label>
 
+    <ul id="pt-files" class="hidden flex-col gap-1 text-[13px] text-ink-subtle"></ul>
+
     <div id="pt-panel" class="hidden flex-col gap-4">
+      <div class="flex flex-wrap items-end gap-x-4 gap-y-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Mode
+          <select id="pt-mode" class="field w-auto py-1">
+            <option value="reading" selected>Reading order (flowing paragraphs)</option>
+            <option value="layout">Preserve layout (columns &amp; spacing)</option>
+            <option value="raw">Raw (as stored in PDF)</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Pages
+          <input id="pt-range" type="text" inputmode="numeric" placeholder="all — e.g. 1-3, 5, 8-" class="field w-44 py-1" />
+        </label>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-ink-subtle">
+        <label class="flex items-center gap-2">
+          <input id="pt-ocr" type="checkbox" class="accent-[#5e6ad2]" /> Force OCR (scanned PDFs, English)
+        </label>
+        <label id="pt-dehyph-wrap" class="flex items-center gap-2">
+          <input id="pt-dehyph" type="checkbox" checked class="accent-[#5e6ad2]" /> Join hyphenated line breaks
+        </label>
+        <label class="flex items-center gap-2">
+          <input id="pt-pagesep" type="checkbox" checked class="accent-[#5e6ad2]" /> Page separators
+        </label>
+      </div>
+
       <div class="flex flex-wrap items-center gap-3">
         <button id="pt-extract" class="btn btn-primary">Extract text</button>
-        <label class="flex items-center gap-2 text-sm text-ink-subtle">
-          <input id="pt-ocr" type="checkbox" class="accent-[#5e6ad2]" /> Force OCR (for scanned PDFs)
-        </label>
         <button id="pt-copy" class="btn btn-secondary">Copy</button>
         <button id="pt-download" class="btn btn-tertiary">Download .txt</button>
+        <button id="pt-clear" class="btn btn-tertiary">Clear</button>
       </div>
+
       <p id="pt-status" class="text-[13px] text-ink-subtle"></p>
       <div id="pt-bar-wrap" class="hidden h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
         <div id="pt-bar" class="h-full w-0 rounded-full transition-all" style="background:var(--color-primary)"></div>
       </div>
-      <textarea id="pt-out" class="field font-mono text-[13px]" rows="14" spellcheck="false" placeholder="Extracted text will appear here…"></textarea>
+      <textarea id="pt-out" class="field font-mono text-[13px]" rows="16" spellcheck="false" placeholder="Extracted text will appear here…"></textarea>
+      <p id="pt-stats" class="hidden text-[13px] text-ink-tertiary"></p>
     </div>
     <p id="pt-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free PDF to text tool extracts written text from a PDF. For digital
-      PDFs it reads the embedded text layer instantly; for scanned documents or
-      images, tick “Force OCR” to recognise the text with optical character
-      recognition. Copy the result or download it as a .txt file. Both the PDF
-      rendering and the OCR run entirely in your browser — your document and its
-      contents are never uploaded to a server.
+      This free PDF to text tool extracts written text from one or many PDFs at
+      once. For digital PDFs it reads the embedded text layer instantly; for
+      scanned documents or images, tick “Force OCR” to recognise the text with
+      optical character recognition. Choose how the text is laid out, limit the
+      extraction to specific pages, and copy or download the result as a .txt
+      file. Both the PDF rendering and the OCR run entirely in your browser —
+      your documents and their contents are never uploaded to a server.
+    </p>
+    <p>
+      Three extraction modes give you control over the output. <strong>Reading
+      order</strong> reflows the text into natural paragraphs, joining lines that
+      were only broken to fit the page and (optionally) repairing words split by
+      a hyphen at a line end. <strong>Preserve layout</strong> keeps the original
+      column and spacing arrangement — useful for tables, forms and multi-column
+      pages. <strong>Raw</strong> returns the text exactly in the order it is
+      stored. Use the <strong>Pages</strong> box to extract a subset such as
+      <code>1-3, 5, 8-</code>, drop in several PDFs to batch-extract them into a
+      single document with per-file and per-page separators, and watch the live
+      word, character and page counts update as you go.
     </p>
   </div>
 </ToolLayout>
@@ -52,49 +94,130 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   const fileInput = document.getElementById('pt-file') as HTMLInputElement;
   const drop = document.getElementById('pt-drop')!;
+  const fileList = document.getElementById('pt-files')!;
   const panel = document.getElementById('pt-panel')!;
   const out = document.getElementById('pt-out') as HTMLTextAreaElement;
   const status = document.getElementById('pt-status')!;
+  const stats = document.getElementById('pt-stats')!;
   const err = document.getElementById('pt-error')!;
   const ocrChk = document.getElementById('pt-ocr') as HTMLInputElement;
+  const modeSel = document.getElementById('pt-mode') as HTMLSelectElement;
+  const rangeEl = document.getElementById('pt-range') as HTMLInputElement;
+  const dehyphChk = document.getElementById('pt-dehyph') as HTMLInputElement;
+  const dehyphWrap = document.getElementById('pt-dehyph-wrap')!;
+  const pagesepChk = document.getElementById('pt-pagesep') as HTMLInputElement;
   const barWrap = document.getElementById('pt-bar-wrap')!;
   const bar = document.getElementById('pt-bar') as HTMLElement;
 
-  let bytes: ArrayBuffer | null = null;
+  let files: { name: string; buffer: ArrayBuffer }[] = [];
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
 
-  function load(file: File) {
+  function load(list: FileList) {
     setErr('');
-    file.arrayBuffer().then((b) => { bytes = b; panel.classList.remove('hidden'); panel.classList.add('flex'); status.textContent = `${file.name} ready.`; });
+    const pdfs = Array.from(list).filter((f) => /\.pdf$/i.test(f.name) || f.type === 'application/pdf');
+    if (!pdfs.length) { setErr('Please choose one or more PDF files.'); return; }
+    Promise.all(pdfs.map((f) => f.arrayBuffer().then((buffer) => ({ name: f.name, buffer }))))
+      .then((loaded) => {
+        files = loaded;
+        panel.classList.remove('hidden'); panel.classList.add('flex');
+        fileList.classList.remove('hidden'); fileList.classList.add('flex');
+        fileList.innerHTML = files.map((f) => `<li>• ${escapeHtml(f.name)}</li>`).join('');
+        status.textContent = files.length === 1 ? `${files[0].name} ready.` : `${files.length} PDFs ready.`;
+      })
+      .catch(() => setErr('Could not read the selected file(s).'));
+  }
+  const escapeHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+
+  // Parse a page-range string like "1-3, 5, 8-" against a total page count.
+  // Empty / "all" → every page. Returns a sorted, de-duplicated 1-based list.
+  function parseRange(spec: string, total: number): number[] {
+    const s = spec.trim().toLowerCase();
+    if (!s || s === 'all') return Array.from({ length: total }, (_, i) => i + 1);
+    const wanted = new Set<number>();
+    for (const part of s.split(',')) {
+      const t = part.trim();
+      if (!t) continue;
+      const m = t.match(/^(\d+)?\s*-\s*(\d+)?$/);
+      if (m) {
+        const from = m[1] ? Math.max(1, +m[1]) : 1;
+        const to = m[2] ? Math.min(total, +m[2]) : total;
+        for (let i = from; i <= to; i++) wanted.add(i);
+      } else if (/^\d+$/.test(t)) {
+        const n = +t;
+        if (n >= 1 && n <= total) wanted.add(n);
+      } else {
+        throw new Error(`invalid page range near "${t}"`);
+      }
+    }
+    const pages = [...wanted].sort((a, b) => a - b);
+    if (!pages.length) throw new Error(`no pages in range for a ${total}-page document`);
+    return pages;
   }
 
-  async function extractTextLayer(): Promise<string> {
-    const pdf = await pdfjsLib.getDocument({ data: bytes!.slice(0) }).promise;
+  // Group PDF text items into visual lines (by baseline y), each sorted left→right.
+  function toLines(items: any[]): { y: number; text: string }[] {
+    const rows: { y: number; parts: { x: number; s: string }[] }[] = [];
+    for (const it of items) {
+      const s = it.str as string;
+      if (!s) continue;
+      const x = it.transform?.[4] ?? 0;
+      const y = it.transform?.[5] ?? 0;
+      const row = rows.find((r) => Math.abs(r.y - y) <= 3);
+      if (row) row.parts.push({ x, s });
+      else rows.push({ y, parts: [{ x, s }] });
+    }
+    rows.sort((a, b) => b.y - a.y); // top of page first
+    return rows.map((r) => {
+      r.parts.sort((a, b) => a.x - b.x);
+      return { y: r.y, text: r.parts.map((p) => p.s).join(' ').replace(/\s+/g, ' ').trim() };
+    });
+  }
+
+  // Reading-order: merge soft-wrapped lines into paragraphs (large vertical
+  // jump = new paragraph), then optionally repair words split by a hyphen at a
+  // line break. De-hyphenation runs as one pass on the joined text: a hyphen is
+  // only followed by a space where we joined two lines, so in-line compounds
+  // like "well-being" are left untouched.
+  function reflow(lines: { y: number; text: string }[], dehyph: boolean): string {
     let text = '';
-    for (let n = 1; n <= pdf.numPages; n++) {
+    for (let i = 0; i < lines.length; i++) {
+      const cur = lines[i].text;
+      if (!cur) continue;
+      const gap = i > 0 ? Math.abs(lines[i - 1].y - lines[i].y) : 0;
+      if (text) text += gap > 18 ? '\n\n' : ' ';
+      text += cur;
+    }
+    if (dehyph) text = text.replace(/([\p{L}])-[ \t]+([\p{L}])/gu, '$1$2');
+    return text.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  async function extractTextLayer(buffer: ArrayBuffer, pages: number[] | null): Promise<{ text: string; total: number; used: number }> {
+    const pdf = await pdfjsLib.getDocument({ data: buffer.slice(0) }).promise;
+    const list = pages ?? Array.from({ length: pdf.numPages }, (_, i) => i + 1);
+    const mode = modeSel.value;
+    let text = '';
+    for (const n of list) {
       status.textContent = `Reading text layer, page ${n} / ${pdf.numPages}…`;
       const page = await pdf.getPage(n);
       const content = await page.getTextContent();
-      let last = 0;
-      const line = content.items.map((it: any) => {
-        const s = it.str;
-        // insert newlines when the vertical position jumps
-        const y = it.transform?.[5] ?? 0;
-        let prefix = '';
-        if (last && Math.abs(y - last) > 5) prefix = '\n';
-        last = y;
-        return prefix + s + (it.hasEOL ? '\n' : '');
-      }).join('');
-      text += line + '\n\n';
+      let pageText: string;
+      if (mode === 'raw') {
+        pageText = content.items.map((it: any) => it.str + (it.hasEOL ? '\n' : ' ')).join('').replace(/\n{3,}/g, '\n\n').trim();
+      } else {
+        const lines = toLines(content.items);
+        pageText = mode === 'layout'
+          ? lines.map((l) => l.text).join('\n').trim()
+          : reflow(lines, dehyphChk.checked);
+      }
+      text += (pagesepChk.checked ? `\n----- Page ${n} -----\n` : '') + pageText + '\n\n';
     }
-    return text.trim();
+    return { text: text.trim(), total: pdf.numPages, used: list.length };
   }
 
-  async function runOcr(): Promise<string> {
+  async function runOcr(buffer: ArrayBuffer, pages: number[] | null): Promise<string> {
     const Tesseract = await import('tesseract.js');
     barWrap.classList.remove('hidden');
     const worker = await Tesseract.createWorker('eng', 1, {
-      // self-hosted assets — no third-party requests
       workerPath: '/tesseract/worker.min.js',
       corePath: '/tesseract/',
       langPath: '/tessdata/',
@@ -103,9 +226,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         status.textContent = `${m.status}${m.progress ? ' ' + Math.round(m.progress * 100) + '%' : ''}…`;
       },
     });
-    const pdf = await pdfjsLib.getDocument({ data: bytes!.slice(0) }).promise;
+    const pdf = await pdfjsLib.getDocument({ data: buffer.slice(0) }).promise;
+    const list = pages ?? Array.from({ length: pdf.numPages }, (_, i) => i + 1);
     let text = '';
-    for (let n = 1; n <= pdf.numPages; n++) {
+    for (const n of list) {
       status.textContent = `OCR page ${n} / ${pdf.numPages}…`;
       bar.style.width = '0%';
       const page = await pdf.getPage(n);
@@ -116,48 +240,112 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
       await page.render({ canvasContext: ctx, viewport, canvas } as any).promise;
       const { data } = await worker.recognize(canvas);
-      text += data.text + '\n\n';
+      text += (pagesepChk.checked ? `\n----- Page ${n} -----\n` : '') + data.text.trim() + '\n\n';
     }
     await worker.terminate();
     barWrap.classList.add('hidden');
     return text.trim();
   }
 
+  function showStats(text: string, pages: number) {
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    const lines = text ? text.split('\n').length : 0;
+    stats.textContent = `${words.toLocaleString()} words · ${text.length.toLocaleString()} characters · ${lines.toLocaleString()} lines · ${pages} ${pages === 1 ? 'page' : 'pages'} processed`;
+    stats.classList.toggle('hidden', !text);
+  }
+
+  async function resolvePages(buffer: ArrayBuffer): Promise<number[] | null> {
+    const spec = rangeEl.value.trim();
+    if (!spec || spec.toLowerCase() === 'all') return null;
+    const pdf = await pdfjsLib.getDocument({ data: buffer.slice(0) }).promise;
+    return parseRange(spec, pdf.numPages);
+  }
+
   async function run() {
-    if (!bytes) return;
-    setErr(''); out.value = '';
+    if (!files.length) return;
+    setErr(''); out.value = ''; stats.classList.add('hidden');
     const btn = document.getElementById('pt-extract') as HTMLButtonElement;
     btn.disabled = true;
     try {
-      let text = ocrChk.checked ? '' : await extractTextLayer();
-      if (!ocrChk.checked && text.replace(/\s/g, '').length < 10) {
-        status.textContent = 'Little or no embedded text found — running OCR instead…';
-        text = await runOcr();
-      } else if (ocrChk.checked) {
-        text = await runOcr();
+      const chunks: string[] = [];
+      let pagesProcessed = 0;
+      for (const f of files) {
+        if (files.length > 1) status.textContent = `Processing ${f.name}…`;
+        let pages: number[] | null;
+        try {
+          pages = await resolvePages(f.buffer);
+        } catch (e) {
+          throw new Error(`${files.length > 1 ? f.name + ': ' : ''}${(e as Error).message}`);
+        }
+        let text: string;
+        if (ocrChk.checked) {
+          text = await runOcr(f.buffer, pages);
+        } else {
+          const res = await extractTextLayer(f.buffer, pages);
+          text = res.text;
+          if (text.replace(/\s/g, '').replace(/-+Page\d+-+/g, '').length < 10) {
+            status.textContent = `${f.name}: little or no embedded text — running OCR…`;
+            text = await runOcr(f.buffer, pages);
+          }
+        }
+        pagesProcessed += pages ? pages.length : (await pdfjsLib.getDocument({ data: f.buffer.slice(0) }).promise).numPages;
+        chunks.push(files.length > 1 ? `===== ${f.name} =====\n\n${text}` : text);
       }
-      out.value = text || '(No text could be extracted.)';
-      status.textContent = `Done — ${out.value.length.toLocaleString()} characters.`;
+      out.value = chunks.join('\n\n\n') || '(No text could be extracted.)';
+      showStats(out.value, pagesProcessed);
+      status.textContent = `Done — ${files.length} ${files.length === 1 ? 'file' : 'files'}, ${out.value.length.toLocaleString()} characters.`;
     } catch (e) {
       barWrap.classList.add('hidden');
-      setErr('Could not extract text: ' + (e as Error).message);
+      const msg = (e as Error).message || String(e);
+      setErr(/password|encrypt/i.test(msg)
+        ? 'This PDF is password-protected. Remove the password and try again.'
+        : 'Could not extract text: ' + msg);
       status.textContent = '';
     } finally { btn.disabled = false; }
   }
 
-  fileInput.addEventListener('change', () => fileInput.files?.[0] && load(fileInput.files[0]));
+  // Raw mode has no line grouping, so de-hyphenation cannot apply.
+  function syncUI() { dehyphWrap.style.display = modeSel.value === 'reading' ? '' : 'none'; }
+  modeSel.addEventListener('change', syncUI);
+  syncUI();
+
+  fileInput.addEventListener('change', () => fileInput.files?.length && load(fileInput.files));
   ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
   ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
-  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) load(f); });
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files; if (f?.length) load(f); });
   document.getElementById('pt-extract')!.addEventListener('click', run);
+  document.getElementById('pt-clear')!.addEventListener('click', () => {
+    files = []; out.value = ''; fileInput.value = '';
+    fileList.classList.add('hidden'); panel.classList.add('hidden'); panel.classList.remove('flex');
+    stats.classList.add('hidden'); status.textContent = ''; setErr('');
+  });
   document.getElementById('pt-copy')!.addEventListener('click', async (e) => {
+    if (!out.value) return;
     await navigator.clipboard.writeText(out.value);
     const b = e.currentTarget as HTMLButtonElement;
     b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
   });
   document.getElementById('pt-download')!.addEventListener('click', () => {
+    if (!out.value) return;
     const blob = new Blob([out.value], { type: 'text/plain' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'extracted-text.txt'; a.click();
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = files.length === 1 ? files[0].name.replace(/\.pdf$/i, '') + '.txt' : 'extracted-text.txt';
+    a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
+
+  // ponytail: page-range parser self-check — run with ?selftest in the URL.
+  if (new URLSearchParams(location.search).has('selftest')) {
+    const eq = (a: unknown, b: unknown, m: string) => console.assert(JSON.stringify(a) === JSON.stringify(b), m, a);
+    eq(parseRange('', 5), [1, 2, 3, 4, 5], 'empty=all');
+    eq(parseRange('1-3, 5, 8-', 10), [1, 2, 3, 5, 8, 9, 10], 'mixed');
+    eq(parseRange('-2', 4), [1, 2], 'open-start');
+    eq(parseRange('3-', 4), [3, 4], 'open-end');
+    let threw = false;
+    try { parseRange('99', 4); } catch { threw = true; }
+    console.assert(threw, 'out-of-range should throw');
+    eq(reflow([{ y: 100, text: 'exam-' }, { y: 88, text: 'ple word' }], true), 'example word', 'de-hyphenate join');
+    eq(reflow([{ y: 100, text: 'a' }, { y: 60, text: 'b' }], false), 'a\n\nb', 'paragraph split on big gap');
+    console.log('self-check done');
+  }
 </script>

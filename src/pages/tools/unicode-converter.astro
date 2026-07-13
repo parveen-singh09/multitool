@@ -4,98 +4,434 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="unicode-converter">
   <div class="flex flex-col gap-4">
-    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-      Text / emoji
-      <textarea id="uni-text" class="field" rows="3" placeholder="Hello 😀 café" spellcheck="false"></textarea>
-    </label>
-
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      {[
-        { id: 'cp', label: 'Code points (U+)' },
-        { id: 'dec', label: 'Decimal (&#…;)' },
-        { id: 'hex', label: 'HTML hex (&#x…;)' },
-        { id: 'js', label: 'JS / JSON (\\u…)' },
-      ].map((f) => (
-        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-          <span class="flex items-center justify-between">{f.label}<button class="uni-copy btn btn-secondary px-2 py-1 text-[13px]" data-t={`uni-${f.id}`} type="button">Copy</button></span>
-          <textarea id={`uni-${f.id}`} class="field font-mono text-[13px]" rows="2" readonly spellcheck="false"></textarea>
-        </label>
-      ))}
+    <!-- Options -->
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Output format
+        <select id="uc-format" class="field w-auto py-1">
+          <optgroup label="Code points">
+            <option value="codepoint" selected>U+ code points</option>
+            <option value="decimal">Decimal numbers</option>
+            <option value="hex">Hex numbers</option>
+            <option value="binary">Binary</option>
+          </optgroup>
+          <optgroup label="HTML entities">
+            <option value="htmldec">HTML decimal (&amp;#…;)</option>
+            <option value="htmlhex">HTML hex (&amp;#x…;)</option>
+            <option value="htmlnamed">HTML named (&amp;copy; …)</option>
+          </optgroup>
+          <optgroup label="Escapes">
+            <option value="js">JavaScript (\u…)</option>
+            <option value="json">JSON (\u… surrogate pairs)</option>
+            <option value="python">Python (\u \U \x)</option>
+            <option value="css">CSS (\HHHHHH)</option>
+          </optgroup>
+          <optgroup label="Encodings / bytes">
+            <option value="utf8">UTF-8 bytes (hex)</option>
+            <option value="utf16">UTF-16 units (hex)</option>
+            <option value="utf32">UTF-32 (hex)</option>
+            <option value="url">URL percent-encoding</option>
+          </optgroup>
+        </select>
+      </label>
+      <label id="uc-delim-wrap" class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Separator
+        <select id="uc-delim" class="field w-auto py-1">
+          <option value=" " selected>Space</option>
+          <option value=", ">Comma</option>
+          <option value="\n">Newline</option>
+          <option value="">None</option>
+        </select>
+      </label>
+      <label id="uc-case-wrap" class="flex items-center gap-2 pb-2 text-sm text-ink-subtle">
+        <input id="uc-uppercase" type="checkbox" checked class="h-4 w-4" />
+        Uppercase hex
+      </label>
     </div>
 
+    <div id="uc-status" class="hidden rounded-md border px-3 py-2 text-sm" role="status"></div>
+
+    <!-- Encode: text/emoji → chosen format -->
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        <span class="flex items-center justify-between">
+          <span>Text / emoji</span>
+          <button id="uc-clear" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Clear</button>
+        </span>
+        <div class="hl-edit field p-0" style="height:14rem;overflow:hidden">
+          <pre class="hl-block" aria-hidden="true"><code id="uc-in-hl" class="hljs" style="background:transparent"></code></pre>
+          <textarea id="uc-in" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="Text input" placeholder="Hello 😀 café"></textarea>
+        </div>
+      </div>
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        <span class="flex items-center justify-between">
+          <span id="uc-out-label">U+ code points</span>
+          <span class="flex gap-2">
+            <button id="uc-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button>
+            <button id="uc-download" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Download</button>
+          </span>
+        </span>
+        <pre class="hl-block field" style="height:14rem;margin:0;overflow:auto;white-space:pre-wrap;word-break:break-all"><code id="uc-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+      </div>
+    </div>
+
+    <!-- Per-character breakdown -->
+    <details id="uc-table-wrap" class="border-t border-hairline pt-4">
+      <summary class="cursor-pointer text-sm text-ink-subtle">Character breakdown</summary>
+      <div class="mt-3 overflow-auto" style="max-height:20rem">
+        <table class="w-full border-collapse text-[13px]">
+          <thead class="text-ink-subtle">
+            <tr class="text-left">
+              <th class="border-b border-hairline py-1 pr-3 font-medium">#</th>
+              <th class="border-b border-hairline py-1 pr-3 font-medium">Char</th>
+              <th class="border-b border-hairline py-1 pr-3 font-medium">Code point</th>
+              <th class="border-b border-hairline py-1 pr-3 font-medium">Dec</th>
+              <th class="border-b border-hairline py-1 pr-3 font-medium">UTF-8</th>
+              <th class="border-b border-hairline py-1 pr-3 font-medium">UTF-16</th>
+              <th class="border-b border-hairline py-1 font-medium">Category</th>
+            </tr>
+          </thead>
+          <tbody id="uc-table" class="font-mono text-ink"></tbody>
+        </table>
+        <p id="uc-table-note" class="mt-2 text-[12px] text-ink-tertiary"></p>
+      </div>
+    </details>
+
+    <!-- Decode: any encoded form → text -->
     <div class="border-t border-hairline pt-4">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-        Decode — paste code points, \u escapes or &amp;#…; entities
-        <div class="flex gap-2">
-          <input id="uni-decode-in" class="field font-mono text-[13px]" placeholder="U+1F600 or é or &#128512;" spellcheck="false" autocomplete="off" />
-        </div>
+        <span class="flex items-center justify-between">
+          <span>Decode — paste U+, \u escapes, &amp;#…; / named entities, %XX, 0x or hex numbers</span>
+          <button id="uc-dec-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button>
+        </span>
+        <textarea id="uc-decode-in" class="field font-mono text-[13px]" rows="2" placeholder="U+1F600 or é or &#128512; or %C3%A9" spellcheck="false" autocomplete="off"></textarea>
       </label>
-      <p class="mt-2 text-[13px]">Decoded: <span id="uni-decoded" class="font-mono text-ink"></span></p>
+      <p class="mt-2 text-[15px]">Decoded: <span id="uc-decoded" class="font-mono text-ink"></span></p>
+      <p id="uc-dec-err" class="mt-1 hidden text-[13px]" style="color:#e5484d" role="alert"></p>
     </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free Unicode and emoji converter shows the code points behind any
-      text or emoji, and encodes them as HTML entities (decimal and hex),
-      JavaScript <code>\u</code> escapes and <code>U+</code> notation. It handles
-      astral characters like emoji correctly using real code points, not just
-      UTF-16 halves. Paste escapes into the decoder to turn them back into
-      characters. Everything runs in your browser.
+      This free Unicode and emoji converter turns any text into the encoding you
+      need and back again. Encode to <code>U+</code> code points, decimal or hex
+      numbers, binary, HTML entities (decimal, hex, and named like
+      <code>&amp;copy;</code>), JavaScript and JSON <code>\u</code> escapes,
+      Python <code>\u</code>/<code>\U</code>/<code>\x</code> escapes, CSS
+      <code>\HHHHHH</code> escapes, UTF-8 / UTF-16 / UTF-32 byte sequences, and
+      URL percent-encoding. It handles astral characters like emoji correctly
+      using real code points, not just UTF-16 halves.
+    </p>
+    <p>
+      The character breakdown lists every code point with its decimal value,
+      UTF-8 and UTF-16 bytes, and Unicode category, and the live stats show code
+      point, UTF-16 unit, UTF-8 byte, and grapheme counts. The decoder is
+      format-agnostic: paste code points, escape sequences, HTML entities (named
+      or numeric), percent-encoded bytes, or bare hex numbers and it reconstructs
+      the original text. Copy or download any result. Everything runs entirely in
+      your browser — nothing is uploaded to a server.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  const textEl = document.getElementById('uni-text') as HTMLTextAreaElement;
-  const cp = document.getElementById('uni-cp') as HTMLTextAreaElement;
-  const dec = document.getElementById('uni-dec') as HTMLTextAreaElement;
-  const hex = document.getElementById('uni-hex') as HTMLTextAreaElement;
-  const js = document.getElementById('uni-js') as HTMLTextAreaElement;
-  const decodeIn = document.getElementById('uni-decode-in') as HTMLInputElement;
-  const decoded = document.getElementById('uni-decoded')!;
+  import { hl, wireInput } from '../../lib/highlight';
 
-  function encode() {
-    const chars = Array.from(textEl.value); // splits by code point, not UTF-16 unit
-    cp.value = chars.map((c) => 'U+' + c.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0')).join(' ');
-    dec.value = chars.map((c) => `&#${c.codePointAt(0)};`).join('');
-    hex.value = chars.map((c) => `&#x${c.codePointAt(0)!.toString(16).toUpperCase()};`).join('');
-    js.value = chars.map((c) => {
-      const n = c.codePointAt(0)!;
-      if (n > 0xffff) return `\\u{${n.toString(16).toUpperCase()}}`;
-      return `\\u${n.toString(16).toUpperCase().padStart(4, '0')}`;
-    }).join('');
+  const inEl = document.getElementById('uc-in') as HTMLTextAreaElement;
+  const inHl = document.getElementById('uc-in-hl')!;
+  const outEl = document.getElementById('uc-out')!;
+  const outLabel = document.getElementById('uc-out-label')!;
+  const formatSel = document.getElementById('uc-format') as HTMLSelectElement;
+  const delimSel = document.getElementById('uc-delim') as HTMLSelectElement;
+  const delimWrap = document.getElementById('uc-delim-wrap')!;
+  const caseWrap = document.getElementById('uc-case-wrap')!;
+  const upperBox = document.getElementById('uc-uppercase') as HTMLInputElement;
+  const statusEl = document.getElementById('uc-status')!;
+  const tableBody = document.getElementById('uc-table')!;
+  const tableNote = document.getElementById('uc-table-note')!;
+  const decodeIn = document.getElementById('uc-decode-in') as HTMLTextAreaElement;
+  const decoded = document.getElementById('uc-decoded')!;
+  const decErr = document.getElementById('uc-dec-err')!;
+  let rawOutput = '';
+
+  // Format value → highlight.js language id and the label shown above the pane.
+  const FORMATS: Record<string, { label: string; lang: string; list: boolean }> = {
+    codepoint: { label: 'U+ code points', lang: 'plaintext', list: true },
+    decimal: { label: 'Decimal numbers', lang: 'plaintext', list: true },
+    hex: { label: 'Hex numbers', lang: 'plaintext', list: true },
+    binary: { label: 'Binary', lang: 'plaintext', list: true },
+    htmldec: { label: 'HTML decimal entities', lang: 'xml', list: false },
+    htmlhex: { label: 'HTML hex entities', lang: 'xml', list: false },
+    htmlnamed: { label: 'HTML named entities', lang: 'xml', list: false },
+    js: { label: 'JavaScript escapes', lang: 'javascript', list: false },
+    json: { label: 'JSON escapes', lang: 'json', list: false },
+    python: { label: 'Python escapes', lang: 'python', list: false },
+    css: { label: 'CSS escapes', lang: 'css', list: false },
+    utf8: { label: 'UTF-8 bytes (hex)', lang: 'plaintext', list: true },
+    utf16: { label: 'UTF-16 units (hex)', lang: 'plaintext', list: true },
+    utf32: { label: 'UTF-32 (hex)', lang: 'plaintext', list: true },
+    url: { label: 'URL percent-encoding', lang: 'plaintext', list: false },
+  };
+
+  // Common code point → HTML named entity. Curated set (the ones browsers and
+  // authors actually use); anything else falls back to a numeric hex entity.
+  // ponytail: curated common map, not the full HTML5 named-character list —
+  // extend the map if a caller needs an exotic named entity.
+  const NAMED: Record<number, string> = {
+    34: 'quot', 38: 'amp', 39: 'apos', 60: 'lt', 62: 'gt', 160: 'nbsp',
+    161: 'iexcl', 162: 'cent', 163: 'pound', 164: 'curren', 165: 'yen',
+    166: 'brvbar', 167: 'sect', 168: 'uml', 169: 'copy', 170: 'ordf',
+    171: 'laquo', 172: 'not', 173: 'shy', 174: 'reg', 175: 'macr',
+    176: 'deg', 177: 'plusmn', 178: 'sup2', 179: 'sup3', 180: 'acute',
+    181: 'micro', 182: 'para', 183: 'middot', 187: 'raquo', 191: 'iquest',
+    215: 'times', 247: 'divide', 8211: 'ndash', 8212: 'mdash',
+    8216: 'lsquo', 8217: 'rsquo', 8220: 'ldquo', 8221: 'rdquo',
+    8224: 'dagger', 8225: 'Dagger', 8226: 'bull', 8230: 'hellip',
+    8240: 'permil', 8242: 'prime', 8243: 'Prime', 8249: 'lsaquo',
+    8250: 'rsaquo', 8260: 'frasl', 8364: 'euro', 8482: 'trade',
+    8592: 'larr', 8593: 'uarr', 8594: 'rarr', 8595: 'darr',
+    8734: 'infin', 8800: 'ne', 8804: 'le', 8805: 'ge', 9829: 'hearts',
+  };
+
+  const codePoints = (text: string): number[] =>
+    Array.from(text).map((c) => c.codePointAt(0)!);
+
+  const utf8Bytes = (cp: number): number[] =>
+    Array.from(new TextEncoder().encode(String.fromCodePoint(cp)));
+
+  const utf16Units = (cp: number): number[] => {
+    const s = String.fromCodePoint(cp);
+    return Array.from({ length: s.length }, (_, i) => s.charCodeAt(i));
+  };
+
+  function hex(n: number, pad = 0): string {
+    const h = n.toString(16).padStart(pad, '0');
+    return upperBox.checked ? h.toUpperCase() : h;
+  }
+
+  function encode(fmt: string, text: string): string {
+    const cps = codePoints(text);
+    const d = delimSel.value === '\\n' ? '\n' : delimSel.value;
+    switch (fmt) {
+      case 'codepoint':
+        return cps.map((n) => 'U+' + hex(n, 4)).join(d);
+      case 'decimal':
+        return cps.map((n) => String(n)).join(d);
+      case 'hex':
+        return cps.map((n) => '0x' + hex(n)).join(d);
+      case 'binary':
+        return cps.map((n) => n.toString(2).padStart(8, '0')).join(d);
+      case 'htmldec':
+        return cps.map((n) => `&#${n};`).join('');
+      case 'htmlhex':
+        return cps.map((n) => `&#x${hex(n)};`).join('');
+      case 'htmlnamed':
+        return cps.map((n) => (NAMED[n] ? `&${NAMED[n]};` : `&#x${hex(n)};`)).join('');
+      case 'js':
+        return cps.map((n) => (n > 0xffff ? `\\u{${hex(n)}}` : `\\u${hex(n, 4)}`)).join('');
+      case 'json':
+        // JSON has no \u{}; astral code points use a UTF-16 surrogate pair.
+        return cps.map((n) => utf16Units(n).map((u) => `\\u${hex(u, 4)}`).join('')).join('');
+      case 'python':
+        return cps.map((n) =>
+          n <= 0xff ? `\\x${hex(n, 2)}` : n <= 0xffff ? `\\u${hex(n, 4)}` : `\\U${hex(n, 8)}`,
+        ).join('');
+      case 'css':
+        // 6-digit zero-padded hex needs no trailing space to be unambiguous.
+        return cps.map((n) => `\\${hex(n, 6)}`).join('');
+      case 'utf8':
+        return cps.map((n) => utf8Bytes(n).map((b) => hex(b, 2)).join(' ')).join(d || ' ');
+      case 'utf16':
+        return cps.map((n) => utf16Units(n).map((u) => hex(u, 4)).join(' ')).join(d || ' ');
+      case 'utf32':
+        return cps.map((n) => hex(n, 8)).join(d);
+      case 'url':
+        return cps.map((n) => utf8Bytes(n).map((b) => '%' + hex(b, 2).toUpperCase()).join('')).join('');
+      default:
+        throw new Error('unknown format');
+    }
+  }
+
+  function category(cp: number): string {
+    const c = String.fromCodePoint(cp);
+    try {
+      if (/\p{Extended_Pictographic}/u.test(c) && cp > 0x2000) return 'Emoji';
+      if (/\p{L}/u.test(c)) return 'Letter';
+      if (/\p{N}/u.test(c)) return 'Number';
+      if (/\p{P}/u.test(c)) return 'Punctuation';
+      if (/\p{S}/u.test(c)) return 'Symbol';
+      if (/\p{M}/u.test(c)) return 'Mark';
+      if (/\p{Z}/u.test(c)) return 'Separator';
+      if (/\p{C}/u.test(c)) return 'Control';
+    } catch { /* \p{} unsupported — leave blank */ }
+    return 'Other';
+  }
+
+  // Escape for safe insertion into innerHTML table cells.
+  function esc(s: string): string {
+    return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+  }
+
+  const graphemeSeg =
+    typeof (Intl as any).Segmenter === 'function'
+      ? new (Intl as any).Segmenter(undefined, { granularity: 'grapheme' })
+      : null;
+
+  function stats(text: string): string {
+    const cps = codePoints(text);
+    const utf16 = text.length;
+    const utf8 = new TextEncoder().encode(text).length;
+    const graphemes = graphemeSeg ? Array.from(graphemeSeg.segment(text)).length : cps.length;
+    return `${cps.length} code points · ${graphemes} graphemes · ${utf16} UTF-16 units · ${utf8} UTF-8 bytes`;
+  }
+
+  const TABLE_CAP = 256;
+  function renderTable(text: string) {
+    const cps = codePoints(text);
+    const rows = cps.slice(0, TABLE_CAP);
+    tableBody.innerHTML = rows
+      .map((n, i) => {
+        const glyph = n < 0x20 || (n >= 0x7f && n < 0xa0) ? '·' : String.fromCodePoint(n);
+        return (
+          `<tr>` +
+          `<td class="py-1 pr-3 text-ink-subtle">${i + 1}</td>` +
+          `<td class="py-1 pr-3">${esc(glyph)}</td>` +
+          `<td class="py-1 pr-3">U+${n.toString(16).toUpperCase().padStart(4, '0')}</td>` +
+          `<td class="py-1 pr-3">${n}</td>` +
+          `<td class="py-1 pr-3">${utf8Bytes(n).map((b) => b.toString(16).toUpperCase().padStart(2, '0')).join(' ')}</td>` +
+          `<td class="py-1 pr-3">${utf16Units(n).map((u) => u.toString(16).toUpperCase().padStart(4, '0')).join(' ')}</td>` +
+          `<td class="py-1 text-ink-subtle">${category(n)}</td>` +
+          `</tr>`
+        );
+      })
+      .join('');
+    tableNote.textContent =
+      cps.length > TABLE_CAP ? `Showing first ${TABLE_CAP} of ${cps.length} characters.` : '';
+  }
+
+  function showStatus(msg: string) {
+    statusEl.textContent = msg;
+    statusEl.classList.remove('hidden');
+    statusEl.style.borderColor = '#27a644';
+    statusEl.style.color = '#27a644';
+  }
+
+  function syncUI() {
+    const fmt = FORMATS[formatSel.value];
+    outLabel.textContent = fmt.label;
+    delimWrap.style.display = fmt.list ? '' : 'none';
+    // Uppercase toggle is meaningless for decimal/binary output.
+    caseWrap.style.display =
+      formatSel.value === 'decimal' || formatSel.value === 'binary' ? 'none' : '';
+  }
+
+  async function convert() {
+    syncUI();
+    const text = inEl.value;
+    if (!text) {
+      rawOutput = '';
+      outEl.textContent = '';
+      statusEl.classList.add('hidden');
+      tableBody.innerHTML = '';
+      tableNote.textContent = '';
+      return;
+    }
+    try {
+      rawOutput = encode(formatSel.value, text);
+      await hl(outEl, rawOutput, FORMATS[formatSel.value].lang);
+      renderTable(text);
+      showStatus(stats(text) + ' ✓');
+    } catch (e) {
+      rawOutput = '';
+      outEl.textContent = '';
+      statusEl.classList.add('hidden');
+      showStatus(`Failed: ${(e as Error).message}`);
+      statusEl.style.borderColor = '#e5484d';
+      statusEl.style.color = '#e5484d';
+    }
+  }
+
+  // Format-agnostic decoder. Applies each transform in turn so mixed input
+  // ("U+0041 &#66; C") still resolves.
+  function decodeAll(raw: string): string {
+    let s = raw;
+    s = s.replace(/\\u\{([0-9a-fA-F]+)\}/g, (_, h) => String.fromCodePoint(parseInt(h, 16)));
+    s = s.replace(/\\U([0-9a-fA-F]{8})/g, (_, h) => String.fromCodePoint(parseInt(h, 16)));
+    s = s.replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCodePoint(parseInt(h, 16)));
+    s = s.replace(/\\x([0-9a-fA-F]{2})/g, (_, h) => String.fromCodePoint(parseInt(h, 16)));
+    s = s.replace(/\\([0-9a-fA-F]{1,6})\s?/g, (_, h) => String.fromCodePoint(parseInt(h, 16))); // CSS
+    s = s.replace(/U\+([0-9a-fA-F]+)/g, (_, h) => String.fromCodePoint(parseInt(h, 16)));
+    // HTML entities: named + numeric, decoded by the browser.
+    const ta = document.createElement('textarea');
+    ta.innerHTML = s;
+    s = ta.value;
+    // Percent-encoded UTF-8.
+    if (/%[0-9a-fA-F]{2}/.test(s)) {
+      try { s = decodeURIComponent(s); } catch { /* leave as-is */ }
+    }
+    // Bare number lists ("1F600 61 62" or "0x61,0x62") — only when the whole
+    // string is nothing but hex tokens, so real text is never misread.
+    const trimmed = s.trim();
+    if (trimmed && /^(0x)?[0-9a-fA-F]+([\s,]+(0x)?[0-9a-fA-F]+)*$/.test(trimmed) && /[a-fA-F]|0x/.test(trimmed)) {
+      const pts = trimmed.split(/[\s,]+/).map((t) => parseInt(t.replace(/^0x/i, ''), 16));
+      s = String.fromCodePoint(...pts);
+    }
+    return s;
   }
 
   function decode() {
-    const raw = decodeIn.value.trim();
-    if (!raw) { decoded.textContent = ''; return; }
-    const points: number[] = [];
-    // U+XXXX
-    const re = /U\+([0-9a-fA-F]+)|\\u\{([0-9a-fA-F]+)\}|\\u([0-9a-fA-F]{4})|&#x([0-9a-fA-F]+);|&#(\d+);|0x([0-9a-fA-F]+)/g;
-    let m: RegExpExecArray | null;
-    let matched = false;
-    while ((m = re.exec(raw))) {
-      matched = true;
-      const g = m[1] || m[2] || m[3] || m[4] || m[6];
-      if (g) points.push(parseInt(g, 16));
-      else if (m[5]) points.push(parseInt(m[5], 10));
-    }
+    const raw = decodeIn.value;
+    decErr.classList.add('hidden');
+    if (!raw.trim()) { decoded.textContent = ''; return; }
     try {
-      decoded.textContent = matched ? String.fromCodePoint(...points) : '(no code points found)';
-    } catch { decoded.textContent = '(invalid code point)'; }
+      const out = decodeAll(raw);
+      decoded.textContent = out;
+    } catch (e) {
+      decoded.textContent = '';
+      decErr.textContent = `Could not decode: ${(e as Error).message}`;
+      decErr.classList.remove('hidden');
+    }
   }
 
-  textEl.addEventListener('input', encode);
+  const rerender = wireInput(inEl, inHl, () => 'plaintext', () => { void convert(); });
+
+  formatSel.addEventListener('change', () => { void convert(); });
+  delimSel.addEventListener('change', () => { void convert(); });
+  upperBox.addEventListener('change', () => { void convert(); });
   decodeIn.addEventListener('input', decode);
-  document.querySelectorAll<HTMLButtonElement>('.uni-copy').forEach((b) => {
-    b.addEventListener('click', async () => {
-      const t = document.getElementById(b.dataset.t!) as HTMLTextAreaElement;
-      await navigator.clipboard.writeText(t.value);
-      b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
-    });
+
+  document.getElementById('uc-clear')!.addEventListener('click', () => {
+    inEl.value = '';
+    rerender();
+    void convert();
   });
 
-  textEl.value = 'Hello 😀 café'; encode();
-  decodeIn.value = 'U+1F600'; decode();
+  async function copyBtn(btn: HTMLButtonElement, text: string) {
+    if (!text) return;
+    await navigator.clipboard.writeText(text);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy'), 1400);
+  }
+
+  document.getElementById('uc-copy')!.addEventListener('click', (e) =>
+    copyBtn(e.currentTarget as HTMLButtonElement, rawOutput));
+  document.getElementById('uc-dec-copy')!.addEventListener('click', (e) =>
+    copyBtn(e.currentTarget as HTMLButtonElement, decoded.textContent ?? ''));
+
+  document.getElementById('uc-download')!.addEventListener('click', () => {
+    if (!rawOutput) return;
+    const blob = new Blob([rawOutput], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `unicode-${formatSel.value}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  inEl.value = 'Hello 😀 café';
+  rerender();
+  void convert();
+  decodeIn.value = 'U+1F600';
+  decode();
 </script>

@@ -1,0 +1,203 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pdf-to-excel">
+  <div class="flex flex-col gap-4">
+    <label id="pe-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a PDF or drop it here</span>
+      <span class="text-[13px] text-ink-tertiary">Converted in your browser — never uploaded</span>
+      <input id="pe-file" type="file" accept="application/pdf" class="sr-only" />
+    </label>
+
+    <div id="pe-panel" class="hidden flex-col gap-4">
+      <div class="flex flex-wrap items-center gap-3">
+        <button id="pe-convert" class="btn btn-primary">Detect tables</button>
+        <button id="pe-download" class="btn btn-secondary" disabled>Download .xlsx</button>
+        <button id="pe-copy" class="btn btn-tertiary" disabled>Copy as TSV</button>
+        <span id="pe-status" class="text-[13px] text-ink-subtle" aria-live="polite"></span>
+      </div>
+      <p class="text-[13px] text-ink-tertiary">
+        Rows are detected from the PDF’s text positions and split into columns
+        where gaps appear. It works best on clean, grid-like tables; merged cells,
+        wrapped text and complex layouts may need cleanup in your spreadsheet app.
+        Scanned PDFs have no text to read.
+      </p>
+      <div id="pe-preview" class="overflow-auto rounded-md border border-hairline" style="max-height:60vh"></div>
+    </div>
+    <p id="pe-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free PDF to Excel converter finds row-and-column data inside a PDF and
+      exports it to an editable Excel (<code class="font-mono text-ink">.xlsx</code>)
+      spreadsheet you can open in Excel, Google Sheets, Numbers or LibreOffice
+      Calc. The PDF is read and the spreadsheet is built entirely in your browser
+      — your file is never uploaded to a server.
+    </p>
+    <p>
+      Tables are reconstructed by reading the position of every piece of text on
+      the page: items sharing a baseline become a row, and larger horizontal gaps
+      mark the boundaries between columns. This works well for clean, grid-aligned
+      tables like statements, price lists and exports. It is a best-effort
+      reconstruction, so merged cells, multi-line cells and heavily styled layouts
+      may need a little tidying up once opened. Numeric-looking cells are written
+      as real numbers so you can sum and sort them straight away.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+  #pe-preview table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  #pe-preview td { border: 1px solid var(--hairline, #2a2a35); padding: 3px 8px; white-space: nowrap; }
+  #pe-preview tr:first-child td { background: var(--surface-2, #17171d); font-weight: 600; }
+</style>
+
+<script>
+  import * as pdfjsLib from 'pdfjs-dist';
+  import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+  import { makeXlsx } from '../../lib/xlsx';
+  pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const fileInput = $('pe-file') as HTMLInputElement;
+  const drop = $('pe-drop');
+  const panel = $('pe-panel');
+  const previewEl = $('pe-preview');
+  const status = $('pe-status');
+  const err = $('pe-error');
+  const dlBtn = $('pe-download') as HTMLButtonElement;
+  const copyBtn = $('pe-copy') as HTMLButtonElement;
+
+  let bytes: ArrayBuffer | null = null;
+  let baseName = 'document';
+  let rows: (string | number)[][] = [];
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  function load(file: File) {
+    setErr('');
+    baseName = file.name.replace(/\.pdf$/i, '') || 'document';
+    file.arrayBuffer().then((b) => {
+      bytes = b;
+      panel.classList.remove('hidden'); panel.classList.add('flex');
+      status.textContent = `${file.name} ready.`;
+      previewEl.innerHTML = ''; dlBtn.disabled = true; copyBtn.disabled = true;
+    });
+  }
+
+  type Cell = { x: number; y: number; w: number; str: string };
+
+  // Group text items into rows (shared baseline), then split each row into
+  // columns where the horizontal gap between items exceeds a threshold.
+  function itemsToRows(items: Cell[]): string[][] {
+    if (!items.length) return [];
+    // Bucket by y (rounded) — items within ~4px vertically share a row.
+    const sorted = [...items].sort((a, b) => b.y - a.y || a.x - b.x);
+    const lines: Cell[][] = [];
+    let cur: Cell[] = [];
+    let curY = sorted[0].y;
+    for (const it of sorted) {
+      if (Math.abs(it.y - curY) > 4) { lines.push(cur); cur = []; curY = it.y; }
+      cur.push(it);
+    }
+    if (cur.length) lines.push(cur);
+
+    // Median character width → column-gap threshold (a gap wider than ~1.5
+    // average characters starts a new column).
+    const widths = items.map((i) => i.w / Math.max(1, i.str.length)).filter((w) => w > 0).sort((a, b) => a - b);
+    const charW = widths[Math.floor(widths.length / 2)] || 4;
+    const gap = charW * 1.8;
+
+    return lines.map((line) => {
+      const cells: string[] = [];
+      let prevEnd = -Infinity;
+      let buf = '';
+      for (const it of line) {
+        if (buf && it.x - prevEnd > gap) { cells.push(buf.trim()); buf = ''; }
+        buf += (buf && it.x - prevEnd > 0 ? ' ' : '') + it.str;
+        prevEnd = it.x + it.w;
+      }
+      if (buf.trim()) cells.push(buf.trim());
+      return cells;
+    }).filter((r) => r.some((c) => c !== ''));
+  }
+
+  // Convert a cell string to a number when it looks purely numeric (allowing
+  // thousands separators, currency symbols and parenthesised negatives).
+  function coerce(s: string): string | number {
+    const cleaned = s.replace(/[$£€,\s]/g, '');
+    const neg = /^\(.*\)$/.test(cleaned);
+    const core = neg ? cleaned.slice(1, -1) : cleaned;
+    if (core !== '' && /^-?\d*\.?\d+%?$/.test(core)) {
+      const n = parseFloat(core.replace('%', ''));
+      if (Number.isFinite(n) && !core.endsWith('%')) return neg ? -n : n;
+    }
+    return s;
+  }
+
+  async function convert() {
+    if (!bytes) return;
+    setErr(''); dlBtn.disabled = true; copyBtn.disabled = true;
+    const btn = $('pe-convert') as HTMLButtonElement;
+    btn.disabled = true;
+    try {
+      const pdf = await pdfjsLib.getDocument({ data: bytes!.slice(0) }).promise;
+      const all: string[][] = [];
+      for (let n = 1; n <= pdf.numPages; n++) {
+        status.textContent = `Reading page ${n} / ${pdf.numPages}…`;
+        const page = await pdf.getPage(n);
+        const content = await page.getTextContent();
+        const cells: Cell[] = (content.items as any[])
+          .filter((it) => it.str && it.str.trim())
+          .map((it) => ({ x: it.transform[4], y: it.transform[5], w: it.width, str: it.str }));
+        all.push(...itemsToRows(cells));
+      }
+      if (!all.length) {
+        setErr('No text-based table found. Scanned/image PDFs have no readable text.');
+        status.textContent = '';
+        return;
+      }
+      rows = all.map((r) => r.map(coerce));
+      renderPreview(all);
+      const cols = Math.max(...all.map((r) => r.length));
+      status.textContent = `Done — ${all.length} rows × up to ${cols} columns.`;
+      dlBtn.disabled = false; copyBtn.disabled = false;
+    } catch (e) {
+      setErr('Could not read this PDF: ' + (e as Error).message);
+      status.textContent = '';
+    } finally { btn.disabled = false; }
+  }
+
+  function renderPreview(data: string[][]) {
+    const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c] as string));
+    const capped = data.slice(0, 200);
+    previewEl.innerHTML =
+      '<table><tbody>' +
+      capped.map((r) => '<tr>' + r.map((c) => `<td>${esc(c)}</td>`).join('') + '</tr>').join('') +
+      '</tbody></table>' +
+      (data.length > capped.length ? `<p class="p-2 text-[13px] text-ink-tertiary">Preview shows first 200 of ${data.length} rows. The download includes all.</p>` : '');
+  }
+
+  fileInput.addEventListener('change', () => fileInput.files?.[0] && load(fileInput.files[0]));
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) load(f); });
+  $('pe-convert').addEventListener('click', convert);
+
+  dlBtn.addEventListener('click', () => {
+    const blob = makeXlsx(rows);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${baseName}.xlsx`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+  copyBtn.addEventListener('click', async () => {
+    const tsv = rows.map((r) => r.join('\t')).join('\n');
+    await navigator.clipboard.writeText(tsv);
+    copyBtn.textContent = 'Copied!'; setTimeout(() => (copyBtn.textContent = 'Copy as TSV'), 1400);
+  });
+</script>

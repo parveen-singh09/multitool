@@ -14,13 +14,31 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div id="pj-panel" class="hidden flex-col gap-4">
       <div class="flex flex-wrap items-end gap-3">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">Format
-          <select id="pj-fmt" class="field w-32"><option value="image/jpeg">JPG</option><option value="image/png">PNG</option></select>
+          <select id="pj-fmt" class="field w-32">
+            <option value="image/jpeg">JPG</option>
+            <option value="image/png">PNG</option>
+            <option value="image/webp">WebP</option>
+          </select>
         </label>
-        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Scale
-          <select id="pj-scale" class="field w-32"><option value="1">1× (72 dpi)</option><option value="2" selected>2× (144 dpi)</option><option value="3">3× (216 dpi)</option></select>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Resolution
+          <select id="pj-scale" class="field w-36">
+            <option value="1">1× (72 dpi)</option>
+            <option value="2" selected>2× (144 dpi)</option>
+            <option value="3">3× (216 dpi)</option>
+            <option value="4">4× (288 dpi)</option>
+          </select>
         </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Pages
+          <input id="pj-range" type="text" class="field w-44" placeholder="all — e.g. 1-3, 5, 8-" />
+        </label>
+        <label id="pj-qwrap" class="flex flex-col gap-1 text-sm text-ink-subtle">Quality <span id="pj-qval" class="text-ink-tertiary">92%</span>
+          <input id="pj-quality" type="range" min="30" max="100" value="92" class="w-40" />
+        </label>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
         <button id="pj-render" class="btn btn-primary">Render pages</button>
-        <button id="pj-all" class="btn btn-secondary hidden">Download all</button>
+        <button id="pj-zip" class="btn btn-secondary hidden">Download ZIP</button>
+        <button id="pj-all" class="btn btn-tertiary hidden">Save each</button>
       </div>
       <p id="pj-status" class="text-[13px] text-ink-subtle"></p>
       <div id="pj-grid" class="grid grid-cols-2 gap-3 sm:grid-cols-3"></div>
@@ -30,11 +48,19 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free PDF to JPG converter renders each page of a PDF into a JPG or PNG
-      image. Pick the output format and resolution, render the pages, then
-      download any single page or all of them. Higher scale gives sharper images
-      for print or zoom. The PDF is rendered entirely in your browser, so your
-      document is never uploaded to a server.
+      This free PDF to JPG converter renders each page of a PDF into a JPG, PNG,
+      or WebP image, right in your browser. Choose the output format, resolution
+      (up to 288 dpi for crisp print or zoom), and — for JPG and WebP — a precise
+      quality level. Convert every page or a specific range like
+      <code>1-3, 5, 8-</code>, preview each result, then download a single page,
+      save every page at once, or grab them all as a single ZIP.
+    </p>
+    <p>
+      Unlike most online converters, nothing is uploaded: the PDF is decoded and
+      rasterized entirely on your device, so private documents stay private. There
+      are no page limits, no watermarks, and no sign-up. The ZIP is assembled
+      locally too, so a hundred-page PDF becomes one tidy download without a
+      round-trip to any server.
     </p>
   </div>
 </ToolLayout>
@@ -48,68 +74,189 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
   pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
-  const fileInput = document.getElementById('pj-file') as HTMLInputElement;
-  const drop = document.getElementById('pj-drop')!;
-  const panel = document.getElementById('pj-panel')!;
-  const grid = document.getElementById('pj-grid')!;
-  const status = document.getElementById('pj-status')!;
-  const err = document.getElementById('pj-error')!;
-  const allBtn = document.getElementById('pj-all') as HTMLButtonElement;
+  const $ = (id: string) => document.getElementById(id)!;
+  const fileInput = $('pj-file') as HTMLInputElement;
+  const drop = $('pj-drop');
+  const panel = $('pj-panel');
+  const grid = $('pj-grid');
+  const status = $('pj-status');
+  const err = $('pj-error');
+  const zipBtn = $('pj-zip') as HTMLButtonElement;
+  const allBtn = $('pj-all') as HTMLButtonElement;
+  const fmtEl = $('pj-fmt') as HTMLSelectElement;
+  const qWrap = $('pj-qwrap');
+  const qEl = $('pj-quality') as HTMLInputElement;
+  const qVal = $('pj-qval');
+  const rangeEl = $('pj-range') as HTMLInputElement;
 
   let bytes: ArrayBuffer | null = null;
-  let rendered: { url: string; page: number; ext: string }[] = [];
+  let baseName = 'page';
+  let rendered: { blob: Blob; url: string; page: number; ext: string }[] = [];
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  // ponytail: quality only matters for lossy encoders
+  const syncQuality = () => {
+    const lossy = fmtEl.value !== 'image/png';
+    qWrap.style.display = lossy ? '' : 'none';
+    qVal.textContent = qEl.value + '%';
+  };
+  fmtEl.addEventListener('change', syncQuality);
+  qEl.addEventListener('input', syncQuality);
+  syncQuality();
 
   function load(file: File) {
     setErr('');
-    file.arrayBuffer().then((b) => { bytes = b; panel.classList.remove('hidden'); panel.classList.add('flex'); status.textContent = `${file.name} ready.`; });
+    baseName = file.name.replace(/\.pdf$/i, '') || 'page';
+    file.arrayBuffer().then((b) => {
+      bytes = b;
+      panel.classList.remove('hidden');
+      panel.classList.add('flex');
+      status.textContent = `${file.name} ready — set your options and render.`;
+    }).catch((e) => setErr('Could not read that file: ' + (e as Error).message));
+  }
+
+  // Parse "1-3, 5, 8-" against a page count. Returns a sorted unique 1-based list.
+  function parseRange(spec: string, total: number): number[] {
+    const s = spec.trim();
+    if (!s) return Array.from({ length: total }, (_, i) => i + 1);
+    const out = new Set<number>();
+    for (const part of s.split(',')) {
+      const p = part.trim();
+      if (!p) continue;
+      const m = p.match(/^(\d+)?\s*-\s*(\d+)?$/);
+      if (m) {
+        const from = m[1] ? Math.max(1, +m[1]) : 1;
+        const to = m[2] ? Math.min(total, +m[2]) : total;
+        for (let i = from; i <= to; i++) out.add(i);
+      } else if (/^\d+$/.test(p)) {
+        const n = +p;
+        if (n >= 1 && n <= total) out.add(n);
+      } else {
+        throw new Error(`Invalid page range: "${p}"`);
+      }
+    }
+    return [...out].sort((a, b) => a - b);
   }
 
   async function render() {
     if (!bytes) return;
-    setErr(''); grid.innerHTML = ''; rendered = []; allBtn.classList.add('hidden');
-    const fmt = (document.getElementById('pj-fmt') as HTMLSelectElement).value;
-    const ext = fmt === 'image/png' ? 'png' : 'jpg';
-    const scale = Number((document.getElementById('pj-scale') as HTMLSelectElement).value);
+    setErr(''); grid.innerHTML = '';
+    rendered.forEach((r) => URL.revokeObjectURL(r.url));
+    rendered = [];
+    zipBtn.classList.add('hidden'); allBtn.classList.add('hidden');
+    const fmt = fmtEl.value;
+    const ext = fmt === 'image/png' ? 'png' : fmt === 'image/webp' ? 'webp' : 'jpg';
+    const quality = fmt === 'image/png' ? undefined : Number(qEl.value) / 100;
+    const scale = Number(($('pj-scale') as HTMLSelectElement).value);
     try {
       const pdf = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
-      status.textContent = `Rendering ${pdf.numPages} page(s)…`;
-      for (let n = 1; n <= pdf.numPages; n++) {
+      let pages: number[];
+      try { pages = parseRange(rangeEl.value, pdf.numPages); }
+      catch (e) { setErr((e as Error).message); return; }
+      if (!pages.length) { setErr(`No pages match that range (document has ${pdf.numPages}).`); return; }
+      let totalBytes = 0;
+      for (let idx = 0; idx < pages.length; idx++) {
+        const n = pages[idx];
+        status.textContent = `Rendering page ${n} (${idx + 1} / ${pages.length})…`;
         const page = await pdf.getPage(n);
         const viewport = page.getViewport({ scale });
         const canvas = document.createElement('canvas');
         canvas.width = viewport.width; canvas.height = viewport.height;
         const ctx = canvas.getContext('2d')!;
-        if (ext === 'jpg') { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+        if (ext !== 'png') { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
         await page.render({ canvasContext: ctx, viewport, canvas } as any).promise;
-        const url = await new Promise<string>((res) => canvas.toBlob((b) => res(URL.createObjectURL(b!)), fmt, 0.92));
-        rendered.push({ url, page: n, ext });
+        const blob = await new Promise<Blob>((res, rej) =>
+          canvas.toBlob((b) => b ? res(b) : rej(new Error('Encoding failed')), fmt, quality));
+        totalBytes += blob.size;
+        const url = URL.createObjectURL(blob);
+        rendered.push({ blob, url, page: n, ext });
         addCard(url, n, ext);
-        status.textContent = `Rendered ${n} / ${pdf.numPages}`;
       }
-      status.textContent = `Done — ${pdf.numPages} page(s).`;
-      if (rendered.length > 1) allBtn.classList.remove('hidden');
+      status.textContent = `Done — ${pages.length} page(s), ${fmtSize(totalBytes)} total.`;
+      allBtn.classList.remove('hidden');
+      if (rendered.length > 1) zipBtn.classList.remove('hidden');
     } catch (e) { setErr('Could not render that PDF: ' + (e as Error).message); }
   }
+
+  const fmtSize = (n: number) => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(0) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
 
   function addCard(url: string, n: number, ext: string) {
     const div = document.createElement('div');
     div.className = 'panel panel-lift flex flex-col gap-2 p-2';
-    div.innerHTML = `<img src="${url}" class="w-full rounded-sm" alt="Page ${n}" />
-      <a href="${url}" download="page-${n}.${ext}" class="btn btn-secondary py-1 text-[13px]">Page ${n} · ${ext.toUpperCase()}</a>`;
+    div.innerHTML = `<img src="${url}" class="w-full rounded-sm" alt="Page ${n}" loading="lazy" />
+      <a href="${url}" download="${baseName}-${n}.${ext}" class="btn btn-secondary py-1 text-[13px]">Page ${n} · ${ext.toUpperCase()}</a>`;
     grid.appendChild(div);
   }
 
   allBtn.addEventListener('click', async () => {
     for (const r of rendered) {
-      const a = document.createElement('a'); a.href = r.url; a.download = `page-${r.page}.${r.ext}`; a.click();
+      const a = document.createElement('a'); a.href = r.url; a.download = `${baseName}-${r.page}.${r.ext}`; a.click();
       await new Promise((res) => setTimeout(res, 150));
     }
+  });
+
+  // --- Minimal STORE-mode ZIP (no deps). Images are already compressed, so no deflate needed. ---
+  let crcTable: number[] | null = null;
+  function crc32(buf: Uint8Array): number {
+    if (!crcTable) {
+      crcTable = [];
+      for (let n = 0; n < 256; n++) {
+        let c = n;
+        for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+        crcTable[n] = c >>> 0;
+      }
+    }
+    let crc = 0xFFFFFFFF;
+    for (let i = 0; i < buf.length; i++) crc = (crc >>> 8) ^ crcTable[(crc ^ buf[i]) & 0xFF];
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+  }
+  const u16 = (n: number) => new Uint8Array([n & 255, (n >> 8) & 255]);
+  const u32 = (n: number) => new Uint8Array([n & 255, (n >>> 8) & 255, (n >>> 16) & 255, (n >>> 24) & 255]);
+  function concat(arrs: Uint8Array[]): Uint8Array {
+    let len = 0; for (const a of arrs) len += a.length;
+    const out = new Uint8Array(len); let o = 0;
+    for (const a of arrs) { out.set(a, o); o += a.length; }
+    return out;
+  }
+  function makeZip(files: { name: string; data: Uint8Array }[]): Blob {
+    const enc = new TextEncoder();
+    const locals: Uint8Array[] = [];
+    const centrals: Uint8Array[] = [];
+    let offset = 0;
+    for (const f of files) {
+      const name = enc.encode(f.name);
+      const crc = crc32(f.data);
+      const sz = f.data.length;
+      const local = concat([u32(0x04034b50), u16(20), u16(0), u16(0), u16(0), u16(0), u32(crc), u32(sz), u32(sz), u16(name.length), u16(0), name, f.data]);
+      locals.push(local);
+      centrals.push(concat([u32(0x02014b50), u16(20), u16(20), u16(0), u16(0), u16(0), u16(0), u32(crc), u32(sz), u32(sz), u16(name.length), u16(0), u16(0), u16(0), u16(0), u32(0), u32(offset), name]));
+      offset += local.length;
+    }
+    const cd = concat(centrals);
+    const end = concat([u32(0x06054b50), u16(0), u16(0), u16(files.length), u16(files.length), u32(cd.length), u32(offset), u16(0)]);
+    return new Blob([concat(locals), cd, end], { type: 'application/zip' });
+  }
+
+  zipBtn.addEventListener('click', async () => {
+    if (!rendered.length) return;
+    zipBtn.disabled = true;
+    const prev = zipBtn.textContent;
+    zipBtn.textContent = 'Zipping…';
+    try {
+      const files = await Promise.all(rendered.map(async (r) => ({
+        name: `${baseName}-${r.page}.${r.ext}`,
+        data: new Uint8Array(await r.blob.arrayBuffer()),
+      })));
+      const url = URL.createObjectURL(makeZip(files));
+      const a = document.createElement('a'); a.href = url; a.download = `${baseName}.zip`; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+    } catch (e) { setErr('Could not build ZIP: ' + (e as Error).message); }
+    finally { zipBtn.disabled = false; zipBtn.textContent = prev; }
   });
 
   fileInput.addEventListener('change', () => fileInput.files?.[0] && load(fileInput.files[0]));
   ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
   ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
   drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) load(f); });
-  document.getElementById('pj-render')!.addEventListener('click', render);
+  $('pj-render').addEventListener('click', render);
 </script>

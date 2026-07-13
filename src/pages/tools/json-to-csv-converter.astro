@@ -4,113 +4,346 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
 <ToolLayout slug="json-to-csv-converter">
   <div class="flex flex-col gap-4">
-    <div class="flex flex-wrap items-center gap-2">
-      <button id="j2c-convert" class="btn btn-primary">Convert to CSV</button>
-      <button id="j2c-copy" class="btn btn-secondary">Copy</button>
-      <button id="j2c-clear" class="btn btn-tertiary">Clear</button>
-      <label class="ml-auto flex items-center gap-2 text-sm text-ink-subtle">
-        Delimiter
-        <select id="j2c-delim" class="field w-auto py-1">
-          <option value=",">Comma</option>
-          <option value=";">Semicolon</option>
-          <option value="tab">Tab</option>
-        </select>
-      </label>
+    <!-- Options toolbar -->
+    <div class="panel flex flex-col gap-3 p-3">
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Delimiter
+          <select id="j2c-delim" class="field w-auto py-1">
+            <option value=",">Comma (,)</option>
+            <option value=";">Semicolon (;)</option>
+            <option value="tab">Tab</option>
+            <option value="|">Pipe (|)</option>
+            <option value=":">Colon (:)</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </label>
+        <label id="j2c-custom-wrap" class="hidden flex-col gap-1 text-sm text-ink-subtle">
+          Custom delimiter
+          <input id="j2c-custom" class="field w-20 py-1 font-mono" maxlength="4" value="," aria-label="Custom delimiter" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Line ending
+          <select id="j2c-eol" class="field w-auto py-1">
+            <option value="lf">LF (\n)</option>
+            <option value="crlf">CRLF (\r\n)</option>
+          </select>
+        </label>
+        <label class="flex items-center gap-2 pb-1 text-sm text-ink-subtle">
+          <input id="j2c-header" type="checkbox" class="accent-primary" checked />
+          Header row
+        </label>
+        <label class="flex items-center gap-2 pb-1 text-sm text-ink-subtle">
+          <input id="j2c-flatten" type="checkbox" class="accent-primary" checked />
+          Flatten nested objects
+        </label>
+        <label class="flex items-center gap-2 pb-1 text-sm text-ink-subtle">
+          <input id="j2c-quote" type="checkbox" class="accent-primary" />
+          Quote all values
+        </label>
+        <label class="flex items-center gap-2 pb-1 text-sm text-ink-subtle" title="Replace newlines inside a field with a space">
+          <input id="j2c-nobreak" type="checkbox" class="accent-primary" />
+          Strip line breaks
+        </label>
+      </div>
     </div>
 
-    <div id="j2c-status" class="hidden rounded-md border px-3 py-2 text-sm" role="status"></div>
+    <!-- Action bar -->
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="j2c-copy" type="button" class="btn btn-secondary">Copy CSV</button>
+      <button id="j2c-download" type="button" class="btn btn-secondary">Download</button>
+      <button id="j2c-upload-btn" type="button" class="btn btn-tertiary">Upload JSON</button>
+      <button id="j2c-sample" type="button" class="btn btn-tertiary">Load sample</button>
+      <button id="j2c-clear" type="button" class="btn btn-tertiary">Clear</button>
+      <input id="j2c-file" type="file" accept=".json,.ndjson,.jsonl,.txt,application/json,text/plain" class="hidden" />
+      <span id="j2c-stats" class="ml-auto text-[13px] text-ink-subtle"></span>
+    </div>
 
-    <div class="grid gap-4 md:grid-cols-2">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-        JSON input (array of objects)
-        <textarea
-          id="j2c-input"
-          class="field min-h-72 resize-y font-mono text-[13px]"
-          placeholder={'[\n  {"name":"Ada","role":{"team":"eng"}},\n  {"name":"Grace","role":{"team":"ops"}}\n]'}
-          spellcheck="false"
-          aria-label="JSON input"
-        ></textarea>
-      </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-        CSV output
-        <textarea
-          id="j2c-output"
-          class="field min-h-72 resize-y font-mono text-[13px]"
-          placeholder="CSV appears here"
-          spellcheck="false"
-          readonly
-          aria-label="CSV output"
-        ></textarea>
-      </label>
+    <p id="j2c-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        <span>JSON input — array of objects, a single object, or JSON Lines</span>
+        <div id="j2c-drop" class="hl-edit field p-0" style="height:22rem;overflow:hidden">
+          <pre class="hl-block" aria-hidden="true"><code id="j2c-in-hl" class="hljs" style="background:transparent"></code></pre>
+          <textarea id="j2c-in" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="JSON input"></textarea>
+        </div>
+      </div>
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        <span>CSV output</span>
+        <pre class="hl-block field" style="height:22rem;margin:0;overflow:auto;white-space:pre"><code id="j2c-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+      </div>
     </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free JSON to CSV converter turns an array of JSON objects into CSV.
-      It builds the header from the union of every object's keys, flattens one
-      level of nested objects into dot-separated columns like
-      <code>role.team</code>, and quotes any field that contains the delimiter,
-      quotes or line breaks. Pick a comma, semicolon or tab delimiter to match
-      your spreadsheet. Everything runs locally in your browser.
+      This free JSON to CSV converter turns JSON into spreadsheet-ready CSV
+      entirely in your browser — nothing is uploaded to a server. It accepts an
+      array of objects, a single object, or JSON Lines / NDJSON (one JSON value
+      per line), builds the header from the union of every record's keys, and
+      converts as you type with a live preview.
+    </p>
+    <p>
+      Options let you match any target tool: pick a comma, semicolon, tab, pipe,
+      colon or a fully custom delimiter, choose LF or CRLF line endings, toggle
+      the header row on or off, force every value to be quoted, and strip line
+      breaks inside fields. Nested objects and arrays are flattened into
+      dot-notation columns like <code>role.team</code> and <code>tags.0</code>
+      when flattening is on, or kept as compact JSON in a single cell when it is
+      off. Fields containing the delimiter, quotes or newlines are quoted and
+      escaped per RFC 4180.
+    </p>
+    <p>
+      Paste JSON, drag a <code>.json</code> file onto the input, or use Upload
+      JSON to load one. Then copy the CSV to your clipboard or download it as a
+      <code>.csv</code> / <code>.tsv</code> file. Invalid JSON is reported inline
+      with the parser's message so you can fix it fast.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  import { jsonToCsv } from '../../lib/dataformats';
-  import type { Json } from '../../lib/dataformats';
+  import { hl, wireInput } from '../../lib/highlight';
 
-  const input = document.getElementById('j2c-input') as HTMLTextAreaElement;
-  const output = document.getElementById('j2c-output') as HTMLTextAreaElement;
-  const status = document.getElementById('j2c-status')!;
+  type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
+
+  const inEl = document.getElementById('j2c-in') as HTMLTextAreaElement;
+  const inHlEl = document.getElementById('j2c-in-hl')!;
+  const outEl = document.getElementById('j2c-out')!;
+  const err = document.getElementById('j2c-error')!;
+  const stats = document.getElementById('j2c-stats')!;
+  const drop = document.getElementById('j2c-drop')!;
+
   const delimSel = document.getElementById('j2c-delim') as HTMLSelectElement;
+  const customWrap = document.getElementById('j2c-custom-wrap')!;
+  const customIn = document.getElementById('j2c-custom') as HTMLInputElement;
+  const eolSel = document.getElementById('j2c-eol') as HTMLSelectElement;
+  const headerChk = document.getElementById('j2c-header') as HTMLInputElement;
+  const flattenChk = document.getElementById('j2c-flatten') as HTMLInputElement;
+  const quoteChk = document.getElementById('j2c-quote') as HTMLInputElement;
+  const nobreakChk = document.getElementById('j2c-nobreak') as HTMLInputElement;
+  const fileIn = document.getElementById('j2c-file') as HTMLInputElement;
 
-  function showStatus(msg: string, ok: boolean) {
-    status.textContent = msg;
-    status.classList.remove('hidden');
-    status.style.borderColor = ok ? '#27a644' : '#d14d4d';
-    status.style.color = ok ? '#27a644' : '#e08585';
+  let csvOut = '';
+
+  /* ── parsing: JSON, then fall back to JSON Lines / NDJSON ── */
+  function parseInput(raw: string): Json {
+    try {
+      return JSON.parse(raw) as Json;
+    } catch (jsonErr) {
+      // Try NDJSON: one JSON value per non-empty line.
+      const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter((l) => l !== '');
+      if (lines.length > 1) {
+        try {
+          return lines.map((l) => JSON.parse(l) as Json);
+        } catch { /* fall through to the original JSON error */ }
+      }
+      throw jsonErr;
+    }
   }
 
   function resolveDelimiter(): string {
-    return delimSel.value === 'tab' ? '\t' : delimSel.value;
+    if (delimSel.value === 'tab') return '\t';
+    if (delimSel.value === 'custom') return customIn.value || ',';
+    return delimSel.value;
+  }
+
+  /* ── flatten one record into a flat map of column → value ── */
+  function flatten(value: Json, prefix: string, deep: boolean, out: { [k: string]: Json }) {
+    if (value !== null && typeof value === 'object') {
+      const entries = Array.isArray(value)
+        ? value.map((v, i) => [String(i), v] as [string, Json])
+        : Object.entries(value);
+      if (entries.length === 0) {
+        out[prefix] = Array.isArray(value) ? '[]' : '{}';
+        return;
+      }
+      for (const [k, v] of entries) {
+        const key = prefix ? `${prefix}.${k}` : k;
+        if (deep && v !== null && typeof v === 'object') flatten(v, key, deep, out);
+        else out[key] = v;
+      }
+    } else {
+      out[prefix] = value;
+    }
+  }
+
+  function recordOf(item: Json, deep: boolean): { [k: string]: Json } {
+    if (item === null || typeof item !== 'object' || Array.isArray(item)) {
+      return { value: item };
+    }
+    if (!deep) {
+      // One-level: only expand nested plain objects; keep arrays/scalars as-is.
+      const out: { [k: string]: Json } = {};
+      for (const [k, v] of Object.entries(item)) {
+        if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
+          for (const [k2, v2] of Object.entries(v)) out[`${k}.${k2}`] = v2;
+        } else out[k] = v;
+      }
+      return out;
+    }
+    const out: { [k: string]: Json } = {};
+    flatten(item, '', true, out);
+    return out;
+  }
+
+  function cellText(v: Json): string {
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'object') return JSON.stringify(v);
+    return String(v);
+  }
+
+  function quoteField(s: string, delim: string, force: boolean, stripBreaks: boolean): string {
+    if (stripBreaks) s = s.replace(/\r?\n/g, ' ');
+    const needs = force || s.includes('"') || s.includes('\n') || s.includes('\r') || s.includes(delim);
+    return needs ? '"' + s.replace(/"/g, '""') + '"' : s;
   }
 
   function convert() {
-    if (!input.value.trim()) {
-      output.value = '';
-      status.classList.add('hidden');
+    err.classList.add('hidden');
+    const raw = inEl.value.trim();
+    if (!raw) {
+      csvOut = '';
+      outEl.textContent = '';
+      stats.textContent = '';
       return;
     }
-    let parsed: Json;
+
+    let data: Json;
     try {
-      parsed = JSON.parse(input.value) as Json;
+      data = parseInput(raw);
     } catch (e) {
-      output.value = '';
-      showStatus(`Invalid JSON: ${(e as Error).message}`, false);
+      fail(`Invalid JSON: ${(e as Error).message}`);
       return;
     }
-    try {
-      output.value = jsonToCsv(parsed, resolveDelimiter());
-      showStatus('Converted to CSV ✓', true);
-    } catch (e) {
-      output.value = '';
-      showStatus((e as Error).message, false);
+
+    // Accept an array, a single object, or a bare scalar.
+    const items: Json[] = Array.isArray(data) ? data : [data];
+    if (items.length === 0) {
+      csvOut = '';
+      outEl.textContent = '';
+      stats.textContent = '0 rows';
+      return;
     }
+
+    const deep = flattenChk.checked;
+    const delim = resolveDelimiter();
+    const eol = eolSel.value === 'crlf' ? '\r\n' : '\n';
+    const force = quoteChk.checked;
+    const strip = nobreakChk.checked;
+
+    const rows = items.map((it) => recordOf(it, deep));
+    const keys: string[] = [];
+    const seen = new Set<string>();
+    for (const r of rows) for (const k of Object.keys(r)) {
+      if (!seen.has(k)) { seen.add(k); keys.push(k); }
+    }
+
+    const lines: string[] = [];
+    if (headerChk.checked) lines.push(keys.map((k) => quoteField(k, delim, force, strip)).join(delim));
+    for (const r of rows) {
+      lines.push(keys.map((k) => quoteField(cellText(k in r ? r[k] : null), delim, force, strip)).join(delim));
+    }
+
+    csvOut = lines.join(eol);
+    void hl(outEl, csvOut, 'plaintext');
+    stats.textContent = `${rows.length} row${rows.length === 1 ? '' : 's'} × ${keys.length} column${keys.length === 1 ? '' : 's'}`;
   }
 
-  document.getElementById('j2c-convert')!.addEventListener('click', convert);
-  delimSel.addEventListener('change', () => { if (output.value) convert(); });
+  function fail(msg: string) {
+    csvOut = '';
+    outEl.textContent = '';
+    stats.textContent = '';
+    err.textContent = msg;
+    err.classList.remove('hidden');
+  }
+
+  /* ── highlighted, editable input (mirror pattern) ── */
+  let timer: number | undefined;
+  const debounced = () => { window.clearTimeout(timer); timer = window.setTimeout(convert, 120); };
+  const rerender = wireInput(inEl, inHlEl, () => 'json', debounced);
+
+  /* ── option wiring ── */
+  delimSel.addEventListener('change', () => {
+    customWrap.classList.toggle('hidden', delimSel.value !== 'custom');
+    customWrap.classList.toggle('flex', delimSel.value === 'custom');
+    convert();
+  });
+  customIn.addEventListener('input', convert);
+  [eolSel].forEach((el) => el.addEventListener('change', convert));
+  [headerChk, flattenChk, quoteChk, nobreakChk].forEach((el) => el.addEventListener('change', convert));
+
+  /* ── actions ── */
   document.getElementById('j2c-clear')!.addEventListener('click', () => {
-    input.value = '';
-    output.value = '';
-    status.classList.add('hidden');
+    inEl.value = '';
+    rerender();
+    convert();
+    inEl.focus();
   });
-  document.getElementById('j2c-copy')!.addEventListener('click', async () => {
-    const btn = document.getElementById('j2c-copy')!;
-    await navigator.clipboard.writeText(output.value);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+
+  document.getElementById('j2c-copy')!.addEventListener('click', async (e) => {
+    if (!csvOut) return;
+    await navigator.clipboard.writeText(csvOut);
+    const b = e.currentTarget as HTMLButtonElement;
+    const prev = b.textContent;
+    b.textContent = 'Copied!';
+    setTimeout(() => (b.textContent = prev), 1400);
   });
+
+  document.getElementById('j2c-download')!.addEventListener('click', () => {
+    if (!csvOut) return;
+    const ext = resolveDelimiter() === '\t' ? 'tsv' : 'csv';
+    const blob = new Blob([csvOut], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `data.${ext}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  const SAMPLE = JSON.stringify([
+    { name: 'Ada Lovelace', role: { team: 'eng', level: 3 }, tags: ['founder', 'math'], active: true },
+    { name: 'Grace Hopper', role: { team: 'ops', level: 4 }, tags: ['navy'], active: false, notes: 'COBOL' },
+  ], null, 2);
+  document.getElementById('j2c-sample')!.addEventListener('click', () => {
+    inEl.value = SAMPLE;
+    rerender();
+    convert();
+  });
+
+  /* ── file upload + drag & drop ── */
+  document.getElementById('j2c-upload-btn')!.addEventListener('click', () => fileIn.click());
+  function loadFile(file: File) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      inEl.value = String(reader.result ?? '');
+      rerender();
+      convert();
+    };
+    reader.onerror = () => fail('Could not read the file.');
+    reader.readAsText(file);
+  }
+  fileIn.addEventListener('change', () => {
+    const f = fileIn.files?.[0];
+    if (f) loadFile(f);
+    fileIn.value = '';
+  });
+  ['dragenter', 'dragover'].forEach((ev) => drop.addEventListener(ev, (e) => {
+    e.preventDefault();
+    drop.style.outline = '2px solid #5e6ad2';
+  }));
+  ['dragleave', 'drop'].forEach((ev) => drop.addEventListener(ev, (e) => {
+    e.preventDefault();
+    drop.style.outline = '';
+  }));
+  drop.addEventListener('drop', (e) => {
+    const f = (e as DragEvent).dataTransfer?.files?.[0];
+    if (f) loadFile(f);
+  });
+
+  /* ── initial render ── */
+  inEl.value = SAMPLE;
+  rerender();
+  convert();
 </script>

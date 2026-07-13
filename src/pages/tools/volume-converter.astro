@@ -1,14 +1,356 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
-import UnitConverter from '../../components/UnitConverter.astro';
 ---
 
 <ToolLayout slug="volume-converter">
-  <UnitConverter slug="volume-converter" />
+  <div id="vc-root" class="flex flex-col gap-6">
+    <!-- Converter -->
+    <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="vc-from-val">From</label>
+        <input
+          id="vc-from-val"
+          type="text"
+          class="field"
+          value="1"
+          inputmode="decimal"
+          spellcheck="false"
+          autocapitalize="off"
+          autocomplete="off"
+          autocorrect="off"
+          placeholder="e.g. 1.5  or  1 1/2  or  3/4"
+        />
+        <select id="vc-from-unit" class="field mt-1"></select>
+      </div>
+      <button
+        id="vc-swap"
+        type="button"
+        class="btn btn-secondary mb-1 h-10 w-10 shrink-0 justify-self-center p-0"
+        aria-label="Swap units"
+        title="Swap units"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
+      </button>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="vc-to-val">To</label>
+        <div class="relative">
+          <input id="vc-to-val" type="text" class="field pr-16" readonly />
+          <button id="vc-copy" type="button" class="btn btn-tertiary absolute right-1 top-1/2 -translate-y-1/2 px-2 py-1 text-[13px]" title="Copy result">Copy</button>
+        </div>
+        <select id="vc-to-unit" class="field mt-1"></select>
+      </div>
+    </div>
+
+    <!-- Precision + formula -->
+    <div class="flex flex-wrap items-center gap-3">
+      <label class="flex items-center gap-2 text-[13px] text-ink-subtle">
+        Decimals
+        <select id="vc-prec" class="field w-auto py-1">
+          <option value="auto" selected>Auto</option>
+          <option value="0">0</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="6">6</option>
+          <option value="8">8</option>
+        </select>
+      </label>
+      <p id="vc-formula" class="text-[13px] text-ink-tertiary"></p>
+    </div>
+
+    <p id="vc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <!-- Live preview + all-units breakdown -->
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-[auto_1fr]">
+      <div class="panel panel-lift flex flex-col items-center gap-2 p-4">
+        <svg id="vc-svg" width="110" height="150" viewBox="0 0 110 150" role="img" aria-label="Volume preview"></svg>
+        <span id="vc-svg-label" class="text-center font-mono text-[13px] text-ink-subtle"></span>
+      </div>
+
+      <div class="panel panel-lift overflow-hidden">
+        <div class="border-b border-hairline px-4 py-2 text-[13px] text-ink-subtle">This volume expressed in every unit</div>
+        <div id="vc-breakdown" class="divide-y divide-hairline"></div>
+      </div>
+    </div>
+
+    <!-- Common conversions -->
+    <div>
+      <p class="mb-2 text-[13px] text-ink-subtle">Common volume equivalents</p>
+      <div id="vc-table" class="overflow-hidden rounded-md border border-hairline"></div>
+    </div>
+  </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free volume converter converts volume between litres, millilitres, cubic metres, US and imperial gallons, quarts, pints, cups and fluid ounces. US and imperial measures differ, and this converter keeps them separate. Runs in your browser.
+      This free volume converter converts between metric, US customary and imperial
+      (UK) units: millilitres, litres, cubic centimetres, cubic metres, cubic
+      inches, feet and yards, US and imperial teaspoons, tablespoons, fluid ounces,
+      cups, pints, quarts and gallons, US dry pints/quarts/gallons, US bushels, oil
+      barrels and metric drops. US and imperial measures are different sizes, so the
+      converter keeps them clearly labelled and separate. Every conversion runs
+      entirely in your browser; nothing is uploaded.
+    </p>
+    <p>
+      Beyond a plain From/To conversion it does what most single-purpose calculators
+      don't: it accepts kitchen fractions like
+      <span class="font-mono text-ink-muted">1 1/2</span> or
+      <span class="font-mono text-ink-muted">3/4</span> as well as decimals, shows
+      the same value in every supported unit at once (grouped by Metric, US and
+      Imperial), draws a live fill preview, lets you pick the decimal precision, and
+      copies the result with one click.
+    </p>
+    <p>
+      Quick reference: 1 litre = 1000 mL = 1 cubic decimetre. 1 US gallon =
+      3.785 L = 4 US quarts = 128 US fluid ounces; 1 imperial gallon = 4.546 L =
+      1.201 US gallons. 1 US cup = 236.6 mL, 1 metric/UK cup ≈ 250/284 mL. A US
+      tablespoon is 14.79 mL and a US teaspoon is 4.929 mL.
     </p>
   </div>
 </ToolLayout>
+
+<script>
+  // Self-contained volume converter. Base unit: LITRE.
+  // No shared lib — the task scopes edits to this one file only.
+  // Volume is numeric, not code/data, so no syntax highlighting applies.
+
+  type Group = 'Metric' | 'US customary' | 'Imperial (UK)';
+  interface Unit { name: string; litres: number; group: Group; }
+
+  // litres per 1 of each unit (exact factors where they exist)
+  const UNITS: Unit[] = [
+    { name: 'Millilitre (mL)',        litres: 0.001,             group: 'Metric' },
+    { name: 'Cubic centimetre (cc)',  litres: 0.001,             group: 'Metric' },
+    { name: 'Litre (L)',              litres: 1,                 group: 'Metric' },
+    { name: 'Cubic decimetre (dm³)',  litres: 1,                 group: 'Metric' },
+    { name: 'Cubic metre (m³)',       litres: 1000,              group: 'Metric' },
+    { name: 'Metric drop',            litres: 0.00005,           group: 'Metric' },
+    { name: 'Cubic inch (in³)',       litres: 0.016387064,       group: 'US customary' },
+    { name: 'Cubic foot (ft³)',       litres: 28.316846592,      group: 'US customary' },
+    { name: 'Cubic yard (yd³)',       litres: 764.554857984,     group: 'US customary' },
+    { name: 'US teaspoon',            litres: 0.00492892159375,  group: 'US customary' },
+    { name: 'US tablespoon',          litres: 0.01478676478125,  group: 'US customary' },
+    { name: 'US fluid ounce',         litres: 0.0295735295625,   group: 'US customary' },
+    { name: 'US cup',                 litres: 0.2365882365,      group: 'US customary' },
+    { name: 'US pint',                litres: 0.473176473,       group: 'US customary' },
+    { name: 'US quart',               litres: 0.946352946,       group: 'US customary' },
+    { name: 'US gallon',              litres: 3.785411784,       group: 'US customary' },
+    { name: 'US dry pint',            litres: 0.5506104713575,   group: 'US customary' },
+    { name: 'US dry quart',           litres: 1.101220942715,    group: 'US customary' },
+    { name: 'US dry gallon',          litres: 4.40488377086,     group: 'US customary' },
+    { name: 'US bushel',              litres: 35.23907016688,    group: 'US customary' },
+    { name: 'Oil barrel (bbl)',       litres: 158.987294928,     group: 'US customary' },
+    { name: 'Imperial teaspoon',      litres: 0.00591938802083,  group: 'Imperial (UK)' },
+    { name: 'Imperial tablespoon',    litres: 0.0177581640625,   group: 'Imperial (UK)' },
+    { name: 'Imperial fluid ounce',   litres: 0.0284130625,      group: 'Imperial (UK)' },
+    { name: 'Imperial cup',           litres: 0.284130625,       group: 'Imperial (UK)' },
+    { name: 'Imperial pint',          litres: 0.56826125,        group: 'Imperial (UK)' },
+    { name: 'Imperial quart',         litres: 1.1365225,         group: 'Imperial (UK)' },
+    { name: 'Imperial gallon',        litres: 4.54609,           group: 'Imperial (UK)' },
+  ];
+  const BY_NAME: Record<string, Unit> = Object.fromEntries(UNITS.map((u) => [u.name, u]));
+  const NAMES = UNITS.map((u) => u.name);
+  const GROUPS: Group[] = ['Metric', 'US customary', 'Imperial (UK)'];
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const fromVal = $<HTMLInputElement>('vc-from-val');
+  const toVal = $<HTMLInputElement>('vc-to-val');
+  const fromUnit = $<HTMLSelectElement>('vc-from-unit');
+  const toUnit = $<HTMLSelectElement>('vc-to-unit');
+  const prec = $<HTMLSelectElement>('vc-prec');
+  const swap = $<HTMLButtonElement>('vc-swap');
+  const copyBtn = $<HTMLButtonElement>('vc-copy');
+  const formula = $('vc-formula');
+  const err = $('vc-error');
+  const breakdown = $('vc-breakdown');
+  const table = $('vc-table');
+  const svg = $('vc-svg');
+  const svgLabel = $('vc-svg-label');
+
+  // ---- number formatting ----
+  function fmt(n: number): string {
+    if (!isFinite(n)) return n > 0 ? '∞' : '-∞';
+    if (n === 0) return '0';
+    const p = prec.value;
+    if (p !== 'auto') return trimZeros(n.toFixed(Number(p)));
+    const abs = Math.abs(n);
+    if (abs >= 1e15 || abs < 1e-6) return n.toExponential(6);
+    return trimZeros((Math.round(n * 1e9) / 1e9).toString());
+  }
+  function trimZeros(s: string): string {
+    return s.includes('.') ? s.replace(/\.?0+$/, '') : s;
+  }
+
+  // ---- input parsing: decimals, "3/4", and "1 1/2" mixed fractions ----
+  function parseValue(raw: string): number {
+    const t = raw.trim();
+    if (t === '') return NaN;
+    const plain = Number(t);
+    if (!isNaN(plain)) return plain;
+    // mixed fraction:  whole  num/den   (e.g. "1 1/2")
+    const mixed = t.match(/^(-?\d+)\s+(\d+)\s*\/\s*(\d+)$/);
+    if (mixed) {
+      const [, w, n, d] = mixed;
+      const den = Number(d);
+      if (den === 0) return NaN;
+      const sign = w.startsWith('-') ? -1 : 1;
+      return sign * (Math.abs(Number(w)) + Number(n) / den);
+    }
+    // simple fraction:  num/den   (e.g. "3/4")
+    const frac = t.match(/^(-?\d+)\s*\/\s*(\d+)$/);
+    if (frac) {
+      const den = Number(frac[2]);
+      return den === 0 ? NaN : Number(frac[1]) / den;
+    }
+    return NaN;
+  }
+
+  const toLitres = (v: number, unit: string) => v * BY_NAME[unit].litres;
+  const fromLitres = (l: number, unit: string) => l / BY_NAME[unit].litres;
+
+  // ---- SVG beaker fill preview (log-scaled so any magnitude shows) ----
+  function drawBeaker(litres: number) {
+    if (!isFinite(litres) || litres < 0) { svg.innerHTML = ''; svgLabel.textContent = '—'; return; }
+    // Map litres to a 0..1 fill across ~8 decades (1 µL .. 100 kL) on a log scale.
+    let frac = 0;
+    if (litres > 0) {
+      const lo = -6, hi = 5; // log10 litres range
+      frac = Math.min(1, Math.max(0.02, (Math.log10(litres) - lo) / (hi - lo)));
+    }
+    const x = 20, w = 70, top = 12, bot = 138, h = bot - top;
+    const fillH = h * frac;
+    const fillY = bot - fillH;
+    svg.innerHTML = `
+      <path d="M${x} ${top} L${x} ${bot} L${x + w} ${bot} L${x + w} ${top}"
+        fill="none" stroke="var(--color-hairline-strong)" stroke-width="2"/>
+      <rect x="${x + 1}" y="${fillY.toFixed(2)}" width="${w - 2}" height="${fillH.toFixed(2)}"
+        fill="var(--color-primary)" fill-opacity="0.28"/>
+      <line x1="${x + 1}" y1="${fillY.toFixed(2)}" x2="${x + w - 1}" y2="${fillY.toFixed(2)}"
+        stroke="var(--color-primary)" stroke-width="2"/>
+    `;
+    svgLabel.textContent = `${fmt(litres)} L`;
+  }
+
+  // ---- all-units breakdown, grouped ----
+  function renderBreakdown(litres: number) {
+    if (!isFinite(litres)) { breakdown.innerHTML = '<div class="px-4 py-2 text-[13px] text-ink-tertiary">—</div>'; return; }
+    const parts: string[] = [];
+    for (const g of GROUPS) {
+      parts.push(`<div class="bg-surface-2 px-4 py-1 text-[11px] uppercase tracking-wide text-ink-tertiary">${g}</div>`);
+      for (const u of UNITS) {
+        if (u.group !== g) continue;
+        parts.push(`<div class="flex items-center justify-between gap-3 px-4 py-2 text-[13px]">
+          <span class="text-ink-subtle">${u.name}</span>
+          <span class="font-mono text-ink">${fmt(fromLitres(litres, u.name))}</span>
+        </div>`);
+      }
+    }
+    breakdown.innerHTML = parts.join('');
+  }
+
+  // ---- reference table of common equivalents ----
+  const COMMON: [string, string][] = [
+    ['1 US gallon', 'US gallon'],
+    ['1 Imperial gallon', 'Imperial gallon'],
+    ['1 Litre', 'Litre (L)'],
+    ['1 US cup', 'US cup'],
+    ['1 US fluid ounce', 'US fluid ounce'],
+    ['1 US tablespoon', 'US tablespoon'],
+  ];
+  function renderTable() {
+    const rows = COMMON.map(([label, unit]) => {
+      const l = BY_NAME[unit].litres;
+      return `<tr class="border-t border-hairline">
+        <td class="px-3 py-2 text-ink">${label}</td>
+        <td class="px-3 py-2 text-right font-mono text-ink-subtle">${trimZeros((Math.round(l * 1e6) / 1e6).toString())} L</td>
+        <td class="px-3 py-2 text-right font-mono text-ink-subtle">${trimZeros((Math.round(l * 1e3) / 1e3).toString())} mL</td>
+      </tr>`;
+    }).join('');
+    table.innerHTML = `<table class="w-full text-[13px]">
+      <thead><tr class="text-left text-ink-tertiary">
+        <th class="px-3 py-2 font-medium">Amount</th>
+        <th class="px-3 py-2 text-right font-medium">Litres</th>
+        <th class="px-3 py-2 text-right font-medium">Millilitres</th>
+      </tr></thead>${rows}</table>`;
+  }
+
+  // ---- main ----
+  function fillUnits() {
+    const opts = GROUPS.map((g) =>
+      `<optgroup label="${g}">${UNITS.filter((u) => u.group === g).map((u) => `<option>${u.name}</option>`).join('')}</optgroup>`
+    ).join('');
+    fromUnit.innerHTML = opts;
+    toUnit.innerHTML = opts;
+    fromUnit.value = 'Litre (L)';
+    toUnit.value = 'US gallon';
+  }
+
+  function convert() {
+    err.classList.add('hidden');
+    const v = parseValue(fromVal.value);
+    if (isNaN(v)) {
+      toVal.value = '';
+      formula.textContent = '';
+      drawBeaker(NaN);
+      renderBreakdown(NaN);
+      if (fromVal.value.trim() !== '') {
+        err.textContent = 'Enter a number, a fraction like 3/4, or a mixed amount like 1 1/2.';
+        err.classList.remove('hidden');
+      }
+      return;
+    }
+    if (v < 0) {
+      toVal.value = '';
+      formula.textContent = '';
+      drawBeaker(NaN);
+      renderBreakdown(NaN);
+      err.textContent = 'Volume cannot be negative.';
+      err.classList.remove('hidden');
+      return;
+    }
+    const litres = toLitres(v, fromUnit.value);
+    const result = fromLitres(litres, toUnit.value);
+    toVal.value = fmt(result);
+    formula.textContent = `${fmt(v)} ${short(fromUnit.value)} = ${fmt(result)} ${short(toUnit.value)}`;
+    drawBeaker(litres);
+    renderBreakdown(litres);
+  }
+
+  // short label = drop the parenthetical for the inline formula line
+  function short(u: string): string {
+    return u.replace(/\s*\(.*$/, '').trim();
+  }
+
+  fromVal.addEventListener('input', convert);
+  fromUnit.addEventListener('change', convert);
+  toUnit.addEventListener('change', convert);
+  prec.addEventListener('change', convert);
+  swap.addEventListener('click', () => {
+    const a = fromUnit.value;
+    fromUnit.value = toUnit.value;
+    toUnit.value = a;
+    if (toVal.value !== '') fromVal.value = toVal.value;
+    convert();
+  });
+  copyBtn.addEventListener('click', async () => {
+    if (!toVal.value) return;
+    try {
+      await navigator.clipboard.writeText(toVal.value);
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => (copyBtn.textContent = 'Copy'), 1400);
+    } catch {
+      /* clipboard blocked — no-op */
+    }
+  });
+
+  fillUnits();
+  renderTable();
+  convert();
+
+  // ponytail: one runnable self-check — silent unless the math regresses.
+  const near = (a: number, b: number, e = 1e-9) => Math.abs(a - b) < e;
+  console.assert(near(fromLitres(toLitres(1, 'US gallon'), 'US fluid ounce'), 128), '1 US gal = 128 fl oz');
+  console.assert(near(fromLitres(1, 'Millilitre (mL)'), 1000), '1 L = 1000 mL');
+  console.assert(near(BY_NAME['Imperial gallon'].litres, 4.54609), 'imp gal factor');
+  console.assert(parseValue('1 1/2') === 1.5 && parseValue('3/4') === 0.75, 'fraction parse');
+  console.assert(isNaN(parseValue('1/0')) && isNaN(parseValue('abc')), 'bad input → NaN');
+</script>

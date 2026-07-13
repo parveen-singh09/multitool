@@ -147,6 +147,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <label class="flex items-center gap-2 text-sm text-ink-subtle">
         <input id="st-punct" type="checkbox" class="accent-[#5e6ad2]" checked /> Auto-capitalize sentences
       </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="st-cmd" type="checkbox" class="accent-[#5e6ad2]" checked /> Voice commands
+      </label>
     </div>
 
     <div class="flex flex-wrap gap-2">
@@ -156,14 +159,33 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </button>
       <button id="st-clear" type="button" class="btn btn-secondary">Clear</button>
       <button id="st-copy" type="button" class="btn btn-secondary">Copy</button>
-      <button id="st-download" type="button" class="btn btn-tertiary">Download .txt</button>
+      <button id="st-download-txt" type="button" class="btn btn-tertiary">Download .txt</button>
+      <button id="st-download-doc" type="button" class="btn btn-tertiary">Download .doc</button>
     </div>
 
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-      Transcript <span id="st-count" class="text-xs text-ink-tertiary"></span>
-      <textarea id="st-out" class="field" rows="8" placeholder="Your speech will appear here as you talk…" spellcheck="true"></textarea>
+      <span class="flex items-center gap-2">Transcript <span id="st-count" class="text-xs text-ink-tertiary"></span> <span id="st-saved" class="text-xs text-ink-tertiary"></span></span>
+      <textarea id="st-out" class="field" rows="10" placeholder="Your speech will appear here as you talk…" spellcheck="true"></textarea>
     </label>
     <p id="st-interim" class="min-h-5 text-[13px] italic text-ink-tertiary"></p>
+
+    <details class="panel p-4 text-[13px] text-ink-subtle">
+      <summary class="cursor-pointer select-none text-ink-muted">Voice commands — say these while dictating</summary>
+      <div class="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-3">
+        <span><strong class="text-ink">“period”</strong> → .</span>
+        <span><strong class="text-ink">“comma”</strong> → ,</span>
+        <span><strong class="text-ink">“question mark”</strong> → ?</span>
+        <span><strong class="text-ink">“exclamation mark”</strong> → !</span>
+        <span><strong class="text-ink">“colon”</strong> → :</span>
+        <span><strong class="text-ink">“semicolon”</strong> → ;</span>
+        <span><strong class="text-ink">“new line”</strong> → line break</span>
+        <span><strong class="text-ink">“new paragraph”</strong> → blank line</span>
+        <span><strong class="text-ink">“open / close paren”</strong> → ( )</span>
+        <span><strong class="text-ink">“open / close quote”</strong> → "</span>
+        <span><strong class="text-ink">“hyphen” / “dash”</strong> → -</span>
+        <span><strong class="text-ink">“smiley”</strong> → :)</span>
+      </div>
+    </details>
 
     <p id="st-unsupported" class="hidden text-[13px]" style="color:#e5484d" role="alert">
       Speech recognition isn't available in this browser. It works in Chrome and Edge on desktop and Android. On other browsers you can still type or paste into the transcript box.
@@ -176,9 +198,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       This free speech to text tool transcribes your voice into editable text
       using your browser's built-in speech recognition. Click start, allow
       microphone access, and speak — words appear live and keep going across
-      pauses. Pick from many languages, then copy or download the transcript.
-      Recognition is handled by your browser (Chrome and Edge support it best);
-      no audio is uploaded or stored by this site.
+      pauses. Speak <strong>voice commands</strong> like “period”, “comma”,
+      “question mark”, “new line” and “new paragraph” to punctuate and format
+      hands-free, and let auto-capitalization clean up each sentence. Pick from
+      120+ languages and regional accents, watch the live word and character
+      count, then copy the text or download it as a <strong>.txt</strong> or
+      <strong>.doc</strong> file. Your transcript is autosaved in this browser
+      so it survives an accidental refresh. Recognition is handled by your
+      browser (Chrome and Edge support it best); no audio is uploaded or stored
+      by this site.
     </p>
   </div>
 </ToolLayout>
@@ -192,26 +220,86 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const interim = document.getElementById('st-interim')!;
   const langSel = document.getElementById('st-lang') as HTMLSelectElement;
   const punct = document.getElementById('st-punct') as HTMLInputElement;
+  const cmdToggle = document.getElementById('st-cmd') as HTMLInputElement;
   const count = document.getElementById('st-count')!;
+  const saved = document.getElementById('st-saved')!;
   const unsupported = document.getElementById('st-unsupported')!;
   const err = document.getElementById('st-error')!;
 
-  function updateCount() {
-    const words = out.value.trim() ? out.value.trim().split(/\s+/).length : 0;
-    count.textContent = `${words} word${words === 1 ? '' : 's'}`;
-  }
-  out.addEventListener('input', updateCount);
+  const SAVE_KEY = 'speech-to-text:transcript';
 
-  document.getElementById('st-clear')!.addEventListener('click', () => { out.value = ''; interim.textContent = ''; updateCount(); });
+  // Restore autosaved transcript.
+  try {
+    const prev = localStorage.getItem(SAVE_KEY);
+    if (prev) out.value = prev;
+  } catch {}
+
+  let saveTimer: number | undefined;
+  function autosave() {
+    try {
+      localStorage.setItem(SAVE_KEY, out.value);
+      saved.textContent = '· saved';
+      clearTimeout(saveTimer);
+      saveTimer = window.setTimeout(() => (saved.textContent = ''), 1200);
+    } catch {}
+  }
+
+  function updateCount() {
+    const t = out.value.trim();
+    const words = t ? t.split(/\s+/).length : 0;
+    const chars = out.value.length;
+    count.textContent = `${words} word${words === 1 ? '' : 's'} · ${chars} char${chars === 1 ? '' : 's'}`;
+  }
+  out.addEventListener('input', () => { updateCount(); autosave(); });
+
+  // Spoken punctuation / formatting commands. Applied to each final chunk when enabled.
+  const COMMANDS: Array<[RegExp, string]> = [
+    [/\bnew paragraph\b/gi, '\n\n'],
+    [/\bnew line\b/gi, '\n'],
+    [/\b(full stop|period)\b/gi, '. '],
+    [/\bcomma\b/gi, ', '],
+    [/\bquestion mark\b/gi, '? '],
+    [/\bexclamation (mark|point)\b/gi, '! '],
+    [/\bsemicolon\b/gi, '; '],
+    [/\bcolon\b/gi, ': '],
+    [/\bopen paren(thesis)?\b/gi, ' ('],
+    [/\bclose paren(thesis)?\b/gi, ') '],
+    [/\bopen quote\b/gi, ' "'],
+    [/\bclose quote\b/gi, '" '],
+    [/\b(hyphen|dash)\b/gi, '-'],
+    [/\bellipsis\b/gi, '… '],
+    [/\bsmiley( face)?\b/gi, ' :) '],
+    [/\bsad face\b/gi, ' :( '],
+  ];
+  function applyCommands(s: string) {
+    for (const [re, rep] of COMMANDS) s = s.replace(re, rep);
+    // Tidy spaces: collapse around line breaks, drop space before sentence
+    // punctuation (but not smiley colons like :) ), and squeeze doubles.
+    return s
+      .replace(/[ \t]*\n[ \t]*/g, '\n')
+      .replace(/[ \t]+([.,;:!?])(?![)(])/g, '$1')
+      .replace(/[ \t]{2,}/g, ' ');
+  }
+
+  document.getElementById('st-clear')!.addEventListener('click', () => { out.value = ''; interim.textContent = ''; updateCount(); autosave(); });
   document.getElementById('st-copy')!.addEventListener('click', async (e) => {
     await navigator.clipboard.writeText(out.value);
     const b = e.currentTarget as HTMLButtonElement;
     b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
   });
-  document.getElementById('st-download')!.addEventListener('click', () => {
-    const blob = new Blob([out.value], { type: 'text/plain' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'transcript.txt'; a.click();
+  function download(filename: string, mime: string, data: string) {
+    const blob = new Blob([data], { type: mime });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  document.getElementById('st-download-txt')!.addEventListener('click', () => {
+    download('transcript.txt', 'text/plain', out.value);
+  });
+  document.getElementById('st-download-doc')!.addEventListener('click', () => {
+    // Minimal Word-openable HTML document. ponytail: HTML .doc is the stdlib-free way Word imports cleanly.
+    const esc = out.value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const html = `<html xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"></head><body><p>${esc.replace(/\n\n+/g, '</p><p>').replace(/\n/g, '<br>')}</p></body></html>`;
+    download('transcript.doc', 'application/msword', html);
   });
 
   if (!SR) {
@@ -239,14 +327,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         else interimTxt += t;
       }
       if (finalTxt) {
-        let addition = finalTxt;
-        // add spacing/punctuation heuristics
-        const needsSpace = out.value && !/\s$/.test(out.value);
-        out.value += (needsSpace ? ' ' : '') + addition.trim();
+        let addition = (cmdToggle.checked ? applyCommands(finalTxt) : finalTxt).trim();
+        // Leading break (new line/paragraph) shouldn't get a space before it; nor should leading punctuation.
+        const startsBreak = /^\n/.test(addition);
+        const needsSpace = out.value && !/\s$/.test(out.value) && !startsBreak && !/^[.,;:!?)]/.test(addition);
+        out.value += (needsSpace ? ' ' : '') + addition;
         if (punct.checked) out.value = capitalize(out.value);
         updateCount();
+        autosave();
       }
-      interim.textContent = interimTxt;
+      interim.textContent = cmdToggle.checked ? applyCommands(interimTxt) : interimTxt;
     };
 
     recog.onerror = (ev: any) => {

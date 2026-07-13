@@ -1,18 +1,249 @@
 ---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 import ColorFormats from '../../components/ColorFormats.astro';
+
+// Primary RGB channel inputs for this page. ColorFormats (below) handles the
+// full multi-format sync + picker + shades + nearest name; this panel adds the
+// channel sliders / 0-255 spinboxes, an alpha channel (RGBA + #RRGGBBAA), and
+// hex output formatting that ColorFormats doesn't cover.
+const channels = [
+  { id: 'r', label: 'R', max: 255 },
+  { id: 'g', label: 'G', max: 255 },
+  { id: 'b', label: 'B', max: 255 },
+];
 ---
 
 <ToolLayout slug="rgb-to-hex">
-  <ColorFormats focus="hex" />
+  <div class="flex flex-col gap-6">
+    <div id="rh-root" class="panel flex flex-col gap-5 p-5">
+      <span class="eyebrow text-primary-hover">RGB → HEX</span>
+
+      <div class="flex flex-col gap-3">
+        {channels.map((c) => (
+          <div class="flex items-center gap-3" data-ch={c.id}>
+            <span class="w-4 text-[13px] font-medium text-ink-subtle">{c.label}</span>
+            <input
+              type="range"
+              id={`rh-${c.id}-range`}
+              min="0"
+              max={c.max}
+              value="0"
+              class="h-1.5 flex-1 cursor-pointer accent-[#5e6ad2]"
+              aria-label={`${c.label} channel slider`}
+            />
+            <input
+              type="number"
+              id={`rh-${c.id}-num`}
+              min="0"
+              max={c.max}
+              value="0"
+              class="field font-mono w-20 text-center"
+              aria-label={`${c.label} channel value`}
+            />
+          </div>
+        ))}
+
+        <div class="flex items-center gap-3" data-ch="a">
+          <span class="w-4 text-[13px] font-medium text-ink-subtle">A</span>
+          <input
+            type="range"
+            id="rh-a-range"
+            min="0"
+            max="100"
+            value="100"
+            class="h-1.5 flex-1 cursor-pointer accent-[#5e6ad2]"
+            aria-label="Alpha slider (percent)"
+          />
+          <input
+            type="number"
+            id="rh-a-num"
+            min="0"
+            max="100"
+            value="100"
+            class="field font-mono w-20 text-center"
+            aria-label="Alpha value (percent)"
+          />
+        </div>
+      </div>
+
+      <p id="rh-error" class="hidden text-[13px] text-[#ff8888]" role="alert" aria-live="polite"></p>
+
+      <div class="flex flex-col gap-3">
+        <label class="flex flex-col gap-1">
+          <span class="text-[13px] text-ink-subtle">HEX</span>
+          <div class="flex gap-2">
+            <input id="rh-hex" class="field font-mono text-lg" spellcheck="false" autocomplete="off" readonly />
+            <button class="btn btn-secondary rh-copy" data-target="rh-hex" type="button">Copy</button>
+          </div>
+        </label>
+
+        <label class="flex flex-col gap-1">
+          <span class="text-[13px] text-ink-subtle">RGBA</span>
+          <div class="flex gap-2">
+            <input id="rh-rgba" class="field font-mono" spellcheck="false" autocomplete="off" readonly />
+            <button class="btn btn-secondary rh-copy" data-target="rh-rgba" type="button">Copy</button>
+          </div>
+        </label>
+
+        <div class="flex flex-wrap items-center gap-4 pt-1">
+          <label class="flex cursor-pointer items-center gap-2 text-[13px] text-ink-subtle">
+            <input id="rh-upper" type="checkbox" class="accent-[#5e6ad2]" /> Uppercase
+          </label>
+          <label class="flex cursor-pointer items-center gap-2 text-[13px] text-ink-subtle">
+            <input id="rh-short" type="checkbox" class="accent-[#5e6ad2]" /> Shorthand when possible
+          </label>
+          <label class="flex cursor-pointer items-center gap-2 text-[13px] text-ink-subtle">
+            <input id="rh-hash" type="checkbox" class="accent-[#5e6ad2]" checked /> Leading #
+          </label>
+          <button id="rh-reset" class="btn btn-tertiary ml-auto" type="button">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <ColorFormats focus="hex" />
+  </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
       This free RGB to HEX converter turns red, green and blue values into a
-      hex color code instantly. Enter an <code>rgb(94, 106, 210)</code> value
-      (or use the picker) and copy the matching <code>#5e6ad2</code> hex string
-      for CSS, HTML or design tools. It also shows HSL, HSV and CMYK, plus the
-      nearest named color. All conversion runs locally in your browser.
+      hex color code instantly. Drag the <strong>R</strong>, <strong>G</strong>
+      and <strong>B</strong> sliders (or type any value 0–255) and copy the
+      matching <code>#5e6ad2</code> hex string for CSS, HTML or design tools.
+      An optional <strong>alpha</strong> channel outputs both
+      <code>rgba()</code> and the modern 8-digit <code>#RRGGBBAA</code> hex.
+    </p>
+    <p>
+      Format the hex however you need: toggle <strong>uppercase</strong>, drop
+      the leading <code>#</code>, or collapse to <strong>3-digit shorthand</strong>
+      (e.g. <code>#ffcc00</code> → <code>#fc0</code>) when the channels allow it.
+      Below, the full color panel keeps HEX, RGB, HSL, HSV/HSB and CMYK in sync,
+      shows the nearest named CSS color, and offers one-click tints and shades.
+      Everything runs locally in your browser — nothing is uploaded.
     </p>
   </div>
 </ToolLayout>
+
+<script>
+  import { parseRgb, clamp } from '../../lib/colors';
+
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const cfRoot = document.getElementById('cf-root');
+  const rhError = document.getElementById('rh-error')!;
+
+  const ranges = { r: $('rh-r-range'), g: $('rh-g-range'), b: $('rh-b-range') };
+  const nums = { r: $('rh-r-num'), g: $('rh-g-num'), b: $('rh-b-num') };
+  const aRange = $('rh-a-range'), aNum = $('rh-a-num');
+  const hexOut = $('rh-hex'), rgbaOut = $('rh-rgba');
+  const upper = $('rh-upper'), short = $('rh-short'), hash = $('rh-hash');
+
+  let syncing = false; // guard against feedback loops with ColorFormats
+
+  const byte = (n: number) => clamp(Math.round(n)).toString(16).padStart(2, '0');
+
+  // Collapse #rrggbb(aa) to #rgb(a) only when every byte has matching nibbles.
+  function shorten(hex: string): string {
+    const h = hex.replace(/^#/, '');
+    if (h.length !== 6 && h.length !== 8) return hex;
+    const pairs = h.match(/../g)!;
+    if (pairs.every((p) => p[0] === p[1])) return '#' + pairs.map((p) => p[0]).join('');
+    return hex;
+  }
+
+  function formatHex(r: number, g: number, b: number, aPct: number): string {
+    const a255 = Math.round((aPct / 100) * 255);
+    let hex = '#' + byte(r) + byte(g) + byte(b) + (aPct < 100 ? byte(a255) : '');
+    if (short.checked) hex = shorten(hex);
+    if (upper.checked) hex = hex.toUpperCase();
+    if (!hash.checked) hex = hex.replace(/^#/, '');
+    return hex;
+  }
+
+  // Read current channel values from the panel, clamping and flagging bad entry.
+  function readRgb(): { r: number; g: number; b: number; a: number } {
+    let bad = '';
+    const get = (el: HTMLInputElement, max: number, name: string) => {
+      const raw = el.value.trim();
+      const v = Number(raw);
+      if (raw === '' || Number.isNaN(v)) { bad = bad || `${name} must be a number`; return 0; }
+      if (v < 0 || v > max) bad = bad || `${name} must be ${max === 100 ? '0–100' : '0–255'}`;
+      return clamp(Math.round(v), 0, max);
+    };
+    const rgb = {
+      r: get(nums.r, 255, 'R'),
+      g: get(nums.g, 255, 'G'),
+      b: get(nums.b, 255, 'B'),
+      a: get(aNum, 100, 'Alpha'),
+    };
+    if (bad) { rhError.textContent = bad; rhError.classList.remove('hidden'); }
+    else { rhError.classList.add('hidden'); }
+    return rgb;
+  }
+
+  // Reflect an rgb+alpha state into every control and both outputs.
+  function apply(r: number, g: number, b: number, aPct: number, push: boolean) {
+    for (const k of ['r', 'g', 'b'] as const) {
+      const v = k === 'r' ? r : k === 'g' ? g : b;
+      ranges[k].value = String(v);
+      if (document.activeElement !== nums[k]) nums[k].value = String(v);
+    }
+    aRange.value = String(aPct);
+    if (document.activeElement !== aNum) aNum.value = String(aPct);
+
+    hexOut.value = formatHex(r, g, b, aPct);
+    rgbaOut.value = aPct < 100
+      ? `rgba(${r}, ${g}, ${b}, ${+(aPct / 100).toFixed(3)})`
+      : `rgb(${r}, ${g}, ${b})`;
+
+    // Drive the shared ColorFormats panel (hex/hsl/hsv/cmyk/preview/shades/name).
+    if (push && cfRoot) {
+      const cfRgb = $('cf-rgb');
+      if (cfRgb) {
+        syncing = true;
+        cfRgb.value = `rgb(${r}, ${g}, ${b})`;
+        cfRgb.dispatchEvent(new Event('input', { bubbles: true }));
+        syncing = false;
+      }
+    }
+  }
+
+  function onPanelInput() {
+    const { r, g, b, a } = readRgb();
+    apply(r, g, b, a, true);
+  }
+
+  // Wire sliders + number inputs. Slider ↔ number stay linked via apply().
+  for (const k of ['r', 'g', 'b'] as const) {
+    ranges[k].addEventListener('input', () => { nums[k].value = ranges[k].value; onPanelInput(); });
+    nums[k].addEventListener('input', onPanelInput);
+  }
+  aRange.addEventListener('input', () => { aNum.value = aRange.value; onPanelInput(); });
+  aNum.addEventListener('input', onPanelInput);
+  [upper, short, hash].forEach((el) => el.addEventListener('change', onPanelInput));
+
+  $('rh-reset').addEventListener('click', () => apply(94, 106, 210, 100, true));
+
+  document.querySelectorAll<HTMLButtonElement>('.rh-copy').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const t = $(btn.dataset.target!);
+      if (!t.value) return;
+      await navigator.clipboard.writeText(t.value);
+      const old = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => (btn.textContent = old), 1400);
+    });
+  });
+
+  // When the user changes color via the picker / hex / hsl / etc. in
+  // ColorFormats, mirror the resulting RGB back into this panel (alpha kept).
+  if (cfRoot) {
+    cfRoot.addEventListener('input', () => {
+      if (syncing) return;
+      const cfRgb = $('cf-rgb');
+      const rgb = cfRgb && parseRgb(cfRgb.value);
+      if (rgb) apply(rgb.r, rgb.g, rgb.b, Number(aNum.value) || 100, false);
+    });
+    // Initialise from ColorFormats' starting color (#5e6ad2).
+    const start = parseRgb($('cf-rgb')?.value || 'rgb(94, 106, 210)') || { r: 94, g: 106, b: 210 };
+    apply(start.r, start.g, start.b, 100, false);
+  }
+</script>

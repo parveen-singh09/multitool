@@ -7,43 +7,104 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <label id="ico-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
       <span class="text-sm text-ink">Choose an image or drop it here</span>
-      <span class="text-[13px] text-ink-tertiary">Best with a square PNG — converted in your browser, never uploaded</span>
+      <span class="text-[13px] text-ink-tertiary">PNG, JPG, WebP, GIF or SVG — square works best. Converted in your browser, never uploaded.</span>
       <input id="ico-file" type="file" accept="image/*" class="sr-only" />
     </label>
 
     <div id="ico-panel" class="hidden flex-col gap-4">
+      <div class="flex flex-wrap items-end gap-4">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Scaling
+          <select id="ico-scale" class="field w-auto py-1">
+            <option value="contain" selected>Contain (fit, no crop)</option>
+            <option value="cover">Cover (fill, crop edges)</option>
+            <option value="stretch">Stretch (ignore ratio)</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Background
+          <select id="ico-bg" class="field w-auto py-1">
+            <option value="transparent" selected>Transparent</option>
+            <option value="#ffffff">White</option>
+            <option value="#010102">Black</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </label>
+        <label id="ico-bg-custom-wrap" class="hidden flex-col gap-1 text-sm text-ink-subtle">
+          Color
+          <input id="ico-bg-custom" type="color" value="#5e6ad2" class="field h-9 w-14 cursor-pointer p-1" />
+        </label>
+      </div>
+
       <div>
         <span class="text-[13px] text-ink-subtle">Sizes to include</span>
         <div id="ico-sizes" class="mt-2 flex flex-wrap gap-3"></div>
       </div>
+
       <div class="flex flex-wrap items-center gap-3">
         <button id="ico-download" class="btn btn-primary">Download .ico</button>
+        <button id="ico-download-png" class="btn btn-secondary">Download PNGs</button>
         <span id="ico-info" class="text-[13px] text-ink-subtle"></span>
       </div>
-      <div class="panel flex items-center justify-center gap-4 p-4">
-        <img id="ico-p16" width="16" height="16" alt="16px" />
-        <img id="ico-p32" width="32" height="32" alt="32px" />
-        <img id="ico-p48" width="48" height="48" alt="48px" />
-        <img id="ico-p64" width="64" height="64" alt="64px" />
+
+      <div>
+        <span class="text-[13px] text-ink-subtle">Live preview</span>
+        <div id="ico-preview" class="ico-checker panel mt-2 flex flex-wrap items-end justify-center gap-6 p-5"></div>
+      </div>
+
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        <span class="flex items-center justify-between">
+          <span>HTML for your page &lt;head&gt;</span>
+          <button id="ico-copy-html" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button>
+        </span>
+        <pre id="ico-html" class="field m-0 overflow-auto p-3 text-[13px]" style="white-space:pre;font-family:var(--font-mono,ui-monospace,monospace)"></pre>
       </div>
     </div>
+
     <p id="ico-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
       This free ICO converter creates Windows icon and favicon <code>.ico</code>
-      files from any image. It renders your image to the standard favicon sizes
-      (16, 32, 48 and 64 pixels) and packs the ones you choose into a single
-      multi-resolution ICO, using embedded PNG data for crisp results. Use a
-      square image for best results. Everything runs in your browser — your
-      image is never uploaded.
+      files from any image — PNG, JPG, WebP, GIF or SVG. It renders your image to
+      every standard icon size (16, 24, 32, 48, 64, 128 and 256 pixels) and packs
+      the ones you choose into a single multi-resolution ICO, using embedded PNG
+      data for crisp, lossless results at each size. Everything runs in your
+      browser — your image is never uploaded.
+    </p>
+    <p>
+      Control how non-square images are fit with three scaling modes — contain
+      (letterbox, no crop), cover (fill and crop the edges) or stretch — and pick
+      a transparent or solid background so your icon looks right on any surface.
+      A live preview shows each selected size against a checkerboard so you can
+      spot transparency issues before you download.
+    </p>
+    <p>
+      Beyond the ICO, you can download individual PNG favicons for each size and
+      copy a ready-to-paste HTML snippet with the correct <code>&lt;link&gt;</code>
+      tags for your favicon, PNG icons and Apple touch icon. Use a square source
+      image at 256×256 or larger for the sharpest results across every size.
     </p>
   </div>
 </ToolLayout>
 
 <style>
   .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+  /* Checkerboard so transparency is visible in the preview. */
+  .ico-checker {
+    background-image:
+      linear-gradient(45deg, #16171a 25%, transparent 25%),
+      linear-gradient(-45deg, #16171a 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #16171a 75%),
+      linear-gradient(-45deg, transparent 75%, #16171a 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  }
+  .ico-tile { display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .ico-tile img { image-rendering:auto; display:block; }
+  .ico-tile .ico-dl { font-size:12px; color:var(--color-ink-subtle,#8a8f98); text-decoration:none; }
+  .ico-tile .ico-dl:hover { color:var(--color-ink,#f7f8f8); text-decoration:underline; }
 </style>
 
 <script>
@@ -53,19 +114,58 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const sizesWrap = document.getElementById('ico-sizes')!;
   const info = document.getElementById('ico-info')!;
   const err = document.getElementById('ico-error')!;
-  const SIZES = [16, 32, 48, 64];
+  const preview = document.getElementById('ico-preview')!;
+  const htmlBlock = document.getElementById('ico-html')!;
+  const scaleSel = document.getElementById('ico-scale') as HTMLSelectElement;
+  const bgSel = document.getElementById('ico-bg') as HTMLSelectElement;
+  const bgCustom = document.getElementById('ico-bg-custom') as HTMLInputElement;
+  const bgCustomWrap = document.getElementById('ico-bg-custom-wrap')!;
+  const SIZES = [16, 24, 32, 48, 64, 128, 256];
+  const DEFAULT_ON = new Set([16, 32, 48, 256]);
   let img: HTMLImageElement | null = null;
+  let sourceName = 'favicon';
+  const objectUrls: string[] = [];
 
   function setErr(m: string) { err.textContent = m; err.classList.toggle('hidden', !m); }
+  function trackUrl(u: string) { objectUrls.push(u); return u; }
+  function revokeAll() { objectUrls.splice(0).forEach(URL.revokeObjectURL); }
 
-  sizesWrap.innerHTML = SIZES.map((s) => `<label class="flex items-center gap-2 text-sm text-ink-subtle"><input type="checkbox" class="ico-size accent-[#5e6ad2]" value="${s}" ${s <= 48 ? 'checked' : ''}> ${s}×${s}</label>`).join('');
+  sizesWrap.innerHTML = SIZES.map((s) => `<label class="flex items-center gap-2 text-sm text-ink-subtle"><input type="checkbox" class="ico-size accent-[#5e6ad2]" value="${s}" ${DEFAULT_ON.has(s) ? 'checked' : ''}> ${s}×${s}</label>`).join('');
+
+  function selectedSizes(): number[] {
+    return Array.from(document.querySelectorAll<HTMLInputElement>('.ico-size:checked')).map((c) => Number(c.value)).sort((a, b) => a - b);
+  }
+
+  // null = keep transparency; otherwise a CSS color to flatten onto.
+  function currentBg(): string | null {
+    if (bgSel.value === 'transparent') return null;
+    return bgSel.value === 'custom' ? bgCustom.value : bgSel.value;
+  }
+
+  // Render the source into a size×size canvas honoring the scaling mode + background.
+  function renderCanvas(size: number): HTMLCanvasElement {
+    const canvas = document.createElement('canvas');
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    const bg = currentBg();
+    if (bg) { ctx.fillStyle = bg; ctx.fillRect(0, 0, size, size); }
+    const iw = img!.naturalWidth || size, ih = img!.naturalHeight || size;
+    const mode = scaleSel.value;
+    if (mode === 'stretch') {
+      ctx.drawImage(img!, 0, 0, size, size);
+    } else {
+      const scale = mode === 'cover' ? Math.max(size / iw, size / ih) : Math.min(size / iw, size / ih);
+      const dw = iw * scale, dh = ih * scale;
+      ctx.drawImage(img!, (size - dw) / 2, (size - dh) / 2, dw, dh);
+    }
+    return canvas;
+  }
 
   function pngBlobFor(size: number): Promise<Blob> {
     return new Promise((resolve, reject) => {
-      const canvas = document.createElement('canvas');
-      canvas.width = size; canvas.height = size;
-      canvas.getContext('2d')!.drawImage(img!, 0, 0, size, size);
-      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('encode failed'))), 'image/png');
+      renderCanvas(size).toBlob((b) => (b ? resolve(b) : reject(new Error('encode failed'))), 'image/png');
     });
   }
 
@@ -81,7 +181,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     dv.setUint16(4, count, true);
     sizes.forEach((s, i) => {
       const base = 6 + i * 16;
-      dv.setUint8(base, s >= 256 ? 0 : s);       // width
+      dv.setUint8(base, s >= 256 ? 0 : s);       // width (0 means 256)
       dv.setUint8(base + 1, s >= 256 ? 0 : s);   // height
       dv.setUint8(base + 2, 0);                  // palette
       dv.setUint8(base + 3, 0);                  // reserved
@@ -94,24 +194,75 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return new Blob([header, ...pngs], { type: 'image/x-icon' });
   }
 
-  function refreshPreview() {
-    if (!img) return;
-    for (const s of SIZES) {
-      pngBlobFor(s).then((b) => {
-        const el = document.getElementById(`ico-p${s}`) as HTMLImageElement;
-        el.src = URL.createObjectURL(b);
-      });
+  function download(blob: Blob, name: string) {
+    const url = trackUrl(URL.createObjectURL(blob));
+    const a = document.createElement('a');
+    a.download = name; a.href = url; a.click();
+  }
+
+  // Standard favicon snippet, tailored to the sizes the user picked.
+  function updateHtml() {
+    const sizes = selectedSizes();
+    const lines = ['<link rel="icon" type="image/x-icon" href="/favicon.ico">'];
+    for (const s of sizes) {
+      if (s === 256) continue; // 256 is the ICO's job, not a PNG link
+      lines.push(`<link rel="icon" type="image/png" sizes="${s}x${s}" href="/favicon-${s}x${s}.png">`);
     }
+    lines.push('<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">');
+    htmlBlock.textContent = lines.join('\n');
+  }
+
+  async function refreshPreview() {
+    if (!img) return;
+    revokeAll();
+    const sizes = selectedSizes();
+    preview.innerHTML = '';
+    if (!sizes.length) { preview.innerHTML = '<span class="text-[13px] text-ink-tertiary">Pick at least one size.</span>'; return; }
+    for (const s of sizes) {
+      const blob = await pngBlobFor(s);
+      const url = trackUrl(URL.createObjectURL(blob));
+      const display = Math.min(s, 128);
+      const tile = document.createElement('div');
+      tile.className = 'ico-tile';
+      const image = document.createElement('img');
+      image.src = url; image.width = display; image.height = display;
+      image.alt = `${s}×${s} preview`;
+      const label = document.createElement('span');
+      label.className = 'text-[12px] text-ink-tertiary';
+      label.textContent = `${s}×${s}`;
+      const dl = document.createElement('a');
+      dl.className = 'ico-dl'; dl.href = url; dl.download = `${sourceName}-${s}x${s}.png`;
+      dl.textContent = 'PNG';
+      tile.append(image, label, dl);
+      preview.append(tile);
+    }
+  }
+
+  function refresh() {
+    setErr('');
+    updateHtml();
+    refreshPreview();
   }
 
   function loadFile(file: File) {
     setErr('');
+    if (!file.type.startsWith('image/')) { setErr('Please choose an image file.'); return; }
+    sourceName = (file.name.replace(/\.[^.]+$/, '') || 'favicon').replace(/[^\w.-]+/g, '-');
     const reader = new FileReader();
+    reader.onerror = () => setErr('Could not read that file.');
     reader.onload = () => {
-      img = new Image();
-      img.onload = () => { panel.classList.remove('hidden'); panel.classList.add('flex'); refreshPreview(); info.textContent = `Source ${img!.naturalWidth}×${img!.naturalHeight}`; };
-      img.onerror = () => setErr('Could not read that image file.');
-      img.src = reader.result as string;
+      const next = new Image();
+      next.onload = () => {
+        img = next;
+        panel.classList.remove('hidden'); panel.classList.add('flex');
+        info.textContent = `Source ${next.naturalWidth}×${next.naturalHeight}`;
+        if (next.naturalWidth < 256 || next.naturalHeight < 256) {
+          info.textContent += ' — small source, larger sizes may look soft';
+        }
+        refresh();
+      };
+      next.onerror = () => setErr('Could not read that image file. Try PNG, JPG, WebP, GIF or SVG.');
+      next.src = reader.result as string;
     };
     reader.readAsDataURL(file);
   }
@@ -121,14 +272,35 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
   drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) loadFile(f); });
 
+  scaleSel.addEventListener('change', refresh);
+  bgSel.addEventListener('change', () => { bgCustomWrap.classList.toggle('hidden', bgSel.value !== 'custom'); bgCustomWrap.classList.toggle('flex', bgSel.value === 'custom'); refresh(); });
+  bgCustom.addEventListener('input', () => { if (bgSel.value === 'custom') refresh(); });
+  sizesWrap.addEventListener('change', refresh);
+
   document.getElementById('ico-download')!.addEventListener('click', async () => {
     if (!img) return;
-    const sizes = Array.from(document.querySelectorAll<HTMLInputElement>('.ico-size:checked')).map((c) => Number(c.value));
+    const sizes = selectedSizes();
     if (!sizes.length) { setErr('Pick at least one size.'); return; }
     setErr('');
     try {
-      const blob = await buildIco(sizes);
-      const a = document.createElement('a'); a.download = 'favicon.ico'; a.href = URL.createObjectURL(blob); a.click();
+      download(await buildIco(sizes), `${sourceName}.ico`);
     } catch { setErr('Could not build the ICO file.'); }
+  });
+
+  document.getElementById('ico-download-png')!.addEventListener('click', async () => {
+    if (!img) return;
+    const sizes = selectedSizes();
+    if (!sizes.length) { setErr('Pick at least one size.'); return; }
+    setErr('');
+    try {
+      // ponytail: sequential downloads, no zip dep. Browsers allow multiple <a>.click().
+      for (const s of sizes) download(await pngBlobFor(s), `${sourceName}-${s}x${s}.png`);
+    } catch { setErr('Could not export the PNG files.'); }
+  });
+
+  document.getElementById('ico-copy-html')!.addEventListener('click', async (e) => {
+    await navigator.clipboard.writeText(htmlBlock.textContent || '');
+    const b = e.currentTarget as HTMLButtonElement;
+    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
   });
 </script>

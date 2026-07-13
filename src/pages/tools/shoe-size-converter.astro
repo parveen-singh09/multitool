@@ -7,13 +7,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div class="flex flex-wrap gap-2" role="tablist" aria-label="Category">
       <button data-cat="men" class="ss-tab btn btn-primary" aria-selected="true">Men</button>
       <button data-cat="women" class="ss-tab btn btn-secondary" aria-selected="false">Women</button>
+      <button data-cat="kids" class="ss-tab btn btn-secondary" aria-selected="false">Kids</button>
       <button data-cat="clothing" class="ss-tab btn btn-secondary" aria-selected="false">Clothing</button>
     </div>
 
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Size
-        <input id="ss-value" type="number" step="any" class="field" />
+        <input id="ss-value" type="number" step="any" min="0" inputmode="decimal" class="field" />
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         in region
@@ -21,8 +22,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </label>
     </div>
 
+    <p id="ss-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
     <div>
-      <span class="text-[13px] text-ink-subtle">Equivalent sizes</span>
+      <div class="flex items-center justify-between">
+        <span class="text-[13px] text-ink-subtle">Equivalent sizes</span>
+        <button id="ss-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy sizes</button>
+      </div>
+      <p id="ss-note" class="mt-1 hidden text-[12px] text-ink-tertiary"></p>
       <div id="ss-result" class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
     </div>
 
@@ -35,10 +42,20 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
       This free shoe and clothing size converter translates sizes between US, UK,
-      EU and other regional systems, including foot length in centimetres for
-      shoes. Pick a category, enter a size you know, and read the equivalents,
-      with a full chart for reference. Sizing varies by brand, so treat these as
-      a close guide. Everything runs in your browser.
+      EU, Japanese (JP) and inch systems, plus foot length in centimetres, across
+      men's, women's and kids' shoes as well as clothing. Pick a category, enter a
+      size you know in any region, and read the equivalents instantly, with a full
+      chart for reference and one-click copy. Sizing varies by brand, so treat
+      these as a close guide. Everything runs in your browser — nothing is uploaded.
+    </p>
+    <p>
+      Not sure of your size? Measure your foot from heel to longest toe, switch the
+      region to <strong>CM</strong> (or <strong>Inches</strong>) and enter that
+      length — the converter finds the closest size in every other system and tells
+      you when your measurement falls between sizes, so you can round up for a
+      comfortable fit. Japanese shoe sizes are given as the foot length in
+      centimetres (mondopoint), and inch lengths are derived from the same
+      measurement.
     </p>
   </div>
 </ToolLayout>
@@ -65,6 +82,17 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         [11, 8.5, 43, 28],
       ],
     },
+    // Big-kid / youth sizing (US toddler 10.5 through US youth 5). Kids sizing is
+    // the least standardised, so the "close guide" caveat matters most here.
+    kids: {
+      cols: ['US', 'UK', 'EU', 'CM'],
+      rows: [
+        [10.5, 10, 28, 17], [11, 10.5, 29, 17.5], [11.5, 11, 29.5, 18], [12, 11, 30, 18.5],
+        [12.5, 12, 30.5, 19], [13, 12, 31, 19.5], [13.5, 13, 31.5, 20], [1, 13, 32, 20.5],
+        [1.5, 1, 33, 21], [2, 1, 33.5, 21.5], [2.5, 2, 34, 22], [3, 2, 34.5, 22.5],
+        [3.5, 3, 35, 23], [4, 3, 36, 23.5], [5, 4, 37, 24],
+      ],
+    },
     clothing: {
       cols: ['US/UK', 'Label', 'EU', 'Chest (in)'],
       rows: [
@@ -74,40 +102,82 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     },
   };
 
+  // Shoe categories carry a CM (foot-length) column — expand them with JP (= foot
+  // length in cm, mondopoint) and Inches (cm / 2.54) so users can convert to and
+  // from those systems too. Clothing has no foot length, so it's left untouched.
+  const round1 = (n: number) => Math.round(n * 10) / 10;
+  for (const cat of ['men', 'women', 'kids']) {
+    const c = DATA[cat];
+    const cmIdx = c.cols.indexOf('CM');
+    if (cmIdx < 0) continue;
+    c.cols.push('JP', 'Inches');
+    for (const row of c.rows) {
+      const cm = Number(row[cmIdx]);
+      row.push(cm, round1(cm / 2.54)); // JP = cm; Inches = cm / 2.54
+    }
+  }
+
   const valueEl = document.getElementById('ss-value') as HTMLInputElement;
   const regionEl = document.getElementById('ss-region') as HTMLSelectElement;
   const result = document.getElementById('ss-result')!;
   const chart = document.getElementById('ss-chart')!;
+  const errEl = document.getElementById('ss-error')!;
+  const noteEl = document.getElementById('ss-note')!;
+  const copyBtn = document.getElementById('ss-copy') as HTMLButtonElement;
   let cat = 'men';
+  let lastRow: (number | string)[] | null = null;
 
   function fillRegions() {
     regionEl.innerHTML = DATA[cat].cols.map((c) => `<option>${c}</option>`).join('');
     regionEl.selectedIndex = 0;
   }
 
-  function findRow(): (number | string)[] | null {
+  // Returns the nearest row plus how far off the entered value was (0 = exact).
+  function findRow(): { row: (number | string)[]; delta: number; cell: number } | null {
     const { cols, rows } = DATA[cat];
     const colIdx = cols.indexOf(regionEl.value);
     const v = Number(valueEl.value);
-    if (isNaN(v)) return null;
-    // nearest by that column's numeric value
-    let best: (number | string)[] | null = null, bestD = Infinity;
+    if (valueEl.value.trim() === '' || isNaN(v)) return null;
+    let best: (number | string)[] | null = null, bestD = Infinity, bestCell = NaN;
     for (const row of rows) {
       const cell = Number(row[colIdx]);
       if (isNaN(cell)) continue;
       const d = Math.abs(cell - v);
-      if (d < bestD) { bestD = d; best = row; }
+      if (d < bestD) { bestD = d; best = row; bestCell = cell; }
     }
-    return best;
+    return best ? { row: best, delta: bestD, cell: bestCell } : null;
   }
 
   function render() {
     const { cols } = DATA[cat];
-    const row = findRow();
-    result.innerHTML = row
-      ? cols.map((c, i) => `<div class="panel panel-lift p-3"><span class="text-[11px] uppercase tracking-wide text-ink-tertiary">${c}</span><div class="mt-1 font-mono text-lg text-ink">${row[i]}</div></div>`).join('')
-      : '<p class="text-[13px] text-ink-tertiary">Enter a size to see equivalents.</p>';
-    renderChart(row);
+    errEl.classList.add('hidden');
+    noteEl.classList.add('hidden');
+
+    const v = valueEl.value.trim();
+    if (v !== '' && Number(v) <= 0) {
+      errEl.textContent = 'Enter a positive size.';
+      errEl.classList.remove('hidden');
+    }
+
+    const match = findRow();
+    lastRow = match ? match.row : null;
+
+    if (match) {
+      const row = match.row;
+      result.innerHTML = cols
+        .map((c, i) => `<div class="panel panel-lift p-3"><span class="text-[11px] uppercase tracking-wide text-ink-tertiary">${c}</span><div class="mt-1 font-mono text-lg text-ink">${row[i]}</div></div>`)
+        .join('');
+      // Flag when the entered value isn't an exact chart value.
+      if (match.delta > 0.001) {
+        noteEl.textContent = `No exact match for ${v} ${regionEl.value} — showing the closest size (${match.cell} ${regionEl.value}). If you're between sizes, round up.`;
+        noteEl.classList.remove('hidden');
+      }
+    } else {
+      result.innerHTML = '<p class="text-[13px] text-ink-tertiary">Enter a size to see equivalents.</p>';
+    }
+    copyBtn.disabled = !match;
+    copyBtn.style.opacity = match ? '1' : '0.5';
+    renderChart(lastRow);
   }
 
   function renderChart(active: (number | string)[] | null) {
@@ -134,6 +204,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   });
   valueEl.addEventListener('input', render);
   regionEl.addEventListener('change', render);
+
+  copyBtn.addEventListener('click', async () => {
+    if (!lastRow) return;
+    const { cols } = DATA[cat];
+    const text = cols.map((c, i) => `${c} ${lastRow![i]}`).join(' · ');
+    await navigator.clipboard.writeText(text);
+    copyBtn.textContent = 'Copied!';
+    setTimeout(() => (copyBtn.textContent = 'Copy sizes'), 1400);
+  });
 
   fillRegions();
   valueEl.value = '9';

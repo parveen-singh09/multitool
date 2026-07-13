@@ -1503,6 +1503,36 @@ export const tools: Tool[] = [
     icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
   },
   {
+    slug: 'png-to-jpg',
+    name: 'PNG to JPG Converter',
+    tagline: 'Convert PNG images to compact JPEG.',
+    description:
+      'Free online PNG to JPG converter. Turn PNG images into smaller, widely compatible JPEG files with adjustable quality, flattening transparency to white. Runs in your browser — no uploads.',
+    category: 'Image',
+    keywords: ['png to jpg', 'png to jpeg', 'convert png to jpg', 'png to jpg converter', 'change png to jpg'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'jpg-to-webp',
+    name: 'JPG to WebP Converter',
+    tagline: 'Shrink JPEG photos to modern WebP.',
+    description:
+      'Free online JPG to WebP converter. Convert JPEG photos to smaller WebP files with adjustable quality for faster web pages. Runs entirely in your browser — no uploads.',
+    category: 'Image',
+    keywords: ['jpg to webp', 'jpeg to webp', 'convert jpg to webp', 'jpg to webp converter', 'compress jpg to webp'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'webp-to-png',
+    name: 'WebP to PNG Converter',
+    tagline: 'Convert WebP images to lossless PNG.',
+    description:
+      'Free online WebP to PNG converter. Turn WebP images into lossless PNG files, preserving transparency for editing or platforms that do not accept WebP. Runs in your browser — no uploads.',
+    category: 'Image',
+    keywords: ['webp to png', 'convert webp to png', 'webp to png converter', 'change webp to png', 'webp to transparent png'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
     slug: 'svg-to-png',
     name: 'SVG to PNG Converter',
     tagline: 'Rasterize SVG vectors to PNG.',
@@ -1628,6 +1658,46 @@ export const tools: Tool[] = [
     category: 'PDF',
     keywords: ['pdf to text', 'pdf ocr', 'extract text from pdf', 'pdf to txt', 'ocr pdf online'],
     icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8M8 17h5',
+  },
+  {
+    slug: 'pdf-to-word',
+    name: 'PDF to Word',
+    tagline: 'Extract PDF text into an editable .docx.',
+    description:
+      'Free online PDF to Word converter. Pull the text out of a PDF into an editable Word (.docx) document, right in your browser — nothing is uploaded. Preserves text and paragraphs; layout is not reproduced.',
+    category: 'PDF',
+    keywords: ['pdf to word', 'pdf to docx', 'convert pdf to word', 'pdf to word converter', 'pdf to editable word'],
+    icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M9 13l1.5 5 1.5-4 1.5 4 1.5-5',
+  },
+  {
+    slug: 'pdf-to-excel',
+    name: 'PDF to Excel',
+    tagline: 'Extract PDF tables into an .xlsx spreadsheet.',
+    description:
+      'Free online PDF to Excel converter. Detect row-and-column data in a PDF and export it to an editable Excel (.xlsx) spreadsheet in your browser — nothing is uploaded. Best for tabular data; complex layouts may need cleanup.',
+    category: 'PDF',
+    keywords: ['pdf to excel', 'pdf to xlsx', 'convert pdf to excel', 'pdf to spreadsheet', 'extract pdf table to excel'],
+    icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M9 12l6 6M15 12l-6 6',
+  },
+  {
+    slug: 'html-to-pdf',
+    name: 'HTML to PDF',
+    tagline: 'Render HTML into a print-ready PDF.',
+    description:
+      'Free online HTML to PDF converter. Paste HTML or a full page, preview the rendered result, and save it as a text-selectable PDF using your browser’s own print engine. Runs entirely in your browser — nothing is uploaded.',
+    category: 'PDF',
+    keywords: ['html to pdf', 'convert html to pdf', 'html to pdf converter', 'webpage to pdf', 'save html as pdf'],
+    icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13l2 2-2 2M13 17h3',
+  },
+  {
+    slug: 'pdf-summarizer',
+    name: 'PDF Summarizer',
+    tagline: 'Summarize a PDF into a short, faithful recap.',
+    description:
+      'Free online PDF summarizer. Extract a PDF’s text in your browser and get an AI summary — short, paragraph or bullet points. Only the extracted text is sent for summarizing; the file itself is never uploaded.',
+    category: 'PDF',
+    keywords: ['pdf summarizer', 'summarize pdf', 'pdf summary generator', 'ai pdf summarizer', 'summarize pdf online'],
+    icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h5M8 17h8',
   },
 
   // ---- Image: format converters needing decode/vectorize libs ----
@@ -2307,6 +2377,16 @@ export const tools: Tool[] = [
     category: 'Developer',
     keywords: ['htaccess generator', 'apache htaccess generator', 'htaccess redirect generator', 'force https htaccess', 'htaccess rewrite generator'],
     icon: 'M4 6h16v12H4zM4 10h16M7 14h6',
+  },
+  {
+    slug: 'mailto-link-generator',
+    name: 'Mailto Link Generator',
+    tagline: 'Build mailto: links with subject, body, CC & BCC.',
+    description:
+      'Free online mailto link generator. Build a mailto: link with recipients, CC, BCC, subject and a pre-filled body, then copy the link or a ready-to-paste HTML anchor. Runs in your browser — nothing is uploaded.',
+    category: 'Developer',
+    keywords: ['mailto link generator', 'mailto generator', 'email link generator', 'create mailto link', 'html email link', 'mailto with subject and body'],
+    icon: 'M4 5h16v14H4zM4 7l8 6 8-6',
   },
   {
     slug: 'gitignore-generator',

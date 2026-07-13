@@ -1,15 +1,409 @@
 ---
+// Self-contained WAV → MP3 converter. It intentionally does NOT use the shared
+// MediaConverter component: this tool extends the shared feature set with volume
+// adjust, reverse, and ID3 metadata tagging (title/artist/album/year/genre) that
+// the shared buildArgs pipeline doesn't expose. Everything the shared component
+// already did is preserved here — batch, bitrate presets (VBR/CBR), sample rate,
+// channels, EBU normalize, trim, fade in/out, per-file preview, individual +
+// ZIP download, drag-drop, progress. All conversion runs client-side via the
+// shared ffmpeg.wasm core; files never leave the browser.
 import ToolLayout from '../../layouts/ToolLayout.astro';
-import MediaConverter from '../../components/MediaConverter.astro';
+import { getConversion } from '../../lib/media';
+
+const conv = getConversion('wav-to-mp3')!;
 ---
 
 <ToolLayout slug="wav-to-mp3">
-  <MediaConverter slug="wav-to-mp3" />
+  <div id="mc-root" data-accept={conv.accept} data-ext={conv.ext} data-mime={conv.mime} class="flex flex-col gap-4">
+    <label id="mc-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose WAV files or drop them here</span>
+      <span class="text-[13px] text-ink-tertiary">Converted in your browser — never uploaded, no size limit</span>
+      <input id="mc-file" type="file" accept={conv.accept} multiple class="sr-only" />
+    </label>
+
+    <div id="mc-panel" class="hidden flex-col gap-4">
+      <!-- File list -->
+      <div id="mc-files" class="flex flex-col gap-2"></div>
+
+      <!-- Options -->
+      <div class="panel flex flex-col gap-4 p-4">
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle">Quality
+            <select id="mc-quality" class="field">
+              <optgroup label="Variable (VBR)">
+                <option value="v0">V0 — best</option>
+                <option value="v2" selected>V2 — high (default)</option>
+                <option value="v4">V4 — good</option>
+              </optgroup>
+              <optgroup label="Constant (CBR)">
+                <option value="320">320 kbps</option>
+                <option value="256">256 kbps</option>
+                <option value="192">192 kbps</option>
+                <option value="128">128 kbps</option>
+                <option value="96">96 kbps</option>
+                <option value="64">64 kbps (voice)</option>
+              </optgroup>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle">Sample rate
+            <select id="mc-samplerate" class="field">
+              <option value="0" selected>Keep original</option>
+              <option value="48000">48 kHz</option>
+              <option value="44100">44.1 kHz</option>
+              <option value="32000">32 kHz</option>
+              <option value="22050">22.05 kHz</option>
+              <option value="16000">16 kHz (voice)</option>
+              <option value="8000">8 kHz (phone)</option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle">Channels
+            <select id="mc-channels" class="field">
+              <option value="0" selected>Keep original</option>
+              <option value="2">Stereo</option>
+              <option value="1">Mono</option>
+            </select>
+          </label>
+          <label class="flex items-center gap-2 pt-6 text-sm text-ink-subtle" title="EBU R128 loudness normalization">
+            <input id="mc-normalize" type="checkbox" class="accent-[#5e6ad2]" /> Normalize
+          </label>
+        </div>
+
+        <!-- Trim, fade, volume, reverse -->
+        <details class="group">
+          <summary class="cursor-pointer select-none text-[13px] text-ink-subtle hover:text-ink">Trim, fade &amp; volume</summary>
+          <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">Trim start (s)
+              <input id="mc-trimstart" type="number" min="0" step="0.5" placeholder="0" class="field" />
+            </label>
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">Trim end (s)
+              <input id="mc-trimend" type="number" min="0" step="0.5" placeholder="end" class="field" />
+            </label>
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">Fade in (s)
+              <input id="mc-fadein" type="number" min="0" step="0.5" placeholder="0" class="field" />
+            </label>
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">Fade out (s)
+              <input id="mc-fadeout" type="number" min="0" step="0.5" placeholder="0" class="field" />
+            </label>
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">Volume (%)
+              <input id="mc-volume" type="number" min="0" step="5" placeholder="100" class="field" />
+            </label>
+            <label class="flex items-center gap-2 pt-6 text-sm text-ink-subtle" title="Play the audio backwards">
+              <input id="mc-reverse" type="checkbox" class="accent-[#5e6ad2]" /> Reverse
+            </label>
+          </div>
+          <p class="mt-2 text-xs text-ink-tertiary">Applies to every file in the queue. Volume 100% = unchanged; 200% doubles, 50% halves. Leave blank to keep the full length and original loudness.</p>
+        </details>
+
+        <!-- ID3 metadata tags -->
+        <details class="group">
+          <summary class="cursor-pointer select-none text-[13px] text-ink-subtle hover:text-ink">MP3 tags (ID3)</summary>
+          <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">Title
+              <input id="mc-title" type="text" maxlength="200" placeholder="Track title" class="field" />
+            </label>
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">Artist
+              <input id="mc-artist" type="text" maxlength="200" placeholder="Artist" class="field" />
+            </label>
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">Album
+              <input id="mc-album" type="text" maxlength="200" placeholder="Album" class="field" />
+            </label>
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">Year
+              <input id="mc-year" type="number" min="0" max="9999" placeholder="2025" class="field" />
+            </label>
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle sm:col-span-2">Genre
+              <input id="mc-genre" type="text" maxlength="100" placeholder="Genre" class="field" />
+            </label>
+          </div>
+          <p class="mt-2 text-xs text-ink-tertiary">Tags are written into every converted MP3. Leave blank to skip.</p>
+        </details>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <button id="mc-go" class="btn btn-primary">Convert to MP3</button>
+        <button id="mc-clear" class="btn btn-secondary">Clear</button>
+        <span id="mc-summary" class="text-[13px] text-ink-subtle"></span>
+      </div>
+
+      <div id="mc-batch-dl" class="hidden">
+        <button id="mc-zip" class="btn btn-primary">Download all as ZIP</button>
+      </div>
+    </div>
+    <p id="mc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free WAV to MP3 converter compresses large uncompressed WAV files into small MP3s, saving space while keeping good quality. All processing happens locally in your browser using an
-      in-page media engine, so your files are never uploaded to any server.
+      This free WAV to MP3 converter compresses large uncompressed WAV audio into small, universally supported MP3 files you can play anywhere. All processing happens locally in your browser using an
+      in-page media engine, so your files are never uploaded to any server and there is no file-size limit — unlike upload-based converters that cap free use at around 1 GB.
+    </p>
+    <p>
+      Unlike most online converters, it gives you full control: pick a variable-bitrate preset (V0–V4) or a constant bitrate from 64 to 320 kbps, set the sample rate and channels, normalize loudness to
+      broadcast standard (EBU R128), trim to just the part you want, add fade in/out, adjust the volume, or even reverse the audio. You can also write ID3 tags — title, artist, album, year and genre —
+      straight into the output.
+    </p>
+    <p>
+      Drop several WAV files at once to batch-convert them and download the results individually or together as a ZIP. Every file is decoded and encoded on your device, so nothing ever leaves your browser.
     </p>
   </div>
 </ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  import { getFFmpeg, fetchFile } from '../../lib/ffmpeg';
+  import { makeZip } from '../../lib/zip';
+
+  const root = document.getElementById('mc-root') as HTMLElement;
+  const EXT = root.dataset.ext!;         // "mp3"
+  const MIME = root.dataset.mime!;       // "audio/mpeg"
+
+  const $ = (id: string) => document.getElementById(id);
+  const fileInput = $('mc-file') as HTMLInputElement;
+  const drop = $('mc-drop')!;
+  const panel = $('mc-panel')!;
+  const filesEl = $('mc-files')!;
+  const goBtn = $('mc-go') as HTMLButtonElement;
+  const clearBtn = $('mc-clear') as HTMLButtonElement;
+  const summary = $('mc-summary')!;
+  const batchDl = $('mc-batch-dl')!;
+  const zipBtn = $('mc-zip') as HTMLButtonElement;
+  const err = $('mc-error')!;
+
+  interface Job {
+    file: File;
+    duration: number;
+    row: HTMLElement;
+    statusEl: HTMLElement;
+    bar: HTMLElement;
+    actionsEl: HTMLElement;
+    outUrl?: string;
+    outData?: Uint8Array;
+    outName?: string;
+    done: boolean;
+  }
+  let jobs: Job[] = [];
+  // The ffmpeg progress hook is attached once and reads this live reference so
+  // it always tracks whichever job is currently encoding.
+  let current: Job | null = null;
+
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+  const fmtSize = (n: number) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`;
+  const numVal = (id: string) => { const v = Number(($(id) as HTMLInputElement)?.value); return Number.isFinite(v) && v > 0 ? v : 0; };
+  const strVal = (id: string) => (($(id) as HTMLInputElement)?.value || '').trim();
+  const outNameFor = (f: File) => f.name.replace(/\.[^.]+$/, '') + '.' + EXT;
+
+  // Read media duration so fade-out and default trim end can be computed.
+  function probeDuration(file: File): Promise<number> {
+    return new Promise((resolve) => {
+      const el = document.createElement('audio');
+      el.preload = 'metadata';
+      const url = URL.createObjectURL(file);
+      el.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(isFinite(el.duration) ? el.duration : 0); };
+      el.onerror = () => { URL.revokeObjectURL(url); resolve(0); };
+      el.src = url;
+    });
+  }
+
+  interface Opts {
+    quality: string; sampleRate: number; channels: number; normalize: boolean;
+    trimStart: number; trimEnd: number; fadeIn: number; fadeOut: number;
+    volume: number; reverse: boolean;
+    title: string; artist: string; album: string; year: string; genre: string;
+  }
+
+  function readOptions(): Opts {
+    const volRaw = ($('mc-volume') as HTMLInputElement).value.trim();
+    return {
+      quality: ($('mc-quality') as HTMLSelectElement).value,
+      sampleRate: Number(($('mc-samplerate') as HTMLSelectElement).value),
+      channels: Number(($('mc-channels') as HTMLSelectElement).value),
+      normalize: ($('mc-normalize') as HTMLInputElement).checked,
+      trimStart: numVal('mc-trimstart'),
+      trimEnd: numVal('mc-trimend'),
+      fadeIn: numVal('mc-fadein'),
+      fadeOut: numVal('mc-fadeout'),
+      volume: volRaw === '' ? 100 : Math.max(0, Number(volRaw) || 100),
+      reverse: ($('mc-reverse') as HTMLInputElement).checked,
+      title: strVal('mc-title'), artist: strVal('mc-artist'), album: strVal('mc-album'),
+      year: strVal('mc-year'), genre: strVal('mc-genre'),
+    };
+  }
+
+  // Build the ffmpeg MP3 args. Mirrors the shared buildArgs audio path and adds
+  // volume, reverse (areverse) and ID3 -metadata flags. -ss before -i for a fast
+  // input seek; the -af chain order is reverse → fades → volume → loudnorm.
+  function buildMp3Args(o: Opts, dur: number, input: string, output: string): string[] {
+    const pre: string[] = [];
+    const start = o.trimStart > 0 ? o.trimStart : 0;
+    if (start > 0) pre.push('-ss', String(start));
+    pre.push('-i', input);
+    if (o.trimEnd > start) pre.push('-to', String(o.trimEnd - start));
+
+    const outDur = o.trimEnd > start ? o.trimEnd - start : (dur || 0) - start;
+    const af: string[] = [];
+    if (o.reverse) af.push('areverse');
+    if (o.fadeIn > 0) af.push(`afade=t=in:st=0:d=${o.fadeIn}`);
+    if (o.fadeOut > 0 && outDur > 0) af.push(`afade=t=out:st=${Math.max(0, outDur - o.fadeOut).toFixed(3)}:d=${o.fadeOut}`);
+    if (o.volume !== 100) af.push(`volume=${(o.volume / 100).toFixed(3)}`);
+    if (o.normalize) af.push('loudnorm=I=-16:TP=-1.5:LRA=11');
+
+    const out: string[] = ['-vn'];
+    if (o.sampleRate > 0) out.push('-ar', String(o.sampleRate));
+    if (o.channels > 0) out.push('-ac', String(o.channels));
+    if (af.length) out.push('-af', af.join(','));
+
+    out.push('-c:a', 'libmp3lame');
+    if (o.quality.startsWith('v')) out.push('-q:a', o.quality.slice(1)); // VBR 0..9
+    else out.push('-b:a', (o.quality || '192') + 'k');                    // CBR kbps
+
+    // ID3v2.3 tags — widest player support. Only write provided fields.
+    const meta: [string, string][] = [
+      ['title', o.title], ['artist', o.artist], ['album', o.album],
+      ['date', o.year], ['genre', o.genre],
+    ];
+    if (meta.some(([, v]) => v)) out.push('-id3v2_version', '3');
+    for (const [k, v] of meta) if (v) out.push('-metadata', `${k}=${v}`);
+
+    return [...pre, ...out, output];
+  }
+
+  function addFiles(list: FileList | File[]) {
+    setErr('');
+    const arr = Array.from(list);
+    if (!arr.length) return;
+    for (const file of arr) {
+      const row = document.createElement('div');
+      row.className = 'panel flex flex-col gap-2 p-3';
+      const top = document.createElement('div');
+      top.className = 'flex flex-wrap items-center gap-2';
+      const name = document.createElement('span');
+      name.className = 'text-[13px] text-ink truncate';
+      name.textContent = `${file.name} · ${fmtSize(file.size)}`;
+      const statusEl = document.createElement('span');
+      statusEl.className = 'text-xs text-ink-tertiary ml-auto';
+      const actionsEl = document.createElement('span');
+      actionsEl.className = 'flex items-center gap-2';
+      top.append(name, statusEl, actionsEl);
+      const barWrap = document.createElement('div');
+      barWrap.className = 'h-1 w-full overflow-hidden rounded-full bg-surface-3';
+      const bar = document.createElement('div');
+      bar.className = 'h-full w-0 rounded-full transition-all';
+      bar.style.background = 'var(--color-primary)';
+      barWrap.appendChild(bar);
+      row.append(top, barWrap);
+      filesEl.appendChild(row);
+      const job: Job = { file, duration: 0, row, statusEl, bar, actionsEl, done: false };
+      jobs.push(job);
+      probeDuration(file).then((d) => (job.duration = d));
+    }
+    panel.classList.remove('hidden'); panel.classList.add('flex');
+    refreshSummary();
+  }
+
+  function refreshSummary() {
+    const doneCount = jobs.filter((j) => j.done).length;
+    summary.textContent = jobs.length ? `${jobs.length} file${jobs.length === 1 ? '' : 's'}${doneCount ? ` · ${doneCount} done` : ''}` : '';
+    batchDl.classList.toggle('hidden', !(doneCount > 1));
+  }
+
+  function download(data: Uint8Array, name: string) {
+    const blob = new Blob([data as BlobPart], { type: MIME });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  async function convertAll() {
+    const pending = jobs.filter((j) => !j.done);
+    if (!pending.length) return;
+    setErr(''); goBtn.disabled = true; clearBtn.disabled = true;
+    const baseOpts = readOptions();
+    try {
+      const ff = await getFFmpeg({
+        onDownload: (n) => { if (n) summary.textContent = n; },
+        onProgress: (r) => { if (current) current.bar.style.width = Math.min(100, Math.round(r * 100)) + '%'; },
+      });
+      for (const job of pending) {
+        current = job;
+        job.bar.style.width = '0%';
+        job.statusEl.textContent = 'Converting…';
+        job.statusEl.style.color = '';
+        const inName = 'in_' + Math.random().toString(36).slice(2) + '.' + (job.file.name.split('.').pop() || 'dat');
+        const outName = 'out.' + EXT;
+        await ff.writeFile(inName, await fetchFile(job.file));
+        await ff.exec(buildMp3Args(baseOpts, job.duration, inName, outName));
+        const data = (await ff.readFile(outName)) as Uint8Array;
+        try { await ff.deleteFile(inName); await ff.deleteFile(outName); } catch {}
+        if (!data || data.length === 0) throw new Error('no decodable audio in the file');
+        job.outData = data;
+        job.outName = outNameFor(job.file);
+        job.done = true;
+        job.bar.style.width = '100%';
+        job.statusEl.textContent = fmtSize(data.length);
+        job.statusEl.style.color = 'var(--color-success)';
+        renderActions(job);
+        refreshSummary();
+      }
+    } catch (e) {
+      if (current) { current.statusEl.textContent = 'Failed'; current.statusEl.style.color = '#e5484d'; }
+      setErr('Conversion failed: ' + (e as Error).message);
+    } finally {
+      current = null;
+      goBtn.disabled = false; clearBtn.disabled = false;
+    }
+  }
+
+  function renderActions(job: Job) {
+    job.actionsEl.replaceChildren();
+    const dl = document.createElement('button');
+    dl.className = 'btn btn-secondary';
+    dl.style.minHeight = '28px'; dl.style.padding = '2px 10px'; dl.style.fontSize = '12px';
+    dl.textContent = 'Download';
+    dl.addEventListener('click', () => job.outData && download(job.outData, job.outName!));
+    job.actionsEl.appendChild(dl);
+    // Inline preview toggle (audio player for the converted MP3).
+    const pv = document.createElement('button');
+    pv.className = 'btn btn-tertiary';
+    pv.style.minHeight = '28px'; pv.style.padding = '2px 10px'; pv.style.fontSize = '12px';
+    pv.textContent = 'Preview';
+    let shown = false;
+    let holder: HTMLElement | null = null;
+    pv.addEventListener('click', () => {
+      if (shown) { holder?.remove(); holder = null; shown = false; pv.textContent = 'Preview'; return; }
+      const blob = new Blob([job.outData as BlobPart], { type: MIME });
+      job.outUrl && URL.revokeObjectURL(job.outUrl);
+      job.outUrl = URL.createObjectURL(blob);
+      holder = document.createElement('div');
+      holder.className = 'mt-1';
+      holder.innerHTML = `<audio src="${job.outUrl}" controls class="w-full"></audio>`;
+      job.row.appendChild(holder);
+      shown = true; pv.textContent = 'Hide';
+    });
+    job.actionsEl.appendChild(pv);
+  }
+
+  zipBtn.addEventListener('click', () => {
+    const done = jobs.filter((j) => j.done && j.outData);
+    if (!done.length) return;
+    const zip = makeZip(done.map((j) => ({ name: j.outName!, data: j.outData! })));
+    const url = URL.createObjectURL(zip);
+    const a = document.createElement('a'); a.href = url; a.download = 'wav-to-mp3-output.zip'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  });
+
+  clearBtn.addEventListener('click', () => {
+    jobs.forEach((j) => { j.outUrl && URL.revokeObjectURL(j.outUrl); j.row.remove(); });
+    jobs = []; refreshSummary();
+    panel.classList.add('hidden'); panel.classList.remove('flex');
+    fileInput.value = '';
+  });
+
+  fileInput.addEventListener('change', () => fileInput.files && addFiles(fileInput.files));
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files; if (f?.length) addFiles(f); });
+  goBtn.addEventListener('click', convertAll);
+</script>

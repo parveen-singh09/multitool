@@ -73,6 +73,52 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <span class="text-sm text-ink-subtle">Around the world</span>
       <div id="ts-world" class="grid grid-cols-1 gap-2 sm:grid-cols-2"></div>
     </div>
+
+    <!-- Code snippets -->
+    <div class="flex flex-col gap-2">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle" for="ts-lang">
+          Code snippet
+          <select id="ts-lang" class="field w-full sm:w-56">
+            <option value="javascript">JavaScript</option>
+            <option value="python">Python</option>
+            <option value="java">Java</option>
+            <option value="php">PHP</option>
+            <option value="go">Go</option>
+            <option value="ruby">Ruby</option>
+            <option value="csharp">C#</option>
+            <option value="sql">SQL (PostgreSQL)</option>
+            <option value="bash">Bash</option>
+            <option value="powershell">PowerShell</option>
+          </select>
+        </label>
+        <button id="ts-code-copy" type="button" class="btn btn-secondary">Copy snippet</button>
+      </div>
+      <pre class="hl-block field" style="margin:0;overflow:auto;white-space:pre"><code id="ts-code" class="hljs" style="background:transparent;padding:0"></code></pre>
+    </div>
+
+    <!-- Batch conversion -->
+    <div class="flex flex-col gap-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle" for="ts-batch-in">
+        Batch convert — one timestamp or date per line
+        <textarea
+          id="ts-batch-in"
+          class="field font-mono"
+          style="height:9rem;resize:vertical"
+          spellcheck="false"
+          autocomplete="off"
+          placeholder="1700000000&#10;1699999999000&#10;2026-07-04 14:30&#10;Jul 4 2026"
+        ></textarea>
+      </label>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <span id="ts-batch-stat" class="text-[12px] text-ink-tertiary"></span>
+        <div class="flex gap-2">
+          <button id="ts-batch-copy" type="button" class="btn btn-secondary">Copy TSV</button>
+          <button id="ts-batch-dl" type="button" class="btn btn-secondary">Download CSV</button>
+        </div>
+      </div>
+      <div id="ts-batch-out" class="overflow-auto rounded-md border border-hairline"></div>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -85,13 +131,23 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       time, the raw Unix value, the ISO week, quarter and day of year, plus a
       fully customisable format string. A live clock shows the current Unix time,
       the same moment is displayed across major world timezones, and any converted
-      moment is linkable via the URL. Click any row to copy it. Everything is
-      calculated in your browser — nothing is uploaded.
+      moment is linkable via the URL. Click any row to copy it.
+    </p>
+    <p>
+      Ready-to-paste code snippets show how to parse the same timestamp in
+      JavaScript, Python, Java, PHP, Go, Ruby, C#, SQL, Bash and PowerShell, each
+      syntax-highlighted. A batch converter turns a whole list of timestamps or
+      dates — one per line — into a table of Unix seconds, milliseconds, ISO 8601
+      and your chosen timezone, which you can copy as TSV or download as CSV.
+      Both ISO 8601 in UTC and ISO 8601 with the selected zone's offset (RFC 3339)
+      are included. Everything is calculated in your browser — nothing is uploaded.
     </p>
   </div>
 </ToolLayout>
 
 <script>
+  import { hl } from '../../lib/highlight';
+
   const nowEl = document.getElementById('ts-now')!;
   const nowMsEl = document.getElementById('ts-now-ms')!;
   const input = document.getElementById('ts-in') as HTMLInputElement;
@@ -102,6 +158,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const fmtIn = document.getElementById('ts-fmt') as HTMLInputElement;
   const fmtOut = document.getElementById('ts-fmt-out')!;
   const world = document.getElementById('ts-world')!;
+  const langSel = document.getElementById('ts-lang') as HTMLSelectElement;
+  const codeEl = document.getElementById('ts-code')!;
+  const codeCopy = document.getElementById('ts-code-copy')!;
+  const batchIn = document.getElementById('ts-batch-in') as HTMLTextAreaElement;
+  const batchOut = document.getElementById('ts-batch-out')!;
+  const batchStat = document.getElementById('ts-batch-stat')!;
+  const batchCopy = document.getElementById('ts-batch-copy')!;
+  const batchDl = document.getElementById('ts-batch-dl')!;
 
   const p2 = (n: number) => String(n).padStart(2, '0');
   const p3 = (n: number) => String(n).padStart(3, '0');
@@ -256,6 +320,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return `${p.weekdayShort}, ${p2(p.day)} ${p.monthShort} ${p.year} ${p2(p.hour)}:${p2(p.minute)}:${p2(p.second)} ${p.offset.replace(':', '')}`;
   }
 
+  // ISO 8601 / RFC 3339 in the selected zone's wall-clock time with its offset.
+  function rfc3339(p: Parts): string {
+    return `${p.year}-${p2(p.month)}-${p2(p.day)}T${p2(p.hour)}:${p2(p.minute)}:${p2(p.second)}${p.offset}`;
+  }
+
   function relative(date: Date): string {
     const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
     const diff = date.getTime() - Date.now();
@@ -270,6 +339,103 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       }
     }
     return 'now';
+  }
+
+  // ---- Code snippets ----
+  // Given a moment, emit an idiomatic "parse this Unix timestamp" snippet per language.
+  function codeSnippet(lang: string, secs: number): string {
+    const ms = secs * 1000;
+    switch (lang) {
+      case 'javascript':
+        return `// ${secs} = Unix seconds\nconst d = new Date(${secs} * 1000);\nconsole.log(d.toISOString());`;
+      case 'python':
+        return `from datetime import datetime, timezone\n\nd = datetime.fromtimestamp(${secs}, tz=timezone.utc)\nprint(d.isoformat())`;
+      case 'java':
+        return `import java.time.Instant;\n\nInstant d = Instant.ofEpochSecond(${secs}L);\nSystem.out.println(d);`;
+      case 'php':
+        return `<?php\n$d = (new DateTime("@${secs}"))->setTimezone(new DateTimeZone("UTC"));\necho $d->format(DateTime::ATOM);`;
+      case 'go':
+        return `package main\n\nimport (\n\t"fmt"\n\t"time"\n)\n\nfunc main() {\n\td := time.Unix(${secs}, 0).UTC()\n\tfmt.Println(d.Format(time.RFC3339))\n}`;
+      case 'ruby':
+        return `require 'time'\n\nd = Time.at(${secs}).utc\nputs d.iso8601`;
+      case 'csharp':
+        return `using System;\n\nvar d = DateTimeOffset.FromUnixTimeSeconds(${secs}L).UtcDateTime;\nConsole.WriteLine(d.ToString("o"));`;
+      case 'sql':
+        return `-- PostgreSQL\nSELECT to_timestamp(${secs}) AT TIME ZONE 'UTC';`;
+      case 'bash':
+        return `date -u -d @${secs} +"%Y-%m-%dT%H:%M:%SZ"\n# macOS/BSD: date -u -r ${secs} +"%Y-%m-%dT%H:%M:%SZ"`;
+      case 'powershell':
+        return `$d = [DateTimeOffset]::FromUnixTimeSeconds(${secs}).UtcDateTime\n$d.ToString("o")`;
+      default:
+        return `new Date(${ms})`;
+    }
+  }
+
+  async function renderCode() {
+    if (!current) { codeEl.textContent = ''; return; }
+    const secs = Math.floor(current.getTime() / 1000);
+    const lang = langSel.value;
+    await hl(codeEl, codeSnippet(lang, secs), lang);
+  }
+
+  // ---- Batch conversion ----
+  function renderBatch() {
+    const lines = batchIn.value.split('\n');
+    const rows: { input: string; res: Parse }[] = [];
+    let ok = 0;
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      const res = parseInput(line);
+      if (res) ok++;
+      rows.push({ input: line.trim(), res });
+    }
+    if (!rows.length) {
+      batchOut.innerHTML = '';
+      batchStat.textContent = '';
+      return;
+    }
+    const tz = selectedZone();
+    const cell = (s: string) =>
+      `<td class="px-3 py-2 font-mono text-ink break-all">${s.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</td>`;
+    const body = rows.map(({ input, res }) => {
+      if (!res) {
+        return `<tr class="border-t border-hairline">${cell(input)}<td class="px-3 py-2 text-[13px]" style="color:#e5484d" colspan="4">Could not parse</td></tr>`;
+      }
+      const p = partsInZone(res.date, tz);
+      const secs = Math.floor(res.date.getTime() / 1000);
+      return `<tr class="border-t border-hairline">${cell(input)}${cell(String(secs))}${cell(String(res.date.getTime()))}${cell(res.date.toISOString())}${cell(`${p.weekdayShort}, ${p.monthName} ${p.day}, ${p.year} ${p2(p.hour)}:${p2(p.minute)}:${p2(p.second)}`)}</tr>`;
+    }).join('');
+    batchOut.innerHTML = `<table class="w-full text-[13px]">
+      <thead><tr class="text-left text-ink-subtle">
+        <th class="px-3 py-2 font-medium">Input</th>
+        <th class="px-3 py-2 font-medium">Unix s</th>
+        <th class="px-3 py-2 font-medium">Unix ms</th>
+        <th class="px-3 py-2 font-medium">ISO 8601</th>
+        <th class="px-3 py-2 font-medium">${tz}</th>
+      </tr></thead>
+      <tbody>${body}</tbody>
+    </table>`;
+    batchStat.textContent = `${ok} of ${rows.length} parsed`;
+  }
+
+  // Build batch export rows (used for both TSV copy and CSV download).
+  function batchRows(): string[][] {
+    const tz = selectedZone();
+    const out: string[][] = [['input', 'unix_seconds', 'unix_ms', 'iso8601', tz]];
+    for (const line of batchIn.value.split('\n')) {
+      if (!line.trim()) continue;
+      const res = parseInput(line);
+      if (!res) { out.push([line.trim(), '', '', '', 'PARSE_ERROR']); continue; }
+      const p = partsInZone(res.date, tz);
+      out.push([
+        line.trim(),
+        String(Math.floor(res.date.getTime() / 1000)),
+        String(res.date.getTime()),
+        res.date.toISOString(),
+        `${p.year}-${p2(p.month)}-${p2(p.day)} ${p2(p.hour)}:${p2(p.minute)}:${p2(p.second)}`,
+      ]);
+    }
+    return out;
   }
 
   // ---- State ----
@@ -293,6 +459,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       out.innerHTML = '';
       fmtOut.textContent = '';
       world.innerHTML = '';
+      codeEl.textContent = '';
       parsed.textContent = '';
       err.classList.toggle('hidden', !input.value.trim());
       syncUrl();
@@ -312,7 +479,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     out.innerHTML = `<table class="w-full text-[13px]">
       ${row(zoneLabel, `${p.weekdayName}, ${p.monthName} ${p.day}, ${p.year} ${p2(p.hour)}:${p2(p.minute)}:${p2(p.second)}`)}
       ${row('UTC / GMT', res.date.toUTCString())}
-      ${row('ISO 8601', res.date.toISOString())}
+      ${row('ISO 8601 (UTC)', res.date.toISOString())}
+      ${row('ISO 8601 (local offset)', rfc3339(p))}
       ${row('RFC 2822', rfc2822(p))}
       ${row('Relative', relative(res.date))}
       ${row('Unix seconds', String(secs))}
@@ -326,6 +494,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     renderFmt(p);
     renderWorld(res.date);
+    void renderCode();
     syncUrl();
   }
 
@@ -411,7 +580,29 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   // ---- Wire events ----
   input.addEventListener('input', render);
-  tzSel.addEventListener('change', render);
+  tzSel.addEventListener('change', () => { render(); renderBatch(); });
+  langSel.addEventListener('change', () => { void renderCode(); });
+  codeCopy.addEventListener('click', (e) => {
+    if (codeEl.textContent) copyText(e.currentTarget as HTMLElement, codeEl.textContent);
+  });
+
+  batchIn.addEventListener('input', renderBatch);
+  batchCopy.addEventListener('click', (e) => {
+    const tsv = batchRows().map((r) => r.join('\t')).join('\n');
+    if (tsv) copyText(e.currentTarget as HTMLElement, tsv);
+  });
+  batchDl.addEventListener('click', () => {
+    const rows = batchRows();
+    if (rows.length <= 1) return;
+    // CSV-quote every field (values may contain commas/quotes from date formats).
+    const csv = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'timestamps.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
   fmtIn.addEventListener('input', () => {
     if (current) renderFmt(partsInZone(current, selectedZone()));
   });

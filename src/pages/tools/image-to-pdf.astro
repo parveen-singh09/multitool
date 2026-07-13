@@ -7,8 +7,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <label id="ip-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
       <span class="text-sm text-ink">Choose images or drop them here</span>
-      <span class="text-[13px] text-ink-tertiary">JPG &amp; PNG · combined into one PDF in your browser — never uploaded</span>
-      <input id="ip-file" type="file" accept="image/jpeg,image/png" multiple class="sr-only" />
+      <span class="text-[13px] text-ink-tertiary">JPG · PNG · WebP · GIF · BMP — combined into one PDF in your browser, never uploaded</span>
+      <input id="ip-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/bmp,image/*" multiple class="sr-only" />
     </label>
 
     <div id="ip-panel" class="hidden flex-col gap-4">
@@ -26,28 +26,70 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
             <option value="landscape">Landscape</option>
           </select>
         </label>
-        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Margin (pt)
-          <input id="ip-margin" type="number" class="field w-24" value="0" min="0" max="100" />
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Image fit
+          <select id="ip-fit" class="field w-36">
+            <option value="contain">Fit (no crop)</option>
+            <option value="cover">Fill page (crop)</option>
+            <option value="stretch">Stretch</option>
+          </select>
         </label>
-        <button id="ip-make" class="btn btn-primary">Create PDF</button>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Margin (pt)
+          <input id="ip-margin" type="number" class="field w-24" value="0" min="0" max="200" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">File name
+          <input id="ip-name" type="text" class="field w-44" value="images" placeholder="images" />
+        </label>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-4">
+        <label class="flex cursor-pointer items-center gap-2 text-sm text-ink-subtle">
+          <input id="ip-compress" type="checkbox" class="accent-[#5e6ad2]" />
+          Compress (JPEG)
+        </label>
+        <label id="ip-quality-wrap" class="hidden items-center gap-2 text-[13px] text-ink-subtle">
+          Quality
+          <input id="ip-quality" type="range" min="30" max="100" step="5" value="85" class="accent-[#5e6ad2]" />
+          <span id="ip-quality-val" class="w-9 tabular-nums text-ink-subtle">85%</span>
+        </label>
+        <label class="flex cursor-pointer items-center gap-2 text-sm text-ink-subtle">
+          <input id="ip-rotate" type="checkbox" class="accent-[#5e6ad2]" checked />
+          Auto-rotate (EXIF)
+        </label>
+        <button id="ip-make" class="btn btn-primary ml-auto">Create PDF</button>
       </div>
 
       <div>
-        <span class="text-[13px] text-ink-subtle"><span id="ip-count">0</span> image(s) — drag to reorder</span>
+        <div class="flex flex-wrap items-center gap-3">
+          <span class="text-[13px] text-ink-subtle"><span id="ip-count">0</span> image(s) — drag to reorder</span>
+          <span class="flex-1"></span>
+          <button id="ip-sort" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Sort A–Z</button>
+          <button id="ip-reverse" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Reverse</button>
+          <button id="ip-clear" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Clear all</button>
+        </div>
         <ul id="ip-list" class="mt-2 flex flex-col gap-2"></ul>
       </div>
     </div>
     <p id="ip-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
-    <p id="ip-status" class="hidden text-[13px] text-ink-subtle"></p>
+    <p id="ip-status" class="hidden text-[13px] text-ink-subtle" aria-live="polite"></p>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free image to PDF converter combines your JPG and PNG images into a
-      single PDF document. Add several images, reorder them by dragging, choose a
-      page size (A4, Letter, or fit-to-image) and margin, then download the PDF.
+      This free image to PDF converter combines your JPG, PNG, WebP, GIF, and BMP
+      images into a single PDF document. Add several images, reorder them by
+      dragging (or sort A–Z / reverse), choose a page size (A4, Letter, or
+      fit-to-image), an image fit mode, and a margin, then download the PDF.
       Everything is assembled in your browser using an in-page PDF engine, so
       your images are never uploaded to a server.
+    </p>
+    <p>
+      Extra controls let you go beyond the basics: turn on Compress to re-encode
+      photos as JPEG at a quality you choose for a smaller file, keep Auto-rotate
+      on so photos taken on a phone land the right way up (using their EXIF
+      orientation), and pick Fill or Stretch when you want the image to cover the
+      whole page instead of fitting inside it. Unsupported formats like WebP, GIF
+      (first frame), and BMP are converted losslessly to PNG before being placed,
+      so no quality is lost unless you opt into compression.
     </p>
   </div>
 </ToolLayout>
@@ -66,6 +108,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const countEl = document.getElementById('ip-count')!;
   const err = document.getElementById('ip-error')!;
   const status = document.getElementById('ip-status')!;
+  const compressEl = document.getElementById('ip-compress') as HTMLInputElement;
+  const qualityWrap = document.getElementById('ip-quality-wrap')!;
+  const qualityEl = document.getElementById('ip-quality') as HTMLInputElement;
+  const qualityVal = document.getElementById('ip-quality-val')!;
+  const rotateEl = document.getElementById('ip-rotate') as HTMLInputElement;
 
   interface Item { file: File; url: string; }
   let items: Item[] = [];
@@ -73,12 +120,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   const PAGE = { a4: [595.28, 841.89], letter: [612, 792] } as const;
   function setErr(m: string) { err.textContent = m; err.classList.toggle('hidden', !m); }
+  const ACCEPTED = /^image\/(jpeg|png|webp|gif|bmp)$/;
 
   function addFiles(files: FileList | File[]) {
-    for (const f of Array.from(files)) {
-      if (f.type === 'image/jpeg' || f.type === 'image/png') items.push({ file: f, url: URL.createObjectURL(f) });
+    const arr = Array.from(files);
+    const rejected = arr.filter((f) => !ACCEPTED.test(f.type)).map((f) => f.name);
+    for (const f of arr) {
+      if (ACCEPTED.test(f.type)) items.push({ file: f, url: URL.createObjectURL(f) });
     }
     if (items.length) { panel.classList.remove('hidden'); panel.classList.add('flex'); }
+    setErr(rejected.length ? `Skipped unsupported file(s): ${rejected.join(', ')}. Use JPG, PNG, WebP, GIF, or BMP.` : '');
     render();
   }
 
@@ -93,8 +144,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <span class="cursor-grab text-ink-tertiary">⋮⋮</span>
         <img src="${it.url}" class="h-12 w-12 rounded-sm object-cover" alt="" />
         <span class="flex-1 truncate text-[13px] text-ink-subtle">${it.file.name}</span>
+        <span class="text-[12px] text-ink-tertiary tabular-nums">${(it.file.size / 1024).toFixed(0)} KB</span>
         <button type="button" class="btn btn-tertiary px-2 py-1 text-[13px]" aria-label="Remove">✕</button>`;
-      li.querySelector('button')!.addEventListener('click', () => { URL.revokeObjectURL(it.url); items.splice(i, 1); render(); });
+      li.querySelector('button')!.addEventListener('click', () => { URL.revokeObjectURL(it.url); items.splice(i, 1); if (!items.length) { panel.classList.add('hidden'); panel.classList.remove('flex'); } render(); });
       li.addEventListener('dragstart', () => { dragIdx = i; });
       li.addEventListener('dragover', (e) => e.preventDefault());
       li.addEventListener('drop', (e) => {
@@ -108,6 +160,31 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     });
   }
 
+  // Returns bytes ready to embed. Direct-embeds JPG/PNG (best fidelity, smallest)
+  // unless conversion is needed (webp/gif/bmp), compression is on, or auto-rotate
+  // must bake in EXIF orientation. ponytail: first frame only for animated GIF.
+  async function rasterize(file: File, compress: boolean, quality: number, rotate: boolean):
+    Promise<{ bytes: ArrayBuffer; type: 'png' | 'jpg' }> {
+    const isJpg = file.type === 'image/jpeg';
+    const isPng = file.type === 'image/png';
+    const needConv = !isJpg && !isPng;
+    // Fast path: no re-encode required.
+    if (!needConv && !compress && !(rotate && isJpg)) {
+      return { bytes: await file.arrayBuffer(), type: isPng ? 'png' : 'jpg' };
+    }
+    const bmp = await createImageBitmap(file, rotate ? { imageOrientation: 'from-image' } : {});
+    const canvas = document.createElement('canvas');
+    canvas.width = bmp.width; canvas.height = bmp.height;
+    const ctx = canvas.getContext('2d')!;
+    const asJpeg = compress || isJpg; // keep JPEGs as JPEG; PNG/others stay lossless PNG unless compressing
+    if (asJpeg) { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height); } // flatten transparency
+    ctx.drawImage(bmp, 0, 0);
+    if (typeof bmp.close === 'function') bmp.close();
+    const blob: Blob = await new Promise((res, rej) =>
+      canvas.toBlob((b) => (b ? res(b) : rej(new Error('encode failed'))), asJpeg ? 'image/jpeg' : 'image/png', asJpeg ? quality : undefined));
+    return { bytes: await blob.arrayBuffer(), type: asJpeg ? 'jpg' : 'png' };
+  }
+
   async function build() {
     if (!items.length) { setErr('Add at least one image.'); return; }
     setErr('');
@@ -116,23 +193,36 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const pdf = await PDFDocument.create();
       const sizeMode = (document.getElementById('ip-size') as HTMLSelectElement).value;
       const landscape = (document.getElementById('ip-orient') as HTMLSelectElement).value === 'landscape';
-      const margin = Number((document.getElementById('ip-margin') as HTMLInputElement).value) || 0;
+      const fitMode = (document.getElementById('ip-fit') as HTMLSelectElement).value;
+      const margin = Math.max(0, Number((document.getElementById('ip-margin') as HTMLInputElement).value) || 0);
+      const compress = compressEl.checked;
+      const quality = Number(qualityEl.value) / 100;
+      const rotate = rotateEl.checked;
 
-      for (const it of items) {
-        const bytes = await it.file.arrayBuffer();
-        const img = it.file.type === 'image/png' ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes);
+      for (let i = 0; i < items.length; i++) {
+        status.textContent = `Building PDF… (${i + 1}/${items.length})`;
+        const { bytes, type } = await rasterize(items[i].file, compress, quality, rotate);
+        const img = type === 'png' ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes);
         let pw: number, ph: number;
         if (sizeMode === 'fit') { pw = img.width + margin * 2; ph = img.height + margin * 2; }
         else { let [w, h] = PAGE[sizeMode as 'a4' | 'letter']; if (landscape) [w, h] = [h, w]; pw = w; ph = h; }
         const page = pdf.addPage([pw, ph]);
         const availW = pw - margin * 2, availH = ph - margin * 2;
-        const scale = Math.min(availW / img.width, availH / img.height);
-        const dw = img.width * scale, dh = img.height * scale;
+        let dw: number, dh: number;
+        if (fitMode === 'stretch') { dw = availW; dh = availH; }
+        else {
+          const scale = fitMode === 'cover'
+            ? Math.max(availW / img.width, availH / img.height)
+            : Math.min(availW / img.width, availH / img.height);
+          dw = img.width * scale; dh = img.height * scale;
+        }
         page.drawImage(img, { x: (pw - dw) / 2, y: (ph - dh) / 2, width: dw, height: dh });
       }
       const out = await pdf.save();
       const blob = new Blob([out], { type: 'application/pdf' });
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'images.pdf'; a.click();
+      let name = ((document.getElementById('ip-name') as HTMLInputElement).value || 'images').trim().replace(/[\\/:*?"<>|]+/g, '_');
+      if (!/\.pdf$/i.test(name)) name += '.pdf';
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
       status.textContent = `Done — ${items.length} page(s), ${(blob.size / 1024).toFixed(0)} KB.`;
     } catch (e) {
       status.classList.add('hidden');
@@ -140,9 +230,22 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }
   }
 
+  function clearAll() {
+    items.forEach((it) => URL.revokeObjectURL(it.url));
+    items = [];
+    panel.classList.add('hidden'); panel.classList.remove('flex');
+    setErr(''); status.classList.add('hidden');
+    render();
+  }
+
   fileInput.addEventListener('change', () => fileInput.files && addFiles(fileInput.files));
   ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
   ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
   drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files; if (f) addFiles(f); });
   document.getElementById('ip-make')!.addEventListener('click', build);
+  document.getElementById('ip-sort')!.addEventListener('click', () => { items.sort((a, b) => a.file.name.localeCompare(b.file.name, undefined, { numeric: true })); render(); });
+  document.getElementById('ip-reverse')!.addEventListener('click', () => { items.reverse(); render(); });
+  document.getElementById('ip-clear')!.addEventListener('click', clearAll);
+  compressEl.addEventListener('change', () => { qualityWrap.classList.toggle('hidden', !compressEl.checked); qualityWrap.classList.toggle('flex', compressEl.checked); });
+  qualityEl.addEventListener('input', () => { qualityVal.textContent = qualityEl.value + '%'; });
 </script>

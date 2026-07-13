@@ -9,6 +9,23 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         Root type name
         <input id="jt-name" class="field w-40 font-mono" value="Root" spellcheck="false" autocomplete="off" />
       </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Interface prefix
+        <input id="jt-prefix" class="field w-28 font-mono" value="" placeholder="e.g. I" spellcheck="false" autocomplete="off" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Indent
+        <select id="jt-indent" class="field w-auto py-1">
+          <option value="2" selected>2 spaces</option>
+          <option value="4">4 spaces</option>
+          <option value="tab">Tab</option>
+        </select>
+      </label>
+    </div>
+    <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="jt-export" type="checkbox" class="accent-[#5e6ad2]" checked /> <code>export</code> declarations
+      </label>
       <label class="flex items-center gap-2 text-sm text-ink-subtle">
         <input id="jt-alias" type="checkbox" class="accent-[#5e6ad2]" /> Type aliases instead of interfaces
       </label>
@@ -21,21 +38,41 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <label class="flex items-center gap-2 text-sm text-ink-subtle">
         <input id="jt-readonly" type="checkbox" class="accent-[#5e6ad2]" /> <code>readonly</code> properties
       </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="jt-dates" type="checkbox" class="accent-[#5e6ad2]" /> ISO strings as <code>Date</code>
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="jt-enums" type="checkbox" class="accent-[#5e6ad2]" /> Infer string enums
+      </label>
     </div>
 
     <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-        <span class="flex h-8 items-center">JSON input</span>
-        <div class="relative h-[19rem]">
-          <pre id="jt-in-hl" aria-hidden="true" class="field border-transparent absolute inset-0 m-0 overflow-auto whitespace-pre-wrap break-words pointer-events-none font-mono text-[13px] leading-[1.5]"></pre>
-          <textarea id="jt-in" class="field absolute inset-0 m-0 h-full resize-none overflow-auto whitespace-pre-wrap break-words bg-transparent font-mono text-[13px] leading-[1.5]" style="color:transparent;caret-color:var(--color-ink)" spellcheck="false" autocomplete="off"></textarea>
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        <span class="flex items-center justify-between">
+          <span>JSON input</span>
+          <span class="flex gap-2">
+            <button id="jt-open" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Open file</button>
+            <button id="jt-clear" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Clear</button>
+          </span>
+        </span>
+        <div id="jt-drop" class="hl-edit field p-0" style="height:22rem;overflow:hidden">
+          <pre class="hl-block" aria-hidden="true"><code id="jt-in-hl" class="hljs" style="background:transparent"></code></pre>
+          <textarea id="jt-in" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
         </div>
-      </label>
-      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
-        <span class="flex h-8 items-center justify-between">TypeScript definitions <button id="jt-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button></span>
-        <pre id="jt-out" class="field m-0 h-[19rem] overflow-auto whitespace-pre font-mono text-[13px] leading-[1.5]" aria-live="polite"></pre>
-      </label>
+        <input id="jt-file" type="file" accept=".json,application/json,text/plain" class="hidden" />
+      </div>
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        <span class="flex items-center justify-between">
+          <span>TypeScript definitions</span>
+          <span class="flex gap-2">
+            <button id="jt-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button>
+            <button id="jt-download" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Download</button>
+          </span>
+        </span>
+        <pre class="hl-block field" style="height:22rem;margin:0;overflow:auto;white-space:pre"><code id="jt-out" class="hljs" style="background:transparent;padding:0" aria-live="polite"></code></pre>
+      </div>
     </div>
+    <p id="jt-stats" class="text-[13px] text-ink-tertiary"></p>
     <p id="jt-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
   </div>
 
@@ -47,112 +84,55 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       shapes of every object in an array</strong> into one interface, marking
       fields that are missing from some elements as optional, and it
       <strong>reuses identical interfaces</strong> instead of emitting duplicates.
-      Choose between <code>interface</code> and <code>type</code> output, mark all
-      fields optional, and prefer <code>| null</code> over optional <code>?</code>.
       Paste a real API response and get typed models in seconds — everything runs
-      in your browser.
+      in your browser and nothing is uploaded to a server.
+    </p>
+    <p>
+      Tune the output to match your codebase: choose between <code>interface</code>
+      and <code>type</code>, add <code>export</code> declarations, prefix names
+      (e.g. <code>I</code> for <code>IUser</code>), pick your indent, mark every
+      field optional, prefer <code>| null</code> over the optional <code>?</code>,
+      or emit <code>readonly</code> properties. Turn on <strong>ISO date
+      detection</strong> to type timestamp strings as <code>Date</code>, and
+      <strong>string-enum inference</strong> to collapse a small, repeating set of
+      string values (like a <code>status</code> field) into a literal union such
+      as <code>"active" | "archived"</code>.
+    </p>
+    <p>
+      Both panes are syntax-highlighted as you type, invalid JSON is flagged
+      inline with the parser's own message, and you can open or drag in a
+      <code>.json</code> file, then copy or download the generated
+      <code>.ts</code> definitions.
     </p>
   </div>
 </ToolLayout>
 
 <script>
+  import { hl, wireInput } from '../../lib/highlight';
+
   const input = document.getElementById('jt-in') as HTMLTextAreaElement;
-  const inputHl = document.getElementById('jt-in-hl') as HTMLPreElement;
-  const output = document.getElementById('jt-out') as HTMLPreElement;
+  const inHl = document.getElementById('jt-in-hl') as HTMLElement;
+  const output = document.getElementById('jt-out') as HTMLElement;
   const nameEl = document.getElementById('jt-name') as HTMLInputElement;
+  const prefixEl = document.getElementById('jt-prefix') as HTMLInputElement;
+  const indentEl = document.getElementById('jt-indent') as HTMLSelectElement;
+  const exportEl = document.getElementById('jt-export') as HTMLInputElement;
   const optEl = document.getElementById('jt-optional') as HTMLInputElement;
   const aliasEl = document.getElementById('jt-alias') as HTMLInputElement;
   const nullEl = document.getElementById('jt-nullable') as HTMLInputElement;
   const roEl = document.getElementById('jt-readonly') as HTMLInputElement;
+  const datesEl = document.getElementById('jt-dates') as HTMLInputElement;
+  const enumsEl = document.getElementById('jt-enums') as HTMLInputElement;
+  const statsEl = document.getElementById('jt-stats') as HTMLElement;
   const err = document.getElementById('jt-error')!;
+  const dropEl = document.getElementById('jt-drop') as HTMLElement;
+  const fileEl = document.getElementById('jt-file') as HTMLInputElement;
 
   // name -> body text, in insertion order; deduped by body below
   const interfaces = new Map<string, string>();
+  let rawOutput = '';
 
-  // Plaintext mirror of the highlighted <pre>, for the Copy button.
-  let plain = '';
-
-  // ---- Syntax highlighting (palette shared with the JSON formatter) ----
-  const KEYWORDS = new Set(['interface', 'type', 'readonly', 'extends']);
-  const PRIMITIVES = new Set(['string', 'number', 'boolean', 'any', 'null', 'undefined', 'unknown', 'void']);
-  const COLORS: Record<string, string> = {
-    keyword: '#c99bf0',
-    typeName: 'var(--color-primary-hover)',
-    primitive: '#e0b978',
-    string: '#7fd88f',
-    punct: 'var(--color-ink-subtle)',
-  };
-  const tok = /("(?:[^"\\]|\\.)*")|([A-Za-z_$][\w$]*)|(\s+)|([^\s])/g;
-
-  // Build colored spans via textContent so JSON-derived key names can't inject markup.
-  function highlight(text: string) {
-    output.textContent = '';
-    const frag = document.createDocumentFragment();
-    let m: RegExpExecArray | null;
-    tok.lastIndex = 0;
-    while ((m = tok.exec(text))) {
-      const [, str, ident, ws, punct] = m;
-      if (ws) { frag.appendChild(document.createTextNode(ws)); continue; }
-      let kind: keyof typeof COLORS | null = null;
-      let val = '';
-      if (str) { kind = 'string'; val = str; }
-      else if (ident) {
-        val = ident;
-        kind = KEYWORDS.has(ident) ? 'keyword'
-          : PRIMITIVES.has(ident) ? 'primitive'
-          : /^[A-Z]/.test(ident) ? 'typeName'
-          : null; // property keys / camelCase identifiers: default ink
-      } else { kind = 'punct'; val = punct; }
-      if (kind) {
-        const s = document.createElement('span');
-        s.textContent = val;
-        s.style.color = COLORS[kind];
-        frag.appendChild(s);
-      } else {
-        frag.appendChild(document.createTextNode(val));
-      }
-    }
-    output.appendChild(frag);
-  }
-
-  function render(text: string) { plain = text; highlight(text); }
-
-  // ---- JSON input highlighting (same palette; keys vs strings via lookahead) ----
-  const JCOLORS: Record<string, string> = {
-    key: 'var(--color-primary-hover)',
-    string: '#7fd88f',
-    number: '#e0b978',
-    literal: '#c99bf0',
-    punct: 'var(--color-ink-subtle)',
-  };
-  const jtok = /("(?:[^"\\]|\\.)*")|(-?\d[\d.eE+-]*)|(true|false|null)|(\s+)|([^\s])/g;
-
-  function highlightInput() {
-    const text = input.value;
-    inputHl.textContent = '';
-    const frag = document.createDocumentFragment();
-    let m: RegExpExecArray | null;
-    jtok.lastIndex = 0;
-    while ((m = jtok.exec(text))) {
-      const [, str, num, lit, ws, punct] = m;
-      if (ws) { frag.appendChild(document.createTextNode(ws)); continue; }
-      let kind: keyof typeof JCOLORS, val: string;
-      if (str) {
-        val = str;
-        // A string is a key if the next non-space char is a colon.
-        kind = text.slice(jtok.lastIndex).match(/^\s*:/) ? 'key' : 'string';
-      } else if (num) { kind = 'number'; val = num; }
-      else if (lit) { kind = 'literal'; val = lit; }
-      else { kind = 'punct'; val = punct; }
-      const s = document.createElement('span');
-      s.textContent = val;
-      s.style.color = JCOLORS[kind];
-      frag.appendChild(s);
-    }
-    // Trailing newline so the last line's height is preserved in the <pre>.
-    frag.appendChild(document.createTextNode('\n'));
-    inputHl.appendChild(frag);
-  }
+  const unit = () => (indentEl.value === 'tab' ? '\t' : ' '.repeat(Number(indentEl.value)));
 
   const pascal = (s: string) =>
     (s.replace(/(^\w|[-_ ]\w)/g, (m) => m.replace(/[-_ ]/, '').toUpperCase()).replace(/[^a-zA-Z0-9]/g, '') || 'Type')
@@ -160,9 +140,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const validKey = (k: string) => (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(k) ? k : JSON.stringify(k));
   const singular = (s: string) => s.replace(/ies$/, 'y').replace(/([^s])s$/, '$1') || s;
   const isObj = (v: any) => v !== null && typeof v === 'object' && !Array.isArray(v);
+  // Matches ISO-8601 date and date-time strings (with optional time/zone).
+  const ISO = /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
+  const isDate = (v: any) => datesEl.checked && typeof v === 'string' && ISO.test(v);
 
   function typeOf(val: any, name: string): string {
     if (val === null) return 'null';
+    if (isDate(val)) return 'Date';
     if (Array.isArray(val)) {
       if (!val.length) return 'any[]';
       // If every element is a plain object, merge them into one interface.
@@ -193,17 +177,33 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   type Shape = ReturnType<typeof mergeObjects>;
 
+  // Infer a string-literal union when a key's samples are a small, repeating set
+  // of plain strings (e.g. a status field). Returns null if it doesn't apply.
+  // ponytail: repeat/size heuristic; a real enum detector would need value stats.
+  function enumUnion(vals: any[]): string | null {
+    if (!enumsEl.checked || vals.length < 3) return null;
+    if (!vals.every((v) => typeof v === 'string' && !isDate(v))) return null;
+    const distinct = [...new Set(vals as string[])];
+    if (distinct.length > 12 || distinct.length * 2 > vals.length) return null;
+    return distinct.map((s) => JSON.stringify(s)).join(' | ');
+  }
+
   function bodyOf({ keys, samples, optional }: Shape): string {
+    const ind = unit();
     const lines = keys.map((k) => {
-      const parts = new Set(samples.get(k)!.map((v) => typeOf(v, k)));
-      let t = parts.size === 1 ? [...parts][0] : [...parts].join(' | ');
+      const vals = samples.get(k)!;
+      let t = enumUnion(vals);
+      if (t === null) {
+        const parts = new Set(vals.map((v) => typeOf(v, k)));
+        t = parts.size === 1 ? [...parts][0] : [...parts].join(' | ');
+      }
       const isOpt = optEl.checked || optional.has(k);
       const nullPref = nullEl.checked;
       // With "prefer null": express optionality as `| null` rather than `?`.
       const mark = isOpt && !nullPref ? '?' : '';
-      if (isOpt && nullPref && !parts.has('null')) t += ' | null';
+      if (isOpt && nullPref && !/\bnull\b/.test(t)) t += ' | null';
       const ro = roEl.checked ? 'readonly ' : '';
-      return `  ${ro}${validKey(k)}${mark}: ${t};`;
+      return `${ind}${ro}${validKey(k)}${mark}: ${t};`;
     });
     return `{\n${lines.join('\n')}\n}`;
   }
@@ -214,7 +214,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const body = bodyOf(shape);
     // Reuse an existing interface with an identical body.
     for (const [n, b] of interfaces) if (b === body) return n;
-    let base = pascal(name);
+    const base = pascal(prefixEl.value + pascal(name));
     let typeName = base;
     let i = 2;
     while (interfaces.has(typeName)) typeName = base + i++;
@@ -223,40 +223,85 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   }
 
   function emit(name: string, body: string): string {
-    return aliasEl.checked ? `type ${name} = ${body};` : `interface ${name} ${body}`;
+    const kw = exportEl.checked ? 'export ' : '';
+    return aliasEl.checked ? `${kw}type ${name} = ${body};` : `${kw}interface ${name} ${body}`;
+  }
+
+  async function render(text: string) {
+    rawOutput = text;
+    await hl(output, text, 'typescript');
   }
 
   function run() {
     err.classList.add('hidden');
     interfaces.clear();
     const raw = input.value.trim();
-    if (!raw) { render(''); return; }
+    if (!raw) { render(''); statsEl.textContent = ''; return; }
     let data: any;
     try { data = JSON.parse(raw); }
-    catch (e) { render(''); err.textContent = 'Invalid JSON: ' + (e as Error).message; err.classList.remove('hidden'); return; }
+    catch (e) {
+      render(''); statsEl.textContent = '';
+      err.textContent = 'Invalid JSON: ' + (e as Error).message; err.classList.remove('hidden');
+      return;
+    }
 
     const rootName = pascal(nameEl.value || 'Root');
     if (isObj(data) || (Array.isArray(data) && data.length && data.every(isObj))) {
       typeOf(data, rootName);
       // Root registered last (children recurse first); reverse so it reads top-down.
       render([...interfaces].reverse().map(([n, b]) => emit(n, b)).join('\n\n'));
+      const n = interfaces.size;
+      statsEl.textContent = `${n} ${aliasEl.checked ? 'type' : 'interface'}${n === 1 ? '' : 's'} generated`;
     } else {
       // Scalars, empty/mixed arrays: a single alias is the honest representation.
-      render(`type ${rootName} = ${typeOf(data, rootName)};`);
+      const kw = exportEl.checked ? 'export ' : '';
+      render(`${kw}type ${rootName} = ${typeOf(data, rootName)};`);
+      statsEl.textContent = '1 type generated';
     }
   }
 
-  input.addEventListener('input', () => { highlightInput(); run(); });
-  input.addEventListener('scroll', () => { inputHl.scrollTop = input.scrollTop; inputHl.scrollLeft = input.scrollLeft; });
-  nameEl.addEventListener('input', run);
-  [optEl, aliasEl, nullEl, roEl].forEach((el) => el.addEventListener('change', run));
+  const refresh = wireInput(input, inHl, () => 'json', () => run());
+  [nameEl, prefixEl].forEach((el) => el.addEventListener('input', run));
+  [indentEl, exportEl, optEl, aliasEl, nullEl, roEl, datesEl, enumsEl].forEach((el) => el.addEventListener('change', run));
+
   document.getElementById('jt-copy')!.addEventListener('click', async (e) => {
-    await navigator.clipboard.writeText(plain);
+    if (!rawOutput) return;
+    await navigator.clipboard.writeText(rawOutput);
     const b = e.currentTarget as HTMLButtonElement;
     b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
   });
 
-  input.value = '{\n  "id": 1,\n  "name": "Ada",\n  "active": true,\n  "roles": ["admin", "user"],\n  "profile": {\n    "age": 36,\n    "city": "London"\n  },\n  "posts": [\n    { "title": "Hello", "views": 10 },\n    { "title": "World", "views": 3, "pinned": true }\n  ]\n}';
-  highlightInput();
+  document.getElementById('jt-download')!.addEventListener('click', () => {
+    if (!rawOutput) return;
+    const blob = new Blob([rawOutput], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (pascal(nameEl.value || 'Root').toLowerCase() || 'types') + '.ts';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById('jt-clear')!.addEventListener('click', () => {
+    input.value = ''; rawOutput = ''; output.textContent = ''; statsEl.textContent = '';
+    err.classList.add('hidden');
+    refresh(); run();
+  });
+
+  // File open + drag-drop: read a .json file into the editor.
+  function loadFile(file: File) {
+    file.text().then((text) => { input.value = text; refresh(); run(); });
+  }
+  document.getElementById('jt-open')!.addEventListener('click', () => fileEl.click());
+  fileEl.addEventListener('change', () => { if (fileEl.files?.[0]) loadFile(fileEl.files[0]); });
+  dropEl.addEventListener('dragover', (e) => { e.preventDefault(); });
+  dropEl.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const f = e.dataTransfer?.files?.[0];
+    if (f) loadFile(f);
+  });
+
+  input.value = '{\n  "id": 1,\n  "name": "Ada",\n  "active": true,\n  "createdAt": "2024-01-05T09:30:00Z",\n  "roles": ["admin", "user"],\n  "profile": {\n    "age": 36,\n    "city": "London"\n  },\n  "posts": [\n    { "title": "Hello", "views": 10, "status": "published" },\n    { "title": "World", "views": 3, "pinned": true, "status": "draft" }\n  ]\n}';
+  refresh();
   run();
 </script>

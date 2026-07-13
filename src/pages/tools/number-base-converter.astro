@@ -7,13 +7,20 @@ const baseOptions = Array.from({ length: 35 }, (_, i) => {
   const b = i + 2;
   return { value: b, label: names[b] ? `${b} (${names[b]})` : String(b) };
 });
+// Quick "all bases at once" rows.
+const commonBases = [
+  { base: 2, label: 'Binary' },
+  { base: 8, label: 'Octal' },
+  { base: 10, label: 'Decimal' },
+  { base: 16, label: 'Hex' },
+];
 ---
 
 <ToolLayout slug="number-base-converter">
   <div class="panel flex flex-col gap-4 p-5">
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">
       Enter number
-      <input id="nb-in" type="text" class="field font-mono" placeholder="10" spellcheck="false" autocomplete="off" autocapitalize="off" />
+      <input id="nb-in" type="text" class="field font-mono" placeholder="0xFF, 1010.11, 1_000…" spellcheck="false" autocomplete="off" autocapitalize="off" />
     </label>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -28,6 +35,21 @@ const baseOptions = Array.from({ length: 35 }, (_, i) => {
         <select id="nb-to" class="field">
           {baseOptions.map((o) => <option value={o.value} selected={o.value === 16}>{o.label}</option>)}
         </select>
+      </label>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-ink-subtle">
+      <label class="flex items-center gap-2">
+        <input id="nb-group" type="checkbox" class="h-4 w-4" />
+        Group digits
+      </label>
+      <label class="flex items-center gap-2">
+        <input id="nb-upper" type="checkbox" checked class="h-4 w-4" />
+        Uppercase A–Z
+      </label>
+      <label class="flex items-center gap-2">
+        Fraction digits
+        <input id="nb-prec" type="number" min="0" max="200" value="20" class="field w-20 py-1" />
       </label>
     </div>
 
@@ -47,6 +69,19 @@ const baseOptions = Array.from({ length: 35 }, (_, i) => {
     </div>
 
     <p id="nb-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="flex flex-col gap-2">
+      <span class="eyebrow text-ink-subtle">All bases at once</span>
+      <div class="flex flex-col gap-2">
+        {commonBases.map((c) => (
+          <div class="flex items-center gap-3 rounded-md border px-3 py-2" style="border-color:#23252a">
+            <span class="w-20 shrink-0 text-sm text-ink-subtle">{c.label}</span>
+            <code id={`nb-all-${c.base}`} class="grow break-all font-mono text-sm" style="color:#f7f8f8"></code>
+            <button type="button" class="btn btn-tertiary shrink-0 px-2 py-1 text-[13px]" data-copy-base={c.base}>Copy</button>
+          </div>
+        ))}
+      </div>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -54,13 +89,19 @@ const baseOptions = Array.from({ length: 35 }, (_, i) => {
       This free number base converter translates a number from any base to any
       other base, from binary and octal through decimal, hexadecimal and every
       base in between (2–36). Pick a “from” and “to” base, hit Convert, and copy
-      the result — or use Swap to reverse the direction instantly.
+      the result — or use Swap to reverse the direction instantly. An “all bases
+      at once” panel always shows the value in binary, octal, decimal and hex
+      side by side, each with its own copy button.
     </p>
     <p>
       Unlike most online converters, this one uses arbitrary-precision integers,
       so numbers far larger than 2<sup>53</sup> convert exactly instead of silently
-      rounding. Negative values and leading zeros are supported too, and every
-      conversion runs entirely in your browser.
+      rounding. It also converts <strong>fractional</strong> numbers (for example
+      <code>1010.11</code> in binary) with an adjustable number of fraction
+      digits, and it accepts common prefixes (<code>0x</code>, <code>0b</code>,
+      <code>0o</code>) plus digit separators (spaces, underscores or commas) in
+      the input. Toggle digit grouping and upper/lower case on the output, and
+      every conversion runs entirely in your browser — nothing is uploaded.
     </p>
   </div>
 </ToolLayout>
@@ -71,40 +112,129 @@ const baseOptions = Array.from({ length: 35 }, (_, i) => {
   const to = document.getElementById('nb-to') as HTMLSelectElement;
   const out = document.getElementById('nb-out') as HTMLTextAreaElement;
   const err = document.getElementById('nb-error')!;
+  const groupBox = document.getElementById('nb-group') as HTMLInputElement;
+  const upperBox = document.getElementById('nb-upper') as HTMLInputElement;
+  const precInput = document.getElementById('nb-prec') as HTMLInputElement;
 
-  // Arbitrary-precision parse: BigInt has no radix parser, so build it digit by digit.
-  function parseBig(raw: string, base: number): bigint | null {
-    let s = raw.trim().toLowerCase();
+  type Value = { neg: boolean; int: bigint; fracNum: bigint; fracDen: bigint };
+
+  // Arbitrary-precision parse. BigInt has no radix parser, so build it digit by
+  // digit. Tolerates a sign, a matching 0x/0b/0o prefix, digit separators
+  // (space/underscore/comma) and one fractional point.
+  function parseVal(raw: string, base: number): Value | null {
+    let s = raw.trim().toLowerCase().replace(/[_,\s]/g, '');
     let neg = false;
     if (s[0] === '+' || s[0] === '-') { neg = s[0] === '-'; s = s.slice(1); }
-    if (!s) return null;
+    if (base === 16 && s.startsWith('0x')) s = s.slice(2);
+    else if (base === 2 && s.startsWith('0b')) s = s.slice(2);
+    else if (base === 8 && s.startsWith('0o')) s = s.slice(2);
+    const dot = s.indexOf('.');
+    if (dot >= 0 && s.indexOf('.', dot + 1) !== -1) return null; // more than one point
+    const ip = dot >= 0 ? s.slice(0, dot) : s;
+    const fp = dot >= 0 ? s.slice(dot + 1) : '';
+    if (ip === '' && fp === '') return null;
     const B = BigInt(base);
-    let n = 0n;
-    for (const ch of s) {
+    let int = 0n;
+    for (const ch of ip) {
       const d = parseInt(ch, 36); // 0–35, NaN for non-alphanumerics
       if (isNaN(d) || d >= base) return null;
-      n = n * B + BigInt(d);
+      int = int * B + BigInt(d);
     }
-    return neg ? -n : n;
+    let fracNum = 0n, fracDen = 1n;
+    for (const ch of fp) {
+      const d = parseInt(ch, 36);
+      if (isNaN(d) || d >= base) return null;
+      fracNum = fracNum * B + BigInt(d);
+      fracDen *= B;
+    }
+    if (int === 0n && fracNum === 0n) neg = false; // no "-0"
+    return { neg, int, fracNum, fracDen };
   }
+
+  const DIGITS = '0123456789abcdefghijklmnopqrstuvwxyz';
+
+  // Group a digit string: integer part from the right, fraction from the left.
+  function group(str: string, base: number): string {
+    const size = base === 2 || base === 16 ? 4 : 3;
+    const neg = str[0] === '-';
+    if (neg) str = str.slice(1);
+    const dot = str.indexOf('.');
+    let intp = dot >= 0 ? str.slice(0, dot) : str;
+    let frac = dot >= 0 ? str.slice(dot + 1) : '';
+    let gi = '';
+    for (let k = intp.length - 1, c = 0; k >= 0; k--) {
+      gi = intp[k] + gi;
+      if (++c % size === 0 && k > 0) gi = ' ' + gi;
+    }
+    let gf = '';
+    for (let k = 0; k < frac.length; k++) {
+      if (k > 0 && k % size === 0) gf += ' ';
+      gf += frac[k];
+    }
+    return (neg ? '-' : '') + gi + (dot >= 0 ? '.' + gf : '');
+  }
+
+  function toStr(v: Value, base: number, places: number): string {
+    let s = v.int.toString(base); // BigInt radix output, lowercase, unsigned
+    if (v.fracNum > 0n && places > 0) {
+      const B = BigInt(base);
+      let num = v.fracNum;
+      const den = v.fracDen;
+      let frac = '';
+      for (let i = 0; i < places && num > 0n; i++) {
+        num *= B;
+        frac += DIGITS[Number(num / den)];
+        num %= den;
+      }
+      frac = frac.replace(/0+$/, '');
+      if (frac) s += '.' + frac;
+    }
+    if (upperBox.checked) s = s.toUpperCase();
+    if (v.neg) s = '-' + s;
+    if (groupBox.checked) s = group(s, base);
+    return s;
+  }
+
+  function readPrec(): number {
+    const p = parseInt(precInput.value, 10);
+    if (isNaN(p) || p < 0) return 0;
+    return Math.min(p, 200);
+  }
+
+  let lastValue: Value | null = null;
 
   function convert() {
     err.classList.add('hidden');
     const raw = input.value.trim();
-    if (!raw) { out.value = ''; return; }
-    const n = parseBig(raw, Number(from.value));
-    if (n === null) {
+    if (!raw) {
       out.value = '';
-      err.textContent = `“${raw}” is not a valid base-${from.value} number.`;
-      err.classList.remove('hidden');
+      lastValue = null;
+      for (const c of [2, 8, 10, 16]) document.getElementById(`nb-all-${c}`)!.textContent = '';
       return;
     }
-    out.value = n.toString(Number(to.value));
+    const v = parseVal(raw, Number(from.value));
+    if (v === null) {
+      out.value = '';
+      lastValue = null;
+      err.textContent = `“${raw}” is not a valid base-${from.value} number.`;
+      err.classList.remove('hidden');
+      for (const c of [2, 8, 10, 16]) document.getElementById(`nb-all-${c}`)!.textContent = '';
+      return;
+    }
+    lastValue = v;
+    const prec = readPrec();
+    out.value = toStr(v, Number(to.value), prec);
+    for (const c of [2, 8, 10, 16]) {
+      document.getElementById(`nb-all-${c}`)!.textContent = toStr(v, c, prec);
+    }
   }
 
   input.addEventListener('input', convert);
   from.addEventListener('change', convert);
   to.addEventListener('change', convert);
+  groupBox.addEventListener('change', convert);
+  upperBox.addEventListener('change', convert);
+  precInput.addEventListener('input', convert);
   document.getElementById('nb-convert')!.addEventListener('click', convert);
 
   document.getElementById('nb-reset')!.addEventListener('click', () => {
@@ -113,6 +243,7 @@ const baseOptions = Array.from({ length: 35 }, (_, i) => {
     from.value = '10';
     to.value = '16';
     err.classList.add('hidden');
+    convert();
     input.focus();
   });
 
@@ -129,4 +260,35 @@ const baseOptions = Array.from({ length: 35 }, (_, i) => {
     copyBtn.textContent = 'Copied!';
     setTimeout(() => (copyBtn.textContent = 'Copy'), 1200);
   });
+
+  // Per-row copy for the all-bases panel.
+  document.querySelectorAll<HTMLButtonElement>('[data-copy-base]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const el = document.getElementById(`nb-all-${btn.dataset.copyBase}`)!;
+      const text = el.textContent ?? '';
+      if (!text) return;
+      await navigator.clipboard.writeText(text);
+      btn.textContent = 'Copied!';
+      setTimeout(() => (btn.textContent = 'Copy'), 1200);
+    });
+  });
+
+  // ponytail: one runnable check for the parse/convert core, DEV-only so it
+  // never runs in users' browsers. Fails loudly in the console if logic breaks.
+  if (import.meta.env.DEV) {
+    const t = (raw: string, fb: number, tb: number, exp: string) => {
+      const v = parseVal(raw, fb)!;
+      console.assert(v && toStr(v, tb, 20) === exp, `nbc: ${raw}(b${fb})→b${tb} expected ${exp}, got ${v ? toStr(v, tb, 20) : 'null'}`);
+    };
+    upperBox.checked = true; groupBox.checked = false;
+    t('255', 10, 16, 'FF');
+    t('0xff', 16, 10, '255');
+    t('1010.11', 2, 10, '10.75');
+    t('-1_000', 10, 2, '-1111101000');
+    t('0.5', 10, 2, '0.1');
+    console.assert(parseVal('12', 2) === null, 'nbc: 12 is not valid binary');
+  }
+
+  input.value = '255';
+  convert();
 </script>

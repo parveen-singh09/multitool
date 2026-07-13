@@ -1,0 +1,119 @@
+---
+import ToolLayout from '../../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="mailto-link-generator">
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <!-- Controls -->
+    <div class="flex flex-col gap-3">
+      <label class="ml-lbl">To
+        <input id="ml-to" class="field" placeholder="alice@example.com, bob@example.com" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" />
+        <span class="ml-hint">Separate multiple addresses with commas.</span>
+      </label>
+      <label class="ml-lbl">CC
+        <input id="ml-cc" class="field" placeholder="carol@example.com" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" />
+      </label>
+      <label class="ml-lbl">BCC
+        <input id="ml-bcc" class="field" placeholder="dave@example.com" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" />
+      </label>
+      <label class="ml-lbl">Subject
+        <input id="ml-subject" class="field" placeholder="Hello there" spellcheck="false" />
+      </label>
+      <label class="ml-lbl">Body
+        <textarea id="ml-body" class="field" rows="6" placeholder="Type your message. Line breaks are preserved."></textarea>
+      </label>
+    </div>
+
+    <!-- Output -->
+    <div class="flex flex-col gap-4 lg:sticky lg:top-6 self-start">
+      <div class="flex flex-col gap-2">
+        <label class="text-sm text-ink-subtle">mailto: link</label>
+        <pre class="field min-h-20 whitespace-pre-wrap break-all font-mono text-[13px]" id="ml-link"></pre>
+        <div class="flex gap-2">
+          <button id="ml-copy-link" class="btn btn-secondary">Copy link</button>
+          <a id="ml-test" class="btn btn-tertiary" href="#">Test in email app</a>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <label class="text-sm text-ink-subtle">HTML anchor</label>
+        <pre class="field min-h-16 whitespace-pre-wrap break-all font-mono text-[13px]" id="ml-html"></pre>
+        <button id="ml-copy-html" class="btn btn-secondary self-start">Copy HTML</button>
+      </div>
+
+      <label class="ml-lbl">Link text (for the HTML anchor)
+        <input id="ml-text" class="field" value="Email us" spellcheck="false" />
+      </label>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free mailto link generator builds a
+      <code class="font-mono text-ink">mailto:</code> link from recipients, CC,
+      BCC, a subject line and a pre-filled body. Clicking such a link opens the
+      visitor's default email app with every field already populated. Fill in the
+      fields, then copy the raw link or a ready-to-paste HTML
+      <code class="font-mono text-ink">&lt;a&gt;</code> anchor for your website or
+      email signature. Multiple addresses in the To, CC and BCC fields are
+      separated with commas, and every value is properly URL-encoded so subjects
+      and bodies with spaces, line breaks or special characters work everywhere.
+      Everything runs in your browser; nothing is uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .ml-lbl { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.875rem; color: var(--ink-subtle, #a1a1b5); }
+  .ml-hint { font-size: 0.75rem; color: var(--ink-tertiary, #6b6b7b); }
+</style>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+
+  // Encode a comma-separated address list, keeping commas as literal separators.
+  const addrList = (s: string) =>
+    s.split(',').map((a) => encodeURIComponent(a.trim())).filter((a) => a).join(',');
+
+  function buildLink(): string {
+    const to = addrList(($('ml-to') as HTMLInputElement).value);
+    const params: string[] = [];
+    const cc = addrList(($('ml-cc') as HTMLInputElement).value);
+    const bcc = addrList(($('ml-bcc') as HTMLInputElement).value);
+    const subject = ($('ml-subject') as HTMLInputElement).value;
+    const body = ($('ml-body') as HTMLTextAreaElement).value;
+    if (cc) params.push('cc=' + cc);
+    if (bcc) params.push('bcc=' + bcc);
+    if (subject) params.push('subject=' + encodeURIComponent(subject));
+    if (body) params.push('body=' + encodeURIComponent(body));
+    return 'mailto:' + to + (params.length ? '?' + params.join('&') : '');
+  }
+
+  // Escape a string for safe use inside a double-quoted HTML attribute / text node.
+  const esc = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  function render() {
+    const link = buildLink();
+    const text = ($('ml-text') as HTMLInputElement).value || 'Email us';
+    $('ml-link').textContent = link;
+    $('ml-html').textContent = `<a href="${esc(link)}">${esc(text)}</a>`;
+    ($('ml-test') as HTMLAnchorElement).href = link;
+  }
+
+  ['ml-to', 'ml-cc', 'ml-bcc', 'ml-subject', 'ml-body', 'ml-text'].forEach((id) => {
+    $(id).addEventListener('input', render);
+  });
+
+  const copy = async (btn: HTMLButtonElement, text: string, label: string) => {
+    await navigator.clipboard.writeText(text);
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = label), 1500);
+  };
+  $('ml-copy-link').addEventListener('click', (e) =>
+    copy(e.currentTarget as HTMLButtonElement, $('ml-link').textContent || '', 'Copy link'));
+  $('ml-copy-html').addEventListener('click', (e) =>
+    copy(e.currentTarget as HTMLButtonElement, $('ml-html').textContent || '', 'Copy HTML'));
+
+  render();
+</script>
