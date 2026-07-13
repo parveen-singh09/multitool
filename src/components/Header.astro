@@ -31,6 +31,19 @@ import { categories } from '../data/tools';
     <div class="hidden items-center gap-6 md:flex">
       <button
         type="button"
+        class="bg-toggle btn btn-tertiary"
+        aria-label="Toggle background image"
+        title="Toggle background image"
+        aria-pressed="false"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="18" height="18" rx="2" />
+          <circle cx="8.5" cy="8.5" r="1.5" />
+          <path d="m21 15-5-5L5 21" />
+        </svg>
+      </button>
+      <button
+        type="button"
         class="theme-toggle btn btn-tertiary"
         aria-label="Toggle color theme"
         title="Toggle light / dark theme"
@@ -64,13 +77,14 @@ import { categories } from '../data/tools';
 
 <style>
 
-  .theme-toggle {
+  .theme-toggle, .bg-toggle {
     padding: 0;
     min-height: 0;
     border: 0;
     background: transparent;
   }
-  .theme-toggle:hover { background: transparent; color: var(--color-ink-muted); }
+  .theme-toggle:hover, .bg-toggle:hover { background: transparent; color: var(--color-ink-muted); }
+  .bg-toggle[aria-pressed='true'] { color: var(--color-primary); }
   .theme-toggle .icon-moon { display: none; }
   :global(html[data-theme='light']) .theme-toggle .icon-sun { display: none; }
   :global(html[data-theme='light']) .theme-toggle .icon-moon { display: inline; }
@@ -92,14 +106,36 @@ import { categories } from '../data/tools';
 
   applyMeta(root.dataset.theme || 'dark');
 
+  const setBg = (on: boolean) => {
+    if (on) root.dataset.bg = 'image';
+    else delete root.dataset.bg;
+    try {
+      localStorage.setItem('bgImage', on ? 'on' : 'off');
+    } catch (_) {}
+    document
+      .querySelectorAll('.bg-toggle')
+      .forEach((b) => b.setAttribute('aria-pressed', String(on)));
+  };
+
+  const setTheme = (theme: string) => {
+    root.dataset.theme = theme;
+    try {
+      localStorage.setItem('theme', theme);
+    } catch (_) {}
+    applyMeta(theme);
+  };
+
+  if (root.dataset.bg === 'image') setBg(true); // sync button states on load
+
+  document.querySelectorAll('.bg-toggle').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setBg(root.dataset.bg !== 'image');
+    });
+  });
+
   document.querySelectorAll('.theme-toggle').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const next = root.dataset.theme === 'light' ? 'dark' : 'light';
-      root.dataset.theme = next;
-      try {
-        localStorage.setItem('theme', next);
-      } catch (_) {}
-      applyMeta(next);
+      setTheme(root.dataset.theme === 'light' ? 'dark' : 'light');
     });
   });
 </script>

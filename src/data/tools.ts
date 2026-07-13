@@ -598,6 +598,16 @@ export const tools: Tool[] = [
     icon: 'M12 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM6 22l2-9h8l2 9M9 13l-2 4M15 13l2 4',
   },
   {
+    slug: 'protein-calculator',
+    name: 'Protein Calculator',
+    tagline: 'Daily protein target by goal & activity.',
+    description:
+      'Free online protein calculator. Find how many grams of protein to eat per day based on your weight, activity level and goal — lose fat, maintain or build muscle — with a per-meal split and food equivalents.',
+    category: 'Calculators',
+    keywords: ['protein calculator', 'daily protein intake calculator', 'how much protein per day', 'protein needs calculator', 'protein grams per kg'],
+    icon: 'M7 12a5 5 0 0 1 10 0v6a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-6ZM9 12V8a3 3 0 0 1 6 0v4',
+  },
+  {
     slug: 'bmr-calculator',
     name: 'BMR Calculator',
     tagline: 'Basal metabolic rate (Mifflin-St Jeor).',

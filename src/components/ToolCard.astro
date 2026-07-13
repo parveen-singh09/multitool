@@ -8,6 +8,22 @@ const { tool } = Astro.props;
 const searchText = [tool.name, tool.tagline, tool.category, ...tool.keywords]
   .join(' ')
   .toLowerCase();
+
+// ponytail: category-keyed tints keep the palette controlled vs. per-tool random.
+// Diverges from DESIGN.md's single-accent rule — requested to match the colorful reference.
+const tints: Record<string, { bg: string; ring: string; fg: string }> = {
+  Text: { bg: 'bg-sky-500/12', ring: 'ring-sky-500/20', fg: 'text-sky-400' },
+  Developer: { bg: 'bg-violet-500/12', ring: 'ring-violet-500/20', fg: 'text-violet-400' },
+  Image: { bg: 'bg-emerald-500/12', ring: 'ring-emerald-500/20', fg: 'text-emerald-400' },
+  Converters: { bg: 'bg-amber-500/12', ring: 'ring-amber-500/20', fg: 'text-amber-400' },
+  Calculators: { bg: 'bg-rose-500/12', ring: 'ring-rose-500/20', fg: 'text-rose-400' },
+  Generators: { bg: 'bg-fuchsia-500/12', ring: 'ring-fuchsia-500/20', fg: 'text-fuchsia-400' },
+  Security: { bg: 'bg-teal-500/12', ring: 'ring-teal-500/20', fg: 'text-teal-400' },
+  PDF: { bg: 'bg-red-500/12', ring: 'ring-red-500/20', fg: 'text-red-400' },
+  'Audio & Video': { bg: 'bg-indigo-500/12', ring: 'ring-indigo-500/20', fg: 'text-indigo-400' },
+  'Device & Sensors': { bg: 'bg-cyan-500/12', ring: 'ring-cyan-500/20', fg: 'text-cyan-400' },
+};
+const tint = tints[tool.category] ?? { bg: 'bg-surface-2', ring: 'ring-hairline', fg: 'text-ink-muted' };
 ---
 
 <a
@@ -16,7 +32,7 @@ const searchText = [tool.name, tool.tagline, tool.category, ...tool.keywords]
   data-search={searchText}
   class="panel panel-lift group flex flex-col gap-3 p-6 transition-colors duration-150 hover:bg-surface-2 hover:border-hairline-strong"
 >
-  <span class="flex h-10 w-10 items-center justify-center rounded-md border border-hairline bg-surface-2 text-ink-muted transition-colors group-hover:text-primary-hover">
+  <span class={`flex h-10 w-10 items-center justify-center rounded-lg ring-1 transition-colors ${tint.bg} ${tint.ring} ${tint.fg}`}>
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d={tool.icon} />
     </svg>

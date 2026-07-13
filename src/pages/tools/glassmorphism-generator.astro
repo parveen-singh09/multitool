@@ -191,11 +191,17 @@ const presets = [
     })
   );
 
+  // Known-good picsum image IDs — random seeds sometimes 404/hang and leave the
+  // stage blank, so pick from a fixed set and preload before swapping.
+  const PHOTO_IDS = [10, 15, 27, 29, 42, 65, 76, 82, 96, 110, 128, 160, 190, 225, 237];
   $('gm-photo').addEventListener('click', () => {
-    // picsum: keyless random photo; nature-ish, new one each click via changing seed.
-    const seed = Math.floor(Math.random() * 1000);
-    const url = `https://picsum.photos/seed/${seed}/800/600`;
-    $('gm-stage').style.background = `center / cover no-repeat url("${url}")`;
+    const id = PHOTO_IDS[Math.floor(Math.random() * PHOTO_IDS.length)];
+    const url = `https://picsum.photos/id/${id}/800/600`;
+    const img = new Image();
+    img.onload = () => {
+      $('gm-stage').style.background = `center / cover no-repeat url("${url}")`;
+    };
+    img.src = url; // only swaps once loaded; if it errors the current bg stays
   });
 
   $('gm-copy').addEventListener('click', async (e) => {

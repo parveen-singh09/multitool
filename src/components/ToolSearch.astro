@@ -16,6 +16,7 @@ const toolIndex =
         n: t.name,
         s: t.slug,
         c: t.category,
+        i: t.icon,
         k: (t.keywords ?? []).join(' '),
       }))
     : null;
@@ -102,6 +103,9 @@ const toolIndex =
   }
   .search-results:empty { display: none; }
   .search-results :global(li) {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
     padding: 0.5rem 0.625rem;
     border-radius: var(--radius-sm);
     color: var(--color-ink);
@@ -112,6 +116,23 @@ const toolIndex =
   .search-results :global(li[aria-selected='true']),
   .search-results :global(li:hover) {
     background-color: var(--color-surface-2);
+  }
+  .search-results :global(li .ico) {
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0.3rem;
+    border-radius: var(--radius-sm);
+    background-color: var(--color-surface-2);
+    color: var(--color-ink-muted);
+    box-sizing: border-box;
+  }
+  .search-results :global(li[aria-selected='true'] .ico),
+  .search-results :global(li:hover .ico) {
+    background-color: var(--color-surface-3);
+  }
+  .search-results :global(li .txt) {
+    min-width: 0;
   }
   .search-results :global(li .cat) {
     display: block;
@@ -161,7 +182,7 @@ const toolIndex =
     }
 
     // Autocomplete dropdown (compact/header variant only).
-    type Entry = { n: string; s: string; c: string; k: string };
+    type Entry = { n: string; s: string; c: string; i: string; k: string };
     let index: Entry[] = [];
     try {
       const raw = document.querySelector('[data-tool-search-index]')?.textContent;
@@ -174,6 +195,20 @@ const toolIndex =
       ) as HTMLUListElement | null;
       if (!list || !index.length) return;
 
+      const SVG_NS = 'http://www.w3.org/2000/svg';
+      // Category → icon hue, mirroring ToolCard's tints (Tailwind *-400 shades).
+      const CAT_COLOR: Record<string, string> = {
+        Text: '#38bdf8',
+        Developer: '#a78bfa',
+        Image: '#34d399',
+        Converters: '#fbbf24',
+        Calculators: '#fb7185',
+        Generators: '#e879f9',
+        Security: '#2dd4bf',
+        PDF: '#f87171',
+        'Audio & Video': '#818cf8',
+        'Device & Sensors': '#22d3ee',
+      };
       let active = -1;
       let items: Entry[] = [];
 
@@ -205,18 +240,14 @@ const toolIndex =
         // Match each term at a word start, so "dom" doesn't hit "ran*dom*".
         const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const res = terms.map((t) => new RegExp(`\\b${esc(t)}`, 'i'));
+        // Names starting with the query rank first, each tier alphabetical.
+        const starts = (n: string) => norm(n).startsWith(terms[0]);
         items = index
-          .filter((t) => {
-            const hay = `${t.n} ${t.c} ${t.k}`;
-            return res.every((re) => re.test(hay));
-          })
-          // Name matches rank above keyword-only matches.
+          .filter((t) => res.every((re) => re.test(t.n)))
           .sort((a, b) => {
-            const an = res.every((re) => re.test(a.n)) ? 0 : 1;
-            const bn = res.every((re) => re.test(b.n)) ? 0 : 1;
-            return an - bn;
-          })
-          .slice(0, 8);
+            const d = Number(starts(b.n)) - Number(starts(a.n));
+            return d || a.n.localeCompare(b.n);
+          });
         if (!items.length) return close();
         list.replaceChildren(
           ...items.map((t) => {
@@ -224,11 +255,34 @@ const toolIndex =
             li.setAttribute('role', 'option');
             li.setAttribute('aria-selected', 'false');
             li.dataset.slug = t.s;
-            li.textContent = t.n;
+
+            const icon = document.createElementNS(SVG_NS, 'svg');
+            icon.setAttribute('class', 'ico');
+            icon.setAttribute('viewBox', '0 0 24 24');
+            icon.setAttribute('fill', 'none');
+            icon.setAttribute('stroke', 'currentColor');
+            icon.setAttribute('stroke-width', '1.75');
+            icon.setAttribute('stroke-linecap', 'round');
+            icon.setAttribute('stroke-linejoin', 'round');
+            icon.setAttribute('aria-hidden', 'true');
+            const hue = CAT_COLOR[t.c];
+            if (hue) {
+              icon.style.color = hue;
+              icon.style.backgroundColor = `color-mix(in srgb, ${hue} 12%, transparent)`;
+            }
+            const path = document.createElementNS(SVG_NS, 'path');
+            path.setAttribute('d', t.i);
+            icon.appendChild(path);
+
+            const text = document.createElement('span');
+            text.className = 'txt';
+            const name = document.createElement('span');
+            name.textContent = t.n;
             const cat = document.createElement('span');
             cat.className = 'cat';
             cat.textContent = t.c;
-            li.appendChild(cat);
+            text.append(name, cat);
+            li.append(icon, text);
             li.addEventListener('mousedown', (e) => {
               e.preventDefault();
               go(t.s);
