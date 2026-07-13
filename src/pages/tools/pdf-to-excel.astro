@@ -1,4 +1,4 @@
----
+﻿---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
@@ -7,7 +7,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <label id="pe-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
       <span class="text-sm text-ink">Choose a PDF or drop it here</span>
-      <span class="text-[13px] text-ink-tertiary">Converted in your browser — never uploaded</span>
       <input id="pe-file" type="file" accept="application/pdf" class="sr-only" />
     </label>
 
@@ -19,7 +18,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <span id="pe-status" class="text-[13px] text-ink-subtle" aria-live="polite"></span>
       </div>
       <p class="text-[13px] text-ink-tertiary">
-        Rows are detected from the PDF’s text positions and split into columns
+        Rows are detected from the PDFâ€™s text positions and split into columns
         where gaps appear. It works best on clean, grid-like tables; merged cells,
         wrapped text and complex layouts may need cleanup in your spreadsheet app.
         Scanned PDFs have no text to read.
@@ -35,7 +34,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       exports it to an editable Excel (<code class="font-mono text-ink">.xlsx</code>)
       spreadsheet you can open in Excel, Google Sheets, Numbers or LibreOffice
       Calc. The PDF is read and the spreadsheet is built entirely in your browser
-      — your file is never uploaded to a server.
+      â€” your file is never uploaded to a server.
     </p>
     <p>
       Tables are reconstructed by reading the position of every piece of text on
@@ -94,7 +93,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   // columns where the horizontal gap between items exceeds a threshold.
   function itemsToRows(items: Cell[]): string[][] {
     if (!items.length) return [];
-    // Bucket by y (rounded) — items within ~4px vertically share a row.
+    // Bucket by y (rounded) â€” items within ~4px vertically share a row.
     const sorted = [...items].sort((a, b) => b.y - a.y || a.x - b.x);
     const lines: Cell[][] = [];
     let cur: Cell[] = [];
@@ -105,7 +104,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }
     if (cur.length) lines.push(cur);
 
-    // Median character width → column-gap threshold (a gap wider than ~1.5
+    // Median character width â†’ column-gap threshold (a gap wider than ~1.5
     // average characters starts a new column).
     const widths = items.map((i) => i.w / Math.max(1, i.str.length)).filter((w) => w > 0).sort((a, b) => a - b);
     const charW = widths[Math.floor(widths.length / 2)] || 4;
@@ -128,7 +127,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   // Convert a cell string to a number when it looks purely numeric (allowing
   // thousands separators, currency symbols and parenthesised negatives).
   function coerce(s: string): string | number {
-    const cleaned = s.replace(/[$£€,\s]/g, '');
+    const cleaned = s.replace(/[$Â£â‚¬,\s]/g, '');
     const neg = /^\(.*\)$/.test(cleaned);
     const core = neg ? cleaned.slice(1, -1) : cleaned;
     if (core !== '' && /^-?\d*\.?\d+%?$/.test(core)) {
@@ -147,7 +146,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const pdf = await pdfjsLib.getDocument({ data: bytes!.slice(0) }).promise;
       const all: string[][] = [];
       for (let n = 1; n <= pdf.numPages; n++) {
-        status.textContent = `Reading page ${n} / ${pdf.numPages}…`;
+        status.textContent = `Reading page ${n} / ${pdf.numPages}â€¦`;
         const page = await pdf.getPage(n);
         const content = await page.getTextContent();
         const cells: Cell[] = (content.items as any[])
@@ -163,7 +162,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       rows = all.map((r) => r.map(coerce));
       renderPreview(all);
       const cols = Math.max(...all.map((r) => r.length));
-      status.textContent = `Done — ${all.length} rows × up to ${cols} columns.`;
+      status.textContent = `Done â€” ${all.length} rows Ã— up to ${cols} columns.`;
       dlBtn.disabled = false; copyBtn.disabled = false;
     } catch (e) {
       setErr('Could not read this PDF: ' + (e as Error).message);

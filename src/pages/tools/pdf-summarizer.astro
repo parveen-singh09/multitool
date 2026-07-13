@@ -1,4 +1,4 @@
----
+﻿---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
@@ -7,7 +7,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <label id="ps-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
       <span class="text-sm text-ink">Choose a PDF or drop it here</span>
-      <span class="text-[13px] text-ink-tertiary">Text is read in your browser — the file itself is never uploaded</span>
       <input id="ps-file" type="file" accept="application/pdf" class="sr-only" />
     </label>
 
@@ -26,9 +25,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <span id="ps-status" class="text-[13px] text-ink-subtle" aria-live="polite"></span>
       </div>
       <p class="text-[13px] text-ink-tertiary">
-        Unlike our other tools, this one sends the PDF’s extracted <em>text</em> to
+        Unlike our other tools, this one sends the PDFâ€™s extracted <em>text</em> to
         an AI model to be summarized. The original file stays on your device.
-        Don’t summarize confidential documents you wouldn’t share.
+        Donâ€™t summarize confidential documents you wouldnâ€™t share.
       </p>
       <div id="ps-out-wrap" class="relative" style="display:none">
         <button id="ps-copy-icon" type="button" title="Copy summary" aria-label="Copy summary" class="btn btn-tertiary absolute right-2 top-2 z-10 min-h-0 p-1.5">
@@ -43,16 +42,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
       This free PDF summarizer reads the text out of a PDF and condenses it into a
-      short recap — pick a two-to-three sentence summary, a single paragraph, or a
+      short recap â€” pick a two-to-three sentence summary, a single paragraph, or a
       set of bullet points covering the key sections. The PDF is opened and its
       text extracted entirely in your browser using the same engine as our PDF to
       Text tool.
     </p>
     <p>
       Summarizing needs an AI model, so this is the one tool on the site that
-      isn’t fully offline: the extracted <strong>text</strong> is sent directly
+      isnâ€™t fully offline: the extracted <strong>text</strong> is sent directly
       from your browser to the AI service to be summarized and the result sent
-      back. The original PDF file is never uploaded — only the text it contains,
+      back. The original PDF file is never uploaded â€” only the text it contains,
       and only when you click Summarize. Because the text does leave your device,
       avoid summarizing confidential or sensitive documents here. Scanned
       image-only PDFs have no text to read; run them through our PDF to Text
@@ -103,7 +102,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const pdf = await pdfjsLib.getDocument({ data: bytes!.slice(0) }).promise;
     let text = '';
     for (let n = 1; n <= pdf.numPages; n++) {
-      status.textContent = `Reading page ${n} / ${pdf.numPages}…`;
+      status.textContent = `Reading page ${n} / ${pdf.numPages}â€¦`;
       const page = await pdf.getPage(n);
       const content = await page.getTextContent();
       text += (content.items as any[]).map((it) => it.str).join(' ') + '\n\n';
@@ -125,7 +124,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       let truncated = false;
       if (text.length > MAX_CHARS) { text = text.slice(0, MAX_CHARS); truncated = true; }
 
-      status.textContent = 'Summarizing…';
+      status.textContent = 'Summarizingâ€¦';
       const lenVal = ($('ps-length') as HTMLSelectElement).value;
       const targets: Record<string, string> = {
         short: 'in 2-3 sentences',
@@ -149,7 +148,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       outWrap.style.display = 'block';
       copyBtn.disabled = false;
       status.textContent = truncated
-        ? 'Done — summarized the first part of a long document.'
+        ? 'Done â€” summarized the first part of a long document.'
         : 'Done.';
     } catch (e) {
       setErr('Could not read this PDF: ' + (e as Error).message);

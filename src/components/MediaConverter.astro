@@ -1,4 +1,4 @@
----
+﻿---
 import { getConversion } from '../lib/media';
 
 export interface Props { slug: string; }
@@ -13,13 +13,12 @@ const isAudio = !isVideo;
   <label id="mc-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
     <span class="text-sm text-ink">Choose {isAudio ? 'files' : 'a file'} or drop {isAudio ? 'them' : 'it'} here</span>
-    <span class="text-[13px] text-ink-tertiary">Converted in your browser — never uploaded, no size limit</span>
     <input id="mc-file" type="file" accept={conv.accept} multiple={isAudio} class="sr-only" />
   </label>
 
   {conv.slow && (
     <p class="text-[13px] text-ink-tertiary">
-      Video re-encoding runs entirely in your browser and is CPU-intensive — expect roughly real-time speed, so a few minutes for a few minutes of footage.
+      Video re-encoding runs entirely in your browser and is CPU-intensive â€” expect roughly real-time speed, so a few minutes for a few minutes of footage.
     </p>
   )}
 
@@ -33,11 +32,11 @@ const isAudio = !isVideo;
           <label class="flex flex-col gap-1 text-sm text-ink-subtle">Quality
             <select id="mc-quality" class="field" set:html={
               conv.out === 'mp3'
-                ? `<optgroup label="Variable (VBR)"><option value="v0">V0 — best</option><option value="v2" selected>V2 — high (default)</option><option value="v4">V4 — good</option></optgroup><optgroup label="Constant (CBR)"><option value="320">320 kbps</option><option value="256">256 kbps</option><option value="192">192 kbps</option><option value="128">128 kbps</option><option value="96">96 kbps</option><option value="64">64 kbps (voice)</option></optgroup>`
+                ? `<optgroup label="Variable (VBR)"><option value="v0">V0 â€” best</option><option value="v2" selected>V2 â€” high (default)</option><option value="v4">V4 â€” good</option></optgroup><optgroup label="Constant (CBR)"><option value="320">320 kbps</option><option value="256">256 kbps</option><option value="192">192 kbps</option><option value="128">128 kbps</option><option value="96">96 kbps</option><option value="64">64 kbps (voice)</option></optgroup>`
                 : conv.out === 'aac'
                 ? `<option value="256">256 kbps</option><option value="192" selected>192 kbps</option><option value="128">128 kbps</option><option value="96">96 kbps</option><option value="64">64 kbps (voice)</option>`
                 : conv.out === 'ogg'
-                ? `<option value="10">Q10 — best</option><option value="7">Q7 — high</option><option value="5" selected>Q5 — standard</option><option value="3">Q3 — small</option><option value="1">Q1 — tiny</option>`
+                ? `<option value="10">Q10 â€” best</option><option value="7">Q7 â€” high</option><option value="5" selected>Q5 â€” standard</option><option value="3">Q3 â€” small</option><option value="1">Q1 â€” tiny</option>`
                 : `<option value="pcm_s16le" selected>16-bit PCM</option><option value="pcm_s24le">24-bit PCM</option><option value="pcm_s32le">32-bit PCM</option>`
             } />
           </label>
@@ -207,7 +206,7 @@ const isAudio = !isVideo;
       top.className = 'flex flex-wrap items-center gap-2';
       const name = document.createElement('span');
       name.className = 'text-[13px] text-ink truncate';
-      name.textContent = `${file.name} · ${fmtSize(file.size)}`;
+      name.textContent = `${file.name} Â· ${fmtSize(file.size)}`;
       const statusEl = document.createElement('span');
       statusEl.className = 'text-xs text-ink-tertiary ml-auto';
       const actionsEl = document.createElement('span');
@@ -231,7 +230,7 @@ const isAudio = !isVideo;
 
   function refreshSummary() {
     const doneCount = jobs.filter((j) => j.done).length;
-    summary.textContent = jobs.length ? `${jobs.length} file${jobs.length === 1 ? '' : 's'}${doneCount ? ` · ${doneCount} done` : ''}` : '';
+    summary.textContent = jobs.length ? `${jobs.length} file${jobs.length === 1 ? '' : 's'}${doneCount ? ` Â· ${doneCount} done` : ''}` : '';
     batchDl.classList.toggle('hidden', !(doneCount > 1));
   }
 
@@ -279,7 +278,7 @@ const isAudio = !isVideo;
       for (const job of pending) {
         current = job;
         job.bar.style.width = '0%';
-        job.statusEl.textContent = 'Converting…';
+        job.statusEl.textContent = 'Convertingâ€¦';
         const inName = 'in_' + Math.random().toString(36).slice(2) + '.' + (job.file.name.split('.').pop() || 'dat');
         const outName = 'out.' + conv.ext;
         await ff.writeFile(inName, await fetchFile(job.file));

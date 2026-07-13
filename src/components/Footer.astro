@@ -4,11 +4,14 @@ import { tools, categories, toolsByCategory } from '../data/tools';
 import { SITE } from '../data/site';
 
 const year = new Date().getFullYear();
+
+// Full footer (with the tool directory) only on the home page.
+const { full = false } = Astro.props;
 ---
 
 <footer class="mt-24 border-t border-hairline bg-canvas">
   <div class="container-page py-16">
-    <div class="grid grid-cols-2 gap-8 md:grid-cols-4 lg:grid-cols-6">
+    <div class:list={["grid gap-8", full ? "grid-cols-2 md:grid-cols-4 lg:grid-cols-6" : "grid-cols-1"]}>
 
       <div class="col-span-2">
         <Logo />
@@ -17,7 +20,7 @@ const year = new Date().getFullYear();
         </p>
       </div>
 
-      {categories.map((category) => (
+      {full && categories.map((category) => (
         <nav class="flex flex-col gap-2" aria-label={category}>
           <span class="eyebrow text-ink-tertiary">{category}</span>
           {toolsByCategory(category).map((tool) => (

@@ -1,4 +1,4 @@
----
+﻿---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
@@ -8,7 +8,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <label id="wj-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
       <span class="text-sm text-ink">Choose WebP images or drop them here</span>
-      <span class="text-[13px] text-ink-tertiary">Batch supported · converted in your browser — never uploaded</span>
       <input id="wj-file" type="file" accept="image/webp,.webp" multiple class="sr-only" />
     </label>
 
@@ -33,7 +32,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
             <option value="0" selected>Original size</option>
             <option value="50">Scale 50%</option>
             <option value="25">Scale 25%</option>
-            <option value="max">Max dimension…</option>
+            <option value="max">Max dimensionâ€¦</option>
           </select>
         </label>
         <label id="wj-max-wrap" class="hidden flex-col gap-1 text-sm text-ink-subtle">
@@ -57,14 +56,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
       This free WebP to JPG converter turns WebP images into widely compatible
-      JPEG files — handy when an app or service won't accept WebP. Drop in one
+      JPEG files â€” handy when an app or service won't accept WebP. Drop in one
       image or a whole batch at once; each file is converted independently and
       can be downloaded on its own or all together. The conversion happens
       entirely in your browser, so your images never leave your device.
     </p>
     <p>
       Because JPEG has no transparency, transparent areas are flattened onto a
-      background color of your choice (white by default — pick any color with the
+      background color of your choice (white by default â€” pick any color with the
       swatch). Tune the JPEG quality from 10% to 100% to balance file size
       against fidelity, and optionally resize output by a percentage or a maximum
       width/height while preserving aspect ratio. Re-encoding through the canvas
@@ -131,7 +130,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const canvas = document.createElement('canvas');
       canvas.width = w; canvas.height = h;
       const ctx = canvas.getContext('2d')!;
-      ctx.fillStyle = bg.value;            // JPEG has no alpha — flatten onto chosen color
+      ctx.fillStyle = bg.value;            // JPEG has no alpha â€” flatten onto chosen color
       ctx.fillRect(0, 0, w, h);
       ctx.drawImage(it.img, 0, 0, w, h);
       canvas.toBlob((b) => {
@@ -143,7 +142,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         it.dlBtn.disabled = false;
         it.dlBtn.dataset.url = it.url;
         it.dlBtn.dataset.name = jpgName(it.name);
-        it.infoEl.textContent = `${w}×${h} · ${fmtSize(it.originalSize)} → ${fmtSize(b.size)}`;
+        it.infoEl.textContent = `${w}Ã—${h} Â· ${fmtSize(it.originalSize)} â†’ ${fmtSize(b.size)}`;
         resolve();
       }, 'image/jpeg', Number(q.value) / 100);
     });
@@ -154,7 +153,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     await Promise.all(items.map(convertItem));
     const outTotal = items.reduce((s, it) => s + (it.blob?.size ?? 0), 0);
     const inTotal = items.reduce((s, it) => s + it.originalSize, 0);
-    summary.textContent = `${items.length} image${items.length === 1 ? '' : 's'} · ${fmtSize(inTotal)} → ${fmtSize(outTotal)}`;
+    summary.textContent = `${items.length} image${items.length === 1 ? '' : 's'} Â· ${fmtSize(inTotal)} â†’ ${fmtSize(outTotal)}`;
   }
 
   function makeRow(it: Item) {
@@ -170,7 +169,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     nameEl.textContent = jpgName(it.name);
     const infoEl = document.createElement('span');
     infoEl.className = 'text-[13px] text-ink-subtle';
-    infoEl.textContent = 'Converting…';
+    infoEl.textContent = 'Convertingâ€¦';
     meta.append(nameEl, infoEl);
     const dl = document.createElement('button');
     dl.type = 'button';
@@ -240,7 +239,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   document.getElementById('wj-clear')!.addEventListener('click', clearAll);
   document.getElementById('wj-download-all')!.addEventListener('click', () => {
-    // ponytail: sequential anchor clicks — no zip dep. Small stagger so browsers don't drop rapid downloads.
+    // ponytail: sequential anchor clicks â€” no zip dep. Small stagger so browsers don't drop rapid downloads.
     items.filter((it) => it.url).forEach((it, i) => setTimeout(() => {
       const a = document.createElement('a');
       a.href = it.url; a.download = jpgName(it.name);

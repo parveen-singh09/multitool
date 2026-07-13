@@ -1,4 +1,4 @@
----
+﻿---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
@@ -7,7 +7,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <label id="vc-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
       <span class="text-sm text-ink">Choose a video or drop it here</span>
-      <span class="text-[13px] text-ink-tertiary">Compressed in your browser — never uploaded, no size limit</span>
       <input id="vc-file" type="file" accept="video/*" class="sr-only" />
     </label>
 
@@ -31,9 +30,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
       <div id="vc-size-opts" class="hidden flex-col gap-3">
         <div class="flex flex-wrap gap-2">
-          <button class="vc-preset btn btn-secondary" data-mb="8">8 MB · Discord</button>
-          <button class="vc-preset btn btn-secondary" data-mb="10">10 MB · Discord</button>
-          <button class="vc-preset btn btn-secondary" data-mb="25">25 MB · Email</button>
+          <button class="vc-preset btn btn-secondary" data-mb="8">8 MB Â· Discord</button>
+          <button class="vc-preset btn btn-secondary" data-mb="10">10 MB Â· Discord</button>
+          <button class="vc-preset btn btn-secondary" data-mb="25">25 MB Â· Email</button>
           <button class="vc-preset btn btn-secondary" data-mb="50">50 MB</button>
           <button class="vc-preset btn btn-secondary" data-mb="100">100 MB</button>
         </div>
@@ -82,7 +81,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <button id="vc-go" class="btn btn-primary">Compress</button>
         <span id="vc-estimate" class="text-[13px] text-ink-subtle"></span>
       </div>
-      <p class="text-[13px] text-ink-tertiary">Video re-encoding is CPU-intensive and runs locally — expect roughly real-time speed.</p>
+      <p class="text-[13px] text-ink-tertiary">Video re-encoding is CPU-intensive and runs locally â€” expect roughly real-time speed.</p>
 
       <div id="vc-progwrap" class="hidden flex-col gap-1">
         <div class="h-1.5 w-full overflow-hidden rounded-full bg-surface-3"><div id="vc-bar" class="h-full w-0 rounded-full transition-all" style="background:var(--color-primary)"></div></div>
@@ -91,8 +90,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
       <div id="vc-result" class="hidden flex-col gap-3">
         <div class="grid grid-cols-2 gap-3 text-center">
-          <div class="panel p-4"><div id="vc-before" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Original</div></div>
-          <div class="panel p-4"><div id="vc-after" class="font-mono text-lg" style="color:var(--color-success)">—</div><div class="mt-1 text-[13px] text-ink-subtle">Compressed (<span id="vc-saved">0%</span> smaller)</div></div>
+          <div class="panel p-4"><div id="vc-before" class="font-mono text-lg text-ink">â€”</div><div class="mt-1 text-[13px] text-ink-subtle">Original</div></div>
+          <div class="panel p-4"><div id="vc-after" class="font-mono text-lg" style="color:var(--color-success)">â€”</div><div class="mt-1 text-[13px] text-ink-subtle">Compressed (<span id="vc-saved">0%</span> smaller)</div></div>
         </div>
         <button id="vc-download" class="btn btn-primary w-fit">Download</button>
         <div class="panel flex justify-center overflow-hidden p-4"><video id="vc-preview" controls class="max-h-96 w-auto max-w-full rounded-md"></video></div>
@@ -104,11 +103,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
       This free video compressor shrinks video file size two ways: by quality (pick a
-      level and let H.264 do the rest) or by target file size — hit a specific size
+      level and let H.264 do the rest) or by target file size â€” hit a specific size
       like 8 MB for Discord or 25 MB for email using two-pass encoding. Optionally
       scale down the resolution, drop the frame rate, remove the audio track or trim
       to a clip. See the before-and-after sizes and preview the result before
-      downloading. All compression runs in your browser — your video is never
+      downloading. All compression runs in your browser â€” your video is never
       uploaded and there is no file-size limit.
     </p>
   </div>
@@ -169,7 +168,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   function updateEstimate() {
     if (!file) { estimate.textContent = ''; return; }
     if (mode === 'size') {
-      estimate.textContent = `Target ≈ ${numVal('vc-target')} MB`;
+      estimate.textContent = `Target â‰ˆ ${numVal('vc-target')} MB`;
       return;
     }
     const crf = Number(($('vc-crf') as HTMLSelectElement).value);
@@ -178,7 +177,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const base: Record<number, number> = { 23: 2500, 28: 1400, 32: 800, 36: 450 };
     const kbps = (base[crf] || 1200) * Math.min(1, w / 1280);
     const bytes = (kbps * 1000 / 8) * (duration || 0);
-    estimate.textContent = duration ? `Estimated ≈ ${fmtSize(bytes)}` : '';
+    estimate.textContent = duration ? `Estimated â‰ˆ ${fmtSize(bytes)}` : '';
   }
   ['vc-crf', 'vc-scale', 'vc-fps', 'vc-target'].forEach((id) => $(id).addEventListener('input', updateEstimate));
 
@@ -241,18 +240,18 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       if (mode === 'size') {
         const targetMB = numVal('vc-target') || 25;
         const dur = effectiveDuration() || duration || 1;
-        // Total budget → video bitrate = total − audio, with a small safety margin.
+        // Total budget â†’ video bitrate = total âˆ’ audio, with a small safety margin.
         const totalKbps = (targetMB * 8192) / dur; // kbit total
         const aKbps = mute ? 0 : audioBitrate;
         let vKbps = Math.floor((totalKbps - aKbps) * 0.97);
         if (vKbps < 80) vKbps = 80; // floor so ffmpeg doesn't choke
         const common = commonArgs();
-        statusEl.textContent = 'Pass 1 of 2…';
+        statusEl.textContent = 'Pass 1 of 2â€¦';
         // Pass 1 only gathers stats; the null muxer writes no media (a plain
         // MEMFS filename is used since /dev/null isn't present in the wasm FS).
         await ff.exec([...trimPre(), '-i', inName, ...trimPost(), '-c:v', 'libx264', '-preset', 'veryfast',
           '-b:v', `${vKbps}k`, ...common, '-pass', '1', '-an', '-f', 'null', '-y', 'pass1.null']);
-        statusEl.textContent = 'Pass 2 of 2…';
+        statusEl.textContent = 'Pass 2 of 2â€¦';
         const audio = mute ? ['-an'] : ['-c:a', 'aac', '-b:a', `${audioBitrate}k`];
         await ff.exec([...trimPre(), '-i', inName, ...trimPost(), '-c:v', 'libx264', '-preset', 'veryfast',
           '-b:v', `${vKbps}k`, ...common, '-pass', '2', ...audio, '-movflags', '+faststart', '-y', 'out.mp4']);
@@ -261,7 +260,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         const crf = ($('vc-crf') as HTMLSelectElement).value;
         const common = commonArgs();
         const audio = mute ? ['-an'] : ['-c:a', 'aac', '-b:a', `${audioBitrate}k`];
-        statusEl.textContent = 'Compressing…';
+        statusEl.textContent = 'Compressingâ€¦';
         await ff.exec([...trimPre(), '-i', inName, ...trimPost(), '-c:v', 'libx264', '-preset', 'veryfast',
           '-crf', crf, ...common, ...audio, '-movflags', '+faststart', 'out.mp4']);
       }

@@ -1,4 +1,4 @@
----
+﻿---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
@@ -7,7 +7,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <label id="ma-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
       <span class="text-sm text-ink">Choose a song or drop it here</span>
-      <span class="text-[13px] text-ink-tertiary">Analyzed in your browser — never uploaded, no size limit</span>
       <input id="ma-file" type="file" accept="audio/*" class="sr-only" />
     </label>
 
@@ -27,22 +26,22 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
         <div class="panel panel-lift flex flex-col gap-1 p-4">
           <span class="text-xs text-ink-tertiary">Tempo</span>
-          <span class="font-display text-3xl font-semibold text-ink"><span id="ma-bpm">—</span><span class="ml-1 text-base font-normal text-ink-subtle">BPM</span></span>
+          <span class="font-display text-3xl font-semibold text-ink"><span id="ma-bpm">â€”</span><span class="ml-1 text-base font-normal text-ink-subtle">BPM</span></span>
           <span id="ma-bpm-conf" class="text-xs text-ink-tertiary"></span>
         </div>
         <div class="panel panel-lift flex flex-col gap-1 p-4">
           <span class="text-xs text-ink-tertiary">Key</span>
-          <span id="ma-key" class="font-display text-3xl font-semibold text-ink">—</span>
+          <span id="ma-key" class="font-display text-3xl font-semibold text-ink">â€”</span>
           <span id="ma-key-conf" class="text-xs text-ink-tertiary"></span>
         </div>
         <div class="panel panel-lift flex flex-col gap-1 p-4">
           <span class="text-xs text-ink-tertiary">Camelot</span>
-          <span id="ma-camelot" class="font-display text-3xl font-semibold text-ink">—</span>
+          <span id="ma-camelot" class="font-display text-3xl font-semibold text-ink">â€”</span>
           <span class="text-xs text-ink-tertiary">for harmonic mixing</span>
         </div>
         <div class="panel panel-lift flex flex-col gap-1 p-4">
           <span class="text-xs text-ink-tertiary">Mood</span>
-          <span id="ma-mood" class="font-display text-3xl font-semibold text-ink">—</span>
+          <span id="ma-mood" class="font-display text-3xl font-semibold text-ink">â€”</span>
           <span id="ma-loudness" class="text-xs text-ink-tertiary"></span>
         </div>
       </div>
@@ -114,7 +113,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       harmonic pitch-class (HPCP) chroma wheel, and reports spectral features like
       brightness and spectral flatness. It can also detect <strong>genre and
       descriptive tags</strong> with a neural network (MSD-MusiCNN) that runs
-      entirely in your browser. Analyze a file or your microphone — everything is
+      entirely in your browser. Analyze a file or your microphone â€” everything is
       computed locally with the Web Audio API and a custom DSP engine, so your
       music is never uploaded and there is no file-size limit.
     </p>
@@ -179,11 +178,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     show(results, false);
     show(progWrap, true);
     bar.style.width = '15%';
-    statusEl.textContent = 'Decoding audio…';
+    statusEl.textContent = 'Decoding audioâ€¦';
     try {
       const raw = await decodeToBuffer(data);
       bar.style.width = '45%';
-      statusEl.textContent = 'Analyzing tempo, key and loudness…';
+      statusEl.textContent = 'Analyzing tempo, key and loudnessâ€¦';
       await new Promise((r) => setTimeout(r, 20));
       const buf = trimForAnalysis(raw);
       currentBuffer = buf;
@@ -254,12 +253,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const dance = r.danceability > 0.66 ? 'highly danceable' : r.danceability > 0.4 ? 'moderately danceable' : 'not especially danceable';
     return `This track runs at ${tempoWord} ${r.bpm} BPM in ${r.key} (Camelot ${r.camelot}). ` +
       `It reads as ${r.mood.toLowerCase()} and ${dance}, with a ${bright} tonal balance. ` +
-      `Integrated loudness is ${r.loudnessLufs.toFixed(1)} LUFS — ${loud} — with a peak of ${r.peakDb.toFixed(1)} dBFS ` +
+      `Integrated loudness is ${r.loudnessLufs.toFixed(1)} LUFS â€” ${loud} â€” with a peak of ${r.peakDb.toFixed(1)} dBFS ` +
       `and roughly ${r.dynamicRange.toFixed(0)} dB of crest. Use the Camelot code ${r.camelot} to find harmonically compatible tracks for mixing.`;
   }
 
   function render(r: AnalysisResult, fullDuration: number) {
-    $('ma-bpm').textContent = r.bpm ? String(r.bpm) : '—';
+    $('ma-bpm').textContent = r.bpm ? String(r.bpm) : 'â€”';
     $('ma-bpm-conf').textContent = r.bpm ? `${pct(r.bpmConfidence)}% confidence` : 'not detected';
     $('ma-key').textContent = r.key.replace('major', 'maj').replace('minor', 'min');
     $('ma-key-conf').textContent = `${pct(r.keyConfidence)}% confidence`;
@@ -319,10 +318,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       rec.start();
       show(progWrap, true); bar.style.width = '0%';
       let left = 12;
-      statusEl.textContent = `Recording from microphone… ${left}s`;
+      statusEl.textContent = `Recording from microphoneâ€¦ ${left}s`;
       const iv = setInterval(() => {
         left--; bar.style.width = `${((12 - left) / 12) * 100}%`;
-        statusEl.textContent = `Recording from microphone… ${left}s`;
+        statusEl.textContent = `Recording from microphoneâ€¦ ${left}s`;
         if (left <= 0) { clearInterval(iv); rec.stop(); }
       }, 1000);
     } catch {
@@ -391,8 +390,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       .map((p) => meterRow(p.label, p.value, 'var(--color-primary)')).join('');
     const chip = (p: { label: string; value: number }) =>
       `<span class="status-badge">${p.label} <span class="text-ink-tertiary">${pct(p.value)}%</span></span>`;
-    $('ma-tags').innerHTML = g.moods.slice(0, 6).map(chip).join('') || '<span class="text-ink-tertiary text-[13px]">—</span>';
-    $('ma-eras').innerHTML = g.eras.slice(0, 3).map(chip).join('') || '<span class="text-ink-tertiary text-[13px]">—</span>';
+    $('ma-tags').innerHTML = g.moods.slice(0, 6).map(chip).join('') || '<span class="text-ink-tertiary text-[13px]">â€”</span>';
+    $('ma-eras').innerHTML = g.eras.slice(0, 3).map(chip).join('') || '<span class="text-ink-tertiary text-[13px]">â€”</span>';
     show(genreBody, true);
     requestAnimationFrame(() => {
       genreBody.querySelectorAll<HTMLElement>('.ma-meter-fill').forEach((el) => { el.style.width = (el.dataset.w || '0') + '%'; });
@@ -405,8 +404,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     genreBtn.disabled = true;
     try {
       await loadGenreModel((note) => { if (note) genreHint.textContent = note; });
-      genreBtn.textContent = 'Classifying…';
-      genreHint.textContent = 'Running the model on your audio…';
+      genreBtn.textContent = 'Classifyingâ€¦';
+      genreHint.textContent = 'Running the model on your audioâ€¦';
       const g = await classifyGenre(currentBuffer);
       renderGenre(g);
       genreBtn.textContent = 'Re-run genre';

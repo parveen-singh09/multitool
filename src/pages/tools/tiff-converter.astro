@@ -1,4 +1,4 @@
----
+﻿---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
@@ -7,7 +7,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <label id="tf-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
       <span class="text-sm text-ink">Choose TIFF (or other) images or drop them here</span>
-      <span class="text-[13px] text-ink-tertiary">Multi-page and multiple files supported · converted in your browser — never uploaded</span>
       <input id="tf-file" type="file" accept=".tif,.tiff,image/tiff,image/*" multiple class="sr-only" />
     </label>
 
@@ -52,7 +51,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free TIFF converter turns TIFF/TIF images into PNG, JPG, WebP or PDF —
+      This free TIFF converter turns TIFF/TIF images into PNG, JPG, WebP or PDF â€”
       and can also convert ordinary images back into TIFF. TIFF is common in
       scanning, publishing and photography but isn't supported by web browsers
       directly, so this tool decodes it in-page and lets you download a
@@ -61,7 +60,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </p>
     <p>
       Convert a single page, download every page and file together as a ZIP, or
-      combine them into one multi-page PDF — ideal for turning scanned TIFF
+      combine them into one multi-page PDF â€” ideal for turning scanned TIFF
       documents into a shareable file. Optional controls let you resize by longest
       side, pick a JPG/WebP quality, and choose a background colour that fills
       transparent areas when writing formats without an alpha channel. Everything
@@ -153,7 +152,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   async function loadFiles(files: File[]) {
     setErr('');
     if (!files.length) return;
-    status.textContent = 'Decoding…';
+    status.textContent = 'Decodingâ€¦';
     const collected: Page[] = [];
     const failed: string[] = [];
     for (const f of files) {
@@ -173,7 +172,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     pagesList.forEach((p, i) => {
       const o = document.createElement('option');
       o.value = String(i);
-      o.textContent = p.pages > 1 ? `${p.base} — page ${p.page}/${p.pages}` : p.base;
+      o.textContent = p.pages > 1 ? `${p.base} â€” page ${p.page}/${p.pages}` : p.base;
       pageSel.appendChild(o);
     });
     pageSel.value = '0';
@@ -229,7 +228,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       if (fmtEl.value === 'application/pdf') {
         // PDF can't preview inline; show the source page as a PNG proxy.
         preview.src = renderTarget(page, bgEl.value).toDataURL('image/png');
-        status.textContent = `${pagesList.length} page(s) ready · "Combine to PDF" builds one document`;
+        status.textContent = `${pagesList.length} page(s) ready Â· "Combine to PDF" builds one document`;
         return;
       }
       const { blob } = await encodePage(page);
@@ -240,7 +239,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         ? renderTarget(page, null).toDataURL('image/png')
         : outUrl;
       const c = renderTarget(page, null);
-      status.textContent = `${page.base}${page.pages > 1 ? ` p${page.page}` : ''} · ${c.width}×${c.height} · ${(blob.size / 1024).toFixed(1)} KB · ${pagesList.length} page(s) total`;
+      status.textContent = `${page.base}${page.pages > 1 ? ` p${page.page}` : ''} Â· ${c.width}Ã—${c.height} Â· ${(blob.size / 1024).toFixed(1)} KB Â· ${pagesList.length} page(s) total`;
     } catch (e) { setErr('Conversion failed: ' + (e as Error).message); }
   }
 
@@ -264,7 +263,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (!pagesList.length) return;
     if (fmtEl.value === 'application/pdf') { setErr('ZIP applies to image formats. Use "Combine to PDF" for PDF.'); return; }
     const btn = ev.currentTarget as HTMLButtonElement;
-    btn.disabled = true; const label = btn.textContent; btn.textContent = 'Zipping…';
+    btn.disabled = true; const label = btn.textContent; btn.textContent = 'Zippingâ€¦';
     try {
       const files: { name: string; data: Uint8Array }[] = [];
       const seen: Record<string, number> = {};
@@ -282,12 +281,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   document.getElementById('tf-download-pdf')!.addEventListener('click', async (ev) => {
     if (!pagesList.length) return;
     const btn = ev.currentTarget as HTMLButtonElement;
-    btn.disabled = true; const label = btn.textContent; btn.textContent = 'Building PDF…';
+    btn.disabled = true; const label = btn.textContent; btn.textContent = 'Building PDFâ€¦';
     try {
       const q = Number(qEl.value) / 100;
       const pdf = await PDFDocument.create();
       for (const page of pagesList) {
-        // ponytail: embed JPEG (matte-flattened) — the common scanned-doc case.
+        // ponytail: embed JPEG (matte-flattened) â€” the common scanned-doc case.
         // Switch to embedPng if lossless PDF pages are ever required.
         const c = renderTarget(page, bgEl.value);
         const bytes = new Uint8Array(await (await canvasToBlob(c, 'image/jpeg', q)).arrayBuffer());
@@ -301,7 +300,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     finally { btn.disabled = false; btn.textContent = label; }
   });
 
-  // Minimal store-only (no compression) ZIP writer — inputs are already-compressed
+  // Minimal store-only (no compression) ZIP writer â€” inputs are already-compressed
   // PNG/JPG/WebP/TIFF, so DEFLATE would barely help. Avoids adding a zip dependency.
   function crc32(buf: Uint8Array): number {
     let c = ~0;

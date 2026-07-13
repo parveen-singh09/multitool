@@ -1,4 +1,4 @@
----
+﻿---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
@@ -8,7 +8,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <label id="mc-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
       <span class="text-sm text-ink">Choose MP3 files or drop them here</span>
-      <span class="text-[13px] text-ink-tertiary">Converted in your browser — never uploaded, no size limit</span>
       <input id="mc-file" type="file" accept="audio/mpeg,.mp3,audio/*" multiple class="sr-only" />
     </label>
 
@@ -16,10 +15,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
       <div class="flex flex-wrap items-center gap-2">
         <span class="text-[13px] text-ink-tertiary">Presets:</span>
-        <button type="button" class="preset btn btn-tertiary" data-codec="pcm_s16le" data-rate="44100" data-ch="2">CD · 16-bit 44.1 kHz</button>
-        <button type="button" class="preset btn btn-tertiary" data-codec="pcm_s24le" data-rate="48000" data-ch="2">Studio · 24-bit 48 kHz</button>
-        <button type="button" class="preset btn btn-tertiary" data-codec="pcm_s32le" data-rate="96000" data-ch="2">Master · 32-bit 96 kHz</button>
-        <button type="button" class="preset btn btn-tertiary" data-codec="pcm_s16le" data-rate="16000" data-ch="1">Voice · 16-bit 16 kHz mono</button>
+        <button type="button" class="preset btn btn-tertiary" data-codec="pcm_s16le" data-rate="44100" data-ch="2">CD Â· 16-bit 44.1 kHz</button>
+        <button type="button" class="preset btn btn-tertiary" data-codec="pcm_s24le" data-rate="48000" data-ch="2">Studio Â· 24-bit 48 kHz</button>
+        <button type="button" class="preset btn btn-tertiary" data-codec="pcm_s32le" data-rate="96000" data-ch="2">Master Â· 32-bit 96 kHz</button>
+        <button type="button" class="preset btn btn-tertiary" data-codec="pcm_s16le" data-rate="16000" data-ch="1">Voice Â· 16-bit 16 kHz mono</button>
       </div>
 
       <div id="mc-files" class="flex flex-col gap-2"></div>
@@ -111,7 +110,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       Unlike most online converters, you get full control over the output: pick 8, 16, 24 or 32-bit depth (including
       32-bit float for studio work), set the sample rate up to 96 kHz, downmix to mono or keep stereo, and adjust the
       volume in percent. One-click presets cover CD, studio, mastering and voice targets. You can also normalize
-      loudness (EBU R128), reverse the audio, trim a section and add fade-in/out — then batch-convert a whole folder and
+      loudness (EBU R128), reverse the audio, trim a section and add fade-in/out â€” then batch-convert a whole folder and
       download everything as a ZIP.
     </p>
     <p>
@@ -163,7 +162,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const num = (id: string) => { const v = Number(($(id) as HTMLInputElement)?.value); return Number.isFinite(v) && v > 0 ? v : 0; };
   const outNameFor = (f: File) => f.name.replace(/\.[^.]+$/, '') + '.' + EXT;
 
-  // Build ffmpeg args for MP3 → WAV. Fast input seek (-ss before -i), -to bounds
+  // Build ffmpeg args for MP3 â†’ WAV. Fast input seek (-ss before -i), -to bounds
   // the end, and one -af chain carries volume, reverse, fades and loudnorm.
   function buildWavArgs(o: Opts, input: string, output: string, duration: number): string[] {
     const pre: string[] = [];
@@ -224,7 +223,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       top.className = 'flex flex-wrap items-center gap-2';
       const name = document.createElement('span');
       name.className = 'text-[13px] text-ink truncate';
-      name.textContent = `${file.name} · ${fmtSize(file.size)}`;
+      name.textContent = `${file.name} Â· ${fmtSize(file.size)}`;
       const statusEl = document.createElement('span');
       statusEl.className = 'text-xs text-ink-tertiary ml-auto';
       const actionsEl = document.createElement('span');
@@ -248,7 +247,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   function refreshSummary() {
     const doneCount = jobs.filter((j) => j.done).length;
-    summary.textContent = jobs.length ? `${jobs.length} file${jobs.length === 1 ? '' : 's'}${doneCount ? ` · ${doneCount} done` : ''}` : '';
+    summary.textContent = jobs.length ? `${jobs.length} file${jobs.length === 1 ? '' : 's'}${doneCount ? ` Â· ${doneCount} done` : ''}` : '';
     batchDl.classList.toggle('hidden', !(doneCount > 1));
   }
 
@@ -272,7 +271,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       for (const job of pending) {
         current = job;
         job.bar.style.width = '0%';
-        job.statusEl.textContent = 'Converting…';
+        job.statusEl.textContent = 'Convertingâ€¦';
         job.statusEl.style.color = '';
         const inName = 'in_' + Math.random().toString(36).slice(2) + '.mp3';
         const outName = 'out.' + EXT;
