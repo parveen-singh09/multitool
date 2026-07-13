@@ -9,7 +9,7 @@ export const SITE = {
   twitter: '@toolsilk',
   tagline: 'Free online tools that run in your browser',
   description:
-    'ToolSilk is a free collection of fast, privacy-first online tools — word counter, password generator, JSON formatter, Base64 encoder, QR code generator and more. No sign-up, no uploads, everything runs in your browser.',
+    'ToolSilk is a free collection of fast online tools — word counter, password generator, JSON formatter, Base64 encoder, QR code generator and more.',
 
   keywords: [
     'free online tools',
@@ -17,7 +17,6 @@ export const SITE = {
     'web tools',
     'text tools',
     'developer tools',
-    'privacy-first tools',
     'browser tools',
     'no sign up tools',
   ],

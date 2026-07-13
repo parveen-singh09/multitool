@@ -28,7 +28,7 @@ export const UNIT_CATEGORIES: UnitCategory[] = [
     name: 'Length Converter',
     tagline: 'Metres, feet, miles, inches & more.',
     description:
-      'Free online length converter. Convert between metres, kilometres, centimetres, millimetres, miles, yards, feet, inches and nautical miles instantly. Runs in your browser.',
+      'Free online length converter. Convert between metres, kilometres, centimetres, millimetres, miles, yards, feet, inches and nautical miles instantly.',
     keywords: ['length converter', 'meters to feet', 'cm to inches', 'km to miles', 'distance converter'],
     icon: 'M4 7h16M4 7l3-3M4 7l3 3M20 17H4M20 17l-3-3M20 17l-3 3',
     from: 'Metre',
@@ -52,7 +52,7 @@ export const UNIT_CATEGORIES: UnitCategory[] = [
     name: 'Weight & Mass Converter',
     tagline: 'Kilograms, pounds, ounces, stone & more.',
     description:
-      'Free online weight and mass converter. Convert between kilograms, grams, milligrams, tonnes, pounds, ounces, stone and US tons instantly. Runs entirely in your browser.',
+      'Free online weight and mass converter. Convert between kilograms, grams, milligrams, tonnes, pounds, ounces, stone and US tons instantly.',
     keywords: ['weight converter', 'mass converter', 'kg to lbs', 'grams to ounces', 'pounds to kg'],
     icon: 'M12 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM6 8h12l3 12H3zM9 8l-2 12M15 8l2 12',
     from: 'Kilogram',
@@ -75,7 +75,7 @@ export const UNIT_CATEGORIES: UnitCategory[] = [
     name: 'Temperature Converter',
     tagline: 'Celsius, Fahrenheit & Kelvin.',
     description:
-      'Free online temperature converter. Convert between Celsius, Fahrenheit, Kelvin and Rankine instantly with accurate offset math. Runs in your browser — nothing uploaded.',
+      'Free online temperature converter. Convert between Celsius, Fahrenheit, Kelvin and Rankine instantly with accurate offset math.',
     keywords: ['temperature converter', 'celsius to fahrenheit', 'fahrenheit to celsius', 'kelvin converter', 'c to f'],
     icon: 'M10 13V5a2 2 0 1 1 4 0v8a4 4 0 1 1-4 0ZM12 13V8',
     special: 'temp',
@@ -87,7 +87,7 @@ export const UNIT_CATEGORIES: UnitCategory[] = [
     name: 'Area Converter',
     tagline: 'Square metres, acres, hectares & more.',
     description:
-      'Free online area converter. Convert between square metres, square feet, square kilometres, square miles, acres and hectares instantly. Runs entirely in your browser.',
+      'Free online area converter. Convert between square metres, square feet, square kilometres, square miles, acres and hectares instantly.',
     keywords: ['area converter', 'square feet to square meters', 'acres to hectares', 'sq ft converter', 'land area converter'],
     icon: 'M4 4h16v16H4zM4 10h16M10 4v16',
     from: 'Square metre',
@@ -110,7 +110,7 @@ export const UNIT_CATEGORIES: UnitCategory[] = [
     name: 'Volume Converter',
     tagline: 'Litres, gallons, cups, millilitres & more.',
     description:
-      'Free online volume converter. Convert between litres, millilitres, cubic metres, US and imperial gallons, quarts, pints, cups and fluid ounces instantly. Runs in your browser.',
+      'Free online volume converter. Convert between litres, millilitres, cubic metres, US and imperial gallons, quarts, pints, cups and fluid ounces instantly.',
     keywords: ['volume converter', 'liters to gallons', 'ml to oz', 'cups to ml', 'gallons to liters'],
     icon: 'M6 3h12l-1 4H7zM7 7l1 13h8l1-13M8 13h8',
     from: 'Litre',
@@ -137,7 +137,7 @@ export const UNIT_CATEGORIES: UnitCategory[] = [
     name: 'Speed Converter',
     tagline: 'km/h, mph, m/s, knots & more.',
     description:
-      'Free online speed converter. Convert between kilometres per hour, miles per hour, metres per second, feet per second and knots instantly. Runs entirely in your browser.',
+      'Free online speed converter. Convert between kilometres per hour, miles per hour, metres per second, feet per second and knots instantly.',
     keywords: ['speed converter', 'kmh to mph', 'mph to kmh', 'm/s to mph', 'knots to mph'],
     icon: 'M12 14a2 2 0 1 0 0-.01M12 14l4-5M4 20a8 8 0 1 1 16 0',
     from: 'Kilometre / hour',
@@ -156,7 +156,7 @@ export const UNIT_CATEGORIES: UnitCategory[] = [
     name: 'Time Converter',
     tagline: 'Seconds, minutes, hours, days & years.',
     description:
-      'Free online time converter. Convert between milliseconds, seconds, minutes, hours, days, weeks, months and years instantly. Runs in your browser — nothing uploaded.',
+      'Free online time converter. Convert between milliseconds, seconds, minutes, hours, days, weeks, months and years instantly.',
     keywords: ['time converter', 'hours to minutes', 'days to hours', 'seconds to minutes', 'weeks to days'],
     icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM12 7v5l3 2',
     from: 'Hour',
@@ -177,7 +177,7 @@ export const UNIT_CATEGORIES: UnitCategory[] = [
     name: 'Pressure Converter',
     tagline: 'Pascal, bar, psi, atm & mmHg.',
     description:
-      'Free online pressure converter. Convert between pascals, kilopascals, bar, psi, atmospheres, mmHg (torr) and hectopascals instantly. Runs entirely in your browser.',
+      'Free online pressure converter. Convert between pascals, kilopascals, bar, psi, atmospheres, mmHg (torr) and hectopascals instantly.',
     keywords: ['pressure converter', 'psi to bar', 'bar to psi', 'kpa to psi', 'atm to pascal'],
     icon: 'M12 3a9 9 0 0 0-9 9h4a5 5 0 0 1 10 0h4a9 9 0 0 0-9-9ZM12 12l4-2',
     from: 'Bar',
@@ -198,7 +198,7 @@ export const UNIT_CATEGORIES: UnitCategory[] = [
     name: 'Energy Converter',
     tagline: 'Joules, calories, kWh, BTU & more.',
     description:
-      'Free online energy converter. Convert between joules, kilojoules, calories, kilocalories, watt-hours, kilowatt-hours, BTU and foot-pounds instantly. Runs in your browser.',
+      'Free online energy converter. Convert between joules, kilojoules, calories, kilocalories, watt-hours, kilowatt-hours, BTU and foot-pounds instantly.',
     keywords: ['energy converter', 'joules to calories', 'kwh to joules', 'calories to kj', 'btu converter'],
     icon: 'M13 2 4 14h6l-1 8 9-12h-6z',
     from: 'Kilocalorie',
@@ -220,7 +220,7 @@ export const UNIT_CATEGORIES: UnitCategory[] = [
     name: 'Power Converter',
     tagline: 'Watts, kilowatts, horsepower & BTU/h.',
     description:
-      'Free online power converter. Convert between watts, kilowatts, megawatts, mechanical horsepower, metric horsepower and BTU per hour instantly. Runs entirely in your browser.',
+      'Free online power converter. Convert between watts, kilowatts, megawatts, mechanical horsepower, metric horsepower and BTU per hour instantly.',
     keywords: ['power converter', 'watts to horsepower', 'kw to hp', 'hp to kw', 'horsepower converter'],
     icon: 'M13 2 4 14h6l-1 8 9-12h-6z',
     from: 'Horsepower',
@@ -239,7 +239,7 @@ export const UNIT_CATEGORIES: UnitCategory[] = [
     name: 'Data Storage Converter',
     tagline: 'Bytes, KB, MB, GB, TB — SI & binary.',
     description:
-      'Free online data storage converter. Convert between bits, bytes, kilobytes, megabytes, gigabytes and terabytes in both SI (1000) and binary (1024) units. Runs in your browser.',
+      'Free online data storage converter. Convert between bits, bytes, kilobytes, megabytes, gigabytes and terabytes in both SI (1000) and binary (1024) units.',
     keywords: ['data storage converter', 'mb to gb', 'gb to mb', 'kb to mb', 'bytes converter'],
     icon: 'M4 6a8 3 0 0 0 16 0 8 3 0 0 0-16 0v12a8 3 0 0 0 16 0V6M4 12a8 3 0 0 0 16 0',
     from: 'Megabyte (MB)',
@@ -263,7 +263,7 @@ export const UNIT_CATEGORIES: UnitCategory[] = [
     name: 'Fuel Economy Converter',
     tagline: 'MPG, L/100km & km/L.',
     description:
-      'Free online fuel economy converter. Convert between US MPG, imperial MPG, litres per 100 km and kilometres per litre with correct inverse math. Runs entirely in your browser.',
+      'Free online fuel economy converter. Convert between US MPG, imperial MPG, litres per 100 km and kilometres per litre with correct inverse math.',
     keywords: ['fuel economy converter', 'mpg to l/100km', 'l/100km to mpg', 'km/l converter', 'mpg converter'],
     icon: 'M5 21V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v15M4 21h12M6 9h8M16 10l3 2v6a2 2 0 0 1-2 2',
     special: 'fuel',
@@ -275,7 +275,7 @@ export const UNIT_CATEGORIES: UnitCategory[] = [
     name: 'Angle Converter',
     tagline: 'Degrees, radians, gradians & more.',
     description:
-      'Free online angle converter. Convert between degrees, radians, gradians, arcminutes, arcseconds and full revolutions instantly with exact math. Runs in your browser.',
+      'Free online angle converter. Convert between degrees, radians, gradians, arcminutes, arcseconds and full revolutions instantly with exact math.',
     keywords: ['angle converter', 'degrees to radians', 'radians to degrees', 'gradians converter', 'deg to rad'],
     icon: 'M4 20a16 16 0 0 1 16-16M4 20h6M4 20l9-9',
     from: 'Degree',
@@ -295,7 +295,7 @@ export const UNIT_CATEGORIES: UnitCategory[] = [
     name: 'Frequency Converter',
     tagline: 'Hz, kHz, MHz, GHz, RPM & rad/s.',
     description:
-      'Free online frequency converter. Convert between hertz, kilohertz, megahertz, gigahertz, revolutions per minute and radians per second instantly. Runs in your browser.',
+      'Free online frequency converter. Convert between hertz, kilohertz, megahertz, gigahertz, revolutions per minute and radians per second instantly.',
     keywords: ['frequency converter', 'hz to khz', 'mhz to hz', 'ghz converter', 'hertz converter'],
     icon: 'M2 12h3l2-7 4 14 3-9 2 5h6',
     from: 'Megahertz (MHz)',
@@ -316,7 +316,7 @@ export const UNIT_CATEGORIES: UnitCategory[] = [
     name: 'Cooking Converter',
     tagline: 'Cups, tablespoons, teaspoons, ml & oz.',
     description:
-      'Free online cooking and recipe converter. Convert between cups, tablespoons, teaspoons, millilitres, litres and fluid ounces for recipes instantly. Runs in your browser.',
+      'Free online cooking and recipe converter. Convert between cups, tablespoons, teaspoons, millilitres, litres and fluid ounces for recipes instantly.',
     keywords: ['cooking converter', 'recipe converter', 'cups to ml', 'tablespoons to teaspoons', 'ml to cups'],
     icon: 'M4 3h16l-1 7a7 7 0 0 1-14 0zM12 17v4M8 21h8',
     from: 'US cup',
