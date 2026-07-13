@@ -15,6 +15,9 @@ export interface Props {
   jsonLd?: Record<string, unknown> | Record<string, unknown>[];
 
   noindex?: boolean;
+
+  // bare = no sidebar chrome (used by the landing page)
+  bare?: boolean;
 }
 
 const {
@@ -25,6 +28,7 @@ const {
   ogType = 'website',
   jsonLd,
   noindex = false,
+  bare = false,
 } = Astro.props;
 
 const pageTitle = title
@@ -119,9 +123,13 @@ const keywordList = keywords.join(', ');
     }
   </head>
   <body>
-    <SidebarLayout currentPath={Astro.url.pathname} client:load>
+    {bare ? (
       <slot />
-    </SidebarLayout>
+    ) : (
+      <SidebarLayout currentPath={Astro.url.pathname} client:load>
+        <slot />
+      </SidebarLayout>
+    )}
     <script is:inline>
       // Delegated handler for inline preview copy icons (.copy-icon[data-copy-target]).
       document.addEventListener('click', async (e) => {

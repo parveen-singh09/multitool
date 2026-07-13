@@ -14,11 +14,15 @@ import {
   Home,
   BookOpen,
   Search,
-  Menu
+  Menu,
+  Mail,
+  MessageSquare,
+  Coffee
 } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
@@ -102,7 +106,6 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
           <Menu className="h-5 w-5" />
         </button>
         <a href="/" className="inline-flex items-center gap-2 no-underline" aria-label="ToolSilk home">
-          <img src="/favicon.svg" width="20" height="20" alt="" aria-hidden="true" className="rounded-[5px]" />
           <span className="font-display font-semibold text-[15px] tracking-[-0.01em] text-ink">
             Tool<span className="text-ink-subtle">Silk</span>
           </span>
@@ -136,10 +139,18 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={normalizedPath === "/about"}>
-                <a href="/about">
-                  <BookOpen className="h-4 w-4" />
-                  <span>About</span>
+              <SidebarMenuButton asChild isActive={normalizedPath === "/feedback"}>
+                <a href="/feedback">
+                  <MessageSquare className="h-4 w-4" />
+                  <span>Feedback</span>
+                </a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <a href="https://ko-fi.com/toolsilk" target="_blank" rel="noopener noreferrer">
+                  <Coffee className="h-4 w-4" />
+                  <span>Buy me a coffee</span>
                 </a>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -243,6 +254,35 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter className="border-t border-sidebar-border/50">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={normalizedPath === "/about"}>
+              <a href="/about">
+                <BookOpen className="h-4 w-4" />
+                <span>About</span>
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={normalizedPath === "/contact"}>
+              <a href="/contact">
+                <Mail className="h-4 w-4" />
+                <span>Contact Us</span>
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={normalizedPath === "/privacy"}>
+              <a href="/privacy">
+                <Shield className="h-4 w-4" />
+                <span>Privacy</span>
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }

@@ -27,7 +27,7 @@ const toolIndex =
   class={`tool-search tool-search--${variant} ${className}`}
   role="search"
   data-tool-search
-  action="/#tools"
+  action="/tools"
 >
   <label for={inputId} class="sr-only">Search tools</label>
   <div class="relative flex items-center">
@@ -189,12 +189,6 @@ const toolIndex =
       }
     }
 
-    function sync(value: string, from: HTMLInputElement) {
-      inputs.forEach((i) => {
-        if (i !== from) i.value = value;
-      });
-    }
-
     // Autocomplete dropdown (compact/header variant only).
     type Entry = { n: string; s: string; c: string; i: string; h: string };
     let index: Entry[] = [];
@@ -322,13 +316,11 @@ const toolIndex =
 
     inputs.forEach((input) => {
       input.addEventListener('input', () => {
-        sync(input.value, input);
         applyFilter(input.value);
       });
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
           input.value = '';
-          sync('', input);
           applyFilter('');
         }
       });
@@ -338,7 +330,7 @@ const toolIndex =
         if (!grid) {
           e.preventDefault();
           const q = encodeURIComponent(input.value.trim());
-          window.location.href = q ? `/?q=${q}#tools` : '/#tools';
+          window.location.href = q ? `/tools?q=${q}` : '/tools';
         } else {
           e.preventDefault();
         }

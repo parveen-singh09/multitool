@@ -2,50 +2,47 @@
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import ToolCard from '../components/ToolCard.astro';
-import ToolSearch from '../components/ToolSearch.astro';
 import { tools, categories, toolsByCategory } from '../data/tools';
 import { SITE } from '../data/site';
 
-const jsonLd = [
-  {
-    '@context': 'https://schema.org',
-    '@type': 'WebSite',
-    name: SITE.name,
-    url: SITE.url,
-    description: SITE.description,
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: `${SITE.url}/#tools?q={search_term_string}`,
-      'query-input': 'required name=search_term_string',
-    },
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: SITE.name,
+  url: SITE.url,
+  description: SITE.description,
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: `${SITE.url}/tools?q={search_term_string}`,
+    'query-input': 'required name=search_term_string',
   },
-  {
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    name: 'ToolSilk free online tools',
-    itemListElement: tools.map((tool, i) => ({
-      '@type': 'ListItem',
-      position: i + 1,
-      name: tool.name,
-      description: tool.tagline,
-      url: `${SITE.url}/tools/${tool.slug}`,
-    })),
-  },
-];
+};
+
+// Category tints mirror ToolCard so the landing reads as the same product.
+const catStyle: Record<string, { bg: string; ring: string; fg: string; icon: string }> = {
+  Text: { bg: 'bg-sky-500/12', ring: 'ring-sky-500/20', fg: 'text-sky-400', icon: 'M4 7V4h16v3 M9 20h6 M12 4v16' },
+  Developer: { bg: 'bg-violet-500/12', ring: 'ring-violet-500/20', fg: 'text-violet-400', icon: 'm16 18 6-6-6-6 M8 6l-6 6 6 6' },
+  Image: { bg: 'bg-emerald-500/12', ring: 'ring-emerald-500/20', fg: 'text-emerald-400', icon: 'M3 3h18v18H3z M8.5 8.5a1.5 1.5 0 1 0 0 3 M21 15l-5-5L5 21' },
+  Converters: { bg: 'bg-amber-500/12', ring: 'ring-amber-500/20', fg: 'text-amber-400', icon: 'M21 12a9 9 0 1 1-3-6.7L21 8 M21 3v5h-5' },
+  Calculators: { bg: 'bg-rose-500/12', ring: 'ring-rose-500/20', fg: 'text-rose-400', icon: 'M5 2h14v20H5z M8 6h8 M8 11h2 M12 11h2 M8 15h2 M12 15h2' },
+  Generators: { bg: 'bg-fuchsia-500/12', ring: 'ring-fuchsia-500/20', fg: 'text-fuchsia-400', icon: 'M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11z' },
+  Security: { bg: 'bg-teal-500/12', ring: 'ring-teal-500/20', fg: 'text-teal-400', icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' },
+  PDF: { bg: 'bg-red-500/12', ring: 'ring-red-500/20', fg: 'text-red-400', icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6' },
+  'Audio & Video': { bg: 'bg-indigo-500/12', ring: 'ring-indigo-500/20', fg: 'text-indigo-400', icon: 'm22 8-6 4 6 4V8z M2 6h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2z' },
+  'Device & Sensors': { bg: 'bg-cyan-500/12', ring: 'ring-cyan-500/20', fg: 'text-cyan-400', icon: 'M12 13l4-4 M3.5 16a9 9 0 1 1 17 0z' },
+};
 ---
 
-<Layout jsonLd={jsonLd}>
-  <Header />
+<Layout bare jsonLd={jsonLd}>
+  <Header landing />
 
   <main>
-
     <section class="relative flex min-h-svh items-center overflow-hidden">
       <div class="container-page w-full py-12">
         <div class="hero-copy mx-auto max-w-3xl text-center">
           <span class="status-badge mx-auto">
             <span class="h-1.5 w-1.5 rounded-full" style="background:#27a644"></span>
-            350+ free tools
+            {tools.length}+ free tools
           </span>
 
           <h1 class="display-xl mt-6 text-balance text-ink sm:whitespace-nowrap">
@@ -58,49 +55,91 @@ const jsonLd = [
           </p>
 
           <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <a href="#tools" class="btn btn-primary">Browse tools</a>
+            <a href="/tools" class="btn btn-primary">Browse tools</a>
           </div>
         </div>
       </div>
     </section>
 
-    <section id="tools" class="container-page scroll-mt-20 py-8">
+    <!-- Browse by category — real counts + sample tools, tinted to match the tool grid -->
+    <section class="container-page py-16">
       <div class="mb-10 flex flex-col gap-2">
-        <span class="eyebrow text-primary-hover">The collection</span>
-        <h2 class="display-md text-ink">Explore every tool</h2>
-        <div class="mt-4">
-          <ToolSearch variant="hero" class="mx-0 max-w-none!" />
-        </div>
-        <p id="search-count" class="text-sm text-primary-hover" role="status" aria-live="polite"></p>
+        <span class="eyebrow text-primary-hover">{categories.length} categories</span>
+        <h2 class="display-md text-ink">Pick a category, start working</h2>
+        <p class="mt-2 max-w-xl text-lg leading-relaxed text-ink-muted">
+          {tools.length}+ tools grouped so you land on the right one fast.
+        </p>
       </div>
 
-      <div
-        id="search-results"
-        class="mb-14 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
-        style="display: none"
-      />
-
-      {categories.map((category) => (
-        <div id={category.toLowerCase()} data-category-section class="mb-14 scroll-mt-20">
-          <div class="mb-5 flex items-center gap-3">
-            <h3 class="font-display text-xl font-semibold tracking-[-0.01em] text-ink">{category}</h3>
-            <span class="h-px flex-1 bg-hairline"></span>
-            <span class="status-badge">{toolsByCategory(category).length}</span>
-          </div>
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {toolsByCategory(category).map((tool) => (
-              <ToolCard tool={tool} />
-            ))}
-          </div>
-        </div>
-      ))}
-
-      <div id="search-empty" class="hidden py-16 text-center">
-        <p class="text-lg text-ink">No tools match your search.</p>
-        <p class="mt-2 text-sm text-ink-subtle">Try a different keyword like “json”, “image” or “password”.</p>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {categories.map((category) => {
+          const s = catStyle[category];
+          const catTools = toolsByCategory(category);
+          const sample = catTools.slice(0, 3).map((t) => t.name).join(' · ');
+          return (
+            <a
+              href={`/tools#${category.toLowerCase()}`}
+              class="panel panel-lift group flex items-start gap-4 p-5 transition-colors duration-150 hover:bg-surface-2 hover:border-hairline-strong"
+            >
+              <span class={`flex h-10 w-10 flex-none items-center justify-center rounded-lg ring-1 ${s.bg} ${s.ring} ${s.fg}`}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={s.icon} /></svg>
+              </span>
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <h3 class="font-display text-[17px] font-medium tracking-[-0.01em] text-ink">{category}</h3>
+                  <span class="status-badge">{catTools.length}</span>
+                </div>
+                <p class="mt-1 truncate text-sm text-ink-subtle">{sample}</p>
+              </div>
+            </a>
+          );
+        })}
       </div>
     </section>
 
+    <!-- The real differentiator: everything runs client-side -->
+    <section class="container-page py-16">
+      <div class="rounded-xl border border-hairline bg-surface-1 p-6 md:p-10">
+        <div class="grid grid-cols-1 gap-8 md:grid-cols-3">
+          <div>
+            <span class="eyebrow text-primary-hover">Why it's different</span>
+            <h2 class="mt-2 display-md text-ink">Nothing leaves your device</h2>
+          </div>
+          <div class="flex flex-col gap-5 md:col-span-2">
+            <div class="flex items-start gap-3">
+              <svg class="mt-0.5 h-5 w-5 flex-none text-primary-hover" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
+              <p class="text-ink-muted"><span class="text-ink">Private by default.</span> Files are processed right in your browser — they're never uploaded to a server.</p>
+            </div>
+            <div class="flex items-start gap-3">
+              <svg class="mt-0.5 h-5 w-5 flex-none text-primary-hover" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9z" /></svg>
+              <p class="text-ink-muted"><span class="text-ink">Instant.</span> No round-trips, no queues. Results happen the moment you hit go.</p>
+            </div>
+            <div class="flex items-start gap-3">
+              <svg class="mt-0.5 h-5 w-5 flex-none text-primary-hover" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+              <p class="text-ink-muted"><span class="text-ink">Free, no account.</span> Every tool is free to use as often as you like — no sign-up, no limits.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Closing -->
+    <section class="container-page py-16">
+      <div class="mx-auto max-w-3xl">
+        <h2 class="display-md text-ink">Built for quick jobs and real work alike</h2>
+        <div class="mt-6 flex flex-col gap-4 text-lg leading-relaxed text-ink-muted">
+          <p>
+            {SITE.name} pulls together images, text, developer, and everyday utilities into one place — so you stop hunting across a dozen single-purpose sites.
+          </p>
+          <p>
+            Convert a file, format some JSON, generate a QR code, or crunch a calculation — each tool runs on its own, right in the browser, with nothing to install.
+          </p>
+          <p>
+            The collection keeps growing. New tools land regularly, so the next thing you need is likely already here.
+          </p>
+        </div>
+      </div>
+    </section>
   </main>
 
   <Footer full />
