@@ -1,5 +1,6 @@
 ---
 import { tools } from '../data/tools';
+import { toolHaystack } from '../lib/toolSearch';
 
 interface Props {
   variant?: 'hero' | 'compact';
@@ -17,7 +18,7 @@ const toolIndex =
         s: t.slug,
         c: t.category,
         i: t.icon,
-        k: (t.keywords ?? []).join(' '),
+        h: toolHaystack(t), // full search haystack, same fields as the grid
       }))
     : null;
 ---
@@ -142,6 +143,8 @@ const toolIndex =
 </style>
 
 <script>
+  import { matchesQuery, compareByQuery } from '../lib/toolSearch';
+
   const inputs = Array.from(
     document.querySelectorAll<HTMLInputElement>('[data-tool-search-input]'),
   );
@@ -152,26 +155,37 @@ const toolIndex =
     function applyFilter(raw: string) {
       if (!grid) return;
       const q = norm(raw);
-      const cards = grid.querySelectorAll<HTMLElement>('[data-tool-card]');
-      let visible = 0;
-      cards.forEach((card) => {
-        const hay = card.dataset.search || '';
-        const match = !q || hay.includes(q);
-        card.classList.toggle('hidden', !match);
-        if (match) visible++;
-      });
-
-      grid.querySelectorAll<HTMLElement>('[data-category-section]').forEach((sec) => {
-        const anyVisible = sec.querySelectorAll('[data-tool-card]:not(.hidden)').length > 0;
-        sec.classList.toggle('hidden', !anyVisible);
-      });
+      const results = document.getElementById('search-results');
+      const sections = grid.querySelectorAll<HTMLElement>('[data-category-section]');
       const empty = document.getElementById('search-empty');
       const count = document.getElementById('search-count');
-      if (empty) empty.classList.toggle('hidden', visible !== 0);
+
+      // Empty query: restore the grouped, per-category view.
+      if (!q) {
+        sections.forEach((sec) => sec.classList.remove('hidden'));
+        if (results) {
+          results.replaceChildren();
+          results.style.display = 'none';
+        }
+        if (empty) empty.classList.add('hidden');
+        if (count) count.textContent = '';
+        return;
+      }
+
+      // Searching: flat ranked list — name-prefix matches first (alphabetical),
+      // then the rest. Same matcher + ranking as the header dropdown.
+      const matched = Array.from(grid.querySelectorAll<HTMLElement>('[data-category-section] [data-tool-card]'))
+        .filter((card) => matchesQuery(card.dataset.search || '', raw))
+        .sort((a, b) => compareByQuery(a.dataset.name || '', b.dataset.name || '', raw));
+
+      sections.forEach((sec) => sec.classList.add('hidden'));
+      if (results) {
+        results.replaceChildren(...matched.map((card) => card.cloneNode(true)));
+        results.style.display = matched.length ? 'grid' : 'none';
+      }
+      if (empty) empty.classList.toggle('hidden', matched.length !== 0);
       if (count) {
-        count.textContent = q
-          ? `${visible} tool${visible === 1 ? '' : 's'} match “${raw.trim()}”`
-          : '';
+        count.textContent = `${matched.length} tool${matched.length === 1 ? '' : 's'} match “${raw.trim()}”`;
       }
     }
 
@@ -182,7 +196,7 @@ const toolIndex =
     }
 
     // Autocomplete dropdown (compact/header variant only).
-    type Entry = { n: string; s: string; c: string; i: string; k: string };
+    type Entry = { n: string; s: string; c: string; i: string; h: string };
     let index: Entry[] = [];
     try {
       const raw = document.querySelector('[data-tool-search-index]')?.textContent;
@@ -236,18 +250,9 @@ const toolIndex =
       const render = (raw: string) => {
         const q = norm(raw);
         if (!q) return close();
-        const terms = q.split(/\s+/).filter(Boolean);
-        // Match each term at a word start, so "dom" doesn't hit "ran*dom*".
-        const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const res = terms.map((t) => new RegExp(`\\b${esc(t)}`, 'i'));
-        // Names starting with the query rank first, each tier alphabetical.
-        const starts = (n: string) => norm(n).startsWith(terms[0]);
         items = index
-          .filter((t) => res.every((re) => re.test(t.n)))
-          .sort((a, b) => {
-            const d = Number(starts(b.n)) - Number(starts(a.n));
-            return d || a.n.localeCompare(b.n);
-          });
+          .filter((t) => matchesQuery(t.h, raw))
+          .sort((a, b) => compareByQuery(a.n, b.n, raw));
         if (!items.length) return close();
         list.replaceChildren(
           ...items.map((t) => {

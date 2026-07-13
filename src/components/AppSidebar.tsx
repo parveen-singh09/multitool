@@ -34,6 +34,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@radix-ui/react-collapsible";
 import { tools, categories } from "../data/tools";
+import { matchesQuery, toolHaystack, compareByQuery } from "../lib/toolSearch";
 
 interface AppSidebarProps {
   currentPath: string;
@@ -75,12 +76,17 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
     setOpenCategories(nextOpen);
   }, [searchQuery, normalizedPath]);
 
-  // Filter tools based on search query
-  const filteredTools = tools.filter(
-    (tool) =>
-      tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tool.category.toLowerCase().includes(searchQuery.toLowerCase())
+  // Filter tools using the shared header logic — same matcher, same fields.
+  const filteredTools = tools.filter((tool) =>
+    matchesQuery(toolHaystack(tool), searchQuery)
   );
+
+  // While searching, show a flat ranked list (name-prefix first, alphabetical),
+  // matching the explore grid and header dropdown.
+  const isSearching = searchQuery.trim() !== "";
+  const rankedTools = isSearching
+    ? [...filteredTools].sort((a, b) => compareByQuery(a.name, b.name, searchQuery))
+    : [];
 
   return (
     <Sidebar className="border-r border-sidebar-border bg-sidebar">
@@ -145,11 +151,37 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
           <SidebarGroupLabel className="text-xs font-semibold text-ink-subtle px-3 py-1">Tools</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {categories.map((category) => {
+              {isSearching && (
+                rankedTools.length === 0 ? (
+                  <p className="px-3 py-2 text-sm text-ink-subtle">No tools match your search.</p>
+                ) : (
+                  <SidebarMenuSub className="ml-2 border-none pl-1">
+                    {rankedTools.map((tool) => {
+                      const isToolActive = `/tools/${tool.slug}` === normalizedPath;
+                      return (
+                        <SidebarMenuSubItem key={tool.slug}>
+                          <SidebarMenuSubButton asChild isActive={isToolActive}>
+                            <a
+                              href={`/tools/${tool.slug}`}
+                              className={`h-auto min-h-7 items-start overflow-visible whitespace-normal py-1.5 text-sm leading-snug ${
+                                isToolActive
+                                  ? "text-primary-hover font-medium"
+                                  : "text-ink-muted hover:text-ink"
+                              }`}
+                            >
+                              {tool.name}
+                            </a>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      );
+                    })}
+                  </SidebarMenuSub>
+                )
+              )}
+              {!isSearching && categories.map((category) => {
                 const Icon = categoryIcons[category] || FileText;
                 const categoryTools = filteredTools.filter((t) => t.category === category);
 
-                // If searching, hide categories that have no matching tools
                 if (categoryTools.length === 0) return null;
 
                 const isOpen = openCategories[category] || false;

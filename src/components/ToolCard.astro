@@ -1,13 +1,12 @@
 ---
 import type { Tool } from '../data/tools';
+import { toolHaystack } from '../lib/toolSearch';
 interface Props {
   tool: Tool;
 }
 const { tool } = Astro.props;
 
-const searchText = [tool.name, tool.tagline, tool.category, ...tool.keywords]
-  .join(' ')
-  .toLowerCase();
+const searchText = toolHaystack(tool);
 
 // ponytail: category-keyed tints keep the palette controlled vs. per-tool random.
 // Diverges from DESIGN.md's single-accent rule — requested to match the colorful reference.
@@ -30,6 +29,7 @@ const tint = tints[tool.category] ?? { bg: 'bg-surface-2', ring: 'ring-hairline'
   href={`/tools/${tool.slug}`}
   data-tool-card
   data-search={searchText}
+  data-name={tool.name}
   class="panel panel-lift group flex flex-col gap-3 p-6 transition-colors duration-150 hover:bg-surface-2 hover:border-hairline-strong"
 >
   <span class={`flex h-10 w-10 items-center justify-center rounded-lg ring-1 transition-colors ${tint.bg} ${tint.ring} ${tint.fg}`}>
