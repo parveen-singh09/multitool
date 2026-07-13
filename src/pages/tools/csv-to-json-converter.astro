@@ -6,7 +6,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   <div class="flex flex-col gap-4">
     <div class="flex flex-wrap items-center gap-2">
       <button id="c2j-convert" class="btn btn-primary">Convert to JSON</button>
-      <button id="c2j-copy" class="btn btn-secondary">Copy</button>
       <button id="c2j-download" class="btn btn-secondary">Download</button>
       <button id="c2j-clear" class="btn btn-tertiary">Clear</button>
       <label class="btn btn-tertiary cursor-pointer">
@@ -87,7 +86,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <span>JSON output</span>
           <span id="c2j-count" class="text-ink-tertiary"></span>
         </span>
-        <pre class="hl-block field" style="height:22rem;margin:0;overflow:auto;white-space:pre"><code id="c2j-output" class="hljs" style="background:transparent;padding:0"></code></pre>
+        <div class="copy-wrap"><pre class="hl-block field" style="height:22rem;margin:0;overflow:auto;white-space:pre"><code id="c2j-output" class="hljs" style="background:transparent;padding:0"></code></pre><button type="button" class="copy-icon" data-copy-target="#c2j-output" aria-label="Copy"></button></div>
       </div>
     </div>
   </div>
@@ -264,14 +263,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     output.textContent = '';
     count.textContent = '';
     status.classList.add('hidden');
-  });
-
-  document.getElementById('c2j-copy')!.addEventListener('click', async () => {
-    if (!rawOutput) return;
-    const btn = document.getElementById('c2j-copy')!;
-    await navigator.clipboard.writeText(rawOutput);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy'), 1500);
   });
 
   document.getElementById('c2j-download')!.addEventListener('click', () => {

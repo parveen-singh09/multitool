@@ -48,8 +48,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div class="panel panel-lift flex flex-col gap-2 p-4">
       <div class="flex items-center gap-3">
-        <pre class="hl-block flex-1" style="overflow:auto"><code id="cr-expr" class="hljs text-lg" style="background:transparent;padding:0"></code></pre>
-        <button id="cr-copy" class="btn btn-secondary">Copy</button>
+        <div class="copy-wrap flex-1"><pre class="hl-block" style="overflow:auto"><code id="cr-expr" class="hljs text-lg" style="background:transparent;padding:0"></code></pre><button type="button" class="copy-icon" data-copy-target="#cr-expr" aria-label="Copy"></button></div>
       </div>
       <p id="cr-human" class="text-sm text-ink-subtle"></p>
       <p id="cr-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
@@ -136,11 +135,5 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     build();
   });
   fields.forEach((id) => $(id).addEventListener('input', build));
-  $('cr-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(rawOutput);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy'), 1500);
-  });
   build();
 </script>

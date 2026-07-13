@@ -7,17 +7,22 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div class="flex gap-2">
       <button id="he-encode" class="btn btn-primary">Encode →</button>
       <button id="he-decode" class="btn btn-secondary">← Decode</button>
-      <button id="he-copy" class="btn btn-secondary ml-auto">Copy output</button>
     </div>
 
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">
       Input
-      <textarea id="he-in" class="field min-h-40 resize-y font-mono text-[13px]" placeholder="Type or paste text / HTML…" spellcheck="false">Fish & chips for "less than" 5 dollars</textarea>
+      <div class="copy-wrap">
+        <textarea id="he-in" class="field min-h-40 resize-y font-mono text-[13px]" placeholder="Type or paste text / HTML…" spellcheck="false">Fish & chips for "less than" 5 dollars</textarea>
+        <button type="button" class="copy-icon" data-copy-target="#he-in" aria-label="Copy"></button>
+      </div>
     </label>
 
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">
       Output
-      <textarea id="he-out" class="field min-h-40 resize-y font-mono text-[13px]" readonly></textarea>
+      <div class="copy-wrap">
+        <textarea id="he-out" class="field min-h-40 resize-y font-mono text-[13px]" readonly></textarea>
+        <button type="button" class="copy-icon" data-copy-target="#he-out" aria-label="Copy"></button>
+      </div>
     </label>
   </div>
 
@@ -56,12 +61,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   });
   document.getElementById('he-decode')!.addEventListener('click', () => {
     output.value = decode(input.value);
-  });
-  document.getElementById('he-copy')!.addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(output.value);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy output'), 1500);
   });
 
   output.value = encode(input.value);

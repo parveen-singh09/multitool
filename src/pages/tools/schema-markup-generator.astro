@@ -20,11 +20,13 @@ import { SCHEMA_TYPES } from '../../lib/schema-markup';
           <div class="flex items-center justify-between gap-3">
             <span class="eyebrow text-primary-hover">JSON-LD output</span>
             <div class="flex gap-2">
-              <button id="sm-copy" class="btn btn-secondary">Copy</button>
               <button id="sm-download" class="btn btn-secondary">Download</button>
             </div>
           </div>
-          <pre class="hl-block" style="max-height:60vh;overflow:auto;margin:0"><code id="sm-out" class="hljs language-html" style="background:transparent;padding:0"></code></pre>
+          <div class="copy-wrap">
+            <pre class="hl-block" style="max-height:60vh;overflow:auto;margin:0"><code id="sm-out" class="hljs language-html" style="background:transparent;padding:0"></code></pre>
+            <button type="button" class="copy-icon" data-copy-target="#sm-out" aria-label="Copy"></button>
+          </div>
         </div>
 
         <div id="sm-hints" class="panel p-4 text-[13px] text-ink-subtle"></div>
@@ -223,13 +225,6 @@ import { SCHEMA_TYPES } from '../../lib/schema-markup';
   }
 
   typeSel.addEventListener('change', switchType);
-
-  $('sm-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(raw);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy'), 1500);
-  });
 
   $('sm-download').addEventListener('click', () => {
     const blob = new Blob([raw], { type: 'text/html' });

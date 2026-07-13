@@ -21,7 +21,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           </select>
         </label>
         <button id="ps-run" class="btn btn-primary">Summarize</button>
-        <button id="ps-copy" class="btn btn-secondary" disabled>Copy</button>
         <span id="ps-status" class="text-[13px] text-ink-subtle" aria-live="polite"></span>
       </div>
       <p class="text-[13px] text-ink-tertiary">
@@ -29,11 +28,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         an AI model to be summarized.
         Donâ€™t summarize confidential documents you wouldnâ€™t share.
       </p>
-      <div id="ps-out-wrap" class="relative" style="display:none">
-        <button id="ps-copy-icon" type="button" title="Copy summary" aria-label="Copy summary" class="btn btn-tertiary absolute right-2 top-2 z-10 min-h-0 p-1.5">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        </button>
+      <div id="ps-out-wrap" class="copy-wrap" style="display:none">
         <div id="ps-out" class="panel min-h-24 whitespace-pre-wrap p-4 pr-12 text-[15px] leading-relaxed text-ink"></div>
+        <button type="button" class="copy-icon" data-copy-target="#ps-out" aria-label="Copy"></button>
       </div>
     </div>
     <p id="ps-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
@@ -78,11 +75,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const panel = $('ps-panel');
   const out = $('ps-out');
   const outWrap = $('ps-out-wrap');
-  const copyIcon = $('ps-copy-icon') as HTMLButtonElement;
   const status = $('ps-status');
   const err = $('ps-error');
   const runBtn = $('ps-run') as HTMLButtonElement;
-  const copyBtn = $('ps-copy') as HTMLButtonElement;
 
   let bytes: ArrayBuffer | null = null;
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
@@ -93,7 +88,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       bytes = b;
       panel.classList.remove('hidden'); panel.classList.add('flex');
       status.textContent = `${file.name} ready.`;
-      outWrap.style.display = 'none'; out.textContent = ''; copyBtn.disabled = true;
+      outWrap.style.display = 'none'; out.textContent = '';
     });
   }
 
@@ -113,7 +108,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   async function run() {
     if (!bytes) return;
-    setErr(''); runBtn.disabled = true; copyBtn.disabled = true;
+    setErr(''); runBtn.disabled = true;
     try {
       let text = await extractText();
       if (text.replace(/\s/g, '').length < 20) {
@@ -146,7 +141,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       }
       out.textContent = summary;
       outWrap.style.display = 'block';
-      copyBtn.disabled = false;
       status.textContent = truncated
         ? 'Done â€” summarized the first part of a long document.'
         : 'Done.';
@@ -161,12 +155,4 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
   drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) load(f); });
   runBtn.addEventListener('click', run);
-  copyBtn.addEventListener('click', async () => {
-    await navigator.clipboard.writeText(out.textContent || '');
-    copyBtn.textContent = 'Copied!'; setTimeout(() => (copyBtn.textContent = 'Copy'), 1400);
-  });
-  copyIcon.addEventListener('click', async () => {
-    await navigator.clipboard.writeText(out.textContent || '');
-    copyIcon.classList.add('text-primary'); setTimeout(() => copyIcon.classList.remove('text-primary'), 1400);
-  });
 </script>

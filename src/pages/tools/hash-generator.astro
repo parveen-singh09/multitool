@@ -6,12 +6,15 @@ const algos = ['MD5', 'SHA-1', 'SHA-256', 'SHA-384', 'SHA-512'];
 
 <ToolLayout slug="hash-generator">
   <div class="flex flex-col gap-4">
-    <textarea
-      id="hash-input"
-      class="field min-h-40 resize-y font-mono text-[13px]"
-      placeholder="Type or paste text to hash…"
-      aria-label="Text to hash"
-    ></textarea>
+    <div class="copy-wrap">
+      <textarea
+        id="hash-input"
+        class="field min-h-40 resize-y font-mono text-[13px]"
+        placeholder="Type or paste text to hash…"
+        aria-label="Text to hash"
+      ></textarea>
+      <button type="button" class="copy-icon" data-copy-target="#hash-input" aria-label="Copy"></button>
+    </div>
 
     <div class="flex items-center justify-end">
       <button id="hash-case" class="btn btn-secondary" aria-pressed="false">
@@ -23,11 +26,14 @@ const algos = ['MD5', 'SHA-1', 'SHA-256', 'SHA-384', 'SHA-512'];
       {algos.map((algo) => (
         <div class="panel flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:gap-4">
           <span class="w-20 shrink-0 font-mono text-sm text-primary-hover">{algo}</span>
-          <output
-            data-algo={algo}
-            class="hash-out flex-1 select-all break-all font-mono text-[13px] text-ink-muted"
-          >—</output>
-          <button class="btn btn-secondary hash-copy shrink-0" data-algo={algo}>Copy</button>
+          <div class="copy-wrap flex-1">
+            <output
+              id={`hash-${algo}`}
+              data-algo={algo}
+              class="hash-out block select-all break-all font-mono text-[13px] text-ink-muted"
+            >—</output>
+            <button type="button" class="copy-icon" data-copy-target={`#hash-${algo}`} aria-label="Copy"></button>
+          </div>
         </div>
       ))}
     </div>
@@ -162,18 +168,5 @@ const algos = ['MD5', 'SHA-1', 'SHA-256', 'SHA-384', 'SHA-512'];
     caseBtn.setAttribute('aria-pressed', String(uppercase));
     caseBtn.textContent = uppercase ? 'Lowercase' : 'Uppercase';
     updateAll();
-  });
-
-  document.querySelectorAll<HTMLButtonElement>('.hash-copy').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const out = document.querySelector<HTMLOutputElement>(
-        `.hash-out[data-algo="${btn.dataset.algo}"]`
-      )!;
-      if (out.textContent && out.textContent !== '—') {
-        await navigator.clipboard.writeText(out.textContent);
-        btn.textContent = 'Copied!';
-        setTimeout(() => (btn.textContent = 'Copy'), 1500);
-      }
-    });
   });
 </script>

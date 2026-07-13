@@ -122,11 +122,10 @@ const PRESETS: { label: string; cmd: string }[] = [
       <span class="flex items-center justify-between">
         <span>Generated code</span>
         <span class="flex gap-2">
-          <button id="ct-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button>
           <button id="ct-download" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Download</button>
         </span>
       </span>
-      <pre class="hl-block field" style="height:22rem;margin:0;overflow:auto;white-space:pre"><code id="ct-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+      <div class="copy-wrap"><pre class="hl-block field" style="height:22rem;margin:0;overflow:auto;white-space:pre"><code id="ct-out" class="hljs" style="background:transparent;padding:0"></code></pre><button type="button" class="copy-icon" data-copy-target="#ct-out" aria-label="Copy"></button></div>
     </div>
     <p id="ct-warn" class="hidden text-[13px]" style="color:#f5a623" role="status"></p>
     <p id="ct-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
@@ -253,13 +252,6 @@ const PRESETS: { label: string; cmd: string }[] = [
     warnEl.classList.add('hidden');
     rerender();
     input.focus();
-  });
-
-  document.getElementById('ct-copy')!.addEventListener('click', async (e) => {
-    if (!rawOutput) return;
-    await navigator.clipboard.writeText(rawOutput);
-    const b = e.currentTarget as HTMLButtonElement;
-    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
   });
 
   document.getElementById('ct-download')!.addEventListener('click', () => {

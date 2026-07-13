@@ -20,10 +20,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <label class="text-sm text-ink-subtle" for="cu-to-val">To</label>
         <div class="relative">
           <span id="cu-to-sym" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ink-tertiary"></span>
-          <input id="cu-to-val" type="number" class="field pl-8 pr-10" inputmode="decimal" />
-          <button id="cu-copy" type="button" class="absolute right-2 top-1/2 -translate-y-1/2 rounded-xs p-1 text-ink-tertiary hover:text-ink" aria-label="Copy converted amount" title="Copy result">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          </button>
+          <div class="copy-wrap">
+            <input id="cu-to-val" type="number" class="field pl-8 pr-10" inputmode="decimal" />
+            <button type="button" class="copy-icon" data-copy-target="#cu-to-val" aria-label="Copy"></button>
+          </div>
         </div>
         <select id="cu-to" class="field mt-1"></select>
       </div>
@@ -159,7 +159,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const table = document.getElementById('cu-table')!;
   const err = document.getElementById('cu-error')!;
   const dpSel = document.getElementById('cu-dp') as HTMLSelectElement;
-  const copyBtn = document.getElementById('cu-copy') as HTMLButtonElement;
   const periods = document.getElementById('cu-periods')!;
   const chart = document.getElementById('cu-chart')!;
   const chartMsg = document.getElementById('cu-chart-msg')!;
@@ -309,10 +308,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   fromSel.addEventListener('change', () => { convert('from'); loadHistory(); });
   toSel.addEventListener('change', () => { convert('from'); loadHistory(); });
   dpSel.addEventListener('change', () => { dp = Number(dpSel.value); convert('from'); loadHistory(); });
-  copyBtn.addEventListener('click', async () => {
-    if (!toVal.value) return;
-    try { await navigator.clipboard.writeText(toVal.value); } catch {}
-  });
   periods.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest('button[data-p]') as HTMLElement | null;
     if (!b) return;

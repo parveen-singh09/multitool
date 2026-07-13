@@ -25,16 +25,22 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <div id="cp-swatch" class="h-16 w-16 shrink-0 rounded-md border border-hairline" aria-hidden="true"></div>
         <div class="flex flex-col gap-2">
           <label class="flex items-center gap-2 text-sm text-ink-subtle">HEX
-            <input id="cp-hex" class="field w-40 font-mono" readonly />
-            <button data-copy="cp-hex" class="cp-copy btn btn-secondary">Copy</button>
+            <div class="copy-wrap">
+              <input id="cp-hex" class="field w-40 font-mono" readonly />
+              <button type="button" class="copy-icon" data-copy-target="#cp-hex" aria-label="Copy"></button>
+            </div>
           </label>
           <label class="flex items-center gap-2 text-sm text-ink-subtle">RGB
-            <input id="cp-rgb" class="field w-40 font-mono" readonly />
-            <button data-copy="cp-rgb" class="cp-copy btn btn-secondary">Copy</button>
+            <div class="copy-wrap">
+              <input id="cp-rgb" class="field w-40 font-mono" readonly />
+              <button type="button" class="copy-icon" data-copy-target="#cp-rgb" aria-label="Copy"></button>
+            </div>
           </label>
           <label class="flex items-center gap-2 text-sm text-ink-subtle">HSL
-            <input id="cp-hsl" class="field w-40 font-mono" readonly />
-            <button data-copy="cp-hsl" class="cp-copy btn btn-secondary">Copy</button>
+            <div class="copy-wrap">
+              <input id="cp-hsl" class="field w-40 font-mono" readonly />
+              <button type="button" class="copy-icon" data-copy-target="#cp-hsl" aria-label="Copy"></button>
+            </div>
           </label>
         </div>
       </div>
@@ -225,15 +231,4 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   ['dragover', 'dragenter'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('bg-surface-2'); }));
   ['dragleave', 'drop'].forEach((ev) => drop.addEventListener(ev, () => drop.classList.remove('bg-surface-2')));
   drop.addEventListener('drop', (e) => { e.preventDefault(); const f = (e as DragEvent).dataTransfer?.files?.[0]; if (f) loadFile(f); });
-
-  document.querySelectorAll<HTMLButtonElement>('.cp-copy').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const target = document.getElementById(btn.dataset.copy!) as HTMLInputElement;
-      if (!target.value) return;
-      await navigator.clipboard.writeText(target.value);
-      const prev = btn.textContent;
-      btn.textContent = 'Copied!';
-      setTimeout(() => (btn.textContent = prev), 1200);
-    });
-  });
 </script>

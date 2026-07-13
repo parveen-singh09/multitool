@@ -65,20 +65,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       return `<div class="panel panel-lift flex items-center gap-3 p-4">
         <div class="flex min-w-0 flex-1 flex-col gap-0.5">
           <span class="text-xs text-ink-tertiary">${name}</span>
-          <span class="truncate text-lg text-ink" title="${result.replace(/"/g, '&quot;')}">${result || '<span class="text-ink-tertiary">…</span>'}</span>
+          <div class="copy-wrap">
+            <span id="st-out-${i}" class="block truncate pr-8 text-lg text-ink" title="${result.replace(/"/g, '&quot;')}">${result}</span>
+            <button type="button" class="copy-icon" data-copy-target="#st-out-${i}" aria-label="Copy"></button>
+          </div>
         </div>
-        <button class="btn btn-secondary" data-copy="${i}">Copy</button>
       </div>`;
     }).join('');
-
-    out.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const [, map] = STYLES[Number(btn.dataset.copy)];
-        await navigator.clipboard.writeText(convert(input.value, map));
-        btn.textContent = 'Copied!';
-        setTimeout(() => (btn.textContent = 'Copy'), 1500);
-      });
-    });
   }
 
   input.addEventListener('input', render);

@@ -5,8 +5,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 <ToolLayout slug="markdown-previewer">
   <div class="flex flex-col gap-4">
     <div class="flex flex-wrap items-center gap-2">
-      <button id="md-copy-html" class="btn btn-primary">Copy HTML</button>
-      <button id="md-copy-md" class="btn btn-secondary">Copy Markdown</button>
       <button id="md-download" class="btn btn-secondary">Download .md</button>
       <button id="md-clear" class="btn btn-tertiary">Clear</button>
       <button id="md-reset" class="btn btn-tertiary">Reset</button>
@@ -19,18 +17,24 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Markdown
-        <div
-          id="md-in"
-          class="cm-host field min-h-[28rem] resize-y overflow-hidden p-0"
-          aria-label="Markdown input"></div>
+        <div class="copy-wrap">
+          <div
+            id="md-in"
+            class="cm-host field min-h-[28rem] resize-y overflow-hidden p-0"
+            aria-label="Markdown input"></div>
+          <button type="button" id="md-copy-md" class="copy-icon" aria-label="Copy Markdown"></button>
+        </div>
       </label>
       <div class="flex flex-col gap-1 text-sm text-ink-subtle">
         Preview
-        <div
-          id="md-out"
-          class="md-preview panel panel-lift min-h-[28rem] overflow-y-auto p-5 text-ink"
-          aria-label="Rendered preview"
-          aria-live="polite"></div>
+        <div class="copy-wrap">
+          <div
+            id="md-out"
+            class="md-preview panel panel-lift min-h-[28rem] overflow-y-auto p-5 text-ink"
+            aria-label="Rendered preview"
+            aria-live="polite"></div>
+          <button type="button" id="md-copy-html" class="copy-icon" aria-label="Copy HTML"></button>
+        </div>
       </div>
     </div>
 
@@ -245,20 +249,22 @@ graph TD
     out.scrollTop = ratio * (out.scrollHeight - out.clientHeight);
   });
 
-  function flash(btn: HTMLElement, msg: string) {
-    const prev = btn.textContent;
-    btn.textContent = msg;
-    setTimeout(() => (btn.textContent = prev), 1500);
+  // These copy JS-derived values (rendered HTML / editor doc), not the preview
+  // elements' textContent, so they need a local handler. Reuses the global
+  // `.copied` green-check styling.
+  function iconCopy(id: string, label: string, getText: () => string) {
+    const btn = document.getElementById(id)!;
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(getText());
+        btn.classList.add('copied');
+        btn.setAttribute('aria-label', 'Copied');
+        setTimeout(() => { btn.classList.remove('copied'); btn.setAttribute('aria-label', label); }, 1500);
+      } catch {}
+    });
   }
-
-  document.getElementById('md-copy-html')!.addEventListener('click', async (e) => {
-    await navigator.clipboard.writeText(out.innerHTML);
-    flash(e.currentTarget as HTMLElement, 'Copied!');
-  });
-  document.getElementById('md-copy-md')!.addEventListener('click', async (e) => {
-    await navigator.clipboard.writeText(getDoc());
-    flash(e.currentTarget as HTMLElement, 'Copied!');
-  });
+  iconCopy('md-copy-html', 'Copy HTML', () => out.innerHTML);
+  iconCopy('md-copy-md', 'Copy Markdown', () => getDoc());
   document.getElementById('md-download')!.addEventListener('click', () => {
     const blob = new Blob([getDoc()], { type: 'text/markdown' });
     const a = document.createElement('a');

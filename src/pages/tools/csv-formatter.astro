@@ -7,7 +7,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div class="flex flex-wrap items-center gap-2">
       <button id="csvf-align" class="btn btn-primary">Align columns</button>
       <button id="csvf-normalize" class="btn btn-secondary">Normalize</button>
-      <button id="csvf-copy" class="btn btn-secondary">Copy</button>
       <button id="csvf-clear" class="btn btn-tertiary">Clear</button>
       <label class="ml-auto flex items-center gap-2 text-sm text-ink-subtle">
         Delimiter
@@ -22,17 +21,20 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div id="csvf-status" class="hidden rounded-md border px-3 py-2 text-sm" role="status"></div>
 
-    <div class="hl-edit field p-0" style="height:18rem;resize:vertical;overflow:hidden">
-      <pre class="hl-block" aria-hidden="true"><code id="csvf-input-hl" class="hljs" style="background:transparent"></code></pre>
-      <textarea
-        id="csvf-input"
-        spellcheck="false"
-        autocapitalize="off"
-        autocomplete="off"
-        autocorrect="off"
-        placeholder="Paste CSV here, e.g.&#10;name,age,city&#10;Ada, 36 ,London"
-        aria-label="CSV input"
-      ></textarea>
+    <div class="copy-wrap">
+      <div class="hl-edit field p-0" style="height:18rem;resize:vertical;overflow:hidden">
+        <pre class="hl-block" aria-hidden="true"><code id="csvf-input-hl" class="hljs" style="background:transparent"></code></pre>
+        <textarea
+          id="csvf-input"
+          spellcheck="false"
+          autocapitalize="off"
+          autocomplete="off"
+          autocorrect="off"
+          placeholder="Paste CSV here, e.g.&#10;name,age,city&#10;Ada, 36 ,London"
+          aria-label="CSV input"
+        ></textarea>
+      </div>
+      <button type="button" class="copy-icon" data-copy-target="#csvf-input" aria-label="Copy"></button>
     </div>
   </div>
 
@@ -195,11 +197,5 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     input.value = '';
     refresh();
     status.classList.add('hidden');
-  });
-  document.getElementById('csvf-copy')!.addEventListener('click', async () => {
-    const btn = document.getElementById('csvf-copy')!;
-    await navigator.clipboard.writeText(input.value);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy'), 1500);
   });
 </script>

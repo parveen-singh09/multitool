@@ -46,9 +46,8 @@ const byGroup = GROUPS.map((g) => ({ g, items: TEMPLATES.filter((t) => t.group =
         <label class="text-sm text-ink-subtle">.gitignore</label>
         <span id="gi-stat" class="text-xs text-ink-tertiary"></span>
       </div>
-      <pre class="hl-block field min-h-72 flex-1" style="resize:vertical;overflow:auto"><code id="gi-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+      <div class="copy-wrap flex-1"><pre class="hl-block field min-h-72 h-full" style="resize:vertical;overflow:auto"><code id="gi-out" class="hljs" style="background:transparent;padding:0"></code></pre><button type="button" class="copy-icon" data-copy-target="#gi-out" aria-label="Copy"></button></div>
       <div class="flex gap-2">
-        <button id="gi-copy" class="btn btn-secondary">Copy</button>
         <button id="gi-dl" class="btn btn-secondary">Download</button>
         <button id="gi-clear" class="btn btn-tertiary ml-auto">Clear all</button>
       </div>
@@ -131,13 +130,6 @@ const byGroup = GROUPS.map((g) => ({ g, items: TEMPLATES.filter((t) => t.group =
 
   boxes().forEach((b) => b.addEventListener('change', build_));
   search.addEventListener('input', filter);
-  $('gi-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    if (!rawOutput) return;
-    await navigator.clipboard.writeText(rawOutput);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy'), 1500);
-  });
   $('gi-dl').addEventListener('click', () => {
     if (!rawOutput) return;
     const url = URL.createObjectURL(new Blob([rawOutput], { type: 'text/plain' }));

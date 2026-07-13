@@ -49,7 +49,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </div>
 
     <div class="flex flex-wrap items-center gap-2">
-      <button id="j2c-copy" type="button" class="btn btn-secondary">Copy CSV</button>
       <button id="j2c-download" type="button" class="btn btn-secondary">Download</button>
       <button id="j2c-upload-btn" type="button" class="btn btn-tertiary">Upload JSON</button>
       <button id="j2c-sample" type="button" class="btn btn-tertiary">Load sample</button>
@@ -70,7 +69,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
       <div class="flex flex-col gap-1 text-sm text-ink-subtle">
         <span>CSV output</span>
-        <pre class="hl-block field" style="height:22rem;margin:0;overflow:auto;white-space:pre"><code id="j2c-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+        <div class="copy-wrap"><pre class="hl-block field" style="height:22rem;margin:0;overflow:auto;white-space:pre"><code id="j2c-out" class="hljs" style="background:transparent;padding:0"></code></pre><button type="button" class="copy-icon" data-copy-target="#j2c-out" aria-label="Copy"></button></div>
       </div>
     </div>
   </div>
@@ -276,15 +275,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     rerender();
     convert();
     inEl.focus();
-  });
-
-  document.getElementById('j2c-copy')!.addEventListener('click', async (e) => {
-    if (!csvOut) return;
-    await navigator.clipboard.writeText(csvOut);
-    const b = e.currentTarget as HTMLButtonElement;
-    const prev = b.textContent;
-    b.textContent = 'Copied!';
-    setTimeout(() => (b.textContent = prev), 1400);
   });
 
   document.getElementById('j2c-download')!.addEventListener('click', () => {

@@ -7,12 +7,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div class="flex flex-col gap-3">
       <div class="eyebrow">Tap tempo</div>
-      <button id="bp-tap" class="panel panel-lift flex h-40 items-center justify-center text-center transition-colors hover:bg-surface-2 active:bg-surface-3">
-        <span class="flex flex-col gap-1">
-          <span id="bp-bpm" class="font-display text-5xl font-semibold text-primary-hover">—</span>
-          <span class="text-sm text-ink-subtle">Tap here (or press Space) to the beat</span>
-        </span>
-      </button>
+      <div class="copy-wrap">
+        <button id="bp-tap" class="panel panel-lift flex h-40 w-full items-center justify-center text-center transition-colors hover:bg-surface-2 active:bg-surface-3">
+          <span class="flex flex-col gap-1">
+            <span id="bp-bpm" class="font-display text-5xl font-semibold text-primary-hover">—</span>
+            <span class="text-sm text-ink-subtle">Tap here (or press Space) to the beat</span>
+          </span>
+        </button>
+        <button type="button" id="bp-copy" class="copy-icon" aria-label="Copy BPM"></button>
+      </div>
       <div class="flex flex-wrap items-center gap-3 text-[13px] text-ink-subtle">
         <span id="bp-taps">0 taps</span>
         <span id="bp-conf"></span>
@@ -21,7 +24,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <button id="bp-half" class="btn btn-tertiary" title="Halve the BPM">½×</button>
           <button id="bp-double" class="btn btn-tertiary" title="Double the BPM">2×</button>
           <label class="flex items-center gap-1">Round<input id="bp-round" type="checkbox" checked class="accent-primary" /></label>
-          <button id="bp-copy" class="btn btn-secondary">Copy</button>
           <button id="bp-reset" class="btn btn-secondary">Reset</button>
         </div>
       </div>
@@ -126,7 +128,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   $('bp-copy').addEventListener('click', async () => {
     if (!currentBpm) return;
     const text = roundEl.checked ? String(Math.round(currentBpm)) : currentBpm.toFixed(1);
-    try { await navigator.clipboard.writeText(text); const b = $('bp-copy'); const o = b.textContent; b.textContent = 'Copied'; setTimeout(() => (b.textContent = o), 1200); } catch {}
+    try { const b = $('bp-copy'); await navigator.clipboard.writeText(text); b.classList.add('copied'); setTimeout(() => b.classList.remove('copied'), 1200); } catch {}
   });
 
   // ---- Audio file BPM detection ----

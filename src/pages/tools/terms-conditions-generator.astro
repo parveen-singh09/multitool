@@ -42,13 +42,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div class="flex flex-wrap gap-2">
       <button id="tc-gen" class="btn btn-primary">Generate</button>
-      <button id="tc-copy" class="btn btn-secondary">Copy</button>
       <button id="tc-dl-txt" class="btn btn-secondary">Download .txt</button>
       <button id="tc-dl-md" class="btn btn-secondary">Download .md</button>
       <button id="tc-dl-html" class="btn btn-secondary">Download .html</button>
     </div>
 
-    <textarea id="tc-out" class="field min-h-96 resize-y text-[13px] leading-relaxed" readonly></textarea>
+    <div class="copy-wrap">
+      <textarea id="tc-out" class="field min-h-96 resize-y text-[13px] leading-relaxed" readonly></textarea>
+      <button type="button" class="copy-icon" data-copy-target="#tc-out" aria-label="Copy"></button>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -179,12 +181,6 @@ ${body}
   const inputs = ['tc-name', 'tc-url', 'tc-law', 'tc-email', 'tc-date', 'tc-platform', 'tc-accounts', 'tc-payments', 'tc-refunds', 'tc-ugc', 'tc-prohibited', 'tc-cookies', 'tc-links', 'tc-iframes', 'tc-age', 'tc-dmca', 'tc-indemnity', 'tc-warranty'];
   inputs.forEach((id) => $(id).addEventListener('input', render));
   $('tc-gen').addEventListener('click', render);
-  $('tc-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(out.value);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy'), 1500);
-  });
   $('tc-dl-txt').addEventListener('click', () => download(toText(), 'terms-and-conditions.txt', 'text/plain'));
   $('tc-dl-md').addEventListener('click', () => download(toMarkdown(), 'terms-and-conditions.md', 'text/markdown'));
   $('tc-dl-html').addEventListener('click', () => download(toHtml(), 'terms-and-conditions.html', 'text/html'));

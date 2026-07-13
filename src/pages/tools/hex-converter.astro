@@ -14,33 +14,33 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Decimal (base 10)
-        <div class="flex gap-2">
+        <div class="copy-wrap">
           <input id="hx-dec" type="text" class="field font-mono" placeholder="255" inputmode="numeric" spellcheck="false" autocomplete="off" data-base="10" />
-          <button class="btn btn-secondary hx-copy self-stretch" data-t="hx-dec" type="button">Copy</button>
+          <button type="button" class="copy-icon" data-copy-target="#hx-dec" aria-label="Copy"></button>
         </div>
       </label>
 
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Hexadecimal (base 16)
-        <div class="flex gap-2">
+        <div class="copy-wrap">
           <input id="hx-hex" type="text" class="field font-mono" placeholder="ff" spellcheck="false" autocomplete="off" data-base="16" />
-          <button class="btn btn-secondary hx-copy self-stretch" data-t="hx-hex" type="button">Copy</button>
+          <button type="button" class="copy-icon" data-copy-target="#hx-hex" aria-label="Copy"></button>
         </div>
       </label>
 
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Binary (base 2)
-        <div class="flex gap-2">
+        <div class="copy-wrap">
           <input id="hx-bin" type="text" class="field font-mono" placeholder="11111111" spellcheck="false" autocomplete="off" data-base="2" />
-          <button class="btn btn-secondary hx-copy self-stretch" data-t="hx-bin" type="button">Copy</button>
+          <button type="button" class="copy-icon" data-copy-target="#hx-bin" aria-label="Copy"></button>
         </div>
       </label>
 
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Octal (base 8)
-        <div class="flex gap-2">
+        <div class="copy-wrap">
           <input id="hx-oct" type="text" class="field font-mono" placeholder="377" spellcheck="false" autocomplete="off" data-base="8" />
-          <button class="btn btn-secondary hx-copy self-stretch" data-t="hx-oct" type="button">Copy</button>
+          <button type="button" class="copy-icon" data-copy-target="#hx-oct" aria-label="Copy"></button>
         </div>
       </label>
 
@@ -88,10 +88,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           Text
           <span class="flex gap-2">
             <button id="hx-file" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Open file…</button>
-            <button class="btn btn-secondary hx-copy px-2 py-1 text-[13px]" data-t="hx-txt" type="button">Copy</button>
           </span>
         </span>
-        <textarea id="hx-txt" class="field" rows="3" placeholder="Hi 👋" spellcheck="false"></textarea>
+        <div class="copy-wrap">
+          <textarea id="hx-txt" class="field" rows="3" placeholder="Hi 👋" spellcheck="false"></textarea>
+          <button type="button" class="copy-icon" data-copy-target="#hx-txt" aria-label="Copy"></button>
+        </div>
         <input id="hx-fileinput" type="file" class="hidden" />
       </label>
 
@@ -99,11 +101,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <span class="flex items-center justify-between">
           Hex bytes
           <span class="flex gap-2">
-            <button class="btn btn-secondary hx-copy px-2 py-1 text-[13px]" data-t="hx-txthex" type="button">Copy</button>
             <button id="hx-download" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Download</button>
           </span>
         </span>
-        <textarea id="hx-txthex" class="field font-mono" rows="3" placeholder="48 69"></textarea>
+        <div class="copy-wrap">
+          <textarea id="hx-txthex" class="field font-mono" rows="3" placeholder="48 69"></textarea>
+          <button type="button" class="copy-icon" data-copy-target="#hx-txthex" aria-label="Copy"></button>
+        </div>
       </label>
       <p class="text-[13px] text-ink-tertiary">Pasted hex accepts any spacing, commas, colons, and <code class="font-mono">0x</code>/<code class="font-mono">\x</code> prefixes — even one continuous string.</p>
     </div>
@@ -349,16 +353,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       textWrap.classList.toggle('hidden', mode !== 'text');
       textWrap.classList.toggle('flex', mode === 'text');
       setErr('');
-    });
-  });
-
-  document.querySelectorAll<HTMLButtonElement>('.hx-copy').forEach((b) => {
-    b.addEventListener('click', async () => {
-      const t = document.getElementById(b.dataset.t!) as HTMLInputElement | HTMLTextAreaElement;
-      if (!t.value) return;
-      await navigator.clipboard.writeText(t.value);
-      const orig = b.textContent;
-      b.textContent = 'Copied!'; setTimeout(() => (b.textContent = orig), 1400);
     });
   });
 

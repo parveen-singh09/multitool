@@ -28,15 +28,15 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </div>
 
     <div class="flex flex-col items-center gap-4">
-      <div class="flex w-full items-center justify-center overflow-auto rounded-lg border border-hairline bg-surface-2 p-4">
+      <div class="copy-wrap flex w-full items-center justify-center overflow-auto rounded-lg border border-hairline bg-surface-2 p-4">
         <canvas id="pl-canvas" class="max-w-full"></canvas>
+        <button id="pl-copy" type="button" class="copy-icon" aria-label="Copy data URI"></button>
       </div>
     </div>
   </div>
 
   <div class="mt-4 flex flex-wrap gap-2">
     <button id="pl-dl" class="btn btn-primary">Download</button>
-    <button id="pl-copy" class="btn btn-secondary">Copy data URI</button>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -83,8 +83,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   $('pl-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
     await navigator.clipboard.writeText(canvas.toDataURL(($('pl-fmt') as HTMLSelectElement).value, 0.92));
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy data URI'), 1500);
+    btn.classList.add('copied');
+    btn.setAttribute('aria-label', 'Copied');
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.setAttribute('aria-label', 'Copy data URI');
+    }, 1500);
   });
   draw();
 </script>

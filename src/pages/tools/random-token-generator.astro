@@ -5,12 +5,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 <ToolLayout slug="random-token-generator">
   <div class="flex flex-col gap-5">
     <div class="panel panel-lift flex items-start gap-3 p-4">
-      <output
-        id="rt-output"
-        class="flex-1 select-all break-all font-mono text-lg leading-relaxed text-ink"
-      >click generate</output>
+      <div class="copy-wrap flex-1">
+        <output
+          id="rt-output"
+          class="select-all break-all font-mono text-lg leading-relaxed text-ink"
+        >click generate</output>
+        <button type="button" class="copy-icon" data-copy-target="#rt-output" aria-label="Copy"></button>
+      </div>
       <div class="flex shrink-0 flex-col gap-2 sm:flex-row">
-        <button id="rt-copy" class="btn btn-secondary" aria-label="Copy token">Copy</button>
         <button id="rt-refresh" class="btn btn-primary" aria-label="Generate new token">Generate</button>
       </div>
     </div>
@@ -98,12 +100,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   });
   Object.values(opts).forEach((el) => el.addEventListener('change', generate));
   document.getElementById('rt-refresh')!.addEventListener('click', generate);
-  document.getElementById('rt-copy')!.addEventListener('click', async () => {
-    const btn = document.getElementById('rt-copy')!;
-    await navigator.clipboard.writeText(out.textContent || '');
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy'), 1500);
-  });
 
   generate();
 </script>

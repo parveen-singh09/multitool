@@ -25,15 +25,20 @@ const defaultPayload = `{
         </label>
       </div>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Payload (JSON)
-        <textarea id="jw-payload" class="field min-h-48 resize-y font-mono text-[13px]" spellcheck="false" set:text={defaultPayload}></textarea>
+        <div class="copy-wrap">
+          <textarea id="jw-payload" class="field min-h-48 resize-y font-mono text-[13px]" spellcheck="false" set:text={defaultPayload}></textarea>
+          <button type="button" class="copy-icon" data-copy-target="#jw-payload" aria-label="Copy"></button>
+        </div>
       </label>
     </div>
 
     <div class="flex flex-col gap-4">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Signed token
-        <textarea id="jw-out" class="field min-h-48 resize-y font-mono text-[13px] break-all" readonly aria-label="Signed JWT"></textarea>
+        <div class="copy-wrap">
+          <textarea id="jw-out" class="field min-h-48 resize-y font-mono text-[13px] break-all" readonly aria-label="Signed JWT"></textarea>
+          <button type="button" class="copy-icon" data-copy-target="#jw-out" aria-label="Copy"></button>
+        </div>
       </label>
-      <button id="jw-copy" class="btn btn-secondary">Copy token</button>
       <p id="jw-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
     </div>
   </div>
@@ -90,11 +95,5 @@ const defaultPayload = `{
   }
 
   [algEl, secretEl, payloadEl].forEach((el) => el.addEventListener('input', sign));
-  $('jw-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(out.value);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy token'), 1500);
-  });
   sign();
 </script>

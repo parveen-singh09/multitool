@@ -14,7 +14,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div class="flex flex-wrap items-center gap-3">
         <button id="pe-convert" class="btn btn-primary">Detect tables</button>
         <button id="pe-download" class="btn btn-secondary" disabled>Download .xlsx</button>
-        <button id="pe-copy" class="btn btn-tertiary" disabled>Copy as TSV</button>
         <span id="pe-status" class="text-[13px] text-ink-subtle" aria-live="polite"></span>
       </div>
       <p class="text-[13px] text-ink-tertiary">
@@ -23,7 +22,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         wrapped text and complex layouts may need cleanup in your spreadsheet app.
         Scanned PDFs have no text to read.
       </p>
-      <div id="pe-preview" class="overflow-auto rounded-md border border-hairline" style="max-height:60vh"></div>
+      <div class="copy-wrap">
+        <div id="pe-preview" class="overflow-auto rounded-md border border-hairline" style="max-height:60vh"></div>
+        <button type="button" id="pe-copy" class="copy-icon" aria-label="Copy as TSV"></button>
+      </div>
     </div>
     <p id="pe-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
   </div>
@@ -193,9 +195,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
+  // ponytail: local handler — copies the JS-built TSV, not the table's textContent
   copyBtn.addEventListener('click', async () => {
     const tsv = rows.map((r) => r.join('\t')).join('\n');
     await navigator.clipboard.writeText(tsv);
-    copyBtn.textContent = 'Copied!'; setTimeout(() => (copyBtn.textContent = 'Copy as TSV'), 1400);
+    copyBtn.classList.add('copied'); setTimeout(() => copyBtn.classList.remove('copied'), 1400);
   });
 </script>

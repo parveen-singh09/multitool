@@ -87,12 +87,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
       <div class="flex flex-col gap-2">
         <label class="text-sm text-ink-subtle">Generated meta tags</label>
-        <div class="relative">
+        <div class="copy-wrap">
           <pre class="hl-block field min-h-48" style="resize:vertical;overflow:auto"><code id="mt-out" class="hljs" style="background:transparent;padding:0"></code></pre>
-          <button id="mt-copy" class="btn btn-secondary absolute bottom-2 right-2 flex items-center gap-1.5 px-2 py-1 text-xs" title="Copy tags">
-            <svg id="mt-copy-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            <span id="mt-copy-label">Copy</span>
-          </button>
+          <button type="button" class="copy-icon" data-copy-target="#mt-out" aria-label="Copy"></button>
         </div>
       </div>
     </div>
@@ -191,13 +188,5 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   ['mt-title','mt-desc','mt-keywords','mt-author','mt-lang','mt-url','mt-robots','mt-theme','mt-image','mt-ogtype','mt-twcard','mt-sitename','mt-twsite']
     .forEach((id) => $(id).addEventListener('input', build));
 
-  const copyIcon = '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>';
-  const checkIcon = '<polyline points="20 6 9 17 4 12"></polyline>';
-  $('mt-copy').addEventListener('click', async () => {
-    await navigator.clipboard.writeText(rawOutput);
-    const icon = $('mt-copy-icon'), label = $('mt-copy-label');
-    icon.innerHTML = checkIcon; label.textContent = 'Copied';
-    setTimeout(() => { icon.innerHTML = copyIcon; label.textContent = 'Copy'; }, 1500);
-  });
   build();
 </script>

@@ -57,9 +57,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div>
       <div class="flex items-center justify-between">
         <span class="text-[13px] text-ink-subtle">Equivalent sizes</span>
-        <button id="br-copy" type="button" class="btn btn-tertiary px-2 py-1 text-[13px] hidden">Copy all</button>
       </div>
-      <div id="br-result" class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4"></div>
+      <div class="copy-wrap">
+        <div id="br-result" class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4"></div>
+        <button id="br-copy" type="button" class="copy-icon hidden" aria-label="Copy all sizes"></button>
+      </div>
       <p class="mt-2 text-[12px] text-ink-tertiary">Tap any card to copy that size.</p>
     </div>
 
@@ -235,8 +237,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const text = cards.map((c) => `${c.querySelector('span')!.textContent}: ${c.dataset.size}`).join('\n');
     if (!text) return;
     try { await navigator.clipboard.writeText(text); } catch { return; }
-    copyBtn.textContent = 'Copied!';
-    setTimeout(() => { copyBtn.textContent = 'Copy all'; }, 1200);
+    copyBtn.classList.add('copied');
+    setTimeout(() => copyBtn.classList.remove('copied'), 1200);
   });
 
   sizeEl.addEventListener('input', render);

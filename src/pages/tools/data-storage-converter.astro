@@ -22,9 +22,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </button>
       <div class="flex flex-col gap-1">
         <label class="text-sm text-ink-subtle" for="ds-to-val">To</label>
-        <div class="flex gap-2">
-          <input id="ds-to-val" type="text" class="field flex-1" readonly />
-          <button id="ds-copy-to" type="button" class="btn btn-secondary h-10 shrink-0 px-3" title="Copy result">Copy</button>
+        <div class="copy-wrap">
+          <input id="ds-to-val" type="text" class="field" readonly />
+          <button type="button" class="copy-icon" data-copy-target="#ds-to-val" aria-label="Copy"></button>
         </div>
         <select id="ds-to-unit" class="field mt-1"></select>
       </div>
@@ -118,7 +118,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const precision = $('ds-precision') as HTMLSelectElement;
   const sep = $('ds-sep') as HTMLInputElement;
   const presets = $('ds-presets');
-  const copyTo = $('ds-copy-to') as HTMLButtonElement;
   const copyAll = $('ds-copy-all') as HTMLButtonElement;
 
   function optionsHtml(): string {
@@ -228,7 +227,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const prev = btn.textContent;
       btn.textContent = 'Copied';
       setTimeout(() => { btn.textContent = prev; }, 1200);
-    } catch 
+    } catch {}
   }
 
   // Presets: [value, fromId, toId]
@@ -270,7 +269,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (toVal.value !== '') fromVal.value = toVal.value.replace(/,/g, '');
     convert();
   });
-  copyTo.addEventListener('click', () => copyText(toVal.value, copyTo));
   copyAll.addEventListener('click', () => {
     const bytes = bytesOf(parseInput() || 0, fromUnit.value);
     const text = UNITS.map((u) => `${fmt(fromBytes(bytes, u.id))} ${u.id}`).join('\n');

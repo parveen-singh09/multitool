@@ -25,7 +25,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </form>
     </div>
 
-    <div id="rc-out" class="panel panel-lift flex flex-col gap-3 p-5"></div>
+    <div class="copy-wrap">
+      <div id="rc-out" class="panel panel-lift flex flex-col gap-3 p-5"></div>
+      <button id="rc-copy-btn" type="button" class="copy-icon" aria-label="Copy"></button>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -104,6 +107,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   ['rc-cuisine', 'rc-meal'].forEach((id) => $(id).addEventListener('change', generate));
   $('rc-gen').addEventListener('click', generate);
   $('rc-ai-gen').addEventListener('click', aiGenerate);
+  // Local copy: the formatted recipe lives in the currentRecipe string, not in rc-out's text.
+  $('rc-copy-btn').addEventListener('click', async (e) => {
+    if (!currentRecipe) return;
+    await navigator.clipboard.writeText(currentRecipe);
+    const btn = e.currentTarget as HTMLElement;
+    btn.classList.add('copied');
+    setTimeout(() => btn.classList.remove('copied'), 1500);
+  });
   generate();
 
   // --- Chef chat (browser-side, PUBLIC_ key — no per-user login). ---

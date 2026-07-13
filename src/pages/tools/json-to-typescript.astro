@@ -65,11 +65,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <span class="flex items-center justify-between">
           <span>TypeScript definitions</span>
           <span class="flex gap-2">
-            <button id="jt-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button>
             <button id="jt-download" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Download</button>
           </span>
         </span>
-        <pre class="hl-block field" style="height:22rem;margin:0;overflow:auto;white-space:pre"><code id="jt-out" class="hljs" style="background:transparent;padding:0" aria-live="polite"></code></pre>
+        <div class="copy-wrap"><pre class="hl-block field" style="height:22rem;margin:0;overflow:auto;white-space:pre"><code id="jt-out" class="hljs" style="background:transparent;padding:0" aria-live="polite"></code></pre><button type="button" class="copy-icon" data-copy-target="#jt-out" aria-label="Copy"></button></div>
       </div>
     </div>
     <p id="jt-stats" class="text-[13px] text-ink-tertiary"></p>
@@ -261,13 +260,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const refresh = wireInput(input, inHl, () => 'json', () => run());
   [nameEl, prefixEl].forEach((el) => el.addEventListener('input', run));
   [indentEl, exportEl, optEl, aliasEl, nullEl, roEl, datesEl, enumsEl].forEach((el) => el.addEventListener('change', run));
-
-  document.getElementById('jt-copy')!.addEventListener('click', async (e) => {
-    if (!rawOutput) return;
-    await navigator.clipboard.writeText(rawOutput);
-    const b = e.currentTarget as HTMLButtonElement;
-    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
-  });
 
   document.getElementById('jt-download')!.addEventListener('click', () => {
     if (!rawOutput) return;

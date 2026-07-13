@@ -66,11 +66,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <span class="flex items-center justify-between">
           <span id="uc-out-label">U+ code points</span>
           <span class="flex gap-2">
-            <button id="uc-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button>
             <button id="uc-download" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Download</button>
           </span>
         </span>
-        <pre class="hl-block field" style="height:14rem;margin:0;overflow:auto;white-space:pre-wrap;word-break:break-all"><code id="uc-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+        <div class="copy-wrap">
+          <pre class="hl-block field" style="height:14rem;margin:0;overflow:auto;white-space:pre-wrap;word-break:break-all"><code id="uc-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+          <button type="button" class="copy-icon" data-copy-target="#uc-out" aria-label="Copy"></button>
+        </div>
       </div>
     </div>
 
@@ -254,7 +256,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       if (/\p{M}/u.test(c)) return 'Mark';
       if (/\p{Z}/u.test(c)) return 'Separator';
       if (/\p{C}/u.test(c)) return 'Control';
-    } catch 
+    } catch {}
     return 'Other';
   }
 
@@ -358,7 +360,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     s = ta.value;
     // Percent-encoded UTF-8.
     if (/%[0-9a-fA-F]{2}/.test(s)) {
-      try { s = decodeURIComponent(s); } catch 
+      try { s = decodeURIComponent(s); } catch {}
     }
     // Bare number lists ("1F600 61 62" or "0x61,0x62") — only when the whole
     // string is nothing but hex tokens, so real text is never misread.
@@ -404,8 +406,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     setTimeout(() => (btn.textContent = 'Copy'), 1400);
   }
 
-  document.getElementById('uc-copy')!.addEventListener('click', (e) =>
-    copyBtn(e.currentTarget as HTMLButtonElement, rawOutput));
   document.getElementById('uc-dec-copy')!.addEventListener('click', (e) =>
     copyBtn(e.currentTarget as HTMLButtonElement, decoded.textContent ?? ''));
 

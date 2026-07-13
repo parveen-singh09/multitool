@@ -35,20 +35,19 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <span>Markdown input</span>
           <button id="m2h-clear" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Clear</button>
         </span>
-        <div id="m2h-drop" class="hl-edit field p-0" style="height:24rem;overflow:hidden">
+        <div class="copy-wrap"><div id="m2h-drop" class="hl-edit field p-0" style="height:24rem;overflow:hidden">
           <pre class="hl-block" aria-hidden="true"><code id="m2h-in-hl" class="hljs" style="background:transparent"></code></pre>
           <textarea id="m2h-in" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="Markdown input"></textarea>
-        </div>
+        </div><button type="button" class="copy-icon" data-copy-target="#m2h-in" aria-label="Copy"></button></div>
       </div>
       <div class="flex flex-col gap-1 text-sm text-ink-subtle">
         <span class="flex items-center justify-between">
           <span>HTML source</span>
           <span class="flex gap-2">
-            <button id="m2h-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button>
             <button id="m2h-download" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Download</button>
           </span>
         </span>
-        <pre class="hl-block field" style="height:24rem;margin:0;overflow:auto;white-space:pre-wrap;word-break:break-word"><code id="m2h-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+        <div class="copy-wrap"><pre class="hl-block field" style="height:24rem;margin:0;overflow:auto;white-space:pre-wrap;word-break:break-word"><code id="m2h-out" class="hljs" style="background:transparent;padding:0"></code></pre><button type="button" class="copy-icon" data-copy-target="#m2h-out" aria-label="Copy"></button></div>
       </div>
     </div>
 
@@ -209,14 +208,6 @@ ${body}
     err.classList.add('hidden');
     statusEl.classList.add('hidden');
     rerender();
-  });
-
-  document.getElementById('m2h-copy')!.addEventListener('click', async (e) => {
-    if (!rawOutput) return;
-    await navigator.clipboard.writeText(rawOutput);
-    const b = e.currentTarget as HTMLButtonElement;
-    b.textContent = 'Copied!';
-    setTimeout(() => (b.textContent = 'Copy'), 1400);
   });
 
   document.getElementById('m2h-download')!.addEventListener('click', () => {

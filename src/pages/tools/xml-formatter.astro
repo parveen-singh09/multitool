@@ -7,7 +7,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div class="flex flex-wrap items-center gap-2">
       <button id="xf-beautify" class="btn btn-primary">Beautify</button>
       <button id="xf-minify" class="btn btn-secondary">Minify</button>
-      <button id="xf-copy" class="btn btn-secondary">Copy</button>
       <button id="xf-download" class="btn btn-secondary">Download</button>
       <button id="xf-clear" class="btn btn-tertiary">Clear</button>
 
@@ -34,17 +33,20 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <pre id="xf-caret" class="panel p-4 mt-2 overflow-x-auto font-mono text-[13px] text-ink whitespace-pre"></pre>
     </div>
 
-    <div class="hl-edit field p-0" style="height:18rem;resize:vertical;overflow:hidden">
-      <pre class="hl-block" aria-hidden="true"><code id="xf-input-hl" class="hljs" style="background:transparent"></code></pre>
-      <textarea
-        id="xf-input"
-        spellcheck="false"
-        autocapitalize="off"
-        autocomplete="off"
-        autocorrect="off"
-        placeholder="Paste XML here, drag a file in, or upload — e.g. <root><item>value</item></root>"
-        aria-label="XML input"
-      ></textarea>
+    <div class="copy-wrap">
+      <div class="hl-edit field p-0" style="height:18rem;resize:vertical;overflow:hidden">
+        <pre class="hl-block" aria-hidden="true"><code id="xf-input-hl" class="hljs" style="background:transparent"></code></pre>
+        <textarea
+          id="xf-input"
+          spellcheck="false"
+          autocapitalize="off"
+          autocomplete="off"
+          autocorrect="off"
+          placeholder="Paste XML here, drag a file in, or upload — e.g. <root><item>value</item></root>"
+          aria-label="XML input"
+        ></textarea>
+      </div>
+      <button type="button" class="copy-icon" data-copy-target="#xf-input" aria-label="Copy"></button>
     </div>
 
     <div id="xf-stats" class="hidden flex flex-wrap gap-2 text-[12px]"></div>
@@ -340,13 +342,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     refresh();
     status.classList.add('hidden');
     hideResults();
-  });
-
-  document.getElementById('xf-copy')!.addEventListener('click', async () => {
-    const btn = document.getElementById('xf-copy')!;
-    await navigator.clipboard.writeText(input.value);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy'), 1500);
   });
 
   document.getElementById('xf-download')!.addEventListener('click', () => {

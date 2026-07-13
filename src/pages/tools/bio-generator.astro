@@ -20,9 +20,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </div>
     <div class="flex gap-2">
       <button id="bo-gen" class="btn btn-primary">Generate</button>
-      <button id="bo-copy" class="btn btn-secondary">Copy all</button>
     </div>
-    <ul id="bo-out" class="flex flex-col gap-2"></ul>
+    <div class="copy-wrap">
+      <ul id="bo-out" class="flex flex-col gap-2"></ul>
+      <button type="button" id="bo-copy" class="copy-icon" aria-label="Copy all bios"></button>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -135,8 +137,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   $('bo-copy').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
     await navigator.clipboard.writeText([...out.querySelectorAll('li')].map((li) => li.textContent).join('\n'));
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+    btn.classList.add('copied');
+    setTimeout(() => btn.classList.remove('copied'), 1500);
   });
   generate();
 </script>

@@ -21,11 +21,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
       </button>
       <div class="flex flex-col gap-1">
-        <span class="flex items-center justify-between">
-          <label class="text-sm text-ink-subtle" for="wc-to-val">To</label>
-          <button id="wc-copy" type="button" class="btn btn-tertiary px-2 py-0.5 text-[13px]">Copy</button>
-        </span>
-        <input id="wc-to-val" type="text" class="field" readonly aria-live="polite" />
+        <label class="text-sm text-ink-subtle" for="wc-to-val">To</label>
+        <div class="copy-wrap">
+          <input id="wc-to-val" type="text" class="field" readonly aria-live="polite" />
+          <button type="button" class="copy-icon" data-copy-target="#wc-to-val" aria-label="Copy"></button>
+        </div>
         <select id="wc-to-unit" class="field mt-1" aria-label="Convert to unit"></select>
       </div>
     </div>
@@ -116,7 +116,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const err = document.getElementById('wc-error') as HTMLElement;
   const allBox = document.getElementById('wc-all') as HTMLElement;
   const allLabel = document.getElementById('wc-alllabel') as HTMLElement;
-  const copyBtn = document.getElementById('wc-copy') as HTMLButtonElement;
   const copyAllBtn = document.getElementById('wc-copyall') as HTMLButtonElement;
 
   function convertVal(value: number, from: string, to: string): number {
@@ -220,8 +219,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }
     convert();
   });
-
-  copyBtn.addEventListener('click', () => copyText(toVal.value, copyBtn, 'Copy'));
 
   copyAllBtn.addEventListener('click', () => {
     const v = Number(fromVal.value);

@@ -7,7 +7,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div class="flex flex-wrap items-center gap-2">
       <button id="jsf-beautify" class="btn btn-primary">Beautify</button>
       <button id="jsf-minify" class="btn btn-secondary">Minify</button>
-      <button id="jsf-copy" class="btn btn-secondary">Copy</button>
       <button id="jsf-clear" class="btn btn-tertiary">Clear</button>
       <span id="jsf-stats" class="ml-auto text-xs text-ink-tertiary"></span>
     </div>
@@ -45,17 +44,20 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div id="jsf-status" class="hidden rounded-md border px-3 py-2 text-sm" role="status"></div>
 
-    <div class="hl-edit field p-0" style="height:22rem;resize:vertical;overflow:hidden">
-      <pre class="hl-block" aria-hidden="true"><code id="jsf-input-hl" class="hljs" style="background:transparent"></code></pre>
-      <textarea
-        id="jsf-input"
-        spellcheck="false"
-        autocapitalize="off"
-        autocomplete="off"
-        autocorrect="off"
-        placeholder="Paste JavaScript here, e.g. function add(a,b){return a+b}"
-        aria-label="JavaScript input"
-      ></textarea>
+    <div class="copy-wrap">
+      <div class="hl-edit field p-0" style="height:22rem;resize:vertical;overflow:hidden">
+        <pre class="hl-block" aria-hidden="true"><code id="jsf-input-hl" class="hljs" style="background:transparent"></code></pre>
+        <textarea
+          id="jsf-input"
+          spellcheck="false"
+          autocapitalize="off"
+          autocomplete="off"
+          autocorrect="off"
+          placeholder="Paste JavaScript here, e.g. function add(a,b){return a+b}"
+          aria-label="JavaScript input"
+        ></textarea>
+      </div>
+      <button type="button" class="copy-icon" data-copy-target="#jsf-input" aria-label="Copy"></button>
     </div>
   </div>
 
@@ -329,11 +331,5 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     refresh();
     stats.textContent = '';
     status.classList.add('hidden');
-  });
-  document.getElementById('jsf-copy')!.addEventListener('click', async () => {
-    const btn = document.getElementById('jsf-copy')!;
-    await navigator.clipboard.writeText(input.value);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy'), 1500);
   });
 </script>

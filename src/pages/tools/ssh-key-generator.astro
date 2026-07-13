@@ -21,15 +21,19 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p id="ss-status" class="text-[13px] text-ink-subtle"></p>
 
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">Public key (OpenSSH)
-      <textarea id="ss-pub" class="field min-h-24 resize-y font-mono text-xs break-all" readonly></textarea>
+      <div class="copy-wrap">
+        <textarea id="ss-pub" class="field min-h-24 resize-y font-mono text-xs break-all" readonly></textarea>
+        <button type="button" class="copy-icon" data-copy-target="#ss-pub" aria-label="Copy"></button>
+      </div>
     </label>
-    <button id="ss-pubcopy" type="button" class="btn btn-secondary w-fit">Copy public key</button>
 
     <label class="flex flex-col gap-1 text-sm text-ink-subtle"><span id="ss-priv-label">Private key (OpenSSH)</span>
-      <textarea id="ss-priv" class="field min-h-48 resize-y font-mono text-xs" readonly></textarea>
+      <div class="copy-wrap">
+        <textarea id="ss-priv" class="field min-h-48 resize-y font-mono text-xs" readonly></textarea>
+        <button type="button" class="copy-icon" data-copy-target="#ss-priv" aria-label="Copy"></button>
+      </div>
     </label>
     <div class="flex flex-wrap gap-2">
-      <button id="ss-privcopy" type="button" class="btn btn-secondary">Copy private key</button>
       <button id="ss-privdl" type="button" class="btn btn-secondary">Download id_ed25519</button>
     </div>
     <p class="text-[13px] text-ink-tertiary">Keep the private key secret. Anyone with it can authenticate as you.</p>
@@ -149,16 +153,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       btn.disabled = false;
     }
   });
-
-  const copyBtn = (id: string, src: HTMLTextAreaElement, label: string) =>
-    $(id).addEventListener('click', async (e) => {
-      const btn = e.currentTarget as HTMLButtonElement;
-      await navigator.clipboard.writeText(src.value);
-      btn.textContent = 'Copied!';
-      setTimeout(() => (btn.textContent = label), 1500);
-    });
-  copyBtn('ss-pubcopy', pubEl, 'Copy public key');
-  copyBtn('ss-privcopy', privEl, 'Copy private key');
 
   $('ss-privdl').addEventListener('click', () => {
     if (!privEl.value) return;

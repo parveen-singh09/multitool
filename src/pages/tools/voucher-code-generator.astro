@@ -62,12 +62,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div class="flex flex-wrap items-center gap-4">
       <button id="vc-gen" class="btn btn-primary">Generate</button>
-      <button id="vc-copy" class="btn btn-secondary">Copy all</button>
       <button id="vc-txt" class="btn btn-secondary">Export .txt</button>
       <button id="vc-csv" class="btn btn-secondary">Export .csv</button>
       <span id="vc-err" class="text-sm text-red-400" role="alert"></span>
     </div>
-    <textarea id="vc-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated voucher codes"></textarea>
+    <div class="copy-wrap"><textarea id="vc-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated voucher codes"></textarea><button type="button" class="copy-icon" data-copy-target="#vc-out" aria-label="Copy"></button></div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -188,12 +187,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   }
 
   $('vc-gen').addEventListener('click', () => { updatePreview(); generate(); });
-  $('vc-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(out.value);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
-  });
   $('vc-txt').addEventListener('click', () => out.value && download('voucher-codes.txt', out.value));
   $('vc-csv').addEventListener('click', () => out.value && download('voucher-codes.csv', 'code\n' + out.value));
 

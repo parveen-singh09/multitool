@@ -8,7 +8,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <button id="jf-beautify" class="btn btn-primary">Beautify</button>
       <button id="jf-minify" class="btn btn-secondary">Minify</button>
       <button id="jf-fix" class="btn btn-secondary" title="Repair trailing commas, comments, single quotes, unquoted keys">Auto-fix</button>
-      <button id="jf-copy" class="btn btn-secondary">Copy</button>
       <button id="jf-download" class="btn btn-secondary">Download</button>
       <button id="jf-clear" class="btn btn-tertiary">Clear</button>
 
@@ -49,7 +48,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <pre id="jf-caret" class="panel p-4 mt-2 overflow-x-auto font-mono text-[13px] text-ink whitespace-pre"></pre>
     </div>
 
-    <div class="hl-edit field p-0" style="height:18rem;resize:vertical;overflow:hidden">
+    <div class="hl-edit copy-wrap field p-0" style="height:18rem;resize:vertical;overflow:hidden">
+      <button type="button" class="copy-icon" data-copy-target="#jf-input" aria-label="Copy"></button>
       <pre class="hl-block" aria-hidden="true"><code id="jf-input-hl" class="hljs" style="background:transparent"></code></pre>
       <textarea
         id="jf-input"
@@ -382,13 +382,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     refresh();
     status.classList.add('hidden');
     hideResults();
-  });
-
-  document.getElementById('jf-copy')!.addEventListener('click', async () => {
-    const btn = document.getElementById('jf-copy')!;
-    await navigator.clipboard.writeText(input.value);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy'), 1500);
   });
 
   document.getElementById('jf-download')!.addEventListener('click', () => {

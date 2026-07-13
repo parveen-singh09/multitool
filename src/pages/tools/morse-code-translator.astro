@@ -6,7 +6,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   <div class="flex flex-col gap-4">
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">
       Text
-      <textarea id="mc-text" class="field" rows="3" placeholder="Hello world" spellcheck="false"></textarea>
+      <div class="copy-wrap">
+        <textarea id="mc-text" class="field" rows="3" placeholder="Hello world" spellcheck="false"></textarea>
+        <button type="button" class="copy-icon" data-copy-target="#mc-text" aria-label="Copy"></button>
+      </div>
     </label>
 
     <div class="flex items-center justify-center gap-2 text-ink-tertiary">
@@ -15,12 +18,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">
       Morse code
-      <textarea id="mc-morse" class="field font-mono" rows="3" placeholder=".... . .-.. .-.. ---" spellcheck="false"></textarea>
+      <div class="copy-wrap">
+        <textarea id="mc-morse" class="field font-mono" rows="3" placeholder=".... . .-.. .-.. ---" spellcheck="false"></textarea>
+        <button type="button" class="copy-icon" data-copy-target="#mc-morse" aria-label="Copy"></button>
+      </div>
     </label>
 
     <div class="flex flex-wrap gap-2">
       <button id="mc-play" type="button" class="btn btn-secondary">▶ Play beeps</button>
-      <button id="mc-copy" type="button" class="btn btn-secondary">Copy Morse</button>
       <button id="mc-swap" type="button" class="btn btn-tertiary">Swap</button>
     </div>
     <p id="mc-note" class="text-[13px] text-ink-tertiary">Use “/” or a double space to separate words in Morse. Unknown characters are skipped.</p>
@@ -73,12 +78,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const t = textEl.value; textEl.value = morseEl.value; morseEl.value = t;
     lastEdited === 'text' ? morseEl.dispatchEvent(new Event('input')) : textEl.dispatchEvent(new Event('input'));
   });
-  document.getElementById('mc-copy')!.addEventListener('click', async (e) => {
-    await navigator.clipboard.writeText(morseEl.value);
-    const b = e.currentTarget as HTMLButtonElement;
-    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy Morse'), 1400);
-  });
-
   document.getElementById('mc-play')!.addEventListener('click', () => {
     const code = morseEl.value.trim();
     if (!code) return;

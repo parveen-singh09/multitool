@@ -22,9 +22,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </button>
       <div class="flex flex-col gap-1">
         <label class="text-sm text-ink-subtle" for="tc-to-val">To</label>
-        <div class="flex gap-2">
+        <div class="copy-wrap">
           <input id="tc-to-val" type="text" class="field font-mono" readonly />
-          <button id="tc-copy" type="button" class="btn btn-secondary shrink-0 px-3" title="Copy result">Copy</button>
+          <button type="button" class="copy-icon" data-copy-target="#tc-to-val" aria-label="Copy"></button>
         </div>
         <select id="tc-to-unit" class="field mt-1"></select>
       </div>
@@ -103,7 +103,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const toUnit = document.getElementById('tc-to-unit') as HTMLSelectElement;
   const swap = document.getElementById('tc-swap') as HTMLButtonElement;
   const precisionSel = document.getElementById('tc-precision') as HTMLSelectElement;
-  const copyBtn = document.getElementById('tc-copy') as HTMLButtonElement;
   const formula = document.getElementById('tc-formula') as HTMLElement;
   const warn = document.getElementById('tc-warn') as HTMLElement;
   const presetsWrap = document.getElementById('tc-presets') as HTMLElement;
@@ -237,8 +236,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (toVal.value !== '') fromVal.value = String(convertValue(Number(fromVal.value), a, fromUnit.value));
     convert();
   });
-
-  copyBtn.addEventListener('click', () => copyText(toVal.value, copyBtn));
 
   presetsWrap.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest('.tc-preset') as HTMLButtonElement | null;

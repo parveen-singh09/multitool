@@ -13,7 +13,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </select>
       </label>
       <button id="rf-format" type="button" class="btn btn-primary">Format</button>
-      <button id="rf-copy" type="button" class="btn btn-secondary">Copy</button>
       <button id="rf-download" type="button" class="btn btn-secondary">Download</button>
       <button id="rf-sample" type="button" class="btn btn-secondary">Sample</button>
       <button id="rf-clear" type="button" class="btn btn-secondary">Clear</button>
@@ -28,7 +27,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </div>
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Formatted
-        <pre class="hl-block field" style="height:24rem;overflow:auto"><code id="rf-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+        <div class="copy-wrap">
+          <pre class="hl-block field" style="height:24rem;overflow:auto"><code id="rf-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+          <button type="button" class="copy-icon" data-copy-target="#rf-out" aria-label="Copy"></button>
+        </div>
       </label>
     </div>
   </div>
@@ -166,11 +168,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   document.getElementById('rf-format')!.addEventListener('click', run);
   const refresh = wireInput(input, inHl, () => 'rust', () => run());
   indentSel.addEventListener('change', run);
-  document.getElementById('rf-copy')!.addEventListener('click', async (e) => {
-    await navigator.clipboard.writeText(rawOutput);
-    const b = e.currentTarget as HTMLButtonElement;
-    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
-  });
   document.getElementById('rf-download')!.addEventListener('click', () => {
     if (!rawOutput) return;
     const url = URL.createObjectURL(new Blob([rawOutput], { type: 'text/x-rust' }));

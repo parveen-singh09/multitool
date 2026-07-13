@@ -13,7 +13,8 @@ import {
   ChevronRight,
   Home,
   BookOpen,
-  Search
+  Search,
+  Menu
 } from "lucide-react";
 import {
   Sidebar,
@@ -27,7 +28,8 @@ import {
   SidebarMenuSubButton,
   SidebarGroup,
   SidebarGroupLabel,
-  SidebarGroupContent
+  SidebarGroupContent,
+  useSidebar
 } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@radix-ui/react-collapsible";
@@ -51,6 +53,7 @@ const categoryIcons: Record<string, React.ComponentType<any>> = {
 };
 
 export function AppSidebar({ currentPath }: AppSidebarProps) {
+  const { toggleSidebar } = useSidebar();
   const [searchQuery, setSearchQuery] = useState("");
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
 
@@ -82,7 +85,16 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
   return (
     <Sidebar className="border-r border-sidebar-border bg-sidebar">
       {/* Brand logo header */}
-      <SidebarHeader className="border-b border-sidebar-border/50 px-5 py-3.5 flex h-14 items-center justify-between">
+      <SidebarHeader className="border-b border-sidebar-border/50 px-5 py-3.5 flex h-14 flex-row items-center gap-2">
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          aria-label="Toggle sidebar"
+          title="Toggle sidebar"
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink cursor-pointer"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
         <a href="/" className="inline-flex items-center gap-2 no-underline" aria-label="ToolSilk home">
           <img src="/favicon.svg" width="20" height="20" alt="" aria-hidden="true" className="rounded-[5px]" />
           <span className="font-display font-semibold text-[15px] tracking-[-0.01em] text-ink">

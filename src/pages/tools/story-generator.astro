@@ -5,8 +5,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 <ToolLayout slug="story-generator">
   <div class="flex flex-col gap-4">
     <button id="st-gen" class="btn btn-primary w-fit">Generate story idea</button>
-    <div id="st-card" class="panel panel-lift flex flex-col gap-3 p-5"></div>
-    <button id="st-copy" class="btn btn-secondary w-fit">Copy prompt</button>
+    <div class="copy-wrap">
+      <div id="st-card" class="panel panel-lift flex flex-col gap-3 p-5"></div>
+      <button type="button" id="st-copy-icon" class="copy-icon" aria-label="Copy"></button>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -60,12 +62,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   }
 
   $('st-gen').addEventListener('click', generate);
-  $('st-copy').addEventListener('click', async (e) => {
+  // Local handler: the copied prompt is a composed string, not the card's own text.
+  $('st-copy-icon').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
     const text = `Premise: ${current.Premise}\nGenre: ${current.Genre}\nOpening line: ${current['Opening line']}`;
-    await navigator.clipboard.writeText(text);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy prompt'), 1500);
+    try {
+      await navigator.clipboard.writeText(text);
+      btn.classList.add('copied');
+      btn.setAttribute('aria-label', 'Copied');
+      setTimeout(() => { btn.classList.remove('copied'); btn.setAttribute('aria-label', 'Copy'); }, 1500);
+    } catch {}
   });
   generate();
 </script>

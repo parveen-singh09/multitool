@@ -52,11 +52,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
 
       <div class="flex flex-col gap-1 text-sm text-ink-subtle">
-        <span class="flex items-center justify-between">
-          <span>HTML for your page &lt;head&gt;</span>
-          <button id="ico-copy-html" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button>
-        </span>
-        <pre id="ico-html" class="field m-0 overflow-auto p-3 text-[13px]" style="white-space:pre;font-family:var(--font-mono,ui-monospace,monospace)"></pre>
+        <span>HTML for your page &lt;head&gt;</span>
+        <div class="copy-wrap">
+          <pre id="ico-html" class="field m-0 overflow-auto p-3 text-[13px]" style="white-space:pre;font-family:var(--font-mono,ui-monospace,monospace)"></pre>
+          <button type="button" class="copy-icon" data-copy-target="#ico-html" aria-label="Copy"></button>
+        </div>
       </div>
     </div>
 
@@ -291,11 +291,5 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       // ponytail: sequential downloads, no zip dep. Browsers allow multiple <a>.click().
       for (const s of sizes) download(await pngBlobFor(s), `${sourceName}-${s}x${s}.png`);
     } catch { setErr('Could not export the PNG files.'); }
-  });
-
-  document.getElementById('ico-copy-html')!.addEventListener('click', async (e) => {
-    await navigator.clipboard.writeText(htmlBlock.textContent || '');
-    const b = e.currentTarget as HTMLButtonElement;
-    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
   });
 </script>

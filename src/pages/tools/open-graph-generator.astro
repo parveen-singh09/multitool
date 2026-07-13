@@ -69,12 +69,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
       <div class="flex flex-col gap-2">
         <label class="text-sm text-ink-subtle">Generated tags</label>
-        <div class="relative">
+        <div class="copy-wrap">
           <pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto"><code id="og-out" class="hljs" style="background:transparent;padding:0"></code></pre>
-          <button id="og-copy" title="Copy tags" aria-label="Copy tags" class="btn btn-secondary absolute bottom-2 right-2 flex items-center gap-1.5 px-2 py-1 text-xs">
-            <svg id="og-copy-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            <span id="og-copy-label">Copy</span>
-          </button>
+          <button type="button" class="copy-icon" data-copy-target="#og-out" aria-label="Copy"></button>
         </div>
       </div>
     </div>
@@ -239,12 +236,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   ['og-title', 'og-desc', 'og-url', 'og-image', 'og-card', 'og-site', 'og-locale', 'og-tw']
     .forEach((id) => $(id).addEventListener('input', build));
   $('og-type').addEventListener('change', onTypeChange);
-  $('og-copy').addEventListener('click', async () => {
-    const label = $('og-copy-label');
-    await navigator.clipboard.writeText(rawOutput);
-    label.textContent = 'Copied!';
-    setTimeout(() => (label.textContent = 'Copy'), 1500);
-  });
 
   renderExtra();
   build();

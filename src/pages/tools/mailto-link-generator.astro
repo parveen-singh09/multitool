@@ -27,17 +27,21 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div class="flex flex-col gap-4 lg:sticky lg:top-6 self-start">
       <div class="flex flex-col gap-2">
         <label class="text-sm text-ink-subtle">mailto: link</label>
-        <pre class="field min-h-20 whitespace-pre-wrap break-all font-mono text-[13px]" id="ml-link"></pre>
+        <div class="copy-wrap">
+          <pre class="field min-h-20 whitespace-pre-wrap break-all font-mono text-[13px]" id="ml-link"></pre>
+          <button type="button" class="copy-icon" data-copy-target="#ml-link" aria-label="Copy"></button>
+        </div>
         <div class="flex gap-2">
-          <button id="ml-copy-link" class="btn btn-secondary">Copy link</button>
           <a id="ml-test" class="btn btn-tertiary" href="#">Test in email app</a>
         </div>
       </div>
 
       <div class="flex flex-col gap-2">
         <label class="text-sm text-ink-subtle">HTML anchor</label>
-        <pre class="field min-h-16 whitespace-pre-wrap break-all font-mono text-[13px]" id="ml-html"></pre>
-        <button id="ml-copy-html" class="btn btn-secondary self-start">Copy HTML</button>
+        <div class="copy-wrap">
+          <pre class="field min-h-16 whitespace-pre-wrap break-all font-mono text-[13px]" id="ml-html"></pre>
+          <button type="button" class="copy-icon" data-copy-target="#ml-html" aria-label="Copy"></button>
+        </div>
       </div>
 
       <label class="ml-lbl">Link text (for the HTML anchor)
@@ -100,16 +104,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   ['ml-to', 'ml-cc', 'ml-bcc', 'ml-subject', 'ml-body', 'ml-text'].forEach((id) => {
     $(id).addEventListener('input', render);
   });
-
-  const copy = async (btn: HTMLButtonElement, text: string, label: string) => {
-    await navigator.clipboard.writeText(text);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = label), 1500);
-  };
-  $('ml-copy-link').addEventListener('click', (e) =>
-    copy(e.currentTarget as HTMLButtonElement, $('ml-link').textContent || '', 'Copy link'));
-  $('ml-copy-html').addEventListener('click', (e) =>
-    copy(e.currentTarget as HTMLButtonElement, $('ml-html').textContent || '', 'Copy HTML'));
 
   render();
 </script>

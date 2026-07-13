@@ -33,9 +33,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
       <div class="flex flex-col gap-1">
         <label class="text-sm text-ink-subtle" for="uc-to-val">To</label>
-        <div class="flex gap-2">
-          <input id="uc-to-val" type="text" class="field flex-1" readonly aria-live="polite" />
-          <button id="uc-copy" type="button" class="btn btn-secondary px-3" title="Copy result">Copy</button>
+        <div class="copy-wrap">
+          <input id="uc-to-val" type="text" class="field w-full" readonly aria-live="polite" />
+          <button type="button" class="copy-icon" data-copy-target="#uc-to-val" aria-label="Copy"></button>
         </div>
         <select id="uc-to-unit" class="field mt-1"></select>
       </div>
@@ -141,7 +141,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const errEl = document.getElementById('uc-error')!;
   const tableBody = document.getElementById('uc-table')!;
   const presetsEl = document.getElementById('uc-presets')!;
-  const copyBtn = document.getElementById('uc-copy') as HTMLButtonElement;
   const swapBtn = document.getElementById('uc-swap') as HTMLButtonElement;
   let cat = 'length';
 
@@ -263,13 +262,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const cur = Number(toVal.value.replace(/[^\d.eE+-]/g, ''));
     if (Number.isFinite(cur) && toVal.value !== '') fromVal.value = String(cur);
     convert();
-  });
-
-  copyBtn.addEventListener('click', async () => {
-    if (!toVal.value) return;
-    await navigator.clipboard.writeText(toVal.value);
-    copyBtn.textContent = 'Copied!';
-    setTimeout(() => (copyBtn.textContent = 'Copy'), 1400);
   });
 
   // Build preset chips.

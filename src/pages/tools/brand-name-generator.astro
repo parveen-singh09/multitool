@@ -12,9 +12,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <input id="bn-count" type="number" min="6" max="60" value="24" class="field w-28" />
       </label>
       <button id="bn-gen" class="btn btn-primary ml-auto">Generate</button>
-      <button id="bn-copy" class="btn btn-secondary">Copy all</button>
     </div>
-    <div id="bn-out" class="grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
+    <div class="copy-wrap">
+      <div id="bn-out" class="grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
+      <button type="button" id="bn-copy" class="copy-icon" aria-label="Copy all names"></button>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -67,8 +69,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const btn = e.currentTarget as HTMLButtonElement;
     const text = [...out.querySelectorAll('button')].map((b) => (b as HTMLElement).dataset.n).join('\n');
     await navigator.clipboard.writeText(text);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+    btn.classList.add('copied');
+    setTimeout(() => btn.classList.remove('copied'), 1500);
   });
   generate();
 </script>

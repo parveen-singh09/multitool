@@ -22,10 +22,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         Start with "Lorem ipsum…"
       </label>
       <button id="li-generate" class="btn btn-primary ml-auto">Generate</button>
-      <button id="li-copy" class="btn btn-secondary">Copy</button>
     </div>
 
-    <div id="li-output" class="panel panel-lift flex min-h-52 flex-col gap-4 p-6 text-[15px] leading-relaxed text-ink-muted"></div>
+    <div class="copy-wrap">
+      <div id="li-output" class="panel panel-lift flex min-h-52 flex-col gap-4 p-6 text-[15px] leading-relaxed text-ink-muted"></div>
+      <button type="button" id="li-copy-icon" class="copy-icon" aria-label="Copy"></button>
+    </div>
   </div>
 </ToolLayout>
 
@@ -91,11 +93,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   }
 
   document.getElementById('li-generate')!.addEventListener('click', generate);
-  document.getElementById('li-copy')!.addEventListener('click', async () => {
-    const btn = document.getElementById('li-copy')!;
+  // ponytail: local handler — output is multi-paragraph, so copy innerText (keeps
+  // blank lines between paragraphs); the global handler's textContent would flatten them.
+  document.getElementById('li-copy-icon')!.addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLElement;
     await navigator.clipboard.writeText(output.innerText);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+    btn.classList.add('copied');
+    btn.setAttribute('aria-label', 'Copied');
+    setTimeout(() => { btn.classList.remove('copied'); btn.setAttribute('aria-label', 'Copy'); }, 1500);
   });
 
   generate();

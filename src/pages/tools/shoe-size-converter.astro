@@ -25,12 +25,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p id="ss-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
 
     <div>
-      <div class="flex items-center justify-between">
-        <span class="text-[13px] text-ink-subtle">Equivalent sizes</span>
-        <button id="ss-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy sizes</button>
-      </div>
+      <span class="text-[13px] text-ink-subtle">Equivalent sizes</span>
       <p id="ss-note" class="mt-1 hidden text-[12px] text-ink-tertiary"></p>
-      <div id="ss-result" class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
+      <div class="copy-wrap">
+        <div id="ss-result" class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
+        <button id="ss-copy" type="button" class="copy-icon" aria-label="Copy"></button>
+      </div>
     </div>
 
     <div>
@@ -206,8 +206,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const { cols } = DATA[cat];
     const text = cols.map((c, i) => `${c} ${lastRow![i]}`).join(' · ');
     await navigator.clipboard.writeText(text);
-    copyBtn.textContent = 'Copied!';
-    setTimeout(() => (copyBtn.textContent = 'Copy sizes'), 1400);
+    copyBtn.classList.add('copied');
+    setTimeout(() => copyBtn.classList.remove('copied'), 1400);
   });
 
   fillRegions();

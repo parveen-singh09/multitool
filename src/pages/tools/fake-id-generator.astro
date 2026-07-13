@@ -48,10 +48,9 @@ import { FIELD_GROUPS, FIELD_TYPES } from '../../lib/genfields';
           <button data-fmt="yaml" class="fi-fmt btn-fmt">YAML</button>
         </div>
         <button id="fi-gen" class="btn btn-primary ml-auto">Generate</button>
-        <button id="fi-copy" class="btn btn-secondary">Copy</button>
         <button id="fi-dl" class="btn btn-secondary">Download</button>
       </div>
-      <pre class="hl-block field min-h-80" style="resize:vertical;overflow:auto" aria-label="Generated data"><code id="fi-out" class="hljs font-mono text-[13px]" style="background:transparent;padding:0"></code></pre>
+      <div class="copy-wrap"><pre class="hl-block field min-h-80" style="resize:vertical;overflow:auto" aria-label="Generated data"><code id="fi-out" class="hljs font-mono text-[13px]" style="background:transparent;padding:0"></code></pre><button type="button" class="copy-icon" data-copy-target="#fi-out" aria-label="Copy"></button></div>
     </div>
   </div>
 
@@ -197,12 +196,6 @@ import { FIELD_GROUPS, FIELD_TYPES } from '../../lib/genfields';
   $('fi-gen').addEventListener('click', generate);
   [countEl, localeEl, seedEl, tableEl].forEach((el) => el.addEventListener('input', generate));
 
-  $('fi-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(raw);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy'), 1500);
-  });
   $('fi-dl').addEventListener('click', () => {
     const url = URL.createObjectURL(new Blob([raw], { type: MIME[fmt] }));
     const a = document.createElement('a'); a.href = url; a.download = `test-data.${fmt}`; a.click();

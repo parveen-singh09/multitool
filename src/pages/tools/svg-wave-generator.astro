@@ -20,11 +20,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </div>
     </div>
 
-    <div id="sw-preview" class="overflow-hidden rounded-lg border border-hairline bg-surface-2"></div>
+    <div class="copy-wrap">
+      <div id="sw-preview" class="overflow-hidden rounded-lg border border-hairline bg-surface-2"></div>
+      <button type="button" id="sw-copy-icon" class="copy-icon" aria-label="Copy SVG code"></button>
+    </div>
 
     <div class="flex flex-wrap gap-2">
       <button id="sw-dl" class="btn btn-primary">Download SVG</button>
-      <button id="sw-copy" class="btn btn-secondary">Copy SVG code</button>
     </div>
   </div>
 
@@ -88,11 +90,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const a = document.createElement('a'); a.href = url; a.download = 'wave.svg'; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
-  $('sw-copy').addEventListener('click', async (e) => {
+  // Local handler: the copied value is the generated SVG source string, which
+  // isn't reflected in any element's text (the preview holds rendered DOM).
+  $('sw-copy-icon').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(svg());
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy SVG code'), 1500);
+    try {
+      await navigator.clipboard.writeText(svg());
+      btn.classList.add('copied');
+      btn.setAttribute('aria-label', 'Copied');
+      setTimeout(() => { btn.classList.remove('copied'); btn.setAttribute('aria-label', 'Copy SVG code'); }, 1500);
+    } catch {}
   });
 
   reseed(); render();

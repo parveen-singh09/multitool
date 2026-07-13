@@ -60,11 +60,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <span class="flex items-center justify-between">
           <span>JSON output</span>
           <span class="flex gap-2">
-            <button id="x2j-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button>
             <button id="x2j-download" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Download</button>
           </span>
         </span>
-        <pre class="hl-block field" style="height:22rem;margin:0;overflow:auto;white-space:pre"><code id="x2j-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+        <div class="copy-wrap">
+          <pre class="hl-block field" style="height:22rem;margin:0;overflow:auto;white-space:pre"><code id="x2j-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+          <button type="button" class="copy-icon" data-copy-target="#x2j-out" aria-label="Copy"></button>
+        </div>
       </div>
     </div>
 
@@ -226,13 +228,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     input.value = ''; rawOutput = ''; output.textContent = '';
     err.classList.add('hidden'); statusEl.classList.add('hidden');
     rerender();
-  });
-
-  document.getElementById('x2j-copy')!.addEventListener('click', async (e) => {
-    if (!rawOutput) return;
-    await navigator.clipboard.writeText(rawOutput);
-    const b = e.currentTarget as HTMLButtonElement;
-    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
   });
 
   document.getElementById('x2j-download')!.addEventListener('click', () => {

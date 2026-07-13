@@ -8,17 +8,17 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">
       Number
-      <div class="flex gap-2">
+      <div class="copy-wrap">
         <input id="rn-num" type="text" class="field font-mono" placeholder="2026" inputmode="numeric" spellcheck="false" autocomplete="off" />
-        <button id="rn-copy-num" type="button" class="btn btn-secondary">Copy</button>
+        <button type="button" class="copy-icon" data-copy-target="#rn-num" aria-label="Copy"></button>
       </div>
     </label>
 
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">
       Roman numeral
-      <div class="flex gap-2">
+      <div class="copy-wrap">
         <input id="rn-rom" type="text" class="field font-mono uppercase" placeholder="MMXXVI" spellcheck="false" autocomplete="off" />
-        <button id="rn-copy" type="button" class="btn btn-secondary">Copy</button>
+        <button type="button" class="copy-icon" data-copy-target="#rn-rom" aria-label="Copy"></button>
       </div>
     </label>
 
@@ -71,9 +71,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           </select>
         </label>
       </div>
-      <div class="flex gap-2">
+      <div class="copy-wrap">
         <input id="rn-date-out" type="text" class="field font-mono" readonly aria-label="Roman numeral date" />
-        <button id="rn-copy-date" type="button" class="btn btn-secondary">Copy</button>
+        <button type="button" class="copy-icon" data-copy-target="#rn-date-out" aria-label="Copy"></button>
       </div>
     </div>
   </div>
@@ -209,14 +209,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   numEl.addEventListener('input', fromNum);
   romEl.addEventListener('input', fromRom);
 
-  async function copyFrom(el: HTMLInputElement, btn: HTMLButtonElement) {
-    if (!el.value) return;
-    await navigator.clipboard.writeText(el.value);
-    btn.textContent = 'Copied!'; setTimeout(() => (btn.textContent = 'Copy'), 1400);
-  }
-  document.getElementById('rn-copy')!.addEventListener('click', (e) => copyFrom(romEl, e.currentTarget as HTMLButtonElement));
-  document.getElementById('rn-copy-num')!.addEventListener('click', (e) => copyFrom(numEl, e.currentTarget as HTMLButtonElement));
-
   document.querySelectorAll<HTMLButtonElement>('.rn-eg').forEach((b) =>
     b.addEventListener('click', () => { numEl.value = b.dataset.n!; fromNum(); }));
 
@@ -237,7 +229,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   dateEl.addEventListener('input', updateDate);
   dateFmt.addEventListener('change', updateDate);
   dateSep.addEventListener('change', updateDate);
-  document.getElementById('rn-copy-date')!.addEventListener('click', (e) => copyFrom(dateOut, e.currentTarget as HTMLButtonElement));
 
   numEl.value = '2026'; fromNum();
   updateDate();

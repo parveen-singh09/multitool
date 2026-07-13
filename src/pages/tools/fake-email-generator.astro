@@ -9,8 +9,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div class="panel flex flex-col gap-3 p-4">
         <span class="text-xs uppercase tracking-wide text-ink-subtle">Your temporary address</span>
         <div class="flex flex-wrap items-center gap-3">
-          <code id="ti-addr" class="flex-1 min-w-0 truncate rounded-md bg-surface-2 px-3 py-2 font-mono text-[15px] text-ink">…</code>
-          <button id="ti-copy" class="btn btn-secondary">Copy</button>
+          <div class="copy-wrap flex-1 min-w-0">
+            <code id="ti-addr" class="block w-full truncate rounded-md bg-surface-2 px-3 py-2 pr-10 font-mono text-[15px] text-ink">…</code>
+            <button type="button" class="copy-icon" data-copy-target="#ti-addr" aria-label="Copy"></button>
+          </div>
           <button id="ti-qr" class="btn btn-secondary" aria-label="Show QR code" title="Show QR code">QR</button>
           <button id="ti-new" class="btn btn-secondary">New address</button>
         </div>
@@ -36,9 +38,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <input id="fe-count" type="number" min="1" max="1000" value="10" class="field w-28" />
         </label>
         <button id="fe-gen" class="btn btn-primary">Generate</button>
-        <button id="fe-copy" class="btn btn-secondary">Copy all</button>
       </div>
-      <textarea id="fe-out" class="field min-h-40 resize-y font-mono text-[13px]" readonly aria-label="Generated emails"></textarea>
+      <div class="copy-wrap">
+        <textarea id="fe-out" class="field min-h-40 resize-y font-mono text-[13px]" readonly aria-label="Generated emails"></textarea>
+        <button type="button" class="copy-icon" data-copy-target="#fe-out" aria-label="Copy"></button>
+      </div>
     </section>
   </div>
 
@@ -197,15 +201,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   }
 
   // ---- controls ----
-  $('ti-copy').addEventListener('click', async (e) => {
-    if (!session) return;
-    await navigator.clipboard.writeText(session.address);
-    const btn = e.currentTarget as HTMLButtonElement;
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy'), 1500);
-  });
   $('ti-new').addEventListener('click', async () => {
-    if (session) { try { await deleteAccount(session.token, session.id); } catch  }
+    if (session) { try { await deleteAccount(session.token, session.id); } catch {} }
     sessionStorage.removeItem(KEY);
     session = null;
     newAddress();
@@ -251,12 +248,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   }
   countEl.addEventListener('input', generate);
   $('fe-gen').addEventListener('click', generate);
-  $('fe-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(out.value);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
-  });
   generate();
 </script>
 

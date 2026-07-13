@@ -63,12 +63,14 @@ import { SERVICES } from '../../lib/privacypolicy';
 
       <div class="flex flex-col gap-3">
         <div class="flex flex-wrap gap-2">
-          <button id="pp-copy" class="btn btn-secondary">Copy Markdown</button>
           <button id="pp-copy-html" class="btn btn-secondary">Copy HTML</button>
           <button id="pp-dl-md" class="btn btn-secondary">Download .md</button>
           <button id="pp-dl-html" class="btn btn-secondary">Download .html</button>
         </div>
-        <div id="pp-preview" class="md-preview panel p-5 text-[15px] leading-relaxed text-ink" style="max-height:70vh;overflow:auto"></div>
+        <div class="copy-wrap">
+          <div id="pp-preview" class="md-preview panel p-5 text-[15px] leading-relaxed text-ink" style="max-height:70vh;overflow:auto"></div>
+          <button type="button" class="copy-icon" id="pp-copy-icon" aria-label="Copy"></button>
+        </div>
       </div>
     </div>
   </div>
@@ -153,7 +155,18 @@ import { SERVICES } from '../../lib/privacypolicy';
   }
 
   $('pp-form').addEventListener('input', render);
-  $('pp-copy').addEventListener('click', (e) => copy(e.currentTarget as HTMLButtonElement, md));
+  // Icon copies the Markdown source (lives only in the `md` variable, not in the
+  // rendered preview), so it needs a local handler rather than the global one.
+  $('pp-copy-icon').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(md);
+    btn.classList.add('copied');
+    btn.setAttribute('aria-label', 'Copied');
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.setAttribute('aria-label', 'Copy');
+    }, 1500);
+  });
   $('pp-copy-html').addEventListener('click', (e) => copy(e.currentTarget as HTMLButtonElement, toHtml()));
   $('pp-dl-md').addEventListener('click', () => download('privacy-policy.md', md, 'text/markdown'));
   $('pp-dl-html').addEventListener('click', () =>

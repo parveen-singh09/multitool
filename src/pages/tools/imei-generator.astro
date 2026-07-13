@@ -32,11 +32,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div class="flex flex-wrap gap-3">
       <button id="im-gen" class="btn btn-primary">Generate</button>
-      <button id="im-copy" class="btn btn-secondary">Copy all</button>
       <button id="im-dl" class="btn btn-secondary">Download .txt</button>
     </div>
 
-    <textarea id="im-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated IMEI numbers"></textarea>
+    <div class="copy-wrap">
+      <textarea id="im-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated IMEI numbers"></textarea>
+      <button type="button" class="copy-icon" data-copy-target="#im-out" aria-label="Copy"></button>
+    </div>
 
     <div class="panel flex flex-col gap-2 p-4">
       <label class="text-sm font-medium text-ink" for="im-check">Validate an IMEI</label>
@@ -255,13 +257,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   spacedEl.addEventListener('change', generate);
   $('im-gen').addEventListener('click', generate);
   checkEl.addEventListener('input', validate);
-
-  $('im-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(out.value);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
-  });
 
   $('im-dl').addEventListener('click', () => {
     const blob = new Blob([out.value], { type: 'text/plain' });

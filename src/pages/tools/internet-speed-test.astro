@@ -274,13 +274,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       ip = m.ip || '';
       colo = (m.colo || '').toUpperCase();
       loc = m.loc || '';
-    } catch 
+    } catch {}
     // Enrichment: /meta returns ISP name + city in a real browser. Degrade gracefully.
     try {
       const meta = await (await fetch(META, { cache: 'no-store' })).json();
       isp = meta.asOrganization || meta.isp || '';
       city = meta.city || '';
-    } catch 
+    } catch {}
     if (ip) $('st-ip').textContent = ip;
     if (isp) $('st-isp').textContent = isp;
     const place = COLO[colo] || city || loc;
@@ -295,7 +295,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       try {
         await fetch(DOWN + '0', { cache: 'no-store' });
         times.push(performance.now() - t0);
-      } catch 
+      } catch {}
     }
     if (!times.length) throw new Error('no latency');
     times.sort((a, b) => a - b);
@@ -369,7 +369,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         try {
           await fetch(DOWN + '0', { cache: 'no-store' });
           if (performance.now() - start > WARMUP_MS) latencies.push(performance.now() - t0);
-        } catch 
+        } catch {}
         await sleep(250);
       }
     })();
@@ -462,7 +462,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     list.unshift({ ...r, t: Date.now() });
     try {
       localStorage.setItem(HKEY, JSON.stringify(list.slice(0, 10)));
-    } catch 
+    } catch {}
     renderHistory();
   }
   function renderHistory() {
@@ -583,7 +583,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   $('st-clear').addEventListener('click', () => {
     try {
       localStorage.removeItem(HKEY);
-    } catch 
+    } catch {}
     renderHistory();
   });
   startBtn.addEventListener('click', runTest);

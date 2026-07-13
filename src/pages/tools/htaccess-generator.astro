@@ -98,7 +98,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
                 <input id="hp-pass" class="field ha-in flex-1" placeholder="password" spellcheck="false" autocomplete="off" />
                 <button id="hp-gen" type="button" class="btn btn-secondary whitespace-nowrap">Generate</button>
               </div>
-              <input id="hp-out" class="field font-mono text-[13px]" readonly placeholder=".htpasswd line appears here" aria-label="htpasswd line" />
+              <div class="copy-wrap"><input id="hp-out" class="field font-mono text-[13px]" readonly placeholder=".htpasswd line appears here" aria-label="htpasswd line" /><button type="button" class="copy-icon" data-copy-target="#hp-out" aria-label="Copy"></button></div>
             </div>
           </div>
         </div>
@@ -122,9 +122,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div class="flex flex-col gap-2 lg:sticky lg:top-6 self-start">
       <label class="text-sm text-ink-subtle">.htaccess</label>
-      <pre class="hl-block field min-h-72 max-h-[70vh]" style="resize:vertical;overflow:auto"><code id="ha-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+      <div class="copy-wrap"><pre class="hl-block field min-h-72 max-h-[70vh]" style="resize:vertical;overflow:auto"><code id="ha-out" class="hljs" style="background:transparent;padding:0"></code></pre><button type="button" class="copy-icon" data-copy-target="#ha-out" aria-label="Copy"></button></div>
       <div class="flex gap-2">
-        <button id="ha-copy" class="btn btn-secondary">Copy</button>
         <button id="ha-dl" class="btn btn-secondary">Download</button>
       </div>
     </div>
@@ -220,7 +219,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const rule = img
         ? `  RewriteRule \\.(${exts.join('|')})$ ${img} [NC,R,L]`
         : `  RewriteRule \\.(${exts.join('|')})$ - [NC,F,L]`;
-      return `# Prevent hotlinking\n<IfModule mod_rewrite.c>\n  RewriteEngine On\n  RewriteCond %{HTTP_REFERER} !^$\n  RewriteCond %{HTTP_REFERER} !^https?:
+      return `# Prevent hotlinking\n<IfModule mod_rewrite.c>\n  RewriteEngine On\n  RewriteCond %{HTTP_REFERER} !^$\n  RewriteCond %{HTTP_REFERER} !^https?://(www\\.)?${esc} [NC]\n${rule}\n</IfModule>`;
     },
     badbots: () => `# Block bad bots\n<IfModule mod_rewrite.c>\n  RewriteEngine On\n  RewriteCond %{HTTP_USER_AGENT} (ahrefs|semrush|mj12bot|dotbot|petalbot|blexbot|scrapy|python-requests|masscan|nikto|sqlmap) [NC]\n  RewriteRule ^ - [F,L]\n</IfModule>`,
     protect: () => {
@@ -269,12 +268,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     btn.textContent = 'Generate'; btn.disabled = false;
   });
 
-  $('ha-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(rawOutput);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy'), 1500);
-  });
   $('ha-dl').addEventListener('click', () => {
     const url = URL.createObjectURL(new Blob([rawOutput], { type: 'text/plain' }));
     const a = document.createElement('a'); a.href = url; a.download = '.htaccess'; a.click();

@@ -17,7 +17,10 @@ const CHANNELS = [
     <div class="panel flex flex-col gap-4 rounded-lg p-4">
       <div class="flex items-baseline justify-between gap-3">
         <span class="eyebrow text-ink-subtle">CMYK sliders</span>
-        <span id="ck-out" class="font-mono text-[13px] text-ink-muted"></span>
+        <span class="copy-wrap">
+          <span id="ck-out" class="font-mono text-[13px] text-ink-muted"></span>
+          <button type="button" class="copy-icon" data-copy-target="#ck-out" aria-label="Copy"></button>
+        </span>
       </div>
 
       <div class="flex flex-col gap-3">
@@ -41,7 +44,6 @@ const CHANNELS = [
       </div>
 
       <div class="flex flex-wrap gap-2">
-        <button id="ck-copy" class="btn btn-secondary" type="button">Copy cmyk(…)</button>
         <button id="ck-reset" class="btn btn-tertiary" type="button">Reset to black (0,0,0,100)</button>
       </div>
     </div>
@@ -121,15 +123,6 @@ const CHANNELS = [
         pushToConverter();
       });
     }
-
-    document.getElementById('ck-copy')?.addEventListener('click', async (e) => {
-      const btn = e.currentTarget as HTMLButtonElement;
-      try {
-        await navigator.clipboard.writeText(outEl?.textContent || cmykField.value);
-        const old = btn.textContent; btn.textContent = 'Copied!';
-        setTimeout(() => (btn.textContent = old), 1400);
-      } catch 
-    });
 
     document.getElementById('ck-reset')?.addEventListener('click', () => {
       pullFromConverter({ c: 0, m: 0, y: 0, k: 100 });

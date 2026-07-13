@@ -57,11 +57,9 @@ const PRESETS = [
       </button>
       <div class="flex flex-col gap-1">
         <label class="text-sm text-ink-subtle" for="lc-to-val">To</label>
-        <div class="relative">
+        <div class="copy-wrap">
           <input id="lc-to-val" type="text" class="field pr-11" readonly />
-          <button id="lc-copy-to" type="button" class="btn btn-tertiary absolute right-1 top-1 h-8 w-9 p-0" aria-label="Copy result" title="Copy result">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
-          </button>
+          <button type="button" class="copy-icon" data-copy-target="#lc-to-val" aria-label="Copy"></button>
         </div>
         <select id="lc-to-unit" class="field mt-1"></select>
       </div>
@@ -106,11 +104,13 @@ const PRESETS = [
         <p class="text-[12px] text-ink-tertiary">Converts every line from the “From” unit to the “To” unit. Blank or non-numeric lines are skipped.</p>
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <textarea id="lc-batch-in" class="field" rows="6" spellcheck="false" placeholder="1&#10;2.5&#10;100"></textarea>
-          <textarea id="lc-batch-out" class="field" rows="6" readonly placeholder="Results appear here"></textarea>
+          <div class="copy-wrap">
+            <textarea id="lc-batch-out" class="field" rows="6" readonly placeholder="Results appear here"></textarea>
+            <button type="button" class="copy-icon" data-copy-target="#lc-batch-out" aria-label="Copy"></button>
+          </div>
         </div>
         <div class="flex gap-2">
           <button id="lc-batch-run" type="button" class="btn btn-secondary h-9 px-3 text-[13px]">Convert lines</button>
-          <button id="lc-batch-copy" type="button" class="btn btn-tertiary h-9 px-3 text-[13px]">Copy results</button>
         </div>
       </div>
     </details>
@@ -144,12 +144,10 @@ const PRESETS = [
   const thousands = document.getElementById('lc-thousands') as HTMLInputElement;
   const presetsEl = document.getElementById('lc-presets') as HTMLElement;
   const table = document.getElementById('lc-table') as HTMLElement;
-  const copyTo = document.getElementById('lc-copy-to') as HTMLButtonElement;
   const copyAll = document.getElementById('lc-copy-all') as HTMLButtonElement;
   const batchIn = document.getElementById('lc-batch-in') as HTMLTextAreaElement;
   const batchOut = document.getElementById('lc-batch-out') as HTMLTextAreaElement;
   const batchRun = document.getElementById('lc-batch-run') as HTMLButtonElement;
-  const batchCopy = document.getElementById('lc-batch-copy') as HTMLButtonElement;
 
   const convert = (v: number, from: string, to: string) => (v * UNITS[from]) / UNITS[to];
 
@@ -303,13 +301,11 @@ const PRESETS = [
     if (parsed !== null) fromVal.value = toVal.value.replace(/,/g, '');
     run();
   });
-  copyTo.addEventListener('click', () => copy(toVal.value, copyTo));
   copyAll.addEventListener('click', () => {
     const text = NAMES.map((u) => `${u}\t${fmt(convert(parseVal(fromVal.value) ?? 0, fromUnit.value, u))} ${abbr(u)}`).join('\n');
     copy(text, copyAll);
   });
   batchRun.addEventListener('click', runBatch);
-  batchCopy.addEventListener('click', () => copy(batchOut.value, batchCopy));
 
   fillUnits();
   fillPresets();

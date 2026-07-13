@@ -9,12 +9,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <span>Text to speak</span>
         <span id="tts-count" class="text-[13px] text-ink-tertiary"></span>
       </span>
-      <textarea id="tts-text" class="field" rows="6" placeholder="Type or paste text to hear it read aloud…" spellcheck="false"></textarea>
+      <div class="copy-wrap">
+        <textarea id="tts-text" class="field" rows="6" placeholder="Type or paste text to hear it read aloud…" spellcheck="false"></textarea>
+        <button type="button" class="copy-icon" data-copy-target="#tts-text" aria-label="Copy"></button>
+      </div>
     </label>
 
     <div class="flex flex-wrap gap-2">
       <button id="tts-sample" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Sample text</button>
-      <button id="tts-copy" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Copy text</button>
       <button id="tts-clear" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Clear</button>
     </div>
 
@@ -158,7 +160,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         if (typeof s.lang === 'string') langSel.dataset.want = s.lang;
         if (typeof s.voice === 'string') savedVoiceName = s.voice;
         if (typeof s.highlight === 'boolean') hlBox.checked = s.highlight;
-      } catch 
+      } catch {}
       syncLabels();
     }
     function saveSettings() {
@@ -168,7 +170,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           rate: Number(rate.value), pitch: Number(pitch.value), volume: Number(vol.value),
           lang: langSel.value, voice: v?.name || '', highlight: hlBox.checked,
         }));
-      } catch 
+      } catch {}
     }
 
     function loadVoices() {
@@ -361,14 +363,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     document.getElementById('tts-sample')!.addEventListener('click', () => {
       textEl.value = SAMPLE; updateCount();
-    });
-    document.getElementById('tts-copy')!.addEventListener('click', async (e) => {
-      if (!textEl.value) return;
-      try {
-        await navigator.clipboard.writeText(textEl.value);
-        const b = e.currentTarget as HTMLButtonElement;
-        b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy text'), 1400);
-      } catch 
     });
     document.getElementById('tts-clear')!.addEventListener('click', () => {
       textEl.value = ''; updateCount(); clearHighlight();

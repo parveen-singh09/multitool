@@ -48,11 +48,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <input id="sn-pad" type="checkbox" class="accent-primary" checked /> Zero-pad to length
       </label>
       <button id="sn-gen" class="btn btn-primary ml-auto">Generate</button>
-      <button id="sn-copy" class="btn btn-secondary">Copy all</button>
       <button id="sn-txt" class="btn btn-secondary">Export .txt</button>
       <button id="sn-csv" class="btn btn-secondary">Export .csv</button>
     </div>
-    <textarea id="sn-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated serial numbers"></textarea>
+    <div class="copy-wrap"><textarea id="sn-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated serial numbers"></textarea><button type="button" class="copy-icon" data-copy-target="#sn-out" aria-label="Copy"></button></div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -139,12 +138,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   ['sn-prefix', 'sn-suffix', 'sn-len', 'sn-count', 'sn-start', 'sn-step', 'sn-set', 'sn-pad'].forEach((id) => $(id).addEventListener('input', generate));
   modeEl.addEventListener('change', syncMode);
   $('sn-gen').addEventListener('click', generate);
-  $('sn-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(out.value);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
-  });
   $('sn-txt').addEventListener('click', () => download('serial-numbers.txt', out.value));
   $('sn-csv').addEventListener('click', () => download('serial-numbers.csv', 'serial\n' + out.value));
 

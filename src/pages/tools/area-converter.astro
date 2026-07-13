@@ -22,11 +22,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </button>
       <div class="flex flex-col gap-1">
         <label class="text-sm text-ink-subtle" for="ac-to-val">To</label>
-        <div class="relative">
+        <div class="copy-wrap">
           <input id="ac-to-val" type="text" class="field pr-11" readonly />
-          <button id="ac-copy-to" type="button" class="btn btn-tertiary absolute right-1 top-1/2 h-8 w-9 -translate-y-1/2 p-0" aria-label="Copy result" title="Copy result">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
-          </button>
+          <button type="button" class="copy-icon" data-copy-target="#ac-to-val" aria-label="Copy"></button>
         </div>
         <select id="ac-to-unit" class="field mt-1"></select>
       </div>
@@ -106,7 +104,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const precision = $('ac-precision') as HTMLSelectElement;
   const thousands = $('ac-thousands') as HTMLInputElement;
   const swap = $('ac-swap') as HTMLButtonElement;
-  const copyTo = $('ac-copy-to') as HTMLButtonElement;
   const formula = $('ac-formula') as HTMLElement;
   const errorEl = $('ac-error') as HTMLElement;
   const allBox = $('ac-all') as HTMLElement;
@@ -233,7 +230,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       ta.style.opacity = '0';
       document.body.appendChild(ta);
       ta.select();
-      try { document.execCommand('copy'); } catch 
+      try { document.execCommand('copy'); } catch {}
       document.body.removeChild(ta);
     }
     const prev = btn.getAttribute('title');
@@ -257,7 +254,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (toVal.value !== '') fromVal.value = toVal.value.replace(/,/g, '');
     render();
   });
-  copyTo.addEventListener('click', () => copy(toVal.value, copyTo));
   allBox.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest('.ac-copy-row') as HTMLElement | null;
     if (btn) copy(btn.dataset.val || '', btn);

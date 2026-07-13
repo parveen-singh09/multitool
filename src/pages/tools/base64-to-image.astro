@@ -13,7 +13,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <button id="b2i-clear" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Clear</button>
         </span>
       </span>
-      <textarea id="b2i-in" class="field font-mono text-[13px]" rows="6" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Paste or drop a data:image/png;base64,iVBORw0KGgo… URI, or just the raw Base64. Type is auto-detected."></textarea>
+      <div class="copy-wrap">
+        <textarea id="b2i-in" class="field font-mono text-[13px]" rows="6" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Paste or drop a data:image/png;base64,iVBORw0KGgo… URI, or just the raw Base64. Type is auto-detected."></textarea>
+        <button type="button" class="copy-icon" data-copy-target="#b2i-in" aria-label="Copy"></button>
+      </div>
       <input id="b2i-file" type="file" accept=".txt,text/plain" class="hidden" />
     </div>
 
@@ -50,18 +53,18 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
       <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div class="flex flex-col gap-1 text-sm text-ink-subtle">
-          <span class="flex items-center justify-between">
-            <span>HTML &lt;img&gt;</span>
-            <button id="b2i-copy-html" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button>
-          </span>
-          <pre class="hl-block field" style="height:8rem;margin:0;overflow:auto;white-space:pre-wrap;word-break:break-all"><code id="b2i-html" class="hljs" style="background:transparent;padding:0"></code></pre>
+          <span>HTML &lt;img&gt;</span>
+          <div class="copy-wrap">
+            <pre class="hl-block field" style="height:8rem;margin:0;overflow:auto;white-space:pre-wrap;word-break:break-all"><code id="b2i-html" class="hljs" style="background:transparent;padding:0"></code></pre>
+            <button type="button" class="copy-icon" data-copy-target="#b2i-html" aria-label="Copy"></button>
+          </div>
         </div>
         <div class="flex flex-col gap-1 text-sm text-ink-subtle">
-          <span class="flex items-center justify-between">
-            <span>CSS background</span>
-            <button id="b2i-copy-css" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button>
-          </span>
-          <pre class="hl-block field" style="height:8rem;margin:0;overflow:auto;white-space:pre-wrap;word-break:break-all"><code id="b2i-css" class="hljs" style="background:transparent;padding:0"></code></pre>
+          <span>CSS background</span>
+          <div class="copy-wrap">
+            <pre class="hl-block field" style="height:8rem;margin:0;overflow:auto;white-space:pre-wrap;word-break:break-all"><code id="b2i-css" class="hljs" style="background:transparent;padding:0"></code></pre>
+            <button type="button" class="copy-icon" data-copy-target="#b2i-css" aria-label="Copy"></button>
+          </div>
         </div>
       </div>
     </div>
@@ -218,8 +221,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   });
 
   copyUri.addEventListener('click', () => copyBtn(copyUri, currentUri));
-  document.getElementById('b2i-copy-html')!.addEventListener('click', (e) => copyBtn(e.currentTarget as HTMLButtonElement, htmlOut.textContent || ''));
-  document.getElementById('b2i-copy-css')!.addEventListener('click', (e) => copyBtn(e.currentTarget as HTMLButtonElement, cssOut.textContent || ''));
 
   document.getElementById('b2i-clear')!.addEventListener('click', () => { input.value = ''; render(); });
   document.getElementById('b2i-sample')!.addEventListener('click', () => {

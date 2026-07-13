@@ -22,9 +22,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </button>
       <div class="flex flex-col gap-1">
         <label class="text-sm text-ink-subtle" for="fe-to-val">To</label>
-        <div class="flex gap-2">
-          <input id="fe-to-val" type="text" class="field flex-1" readonly />
-          <button id="fe-copy" type="button" class="btn btn-secondary shrink-0 px-3" title="Copy result">Copy</button>
+        <div class="copy-wrap">
+          <input id="fe-to-val" type="text" class="field" readonly />
+          <button type="button" class="copy-icon" data-copy-target="#fe-to-val" aria-label="Copy"></button>
         </div>
         <select id="fe-to-unit" class="field mt-1"></select>
       </div>
@@ -119,7 +119,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const fromUnit = $<HTMLSelectElement>('fe-from-unit');
   const toUnit = $<HTMLSelectElement>('fe-to-unit');
   const swap = $<HTMLButtonElement>('fe-swap');
-  const copyBtn = $<HTMLButtonElement>('fe-copy');
   const precision = $<HTMLSelectElement>('fe-precision');
   const presets = $<HTMLElement>('fe-presets');
   const formula = $<HTMLElement>('fe-formula');
@@ -220,15 +219,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     // Carry the current result back into the input for a natural round-trip.
     if (toVal.value && isFinite(Number(toVal.value))) fromVal.value = toVal.value;
     run();
-  });
-
-  copyBtn.addEventListener('click', async () => {
-    if (!toVal.value) return;
-    try {
-      await navigator.clipboard.writeText(toVal.value);
-      copyBtn.textContent = 'Copied!';
-      setTimeout(() => (copyBtn.textContent = 'Copy'), 1400);
-    } catch 
   });
 
   fillUnits();

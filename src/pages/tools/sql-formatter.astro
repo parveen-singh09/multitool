@@ -44,7 +44,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </label>
       <button id="sf-format" type="button" class="btn btn-primary">Format</button>
       <button id="sf-minify" type="button" class="btn btn-secondary">Minify</button>
-      <button id="sf-copy" type="button" class="btn btn-secondary">Copy</button>
     </div>
 
     <div class="flex flex-wrap items-end gap-3">
@@ -100,14 +99,20 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
       <div class="flex flex-col gap-1 text-sm text-ink-subtle">
         SQL input
-        <div class="hl-edit field p-0" style="height:24rem;resize:vertical;overflow:hidden">
-          <pre class="hl-block" aria-hidden="true"><code id="sf-in-hl" class="hljs" style="background:transparent"></code></pre>
-          <textarea id="sf-in" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="select id, name from users where age > 21 order by name"></textarea>
+        <div class="copy-wrap">
+          <div class="hl-edit field p-0" style="height:24rem;resize:vertical;overflow:hidden">
+            <pre class="hl-block" aria-hidden="true"><code id="sf-in-hl" class="hljs" style="background:transparent"></code></pre>
+            <textarea id="sf-in" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="select id, name from users where age > 21 order by name"></textarea>
+          </div>
+          <button type="button" class="copy-icon" data-copy-target="#sf-in" aria-label="Copy"></button>
         </div>
       </div>
       <div class="flex flex-col gap-1 text-sm text-ink-subtle">
         Output
-        <pre class="hl-block field" style="height:24rem;overflow:auto"><code id="sf-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+        <div class="copy-wrap">
+          <pre class="hl-block field" style="height:24rem;overflow:auto"><code id="sf-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+          <button type="button" class="copy-icon" data-copy-target="#sf-out" aria-label="Copy"></button>
+        </div>
       </div>
     </div>
     <p id="sf-err" class="hidden text-sm text-danger"></p>
@@ -222,13 +227,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   [dialect, outputType, kw, dt, fn, idCase, indent, logical].forEach((el) =>
     el.addEventListener('change', () => run(false)));
 
-  $('sf-copy').addEventListener('click', async (e) => {
-    await navigator.clipboard.writeText(rawOutput);
-    const b = e.currentTarget as HTMLButtonElement;
-    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
-  });
-
-  input.value = "select u.id, u.name, u.email, count(o.id) as order_count from users u left join orders o on o.user_id = u.id where u.age > 21 and u.status = 'active' group by u.id, u.name, u.email having count(o.id) > 0 order by order_count desc limit 10";
+  input.value ="select u.id, u.name, u.email, count(o.id) as order_count from users u left join orders o on o.user_id = u.id where u.age > 21 and u.status = 'active' group by u.id, u.name, u.email having count(o.id) > 0 order by order_count desc limit 10";
   // Highlight the SQL input as you type; run() feeds the output panel.
   wireInput(input, inHl, () => 'sql', () => run(false));
   run(false);

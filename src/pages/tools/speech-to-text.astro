@@ -158,14 +158,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <span id="st-start-label">Start listening</span>
       </button>
       <button id="st-clear" type="button" class="btn btn-secondary">Clear</button>
-      <button id="st-copy" type="button" class="btn btn-secondary">Copy</button>
       <button id="st-download-txt" type="button" class="btn btn-tertiary">Download .txt</button>
       <button id="st-download-doc" type="button" class="btn btn-tertiary">Download .doc</button>
     </div>
 
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">
       <span class="flex items-center gap-2">Transcript <span id="st-count" class="text-xs text-ink-tertiary"></span> <span id="st-saved" class="text-xs text-ink-tertiary"></span></span>
-      <textarea id="st-out" class="field" rows="10" placeholder="Your speech will appear here as you talk…" spellcheck="true"></textarea>
+      <div class="copy-wrap">
+        <textarea id="st-out" class="field" rows="10" placeholder="Your speech will appear here as you talk…" spellcheck="true"></textarea>
+        <button type="button" class="copy-icon" data-copy-target="#st-out" aria-label="Copy"></button>
+      </div>
     </label>
     <p id="st-interim" class="min-h-5 text-[13px] italic text-ink-tertiary"></p>
 
@@ -281,11 +283,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   }
 
   document.getElementById('st-clear')!.addEventListener('click', () => { out.value = ''; interim.textContent = ''; updateCount(); autosave(); });
-  document.getElementById('st-copy')!.addEventListener('click', async (e) => {
-    await navigator.clipboard.writeText(out.value);
-    const b = e.currentTarget as HTMLButtonElement;
-    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
-  });
   function download(filename: string, mime: string, data: string) {
     const blob = new Blob([data], { type: mime });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click();
@@ -375,7 +372,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         setListening(false);
       } else {
         manualStop = false;
-        try { recog.start(); setListening(true); } catch 
+        try { recog.start(); setListening(true); } catch {}
       }
     });
   }

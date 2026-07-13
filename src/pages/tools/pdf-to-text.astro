@@ -42,7 +42,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
       <div class="flex flex-wrap items-center gap-3">
         <button id="pt-extract" class="btn btn-primary">Extract text</button>
-        <button id="pt-copy" class="btn btn-secondary">Copy</button>
         <button id="pt-download" class="btn btn-tertiary">Download .txt</button>
         <button id="pt-clear" class="btn btn-tertiary">Clear</button>
       </div>
@@ -51,7 +50,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div id="pt-bar-wrap" class="hidden h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
         <div id="pt-bar" class="h-full w-0 rounded-full transition-all" style="background:var(--color-primary)"></div>
       </div>
-      <textarea id="pt-out" class="field font-mono text-[13px]" rows="16" spellcheck="false" placeholder="Extracted text will appear hereâ€¦"></textarea>
+      <div class="copy-wrap">
+        <textarea id="pt-out" class="field font-mono text-[13px]" rows="16" spellcheck="false" placeholder="Extracted text will appear hereâ€¦"></textarea>
+        <button type="button" class="copy-icon" data-copy-target="#pt-out" aria-label="Copy"></button>
+      </div>
       <p id="pt-stats" class="hidden text-[13px] text-ink-tertiary"></p>
     </div>
     <p id="pt-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
@@ -316,12 +318,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     files = []; out.value = ''; fileInput.value = '';
     fileList.classList.add('hidden'); panel.classList.add('hidden'); panel.classList.remove('flex');
     stats.classList.add('hidden'); status.textContent = ''; setErr('');
-  });
-  document.getElementById('pt-copy')!.addEventListener('click', async (e) => {
-    if (!out.value) return;
-    await navigator.clipboard.writeText(out.value);
-    const b = e.currentTarget as HTMLButtonElement;
-    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
   });
   document.getElementById('pt-download')!.addEventListener('click', () => {
     if (!out.value) return;

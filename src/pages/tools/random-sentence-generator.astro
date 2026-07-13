@@ -9,9 +9,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <input id="rs-count" type="number" min="1" max="100" value="5" class="field w-28" />
       </label>
       <button id="rs-gen" class="btn btn-primary ml-auto">Generate</button>
-      <button id="rs-copy" class="btn btn-secondary">Copy all</button>
     </div>
-    <textarea id="rs-out" class="field min-h-56 resize-y text-[15px] leading-relaxed" readonly aria-label="Generated sentences"></textarea>
+    <div class="copy-wrap"><textarea id="rs-out" class="field min-h-56 resize-y text-[15px] leading-relaxed" readonly aria-label="Generated sentences"></textarea><button type="button" class="copy-icon" data-copy-target="#rs-out" aria-label="Copy"></button></div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -52,11 +51,5 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   countEl.addEventListener('input', generate);
   $('rs-gen').addEventListener('click', generate);
-  $('rs-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(out.value);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
-  });
   generate();
 </script>

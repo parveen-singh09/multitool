@@ -30,9 +30,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
             <button id="cs-clear" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Clear</button>
           </span>
         </span>
-        <div id="cs-drop" class="hl-edit field p-0" style="height:24rem;resize:vertical;overflow:hidden">
-          <pre class="hl-block" aria-hidden="true"><code id="cs-in-hl" class="hljs" style="background:transparent"></code></pre>
-          <textarea id="cs-in" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
+        <div class="copy-wrap">
+          <div id="cs-drop" class="hl-edit field p-0" style="height:24rem;resize:vertical;overflow:hidden">
+            <pre class="hl-block" aria-hidden="true"><code id="cs-in-hl" class="hljs" style="background:transparent"></code></pre>
+            <textarea id="cs-in" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
+          </div>
+          <button type="button" class="copy-icon" data-copy-target="#cs-in" aria-label="Copy"></button>
         </div>
         <input id="cs-file" type="file" accept=".css,text/css" class="hidden" />
       </div>
@@ -40,11 +43,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <span class="flex items-center justify-between">
           <span>SCSS output</span>
           <span class="flex gap-2">
-            <button id="cs-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button>
             <button id="cs-download" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Download</button>
           </span>
         </span>
-        <pre class="hl-block field" style="height:24rem;overflow:auto"><code id="cs-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+        <div class="copy-wrap"><pre class="hl-block field" style="height:24rem;overflow:auto"><code id="cs-out" class="hljs" style="background:transparent;padding:0"></code></pre><button type="button" class="copy-icon" data-copy-target="#cs-out" aria-label="Copy"></button></div>
       </div>
     </div>
 
@@ -91,7 +93,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   function parseRules(css: string): Rule[] {
 
-    const clean = css.replace(/\/\*[\s\S]*?\*\
+    const clean = css.replace(/\/\*[\s\S]*?\*\//g, '');
     const rules: Rule[] = [];
     const re = /([^{}]+)\{([^{}]*)\}/g;
     let m: RegExpExecArray | null;
@@ -182,13 +184,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   nestEl.addEventListener('change', run);
   varsEl.addEventListener('change', run);
   indentEl.addEventListener('change', run);
-
-  document.getElementById('cs-copy')!.addEventListener('click', async (e) => {
-    if (!rawOutput) return;
-    await navigator.clipboard.writeText(rawOutput);
-    const b = e.currentTarget as HTMLButtonElement;
-    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
-  });
 
   document.getElementById('cs-download')!.addEventListener('click', () => {
     if (!rawOutput) return;

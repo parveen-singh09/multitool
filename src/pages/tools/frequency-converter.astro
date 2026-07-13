@@ -33,9 +33,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </button>
       <div class="flex flex-col gap-1">
         <label class="text-sm text-ink-subtle" for="fc-to-val">To</label>
-        <div class="relative">
-          <input id="fc-to-val" type="text" class="field pr-16" readonly />
-          <button id="fc-copy" type="button" class="btn btn-tertiary absolute right-1 top-1/2 -translate-y-1/2 px-2 py-1 text-[13px]" title="Copy result">Copy</button>
+        <div class="copy-wrap">
+          <input id="fc-to-val" type="text" class="field" readonly />
+          <button type="button" class="copy-icon" data-copy-target="#fc-to-val" aria-label="Copy"></button>
         </div>
         <select id="fc-to-unit" class="field mt-1"></select>
       </div>
@@ -138,7 +138,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const toUnit = $<HTMLSelectElement>('fc-to-unit');
   const prec = $<HTMLSelectElement>('fc-prec');
   const swap = $<HTMLButtonElement>('fc-swap');
-  const copyBtn = $<HTMLButtonElement>('fc-copy');
   const formula = $('fc-formula');
   const err = $('fc-error');
   const derived = $('fc-derived');
@@ -321,15 +320,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (toVal.value !== '') fromVal.value = toVal.value;
     convert();
   });
-  copyBtn.addEventListener('click', async () => {
-    if (!toVal.value) return;
-    try {
-      await navigator.clipboard.writeText(toVal.value);
-      copyBtn.textContent = 'Copied!';
-      setTimeout(() => (copyBtn.textContent = 'Copy'), 1400);
-    } catch 
-  });
-
   fillUnits();
   renderTable();
   convert();

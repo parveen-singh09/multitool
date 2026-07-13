@@ -40,9 +40,8 @@ https://example.com/contact</textarea>
 
       <div class="flex flex-col gap-2">
         <label class="text-sm text-ink-subtle">sitemap.xml <span id="sm-count" class="text-ink-tertiary"></span></label>
-        <pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto"><code id="sm-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+        <div class="copy-wrap"><pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto"><code id="sm-out" class="hljs" style="background:transparent;padding:0"></code></pre><button type="button" class="copy-icon" data-copy-target="#sm-out" aria-label="Copy"></button></div>
         <div class="flex gap-2">
-          <button id="sm-copy" class="btn btn-secondary">Copy</button>
           <button id="sm-dl" class="btn btn-secondary">Download</button>
         </div>
       </div>
@@ -111,12 +110,6 @@ https://example.com/contact</textarea>
 
   ['sm-urls', 'sm-freq', 'sm-priority', 'sm-lastmod'].forEach((id) => $(id).addEventListener('input', build));
 
-  $('sm-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(rawOutput);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy'), 1500);
-  });
   $('sm-dl').addEventListener('click', () => {
     const url = URL.createObjectURL(new Blob([rawOutput], { type: 'application/xml' }));
     const a = document.createElement('a'); a.href = url; a.download = 'sitemap.xml'; a.click();

@@ -70,7 +70,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <label for="b64-input" class="text-sm text-ink-subtle">Input</label>
           <span id="in-count" class="text-xs text-ink-tertiary">0 chars</span>
         </div>
-        <textarea id="b64-input" class="field min-h-52 resize-y font-mono text-[13px]" placeholder="Text or Base64…" spellcheck="false"></textarea>
+        <div class="copy-wrap">
+          <textarea id="b64-input" class="field min-h-52 resize-y font-mono text-[13px]" placeholder="Text or Base64…" spellcheck="false"></textarea>
+          <button type="button" class="copy-icon" data-copy-target="#b64-input" aria-label="Copy"></button>
+        </div>
         <div class="flex flex-wrap items-center gap-2">
           <button id="b64-load" class="btn btn-secondary text-sm">Load file…</button>
           <input id="b64-file" type="file" class="hidden" />
@@ -81,9 +84,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <label for="b64-output" class="text-sm text-ink-subtle">Output</label>
           <span id="out-count" class="text-xs text-ink-tertiary">0 chars</span>
         </div>
-        <textarea id="b64-output" class="field min-h-52 resize-y font-mono text-[13px]" placeholder="Result…" spellcheck="false" readonly></textarea>
+        <div class="copy-wrap">
+          <textarea id="b64-output" class="field min-h-52 resize-y font-mono text-[13px]" placeholder="Result…" spellcheck="false" readonly></textarea>
+          <button type="button" class="copy-icon" data-copy-target="#b64-output" aria-label="Copy"></button>
+        </div>
         <div class="flex flex-wrap items-center gap-2">
-          <button id="b64-copy" class="btn btn-secondary text-sm">Copy output</button>
           <button id="b64-download" class="btn btn-tertiary text-sm">Download</button>
         </div>
       </div>
@@ -158,7 +163,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return new TextDecoder(cs, { fatal: true }).decode(bytes);
   }
 
-  const toUrlSafe = (s: string) => s.replace(/\+/g, '-').replace(/\
+  const toUrlSafe = (s: string) => s.replace(/\+/g, '-').replace(/\//g, '_');
   const fromUrlSafe = (s: string) => s.replace(/-/g, '+').replace(/_/g, '/');
   const wrap76 = (s: string) => s.replace(/.{76}/g, '$&\n');
 
@@ -268,14 +273,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     input.value = output.value = '';
     clearError();
     updateCounts();
-  });
-
-  $('b64-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(output.value);
-    const t = btn.textContent;
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = t), 1500);
   });
 
   $('b64-download').addEventListener('click', () => {

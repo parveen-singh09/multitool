@@ -46,10 +46,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div class="flex gap-2">
       <button id="rd-gen" class="btn btn-primary">Generate</button>
-      <button id="rd-copy" class="btn btn-secondary">Copy all</button>
     </div>
     <p id="rd-note" class="text-[13px] text-ink-muted" role="status"></p>
-    <textarea id="rd-out" class="field min-h-56 resize-y font-mono text-[13px]" readonly aria-label="Generated dates"></textarea>
+    <div class="copy-wrap">
+      <textarea id="rd-out" class="field min-h-56 resize-y font-mono text-[13px]" readonly aria-label="Generated dates"></textarea>
+      <button type="button" class="copy-icon" data-copy-target="#rd-out" aria-label="Copy"></button>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -149,11 +151,5 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     .querySelectorAll('#rd-from,#rd-to,#rd-count,#rd-fmt,#rd-unique,#rd-sort,#rd-time,#rd-seed,.rd-dow')
     .forEach((el) => el.addEventListener('input', generate));
   $('rd-gen').addEventListener('click', generate);
-  $('rd-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(out.value);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
-  });
   generate();
 </script>

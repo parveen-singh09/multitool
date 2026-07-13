@@ -7,7 +7,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div class="flex flex-wrap items-center gap-2">
       <button id="yf-beautify" class="btn btn-primary">Reformat</button>
       <button id="yf-validate" class="btn btn-secondary">Validate</button>
-      <button id="yf-copy" class="btn btn-secondary">Copy</button>
       <button id="yf-clear" class="btn btn-tertiary">Clear</button>
       <label class="ml-auto flex items-center gap-2 text-sm text-ink-subtle">
         Indent
@@ -20,17 +19,20 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div id="yf-status" class="hidden rounded-md border px-3 py-2 text-sm" role="status"></div>
 
-    <div class="hl-edit field p-0" style="height:18rem;resize:vertical;overflow:hidden">
-      <pre class="hl-block" aria-hidden="true"><code id="yf-input-hl" class="hljs" style="background:transparent"></code></pre>
-      <textarea
-        id="yf-input"
-        spellcheck="false"
-        autocapitalize="off"
-        autocomplete="off"
-        autocorrect="off"
-        placeholder="Paste YAML here, e.g.&#10;name: example&#10;items:&#10;  - one&#10;  - two"
-        aria-label="YAML input"
-      ></textarea>
+    <div class="copy-wrap">
+      <div class="hl-edit field p-0" style="height:18rem;resize:vertical;overflow:hidden">
+        <pre class="hl-block" aria-hidden="true"><code id="yf-input-hl" class="hljs" style="background:transparent"></code></pre>
+        <textarea
+          id="yf-input"
+          spellcheck="false"
+          autocapitalize="off"
+          autocomplete="off"
+          autocorrect="off"
+          placeholder="Paste YAML here, e.g.&#10;name: example&#10;items:&#10;  - one&#10;  - two"
+          aria-label="YAML input"
+        ></textarea>
+      </div>
+      <button type="button" class="copy-icon" data-copy-target="#yf-input" aria-label="Copy"></button>
     </div>
   </div>
 
@@ -157,11 +159,5 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     input.value = '';
     refresh();
     status.classList.add('hidden');
-  });
-  document.getElementById('yf-copy')!.addEventListener('click', async () => {
-    const btn = document.getElementById('yf-copy')!;
-    await navigator.clipboard.writeText(input.value);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy'), 1500);
   });
 </script>

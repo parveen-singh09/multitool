@@ -22,8 +22,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div class="flex flex-col gap-2">
       <label class="text-sm text-ink-subtle">Markdown output</label>
-      <pre class="hl-block field min-h-40" style="resize:vertical;overflow:auto"><code id="md-out" class="hljs" style="background:transparent;padding:0"></code></pre>
-      <button id="md-copy" class="btn btn-secondary w-fit">Copy Markdown</button>
+      <div class="copy-wrap"><pre class="hl-block field min-h-40" style="resize:vertical;overflow:auto"><code id="md-out" class="hljs" style="background:transparent;padding:0"></code></pre><button type="button" class="copy-icon" data-copy-target="#md-out" aria-label="Copy"></button></div>
     </div>
   </div>
 
@@ -98,11 +97,5 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   ['md-rows', 'md-cols'].forEach((id) => $(id).addEventListener('input', rebuild));
   $('md-align').addEventListener('change', buildOut);
-  $('md-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(rawOutput);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy Markdown'), 1500);
-  });
   rebuild();
 </script>

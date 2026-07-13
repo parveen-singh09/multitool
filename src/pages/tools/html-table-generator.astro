@@ -105,12 +105,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <label id="ht-minopt" class="flex items-center gap-2 text-sm text-ink-subtle"><input id="ht-min" type="checkbox" class="accent-primary" /> Minify</label>
         <span id="ht-count" class="text-xs text-ink-subtle"></span>
       </div>
-      <div class="relative">
-        <button id="ht-copy" title="Copy code" aria-label="Copy code" class="btn btn-secondary absolute right-2 top-2 z-10 h-8 w-8 p-0">
-          <svg id="ht-copy-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-        </button>
-        <pre class="hl-block field min-h-40" style="resize:vertical;overflow:auto"><code id="ht-out" class="hljs" style="background:transparent;padding:0"></code></pre>
-      </div>
+      <div class="copy-wrap"><pre class="hl-block field min-h-40" style="resize:vertical;overflow:auto"><code id="ht-out" class="hljs" style="background:transparent;padding:0"></code></pre><button type="button" class="copy-icon" data-copy-target="#ht-out" aria-label="Copy"></button></div>
     </div>
   </div>
 
@@ -419,15 +414,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       $('ht-minopt').style.display = fmt === 'html' ? '' : 'none';
       buildOut();
     });
-  });
-
-  const COPY_ICON = '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>';
-  const CHECK_ICON = '<path d="M20 6 9 17l-5-5"/>';
-  $('ht-copy').addEventListener('click', async () => {
-    await navigator.clipboard.writeText(rawOutput);
-    const icon = $('ht-copy-icon');
-    icon.innerHTML = CHECK_ICON;
-    setTimeout(() => (icon.innerHTML = COPY_ICON), 1500);
   });
 
   rebuild();

@@ -23,9 +23,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <div class="flex flex-col gap-1">
         <span class="flex items-center justify-between">
           <label class="text-sm text-ink-subtle" for="ec-to-val">To</label>
-          <button id="ec-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button>
         </span>
-        <input id="ec-to-val" type="text" class="field" readonly />
+        <div class="copy-wrap">
+          <input id="ec-to-val" type="text" class="field" readonly />
+          <button type="button" class="copy-icon" data-copy-target="#ec-to-val" aria-label="Copy"></button>
+        </div>
         <select id="ec-to-unit" class="field mt-1"></select>
       </div>
     </div>
@@ -254,9 +256,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     run();
   });
 
-  $('ec-copy').addEventListener('click', (e) =>
-    copyText(e.currentTarget as HTMLButtonElement, toVal.value)
-  );
   $('ec-copy-all').addEventListener('click', (e) => {
     const raw = fromVal.value.trim();
     const v = raw === '' ? NaN : Number(raw);

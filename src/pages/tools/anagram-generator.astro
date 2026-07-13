@@ -37,9 +37,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div class="flex items-baseline justify-between border-t border-hairline pt-4">
       <p id="an-summary" class="text-sm text-ink-subtle">Loading dictionary…</p>
-      <button id="an-copy" class="btn btn-secondary">Copy all</button>
     </div>
-    <div id="an-out" class="flex flex-col gap-4"></div>
+    <div class="copy-wrap">
+      <div id="an-out" class="flex flex-col gap-4"></div>
+      <button type="button" id="an-copy-icon" class="copy-icon" aria-label="Copy"></button>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -309,11 +311,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (WORDS.length) solve();
   });
 
-  $('an-copy').addEventListener('click', async (e) => {
+  // Copy source is the lastList variable (chips render without separators), so
+  // this keeps a minimal local handler instead of the global textContent one.
+  $('an-copy-icon').addEventListener('click', (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(lastList.join('\n'));
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+    navigator.clipboard.writeText(lastList.join('\n'));
+    btn.classList.add('copied');
+    btn.setAttribute('aria-label', 'Copied');
+    setTimeout(() => { btn.classList.remove('copied'); btn.setAttribute('aria-label', 'Copy'); }, 1500);
   });
 
   loadDict()

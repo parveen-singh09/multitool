@@ -5,7 +5,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 <ToolLayout slug="regex-generator">
   <div class="flex flex-col gap-4">
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">Example text
-      <textarea id="rg-sample" class="field min-h-24 resize-y font-mono text-[13px]" spellcheck="false" autocomplete="off" placeholder="Paste a line you want to match…">2020-03-12T13:34:56.123Z INFO  [org.example.Class]: This is a #simple #logline containing a 'value'.</textarea>
+      <div class="copy-wrap">
+        <textarea id="rg-sample" class="field min-h-24 resize-y font-mono text-[13px]" spellcheck="false" autocomplete="off" placeholder="Paste a line you want to match…">2020-03-12T13:34:56.123Z INFO  [org.example.Class]: This is a #simple #logline containing a 'value'.</textarea>
+        <button type="button" class="copy-icon" data-copy-target="#rg-sample" aria-label="Copy"></button>
+      </div>
     </label>
 
     <div class="panel flex flex-col gap-3 p-4">
@@ -56,9 +59,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <option value="go">Go</option>
         <option value="cs">C#</option>
       </select>
-      <button id="rg-copy-code" class="btn btn-tertiary w-fit">Copy code</button>
     </div>
-    <pre id="rg-code" class="panel overflow-x-auto p-4 font-mono text-[13px] text-ink-muted"></pre>
+    <div class="copy-wrap"><pre id="rg-code" class="panel overflow-x-auto p-4 font-mono text-[13px] text-ink-muted"></pre><button type="button" class="copy-icon" data-copy-target="#rg-code" aria-label="Copy"></button></div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -284,13 +286,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     btn.textContent = 'Copied!';
     setTimeout(() => (btn.textContent = 'Copy regex'), 1500);
   });
-  $('rg-copy-code').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(codeEl.textContent || '');
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy code'), 1500);
-  });
-
   retokenize();
 
   // ponytail: dev-only self-check on the tokenizer — the one non-trivial piece.

@@ -18,11 +18,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       <input type="checkbox" id="lt-ci" class="accent-primary" /> Case-insensitive sort & dedupe
     </label>
 
-    <textarea id="lt-io" class="field min-h-64 resize-y font-mono text-[13px]" placeholder="Paste your lines here…" spellcheck="false"></textarea>
+    <div class="copy-wrap">
+      <textarea id="lt-io" class="field min-h-64 resize-y font-mono text-[13px]" placeholder="Paste your lines here…" spellcheck="false"></textarea>
+      <button type="button" class="copy-icon" data-copy-target="#lt-io" aria-label="Copy"></button>
+    </div>
 
     <div class="flex flex-wrap items-center gap-4 text-[13px] text-ink-subtle">
       <span>Lines: <span id="lt-count" class="text-ink">0</span></span>
-      <button id="lt-copy" class="btn btn-secondary ml-auto">Copy</button>
     </div>
   </div>
 
@@ -77,11 +79,5 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     btn.addEventListener('click', () => ops[btn.dataset.op!]?.());
   });
   io.addEventListener('input', updateCount);
-  document.getElementById('lt-copy')!.addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(io.value);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy'), 1500);
-  });
   updateCount();
 </script>

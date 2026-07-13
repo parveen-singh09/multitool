@@ -20,11 +20,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
       </button>
       <div class="flex flex-col gap-1">
-        <span class="flex items-center justify-between">
-          <label class="text-sm text-ink-subtle" for="pc-to-val">To</label>
-          <button id="pc-copy" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Copy</button>
-        </span>
-        <input id="pc-to-val" type="text" class="field" readonly />
+        <label class="text-sm text-ink-subtle" for="pc-to-val">To</label>
+        <div class="copy-wrap">
+          <input id="pc-to-val" type="text" class="field" readonly />
+          <button type="button" class="copy-icon" data-copy-target="#pc-to-val" aria-label="Copy"></button>
+        </div>
         <select id="pc-to-unit" class="field mt-1"></select>
       </div>
     </div>
@@ -114,7 +114,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const toUnit = document.getElementById('pc-to-unit') as HTMLSelectElement;
   const precision = document.getElementById('pc-precision') as HTMLSelectElement;
   const swap = document.getElementById('pc-swap') as HTMLButtonElement;
-  const copyBtn = document.getElementById('pc-copy') as HTMLButtonElement;
   const formula = document.getElementById('pc-formula') as HTMLElement;
   const table = document.getElementById('pc-table') as HTMLElement;
   const err = document.getElementById('pc-error') as HTMLElement;
@@ -217,12 +216,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       fromVal.value = toVal.value;
     }
     convert();
-  });
-  copyBtn.addEventListener('click', async () => {
-    if (!toVal.value) return;
-    await navigator.clipboard.writeText(toVal.value);
-    copyBtn.textContent = 'Copied!';
-    setTimeout(() => (copyBtn.textContent = 'Copy'), 1400);
   });
 
   fillUnits();

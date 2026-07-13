@@ -87,9 +87,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
             <option value="powershell">PowerShell</option>
           </select>
         </label>
-        <button id="ts-code-copy" type="button" class="btn btn-secondary">Copy snippet</button>
       </div>
-      <pre class="hl-block field" style="margin:0;overflow:auto;white-space:pre"><code id="ts-code" class="hljs" style="background:transparent;padding:0"></code></pre>
+      <div class="copy-wrap"><pre class="hl-block field" style="margin:0;overflow:auto;white-space:pre"><code id="ts-code" class="hljs" style="background:transparent;padding:0"></code></pre><button type="button" class="copy-icon" data-copy-target="#ts-code" aria-label="Copy"></button></div>
     </div>
 
     <div class="flex flex-col gap-2">
@@ -154,7 +153,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const world = document.getElementById('ts-world')!;
   const langSel = document.getElementById('ts-lang') as HTMLSelectElement;
   const codeEl = document.getElementById('ts-code')!;
-  const codeCopy = document.getElementById('ts-code-copy')!;
   const batchIn = document.getElementById('ts-batch-in') as HTMLTextAreaElement;
   const batchOut = document.getElementById('ts-batch-out')!;
   const batchStat = document.getElementById('ts-batch-stat')!;
@@ -515,7 +513,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const old = tgt.textContent;
       tgt.textContent = 'Copied!';
       setTimeout(() => { tgt.textContent = old; }, 1000);
-    } catch 
+    } catch {}
   }
 
   function bindCopy(container: HTMLElement) {
@@ -574,9 +572,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   input.addEventListener('input', render);
   tzSel.addEventListener('change', () => { render(); renderBatch(); });
   langSel.addEventListener('change', () => { void renderCode(); });
-  codeCopy.addEventListener('click', (e) => {
-    if (codeEl.textContent) copyText(e.currentTarget as HTMLElement, codeEl.textContent);
-  });
 
   batchIn.addEventListener('input', renderBatch);
   batchCopy.addEventListener('click', (e) => {

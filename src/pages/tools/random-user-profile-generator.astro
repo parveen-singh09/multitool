@@ -40,10 +40,12 @@ import { LOCALES } from '../../lib/locales';
           <button data-fmt="xml" class="ru-fmt btn-fmt">XML</button>
           <button data-fmt="yaml" class="ru-fmt btn-fmt">YAML</button>
         </div>
-        <button id="ru-copy" class="btn btn-secondary ml-auto">Copy</button>
-        <button id="ru-download" class="btn btn-secondary">Download</button>
+        <button id="ru-download" class="btn btn-secondary ml-auto">Download</button>
       </div>
-      <pre class="hl-block field min-h-80" style="resize:vertical;overflow:auto" aria-label="Generated profiles"><code id="ru-out" class="hljs font-mono text-[13px]" style="background:transparent;padding:0"></code></pre>
+      <div class="copy-wrap">
+        <pre class="hl-block field min-h-80" style="resize:vertical;overflow:auto" aria-label="Generated profiles"><code id="ru-out" class="hljs font-mono text-[13px]" style="background:transparent;padding:0"></code></pre>
+        <button type="button" class="copy-icon" data-copy-target="#ru-out" aria-label="Copy"></button>
+      </div>
     </div>
   </div>
 
@@ -177,13 +179,6 @@ import { LOCALES } from '../../lib/locales';
   [countEl, sexEl, natEl].forEach((el) => el.addEventListener('input', generate));
   seedEl.addEventListener('input', generate);
   $('ru-gen').addEventListener('click', generate);
-
-  $('ru-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(raw);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy'), 1500);
-  });
 
   $('ru-download').addEventListener('click', () => {
     const blob = new Blob([raw], { type: MIME[fmt] });

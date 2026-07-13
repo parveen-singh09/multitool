@@ -12,30 +12,30 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div id="bc-num" class="flex flex-col gap-3">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Decimal (base 10)
-        <div class="flex gap-2">
+        <div class="copy-wrap">
           <input id="bc-dec" data-base="dec" type="text" class="field font-mono bc-in" placeholder="42" inputmode="numeric" spellcheck="false" autocomplete="off" />
-          <button class="btn btn-secondary bc-copy" data-t="bc-dec" type="button">Copy</button>
+          <button type="button" class="copy-icon" data-copy-target="#bc-dec" aria-label="Copy"></button>
         </div>
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Binary (base 2)
-        <div class="flex gap-2">
+        <div class="copy-wrap">
           <input id="bc-bin" data-base="bin" type="text" class="field font-mono bc-in" placeholder="101010" spellcheck="false" autocomplete="off" />
-          <button class="btn btn-secondary bc-copy" data-t="bc-bin" type="button">Copy</button>
+          <button type="button" class="copy-icon" data-copy-target="#bc-bin" aria-label="Copy"></button>
         </div>
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Hexadecimal (base 16)
-        <div class="flex gap-2">
+        <div class="copy-wrap">
           <input id="bc-hex" data-base="hex" type="text" class="field font-mono bc-in" placeholder="2a" spellcheck="false" autocomplete="off" />
-          <button class="btn btn-secondary bc-copy" data-t="bc-hex" type="button">Copy</button>
+          <button type="button" class="copy-icon" data-copy-target="#bc-hex" aria-label="Copy"></button>
         </div>
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Octal (base 8)
-        <div class="flex gap-2">
+        <div class="copy-wrap">
           <input id="bc-oct" data-base="oct" type="text" class="field font-mono bc-in" placeholder="52" spellcheck="false" autocomplete="off" />
-          <button class="btn btn-secondary bc-copy" data-t="bc-oct" type="button">Copy</button>
+          <button type="button" class="copy-icon" data-copy-target="#bc-oct" aria-label="Copy"></button>
         </div>
       </label>
       <label class="flex items-center gap-2 text-[13px] text-ink-subtle">
@@ -47,9 +47,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div id="bc-textwrap" class="hidden flex-col gap-3">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Text
-        <div class="flex gap-2">
+        <div class="copy-wrap">
           <textarea id="bc-txt" class="field" rows="3" placeholder="Hi" spellcheck="false"></textarea>
-          <button class="btn btn-secondary bc-copy self-start" data-t="bc-txt" type="button">Copy</button>
+          <button type="button" class="copy-icon" data-copy-target="#bc-txt" aria-label="Copy"></button>
         </div>
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
@@ -62,9 +62,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">
         Binary (8-bit UTF-8 bytes)
-        <div class="flex gap-2">
+        <div class="copy-wrap">
           <textarea id="bc-txtbin" class="field font-mono" rows="3" placeholder="01001000 01101001"></textarea>
-          <button class="btn btn-secondary bc-copy self-start" data-t="bc-txtbin" type="button">Copy</button>
+          <button type="button" class="copy-icon" data-copy-target="#bc-txtbin" aria-label="Copy"></button>
         </div>
       </label>
     </div>
@@ -183,15 +183,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       textWrap.classList.toggle('hidden', mode !== 'text');
       textWrap.classList.toggle('flex', mode === 'text');
       setErr('');
-    });
-  });
-
-  document.querySelectorAll<HTMLButtonElement>('.bc-copy').forEach((b) => {
-    b.addEventListener('click', async () => {
-      const t = document.getElementById(b.dataset.t!) as HTMLInputElement | HTMLTextAreaElement;
-      if (!t.value) return;
-      await navigator.clipboard.writeText(t.value);
-      b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
     });
   });
 

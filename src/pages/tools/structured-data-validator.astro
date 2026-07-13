@@ -8,9 +8,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <label class="flex flex-col gap-1 text-sm text-ink-subtle">
       Paste JSON-LD or a full HTML page
-      <div class="hl-edit field p-0" style="height:24rem;resize:vertical;overflow:hidden">
-        <pre class="hl-block" aria-hidden="true"><code id="sd-in-hl" class="hljs" style="background:transparent"></code></pre>
-        <textarea id="sd-in" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder='Paste JSON-LD, e.g. {"@context":"https://schema.org","@type":"Product","name":"Shoe"} — or paste a whole HTML page and it will extract every <script type="application/ld+json"> block.'></textarea>
+      <div class="copy-wrap">
+        <div class="hl-edit field p-0" style="height:24rem;resize:vertical;overflow:hidden">
+          <pre class="hl-block" aria-hidden="true"><code id="sd-in-hl" class="hljs" style="background:transparent"></code></pre>
+          <textarea id="sd-in" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder='Paste JSON-LD, e.g. {"@context":"https://schema.org","@type":"Product","name":"Shoe"} — or paste a whole HTML page and it will extract every <script type="application/ld+json"> block.'></textarea>
+        </div>
+        <button type="button" class="copy-icon" data-copy-target="#sd-in" aria-label="Copy"></button>
       </div>
     </label>
 
@@ -121,7 +124,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       if (kind === 'number' && isNaN(Number(s))) return `"${prop}" should be numeric (got "${trunc(s)}").`;
       if (kind.startsWith('enum:')) {
         const set = ENUMS[kind.slice(5)];
-        const norm = s.replace(/^https?:\/\/schema\.org\
+        const norm = s.replace(/^https?:\/\/schema\.org\//, '');
         if (!set.includes(norm)) return `"${prop}" = "${trunc(s)}" is not a recognised value (expected e.g. ${set.slice(0, 3).join(', ')}…).`;
       }
     }

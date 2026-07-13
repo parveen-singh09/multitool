@@ -22,44 +22,44 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <label class="flex flex-col gap-1">
         <span class="text-[13px] text-ink-subtle">HEX</span>
-        <div class="flex gap-2">
+        <div class="copy-wrap">
           <input id="cc-hex" class="field font-mono" value="#5e6ad2" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" />
-          <button class="btn btn-secondary cc-copy" data-target="cc-hex" type="button">Copy</button>
+          <button type="button" class="copy-icon" data-copy-target="#cc-hex" aria-label="Copy"></button>
         </div>
       </label>
       <label class="flex flex-col gap-1">
         <span class="text-[13px] text-ink-subtle">RGB</span>
-        <div class="flex gap-2">
+        <div class="copy-wrap">
           <input id="cc-rgb" class="field font-mono" value="rgb(94, 106, 210)" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" />
-          <button class="btn btn-secondary cc-copy" data-target="cc-rgb" type="button">Copy</button>
+          <button type="button" class="copy-icon" data-copy-target="#cc-rgb" aria-label="Copy"></button>
         </div>
       </label>
       <label class="flex flex-col gap-1">
         <span class="text-[13px] text-ink-subtle">HSL</span>
-        <div class="flex gap-2">
+        <div class="copy-wrap">
           <input id="cc-hsl" class="field font-mono" value="hsl(232, 57%, 60%)" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" />
-          <button class="btn btn-secondary cc-copy" data-target="cc-hsl" type="button">Copy</button>
+          <button type="button" class="copy-icon" data-copy-target="#cc-hsl" aria-label="Copy"></button>
         </div>
       </label>
       <label class="flex flex-col gap-1">
         <span class="text-[13px] text-ink-subtle">HSV / HSB</span>
-        <div class="flex gap-2">
+        <div class="copy-wrap">
           <input id="cc-hsv" class="field font-mono" value="hsv(232, 55%, 82%)" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" />
-          <button class="btn btn-secondary cc-copy" data-target="cc-hsv" type="button">Copy</button>
+          <button type="button" class="copy-icon" data-copy-target="#cc-hsv" aria-label="Copy"></button>
         </div>
       </label>
       <label class="flex flex-col gap-1">
         <span class="text-[13px] text-ink-subtle">CMYK</span>
-        <div class="flex gap-2">
+        <div class="copy-wrap">
           <input id="cc-cmyk" class="field font-mono" value="cmyk(55%, 50%, 0%, 18%)" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" />
-          <button class="btn btn-secondary cc-copy" data-target="cc-cmyk" type="button">Copy</button>
+          <button type="button" class="copy-icon" data-copy-target="#cc-cmyk" aria-label="Copy"></button>
         </div>
       </label>
       <label class="flex flex-col gap-1">
         <span class="text-[13px] text-ink-subtle">CSS name (nearest)</span>
-        <div class="flex gap-2">
+        <div class="copy-wrap">
           <input id="cc-name" class="field font-mono" value="royalblue" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" />
-          <button class="btn btn-secondary cc-copy" data-target="cc-name" type="button">Copy</button>
+          <button type="button" class="copy-icon" data-copy-target="#cc-name" aria-label="Copy"></button>
         </div>
       </label>
     </div>
@@ -420,15 +420,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   hsvIn.addEventListener('change', () => commit(hsvIn, 'HSV'));
   cmykIn.addEventListener('change', () => commit(cmykIn, 'CMYK'));
   nameIn.addEventListener('change', () => commit(nameIn, 'CSS name'));
-
-  document.querySelectorAll<HTMLButtonElement>('.cc-copy').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const target = $(btn.dataset.target!) as HTMLInputElement;
-      await navigator.clipboard.writeText(target.value);
-      btn.textContent = 'Copied!';
-      setTimeout(() => (btn.textContent = 'Copy'), 1400);
-    });
-  });
 
   $('cc-copy-all').addEventListener('click', async (e) => {
     const block = [hexIn.value, rgbIn.value, hslIn.value, hsvIn.value, cmykIn.value, nameIn.value].join('\n');

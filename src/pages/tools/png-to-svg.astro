@@ -29,7 +29,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           </select>
         </label>
         <button id="pv-trace" class="btn btn-primary">Vectorize</button>
-        <button id="pv-copy" class="btn btn-secondary hidden">Copy SVG</button>
         <button id="pv-download" class="btn btn-secondary hidden">Download SVG</button>
       </div>
 
@@ -77,7 +76,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <div>
           <span class="text-[13px] text-ink-subtle">SVG result</span>
           <div id="pv-out" class="pv-checker panel mt-1 flex max-h-80 items-center justify-center overflow-auto p-3 text-ink-tertiary text-[13px]">Not vectorized yet</div>
-          <pre id="pv-code-wrap" class="hl-block field mt-1 hidden" style="height:20rem;margin:0;overflow:auto;white-space:pre"><code id="pv-code" class="hljs" style="background:transparent;padding:0"></code></pre>
+          <div id="pv-code-wrap" class="copy-wrap mt-1 hidden"><pre class="hl-block field" style="height:20rem;margin:0;overflow:auto;white-space:pre"><code id="pv-code" class="hljs" style="background:transparent;padding:0"></code></pre><button type="button" class="copy-icon" data-copy-target="#pv-code" aria-label="Copy"></button></div>
         </div>
       </div>
     </div>
@@ -137,7 +136,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const presetSel = document.getElementById('pv-preset') as HTMLSelectElement;
   const modeSel = document.getElementById('pv-mode') as HTMLSelectElement;
   const dlBtn = document.getElementById('pv-download') as HTMLButtonElement;
-  const copyBtn = document.getElementById('pv-copy') as HTMLButtonElement;
   const viewRenderBtn = document.getElementById('pv-view-render') as HTMLButtonElement;
   const viewCodeBtn = document.getElementById('pv-view-code') as HTMLButtonElement;
 
@@ -218,7 +216,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       outBox.textContent = 'Not vectorized yet';
       svg = '';
       dlBtn.classList.add('hidden');
-      copyBtn.classList.add('hidden');
       showView('render');
     };
     reader.readAsDataURL(file);
@@ -259,7 +256,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
             const paths = (svg.match(/<path/g) || []).length;
             status.textContent = `Done â€” ${kb} KB Â· ${paths} ${paths === 1 ? 'path' : 'paths'}.`;
             dlBtn.classList.remove('hidden');
-            copyBtn.classList.remove('hidden');
           } catch (e) {
             setErr('Could not render the result: ' + (e as Error).message); status.textContent = '';
           }
@@ -277,14 +273,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const blob = new Blob([svg], { type: 'image/svg+xml' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${fileName}.svg`; a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  });
-
-  copyBtn.addEventListener('click', async () => {
-    if (!svg) return;
-    try {
-      await navigator.clipboard.writeText(svg);
-      copyBtn.textContent = 'Copied!'; setTimeout(() => (copyBtn.textContent = 'Copy SVG'), 1400);
-    } catch { setErr('Clipboard blocked by the browser â€” use Download instead.'); }
   });
 
   viewRenderBtn.addEventListener('click', () => showView('render'));

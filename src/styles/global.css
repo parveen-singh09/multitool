@@ -62,6 +62,9 @@
 
   
   --spacing-section: 96px;
+
+  --icon-copy: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");
+  --icon-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
 }
 
 html[data-theme='light'] {
@@ -207,6 +210,44 @@ html[data-bg='image'] .hero-copy :is(h1, h1 span, p) {
   .btn-secondary:hover { background-color: var(--color-surface-2); border-color: var(--color-hairline-strong); }
   .btn-tertiary { background-color: transparent; color: var(--color-ink); }
   .btn-tertiary:hover { background-color: var(--color-surface-1); }
+
+  /* Inline copy icon that sits at the top-right of a preview (textarea/code block).
+     Wrap the preview in .copy-wrap and point the button at its target via
+     data-copy-target="#id"; the global handler in Layout.astro does the rest. */
+  .copy-wrap { position: relative; }
+  .copy-icon {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-hairline);
+    background-color: color-mix(in srgb, var(--color-surface-1) 88%, transparent);
+    backdrop-filter: blur(4px);
+    color: var(--color-ink-subtle);
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+    z-index: 2;
+  }
+  .copy-icon:hover { color: var(--color-ink); border-color: var(--color-hairline-strong); }
+  .copy-icon::before {
+    content: "";
+    width: 15px;
+    height: 15px;
+    background-color: currentColor;
+    -webkit-mask: var(--icon-copy) center / contain no-repeat;
+    mask: var(--icon-copy) center / contain no-repeat;
+  }
+  .copy-icon.copied { color: var(--color-success); border-color: var(--color-success); }
+  .copy-icon.copied::before {
+    -webkit-mask-image: var(--icon-check);
+    mask-image: var(--icon-check);
+  }
 
   
   .status-badge {

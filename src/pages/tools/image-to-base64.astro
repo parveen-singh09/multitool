@@ -54,11 +54,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <span class="flex items-center justify-between">
             <span id="ib-out-label" class="text-ink-subtle">Data URI output</span>
             <span class="flex gap-2">
-              <button id="ib-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button>
               <button id="ib-download" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Download</button>
             </span>
           </span>
-          <pre class="hl-block field" style="height:18rem;margin:0;overflow:auto;white-space:pre-wrap;word-break:break-all"><code id="ib-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+          <div class="copy-wrap"><pre class="hl-block field" style="height:18rem;margin:0;overflow:auto;white-space:pre-wrap;word-break:break-all"><code id="ib-out" class="hljs" style="background:transparent;padding:0"></code></pre><button type="button" class="copy-icon" data-copy-target="#ib-out" aria-label="Copy"></button></div>
         </div>
       </div>
 
@@ -270,14 +269,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   });
 
   document.getElementById('ib-reset')!.addEventListener('click', reset);
-
-  document.getElementById('ib-copy')!.addEventListener('click', async (e) => {
-    if (!outputText) return;
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(outputText);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy'), 1500);
-  });
 
   document.getElementById('ib-download')!.addEventListener('click', () => {
     if (!outputText || active < 0) return;

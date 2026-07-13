@@ -54,7 +54,6 @@ const FORMATS = [
       <div class="flex items-center justify-between">
         <span class="text-[11px] uppercase tracking-wide text-ink-tertiary">Batch convert</span>
         <span class="flex gap-2">
-          <button id="ip-batch-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy CSV</button>
           <button id="ip-batch-dl" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Download CSV</button>
         </span>
       </div>
@@ -65,7 +64,7 @@ const FORMATS = [
         </label>
         <div class="flex flex-col gap-1 text-sm text-ink-subtle">
           Result (CSV)
-          <pre id="ip-batch-out" class="field font-mono" style="height:12rem;margin:0;overflow:auto;white-space:pre;font-size:13px;line-height:1.55"></pre>
+          <div class="copy-wrap"><pre id="ip-batch-out" class="field font-mono" style="height:12rem;margin:0;overflow:auto;white-space:pre;font-size:13px;line-height:1.55"></pre><button type="button" class="copy-icon" data-copy-target="#ip-batch-out" aria-label="Copy"></button></div>
         </div>
       </div>
     </div>
@@ -238,13 +237,6 @@ const FORMATS = [
     batchOut.textContent = batchCsv;
   }
   batchIn.addEventListener('input', runBatch);
-
-  document.getElementById('ip-batch-copy')!.addEventListener('click', async (e) => {
-    if (!batchCsv) return;
-    await navigator.clipboard.writeText(batchCsv);
-    const b = e.currentTarget as HTMLButtonElement;
-    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy CSV'), 1400);
-  });
 
   document.getElementById('ip-batch-dl')!.addEventListener('click', () => {
     if (!batchCsv) return;

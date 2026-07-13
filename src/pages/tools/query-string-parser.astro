@@ -24,9 +24,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div class="flex flex-col gap-1">
       <div class="flex items-center gap-2 text-sm text-ink-subtle">
         Reconstructed &amp; encoded string
-        <button id="qsp-copy" class="btn btn-tertiary ml-auto">Copy</button>
       </div>
-      <div id="qsp-rebuilt" class="panel p-4 font-mono text-[13px] text-ink break-all">—</div>
+      <div class="copy-wrap">
+        <div id="qsp-rebuilt" class="panel p-4 font-mono text-[13px] text-ink break-all">—</div>
+        <button type="button" class="copy-icon" data-copy-target="#qsp-rebuilt" aria-label="Copy"></button>
+      </div>
     </div>
   </div>
 
@@ -97,13 +99,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     rebuilt.textContent = params.toString() || '—';
   }
-
-  document.getElementById('qsp-copy')!.addEventListener('click', async () => {
-    const btn = document.getElementById('qsp-copy')!;
-    await navigator.clipboard.writeText(rebuilt.textContent || '');
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy'), 1500);
-  });
 
   input.addEventListener('input', parse);
   parse();

@@ -38,10 +38,12 @@ import { COUNTRIES } from '../../lib/faddr';
           </select>
         </label>
         <button id="fa-gen" class="btn btn-primary ml-auto">Generate</button>
-        <button id="fa-copy" class="btn btn-secondary">Copy all</button>
         <button id="fa-dl" class="btn btn-secondary">Download</button>
       </div>
-      <textarea id="fa-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated addresses"></textarea>
+      <div class="copy-wrap">
+        <textarea id="fa-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated addresses"></textarea>
+        <button type="button" class="copy-icon" data-copy-target="#fa-out" aria-label="Copy"></button>
+      </div>
     </section>
   </div>
 
@@ -138,12 +140,6 @@ import { COUNTRIES } from '../../lib/faddr';
   $('fa-new').addEventListener('click', renderCard);
   [countEl, fmtEl].forEach((el) => el.addEventListener('input', generateBulk));
   $('fa-gen').addEventListener('click', generateBulk);
-  $('fa-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(out.value);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
-  });
   $('fa-dl').addEventListener('click', () => {
     const type = fmtEl.value === 'json' ? 'application/json' : fmtEl.value === 'csv' ? 'text/csv' : 'text/plain';
     const url = URL.createObjectURL(new Blob([out.value], { type }));

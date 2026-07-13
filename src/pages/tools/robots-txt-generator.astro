@@ -49,10 +49,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div class="flex flex-col gap-2">
       <label class="text-sm text-ink-subtle">robots.txt</label>
-      <pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto"><code id="rb-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+      <div class="copy-wrap"><pre class="hl-block field min-h-72" style="resize:vertical;overflow:auto"><code id="rb-out" class="hljs" style="background:transparent;padding:0"></code></pre><button type="button" class="copy-icon" data-copy-target="#rb-out" aria-label="Copy"></button></div>
       <p id="rb-warn" class="hidden text-[13px] text-amber-400"></p>
       <div class="flex gap-2">
-        <button id="rb-copy" class="btn btn-secondary">Copy</button>
         <button id="rb-dl" class="btn btn-secondary">Download</button>
       </div>
     </div>
@@ -198,12 +197,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     $(id).addEventListener('input', build),
   );
 
-  $('rb-copy').addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    await navigator.clipboard.writeText(rawOutput);
-    btn.textContent = 'Copied!';
-    setTimeout(() => (btn.textContent = 'Copy'), 1500);
-  });
   $('rb-dl').addEventListener('click', () => {
     const url = URL.createObjectURL(new Blob([rawOutput], { type: 'text/plain' }));
     const a = document.createElement('a');

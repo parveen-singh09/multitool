@@ -6,7 +6,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   <div class="flex flex-col gap-4">
     <div class="flex flex-wrap items-center gap-2">
       <button id="y2j-convert" class="btn btn-primary">Convert to JSON</button>
-      <button id="y2j-copy" class="btn btn-secondary">Copy</button>
       <button id="y2j-download" class="btn btn-secondary">Download</button>
       <label class="btn btn-tertiary cursor-pointer">
         Upload
@@ -38,14 +37,20 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <div class="grid gap-4 md:grid-cols-2">
       <div class="flex flex-col gap-1 text-sm text-ink-subtle">
         <span>YAML input</span>
-        <div id="y2j-drop" class="hl-edit field p-0" style="height:22rem;overflow:hidden">
-          <pre class="hl-block" aria-hidden="true"><code id="y2j-in-hl" class="hljs" style="background:transparent"></code></pre>
-          <textarea id="y2j-input" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="YAML input"></textarea>
+        <div class="copy-wrap">
+          <div id="y2j-drop" class="hl-edit field p-0" style="height:22rem;overflow:hidden">
+            <pre class="hl-block" aria-hidden="true"><code id="y2j-in-hl" class="hljs" style="background:transparent"></code></pre>
+            <textarea id="y2j-input" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="YAML input"></textarea>
+          </div>
+          <button type="button" class="copy-icon" data-copy-target="#y2j-input" aria-label="Copy"></button>
         </div>
       </div>
       <div class="flex flex-col gap-1 text-sm text-ink-subtle">
         <span>JSON output</span>
-        <pre class="hl-block field" style="height:22rem;margin:0;overflow:auto;white-space:pre"><code id="y2j-output" class="hljs" style="background:transparent;padding:0"></code></pre>
+        <div class="copy-wrap">
+          <pre class="hl-block field" style="height:22rem;margin:0;overflow:auto;white-space:pre"><code id="y2j-output" class="hljs" style="background:transparent;padding:0"></code></pre>
+          <button type="button" class="copy-icon" data-copy-target="#y2j-output" aria-label="Copy"></button>
+        </div>
       </div>
     </div>
   </div>
@@ -138,13 +143,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     input.value = ''; rawOutput = ''; output.textContent = '';
     statusEl.classList.add('hidden');
     rerender();
-  });
-
-  document.getElementById('y2j-copy')!.addEventListener('click', async (e) => {
-    if (!rawOutput) return;
-    await navigator.clipboard.writeText(rawOutput);
-    const b = e.currentTarget as HTMLButtonElement;
-    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1500);
   });
 
   document.getElementById('y2j-download')!.addEventListener('click', () => {

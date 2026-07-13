@@ -128,11 +128,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <span class="flex items-center justify-between">
             <span>Output</span>
             <span class="flex gap-2">
-              <button id="pr-batch-copy" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button>
               <button id="pr-batch-download" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Download</button>
             </span>
           </span>
-          <pre class="hl-block field" style="height:14rem;margin:0;overflow:auto;white-space:pre-wrap"><code id="pr-batch-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+          <div class="copy-wrap"><pre class="hl-block field" style="height:14rem;margin:0;overflow:auto;white-space:pre-wrap"><code id="pr-batch-out" class="hljs" style="background:transparent;padding:0"></code></pre><button type="button" class="copy-icon" data-copy-target="#pr-batch-out" aria-label="Copy"></button></div>
         </div>
       </div>
     </div>
@@ -322,12 +321,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   batchUnit.addEventListener('change', convertBatch);
   document.getElementById('pr-batch-clear')!.addEventListener('click', () => {
     batchIn.value = ''; batchResult = ''; batchOut.textContent = '';
-  });
-  document.getElementById('pr-batch-copy')!.addEventListener('click', async (e) => {
-    if (!batchResult) return;
-    await navigator.clipboard.writeText(batchResult);
-    const b = e.currentTarget as HTMLButtonElement;
-    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
   });
   document.getElementById('pr-batch-download')!.addEventListener('click', () => {
     if (!batchResult) return;
