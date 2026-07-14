@@ -96,6 +96,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 <script>
   import { shuffle } from '../../lib/random';
   import { aiChat } from '../../lib/ai';
+  import { affixPool } from '../../lib/domain-affixes';
 
   const $ = (id: string) => document.getElementById(id)!;
   const wordEl = $('dn-word') as HTMLInputElement;
@@ -376,8 +377,23 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   function fallbackNames(s: Settings): string[] {
     const w = s.word;
     const labels = new Set<string>([w]);
-    for (const p of PREFIX) labels.add(`${p}${w}`);
-    for (const suf of SUFFIX) labels.add(`${w}${suf}`);
+    // Slider on → draw affixes of the requested length; off → 0-length pool.
+    const prefixes = s.prefixLen ? affixPool(s.prefixLen) : [];
+    const suffixes = s.suffixLen ? affixPool(s.suffixLen) : [];
+    if (!prefixes.length && !suffixes.length) {
+      // No affix requested — fall back to the curated domain-flavored lists.
+      for (const p of PREFIX) labels.add(`${p}${w}`);
+      for (const suf of SUFFIX) labels.add(`${w}${suf}`);
+      return [...labels];
+    }
+    for (const p of prefixes) labels.add(`${p}${w}`);
+    for (const suf of suffixes) labels.add(`${w}${suf}`);
+    // Both sliders on → also offer prefix+word+suffix, sampled to stay bounded.
+    if (prefixes.length && suffixes.length) {
+      const ps = shuffle([...prefixes]).slice(0, 30);
+      const ss = shuffle([...suffixes]).slice(0, 30);
+      for (const p of ps) for (const suf of ss) labels.add(`${p}${w}${suf}`);
+    }
     return [...labels];
   }
 
