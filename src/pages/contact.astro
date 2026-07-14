@@ -23,38 +23,146 @@ const jsonLd = {
   <Header />
 
   <main class="container-page py-14">
-    <div class="mx-auto max-w-3xl">
+    <div class="mx-auto max-w-2xl">
       <span class="eyebrow text-primary-hover">Contact</span>
       <h1 class="display-md mt-3 text-ink">Get in touch</h1>
+      <p class="mt-4 text-[15px] leading-relaxed text-ink-muted">
+        Found a bug, have an idea for a new tool, or just want to say hello? We
+        read every message. Send it below and we'll get back to you over email.
+      </p>
 
-      <div class="mt-8 flex flex-col gap-4 text-[15px] leading-relaxed text-ink-muted">
-        <p>
-          Found a bug, have an idea for a new tool, or just want to say hello? We
-          read every message and love hearing how you use {SITE.name}.
-        </p>
+      <form id="contact-form" class="mt-8 flex flex-col gap-5">
+        <div class="grid gap-5 sm:grid-cols-2">
+          <label class="flex flex-col gap-2">
+            <span class="text-sm font-medium text-ink">Name</span>
+            <input
+              type="text"
+              name="name"
+              required
+              placeholder="Your name"
+              class="h-10 rounded-md border border-hairline bg-surface-2 px-3 text-sm text-ink placeholder:text-ink-subtle focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </label>
 
-        <h2 class="mt-4 font-display text-xl font-semibold text-ink">Email</h2>
-        <p>
-          The fastest way to reach us is by email:
-        </p>
-        <p>
-          <a href={`mailto:${email}`} class="btn btn-primary">{email}</a>
-        </p>
+          <label class="flex flex-col gap-2">
+            <span class="text-sm font-medium text-ink">Email</span>
+            <input
+              type="email"
+              name="from"
+              required
+              placeholder="you@example.com"
+              class="h-10 rounded-md border border-hairline bg-surface-2 px-3 text-sm text-ink placeholder:text-ink-subtle focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </label>
+        </div>
 
-        <h2 class="mt-4 font-display text-xl font-semibold text-ink">What to include</h2>
-        <ul class="flex list-disc flex-col gap-2 pl-5">
-          <li><strong class="text-ink">Bug reports:</strong> the tool name, what you expected, and what happened.</li>
-          <li><strong class="text-ink">Tool ideas:</strong> what the tool should do and who it helps.</li>
-          <li><strong class="text-ink">Feedback:</strong> anything that would make {SITE.name} better.</li>
-        </ul>
+        <label class="flex flex-col gap-2">
+          <span class="text-sm font-medium text-ink">Subject <span class="text-ink-subtle">(optional)</span></span>
+          <input
+            type="text"
+            name="subject"
+            placeholder="What's this about?"
+            class="h-10 rounded-md border border-hairline bg-surface-2 px-3 text-sm text-ink placeholder:text-ink-subtle focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+        </label>
 
-        <p class="mt-4">
-          Prefer to browse first? Explore all
-          <a href="/tools" class="text-primary-hover underline">available tools</a>.
-        </p>
-      </div>
+        <label class="flex flex-col gap-2">
+          <span class="text-sm font-medium text-ink">Message</span>
+          <textarea
+            name="message"
+            rows="6"
+            required
+            placeholder="How can we help?"
+            class="rounded-md border border-hairline bg-surface-2 px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          ></textarea>
+        </label>
+
+        <div class="flex items-center gap-3">
+          <button type="submit" class="btn btn-primary">Send message</button>
+          <span id="contact-status" class="text-sm text-ink-subtle" role="status" aria-live="polite"></span>
+        </div>
+      </form>
+
+      <p class="mt-8 text-sm text-ink-subtle">
+        Prefer email? Reach us directly at
+        <a href={`mailto:${email}`} class="text-primary-hover underline">{email}</a>.
+      </p>
     </div>
   </main>
 
   <Footer />
 </Layout>
+
+<style>
+  .spinner {
+    display: inline-block;
+    width: 0.9em;
+    height: 0.9em;
+    margin-right: 0.5em;
+    vertical-align: -0.1em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  /* Success state — overrides btn-primary's lavender. */
+  #contact-form button.is-sent {
+    background-color: #16a34a;
+    border-color: #16a34a;
+    color: #fff;
+  }
+</style>
+
+<script is:inline>
+  const form = document.getElementById('contact-form');
+  const status = document.getElementById('contact-status');
+  const btn = form?.querySelector('button[type="submit"]');
+  const label = btn?.textContent || 'Send message';
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = new FormData(form);
+    const name = (data.get('name') || '').toString().trim();
+    const subject = (data.get('subject') || '').toString().trim();
+    const body = (data.get('message') || '').toString().trim();
+    const payload = {
+      type: 'Contact',
+      tool: subject, // becomes the email subject suffix
+      from: (data.get('from') || '').toString().trim(),
+      message: name ? `Name: ${name}\n\n${body}` : body,
+    };
+
+    if (status) { status.textContent = ''; status.style.color = ''; }
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.remove('is-sent');
+      btn.innerHTML = '<span class="spinner"></span>Sending…';
+    }
+
+    try {
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error();
+      form.reset();
+      if (btn) {
+        btn.classList.add('is-sent');
+        btn.textContent = 'Sent ✓';
+        setTimeout(() => {
+          btn.classList.remove('is-sent');
+          btn.textContent = label;
+        }, 2500);
+      }
+    } catch (_) {
+      if (btn) btn.textContent = label;
+      if (status) {
+        status.textContent = 'Could not send. Please email us instead.';
+        status.style.color = '#f87171';
+      }
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  });
+</script>
