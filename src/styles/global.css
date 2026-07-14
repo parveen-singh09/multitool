@@ -163,6 +163,15 @@ html[data-bg='image'] .hero-copy :is(h1, h1 span, p) {
     border-radius: var(--radius-md);
   }
 
+  /* Mobile sidebar (Radix Sheet) jitters if the sticky header keeps its
+     backdrop-blur: the blur re-samples every frame while the panel slides.
+     Drop it to a solid bar while the sheet is mounted (open + close anim). */
+  body:has([data-slot="sheet-overlay"]) header {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background-color: var(--color-canvas);
+  }
+
   h1, h2, h3, h4 {
     font-family: var(--font-display);
     font-weight: 600;
@@ -421,3 +430,26 @@ pre.hl-block > code { background: transparent; padding: 0; }
 .hl-block .hljs-comment .hljs-doctag { color: #8a8f98; }
 .hl-block .hljs-punctuation,
 .hl-block .hljs-tag { color: #8a8f98; }
+
+/* Mobile sidebar (Radix Sheet) slide. Kept UNLAYERED on purpose: inside
+   @layer base it lost the cascade to Tailwind's utilities layer and never
+   ran (panel snapped open). tailwindcss-animate@1 is a v3 plugin whose
+   animate-in/slide-in don't work under Tailwind v4, so we drive the motion
+   with plain transform/opacity keyframes off Radix's data-state. */
+@keyframes sheet-in-left  { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+@keyframes sheet-out-left { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+@keyframes sheet-fade-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sheet-fade-out { from { opacity: 1; } to { opacity: 0; } }
+
+[data-slot="sidebar"][data-mobile="true"][data-state="open"] {
+  animation: sheet-in-left 300ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+[data-slot="sidebar"][data-mobile="true"][data-state="closed"] {
+  animation: sheet-out-left 300ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+[data-slot="sheet-overlay"][data-state="open"] {
+  animation: sheet-fade-in 300ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+[data-slot="sheet-overlay"][data-state="closed"] {
+  animation: sheet-fade-out 300ms cubic-bezier(0.32, 0.72, 0, 1);
+}
