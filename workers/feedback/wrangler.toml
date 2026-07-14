@@ -5,6 +5,13 @@ name = "toolsilk-feedback"
 main = "src/index.ts"
 compatibility_date = "2024-09-23"
 
+# This route intercepts the path before Pages sees it. Same origin as the
+# site, so the form needs no CORS and no change. Must be top-level (a bare
+# `routes =` after a [table] header would nest under that table instead).
+routes = [
+  { pattern = "toolsilk.com/api/feedback", zone_name = "toolsilk.com" }
+]
+
 # Cloudflare Email Routing send binding. destination_address pins the only
 # recipient — it MUST be a verified destination in Email Routing.
 [[send_email]]
@@ -14,9 +21,3 @@ destination_address = "contactfeedback9@gmail.com"
 [vars]
 FEEDBACK_TO = "contactfeedback9@gmail.com"
 FEEDBACK_FROM = "feedback@toolsilk.com"
-
-# This route intercepts the path before Pages sees it. Same origin as the
-# site, so the form needs no CORS and no change.
-routes = [
-  { pattern = "toolsilk.com/api/feedback", zone_name = "toolsilk.com" }
-]
