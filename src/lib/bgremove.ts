@@ -18,11 +18,14 @@ export async function loadBgModel(onProgress?: (note: string) => void): Promise<
     onProgress?.('Loading the cutout model (~44 MB, first use only)…');
     const ort = await import('onnxruntime-web');
     ort.env.wasm.numThreads = 1;
-    ort.env.wasm.wasmPaths = `${BASE}/`;
+    ort.env.wasm.wasmPaths = `${BASE}/`; // ORT wasm stays self-hosted (under 25 MB)
     ortMod = ort;
-    session = await ort.InferenceSession.create(`${BASE}/rmbg-1.4.onnx`, {
-      executionProviders: ['wasm'],
-    });
+    // 42 MB model exceeds Cloudflare Pages' 25 MB/file cap — served from
+    // HuggingFace instead of the asset bundle.
+    session = await ort.InferenceSession.create(
+      'https://huggingface.co/briaai/RMBG-1.4/resolve/main/onnx/model_quantized.onnx',
+      { executionProviders: ['wasm'] },
+    );
   })();
   try {
     await loadingPromise;

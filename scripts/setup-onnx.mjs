@@ -59,13 +59,7 @@ try {
   console.warn('onnx: model download failed (genre detection will be unavailable):', e.message);
 }
 
-// 3) RMBG-1.4 background-removal model for the Sticker Maker (die-cut cutouts).
-// Quantized (~44 MB) — still cuts cleanly and keeps the first-use download sane.
+// 3) RMBG-1.4 background-removal model (Sticker Maker) is loaded from
+// HuggingFace at runtime (see src/lib/bgremove.ts) — its ~42 MB quantized
+// model exceeds Cloudflare Pages' 25 MB/file cap, so it's no longer bundled.
 // License: Bria RAIL (non-commercial). Fine for a free tool; revisit if monetized.
-const RMBG_URL = 'https://huggingface.co/briaai/RMBG-1.4/resolve/main/onnx/model_quantized.onnx';
-try {
-  await download(RMBG_URL, resolve(dest, 'rmbg-1.4.onnx'), 'rmbg-1.4.onnx');
-  console.log('onnx background-removal model ready under public/onnx.');
-} catch (e) {
-  console.warn('onnx: RMBG download failed (auto background removal will be unavailable):', e.message);
-}
