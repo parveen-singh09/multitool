@@ -100,7 +100,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   const $ = (id: string) => document.getElementById(id)!;
   const wordEl = $('dn-word') as HTMLInputElement;
-  const styleEl = $('dn-style') as HTMLSelectElement;
+  const styleEl = $('dn-style') as unknown as HTMLSelectElement;
   const sylEl = $('dn-syl') as HTMLInputElement;
   const prefixOnEl = $('dn-prefix-on') as HTMLInputElement;
   const prefixNEl = $('dn-prefix-n') as HTMLInputElement;
@@ -420,7 +420,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         { headers: { accept: 'application/dns-json' }, signal },
       );
       if (!res.ok) return 'error';
-      const data = await res.json();
+      const data = await res.json() as { Status: number };
       return data.Status === 3 ? 'free' : 'taken';
     } catch (e) {
       if ((e as Error).name === 'AbortError') throw e;
@@ -461,6 +461,23 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   // Persistent AI-run state so "Show more" resumes the same search instead of
   // restarting: results and tried labels accumulate across clicks.
   const moreEl = $('dn-more') as HTMLButtonElement;
+  const genEl = $('dn-gen') as HTMLButtonElement;
+  const aiGenEl = $('dn-ai-gen') as HTMLButtonElement;
+
+  /** Toggle a button into a disabled "working" state, restoring its label after. */
+  function setBusy(btn: HTMLButtonElement, on: boolean, label = '') {
+    if (on) {
+      if (btn.dataset.label == null) btn.dataset.label = btn.textContent ?? '';
+      btn.textContent = label;
+      btn.disabled = true;
+      btn.classList.add('opacity-70', 'cursor-wait');
+    } else {
+      if (btn.dataset.label != null) btn.textContent = btn.dataset.label;
+      delete btn.dataset.label;
+      btn.disabled = false;
+      btn.classList.remove('opacity-70', 'cursor-wait');
+    }
+  }
   let aiStates: Map<string, State> | null = null;
   let aiTried: string[] = [];
   let aiSettings: Settings | null = null;
@@ -530,10 +547,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const mine = runId;
     const w = readSettings().word;
     const states = new Map<string, State>();
-    statusEl.textContent = `Checking ${list.length} names…`;
     await checkList(states, list, controller, mine, w);
-    if (mine !== runId) return;
-    statusEl.textContent = `${freeCount(states)} of ${list.length} look available.`;
   }
 
   /** Re-expand the current labels across the active TLDs and re-check. */
@@ -564,7 +578,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     resetAi();
     const labels = fallbackNames(s);
     currentLabels = labels;
-    const list = expand(labels);
+    // Always check the exact keyword itself first — renderStates already sorts
+    // the keyword-exact match to the top, so an available one shows first.
+    const exact = TLDS.filter((t) => active.has(t)).map((t) => `${s.word}.${t}`);
+    const list = [...new Set([...exact, ...expand(labels)])];
     if (!list.length) {
       out.innerHTML = '';
       statusEl.textContent = 'Pick at least one domain type above.';
@@ -588,11 +605,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     for (let round = 0; round < MAX_ROUNDS; round++) {
       if (freeCount(states) >= target || checked >= MAX_CHECK) break;
-
-      statusEl.textContent =
-        states.size === 0
-          ? 'Generating name ideas…'
-          : `Found ${freeCount(states)}/${target} available — searching more…`;
 
       let labels: string[];
       try {
@@ -636,7 +648,6 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       resetAi();
       return;
     }
-    statusEl.textContent = `Found ${freeCount(states)} available after checking ${states.size} names.`;
     moreEl.classList.remove('hidden');
   }
 
@@ -718,11 +729,19 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   });
   renderChips();
 
-  $('dn-gen').addEventListener('click', () => generateLocal());
-  $('dn-ai-gen').addEventListener('click', () => generateAi());
+  async function runLocal() {
+    setBusy(genEl, true, 'Checking…');
+    try { await generateLocal(); } finally { setBusy(genEl, false); }
+  }
+  async function runAi() {
+    setBusy(aiGenEl, true, '✦ Generating…');
+    try { await generateAi(); } finally { setBusy(aiGenEl, false); }
+  }
+  $('dn-gen').addEventListener('click', () => runLocal());
+  $('dn-ai-gen').addEventListener('click', () => runAi());
   moreEl.addEventListener('click', () => showMoreAi());
   wordEl.addEventListener('keydown', (e) => {
-    if ((e as KeyboardEvent).key === 'Enter') generateLocal();
+    if ((e as KeyboardEvent).key === 'Enter') runLocal();
   });
 
   if (import.meta.env.DEV) {
