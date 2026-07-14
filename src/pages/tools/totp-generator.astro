@@ -86,7 +86,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     view.setUint32(0, Math.floor(counter / 0x100000000));
     view.setUint32(4, counter >>> 0);
-    const key = await crypto.subtle.importKey('raw', secret, { name: 'HMAC', hash }, false, ['sign']);
+    const key = await crypto.subtle.importKey('raw', secret as BufferSource, { name: 'HMAC', hash }, false, ['sign']);
     const hmac = new Uint8Array(await crypto.subtle.sign('HMAC', key, buf));
     const offset = hmac[hmac.length - 1] & 0x0f;
     const bin = ((hmac[offset] & 0x7f) << 24) | (hmac[offset + 1] << 16) | (hmac[offset + 2] << 8) | hmac[offset + 3];

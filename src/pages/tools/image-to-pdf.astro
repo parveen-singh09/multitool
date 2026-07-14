@@ -115,7 +115,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   let items: Item[] = [];
   let dragIdx = -1;
 
-  const PAGE = { a4: [595.28, 841.89], letter: [612, 792] } as const;
+  const PAGE: Record<'a4' | 'letter', [number, number]> = { a4: [595.28, 841.89], letter: [612, 792] };
   function setErr(m: string) { err.textContent = m; err.classList.toggle('hidden', !m); }
   const ACCEPTED = /^image\/(jpeg|png|webp|gif|bmp)$/;
 
@@ -216,7 +216,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         page.drawImage(img, { x: (pw - dw) / 2, y: (ph - dh) / 2, width: dw, height: dh });
       }
       const out = await pdf.save();
-      const blob = new Blob([out], { type: 'application/pdf' });
+      const blob = new Blob([out as BlobPart], { type: 'application/pdf' });
       let name = ((document.getElementById('ip-name') as HTMLInputElement).value || 'images').trim().replace(/[\\/:*?"<>|]+/g, '_');
       if (!/\.pdf$/i.test(name)) name += '.pdf';
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();

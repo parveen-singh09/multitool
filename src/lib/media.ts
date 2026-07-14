@@ -83,7 +83,7 @@ export function buildArgs(conv: MediaConversion, o: ConvertOptions, input: strin
   if (o.normalize) af.push('loudnorm=I=-16:TP=-1.5:LRA=11');
 
   const out: string[] = [];
-  if (conv.out !== 'video') out.push('-vn');
+  out.push('-vn'); // audio-only path (video returned above)
   if (o.sampleRate && o.sampleRate > 0) out.push('-ar', String(o.sampleRate));
   if (o.channels && o.channels > 0) out.push('-ac', String(o.channels));
   if (af.length) out.push('-af', af.join(','));

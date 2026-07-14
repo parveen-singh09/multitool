@@ -3,8 +3,8 @@
 import { COUNTRIES, INDIA_STATES } from './geo';
 
 export interface PartyOptions {
-  prefix: string;            
-  companyLabel: string;      
+  prefix: string;
+  companyLabel?: string;
   companyPlaceholder: string;
   taxLabel: string;          
   addressLabel: string;      

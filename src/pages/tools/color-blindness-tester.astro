@@ -811,16 +811,16 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     // confusion axis. Protan/deutan sit near the red-green (0-180) hue axis,
     // tritan near blue-yellow (60-240 region on this wheel).
     let rgJumps = 0, byJumps = 0;
-    prev = -1;
+    let prevIdx = -1;
     for (const idx of d15Order) {
-      if (prev >= 0) {
-        const gap = Math.abs(d15Hues[idx] - d15Hues[prev]);
+      if (prevIdx >= 0) {
+        const gap = Math.abs(d15Hues[idx] - d15Hues[prevIdx]);
         if (gap > 96) { // a crossing
-          const mid = ((d15Hues[idx] + d15Hues[prev]) / 2) % 180;
+          const mid = ((d15Hues[idx] + d15Hues[prevIdx]) / 2) % 180;
           if (mid < 45 || mid > 135) rgJumps++; else byJumps++;
         }
       }
-      prev = idx;
+      prevIdx = idx;
     }
     let axis = 'unclear';
     if (rgJumps + byJumps > 0) axis = rgJumps >= byJumps ? 'red-green' : 'blue-yellow';

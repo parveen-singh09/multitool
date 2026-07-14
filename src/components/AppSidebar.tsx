@@ -131,8 +131,8 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
         <SidebarGroup>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={normalizedPath === ""}>
-                <a href="/">
+              <SidebarMenuButton asChild isActive={normalizedPath === "/tools"}>
+                <a href="/tools">
                   <Home className="h-4 w-4" />
                   <span>Home</span>
                 </a>

@@ -98,7 +98,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         const out = await PDFDocument.create();
         const copied = await out.copyPages(src, idx);
         copied.forEach((p) => out.addPage(p));
-        const blob = new Blob([await out.save()], { type: 'application/pdf' });
+        const blob = new Blob([await out.save() as BlobPart], { type: 'application/pdf' });
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'extracted.pdf'; a.click();
         status.textContent = `Done â€” extracted ${idx.length} page(s).`;
       } else {
@@ -107,7 +107,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           const out = await PDFDocument.create();
           const [p] = await out.copyPages(src, [i]);
           out.addPage(p);
-          const blob = new Blob([await out.save()], { type: 'application/pdf' });
+          const blob = new Blob([await out.save() as BlobPart], { type: 'application/pdf' });
           const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `page-${i + 1}.pdf`; a.click();
           await new Promise((r) => setTimeout(r, 150)); // stagger downloads
         }

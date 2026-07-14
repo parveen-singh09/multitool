@@ -115,13 +115,13 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const crc = crc32(e.data), size = e.data.length;
       const lfh = [u32(0x04034b50), u16(20), u16(0), u16(0), u16(0), u16(0), u32(crc), u32(size), u32(size), u16(name.length), u16(0), name, e.data];
       const lfhLen = lfh.reduce((s, a) => s + a.length, 0);
-      parts.push(...lfh);
+      parts.push(...(lfh as BlobPart[]));
       central.push(...[u32(0x02014b50), u16(20), u16(20), u16(0), u16(0), u16(0), u16(0), u32(crc), u32(size), u32(size), u16(name.length), u16(0), u16(0), u16(0), u16(0), u32(0), u32(offset), name] as any);
       offset += lfhLen;
     }
     const cdStart = offset;
     const cdSize = central.reduce((s, a) => s + a.length, 0);
-    parts.push(...central);
+    parts.push(...(central as unknown as BlobPart[]));
     parts.push(u32(0x06054b50), u16(0), u16(0), u16(entries.length), u16(entries.length), u32(cdSize), u32(cdStart), u16(0));
     return new Blob(parts, { type: 'application/zip' });
   }

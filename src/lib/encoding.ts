@@ -61,6 +61,6 @@ export function fromBase32(s: string): Uint8Array {
   return new Uint8Array(out);
 }
 
-export function utf8(s: string): Uint8Array {
+export function utf8(s: string): Uint8Array<ArrayBuffer> {
   return new TextEncoder().encode(s);
 }

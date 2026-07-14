@@ -45,11 +45,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <input id="jc-file" type="file"
           accept=".json,.yaml,.yml,.xml,.toml,.csv,.tsv,.txt,text/plain" class="hidden" />
       </label>
-      <label id="jc-minify-wrap" class="flex items-center gap-2 hidden">
+      <label id="jc-minify-wrap" class="hidden items-center gap-2">
         <input id="jc-minify" type="checkbox" class="h-4 w-4" />
         Minify JSON
       </label>
-      <label id="jc-header-wrap" class="flex items-center gap-2 hidden">
+      <label id="jc-header-wrap" class="hidden items-center gap-2">
         <input id="jc-header" type="checkbox" checked class="h-4 w-4" />
         First row is header
       </label>
@@ -253,8 +253,12 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     // Indent only affects JSON/YAML output; hidden when minifying JSON.
     const indented = (to === 'json' && !minifyBox.checked) || to === 'yaml';
     indentWrap.style.display = indented ? '' : 'none';
-    minifyWrap.classList.toggle('hidden', to !== 'json');
-    headerWrap.classList.toggle('hidden', from !== 'csv' && from !== 'tsv');
+    const showMinify = to === 'json';
+    minifyWrap.classList.toggle('hidden', !showMinify);
+    minifyWrap.classList.toggle('flex', showMinify);
+    const showHeader = from === 'csv' || from === 'tsv';
+    headerWrap.classList.toggle('hidden', !showHeader);
+    headerWrap.classList.toggle('flex', showHeader);
   }
 
   const rerender = wireInput(input, inHl, () => HL_LANG[fromSel.value] ?? 'plaintext', () => { void convert(); });

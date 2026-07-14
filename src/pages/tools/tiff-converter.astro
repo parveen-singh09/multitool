@@ -119,7 +119,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const ifds = UTIF.decode(buf);
       if (!ifds.length) throw new Error('no images found in TIFF');
       UTIF.decodeImages(buf, ifds);
-      return ifds.map((ifd, i) => {
+      return ifds.map((ifd: any, i: number) => {
         const rgba = UTIF.toRGBA8(ifd);
         const canvas = document.createElement('canvas');
         canvas.width = ifd.width; canvas.height = ifd.height;
@@ -272,7 +272,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         if (seen[name] != null) name = `${page.base}-${++seen[name]}.${ext}`; else seen[name] = 0;
         files.push({ name, data: new Uint8Array(await blob.arrayBuffer()) });
       }
-      triggerDownload(new Blob([buildZip(files)], { type: 'application/zip' }), 'tiff-converted.zip');
+      triggerDownload(new Blob([buildZip(files) as BlobPart], { type: 'application/zip' }), 'tiff-converted.zip');
     } catch (e) { setErr('ZIP failed: ' + (e as Error).message); }
     finally { btn.disabled = false; btn.textContent = label; }
   });
@@ -294,7 +294,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         p.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
       }
       const out = await pdf.save();
-      triggerDownload(new Blob([out], { type: 'application/pdf' }), 'tiff-converted.pdf');
+      triggerDownload(new Blob([out as BlobPart], { type: 'application/pdf' }), 'tiff-converted.pdf');
     } catch (e) { setErr('PDF failed: ' + (e as Error).message); }
     finally { btn.disabled = false; btn.textContent = label; }
   });

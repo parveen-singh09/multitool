@@ -83,10 +83,10 @@ const defaultPayload = `{
     const signingInput = `${b64urlStr(JSON.stringify(header))}.${b64urlStr(JSON.stringify(payloadObj))}`;
     try {
       const key = await crypto.subtle.importKey(
-        'raw', utf8(secretEl.value),
+        'raw', utf8(secretEl.value) as BufferSource,
         { name: 'HMAC', hash: HASH[alg] }, false, ['sign'],
       );
-      const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, utf8(signingInput)));
+      const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, utf8(signingInput) as BufferSource));
       out.value = `${signingInput}.${toBase64Url(sig)}`;
       setErr('');
     } catch (e) {
