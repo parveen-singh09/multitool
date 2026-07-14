@@ -1,4 +1,4 @@
-﻿---
+?---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
@@ -26,7 +26,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <input id="hc-max" type="number" min="16" step="1" placeholder="Original" class="field w-32" />
         </label>
       </div>
-      <p class="text-[13px] text-ink-tertiary">Change any option to re-convert instantly â€” the decoded photos stay cached, so there's no waiting for a fresh HEIC decode.</p>
+      <p class="text-[13px] text-ink-tertiary">Change any option to re-convert instantly — the decoded photos stay cached, so there's no waiting for a fresh HEIC decode.</p>
       <div class="flex flex-wrap items-center gap-3">
         <p id="hc-status" class="flex-1 text-[13px] text-ink-subtle"></p>
         <button id="hc-more" class="btn btn-secondary hidden py-1 text-[13px]" type="button">Add more</button>
@@ -40,8 +40,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free HEIC to JPG converter turns Apple HEIC and HEIF photos â€” the
-      format iPhones use â€” into universally supported JPG, PNG, or WebP images.
+      This free HEIC to JPG converter turns Apple HEIC and HEIF photos — the
+      format iPhones use — into universally supported JPG, PNG, or WebP images.
       Add one or several photos, pick a format, tune the quality, optionally cap
       the longest side to shrink large shots, then download each result or grab
       them all in a single ZIP.
@@ -54,7 +54,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </p>
     <p>
       Unlike most online converters, each photo is decoded once and kept in
-      memory â€” so changing the format, quality, or maximum size re-converts
+      memory — so changing the format, quality, or maximum size re-converts
       instantly instead of re-processing every file from scratch. Add more
       photos to the batch at any time, remove individual ones you don't want,
       then download results one by one or all together as a ZIP.
@@ -156,7 +156,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         div.style.color = '#e5484d';
         div.innerHTML = `<span class="truncate" title="${it.file.name}">${it.file.name}: not a valid HEIC/HEIF image</span>`;
         const x = document.createElement('button');
-        x.type = 'button'; x.textContent = 'âœ•'; x.title = 'Remove';
+        x.type = 'button'; x.textContent = '✕'; x.title = 'Remove';
         x.className = 'shrink-0 text-ink-tertiary hover:text-ink';
         x.addEventListener('click', () => removeAt(i));
         div.appendChild(x);
@@ -164,14 +164,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         continue;
       }
       div.className = 'panel panel-lift flex flex-col gap-2 p-2';
-      const dims = it.w ? `${it.w}Ã—${it.h}` : '';
-      const meta = it.blob ? `${it.name} Â· ${dims} Â· ${fmtSize(it.blob.size)}` : `${it.file.name} Â· decodingâ€¦`;
+      const dims = it.w ? `${it.w}×${it.h}` : '';
+      const meta = it.blob ? `${it.name} · ${dims} · ${fmtSize(it.blob.size)}` : `${it.file.name} · decoding…`;
       div.innerHTML =
         (it.url ? `<img src="${it.url}" class="w-full rounded-sm" alt="${it.name}" loading="lazy" />` : '') +
         `<span class="truncate text-[12px] text-ink-subtle" title="${meta}">${meta}</span>` +
         `<div class="flex gap-2">` +
           (it.blob ? `<a href="${it.url}" download="${it.name}" class="btn btn-secondary flex-1 py-1 text-[13px] truncate">Download</a>` : '') +
-          `<button type="button" data-rm class="btn btn-tertiary py-1 text-[13px]" title="Remove">âœ•</button>` +
+          `<button type="button" data-rm class="btn btn-tertiary py-1 text-[13px]" title="Remove">✕</button>` +
         `</div>`;
       div.querySelector('[data-rm]')!.addEventListener('click', () => removeAt(i));
       grid.appendChild(div);
@@ -194,11 +194,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     let savedIn = 0, savedOut = 0, ok = 0;
     for (const it of items) if (it.blob) { savedIn += it.file.size; savedOut += it.blob.size; ok++; }
     const delta = savedIn - savedOut;
-    const savedMsg = ok && delta > 0 ? ` â€” saved ${fmtSize(delta)} (${Math.round((delta / savedIn) * 100)}%)` : '';
-    status.textContent = ok ? `Done â€” ${ok}/${items.length} converted${savedMsg}.` : '';
+    const savedMsg = ok && delta > 0 ? ` — saved ${fmtSize(delta)} (${Math.round((delta / savedIn) * 100)}%)` : '';
+    status.textContent = ok ? `Done — ${ok}/${items.length} converted${savedMsg}.` : '';
   }
 
-  // Re-encode every already-decoded item with the current format/quality/size. Instant â€” no HEIC decode.
+  // Re-encode every already-decoded item with the current format/quality/size. Instant — no HEIC decode.
   async function encodeAll() {
     const fmt = fmtEl.value, ext = currentExt();
     const quality = Number(qEl.value) / 100;
@@ -222,7 +222,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const { default: heic2any } = await import('heic2any');
     let n = 0;
     for (const it of pending) {
-      status.textContent = `Decoding ${it.file.name} (${++n}/${pending.length})â€¦`;
+      status.textContent = `Decoding ${it.file.name} (${++n}/${pending.length})…`;
       render();
       try {
         const decoded = await heic2any({ blob: it.file, toType: 'image/png' });
@@ -264,7 +264,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (!ready.length) return;
     allBtn.disabled = true;
     const prev = allBtn.textContent;
-    allBtn.textContent = 'Zippingâ€¦';
+    allBtn.textContent = 'Zipping…';
     try {
       const entries = await Promise.all(ready.map(async (r) => ({ name: r.name!, data: new Uint8Array(await r.blob!.arrayBuffer()) })));
       const zip = makeZip(entries);

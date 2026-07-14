@@ -1,4 +1,4 @@
-﻿---
+?---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
@@ -11,7 +11,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </label>
 
     <div id="ps-panel" class="hidden flex-col gap-4">
-      <p class="text-[13px] text-ink-subtle"><span id="ps-name"></span> Â· <span id="ps-pages">0</span> pages</p>
+      <p class="text-[13px] text-ink-subtle"><span id="ps-name"></span> · <span id="ps-pages">0</span> pages</p>
 
       <div class="flex flex-wrap gap-2" role="tablist" aria-label="Split mode">
         <button data-mode="range" class="ps-tab btn btn-primary" aria-selected="true">Extract range</button>
@@ -89,18 +89,18 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   async function run() {
     if (!bytes) return;
-    setErr(''); status.classList.remove('hidden'); status.textContent = 'Workingâ€¦';
+    setErr(''); status.classList.remove('hidden'); status.textContent = 'Working…';
     try {
       const src = await PDFDocument.load(bytes);
       if (mode === 'range') {
         const idx = parseRange(rangeIn.value);
-        if (!idx.length) { status.classList.add('hidden'); setErr('Enter a valid page range within 1â€“' + pageCount + '.'); return; }
+        if (!idx.length) { status.classList.add('hidden'); setErr('Enter a valid page range within 1–' + pageCount + '.'); return; }
         const out = await PDFDocument.create();
         const copied = await out.copyPages(src, idx);
         copied.forEach((p) => out.addPage(p));
         const blob = new Blob([await out.save() as BlobPart], { type: 'application/pdf' });
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'extracted.pdf'; a.click();
-        status.textContent = `Done â€” extracted ${idx.length} page(s).`;
+        status.textContent = `Done — extracted ${idx.length} page(s).`;
       } else {
         // every page separately
         for (let i = 0; i < pageCount; i++) {
@@ -111,7 +111,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `page-${i + 1}.pdf`; a.click();
           await new Promise((r) => setTimeout(r, 150)); // stagger downloads
         }
-        status.textContent = `Done â€” ${pageCount} single-page PDFs downloaded.`;
+        status.textContent = `Done — ${pageCount} single-page PDFs downloaded.`;
       }
     } catch (e) { status.classList.add('hidden'); setErr('Could not split: ' + (e as Error).message); }
   }

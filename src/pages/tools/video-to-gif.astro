@@ -1,4 +1,4 @@
-﻿---
+?---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
@@ -51,7 +51,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <select id="vg-fps" class="field w-24"><option>10</option><option selected>15</option><option>20</option><option>25</option><option>30</option></select>
         </label>
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">Speed
-          <select id="vg-speed" class="field w-28"><option value="0.25">0.25Ã—</option><option value="0.5">0.5Ã—</option><option value="1" selected>1Ã— (normal)</option><option value="1.5">1.5Ã—</option><option value="2">2Ã—</option><option value="3">3Ã—</option><option value="4">4Ã—</option></select>
+          <select id="vg-speed" class="field w-28"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1× (normal)</option><option value="1.5">1.5×</option><option value="2">2×</option><option value="3">3×</option><option value="4">4×</option></select>
         </label>
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">Colors
           <select id="vg-colors" class="field w-28"><option value="256" selected>256 (best)</option><option value="128">128</option><option value="64">64 (small)</option><option value="32">32 (tiny)</option></select>
@@ -59,7 +59,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">Smoothing
           <select id="vg-dither" class="field w-36">
             <option value="sierra2_4a" selected>Sierra (default)</option>
-            <option value="floyd_steinberg">Floydâ€“Steinberg</option>
+            <option value="floyd_steinberg">Floyd–Steinberg</option>
             <option value="bayer">Bayer (patterned)</option>
             <option value="none">None (flat)</option>
           </select>
@@ -98,7 +98,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       This free video to GIF converter turns a clip from any video into an
       animated GIF. Scrub the video and drag the two handles to pick the exact
       start and end, then set the width, frame rate, color count and smoothing.
-      Add text captions and drag them anywhere on the frame â€” pick the size,
+      Add text captions and drag them anywhere on the frame — pick the size,
       color, bold weight and an optional background box, and the text is burned
       right into the GIF. Drag a crop box to keep just the part of the frame you
       want, speed the clip up or slow it down, reverse it or make a boomerang that
@@ -253,7 +253,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (!texts.length) {
       const hint = document.createElement('p');
       hint.className = 'text-[13px] text-ink-tertiary';
-      hint.textContent = 'No text yet. Click â€œAdd textâ€ to place a caption on the GIF.';
+      hint.textContent = 'No text yet. Click “Add text” to place a caption on the GIF.';
       textList.appendChild(hint);
       return;
     }
@@ -356,7 +356,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     cropBox.style.height = crop.h + '%';
   }
 
-  // Move (drag body) or resize (drag handle) the crop rect, clamped to 0â€“100.
+  // Move (drag body) or resize (drag handle) the crop rect, clamped to 0–100.
   function attachCropDrag() {
     const grab = (e: PointerEvent, mode: 'move' | 'resize') => {
       e.preventDefault(); e.stopPropagation();
@@ -447,7 +447,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     // Keep start below end with a small minimum gap.
     if (Number(rStart.value) > Number(rEnd.value) - 1) rStart.value = String(Math.max(0, Number(rEnd.value) - 1));
     const s = startSec(), e = endSec();
-    clipEl.textContent = `${fmtTime(s)} â†’ ${fmtTime(e)}  (${(e - s).toFixed(1)}s)`;
+    clipEl.textContent = `${fmtTime(s)} → ${fmtTime(e)}  (${(e - s).toFixed(1)}s)`;
     updateEstimate();
   }
   function updateEstimate() {
@@ -459,10 +459,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const outDur = dur / speed; // speed changes playback length
     const frames = Math.max(1, Math.round(outDur * fps)) * (boomerang ? 2 : 1);
     const { w, h } = outputDims();
-    // Rough GIF bytes: frames Ã— pixels Ã— bits-per-pixel(from palette)/8 Ã— LZW factor.
+    // Rough GIF bytes: frames × pixels × bits-per-pixel(from palette)/8 × LZW factor.
     const bpp = Math.log2(colors) / 8;
     const bytes = frames * w * h * bpp * 0.5;
-    estimate.textContent = dur > 0 ? `~${frames} frames Â· ${w}Ã—${h} Â· est. ${fmtSize(bytes)}` : '';
+    estimate.textContent = dur > 0 ? `~${frames} frames · ${w}×${h} · est. ${fmtSize(bytes)}` : '';
   }
 
   rStart.addEventListener('input', () => { refreshClip(); video.currentTime = startSec(); });
@@ -479,7 +479,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     video.onloadedmetadata = () => {
       duration = isFinite(video.duration) ? video.duration : 0;
       // The video sits in normal flow and defines the stage box; the text layer
-      // (absolute inset-0) covers exactly the video's pixels â€” no letterbox drift.
+      // (absolute inset-0) covers exactly the video's pixels — no letterbox drift.
       rStart.value = '0';
       rEnd.value = String(Math.min(100, (Math.min(duration, 5) / duration) * 100));
       refreshClip();
@@ -516,7 +516,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         onProgress: (r) => { bar.style.width = Math.min(100, Math.round(r * 100)) + '%'; },
         onDownload: (n) => { if (n) statusEl.textContent = n; },
       });
-      statusEl.textContent = 'Generating paletteâ€¦';
+      statusEl.textContent = 'Generating palette…';
       const inName = 'in.' + (file.name.split('.').pop() || 'mp4');
       await ff.writeFile(inName, await fetchFile(file));
 
@@ -536,7 +536,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         // pass 1: palette
         await ff.exec(['-ss', String(start), '-t', String(dur), '-i', inName, '-i', 'overlay.png',
           '-filter_complex', `${proc};[proc]palettegen=max_colors=${colors}[p]`, '-map', '[p]', 'palette.png']);
-        statusEl.textContent = 'Encoding GIFâ€¦';
+        statusEl.textContent = 'Encoding GIF…';
         // pass 2: apply palette with the chosen dithering
         await ff.exec(['-ss', String(start), '-t', String(dur), '-i', inName, '-i', 'overlay.png', '-i', 'palette.png',
           '-filter_complex', `${proc};[proc][2:v]paletteuse=dither=${dither}[o]`, '-map', '[o]', '-loop', loop, 'out.gif']);
@@ -546,7 +546,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         if (boomerang) chain += `,split[a][b];[b]reverse[r];[a][r]concat`;
         else if (reverse) chain += `,reverse`;
         await ff.exec(['-ss', String(start), '-t', String(dur), '-i', inName, '-vf', `${chain},palettegen=max_colors=${colors}`, 'palette.png']);
-        statusEl.textContent = 'Encoding GIFâ€¦';
+        statusEl.textContent = 'Encoding GIF…';
         await ff.exec(['-ss', String(start), '-t', String(dur), '-i', inName, '-i', 'palette.png',
           '-lavfi', `${chain} [x]; [x][1:v] paletteuse=dither=${dither}`, '-loop', loop, 'out.gif']);
       }
@@ -557,7 +557,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       outUrl = URL.createObjectURL(blob);
       for (const f of cleanup) { try { await ff.deleteFile(f); } catch {} }
       preview.src = outUrl;
-      info.textContent = `Done â€” ${fmtSize(blob.size)} GIF`;
+      info.textContent = `Done — ${fmtSize(blob.size)} GIF`;
       progWrap.classList.add('hidden');
       result.classList.remove('hidden'); result.classList.add('flex');
     } catch (e) { progWrap.classList.add('hidden'); setErr('Could not make the GIF: ' + (e as Error).message); }

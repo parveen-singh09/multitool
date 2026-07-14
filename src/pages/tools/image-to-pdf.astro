@@ -59,9 +59,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
       <div>
         <div class="flex flex-wrap items-center gap-3">
-          <span class="text-[13px] text-ink-subtle"><span id="ip-count">0</span> image(s) â€” drag to reorder</span>
+          <span class="text-[13px] text-ink-subtle"><span id="ip-count">0</span> image(s) — drag to reorder</span>
           <span class="flex-1"></span>
-          <button id="ip-sort" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Sort Aâ€“Z</button>
+          <button id="ip-sort" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Sort A–Z</button>
           <button id="ip-reverse" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Reverse</button>
           <button id="ip-clear" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Clear all</button>
         </div>
@@ -76,7 +76,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p>
       This free image to PDF converter combines your JPG, PNG, WebP, GIF, and BMP
       images into a single PDF document. Add several images, reorder them by
-      dragging (or sort Aâ€“Z / reverse), choose a page size (A4, Letter, or
+      dragging (or sort A–Z / reverse), choose a page size (A4, Letter, or
       fit-to-image), an image fit mode, and a margin, then download the PDF.
     </p>
     <p>
@@ -138,11 +138,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       li.className = 'panel flex items-center gap-3 p-2';
       li.draggable = true;
       li.innerHTML = `
-        <span class="cursor-grab text-ink-tertiary">â‹®â‹®</span>
+        <span class="cursor-grab text-ink-tertiary">⋮⋮</span>
         <img src="${it.url}" class="h-12 w-12 rounded-sm object-cover" alt="" />
         <span class="flex-1 truncate text-[13px] text-ink-subtle">${it.file.name}</span>
         <span class="text-[12px] text-ink-tertiary tabular-nums">${(it.file.size / 1024).toFixed(0)} KB</span>
-        <button type="button" class="btn btn-tertiary px-2 py-1 text-[13px]" aria-label="Remove">âœ•</button>`;
+        <button type="button" class="btn btn-tertiary px-2 py-1 text-[13px]" aria-label="Remove">✕</button>`;
       li.querySelector('button')!.addEventListener('click', () => { URL.revokeObjectURL(it.url); items.splice(i, 1); if (!items.length) { panel.classList.add('hidden'); panel.classList.remove('flex'); } render(); });
       li.addEventListener('dragstart', () => { dragIdx = i; });
       li.addEventListener('dragover', (e) => e.preventDefault());
@@ -185,7 +185,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   async function build() {
     if (!items.length) { setErr('Add at least one image.'); return; }
     setErr('');
-    status.classList.remove('hidden'); status.textContent = 'Building PDFâ€¦';
+    status.classList.remove('hidden'); status.textContent = 'Building PDF…';
     try {
       const pdf = await PDFDocument.create();
       const sizeMode = (document.getElementById('ip-size') as HTMLSelectElement).value;
@@ -197,7 +197,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const rotate = rotateEl.checked;
 
       for (let i = 0; i < items.length; i++) {
-        status.textContent = `Building PDFâ€¦ (${i + 1}/${items.length})`;
+        status.textContent = `Building PDF… (${i + 1}/${items.length})`;
         const { bytes, type } = await rasterize(items[i].file, compress, quality, rotate);
         const img = type === 'png' ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes);
         let pw: number, ph: number;
@@ -220,7 +220,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       let name = ((document.getElementById('ip-name') as HTMLInputElement).value || 'images').trim().replace(/[\\/:*?"<>|]+/g, '_');
       if (!/\.pdf$/i.test(name)) name += '.pdf';
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
-      status.textContent = `Done â€” ${items.length} page(s), ${(blob.size / 1024).toFixed(0)} KB.`;
+      status.textContent = `Done — ${items.length} page(s), ${(blob.size / 1024).toFixed(0)} KB.`;
     } catch (e) {
       status.classList.add('hidden');
       setErr('Could not build the PDF: ' + (e as Error).message);

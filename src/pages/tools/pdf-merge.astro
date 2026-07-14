@@ -1,4 +1,4 @@
-﻿---
+?---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
@@ -12,7 +12,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
     <div id="pm-panel" class="hidden flex-col gap-4">
       <div>
-        <span class="text-[13px] text-ink-subtle"><span id="pm-count">0</span> PDF(s) â€” drag to reorder</span>
+        <span class="text-[13px] text-ink-subtle"><span id="pm-count">0</span> PDF(s) — drag to reorder</span>
         <ul id="pm-list" class="mt-2 flex flex-col gap-2"></ul>
       </div>
       <button id="pm-make" class="btn btn-primary w-fit">Merge PDFs</button>
@@ -62,11 +62,11 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     files.forEach((f, i) => {
       const li = document.createElement('li');
       li.className = 'panel flex items-center gap-3 p-2'; li.draggable = true;
-      li.innerHTML = `<span class="cursor-grab text-ink-tertiary">â‹®â‹®</span>
+      li.innerHTML = `<span class="cursor-grab text-ink-tertiary">⋮⋮</span>
         <svg width="20" height="20" viewBox="0 0 512 512" fill="#e5252a" aria-hidden="true"><path d="M0 64C0 28.7 28.7 0 64 0L224 0l0 128c0 17.7 14.3 32 32 32l128 0 0 144-208 0c-35.3 0-64 28.7-64 64l0 144-48 0c-35.3 0-64-28.7-64-64L0 64zm384 64l-128 0L256 0 384 128zM176 352l32 0c30.9 0 56 25.1 56 56s-25.1 56-56 56l-16 0 0 32c0 8.8-7.2 16-16 16s-16-7.2-16-16l0-48 0-80c0-8.8 7.2-16 16-16zm32 80c13.3 0 24-10.7 24-24s-10.7-24-24-24l-16 0 0 48 16 0zm96-80l32 0c26.5 0 48 21.5 48 48l0 64c0 26.5-21.5 48-48 48l-32 0c-8.8 0-16-7.2-16-16l0-128c0-8.8 7.2-16 16-16zm32 128c8.8 0 16-7.2 16-16l0-64c0-8.8-7.2-16-16-16l-16 0 0 96 16 0zm80-112c0-8.8 7.2-16 16-16l48 0c8.8 0 16 7.2 16 16s-7.2 16-16 16l-32 0 0 32 32 0c8.8 0 16 7.2 16 16s-7.2 16-16 16l-32 0 0 48c0 8.8-7.2 16-16 16s-16-7.2-16-16l0-64 0-64z"/></svg>
         <span class="flex-1 truncate text-[13px] text-ink-subtle">${f.name}</span>
         <span class="text-xs text-ink-tertiary">${(f.size / 1024).toFixed(0)} KB</span>
-        <button type="button" class="btn btn-tertiary px-2 py-1 text-[13px]" aria-label="Remove">âœ•</button>`;
+        <button type="button" class="btn btn-tertiary px-2 py-1 text-[13px]" aria-label="Remove">✕</button>`;
       li.querySelector('button')!.addEventListener('click', () => { files.splice(i, 1); render(); });
       li.addEventListener('dragstart', () => { dragIdx = i; });
       li.addEventListener('dragover', (e) => e.preventDefault());
@@ -77,7 +77,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   async function merge() {
     if (files.length < 2) { setErr('Add at least two PDFs to merge.'); return; }
-    setErr(''); status.classList.remove('hidden'); status.textContent = 'Mergingâ€¦';
+    setErr(''); status.classList.remove('hidden'); status.textContent = 'Merging…';
     try {
       const out = await PDFDocument.create();
       for (const f of files) {
@@ -88,7 +88,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const bytes = await out.save();
       const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'merged.pdf'; a.click();
-      status.textContent = `Done â€” ${out.getPageCount()} pages, ${(blob.size / 1024).toFixed(0)} KB.`;
+      status.textContent = `Done — ${out.getPageCount()} pages, ${(blob.size / 1024).toFixed(0)} KB.`;
     } catch (e) {
       status.classList.add('hidden');
       setErr('Could not merge: ' + (e as Error).message + '. Encrypted PDFs are not supported.');

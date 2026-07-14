@@ -1,4 +1,4 @@
-﻿---
+?---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
@@ -33,7 +33,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
           <div id="wm-text-controls" class="flex flex-col gap-3">
             <label class="flex flex-col gap-1 text-sm text-ink-subtle">Watermark text
-              <input id="wm-text" class="field" value="Â© ToolSilk" />
+              <input id="wm-text" class="field" value="© ToolSilk" />
             </label>
             <div class="grid grid-cols-2 gap-3">
               <label class="flex flex-col gap-1 text-sm text-ink-subtle">Font
@@ -70,7 +70,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <label class="flex flex-col gap-1 text-sm text-ink-subtle">Size: <span id="wm-sv" class="text-ink">6%</span>
             <input id="wm-size" type="range" min="1" max="40" value="6" class="w-full accent-primary" />
           </label>
-          <label class="flex flex-col gap-1 text-sm text-ink-subtle">Rotation: <span id="wm-av" class="text-ink">-30Â°</span>
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle">Rotation: <span id="wm-av" class="text-ink">-30°</span>
             <input id="wm-angle" type="range" min="-90" max="90" value="-30" class="w-full accent-primary" />
           </label>
 
@@ -147,8 +147,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
       This free watermark generator adds a <strong class="text-ink">text or logo watermark</strong> to
-      your photos â€” a single positioned mark or a repeating tile across the whole
-      image â€” with adjustable opacity, size, rotation and color. Drop in one image
+      your photos — a single positioned mark or a repeating tile across the whole
+      image — with adjustable opacity, size, rotation and color. Drop in one image
       or a whole batch: your settings apply to every photo at once, and you can
       download them individually or as a single ZIP.
     </p>
@@ -221,7 +221,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   let logoImg: HTMLImageElement | null = null;
 
   const s: Settings = {
-    type: 'text', text: 'Â© ToolSilk', font: 'Inter', weight: '600',
+    type: 'text', text: '© ToolSilk', font: 'Inter', weight: '600',
     color: '#ffffff', shadow: true, opacity: 0.35, size: 6, angle: -30,
     layout: 'single', posX: 0.5, posY: 0.5, tileMode: 'diagonal', span: 100,
     format: 'image/png', quality: 0.92,
@@ -256,7 +256,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         ctx.shadowOffsetX = fontPx * 0.03;
         ctx.shadowOffsetY = fontPx * 0.03;
       }
-      const text = s.text || 'Â©';
+      const text = s.text || '©';
       const tw = ctx.measureText(text).width;
       if (s.layout === 'tile') {
         drawTile(ctx, W, H, angle, tw + unit, unit * 2, (x, y) => ctx.fillText(text, x, y));
@@ -333,7 +333,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const b = document.createElement('button');
       b.className = 'wm-thumb';
       b.setAttribute('aria-pressed', String(i === active));
-      b.innerHTML = `<img src="${it.img.src}" alt="${it.name}" /><span class="wm-thumb-x" title="Remove">Ã—</span>`;
+      b.innerHTML = `<img src="${it.img.src}" alt="${it.name}" /><span class="wm-thumb-x" title="Remove">×</span>`;
       b.addEventListener('click', (e) => {
         if ((e.target as HTMLElement).classList.contains('wm-thumb-x')) { removeItem(i); return; }
         active = i; buildStrip(); render();
@@ -353,8 +353,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   function updateInfo() {
     const it = items[active];
     if (!it) { $('wm-info').textContent = ''; return; }
-    const count = items.length > 1 ? ` Â· ${items.length} images` : '';
-    $('wm-info').textContent = `${it.img.naturalWidth}Ã—${it.img.naturalHeight}${count}`;
+    const count = items.length > 1 ? ` · ${items.length} images` : '';
+    $('wm-info').textContent = `${it.img.naturalWidth}×${it.img.naturalHeight}${count}`;
   }
 
   // ---- Load files ----
@@ -401,7 +401,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   function syncLabels() {
     $('wm-ov').textContent = Math.round(s.opacity * 100) + '%';
     $('wm-sv').textContent = s.size + '%';
-    $('wm-av').textContent = s.angle + 'Â°';
+    $('wm-av').textContent = s.angle + '°';
     $('wm-spv').textContent = s.span + '%';
     $('wm-qv').textContent = Math.round(s.quality * 100) + '%';
   }
@@ -499,7 +499,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   $('wm-dl-all').addEventListener('click', async () => {
     if (items.length < 2) return;
     const btn = $('wm-dl-all') as HTMLButtonElement;
-    btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Processingâ€¦';
+    btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Processing…';
     try {
       const files: { name: string; data: Uint8Array }[] = [];
       const seen: Record<string, number> = {};
@@ -533,7 +533,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     tpls.forEach((t, i) => {
       const chip = document.createElement('button');
       chip.className = 'flex items-center gap-1.5 rounded-md border border-hairline bg-surface-2 px-2.5 py-1 text-[13px] text-ink hover:border-hairline-strong';
-      chip.innerHTML = `<span>${t.label}</span><span class="text-ink-tertiary" title="Delete">Ã—</span>`;
+      chip.innerHTML = `<span>${t.label}</span><span class="text-ink-tertiary" title="Delete">×</span>`;
       chip.addEventListener('click', (e) => {
         if ((e.target as HTMLElement).title === 'Delete') {
           const all = loadTpls(); all.splice(i, 1); saveTpls(all); renderTpls(); return;

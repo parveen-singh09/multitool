@@ -1,4 +1,4 @@
-﻿---
+?---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
@@ -21,14 +21,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </label>
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">Resolution
           <select id="pj-scale" class="field w-36">
-            <option value="1">1Ã— (72 dpi)</option>
-            <option value="2" selected>2Ã— (144 dpi)</option>
-            <option value="3">3Ã— (216 dpi)</option>
-            <option value="4">4Ã— (288 dpi)</option>
+            <option value="1">1× (72 dpi)</option>
+            <option value="2" selected>2× (144 dpi)</option>
+            <option value="3">3× (216 dpi)</option>
+            <option value="4">4× (288 dpi)</option>
           </select>
         </label>
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">Pages
-          <input id="pj-range" type="text" class="field w-44" placeholder="all â€” e.g. 1-3, 5, 8-" />
+          <input id="pj-range" type="text" class="field w-44" placeholder="all — e.g. 1-3, 5, 8-" />
         </label>
         <label id="pj-qwrap" class="flex flex-col gap-1 text-sm text-ink-subtle">Quality <span id="pj-qval" class="text-ink-tertiary">92%</span>
           <input id="pj-quality" type="range" min="30" max="100" value="92" class="w-40" />
@@ -49,7 +49,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p>
       This free PDF to JPG converter renders each page of a PDF into a JPG, PNG,
       or WebP image, right in your browser. Choose the output format, resolution
-      (up to 288 dpi for crisp print or zoom), and â€” for JPG and WebP â€” a precise
+      (up to 288 dpi for crisp print or zoom), and — for JPG and WebP — a precise
       quality level. Convert every page or a specific range like
       <code>1-3, 5, 8-</code>, preview each result, then download a single page,
       save every page at once, or grab them all as a single ZIP.
@@ -106,7 +106,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       bytes = b;
       panel.classList.remove('hidden');
       panel.classList.add('flex');
-      status.textContent = `${file.name} ready â€” set your options and render.`;
+      status.textContent = `${file.name} ready — set your options and render.`;
     }).catch((e) => setErr('Could not read that file: ' + (e as Error).message));
   }
 
@@ -152,7 +152,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       let totalBytes = 0;
       for (let idx = 0; idx < pages.length; idx++) {
         const n = pages[idx];
-        status.textContent = `Rendering page ${n} (${idx + 1} / ${pages.length})â€¦`;
+        status.textContent = `Rendering page ${n} (${idx + 1} / ${pages.length})…`;
         const page = await pdf.getPage(n);
         const viewport = page.getViewport({ scale });
         const canvas = document.createElement('canvas');
@@ -167,7 +167,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         rendered.push({ blob, url, page: n, ext });
         addCard(url, n, ext);
       }
-      status.textContent = `Done â€” ${pages.length} page(s), ${fmtSize(totalBytes)} total.`;
+      status.textContent = `Done — ${pages.length} page(s), ${fmtSize(totalBytes)} total.`;
       allBtn.classList.remove('hidden');
       if (rendered.length > 1) zipBtn.classList.remove('hidden');
     } catch (e) { setErr('Could not render that PDF: ' + (e as Error).message); }
@@ -179,7 +179,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const div = document.createElement('div');
     div.className = 'panel panel-lift flex flex-col gap-2 p-2';
     div.innerHTML = `<img src="${url}" class="w-full rounded-sm" alt="Page ${n}" loading="lazy" />
-      <a href="${url}" download="${baseName}-${n}.${ext}" class="btn btn-secondary py-1 text-[13px]">Page ${n} Â· ${ext.toUpperCase()}</a>`;
+      <a href="${url}" download="${baseName}-${n}.${ext}" class="btn btn-secondary py-1 text-[13px]">Page ${n} · ${ext.toUpperCase()}</a>`;
     grid.appendChild(div);
   }
 
@@ -236,7 +236,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (!rendered.length) return;
     zipBtn.disabled = true;
     const prev = zipBtn.textContent;
-    zipBtn.textContent = 'Zippingâ€¦';
+    zipBtn.textContent = 'Zipping…';
     try {
       const files = await Promise.all(rendered.map(async (r) => ({
         name: `${baseName}-${r.page}.${r.ext}`,

@@ -1,4 +1,4 @@
-﻿---
+?---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
@@ -65,8 +65,8 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
       <div id="ac-result" class="hidden flex-col gap-3">
         <div class="grid grid-cols-2 gap-3 text-center">
-          <div class="panel p-4"><div id="ac-before" class="font-mono text-lg text-ink">â€”</div><div class="mt-1 text-[13px] text-ink-subtle">Original</div></div>
-          <div class="panel p-4"><div id="ac-after" class="font-mono text-lg" style="color:var(--color-success)">â€”</div><div class="mt-1 text-[13px] text-ink-subtle">Compressed (<span id="ac-saved">0%</span> smaller)</div></div>
+          <div class="panel p-4"><div id="ac-before" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Original</div></div>
+          <div class="panel p-4"><div id="ac-after" class="font-mono text-lg" style="color:var(--color-success)">—</div><div class="mt-1 text-[13px] text-ink-subtle">Compressed (<span id="ac-saved">0%</span> smaller)</div></div>
         </div>
         <button id="ac-download" class="btn btn-primary w-fit">Download MP3</button>
         <audio id="ac-preview" controls class="w-full"></audio>
@@ -79,7 +79,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p>
       This free audio compressor reduces the file size of MP3, WAV, M4A and other
       audio by re-encoding to MP3. Pick a bitrate, or switch to target-size mode
-      and hit a specific size like 5 MB â€” the bitrate is worked out from the
+      and hit a specific size like 5 MB — the bitrate is worked out from the
       track length automatically. Downsample, mix down to mono for voice, and
       normalize loudness so quiet files come up to a consistent level. See the
       before-and-after sizes and preview the result. There is no size limit.
@@ -140,10 +140,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   function updateEstimate() {
     if (!file) { estimate.textContent = ''; return; }
     if (mode === 'size') {
-      estimate.textContent = duration ? `â‰ˆ ${targetBitrate()} kbps` : `Target ${numVal('ac-target')} MB`;
+      estimate.textContent = duration ? `≈ ${targetBitrate()} kbps` : `Target ${numVal('ac-target')} MB`;
     } else if (duration) {
       const kbps = numVal('ac-bitrate');
-      estimate.textContent = `Estimated â‰ˆ ${fmtSize(kbps * 1000 / 8 * duration)}`;
+      estimate.textContent = `Estimated ≈ ${fmtSize(kbps * 1000 / 8 * duration)}`;
     } else estimate.textContent = '';
   }
   ['ac-bitrate', 'ac-target'].forEach((id) => $(id).addEventListener('input', updateEstimate));
@@ -175,7 +175,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         onProgress: (r) => { bar.style.width = Math.min(100, Math.round(r * 100)) + '%'; },
         onDownload: (n) => { if (n) statusEl.textContent = n; },
       });
-      statusEl.textContent = 'Compressingâ€¦';
+      statusEl.textContent = 'Compressing…';
       const inName = 'in.' + (file.name.split('.').pop() || 'mp3');
       await ff.writeFile(inName, await fetchFile(file));
       const args = ['-i', inName, '-vn', '-c:a', 'libmp3lame', '-b:a', `${br}k`];

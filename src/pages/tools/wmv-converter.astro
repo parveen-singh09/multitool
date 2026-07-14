@@ -1,4 +1,4 @@
-﻿---
+?---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
@@ -12,7 +12,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     </label>
 
     <p class="text-[13px] text-ink-tertiary">
-      Video re-encoding is CPU-intensive â€” expect roughly real-time speed, so a few minutes for a few minutes of footage.
+      Video re-encoding is CPU-intensive — expect roughly real-time speed, so a few minutes for a few minutes of footage.
     </p>
 
     <div id="wc-panel" class="hidden flex-col gap-4">
@@ -24,10 +24,10 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <label class="flex flex-col gap-1 text-sm text-ink-subtle">Convert to
             <select id="wc-format" class="field">
-              <option value="mp4" selected>MP4 Â· H.264</option>
-              <option value="webm">WebM Â· VP9</option>
-              <option value="mkv">MKV Â· H.264</option>
-              <option value="mov">MOV Â· H.264</option>
+              <option value="mp4" selected>MP4 · H.264</option>
+              <option value="webm">WebM · VP9</option>
+              <option value="mkv">MKV · H.264</option>
+              <option value="mov">MOV · H.264</option>
               <option value="gif">GIF (animated)</option>
               <option value="mp3">MP3 (audio only)</option>
             </select>
@@ -67,9 +67,9 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           <label class="flex flex-col gap-1 text-sm text-ink-subtle" data-group="rotate">Rotate
             <select id="wc-rotate" class="field">
               <option value="0" selected>None</option>
-              <option value="90">90Â° clockwise</option>
-              <option value="180">180Â°</option>
-              <option value="270">90Â° counter-clockwise</option>
+              <option value="90">90° clockwise</option>
+              <option value="180">180°</option>
+              <option value="270">90° counter-clockwise</option>
             </select>
           </label>
           <label class="flex flex-col gap-1 text-sm text-ink-subtle" data-group="flip">Flip
@@ -233,7 +233,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       top.className = 'flex flex-wrap items-center gap-2';
       const name = document.createElement('span');
       name.className = 'text-[13px] text-ink truncate';
-      name.textContent = `${file.name} Â· ${fmtSize(file.size)}`;
+      name.textContent = `${file.name} · ${fmtSize(file.size)}`;
       const statusEl = document.createElement('span');
       statusEl.className = 'text-xs text-ink-tertiary ml-auto';
       const actionsEl = document.createElement('span');
@@ -257,7 +257,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
 
   function refreshSummary() {
     const doneCount = jobs.filter((j) => j.done).length;
-    summary.textContent = jobs.length ? `${jobs.length} file${jobs.length === 1 ? '' : 's'}${doneCount ? ` Â· ${doneCount} done` : ''}` : '';
+    summary.textContent = jobs.length ? `${jobs.length} file${jobs.length === 1 ? '' : 's'}${doneCount ? ` · ${doneCount} done` : ''}` : '';
     batchDl.classList.toggle('hidden', !(doneCount > 1));
   }
 
@@ -297,7 +297,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     if (fadeIn > 0) af.push(`afade=t=in:st=0:d=${fadeIn}`);
     if (fadeOut > 0 && outDur > 0) af.push(`afade=t=out:st=${Math.max(0, outDur - fadeOut).toFixed(3)}:d=${fadeOut}`);
 
-    // GIF: single-pass split â†’ palettegen â†’ paletteuse for clean colors.
+    // GIF: single-pass split → palettegen → paletteuse for clean colors.
     if (fmt === 'gif') {
       const chain = videoFilters(scale > 0 ? scale : 480, rotate, flip);
       chain.unshift(`fps=${fps > 0 ? fps : 15}`);
@@ -354,14 +354,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         current = job;
         job.bar.style.width = '0%';
         job.statusEl.style.color = '';
-        job.statusEl.textContent = 'Convertingâ€¦';
+        job.statusEl.textContent = 'Converting…';
         const inName = 'in_' + Math.random().toString(36).slice(2) + '.' + (job.file.name.split('.').pop() || 'wmv');
         const outName = 'out.' + meta.ext;
         try {
           await ff.writeFile(inName, await fetchFile(job.file));
           await ff.exec(buildArgs(inName, outName, job.duration));
           const data = (await ff.readFile(outName)) as Uint8Array;
-          if (!data || data.length === 0) throw new Error('empty output â€” the codec may not support these options');
+          if (!data || data.length === 0) throw new Error('empty output — the codec may not support these options');
           try { await ff.deleteFile(inName); await ff.deleteFile(outName); } catch {}
           job.outData = data;
           job.outName = outNameFor(job.file);
@@ -381,7 +381,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       }
     } catch (e) {
       const msg = (e as Error).message || String(e);
-      setErr(`Conversion failed: ${msg}. Try a different output format or simpler options â€” some source files use codecs the in-browser engine can't decode.`);
+      setErr(`Conversion failed: ${msg}. Try a different output format or simpler options — some source files use codecs the in-browser engine can't decode.`);
     } finally {
       goBtn.disabled = false; clearBtn.disabled = false;
     }

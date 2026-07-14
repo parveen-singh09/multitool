@@ -1,4 +1,4 @@
-﻿---
+?---
 import ToolLayout from '../../layouts/ToolLayout.astro';
 ---
 
@@ -24,7 +24,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         </label>
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">
           Pages
-          <input id="pt-range" type="text" inputmode="numeric" placeholder="all â€” e.g. 1-3, 5, 8-" class="field w-44 py-1" />
+          <input id="pt-range" type="text" inputmode="numeric" placeholder="all — e.g. 1-3, 5, 8-" class="field w-44 py-1" />
         </label>
       </div>
 
@@ -51,7 +51,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <div id="pt-bar" class="h-full w-0 rounded-full transition-all" style="background:var(--color-primary)"></div>
       </div>
       <div class="copy-wrap">
-        <textarea id="pt-out" class="field font-mono text-[13px]" rows="16" spellcheck="false" placeholder="Extracted text will appear hereâ€¦"></textarea>
+        <textarea id="pt-out" class="field font-mono text-[13px]" rows="16" spellcheck="false" placeholder="Extracted text will appear here…"></textarea>
         <button type="button" class="copy-icon" data-copy-target="#pt-out" aria-label="Copy"></button>
       </div>
       <p id="pt-stats" class="hidden text-[13px] text-ink-tertiary"></p>
@@ -63,7 +63,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     <p>
       This free PDF to text tool extracts written text from one or many PDFs at
       once. For digital PDFs it reads the embedded text layer instantly; for
-      scanned documents or images, tick â€œForce OCRâ€ to recognise the text with
+      scanned documents or images, tick “Force OCR” to recognise the text with
       optical character recognition. Choose how the text is laid out, limit the
       extraction to specific pages, and copy or download the result as a .txt
       file.
@@ -73,7 +73,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       order</strong> reflows the text into natural paragraphs, joining lines that
       were only broken to fit the page and (optionally) repairing words split by
       a hyphen at a line end. <strong>Preserve layout</strong> keeps the original
-      column and spacing arrangement â€” useful for tables, forms and multi-column
+      column and spacing arrangement — useful for tables, forms and multi-column
       pages. <strong>Raw</strong> returns the text exactly in the order it is
       stored. Use the <strong>Pages</strong> box to extract a subset such as
       <code>1-3, 5, 8-</code>, drop in several PDFs to batch-extract them into a
@@ -121,7 +121,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         files = loaded;
         panel.classList.remove('hidden'); panel.classList.add('flex');
         fileList.classList.remove('hidden'); fileList.classList.add('flex');
-        fileList.innerHTML = files.map((f) => `<li>â€¢ ${escapeHtml(f.name)}</li>`).join('');
+        fileList.innerHTML = files.map((f) => `<li>• ${escapeHtml(f.name)}</li>`).join('');
         status.textContent = files.length === 1 ? `${files[0].name} ready.` : `${files.length} PDFs ready.`;
       })
       .catch(() => setErr('Could not read the selected file(s).'));
@@ -129,7 +129,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   const escapeHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 
   // Parse a page-range string like "1-3, 5, 8-" against a total page count.
-  // Empty / "all" â†’ every page. Returns a sorted, de-duplicated 1-based list.
+  // Empty / "all" → every page. Returns a sorted, de-duplicated 1-based list.
   function parseRange(spec: string, total: number): number[] {
     const s = spec.trim().toLowerCase();
     if (!s || s === 'all') return Array.from({ length: total }, (_, i) => i + 1);
@@ -154,7 +154,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     return pages;
   }
 
-  // Group PDF text items into visual lines (by baseline y), each sorted leftâ†’right.
+  // Group PDF text items into visual lines (by baseline y), each sorted left→right.
   function toLines(items: any[]): { y: number; text: string }[] {
     const rows: { y: number; parts: { x: number; s: string }[] }[] = [];
     for (const it of items) {
@@ -197,7 +197,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     const mode = modeSel.value;
     let text = '';
     for (const n of list) {
-      status.textContent = `Reading text layer, page ${n} / ${pdf.numPages}â€¦`;
+      status.textContent = `Reading text layer, page ${n} / ${pdf.numPages}…`;
       const page = await pdf.getPage(n);
       const content = await page.getTextContent();
       let pageText: string;
@@ -223,14 +223,14 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       langPath: '/tessdata/',
       logger: (m: any) => {
         if (m.status === 'recognizing text') { bar.style.width = Math.round(m.progress * 100) + '%'; }
-        status.textContent = `${m.status}${m.progress ? ' ' + Math.round(m.progress * 100) + '%' : ''}â€¦`;
+        status.textContent = `${m.status}${m.progress ? ' ' + Math.round(m.progress * 100) + '%' : ''}…`;
       },
     });
     const pdf = await pdfjsLib.getDocument({ data: buffer.slice(0) }).promise;
     const list = pages ?? Array.from({ length: pdf.numPages }, (_, i) => i + 1);
     let text = '';
     for (const n of list) {
-      status.textContent = `OCR page ${n} / ${pdf.numPages}â€¦`;
+      status.textContent = `OCR page ${n} / ${pdf.numPages}…`;
       bar.style.width = '0%';
       const page = await pdf.getPage(n);
       const viewport = page.getViewport({ scale: 2 });
@@ -250,7 +250,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   function showStats(text: string, pages: number) {
     const words = text.trim() ? text.trim().split(/\s+/).length : 0;
     const lines = text ? text.split('\n').length : 0;
-    stats.textContent = `${words.toLocaleString()} words Â· ${text.length.toLocaleString()} characters Â· ${lines.toLocaleString()} lines Â· ${pages} ${pages === 1 ? 'page' : 'pages'} processed`;
+    stats.textContent = `${words.toLocaleString()} words · ${text.length.toLocaleString()} characters · ${lines.toLocaleString()} lines · ${pages} ${pages === 1 ? 'page' : 'pages'} processed`;
     stats.classList.toggle('hidden', !text);
   }
 
@@ -270,7 +270,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const chunks: string[] = [];
       let pagesProcessed = 0;
       for (const f of files) {
-        if (files.length > 1) status.textContent = `Processing ${f.name}â€¦`;
+        if (files.length > 1) status.textContent = `Processing ${f.name}…`;
         let pages: number[] | null;
         try {
           pages = await resolvePages(f.buffer);
@@ -284,7 +284,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
           const res = await extractTextLayer(f.buffer, pages);
           text = res.text;
           if (text.replace(/\s/g, '').replace(/-+Page\d+-+/g, '').length < 10) {
-            status.textContent = `${f.name}: little or no embedded text â€” running OCRâ€¦`;
+            status.textContent = `${f.name}: little or no embedded text — running OCR…`;
             text = await runOcr(f.buffer, pages);
           }
         }
@@ -293,7 +293,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       }
       out.value = chunks.join('\n\n\n') || '(No text could be extracted.)';
       showStats(out.value, pagesProcessed);
-      status.textContent = `Done â€” ${files.length} ${files.length === 1 ? 'file' : 'files'}, ${out.value.length.toLocaleString()} characters.`;
+      status.textContent = `Done — ${files.length} ${files.length === 1 ? 'file' : 'files'}, ${out.value.length.toLocaleString()} characters.`;
     } catch (e) {
       barWrap.classList.add('hidden');
       const msg = (e as Error).message || String(e);
@@ -328,7 +328,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
 
-  // ponytail: page-range parser self-check â€” run with ?selftest in the URL.
+  // ponytail: page-range parser self-check — run with ?selftest in the URL.
   if (new URLSearchParams(location.search).has('selftest')) {
     const eq = (a: unknown, b: unknown, m: string) => console.assert(JSON.stringify(a) === JSON.stringify(b), m, a);
     eq(parseRange('', 5), [1, 2, 3, 4, 5], 'empty=all');
