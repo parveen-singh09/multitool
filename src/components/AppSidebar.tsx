@@ -14,7 +14,6 @@ import {
   Home,
   BookOpen,
   Search,
-  Menu,
   Mail,
   MessageSquare,
   Coffee
@@ -103,7 +102,11 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
           title="Toggle sidebar"
           className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink cursor-pointer"
         >
-          <Menu className="h-5 w-5" />
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6" />
+            <line x1="4" y1="12" x2="20" y2="12" />
+            <line x1="4" y1="18" x2="20" y2="18" />
+          </svg>
         </button>
         <a href="/" className="inline-flex items-center gap-2 no-underline" aria-label="ToolSilk home">
           <span className="font-display font-semibold text-[15px] tracking-[-0.01em] text-ink">
