@@ -17,7 +17,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
         <span id="pe-status" class="text-[13px] text-ink-subtle" aria-live="polite"></span>
       </div>
       <p class="text-[13px] text-ink-tertiary">
-        Rows are detected from the PDFâ€™s text positions and split into columns
+        Rows are detected from the PDF’s text positions and split into columns
         where gaps appear. It works best on clean, grid-like tables; merged cells,
         wrapped text and complex layouts may need cleanup in your spreadsheet app.
         Scanned PDFs have no text to read.
@@ -94,7 +94,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   // columns where the horizontal gap between items exceeds a threshold.
   function itemsToRows(items: Cell[]): string[][] {
     if (!items.length) return [];
-    // Bucket by y (rounded) â€” items within ~4px vertically share a row.
+    // Bucket by y (rounded) — items within ~4px vertically share a row.
     const sorted = [...items].sort((a, b) => b.y - a.y || a.x - b.x);
     const lines: Cell[][] = [];
     let cur: Cell[] = [];
@@ -105,7 +105,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
     }
     if (cur.length) lines.push(cur);
 
-    // Median character width â†’ column-gap threshold (a gap wider than ~1.5
+    // Median character width → column-gap threshold (a gap wider than ~1.5
     // average characters starts a new column).
     const widths = items.map((i) => i.w / Math.max(1, i.str.length)).filter((w) => w > 0).sort((a, b) => a - b);
     const charW = widths[Math.floor(widths.length / 2)] || 4;
@@ -128,7 +128,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
   // Convert a cell string to a number when it looks purely numeric (allowing
   // thousands separators, currency symbols and parenthesised negatives).
   function coerce(s: string): string | number {
-    const cleaned = s.replace(/[$Â£â‚¬,\s]/g, '');
+    const cleaned = s.replace(/[$£€,\s]/g, '');
     const neg = /^\(.*\)$/.test(cleaned);
     const core = neg ? cleaned.slice(1, -1) : cleaned;
     if (core !== '' && /^-?\d*\.?\d+%?$/.test(core)) {
@@ -147,7 +147,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       const pdf = await pdfjsLib.getDocument({ data: bytes!.slice(0) }).promise;
       const all: string[][] = [];
       for (let n = 1; n <= pdf.numPages; n++) {
-        status.textContent = `Reading page ${n} / ${pdf.numPages}â€¦`;
+        status.textContent = `Reading page ${n} / ${pdf.numPages}…`;
         const page = await pdf.getPage(n);
         const content = await page.getTextContent();
         const cells: Cell[] = (content.items as any[])
@@ -163,7 +163,7 @@ import ToolLayout from '../../layouts/ToolLayout.astro';
       rows = all.map((r) => r.map(coerce));
       renderPreview(all);
       const cols = Math.max(...all.map((r) => r.length));
-      status.textContent = `Done â€” ${all.length} rows Ã— up to ${cols} columns.`;
+      status.textContent = `Done — ${all.length} rows × up to ${cols} columns.`;
       dlBtn.disabled = false; copyBtn.disabled = false;
     } catch (e) {
       setErr('Could not read this PDF: ' + (e as Error).message);
