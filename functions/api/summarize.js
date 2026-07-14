@@ -1,18 +1,19 @@
 // Cloudflare Pages Function: POST /api/summarize
-// Proxies Anthropic's Messages API so the API key stays server-side. The
-// browser extracts the PDF's text locally and sends ONLY that text here —
-// the file itself is never uploaded. This is the one tool that leaves the
-// no-upload model (documented in privacy.astro's live-data carve-out).
+// Proxies Google's Gemini API. The browser extracts the PDF's text locally and
+// sends ONLY that text here — the file itself is never uploaded. This is the
+// one tool that leaves the no-upload model (documented in privacy.astro's
+// live-data carve-out).
 //
-// Setup: set ANTHROPIC_API_KEY in the Cloudflare Pages project env vars.
+// Uses PUBLIC_AI_API_KEY (same Gemini key as the client-side AI tools). Note
+// this key is NOT secret — it also ships in the client bundle — so the proxy
+// bounds cost (MAX_CHARS below) but does not hide the key.
 //
 // ponytail: no per-IP rate limiting — Workers can't do it without KV/Durable
-// Objects. Input is hard-capped below to bound per-request cost, but this
-// endpoint is unauthenticated and abusable at volume. Add a Cloudflare rate-
+// Objects. Input is hard-capped below, but this endpoint is unauthenticated
+// and, with a public key upstream, abusable at volume. Add a Cloudflare rate-
 // limiting rule (dashboard → Security → Rate limiting) on /api/summarize
 // before this sees real traffic — that's the right layer, not app code.
 
-const MODEL = 'claude-opus-4-8';
 // ~100k chars ≈ 25k tokens — a long report, but bounded so one request can't
 // run up an unbounded bill. The client truncates to match and warns the user.
 const MAX_CHARS = 100_000;
@@ -24,8 +25,9 @@ const json = (body, status = 200) =>
   });
 
 export async function onRequestPost({ request, env }) {
-  const key = env.ANTHROPIC_API_KEY;
+  const key = env.PUBLIC_AI_API_KEY;
   if (!key) return json({ error: 'summarizer not configured' }, 503);
+  const model = env.PUBLIC_AI_MODEL || 'gemini-flash-latest';
 
   let body;
   try {
@@ -54,28 +56,24 @@ export async function onRequestPost({ request, env }) {
     `Reply with only the summary, no preamble.\n\n<document>\n${text}\n</document>`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 2000 },
+        }),
       },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 2000,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
+    );
 
     if (!res.ok) return json({ error: 'summarizer upstream error' }, 502);
     const data = await res.json();
-    // Return only the text — don't leak the full upstream payload/usage.
-    const summary = (data.content || [])
-      .filter((b) => b.type === 'text')
-      .map((b) => b.text)
-      .join('\n')
-      .trim();
+    const parts = data?.candidates?.[0]?.content?.parts;
+    const summary = Array.isArray(parts)
+      ? parts.map((p) => p.text ?? '').join('').trim()
+      : '';
     if (!summary) return json({ error: 'no summary produced' }, 502);
     return json({ summary });
   } catch {
