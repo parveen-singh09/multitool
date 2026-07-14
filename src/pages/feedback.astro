@@ -123,6 +123,24 @@ const toolIndex = tools.map((t) => ({ n: t.name, h: toolHaystack(t) }));
   .tool-results :global(li:hover) {
     background-color: var(--color-surface-2);
   }
+  .spinner {
+    display: inline-block;
+    width: 0.9em;
+    height: 0.9em;
+    margin-right: 0.5em;
+    vertical-align: -0.1em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  /* Success state — overrides btn-primary's lavender. */
+  #feedback-form button.is-sent {
+    background-color: #16a34a;
+    border-color: #16a34a;
+    color: #fff;
+  }
 </style>
 
 <script>
@@ -215,6 +233,7 @@ const toolIndex = tools.map((t) => ({ n: t.name, h: toolHaystack(t) }));
   const form = document.getElementById('feedback-form');
   const status = document.getElementById('feedback-status');
   const btn = form?.querySelector('button[type="submit"]');
+  const label = btn?.textContent || 'Send feedback';
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const data = new FormData(form);
@@ -225,8 +244,12 @@ const toolIndex = tools.map((t) => ({ n: t.name, h: toolHaystack(t) }));
       from: (data.get('from') || '').toString().trim(),
     };
 
-    if (status) { status.textContent = 'Sending…'; status.style.color = ''; }
-    if (btn) btn.disabled = true;
+    if (status) { status.textContent = ''; status.style.color = ''; }
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.remove('is-sent');
+      btn.innerHTML = '<span class="spinner"></span>Sending…';
+    }
 
     try {
       const res = await fetch('/api/feedback', {
@@ -236,11 +259,9 @@ const toolIndex = tools.map((t) => ({ n: t.name, h: toolHaystack(t) }));
       });
       if (!res.ok) throw new Error();
       form.reset();
-      if (status) {
-        status.textContent = 'Thanks — your feedback was sent.';
-        status.style.color = 'var(--color-primary-hover)';
-      }
+      if (btn) { btn.classList.add('is-sent'); btn.textContent = 'Sent ✓'; }
     } catch (_) {
+      if (btn) btn.textContent = label;
       if (status) {
         status.textContent = 'Could not send. Please email us instead.';
         status.style.color = '#f87171';
