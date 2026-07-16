@@ -290,6 +290,41 @@ const index = tools.map((t) => ({
       `<span class="text-[12px] text-ink-tertiary">${esc(t.category)}</span></span></a>`;
   }
 
+  // "Download all (ZIP)" button — only when 2+ files were produced. Uses the
+  // site's own zip builder (src/lib/zip), imported lazily so the chat stays lean.
+  function appendDownloadAll(container: HTMLElement, produced: { name: string; blob: Blob }[], zipName: string) {
+    if (produced.length < 2) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-primary self-start';
+    btn.textContent = `Download all (${produced.length}) · ZIP`;
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try {
+        const { makeZip } = await import('../lib/zip');
+        const entries = await Promise.all(
+          produced.map(async (f) => ({ name: f.name, data: new Uint8Array(await f.blob.arrayBuffer()) })),
+        );
+        const url = URL.createObjectURL(makeZip(entries));
+        const a = document.createElement('a');
+        a.href = url; a.download = zipName; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+    container.appendChild(btn);
+  }
+
+  // "Used this tool" footer — the tool that produced the result, as a card the
+  // user can open for more options. Shared by every inline/runner result path.
+  function appendToolFooter(container: HTMLElement, slug: string) {
+    const foot = document.createElement('div');
+    foot.className = 'flex flex-col gap-1.5';
+    foot.innerHTML = `<span class="text-[13px] text-ink-subtle">Used this tool — open it for more options:</span>${toolCardLink(slug)}`;
+    container.appendChild(foot);
+  }
+
   // Any tool that can't run in-chat: surface the related tool as a card the user
   // opens in a new tab, instead of embedding its full page. Keeps the chat as the
   // hub and the conversation compact.
@@ -388,6 +423,7 @@ const index = tools.map((t) => ({
       const dl = document.createElement('a');
       dl.className = 'btn btn-primary self-start'; dl.href = url; dl.download = 'merged.pdf'; dl.textContent = 'Download merged.pdf';
       container.appendChild(dl);
+      appendToolFooter(container, 'pdf-merge');
       setWorking([new File([blob], 'merged.pdf', { type: 'application/pdf' })], true);
     } catch (e) {
       container.innerHTML = `<p class="text-[13px]" style="color:#e5484d">Couldn’t merge: ${esc((e as Error).message || 'error')}. Encrypted PDFs aren’t supported.</p>`;
@@ -403,6 +439,7 @@ const index = tools.map((t) => ({
     const sources = pdfFiles();
     if (!sources.length) { bubble('assistant', 'Attach a PDF first (paperclip on the left), then send again — I’ll render its pages here.'); return; }
     container.innerHTML = '';
+    const produced: { name: string; blob: Blob }[] = [];
     for (const pdf of sources) {
       const block = document.createElement('div');
       block.className = 'flex flex-col gap-2';
@@ -415,11 +452,13 @@ const index = tools.map((t) => ({
         const grid = document.createElement('div');
         grid.className = 'grid grid-cols-2 gap-2 sm:grid-cols-3';
         for (const im of images) {
+          const name = `${base}-${im.page}.${cfg.ext}`;
+          produced.push({ name, blob: im.blob });
           const cell = document.createElement('div');
           cell.className = 'panel panel-lift flex flex-col gap-1 p-2';
           cell.innerHTML =
             `<img src="${im.url}" class="w-full rounded-sm" alt="Page ${im.page}" loading="lazy" />` +
-            `<a href="${im.url}" download="${esc(base)}-${im.page}.${cfg.ext}" class="btn btn-secondary py-1 text-[13px]">Page ${im.page} · ${cfg.ext.toUpperCase()}</a>`;
+            `<a href="${im.url}" download="${esc(name)}" class="btn btn-secondary py-1 text-[13px]">Page ${im.page} · ${cfg.ext.toUpperCase()}</a>`;
           grid.appendChild(cell);
         }
         block.appendChild(grid);
@@ -436,6 +475,8 @@ const index = tools.map((t) => ({
           `<p class="text-[13px] text-ink-subtle mt-1">Try the full tool: ${openLink(slug, getTool(slug)!.name)}</p>`;
       }
     }
+    appendDownloadAll(container, produced, `${cfg.ext}-pages.zip`);
+    appendToolFooter(container, slug);
   }
 
   async function runInline(slug: string, container: HTMLElement, opts: JobOpts = {}) {
@@ -501,7 +542,11 @@ const index = tools.map((t) => ({
     container.innerHTML = '';
     container.appendChild(grid);
     // Chain: the produced results become the working files for the next step.
-    if (anyOk) setWorking(produced, true);
+    if (anyOk) {
+      appendDownloadAll(container, produced.map((f) => ({ name: f.name, blob: f })), `converted-${cfg.ext}.zip`);
+      appendToolFooter(container, slug);
+      setWorking(produced, true);
+    }
   }
 
   // Render a tool's AI-computed result as a card: the answer text (copyable),
@@ -592,11 +637,9 @@ const index = tools.map((t) => ({
       }
       container.appendChild(grid);
     }
+    appendDownloadAll(container, produced.map((f) => ({ name: f.name, blob: f })), `${pick.slug}-files.zip`);
     // Footer: the tool that produced this, as a card button (open for options).
-    const foot = document.createElement('div');
-    foot.className = 'flex flex-col gap-1.5';
-    foot.innerHTML = `<span class="text-[13px] text-ink-subtle">Used this tool — open it for more options:</span>${toolCardLink(pick.slug)}`;
-    container.appendChild(foot);
+    appendToolFooter(container, pick.slug);
     // Chain produced files into the working set for a follow-up step.
     if (produced.length) setWorking(produced, true);
   }
@@ -861,7 +904,7 @@ const index = tools.map((t) => ({
   // word must match), this surfaces the closest tools for loose phrasing like
   // "shrink my photo size". Skips 1-2 letter noise words.
   function looseMatches(query: string): Pick[] {
-    const words = query.toLowerCase().match(/[a-z0-9]{3,}/g) ?? [];
+    const words: string[] = query.toLowerCase().match(/[a-z0-9]{3,}/g) ?? [];
     if (!words.length) return [];
     return index
       .map((t) => {
