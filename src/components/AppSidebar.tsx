@@ -139,6 +139,14 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={normalizedPath === "/ai"}>
+                <a href="/ai">
+                  <Sparkles className="h-4 w-4" />
+                  <span>Ask AI</span>
+                </a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={normalizedPath === "/feedback"}>
                 <a href="/feedback">
                   <MessageSquare className="h-4 w-4" />
