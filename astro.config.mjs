@@ -27,6 +27,13 @@ export default defineConfig({
     // imported module" in dev. Serve it unbundled too.
     optimizeDeps: {
       exclude: ['figlet', 'onnxruntime-web'],
+      // The AI chat's runners reach these bare deps ONLY via await import().
+      // Astro compiles pages on demand, so if the chat is hit before any tool
+      // page that imports them statically, Vite discovers them mid-request,
+      // re-optimizes, and force-reloads — rejecting the in-flight dynamic
+      // import ("Failed to fetch dynamically imported module"). Pre-bundle at
+      // startup so the order of navigation can't trip that.
+      include: ['qrcode', 'wordcloud'],
     },
   },
 });

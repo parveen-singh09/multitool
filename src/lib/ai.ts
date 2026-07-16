@@ -40,6 +40,53 @@ export async function aiChat(messages: ChatMsg[], opts: { temperature?: number }
   return text;
 }
 
+// Streaming variant: same request via :streamGenerateContent (SSE), fires
+// onChunk as each token batch lands so the UI can render progressively.
+// Returns the full text. Use for text answers shown directly in a bubble;
+// routing still uses aiChat since its JSON reply must be parsed whole.
+export async function aiChatStream(
+  messages: ChatMsg[],
+  onChunk: (text: string) => void,
+  opts: { temperature?: number } = {},
+): Promise<string> {
+  if (!hasAI) throw new Error('no api key');
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:streamGenerateContent?alt=sse&key=${encodeURIComponent(KEY)}`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(toRequestBody(messages, opts.temperature)),
+    },
+  );
+  if (!res.ok || !res.body) throw new Error(`ai ${res.status}`);
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  let full = '';
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    // SSE: one "data: {json}" per line; JSON never spans lines with alt=sse.
+    let nl: number;
+    while ((nl = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (!line.startsWith('data:')) continue;
+      const json = line.slice(5).trim();
+      if (!json || json === '[DONE]') continue;
+      try {
+        const data = JSON.parse(json);
+        const parts = data?.candidates?.[0]?.content?.parts;
+        const text = Array.isArray(parts) ? parts.map((p: { text?: string }) => p.text ?? '').join('') : '';
+        if (text) { full += text; onChunk(text); }
+      } catch { /* partial/non-JSON frame — skip */ }
+    }
+  }
+  if (!full) throw new Error('empty reply');
+  return full;
+}
+
 // ponytail self-check: dev-only, covers the one non-trivial bit (role mapping
 // + system folding). Runs once when the first tool imports this in dev.
 if (import.meta.env.DEV) {

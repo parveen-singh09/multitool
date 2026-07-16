@@ -24,7 +24,7 @@ const index = tools.map((t) => ({
   <div class:list={["panel flex flex-col overflow-hidden", fullPage && "min-h-0 flex-1"]}>
     {!launcher && (
       <div class="flex items-center justify-between border-b border-hairline px-3 py-1.5">
-        <span class="bg-linear-to-r from-ink to-primary bg-clip-text text-[15px] font-semibold text-transparent">AI assistant</span>
+        <span class="ai-shine bg-clip-text text-[15px] font-semibold text-transparent">AI assistant</span>
         <button type="button" id="ai-clear" class="text-[13px] text-ink-tertiary transition-colors hover:text-ink">Clear chat</button>
       </div>
     )}
@@ -71,13 +71,32 @@ const index = tools.map((t) => ({
 
 <style>
   .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+  /* "AI assistant": a FIXED ink→primary linear gradient (never moves), with a
+     separate white shine band swept over it. The band is transparent at both
+     ends, so the loop reset is off-screen — no color swing, no jitter. */
+  .ai-shine {
+    background-image:
+      linear-gradient(90deg, transparent 30%, rgba(255,255,255,0.9) 50%, transparent 70%),
+      linear-gradient(100deg, var(--color-ink, #f7f8f8) 0%, var(--color-primary, #5e6ad2) 100%);
+    background-size: 200% 100%, 100% 100%;
+    background-repeat: no-repeat;
+    background-position: -100% 0, 0 0;
+    animation: ai-shine 4s linear infinite;
+  }
+  @keyframes ai-shine {
+    from { background-position: -100% 0, 0 0; }
+    to   { background-position:  200% 0, 0 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ai-shine { animation: none; }
+  }
   /* Auto/Edit toggle: active tab lifts onto surface-2 with ink text (mirrors DESIGN pricing-tab). */
   .ai-mode { color: var(--color-ink-subtle, #8a8f98); }
   .ai-mode[aria-pressed="true"] { background: var(--color-surface-2, #141516); color: var(--color-ink, #f7f8f8); }
 </style>
 
 <script>
-  import { aiChat, hasAI } from '../lib/ai';
+  import { aiChat, aiChatStream, hasAI } from '../lib/ai';
   import { convertImage } from '../lib/imageConvert';
   import { pdfToImages } from '../lib/pdfToImages';
   import { getTool } from '../data/tools';
@@ -390,17 +409,19 @@ const index = tools.map((t) => ({
     return !!io && (io.output === 'text' || io.output === 'data' || io.output === 'number');
   }
 
-  // Run the chosen tool's job on the user's input and return only the result.
-  async function computeAnswer(query: string, pick: Pick): Promise<string> {
+  // Run the chosen tool's job on the user's input, streaming the result. onChunk
+  // fires per token batch (progressive render); the resolved value is the full,
+  // code-fence-stripped result.
+  async function computeAnswer(query: string, pick: Pick, onChunk: (t: string) => void): Promise<string> {
     const io = getToolIO(pick.slug);
-    const raw = await aiChat([
+    const raw = await aiChatStream([
       { role: 'system', content:
         `You are the "${pick.label}" tool. ${io?.does ?? ''} ` +
         `The user's message is the input. Perform the tool's job and return ONLY the result — ` +
         `no preamble, no explanation, no code fences. ` +
         `If the required input is missing, reply with one short line asking for exactly what you need.` },
       { role: 'user', content: query },
-    ], { temperature: 0 });
+    ], onChunk, { temperature: 0 });
     return raw.replace(/^```[a-z]*\s*|\s*```$/g, '').trim();
   }
 
@@ -564,20 +585,31 @@ const index = tools.map((t) => ({
   // Render a tool's AI-computed result as a card: the answer text (copyable),
   // a caveat + link to the exact tool. Falls back to embed on AI failure.
   async function renderAnswer(query: string, pick: Pick, container: HTMLElement) {
-    container.innerHTML = '<p class="text-[13px] text-ink-subtle">Working…</p>';
+    // Live answer box: stream tokens straight into it as they arrive.
+    container.innerHTML = '';
+    const box = document.createElement('div');
+    box.className = 'rounded-md bg-canvas p-3 text-[14px] text-ink whitespace-pre-wrap break-words';
+    box.textContent = '';
+    container.appendChild(box);
     let answer: string;
     try {
-      answer = await computeAnswer(query, pick);
+      answer = await computeAnswer(query, pick, (chunk) => {
+        box.textContent += chunk;
+        log.scrollTop = log.scrollHeight;
+      });
     } catch {
       container.innerHTML = '';
       embedTool(pick.slug, pick.label); // AI down — hand off to the live tool
       return;
     }
     if (!answer) { container.innerHTML = ''; embedTool(pick.slug, pick.label); return; }
-    container.innerHTML =
-      `<div class="rounded-md bg-canvas p-3 text-[14px] text-ink whitespace-pre-wrap break-words">${esc(answer)}</div>` +
-      `<span class="text-[13px] text-ink-subtle">AI result — for exact output, open this tool:</span>` +
-      toolCardLink(pick.slug);
+    // Replace the streamed raw text with the fence-stripped final, then footer.
+    box.textContent = answer;
+    const foot = document.createElement('span');
+    foot.className = 'text-[13px] text-ink-subtle';
+    foot.textContent = 'AI result — for exact output, open this tool:';
+    container.appendChild(foot);
+    container.insertAdjacentHTML('beforeend', toolCardLink(pick.slug));
     const copy = document.createElement('button');
     copy.type = 'button'; copy.className = 'btn btn-secondary py-1 text-[13px] self-start';
     copy.textContent = 'Copy';
@@ -962,16 +994,19 @@ const index = tools.map((t) => ({
       .join('\n');
     try {
       const raw = await aiChat([
+        // Static prefix first (intro + full catalog) so Gemini implicit-caching
+        // reuses it across turns; the per-turn "attached files" note goes LAST so
+        // it never breaks the cached prefix.
         { role: 'system', content:
           'You are the assistant on ToolSilk, a site of free browser-based utilities. ' +
           'Chat naturally with the user. When they want to get something done, pick the best matching tool(s) from the catalog. ' +
-          (files.length ? `The user has attached ${files.length === 1 ? `a file named "${files[0].name}"` : `${files.length} files: ${files.map((f) => `"${f.name}"`).join(', ')}`}. ` : 'The user has NOT attached a file. ') +
           'Respond ONLY with JSON, no prose, no code fences, of this exact shape: ' +
           '{"reply":"...","tools":[{"slug":"...","label":"...","why":"..."}]}. ' +
           '"reply" is a short, friendly conversational message (1-2 sentences) — greet, answer questions, or say what you found. ' +
           'If the user is just chatting (no task), return an empty tools array and reply conversationally. ' +
           'When there is a task, include up to 3 tools, best first; "slug" MUST be copied verbatim from the catalog; ' +
-          '"label" is the tool name; "why" is a short reason (max ~10 words).\n\nCATALOG (slug | name | category):\n' + catalog },
+          '"label" is the tool name; "why" is a short reason (max ~10 words).\n\nCATALOG (slug | name | category):\n' + catalog +
+          '\n\n' + (files.length ? `The user has attached ${files.length === 1 ? `a file named "${files[0].name}"` : `${files.length} files: ${files.map((f) => `"${f.name}"`).join(', ')}`}.` : 'The user has NOT attached a file.') },
         ...history,
         { role: 'user', content: query },
       ], { temperature: 0.3 });
