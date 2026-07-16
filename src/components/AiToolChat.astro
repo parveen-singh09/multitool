@@ -23,7 +23,8 @@ const index = tools.map((t) => ({
 <div id="ai-chat" class:list={["w-full text-left", fullPage ? "flex min-h-0 flex-1 flex-col" : "mx-auto max-w-2xl"]} data-index={JSON.stringify(index)} data-launcher={String(launcher)}>
   <div class:list={["panel flex flex-col overflow-hidden", fullPage && "min-h-0 flex-1"]}>
     {!launcher && (
-      <div class="flex items-center justify-end border-b border-hairline px-3 py-1.5">
+      <div class="flex items-center justify-between border-b border-hairline px-3 py-1.5">
+        <span class="bg-linear-to-r from-ink to-primary bg-clip-text text-[15px] font-semibold text-transparent">AI assistant</span>
         <button type="button" id="ai-clear" class="text-[13px] text-ink-tertiary transition-colors hover:text-ink">Clear chat</button>
       </div>
     )}
@@ -49,12 +50,20 @@ const index = tools.map((t) => ({
         )}
         <input id="ai-input" class="field flex-1" placeholder="Describe what you want to do…" autocomplete="off" />
         {!launcher && (
-          <div class="flex shrink-0 overflow-hidden rounded-pill bg-canvas p-0.5" role="group" aria-label="Mode">
-            <button type="button" id="ai-mode-auto" data-mode="auto" class="ai-mode rounded-pill px-3 py-1 text-[13px] font-medium">Auto</button>
-            <button type="button" id="ai-mode-edit" data-mode="edit" class="ai-mode rounded-pill px-3 py-1 text-[13px] font-medium">Edit</button>
-          </div>
+          <>
+            <div class="hidden shrink-0 overflow-hidden rounded-pill bg-canvas p-0.5 sm:flex" role="group" aria-label="Mode">
+              <button type="button" id="ai-mode-auto" data-mode="auto" class="ai-mode rounded-pill px-3 py-1 text-[13px] font-medium">Auto</button>
+              <button type="button" id="ai-mode-edit" data-mode="edit" class="ai-mode rounded-pill px-3 py-1 text-[13px] font-medium">Edit</button>
+            </div>
+            <select id="ai-mode-select" class="field w-auto shrink-0 px-2 py-1.5 text-[13px] sm:hidden" aria-label="Mode">
+              <option value="auto">Auto</option>
+              <option value="edit">Edit</option>
+            </select>
+          </>
         )}
-        <button type="submit" class="btn btn-primary shrink-0">Send</button>
+        <button type="submit" class="btn btn-primary shrink-0 h-9 w-9 rounded-full p-0" aria-label="Send" title="Send">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+        </button>
       </div>
     </form>
   </div>
@@ -133,6 +142,8 @@ const index = tools.map((t) => ({
     mode = m;
     for (const b of document.querySelectorAll<HTMLButtonElement>('.ai-mode'))
       b.setAttribute('aria-pressed', String(b.dataset.mode === m));
+    const sel = document.getElementById('ai-mode-select') as HTMLSelectElement | null;
+    if (sel) sel.value = m;
   }
   // The working files: start as the uploads, but each inline conversion REPLACES
   // them with its own outputs so steps chain — "to png" then "now webp" reuses the
@@ -185,6 +196,7 @@ const index = tools.map((t) => ({
   if (!isLauncher) {
     document.getElementById('ai-mode-auto')!.addEventListener('click', () => setMode('auto'));
     document.getElementById('ai-mode-edit')!.addEventListener('click', () => setMode('edit'));
+    document.getElementById('ai-mode-select')!.addEventListener('change', (e) => setMode((e.target as HTMLSelectElement).value as 'auto' | 'edit'));
     setMode('auto');
 
     fileInput.addEventListener('change', () => setWorking(Array.from(fileInput.files ?? [])));

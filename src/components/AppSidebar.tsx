@@ -100,7 +100,7 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
           onClick={toggleSidebar}
           aria-label="Toggle sidebar"
           title="Toggle sidebar"
-          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink cursor-pointer"
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink cursor-pointer focus:outline-none focus-visible:outline-none focus-visible:ring-0"
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
             <line x1="4" y1="6" x2="20" y2="6" />
