@@ -1,0 +1,996 @@
+---
+// AI tool chat: describe a job in plain language, the AI picks the best tool.
+// Common image conversions run inline (right here, nothing uploaded); everything
+// else opens in a new tab. fullPage=true fills the viewport (its own /ai route).
+import { tools } from '../data/tools';
+
+// launcher = landing-page entry box; sending navigates to /ai with the query
+// (auto-runs there). fullPage = the /ai route that fills the viewport.
+export interface Props { fullPage?: boolean; launcher?: boolean }
+const { fullPage = false, launcher = false } = Astro.props;
+
+// Compact index the AI router and local fallback both read. Only the fields
+// search/routing need — keeps the embedded payload lean.
+const index = tools.map((t) => ({
+  slug: t.slug,
+  name: t.name,
+  tagline: t.tagline ?? '',
+  category: t.category,
+  keywords: t.keywords ?? [],
+}));
+---
+
+<div id="ai-chat" class:list={["w-full text-left", fullPage ? "flex min-h-0 flex-1 flex-col" : "mx-auto max-w-2xl"]} data-index={JSON.stringify(index)} data-launcher={String(launcher)}>
+  <div class:list={["panel flex flex-col overflow-hidden", fullPage && "min-h-0 flex-1"]}>
+    {!launcher && (
+      <div class="flex items-center justify-end border-b border-hairline px-3 py-1.5">
+        <button type="button" id="ai-clear" class="text-[13px] text-ink-tertiary transition-colors hover:text-ink">Clear chat</button>
+      </div>
+    )}
+    <div id="ai-log" class:list={["flex flex-col gap-3 overflow-y-auto p-4", fullPage ? "flex-1 min-h-0" : "max-h-[46vh] min-h-32"]}>
+      <div class="w-fit max-w-md rounded-lg bg-surface-2 px-3 py-2 text-[14px] text-ink-subtle">
+        Tell me what you need — e.g. “convert my JPG to PNG”, “compress a PDF”, or “make a QR code”. Attach a file and I’ll convert common image formats right here.
+      </div>
+    </div>
+
+    <form id="ai-form" class:list={["flex flex-col gap-2 border-t border-hairline bg-surface-1 p-3", fullPage && "sticky bottom-0 z-10"]}>
+      {!launcher && (
+        <div id="ai-file-tag" class="hidden flex-col gap-1.5">
+          <span id="ai-file-caption" class="hidden text-[13px] text-ink-subtle"></span>
+          <div id="ai-file-chips" class="flex flex-wrap gap-2"></div>
+        </div>
+      )}
+      <div class="flex items-center gap-2">
+        {!launcher && (
+          <label class="btn btn-tertiary shrink-0 cursor-pointer px-2.5" title="Attach a file" aria-label="Attach a file">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            <input id="ai-file" type="file" multiple class="sr-only" />
+          </label>
+        )}
+        <input id="ai-input" class="field flex-1" placeholder="Describe what you want to do…" autocomplete="off" />
+        {!launcher && (
+          <div class="flex shrink-0 overflow-hidden rounded-pill bg-canvas p-0.5" role="group" aria-label="Mode">
+            <button type="button" id="ai-mode-auto" data-mode="auto" class="ai-mode rounded-pill px-3 py-1 text-[13px] font-medium">Auto</button>
+            <button type="button" id="ai-mode-edit" data-mode="edit" class="ai-mode rounded-pill px-3 py-1 text-[13px] font-medium">Edit</button>
+          </div>
+        )}
+        <button type="submit" class="btn btn-primary shrink-0">Send</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+  /* Auto/Edit toggle: active tab lifts onto surface-2 with ink text (mirrors DESIGN pricing-tab). */
+  .ai-mode { color: var(--color-ink-subtle, #8a8f98); }
+  .ai-mode[aria-pressed="true"] { background: var(--color-surface-2, #141516); color: var(--color-ink, #f7f8f8); }
+</style>
+
+<script>
+  import { aiChat, hasAI } from '../lib/ai';
+  import { convertImage } from '../lib/imageConvert';
+  import { pdfToImages } from '../lib/pdfToImages';
+  import { getTool } from '../data/tools';
+  import { getToolIO } from '../data/tool-io';
+  import { getRunner } from '../lib/toolRunners';
+  import type { RunResult } from '../lib/toolRunners';
+  import { matchesQuery, compareByQuery, toolHaystack } from '../lib/toolSearch';
+
+  type IdxTool = { slug: string; name: string; tagline: string; category: string; keywords: string[] };
+
+  // Tools the chat can run without leaving the page. Keyed to convertImage opts.
+  // Only the 6 canvas format-conversions that exist as tools today.
+  const INLINE: Record<string, { to: string; ext: string; quality: boolean; flatten: boolean }> = {
+    'jpg-to-png':  { to: 'image/png',  ext: 'png',  quality: false, flatten: false },
+    'webp-to-png': { to: 'image/png',  ext: 'png',  quality: false, flatten: false },
+    'png-to-jpg':  { to: 'image/jpeg', ext: 'jpg',  quality: true,  flatten: true },
+    'webp-to-jpg': { to: 'image/jpeg', ext: 'jpg',  quality: true,  flatten: true },
+    'png-to-webp': { to: 'image/webp', ext: 'webp', quality: true,  flatten: false },
+    'jpg-to-webp': { to: 'image/webp', ext: 'webp', quality: true,  flatten: false },
+  };
+
+  const root = document.getElementById('ai-chat')!;
+  const isLauncher = root.dataset.launcher === 'true';
+  const index: IdxTool[] = JSON.parse(root.dataset.index || '[]');
+  const log = document.getElementById('ai-log')!;
+  const form = document.getElementById('ai-form') as HTMLFormElement;
+  const input = document.getElementById('ai-input') as HTMLInputElement;
+  const fileInput = document.getElementById('ai-file') as HTMLInputElement;
+  const fileTag = document.getElementById('ai-file-tag')!;
+  const fileChips = document.getElementById('ai-file-chips')!;
+  const fileCaption = document.getElementById('ai-file-caption')!;
+  const seedLog = log.innerHTML; // greeting bubble, restored on Clear chat
+
+  let mode: 'auto' | 'edit' = 'auto';
+  let files: File[] = []; // attached uploads; inline jobs batch over the fitting ones
+  let lastQuery = ''; // the request text driving the current turn (for setting extraction)
+
+  // Deterministic setting extraction: pull the desired output image format from
+  // the request words. The LLM picks the tool; code applies the parameters.
+  function parseFmt(q: string): { to: string; ext: string } | null {
+    const s = q.toLowerCase();
+    if (/\bpng\b/.test(s)) return { to: 'image/png', ext: 'png' };
+    if (/\bwebp\b/.test(s)) return { to: 'image/webp', ext: 'webp' };
+    if (/\bjpe?g\b/.test(s)) return { to: 'image/jpeg', ext: 'jpg' };
+    return null;
+  }
+
+  // Deterministic quality extraction: map request words to an encode quality.
+  // Only meaningful for lossy outputs (jpg/webp/pdf-render). null = tool default.
+  function parseQuality(q: string): number | null {
+    const s = q.toLowerCase();
+    if (/\b(smaller|compress|reduce|shrink|tiny|low quality)\b/.test(s)) return 0.6;
+    if (/\b(high quality|best|max quality|lossless|sharp|crisp)\b/.test(s)) return 0.95;
+    return null;
+  }
+
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+  const fmtSize = (n: number) => (n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`);
+
+  // --- mode toggle ---
+  function setMode(m: 'auto' | 'edit') {
+    mode = m;
+    for (const b of document.querySelectorAll<HTMLButtonElement>('.ai-mode'))
+      b.setAttribute('aria-pressed', String(b.dataset.mode === m));
+  }
+  // The working files: start as the uploads, but each inline conversion REPLACES
+  // them with its own outputs so steps chain — "to png" then "now webp" reuses the
+  // results. `fromStep` marks them as produced results (shown in the tag).
+  let fromStep = false;
+  let chipUrls: string[] = []; // object URLs for image thumbnails, revoked on re-render
+  function setWorking(next: File[], produced = false) {
+    files = next;
+    fromStep = produced;
+    if (!fileTag) return; // launcher has no tag
+    // Rebuild the chip strip: one thumbnail per file, each with its own remove ✕.
+    chipUrls.forEach(URL.revokeObjectURL);
+    chipUrls = [];
+    fileChips.innerHTML = '';
+    for (const [i, f] of next.entries()) {
+      const chip = document.createElement('div');
+      chip.className = 'group relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-hairline bg-surface-2';
+      chip.title = f.name;
+      if (/^image\//.test(f.type)) {
+        const url = URL.createObjectURL(f);
+        chipUrls.push(url);
+        chip.innerHTML = `<img src="${url}" alt="${esc(f.name)}" class="h-full w-full object-cover" />`;
+      } else {
+        chip.innerHTML =
+          `<div class="flex h-full w-full flex-col items-center justify-center gap-0.5 px-1 text-ink-subtle">` +
+          `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>` +
+          `<span class="w-full truncate text-center text-[9px] leading-tight">${esc((f.name.split('.').pop() || 'file').toUpperCase())}</span></div>`;
+      }
+      const x = document.createElement('button');
+      x.type = 'button';
+      x.setAttribute('aria-label', `Remove ${f.name}`);
+      x.className = 'absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-canvas/80 text-[11px] leading-none text-ink-subtle backdrop-blur-sm transition-colors hover:text-ink';
+      x.textContent = '✕';
+      x.addEventListener('click', () => {
+        const rest = files.slice(0, i).concat(files.slice(i + 1));
+        fileInput.value = ''; // detach the <input> selection; working set is the source of truth now
+        setWorking(rest, fromStep);
+      });
+      chip.appendChild(x);
+      fileChips.appendChild(chip);
+    }
+    fileCaption.textContent = produced && next.length ? '↳ from last step' : '';
+    fileCaption.classList.toggle('hidden', !(produced && next.length));
+    fileTag.classList.toggle('hidden', !next.length);
+    fileTag.classList.toggle('flex', !!next.length);
+  }
+
+  // Mode toggle + file attach only exist off the launcher (they can't survive
+  // navigation), so wire them only when present.
+  if (!isLauncher) {
+    document.getElementById('ai-mode-auto')!.addEventListener('click', () => setMode('auto'));
+    document.getElementById('ai-mode-edit')!.addEventListener('click', () => setMode('edit'));
+    setMode('auto');
+
+    fileInput.addEventListener('change', () => setWorking(Array.from(fileInput.files ?? [])));
+
+    document.getElementById('ai-clear')!.addEventListener('click', () => {
+      log.innerHTML = seedLog;
+      history.length = 0;
+      lastQuery = '';
+      fileInput.value = '';
+      setWorking([]);
+    });
+  }
+
+  // --- chat rendering ---
+  function bubble(role: 'user' | 'assistant', html: string): HTMLElement {
+    const mine = role === 'user';
+    const el = document.createElement('div');
+    el.style.overflowWrap = 'anywhere'; // base64 etc. breaks mid-token, no overflow
+    el.innerHTML = html;
+
+    if (!mine) {
+      el.className = 'w-fit max-w-md whitespace-pre-line rounded-lg bg-surface-2 px-3 py-2 text-[14px] text-ink-subtle';
+      log.appendChild(el);
+      log.scrollTop = log.scrollHeight;
+      return el;
+    }
+
+    // User input reads as a code block (monospace on a dark code surface). Height
+    // is capped so a huge paste (base64) is hidden beneath a few lines; a Show
+    // more/less toggle appears only when the content actually overflows the cap.
+    // ponytail: monospace, no syntax highlighting — it'd misfire on plain text.
+    const COLLAPSED = '5.5rem';
+    // break-all + w-full inside a fixed-width column so a long unbreakable string
+    // wraps to fill the width (instead of collapsing to a thin one-line strip).
+    // relative so the Show more toggle can sit inside, bottom-right.
+    el.className = 'group relative w-full overflow-hidden whitespace-pre-line break-all rounded-lg border border-hairline bg-canvas px-3 py-2 font-mono text-[13px] text-ink';
+    el.style.maxHeight = COLLAPSED;
+    const wrap = document.createElement('div');
+    wrap.className = 'ml-auto flex max-w-md flex-col items-end';
+    wrap.appendChild(el);
+    log.appendChild(wrap);
+    // Measure after insertion: scrollHeight > clientHeight means it's clipped.
+    if (el.scrollHeight > el.clientHeight + 1) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      // Inside the bubble, bottom-right, on a blurred chip so it reads over text.
+      btn.className = 'absolute bottom-2 right-2 rounded-md border border-hairline px-2 py-1 text-[12px] text-ink-subtle opacity-0 backdrop-blur-sm transition-opacity hover:text-ink focus-visible:opacity-100 group-hover:opacity-100';
+      btn.style.backgroundColor = 'color-mix(in srgb, var(--color-canvas) 82%, transparent)';
+      btn.textContent = 'Show more';
+      let open = false;
+      btn.addEventListener('click', () => {
+        open = !open;
+        el.style.maxHeight = open ? 'none' : COLLAPSED;
+        btn.textContent = open ? 'Show less' : 'Show more';
+      });
+      el.appendChild(btn);
+    }
+    log.scrollTop = log.scrollHeight;
+    return el;
+  }
+  // Wider assistant card (tool chips, converted preview) — not a chat bubble.
+  function card(): HTMLElement {
+    const el = document.createElement('div');
+    el.className = 'flex w-full max-w-md flex-col gap-3 rounded-lg bg-surface-2 p-3';
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
+    return el;
+  }
+
+  // --- routing / inline conversion ---
+  // Tools that can't run in-chat (full-page apps) open in a NEW tab so the
+  // conversation stays put. The chat is the hub; we never navigate away from it.
+  const history: { role: 'user' | 'assistant'; content: string }[] = [];
+  function openLink(slug: string, label: string): string {
+    return `<a class="text-primary-hover underline underline-offset-2 hover:text-ink" href="/tools/${slug}" target="_blank" rel="noopener">${esc(label)} ↗</a>`;
+  }
+
+  // Category tints, mirrored from ToolCard.astro so the chat's tool button reads
+  // like the site's cards.
+  const CAT_TINT: Record<string, string> = {
+    Text: 'bg-sky-500/12 ring-sky-500/20 text-sky-400',
+    Developer: 'bg-violet-500/12 ring-violet-500/20 text-violet-400',
+    Image: 'bg-emerald-500/12 ring-emerald-500/20 text-emerald-400',
+    Converters: 'bg-amber-500/12 ring-amber-500/20 text-amber-400',
+    Calculators: 'bg-rose-500/12 ring-rose-500/20 text-rose-400',
+    Generators: 'bg-fuchsia-500/12 ring-fuchsia-500/20 text-fuchsia-400',
+    Security: 'bg-teal-500/12 ring-teal-500/20 text-teal-400',
+    PDF: 'bg-red-500/12 ring-red-500/20 text-red-400',
+    'Audio & Video': 'bg-indigo-500/12 ring-indigo-500/20 text-indigo-400',
+    'Device & Sensors': 'bg-cyan-500/12 ring-cyan-500/20 text-cyan-400',
+  };
+
+  // A compact tool-card button (icon + name + category) — the site's card look,
+  // used as the "tool that ran" footer instead of a plain text link.
+  function toolCardLink(slug: string): string {
+    const t = getTool(slug);
+    if (!t) return '';
+    const tint = CAT_TINT[t.category] ?? 'bg-surface-2 ring-hairline text-ink-muted';
+    return `<a href="/tools/${slug}" target="_blank" rel="noopener" class="panel panel-lift group flex items-center gap-3 p-2.5 transition-colors hover:bg-surface-3">` +
+      `<span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1 ${tint}">` +
+      `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${t.icon}" /></svg></span>` +
+      `<span class="flex min-w-0 flex-col"><span class="truncate text-[14px] font-medium text-ink">${esc(t.name)}</span>` +
+      `<span class="text-[12px] text-ink-tertiary">${esc(t.category)}</span></span></a>`;
+  }
+
+  // Any tool that can't run in-chat: surface the related tool as a card the user
+  // opens in a new tab, instead of embedding its full page. Keeps the chat as the
+  // hub and the conversation compact.
+  function embedTool(slug: string, _label: string) {
+    const wrap = document.createElement('div');
+    wrap.className = 'flex w-full max-w-md flex-col gap-2 rounded-lg bg-surface-2 p-3';
+    wrap.innerHTML =
+      `<span class="text-[13px] text-ink-subtle">Best tool for this — open it to continue:</span>` +
+      toolCardLink(slug);
+    log.appendChild(wrap);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  // PDF tools the chat renders inline (page images). Keyed to output format.
+  const PDF_INLINE: Record<string, { to: string; ext: string }> = {
+    'pdf-to-jpg': { to: 'image/jpeg', ext: 'jpg' },
+  };
+
+  const isInline = (slug: string) => !!INLINE[slug] || !!PDF_INLINE[slug] || slug === 'pdf-merge';
+  const isPdf = (f: File) => f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
+  const pdfFiles = () => files.filter(isPdf);
+  const imageFiles = () => files.filter((f) => !isPdf(f));
+
+  // Interactive tools that are really just whimsy/random TEXT the AI can write —
+  // classified 'interactive' only because they animate on their page. Let these
+  // answer in chat. (Device/network/live tools stay embed: speed test, GPS,
+  // camera, live prices, real disposable inbox.)
+  const CHATTY_INTERACTIVE = new Set([
+    'zodiac-generator', 'random-animal-generator', 'emoji-generator',
+    'gender-predictor', 'love-predictor', 'life-expectancy-predictor', 'child-height-predictor',
+    'dice-roller', 'coin-flip', 'random-picker', 'team-generator',
+  ]);
+
+  // Tools classified as file/image output whose result is REALLY just text the
+  // AI can write (fake sample data, generated word lists). No precision concern
+  // — it's synthetic. A real runner (if one lands) still wins via getRunner.
+  const TEXT_ANSWERABLE = new Set([
+    'fake-id-generator',
+  ]);
+
+  // Tools whose result the AI can just write back into the chat: anything that
+  // outputs text/data/number (transforms, validators, calculators, generators,
+  // AI writers), plus the whimsy/text allowlists above. Image conversions run
+  // deterministically inline; files, images, and real interactive tools embed.
+  // ponytail: LLM answers can be off on exact math/encoding/hashing — the result
+  // card labels that and links the real tool. Wire per-tool code if precision matters.
+  function aiAnswerable(slug: string): boolean {
+    if (isInline(slug)) return false;
+    if (CHATTY_INTERACTIVE.has(slug) || TEXT_ANSWERABLE.has(slug)) return true;
+    const io = getToolIO(slug);
+    return !!io && (io.output === 'text' || io.output === 'data' || io.output === 'number');
+  }
+
+  // Run the chosen tool's job on the user's input and return only the result.
+  async function computeAnswer(query: string, pick: Pick): Promise<string> {
+    const io = getToolIO(pick.slug);
+    const raw = await aiChat([
+      { role: 'system', content:
+        `You are the "${pick.label}" tool. ${io?.does ?? ''} ` +
+        `The user's message is the input. Perform the tool's job and return ONLY the result — ` +
+        `no preamble, no explanation, no code fences. ` +
+        `If the required input is missing, reply with one short line asking for exactly what you need.` },
+      { role: 'user', content: query },
+    ], { temperature: 0 });
+    return raw.replace(/^```[a-z]*\s*|\s*```$/g, '').trim();
+  }
+
+  // Params a confirmed inline job runs with. All optional — omit for tool defaults.
+  // fmt overrides output format (PDF only); quality sets initial encode; showSlider
+  // adds the post-conversion tweak slider (skipped when the confirm card already had one).
+  type JobOpts = { showSlider?: boolean; quality?: number; fmt?: { to: string; ext: string } };
+
+  // Dispatch an inline job to the right renderer.
+  function runInlineJob(slug: string, container: HTMLElement, opts: JobOpts = {}) {
+    if (slug === 'pdf-merge') return void runInlineMerge(container);
+    if (PDF_INLINE[slug]) return void runInlinePdf(slug, container, opts);
+    return void runInline(slug, container, opts);
+  }
+
+  // Merge every attached PDF (in upload order) into one, right in the chat.
+  // ponytail: order = upload order; drag-to-reorder lives on the full tool.
+  async function runInlineMerge(container: HTMLElement) {
+    const sources = pdfFiles();
+    if (sources.length < 2) { bubble('assistant', 'Attach two or more PDFs (paperclip on the left), then send again — I’ll merge them here.'); return; }
+    container.innerHTML = '<p class="text-[13px] text-ink-subtle">Merging…</p>';
+    try {
+      const { PDFDocument } = await import('pdf-lib');
+      const out = await PDFDocument.create();
+      for (const f of sources) {
+        const src = await PDFDocument.load(await f.arrayBuffer());
+        (await out.copyPages(src, src.getPageIndices())).forEach((p) => out.addPage(p));
+      }
+      const blob = new Blob([(await out.save()) as BlobPart], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      container.innerHTML = `<p class="text-[13px] text-ink-subtle">${sources.length} PDFs → ${out.getPageCount()} pages · ${fmtSize(blob.size)}</p>`;
+      const dl = document.createElement('a');
+      dl.className = 'btn btn-primary self-start'; dl.href = url; dl.download = 'merged.pdf'; dl.textContent = 'Download merged.pdf';
+      container.appendChild(dl);
+      setWorking([new File([blob], 'merged.pdf', { type: 'application/pdf' })], true);
+    } catch (e) {
+      container.innerHTML = `<p class="text-[13px]" style="color:#e5484d">Couldn’t merge: ${esc((e as Error).message || 'error')}. Encrypted PDFs aren’t supported.</p>`;
+    }
+  }
+
+  // Render an attached PDF's pages to images, right in the chat. On failure,
+  // fall back to a link to the full tool.
+  async function runInlinePdf(slug: string, container: HTMLElement, opts: JobOpts = {}) {
+    // Confirmed fmt wins; else the format the user asked for ("pdf to png"); else default.
+    const cfg = opts.fmt ?? parseFmt(lastQuery) ?? PDF_INLINE[slug];
+    const quality = opts.quality ?? 0.92;
+    const sources = pdfFiles();
+    if (!sources.length) { bubble('assistant', 'Attach a PDF first (paperclip on the left), then send again — I’ll render its pages here.'); return; }
+    container.innerHTML = '';
+    for (const pdf of sources) {
+      const block = document.createElement('div');
+      block.className = 'flex flex-col gap-2';
+      if (sources.length > 1) block.innerHTML = `<p class="text-[13px] text-ink">${esc(pdf.name)}</p>`;
+      container.appendChild(block);
+      try {
+        const base = pdf.name.replace(/\.pdf$/i, '') || 'page';
+        const { images, total, truncated } = await pdfToImages(pdf, { to: cfg.to, quality, scale: 2 });
+        if (!images.length) throw new Error('No pages rendered.');
+        const grid = document.createElement('div');
+        grid.className = 'grid grid-cols-2 gap-2 sm:grid-cols-3';
+        for (const im of images) {
+          const cell = document.createElement('div');
+          cell.className = 'panel panel-lift flex flex-col gap-1 p-2';
+          cell.innerHTML =
+            `<img src="${im.url}" class="w-full rounded-sm" alt="Page ${im.page}" loading="lazy" />` +
+            `<a href="${im.url}" download="${esc(base)}-${im.page}.${cfg.ext}" class="btn btn-secondary py-1 text-[13px]">Page ${im.page} · ${cfg.ext.toUpperCase()}</a>`;
+          grid.appendChild(cell);
+        }
+        block.appendChild(grid);
+        const note = document.createElement('p');
+        note.className = 'text-[13px] text-ink-subtle';
+        note.innerHTML = truncated
+          ? `Showing first ${images.length} of ${total} pages. For all pages, page ranges, or a ZIP, use ${openLink(slug, getTool(slug)!.name)}.`
+          : `${images.length} page${images.length === 1 ? '' : 's'} rendered.`;
+        block.appendChild(note);
+      } catch (e) {
+        // Couldn't do it inline — surface the full tool as the user asked.
+        block.innerHTML +=
+          `<p class="text-[13px]" style="color:#e5484d">Couldn’t render that PDF here (${esc((e as Error).message || 'error')}).</p>` +
+          `<p class="text-[13px] text-ink-subtle mt-1">Try the full tool: ${openLink(slug, getTool(slug)!.name)}</p>`;
+      }
+    }
+  }
+
+  async function runInline(slug: string, container: HTMLElement, opts: JobOpts = {}) {
+    const cfg = INLINE[slug];
+    const sources = imageFiles();
+    if (!sources.length) { bubble('assistant', 'Attach an image first, then send your request and I’ll convert it here.'); return; }
+    // Confirmed quality wins; else default 0.92 for lossy formats, undefined for lossless.
+    const q = cfg.quality ? (opts.quality ?? 0.92) : undefined;
+    const q0 = Math.round((q ?? 0.92) * 100);
+    // Per-file slider only makes sense converting a single image; batch skips it.
+    const single = sources.length === 1;
+    container.innerHTML = `<p class="text-[13px] text-ink-subtle">Converting ${single ? '' : sources.length + ' images'}…</p>`;
+    const grid = document.createElement('div');
+    grid.className = single ? 'flex flex-col gap-3' : 'grid grid-cols-2 gap-2 sm:grid-cols-3';
+    const produced: File[] = [];
+    let anyOk = false;
+    for (const src of sources) {
+      const base = src.name.replace(/\.[^./\\]+$/, '') || 'converted';
+      const outName = `${base}.${cfg.ext}`;
+      const cell = document.createElement('div');
+      cell.className = single ? 'flex flex-col gap-3' : 'panel panel-lift flex flex-col gap-1 p-2';
+      try {
+        const blob = await convertImage(src, { to: cfg.to, quality: q, flatten: cfg.flatten });
+        const url = URL.createObjectURL(blob);
+        produced.push(new File([blob], outName, { type: cfg.to }));
+        anyOk = true;
+        cell.innerHTML =
+          `<div class="flex justify-center overflow-hidden rounded-md bg-canvas p-3">` +
+          `<img src="${url}" alt="Converted preview" class="max-h-56 w-auto max-w-full rounded-sm" /></div>` +
+          `<p class="text-[13px] text-ink-subtle">${fmtSize(src.size)} → ${fmtSize(blob.size)} · .${cfg.ext}</p>`;
+        const actions = document.createElement('div');
+        actions.className = 'flex flex-wrap items-center gap-2';
+        const dl = document.createElement('a');
+        dl.className = single ? 'btn btn-primary' : 'btn btn-secondary py-1 text-[13px]';
+        dl.href = url; dl.download = outName; dl.textContent = single ? 'Download' : outName;
+        actions.appendChild(dl);
+        if (single && opts.showSlider && cfg.quality) {
+          const wrap = document.createElement('label');
+          wrap.className = 'flex items-center gap-2 text-[13px] text-ink-subtle';
+          wrap.innerHTML = `Quality <span data-qv class="text-ink">${q0}%</span>`;
+          const slider = document.createElement('input');
+          slider.type = 'range'; slider.min = '10'; slider.max = '100'; slider.value = String(q0);
+          slider.className = 'w-32 accent-primary';
+          slider.addEventListener('input', async () => {
+            wrap.querySelector('[data-qv]')!.textContent = slider.value + '%';
+            const b2 = await convertImage(src, { to: cfg.to, quality: Number(slider.value) / 100, flatten: cfg.flatten });
+            URL.revokeObjectURL(dl.href);
+            const u2 = URL.createObjectURL(b2);
+            (cell.querySelector('img') as HTMLImageElement).src = u2;
+            dl.href = u2;
+            cell.querySelector('p')!.textContent = `${fmtSize(src.size)} → ${fmtSize(b2.size)} · .${cfg.ext}`;
+            setWorking([new File([b2], outName, { type: cfg.to })], true);
+          });
+          wrap.appendChild(slider);
+          actions.appendChild(wrap);
+        }
+        cell.appendChild(actions);
+      } catch (e) {
+        cell.innerHTML = `<p class="text-[13px]" style="color:#e5484d">${esc(src.name)}: ${esc((e as Error).message || 'Conversion failed.')}</p>`;
+      }
+      grid.appendChild(cell);
+    }
+    container.innerHTML = '';
+    container.appendChild(grid);
+    // Chain: the produced results become the working files for the next step.
+    if (anyOk) setWorking(produced, true);
+  }
+
+  // Render a tool's AI-computed result as a card: the answer text (copyable),
+  // a caveat + link to the exact tool. Falls back to embed on AI failure.
+  async function renderAnswer(query: string, pick: Pick, container: HTMLElement) {
+    container.innerHTML = '<p class="text-[13px] text-ink-subtle">Working…</p>';
+    let answer: string;
+    try {
+      answer = await computeAnswer(query, pick);
+    } catch {
+      container.innerHTML = '';
+      embedTool(pick.slug, pick.label); // AI down — hand off to the live tool
+      return;
+    }
+    if (!answer) { container.innerHTML = ''; embedTool(pick.slug, pick.label); return; }
+    container.innerHTML =
+      `<div class="rounded-md bg-canvas p-3 text-[14px] text-ink whitespace-pre-wrap break-words">${esc(answer)}</div>` +
+      `<span class="text-[13px] text-ink-subtle">AI result — for exact output, open this tool:</span>` +
+      toolCardLink(pick.slug);
+    const copy = document.createElement('button');
+    copy.type = 'button'; copy.className = 'btn btn-secondary py-1 text-[13px] self-start';
+    copy.textContent = 'Copy';
+    copy.addEventListener('click', () => { navigator.clipboard?.writeText(answer); copy.textContent = 'Copied'; });
+    container.appendChild(copy);
+  }
+
+  // One-shot AI call to pull the exact input out of a chat message (e.g.
+  // "make a qr for example.com" → "example.com"). Falls back to the raw query
+  // when AI is unavailable. Injected into runners as ctx.extract.
+  async function extract(instruction: string): Promise<string> {
+    if (!hasAI) return lastQuery;
+    try {
+      const raw = await aiChat([
+        { role: 'system', content: instruction },
+        { role: 'user', content: lastQuery },
+      ], { temperature: 0 });
+      return raw.replace(/^```[a-z]*\s*|\s*```$/g, '').trim();
+    } catch { return lastQuery; }
+  }
+
+  // Does the attachment a registry runner needs exist?
+  function runnerReady(needs: string): boolean {
+    if (needs === 'pdf') return pdfFiles().length > 0;
+    if (needs === 'image') return imageFiles().some((f) => /^image\//.test(f.type));
+    if (needs === 'svg') return files.some((f) => f.type === 'image/svg+xml' || /\.svg$/i.test(f.name));
+    return true; // 'text' — works from the message
+  }
+  const needsLabel = (needs: string) =>
+    needs === 'pdf' ? 'a PDF' : needs === 'svg' ? 'an SVG file' : needs === 'image' ? 'an image' : '';
+
+  // Render a registry runner's result: images preview + download, files as
+  // download buttons, text inline (copyable). Footer links the tool that ran.
+  function renderRunResult(res: RunResult, container: HTMLElement, pick: Pick) {
+    container.innerHTML = '';
+    if (res.note) {
+      const n = document.createElement('p');
+      n.className = 'text-[13px] text-ink-subtle'; n.textContent = res.note;
+      container.appendChild(n);
+    }
+    if (res.text) {
+      const box = document.createElement('div');
+      box.className = 'rounded-md bg-canvas p-3 text-[14px] text-ink whitespace-pre-wrap break-words max-h-80 overflow-auto';
+      box.textContent = res.text;
+      container.appendChild(box);
+      const copy = document.createElement('button');
+      copy.type = 'button'; copy.className = 'btn btn-secondary py-1 text-[13px] self-start';
+      copy.textContent = 'Copy';
+      copy.addEventListener('click', () => { navigator.clipboard?.writeText(res.text!); copy.textContent = 'Copied'; });
+      container.appendChild(copy);
+    }
+    const produced: File[] = [];
+    if (res.files?.length) {
+      const single = res.files.length === 1;
+      const grid = document.createElement('div');
+      grid.className = single ? 'flex flex-col gap-3' : 'grid grid-cols-2 gap-2 sm:grid-cols-3';
+      for (const f of res.files) {
+        const url = URL.createObjectURL(f.blob);
+        produced.push(new File([f.blob], f.name, { type: f.blob.type }));
+        const cell = document.createElement('div');
+        cell.className = single ? 'flex flex-col gap-2' : 'panel panel-lift flex flex-col gap-1 p-2';
+        if (f.kind === 'image')
+          cell.innerHTML = `<div class="flex justify-center overflow-hidden rounded-md bg-canvas p-3"><img src="${url}" alt="${esc(f.name)}" class="max-h-56 w-auto max-w-full rounded-sm" /></div>`;
+        const dl = document.createElement('a');
+        dl.className = single ? 'btn btn-primary self-start' : 'btn btn-secondary py-1 text-[13px]';
+        dl.href = url; dl.download = f.name; dl.textContent = single ? `Download ${f.name}` : f.name;
+        cell.appendChild(dl);
+        grid.appendChild(cell);
+      }
+      container.appendChild(grid);
+    }
+    // Footer: the tool that produced this, as a card button (open for options).
+    const foot = document.createElement('div');
+    foot.className = 'flex flex-col gap-1.5';
+    foot.innerHTML = `<span class="text-[13px] text-ink-subtle">Used this tool — open it for more options:</span>${toolCardLink(pick.slug)}`;
+    container.appendChild(foot);
+    // Chain produced files into the working set for a follow-up step.
+    if (produced.length) setWorking(produced, true);
+  }
+
+  // Non-inline pick: run a registry tool inline when one exists, else compute a
+  // text answer (text/data tools), else embed the live tool.
+  async function handlePick(query: string, pick: Pick, container: HTMLElement) {
+    const runner = getRunner(pick.slug);
+    if (runner) {
+      if (!runnerReady(runner.needs)) {
+        container.innerHTML = `<p class="text-[13px] text-ink-subtle">Attach ${needsLabel(runner.needs)} (paperclip on the left) and send again — I’ll do it here.</p>`;
+        return;
+      }
+      container.innerHTML = '<p class="text-[13px] text-ink-subtle">Working…</p>';
+      try {
+        renderRunResult(await runner.run({ query, files, extract }), container, pick);
+      } catch (e) {
+        container.innerHTML =
+          `<p class="text-[13px]" style="color:#e5484d">${esc((e as Error).message || 'Could not run that here.')}</p>` +
+          `<p class="text-[13px] text-ink-subtle mt-1">Try the full tool: ${openLink(pick.slug, pick.label)}</p>`;
+      }
+      return;
+    }
+    if (aiAnswerable(pick.slug)) return void renderAnswer(query, pick, container);
+    // Embed path: if the tool needs a file and none is attached, ask for it
+    // (using the tool's own inputShape) instead of showing an empty form.
+    const io = getToolIO(pick.slug);
+    if (io && (io.input === 'file' || io.input === 'files') && !files.length) {
+      container.innerHTML =
+        `<p class="text-[14px] text-ink">${esc(pick.label)} needs a file first.</p>` +
+        `<p class="text-[13px] text-ink-subtle">${esc(io.inputShape)} Attach it (paperclip on the left) and send again — or open ${openLink(pick.slug, pick.label)}.</p>`;
+      return;
+    }
+    container.innerHTML = '';
+    embedTool(pick.slug, pick.label);
+  }
+
+  // A tool the router chose: {slug, label, why}. Plus a conversational reply.
+  type Pick = { slug: string; label: string; why?: string };
+  type Routed = { reply: string; tools: Pick[] };
+
+  // Render the assistant turn: a conversational line, then act on the tools.
+  // Inline image jobs run right here; anything else gets an open-in-new-tab link.
+  // Nothing ever navigates the chat away.
+  // Does the attached file suit this inline tool? Image tools want an image;
+  // PDF tools want a PDF.
+  function fileFits(slug: string): boolean {
+    if (slug === 'pdf-merge') return pdfFiles().length >= 2;
+    if (PDF_INLINE[slug]) return pdfFiles().length > 0;
+    if (INLINE[slug]) return imageFiles().length > 0;
+    return false;
+  }
+  const needLabel = (slug: string) => (slug === 'pdf-merge' ? 'two or more PDFs' : PDF_INLINE[slug] ? 'a PDF' : 'an image');
+
+  // Params extracted from the request for a given inline tool. Image tools have a
+  // fixed output format (the slug says so), so fmt is only pulled for PDF tools.
+  function extractOpts(slug: string): JobOpts {
+    const o: JobOpts = {};
+    const q = parseQuality(lastQuery);
+    if (q != null) o.quality = q;
+    if (PDF_INLINE[slug]) { const f = parseFmt(lastQuery); if (f) o.fmt = f; }
+    return o;
+  }
+
+  function present(r: Routed) {
+    const picks = r.tools;
+    // Best inline pick we can actually run now (right file attached).
+    const runnable = picks.find((p) => isInline(p.slug) && fileFits(p.slug));
+
+    // Auto: if we can run an inline job right now, just do it and show the result.
+    if (mode === 'auto' && runnable) {
+      const c = card();
+      c.innerHTML = `<p class="text-[14px] text-ink">${esc(r.reply)}</p>`;
+      const out = document.createElement('div'); out.className = 'flex flex-col gap-3'; c.appendChild(out);
+      runInlineJob(runnable.slug, out, extractOpts(runnable.slug));
+      return;
+    }
+    // Auto: inline tool chosen but the right file isn't attached — ask for it.
+    if (mode === 'auto') {
+      const inlinePick = picks.find((p) => isInline(p.slug));
+      if (inlinePick) {
+        bubble('assistant', esc(r.reply) + `<br><span class="text-ink-subtle">Attach ${needLabel(inlinePick.slug)} (paperclip on the left) and send again — I’ll do it right here.</span>`);
+        return;
+      }
+      // Auto: any other tool — compute the answer in-chat (text/data tools) or
+      // embed the live tool (files, images, interactive).
+      if (picks.length) {
+        const c = card();
+        c.innerHTML = `<p class="text-[14px] text-ink">${esc(r.reply)}</p>`;
+        const out = document.createElement('div'); out.className = 'flex flex-col gap-3'; c.appendChild(out);
+        handlePick(lastQuery, picks[0], out);
+        return;
+      }
+    }
+
+    if (!picks.length) { bubble('assistant', esc(r.reply)); return; }
+
+    const c = card();
+    c.innerHTML = `<p class="text-[14px] text-ink">${esc(r.reply)}</p>`;
+    const workspace = document.createElement('div'); workspace.className = 'flex flex-col gap-3'; c.appendChild(workspace);
+
+    // EDIT mode: stage the top pick — show the chosen tool + its extracted params,
+    // editable, and run only on Confirm. Runners-up appear below as quick switches.
+    if (mode === 'edit') {
+      let top = picks[0];
+      const stage = document.createElement('div'); stage.className = 'flex flex-col gap-3';
+      const renderConfirm = () => { stage.innerHTML = ''; confirmCard(top, stage, picks); };
+      // Alternative picks: click swaps which tool is staged.
+      const alts = picks.slice(1, 3);
+      workspace.appendChild(stage);
+      renderConfirm();
+      if (alts.length) {
+        const row = document.createElement('div'); row.className = 'flex flex-wrap gap-2';
+        row.innerHTML = '<span class="w-full text-[13px] text-ink-subtle">Or pick another:</span>';
+        for (const a of alts) {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'rounded-md bg-surface-1 px-2.5 py-1 text-[13px] text-ink-subtle transition-colors hover:bg-surface-3 hover:text-ink';
+          b.textContent = a.label;
+          b.addEventListener('click', () => { top = a; renderConfirm(); });
+          row.appendChild(b);
+        }
+        workspace.appendChild(row);
+      }
+      return;
+    }
+
+    // Fallback path (AI down, non-auto edge cases): tools as chips.
+    for (const p of picks.slice(0, 3)) {
+      if (isInline(p.slug)) {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'panel panel-lift flex flex-col items-start gap-0.5 p-3 text-left transition-colors hover:bg-surface-3';
+        chip.innerHTML = `<span class="text-[14px] text-ink">${esc(p.label)}</span>` +
+          `<span class="text-[13px] text-ink-subtle">${fileFits(p.slug) ? 'Do it here →' : `Attach ${needLabel(p.slug)}, then click`}</span>`;
+        chip.addEventListener('click', () => {
+          if (!fileFits(p.slug)) { bubble('assistant', `Attach ${needLabel(p.slug)} first (the paperclip on the left), then click again.`); return; }
+          const out = document.createElement('div'); out.className = 'flex flex-col gap-3';
+          chip.replaceWith(out);
+          runInlineJob(p.slug, out, { ...extractOpts(p.slug), showSlider: true });
+        });
+        workspace.appendChild(chip);
+      } else {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'panel panel-lift flex flex-col items-start gap-0.5 p-3 text-left transition-colors hover:bg-surface-3';
+        chip.innerHTML = `<span class="text-[14px] text-ink">${esc(p.label)}</span>` +
+          (p.why ? `<span class="text-[13px] text-ink-subtle">${esc(p.why)}</span>` : `<span class="text-[13px] text-ink-subtle">${aiAnswerable(p.slug) ? 'Get the answer here →' : 'Open here →'}</span>`);
+        chip.addEventListener('click', () => { const out = document.createElement('div'); out.className = 'flex flex-col gap-3'; chip.replaceWith(out); handlePick(lastQuery, p, out); });
+        workspace.appendChild(chip);
+      }
+    }
+  }
+
+  // EDIT-mode confirmation card: names the staged tool, exposes its runnable
+  // params for review/edit, and executes only on Confirm. Non-inline tools have
+  // no in-chat params, so they confirm straight to an embed.
+  function confirmCard(p: Pick, host: HTMLElement, _all: Pick[]) {
+    const inline = isInline(p.slug);
+    const opts = extractOpts(p.slug);
+    const box = document.createElement('div');
+    box.className = 'panel flex flex-col gap-3 p-3';
+
+    // Header: tool + why.
+    const head = document.createElement('div');
+    head.innerHTML =
+      `<div class="text-[14px] font-medium text-ink">${esc(p.label)}</div>` +
+      (p.why ? `<div class="text-[13px] text-ink-subtle">${esc(p.why)}</div>` : '');
+    box.appendChild(head);
+
+    // Params block (only for inline jobs that actually consume params).
+    const isLossy = !!INLINE[p.slug]?.quality || !!PDF_INLINE[p.slug];
+    let fmtSel: HTMLSelectElement | null = null;
+    let qSlider: HTMLInputElement | null = null;
+    if (inline) {
+      const params = document.createElement('div');
+      params.className = 'flex flex-col gap-2 rounded-md bg-surface-1 p-2.5';
+      // Output format — editable for PDF tools; fixed (shown as text) for image tools.
+      if (PDF_INLINE[p.slug]) {
+        const cur = (opts.fmt ?? PDF_INLINE[p.slug]).ext;
+        const wrap = document.createElement('label');
+        wrap.className = 'flex items-center justify-between gap-2 text-[13px] text-ink-subtle';
+        wrap.innerHTML = '<span>Output format</span>';
+        fmtSel = document.createElement('select');
+        fmtSel.className = 'field py-1 text-[13px]';
+        for (const [ext, to] of [['jpg', 'image/jpeg'], ['png', 'image/png'], ['webp', 'image/webp']]) {
+          const o = document.createElement('option'); o.value = `${to}|${ext}`; o.textContent = ext.toUpperCase();
+          if (ext === cur) o.selected = true; fmtSel.appendChild(o);
+        }
+        wrap.appendChild(fmtSel); params.appendChild(wrap);
+      } else if (INLINE[p.slug]) {
+        const ext = INLINE[p.slug].ext;
+        const r = document.createElement('div');
+        r.className = 'flex items-center justify-between text-[13px] text-ink-subtle';
+        r.innerHTML = `<span>Output format</span><span class="text-ink">${ext.toUpperCase()}</span>`;
+        params.appendChild(r);
+      }
+      // pdf-merge has no format/quality params — just say what it'll do.
+      if (p.slug === 'pdf-merge') {
+        const r = document.createElement('div');
+        r.className = 'text-[13px] text-ink-subtle';
+        r.textContent = 'Merges the attached PDFs in upload order into one file.';
+        params.appendChild(r);
+      }
+      // Quality — only for lossy outputs.
+      if (isLossy) {
+        const q0 = Math.round((opts.quality ?? 0.92) * 100);
+        const wrap = document.createElement('label');
+        wrap.className = 'flex items-center justify-between gap-2 text-[13px] text-ink-subtle';
+        wrap.innerHTML = `<span>Quality <span data-qv class="text-ink">${q0}%</span></span>`;
+        qSlider = document.createElement('input');
+        qSlider.type = 'range'; qSlider.min = '10'; qSlider.max = '100'; qSlider.value = String(q0);
+        qSlider.className = 'w-32 accent-primary';
+        qSlider.addEventListener('input', () => { wrap.querySelector('[data-qv]')!.textContent = qSlider!.value + '%'; });
+        wrap.appendChild(qSlider); params.appendChild(wrap);
+      }
+      // File readiness note.
+      if (!fileFits(p.slug)) {
+        const note = document.createElement('p');
+        note.className = 'text-[13px]'; note.style.color = '#e5484d';
+        note.textContent = `Attach ${needLabel(p.slug)} first (paperclip on the left).`;
+        params.appendChild(note);
+      }
+      box.appendChild(params);
+    } else {
+      const note = document.createElement('p');
+      note.className = 'text-[13px] text-ink-subtle';
+      note.textContent = aiAnswerable(p.slug)
+        ? 'No settings needed — confirm and I’ll return the result here.'
+        : 'No in-chat settings for this tool — confirm to open it live in the chat.';
+      box.appendChild(note);
+    }
+
+    // Actions: Confirm runs the staged job; Cancel dismisses the card.
+    const actions = document.createElement('div');
+    actions.className = 'flex items-center gap-2';
+    const confirm = document.createElement('button');
+    confirm.type = 'button'; confirm.className = 'btn btn-primary'; confirm.textContent = 'Confirm';
+    confirm.addEventListener('click', () => {
+      if (!inline) { const out = document.createElement('div'); out.className = 'flex flex-col gap-3'; host.replaceWith(out); handlePick(lastQuery, p, out); return; }
+      if (!fileFits(p.slug)) { bubble('assistant', `Attach ${needLabel(p.slug)} first (the paperclip on the left), then Confirm again.`); return; }
+      // Read edited params off the controls.
+      const run: JobOpts = { showSlider: true };
+      if (fmtSel) { const [to, ext] = fmtSel.value.split('|'); run.fmt = { to, ext }; }
+      if (qSlider) run.quality = Number(qSlider.value) / 100;
+      const out = document.createElement('div'); out.className = 'flex flex-col gap-3';
+      host.replaceWith(out);
+      runInlineJob(p.slug, out, run);
+    });
+    const cancel = document.createElement('button');
+    cancel.type = 'button'; cancel.className = 'btn btn-tertiary'; cancel.textContent = 'Cancel';
+    cancel.addEventListener('click', () => host.replaceWith(document.createComment('cancelled')));
+    actions.append(confirm, cancel);
+    box.appendChild(actions);
+
+    host.appendChild(box);
+  }
+
+  // --- AI router with local-search fallback ---
+  // Lenient scored match: rank by how many query words hit the tool's haystack
+  // (name + tagline + category + keywords). Unlike matchesQuery (AND — every
+  // word must match), this surfaces the closest tools for loose phrasing like
+  // "shrink my photo size". Skips 1-2 letter noise words.
+  function looseMatches(query: string): Pick[] {
+    const words = query.toLowerCase().match(/[a-z0-9]{3,}/g) ?? [];
+    if (!words.length) return [];
+    return index
+      .map((t) => {
+        const hay = toolHaystack(t);
+        const score = words.reduce((n, w) => n + (new RegExp(`\\b${w}`).test(hay) ? 1 : 0), 0);
+        return { t, score };
+      })
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score || a.t.name.localeCompare(b.t.name))
+      .slice(0, 3)
+      .map((x) => ({ slug: x.t.slug, label: x.t.name, why: x.t.tagline }));
+  }
+
+  function localRouted(query: string): Routed {
+    const strict = index
+      .filter((t) => matchesQuery(toolHaystack(t), query))
+      .sort((a, b) => compareByQuery(a.name, b.name, query))
+      .slice(0, 3)
+      .map((t) => ({ slug: t.slug, label: t.name, why: t.tagline }));
+    const tools = strict.length ? strict : looseMatches(query);
+    const reply = tools.length
+      ? `Here ${tools.length === 1 ? 'is the tool' : 'are the tools'} that fit that:`
+      : 'I couldn’t find a matching tool — try naming the file type or the action.';
+    return { reply, tools };
+  }
+
+  async function route(query: string): Promise<Routed> {
+    if (!hasAI) return localRouted(query);
+    // Feed name + category + tagline + keywords so the router matches on the
+    // same signal the local search uses. Keywords already live in tools.ts.
+    const catalog = index
+      .map((t) => `${t.slug} | ${t.name} | ${t.category} | ${t.tagline} | ${t.keywords.join(', ')}`)
+      .join('\n');
+    try {
+      const raw = await aiChat([
+        { role: 'system', content:
+          'You are the assistant on ToolSilk, a site of free browser-based utilities. ' +
+          'Chat naturally with the user. When they want to get something done, pick the best matching tool(s) from the catalog. ' +
+          (files.length ? `The user has attached ${files.length === 1 ? `a file named "${files[0].name}"` : `${files.length} files: ${files.map((f) => `"${f.name}"`).join(', ')}`}. ` : 'The user has NOT attached a file. ') +
+          'Respond ONLY with JSON, no prose, no code fences, of this exact shape: ' +
+          '{"reply":"...","tools":[{"slug":"...","label":"...","why":"..."}]}. ' +
+          '"reply" is a short, friendly conversational message (1-2 sentences) — greet, answer questions, or say what you found. ' +
+          'If the user is just chatting (no task), return an empty tools array and reply conversationally. ' +
+          'When there is a task, include up to 3 tools, best first; "slug" MUST be copied verbatim from the catalog; ' +
+          '"label" is the tool name; "why" is a short reason (max ~10 words).\n\nCATALOG (slug | name | category):\n' + catalog },
+        ...history,
+        { role: 'user', content: query },
+      ], { temperature: 0.3 });
+      const parsed = JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim());
+      let tools: Pick[] = (parsed.tools || [])
+        .filter((p: Pick) => p && getTool(p.slug))
+        .map((p: Pick) => ({ slug: p.slug, label: getTool(p.slug)!.name, why: p.why }));
+      const conv = typeof parsed.reply === 'string' && parsed.reply.trim() ? parsed.reply.trim() : localRouted(query).reply;
+      // Trust the AI: empty tools = it decided this is chit-chat, not a task.
+      // Only fall back to keyword matches when the AI ALSO gave no reply (a
+      // parse/shape failure), so greetings stay conversational.
+      let reply = conv;
+      if (!tools.length && !(typeof parsed.reply === 'string' && parsed.reply.trim())) {
+        const local = localRouted(query).tools;
+        if (local.length) { tools = local; reply = conv + '\n\nClosest tools I found:'; }
+      }
+      history.push({ role: 'user', content: query }, { role: 'assistant', content: conv });
+      return { reply, tools };
+    } catch {
+      return localRouted(query); // AI down / bad JSON — keyword search still works
+    }
+  }
+
+  // Live facts the AI must NOT fabricate. Domain availability we can actually
+  // check (RDAP is free + CORS-enabled); prices/weather/scores we can't, so we
+  // refuse rather than let the router hand them to a text tool that guesses.
+  // Returns true if the query was handled here (skip routing).
+  async function handleLiveFact(query: string): Promise<boolean> {
+    const q = query.toLowerCase();
+
+    // Domain availability → real RDAP lookup. 404 = unregistered (available).
+    const domain = q.match(/\b([a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.[a-z]{2,}(?:\.[a-z]{2,})?)\b/)?.[1];
+    if (domain && /\b(avail|available|taken|registered|register|whois|free|buy)\b/.test(q)) {
+      const c = card();
+      c.innerHTML = `<p class="text-[13px] text-ink-subtle">Checking ${esc(domain)}…</p>`;
+      try {
+        const res = await fetch(`https://rdap.org/domain/${encodeURIComponent(domain)}`);
+        if (res.status === 404) {
+          c.innerHTML = `<p class="text-[14px] text-ink"><strong>${esc(domain)}</strong> looks <strong>available</strong> — no registration found.</p>` +
+            `<p class="text-[13px] text-ink-subtle">Checked live via RDAP. Confirm at your registrar before buying.</p>`;
+        } else if (res.ok) {
+          c.innerHTML = `<p class="text-[14px] text-ink"><strong>${esc(domain)}</strong> is <strong>registered</strong> (taken).</p>` +
+            `<p class="text-[13px] text-ink-subtle">Checked live via RDAP.</p>`;
+        } else {
+          throw new Error(`status ${res.status}`);
+        }
+      } catch {
+        c.innerHTML = `<p class="text-[14px] text-ink">Couldn’t check ${esc(domain)} right now.</p>` +
+          `<p class="text-[13px] text-ink-subtle">RDAP lookup failed — try a WHOIS service directly.</p>`;
+      }
+      // Related tool: naming ideas for the domain search.
+      if (getTool('domain-name-generator'))
+        c.innerHTML += `<span class="text-[13px] text-ink-subtle">Need name ideas?</span>` + toolCardLink('domain-name-generator');
+      return true;
+    }
+
+    // Other real-time facts we can't verify — refuse instead of fabricating.
+    if (/\b(price|cost|worth|stock|crypto|bitcoin|weather|temperature|forecast|score|who won|latest news|exchange rate)\b/.test(q)) {
+      bubble('assistant', 'I can’t look that up live — that’s real-time info I don’t have. I only run browser-based tools on input you give me.');
+      return true;
+    }
+    return false;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const query = input.value.trim();
+    if (!query) return;
+    // Launcher box on the landing page: carry the query to the full-page chat.
+    if (isLauncher) { window.location.href = `/ai?q=${encodeURIComponent(query)}`; return; }
+    lastQuery = query; // drives deterministic setting extraction (format, etc.)
+    input.value = '';
+    bubble('user', esc(query) + (files.length ? ` <span class="text-ink-subtle">(${esc(files.length === 1 ? files[0].name : files.length + ' files')})</span>` : ''));
+    const thinking = bubble('assistant', 'Thinking…');
+    // Intercept live-fact questions before routing — the AI would guess otherwise.
+    if (await handleLiveFact(query)) { thinking.remove(); return; }
+    const routed = await route(query);
+    thinking.remove();
+    present(routed);
+  });
+
+  // Full-page chat: if arrived with ?q=, prefill and auto-send.
+  if (!isLauncher) {
+    const q = new URLSearchParams(location.search).get('q');
+    if (q) { input.value = q; form.requestSubmit(); }
+  }
+</script>

@@ -2832,16 +2832,6 @@ export const tools: Tool[] = [
     icon: 'M12 3l7 4v10l-7 4-7-4V7zM12 3v18M5 7l7 4 7-4',
   },
   {
-    slug: 'mockup-generator',
-    name: 'Mockup Generator',
-    tagline: 'Drop a screenshot into a device or browser frame.',
-    description:
-      'Free online mockup generator. Place a screenshot inside a browser window, phone or laptop frame over a clean gradient backdrop and export a shareable PNG.',
-    category: 'Image',
-    keywords: ['mockup generator', 'screenshot mockup', 'device mockup maker', 'browser frame mockup', 'product mockup'],
-    icon: 'M4 5h16v11H4zM2 20h20M9 20l.5-4M15 20l-.5-4',
-  },
-  {
     slug: 'ambigram-generator',
     name: 'Ambigram Generator',
     tagline: 'Words that read the same upside down.',
