@@ -1,14 +1,3 @@
-// Inline runners for the mixed visual + audio generators. Same contract as
-// toolRunners.ts — one entry per tool, porting each tool's REAL logic (its lib
-// or its page's generation code), never guessing at output.
-//
-// Deps reused from the pages: highlight.js (code-snippet), wordcloud
-// (word-cloud-maker), chart.js (chart-maker), plus ./colors + ./random for the
-// palette. Web Audio's OfflineAudioContext + a ported WAV encoder for tones.
-//
-// ponytail: chat runners take a single named input via `extract` + sane
-// defaults; the full pages keep every slider/picker/mode. One extract call per
-// runner to avoid extra AI roundtrips.
 
 import type { Runner, RunFile } from './toolRunners';
 import { canvasBlob } from './toolRunners';
@@ -17,15 +6,12 @@ const svgFile = (name: string, svg: string): RunFile =>
   ({ name, blob: new Blob([svg], { type: 'image/svg+xml' }), kind: 'image' });
 
 export const RUNNERS_MISC: Record<string, Runner> = {
-  // --- Color palette: build a harmony palette → hex list (text) + a PNG strip.
-  // Ports build()/hslHex from the page, reusing ./colors + ./random.
   'color-palette-generator': {
     needs: 'text',
     async run({ extract }) {
       const { hexToRgb, rgbToHex, hslToRgb } = await import('./colors');
       const { randInt } = await import('./random');
 
-      // One call: harmony + count. Defaults: auto, 5.
       const spec = (await extract(
         'From the request, return the palette harmony and color count as "<harmony> <count>". ' +
         'harmony ∈ auto|analogous|monochrome|complementary|split|triadic|tetradic; count 3-8. ' +
@@ -52,7 +38,6 @@ export const RUNNERS_MISC: Record<string, Runner> = {
         }
       }
 
-      // PNG swatch strip (ported from the page's downloadPng).
       const W = 240, H = 320;
       const canvas = document.createElement('canvas');
       canvas.width = W * hexes.length; canvas.height = H;
@@ -73,15 +58,12 @@ export const RUNNERS_MISC: Record<string, Runner> = {
     },
   },
 
-  // --- Signature: render a typed name in a script font to a transparent PNG.
-  // Ports the page's "type" mode (renderTyped) + high-res export.
   'signature-generator': {
     needs: 'text',
     async run({ extract }) {
       const name = (await extract('Return ONLY the name to render as a signature. Just the name, no quotes.')).trim() || 'Signature';
-      const REF_W = 700, W = REF_W * 3, H = Math.round(REF_W * 0.4) * 3; // 5:2 stage, 3× export
+      const REF_W = 700, W = REF_W * 3, H = Math.round(REF_W * 0.4) * 3; 
       const ink = '#0b1324';
-      // ponytail: system cursive stack (page default); full tool offers 6 styles.
       const font = '"Segoe Script","Snell Roundhand","Brush Script MT",cursive';
       const canvas = document.createElement('canvas');
       canvas.width = W; canvas.height = H;
@@ -95,10 +77,6 @@ export const RUNNERS_MISC: Record<string, Runner> = {
     },
   },
 
-  // --- Code snippet: highlight code (highlight.js auto-detect) and render it to
-  // a framed PNG. Ports the page's tokenize/roleColor + canvas draw (linear
-  // theme, indigo gradient bg, traffic-light dots).
-  // ponytail: single theme + background; full tool has 9 themes / 16 backgrounds.
   'code-snippet-generator': {
     needs: 'text',
     async run({ extract }) {
@@ -154,15 +132,12 @@ export const RUNNERS_MISC: Record<string, Runner> = {
       ctx.setTransform(scale, 0, 0, scale, 0, 0);
       ctx.textBaseline = 'top'; ctx.textAlign = 'left';
 
-      // indigo gradient background (page default index 5).
       const g = ctx.createLinearGradient(0, 0, cw, ch);
       g.addColorStop(0, '#667eea'); g.addColorStop(1, '#764ba2');
       ctx.fillStyle = g; ctx.fillRect(0, 0, cw, ch);
-      // window card + drop shadow + dots.
       ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 20;
       ctx.fillStyle = t.win; ctx.beginPath(); ctx.roundRect(pad, pad, winW, winH, 12); ctx.fill(); ctx.restore();
       ['#ff5f56', '#ffbd2e', '#27c93f'].forEach((col, i) => { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(pad + 24 + i * 20, pad + 22, 6, 0, Math.PI * 2); ctx.fill(); });
-      // code.
       ctx.font = `${fontSize}px ${MONO}`;
       const codeX = pad + winPad, codeY = pad + titleH + winPad;
       lines.forEach((line, i) => {
@@ -173,9 +148,6 @@ export const RUNNERS_MISC: Record<string, Runner> = {
     },
   },
 
-  // --- Logo: build a wordmark SVG from a brand name. Ports the page's buildSvg
-  // (default icon left of the name, indigo accent, dark card).
-  // ponytail: fixed icon/layout/accent; full tool shuffles all of them.
   'logo-generator': {
     needs: 'text',
     async run({ extract }) {
@@ -183,11 +155,11 @@ export const RUNNERS_MISC: Record<string, Runner> = {
       const esc = (s: string) => s.replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]!));
       const name = esc(raw);
       const accent = '#5e6ad2', font = "'Inter',system-ui,sans-serif";
-      const icon = '<path d="M50 6l10 34 34 10-34 10-10 34-10-34L6 50l34-10z" fill="currentColor"/>'; // Spark
+      const icon = '<path d="M50 6l10 34 34 10-34 10-10 34-10-34L6 50l34-10z" fill="currentColor"/>'; 
 
       const measure = document.createElement('canvas').getContext('2d')!;
       measure.font = `700 54px ${font}`;
-      const nameW = measure.measureText(raw).width - (raw.length - 1); // letter-spacing -1
+      const nameW = measure.measureText(raw).width - (raw.length - 1); 
       const iconBox = 88, gap = 24, pad = 40, nameSize = 54;
       const textX = pad + iconBox + gap;
       const w = Math.round(textX + Math.max(nameW, 0) + pad);
@@ -201,10 +173,6 @@ export const RUNNERS_MISC: Record<string, Runner> = {
     },
   },
 
-  // --- Word cloud: count words from the user's text and render a cloud PNG via
-  // the `wordcloud` dep. Ports the page's tokenizer + weightFactor essentials.
-  // ponytail: circle shape, lavender palette, system font; full tool has masks,
-  // 20 fonts, and every layout knob.
   'word-cloud-maker': {
     needs: 'text',
     async run({ extract }) {
@@ -246,17 +214,12 @@ export const RUNNERS_MISC: Record<string, Runner> = {
           abortThreshold: 2000,
           minRotation: -Math.PI / 2, maxRotation: Math.PI / 2, rotationSteps: 2,
         });
-        // Fallback in case the stop event never fires (empty layout).
         setTimeout(resolve, 5000);
       });
       return { files: [{ name: 'word-cloud.png', blob: await canvasBlob(canvas), kind: 'image' }], note: `Word cloud · ${list.length} words` };
     },
   },
 
-  // --- Chart: render {type, labels, values} to a PNG via chart.js. Ports the
-  // page's config essentials for the common single-series types.
-  // ponytail: bar/line/area/pie/doughnut/scatter only; full tool covers 24
-  // types incl. treemap/heatmap/candlestick via extra plugins.
   'chart-maker': {
     needs: 'text',
     async run({ extract }) {
@@ -305,16 +268,13 @@ export const RUNNERS_MISC: Record<string, Runner> = {
         };
       }
       const chart = new Chart(canvas, config);
-      chart.draw(); // animation:false renders synchronously, but force a draw to be safe
+      chart.draw(); 
       const blob = await canvasBlob(canvas);
       chart.destroy();
       return { files: [{ name: 'chart.png', blob, kind: 'image' }], note: `${type} chart · ${values.length} points` };
     },
   },
 
-  // --- Audio tone: synthesize a single tone offline → WAV. Ports the page's
-  // OfflineAudioContext render + encodeWav (44-byte header + 16-bit PCM).
-  // ponytail: single-tone mode; full tool also does sweeps and binaural beats.
   'audio-tone-generator': {
     needs: 'text',
     async run({ extract }) {
@@ -341,7 +301,6 @@ export const RUNNERS_MISC: Record<string, Runner> = {
       o.connect(g); o.start(); o.stop(dur);
       const buffer = await oac.startRendering();
 
-      // encodeWav: mono 16-bit PCM (ported from the page).
       const ch = buffer.numberOfChannels, len = buffer.length;
       const out = new ArrayBuffer(44 + len * ch * 2);
       const dv = new DataView(out);

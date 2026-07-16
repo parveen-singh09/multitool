@@ -75,8 +75,6 @@ export function money(n: number, currency: string): string {
   return `${currency}${n.toFixed(2)}`;
 }
 
-// Parse "#5e6ad2" → normalized [r,g,b] in 0..1 for rgb(). Falls back to the
-// Linear lavender accent on any malformed input so a builder never throws.
 function hexRgb(hex: string | undefined): [number, number, number] {
   const fallback: [number, number, number] = [0.37, 0.42, 0.82];
   if (!hex) return fallback;
@@ -86,11 +84,10 @@ function hexRgb(hex: string | undefined): [number, number, number] {
   return [((int >> 16) & 255) / 255, ((int >> 8) & 255) / 255, (int & 255) / 255];
 }
 
-/** Build the PDF bytes for a line-item business document. */
 export async function buildDocPdf(d: DocData): Promise<Uint8Array> {
   const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
   const pdf = await PDFDocument.create();
-  const page = pdf.addPage([595, 842]); // A4 portrait
+  const page = pdf.addPage([595, 842]); 
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const { width } = page.getSize();
@@ -100,12 +97,6 @@ export async function buildDocPdf(d: DocData): Promise<Uint8Array> {
   const M = 50;
   let y = 792;
 
-  // The standard fonts use WinAnsi encoding, which can't represent glyphs like
-  // the rupee sign (₹) or the other non-CP1252 currency symbols. The currency
-  // module already hands us a WinAnsi-safe prefix (ISO code when the symbol
-  // isn't representable), so drawText won't hit those — but callers can still
-  // pass arbitrary text (business names, notes), so guard every draw: replace
-  // anything the font can't encode rather than throwing mid-render.
   const enc = (s: string): string => {
     try {
       font.encodeText(s);
@@ -123,11 +114,8 @@ export async function buildDocPdf(d: DocData): Promise<Uint8Array> {
   const text = (s: string, x: number, yy: number, size = 10, f = font, color = ink) =>
     page.drawText(enc(s), { x, y: yy, size, font: f, color });
 
-  // Measure the encoded string so width math matches what gets drawn and never
-  // throws on an unencodable glyph.
   const widthOf = (s: string, size: number, f = font) => f.widthOfTextAtSize(enc(s), size);
 
-  // Header. Optional logo sits top-left; the doc title drops beneath it.
   let titleY = y;
   if (d.logo) {
     try {
@@ -142,7 +130,6 @@ export async function buildDocPdf(d: DocData): Promise<Uint8Array> {
   }
   text(d.docType, M, titleY, 26, bold, accent);
 
-  // Right-aligned meta stack: number, date, optional due date + terms.
   let metaY = y + 6;
   const metaRight = (label: string, size = 10, f = font) => {
     text(label, width - M - widthOf(label, size, f), metaY, size, f, muted);
@@ -154,7 +141,6 @@ export async function buildDocPdf(d: DocData): Promise<Uint8Array> {
   if (d.terms) metaRight(`Terms: ${d.terms}`);
   y = Math.min(titleY, metaY) - 24;
 
-  // From / To blocks.
   text(d.fromLabel.toUpperCase(), M, y, 9, bold, muted);
   text(d.toLabel.toUpperCase(), width / 2, y, 9, bold, muted);
   y -= 16;
@@ -166,7 +152,6 @@ export async function buildDocPdf(d: DocData): Promise<Uint8Array> {
   }
   y -= 20;
 
-  // Table header.
   page.drawRectangle({ x: M, y: y - 4, width: width - M * 2, height: 22, color: rgb(0.95, 0.95, 0.96) });
   text('DESCRIPTION', M + 8, y + 3, 9, bold, muted);
   text('QTY', width - M - 200, y + 3, 9, bold, muted);
@@ -174,7 +159,6 @@ export async function buildDocPdf(d: DocData): Promise<Uint8Array> {
   text('AMOUNT', width - M - 60, y + 3, 9, bold, muted);
   y -= 26;
 
-  // Rows.
   for (const it of d.items) {
     const amt = it.qty * it.price;
     text(it.description.slice(0, 50), M + 8, y, 10);
@@ -185,7 +169,6 @@ export async function buildDocPdf(d: DocData): Promise<Uint8Array> {
     if (y < 120) break;
   }
 
-  // Totals.
   y -= 8;
   page.drawLine({ start: { x: width - M - 220, y }, end: { x: width - M, y }, thickness: 0.5, color: muted });
   y -= 18;
@@ -207,7 +190,6 @@ export async function buildDocPdf(d: DocData): Promise<Uint8Array> {
   if (t.shipping) totalRow('Shipping', money(t.shipping, d.currency));
   totalRow('Total', money(t.total, d.currency), bold, accent);
 
-  // Notes.
   if (d.notes) {
     y -= 20;
     text('NOTES', M, y, 9, bold, muted); y -= 14;
@@ -217,21 +199,12 @@ export async function buildDocPdf(d: DocData): Promise<Uint8Array> {
   return pdf.save();
 }
 
-/**
- * Build a receipt PDF. Two paper styles:
- *  - 'thermal'  → narrow 80mm point-of-sale roll, monospace, dashed rules. The
- *                 look people picture when they hear "receipt". Height grows to
- *                 fit the content so a long order never clips.
- *  - 'standard' → an A4 business receipt: logo, table, totals, and a payment
- *                 block (method / paid / change) that an invoice doesn't carry.
- */
 export async function buildReceiptPdf(d: ReceiptData): Promise<Uint8Array> {
   return (d.style === 'standard')
     ? buildStandardReceipt(d)
     : buildThermalReceipt(d);
 }
 
-// --- Thermal (80mm POS roll) -------------------------------------------------
 
 async function buildThermalReceipt(d: ReceiptData): Promise<Uint8Array> {
   const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
@@ -239,27 +212,22 @@ async function buildThermalReceipt(d: ReceiptData): Promise<Uint8Array> {
   const mono = await pdf.embedFont(StandardFonts.Courier);
   const monoBold = await pdf.embedFont(StandardFonts.CourierBold);
 
-  const W = 226;            // 80mm at 72dpi
-  const M = 14;             // side margin
-  const CW = W - M * 2;     // content width
+  const W = 226;            
+  const M = 14;             
+  const CW = W - M * 2;     
   const ink = rgb(0.08, 0.08, 0.09);
   const t = computeTotals(d);
 
-  // The currency prefix reaches us already WinAnsi-safe (ISO code when the
-  // symbol isn't in CP1252). Free-text fields still might carry glyphs Courier
-  // can't encode, so drop anything unencodable rather than fail the roll.
   const enc = (s: string): string => {
     try { mono.encodeText(s); return s; } catch {
       let out = ''; for (const ch of s) { try { mono.encodeText(ch); out += ch; } catch { out += '?'; } } return out;
     }
   };
 
-  // Courier is monospaced: width per char = size * 0.6. Fit N chars per line.
   const SIZE = 8, LH = 11;
   const charW = SIZE * 0.6;
   const cols = Math.floor(CW / charW);
 
-  // Pass 1: build a flat op list so we can measure exact height, then draw.
   type Op =
     | { t: 'center'; s: string; bold?: boolean; size?: number }
     | { t: 'left'; s: string; bold?: boolean }
@@ -269,7 +237,6 @@ async function buildThermalReceipt(d: ReceiptData): Promise<Uint8Array> {
     | { t: 'logo' };
   const ops: Op[] = [];
 
-  // A "label ............ value" line padded to the column width.
   const pair = (l: string, r: string, bold = false): Op => ({ t: 'pair', l, r, bold });
 
   if (d.logo) ops.push({ t: 'logo' });
@@ -285,7 +252,6 @@ async function buildThermalReceipt(d: ReceiptData): Promise<Uint8Array> {
   if (cust.length) { ops.push({ t: 'left', s: `Customer: ${cust[0]}` }); for (const c of cust.slice(1)) ops.push({ t: 'left', s: `          ${c}` }); }
   ops.push({ t: 'rule' });
 
-  // Items: description on its own line, then "  qty x price       amount".
   for (const it of d.items) {
     if (!it.description && !it.qty && !it.price) continue;
     ops.push({ t: 'left', s: it.description || 'Item' });
@@ -318,7 +284,6 @@ async function buildThermalReceipt(d: ReceiptData): Promise<Uint8Array> {
   ops.push({ t: 'gap', h: 6 });
   ops.push({ t: 'center', s: '* * *', size: SIZE });
 
-  // Measure logo (scaled to fit content width) so height math includes it.
   let logoImg: any = null, logoH = 0, logoW = 0;
   if (d.logo) {
     try {
@@ -328,7 +293,6 @@ async function buildThermalReceipt(d: ReceiptData): Promise<Uint8Array> {
     } catch { logoImg = null; }
   }
 
-  // Compute total height from the op list.
   const opH = (op: Op) => op.t === 'gap' ? (op.h ?? 6) : op.t === 'rule' ? 8 : op.t === 'logo' ? (logoImg ? logoH + 6 : 0) : LH;
   const TOP = 16, BOT = 16;
   const H = Math.round(TOP + BOT + ops.reduce((s, op) => s + opH(op), 0));
@@ -367,7 +331,6 @@ async function buildThermalReceipt(d: ReceiptData): Promise<Uint8Array> {
   return pdf.save();
 }
 
-// --- Standard (A4 business receipt) -----------------------------------------
 
 async function buildStandardReceipt(d: ReceiptData): Promise<Uint8Array> {
   const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
@@ -390,7 +353,6 @@ async function buildStandardReceipt(d: ReceiptData): Promise<Uint8Array> {
   const text = (s: string, x: number, yy: number, size = 10, f = font, color = ink) => page.drawText(enc(s), { x, y: yy, size, font: f, color });
   const widthOf = (s: string, size: number, f = font) => f.widthOfTextAtSize(enc(s), size);
 
-  // Header — logo top-left, RECEIPT title, right-aligned meta.
   let titleY = y;
   if (d.logo) {
     try {
@@ -410,7 +372,6 @@ async function buildStandardReceipt(d: ReceiptData): Promise<Uint8Array> {
   if (d.cashier) metaRight(`Cashier: ${d.cashier}`);
   y = Math.min(titleY, metaY) - 24;
 
-  // Store / customer blocks.
   text(d.fromLabel.toUpperCase(), M, y, 9, bold, muted);
   if (d.to.filter(Boolean).length) text(d.toLabel.toUpperCase(), width / 2, y, 9, bold, muted);
   y -= 16;
@@ -422,7 +383,6 @@ async function buildStandardReceipt(d: ReceiptData): Promise<Uint8Array> {
   }
   y -= 20;
 
-  // Table header.
   page.drawRectangle({ x: M, y: y - 4, width: width - M * 2, height: 22, color: rgb(0.95, 0.95, 0.96) });
   text('DESCRIPTION', M + 8, y + 3, 9, bold, muted);
   text('QTY', width - M - 200, y + 3, 9, bold, muted);
@@ -440,7 +400,6 @@ async function buildStandardReceipt(d: ReceiptData): Promise<Uint8Array> {
     if (y < 160) break;
   }
 
-  // Totals.
   y -= 8;
   page.drawLine({ start: { x: width - M - 220, y }, end: { x: width - M, y }, thickness: 0.5, color: muted });
   y -= 18;
@@ -457,7 +416,6 @@ async function buildStandardReceipt(d: ReceiptData): Promise<Uint8Array> {
   if (t.tip) totalRow(d.tip!.mode === 'percent' ? `Tip (${d.tip!.value}%)` : 'Tip', money(t.tip, d.currency));
   totalRow('Total', money(t.total, d.currency), bold, accent);
 
-  // Payment block — the receipt-specific part.
   if (d.paymentMethod || d.amountPaid) {
     y -= 6;
     if (d.paymentMethod) totalRow('Paid via', d.paymentMethod, font, muted);
@@ -488,7 +446,6 @@ function wrap(s: string, max: number): string[] {
   return lines;
 }
 
-/** Trigger a browser download of PDF bytes. */
 export function downloadPdf(bytes: Uint8Array, filename: string): void {
   const blob = new Blob([bytes.slice()], { type: 'application/pdf' });
   const url = URL.createObjectURL(blob);

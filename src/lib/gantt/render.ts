@@ -31,7 +31,6 @@ function esc(s: string): string {
   return s.replace(/[&<>"]/g, (c) => (c === '&' ? '&amp;' : c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&quot;'));
 }
 
-// --- geometry returned for hit-testing --------------------------------------
 export interface BarGeom {
   id: string;
   x: number; y: number; w: number; h: number;
@@ -75,7 +74,6 @@ export function renderSVG(input: RenderInput): RenderResult {
   const chartX = GUTTER_W;
   const chartW = w - chartX - PAD;
 
-  // Visible index range: pad a little on each side.
   const minIndex = Math.min(0, sched.projectStartIdx) - 1;
   const maxIndex = Math.max(sched.projectFinishIdx + 2, minIndex + Math.ceil(chartW / pxPerDay));
   const xOf = (idx: number) => chartX + (idx - minIndex) * pxPerDay;
@@ -86,32 +84,25 @@ export function renderSVG(input: RenderInput): RenderResult {
   const parts: string[] = [];
   const bars: BarGeom[] = [];
 
-  // background
   parts.push(`<rect width="${w}" height="${height}" fill="${theme.bg}"/>`);
 
-  // title
   if (p.title) {
     parts.push(`<text x="${PAD}" y="${titlePx + 8}" fill="${theme.ink}" font-family="${FONT}" font-size="${titlePx}" font-weight="600">${esc(p.title)}</text>`);
   }
 
-  // --- time axis: gridlines + two-tier labels -------------------------------
   parts.push(...axis(p.zoom, minIndex, maxIndex, xOf, epoch, cal, theme, titleH, top, height));
 
-  // gutter divider + header underline
   parts.push(`<line x1="${chartX}" y1="${titleH}" x2="${chartX}" y2="${height}" stroke="${theme.grid}" stroke-width="1"/>`);
   parts.push(`<line x1="0" y1="${top}" x2="${w}" y2="${top}" stroke="${theme.grid}" stroke-width="1"/>`);
 
-  // --- rows: labels + bars --------------------------------------------------
   rows.forEach((st, i) => {
     const task = p.tasks[i];
     const y = top + i * ROW_H;
     const barY = y + (ROW_H - BAR_H) / 2;
     const accent = task.color || (st.critical ? theme.barCritical : theme.bar);
 
-    // row separator
     if (i > 0) parts.push(`<line x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="${theme.grid}" stroke-width="0.5" opacity="0.5"/>`);
 
-    // label (indented by outline; summary in bold)
     const indent = PAD + task.outline * 16;
     const labelW = chartX - indent - 8;
     const weight = st.isSummary ? '600' : '400';
@@ -119,7 +110,7 @@ export function renderSVG(input: RenderInput): RenderResult {
     parts.push(`<text x="${indent}" y="${y + ROW_H / 2 + 4}" fill="${theme.ink}" font-family="${FONT}" font-size="13" font-weight="${weight}">${esc(label)}</text>`);
 
     const x1 = xOf(st.startIdx);
-    const x2 = xOf(st.endIdx + 1); // end is inclusive -> extend one day for width
+    const x2 = xOf(st.endIdx + 1); 
     const bw = Math.max(x2 - x1, 3);
 
     if (st.isMilestone) {
@@ -128,18 +119,14 @@ export function renderSVG(input: RenderInput): RenderResult {
       bars.push({ id: st.id, x: cx - r, y: cy - r, w: r * 2, h: r * 2, type: 'milestone' });
     } else if (st.isSummary) {
       const sy = y + ROW_H / 2 - 4;
-      // summary bracket: a thin bar with down-turned end caps
       parts.push(`<path d="M ${x1} ${sy} L ${x2} ${sy} L ${x2} ${sy + 5} L ${x2 - 4} ${sy} L ${x1 + 4} ${sy} L ${x1} ${sy + 5} Z" fill="${theme.summary}"/>`);
       bars.push({ id: st.id, x: x1, y: sy - 3, w: bw, h: 10, type: 'summary' });
     } else {
-      // base bar
       parts.push(`<rect x="${x1}" y="${barY}" width="${bw}" height="${BAR_H}" rx="4" fill="${accent}" opacity="0.9"/>`);
-      // progress overlay (left-aligned fill, no clip needed)
       if (st.progress > 0) {
         const pw = Math.max(0, Math.min(bw, (bw * st.progress) / 100));
         parts.push(`<rect x="${x1}" y="${barY}" width="${pw}" height="${BAR_H}" rx="4" fill="${theme.progress}"/>`);
       }
-      // assignee label to the right of the bar, if it fits
       if (task.assignee) {
         parts.push(`<text x="${x2 + 6}" y="${barY + BAR_H - 4}" fill="${theme.inkSubtle}" font-family="${FONT}" font-size="11">${esc(task.assignee)}</text>`);
       }
@@ -147,7 +134,6 @@ export function renderSVG(input: RenderInput): RenderResult {
     }
   });
 
-  // --- dependency arrows (drawn on top) -------------------------------------
   const geomById = new Map(bars.map((b) => [b.id, b]));
   for (const task of p.tasks) {
     for (const d of task.deps) {
@@ -158,7 +144,6 @@ export function renderSVG(input: RenderInput): RenderResult {
     }
   }
 
-  // --- today marker ---------------------------------------------------------
   const todayIdx = todayIndex(epoch, cal, minIndex, maxIndex);
   if (todayIdx !== null) {
     const tx = xOf(todayIdx);
@@ -174,10 +159,6 @@ export function renderSVG(input: RenderInput): RenderResult {
   return { svg, bars, rowH: ROW_H, chartX, minIndex, pxPerDay, width: w, height };
 }
 
-// Orthogonal FS-style elbow arrow from predecessor right edge to successor left
-// edge (right, down/up, right) with a small arrowhead. Simple routing — no
-// collision avoidance. ponytail: elbow only; polished routing when dense charts
-// demand it.
 function arrow(a: BarGeom, b: BarGeom, color: string): string {
   const ax = a.x + a.w, ay = a.y + a.h / 2;
   const bx = b.x, by = b.y + b.h / 2;
@@ -189,14 +170,10 @@ function arrow(a: BarGeom, b: BarGeom, color: string): string {
   );
 }
 
-// Working-day index of "today" if it falls in the visible calendar range, else
-// null. Uses the machine clock via Date (browser only); guarded caller ranges.
 function todayIndex(epoch: string, cal: import('./types').Calendar, minIndex: number, maxIndex: number): number | null {
   if (typeof Date === 'undefined') return null;
   const now = new Date();
   const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  // Map today's calendar date to a working-day index by scanning the visible
-  // range for the nearest index whose date is >= today.
   for (let idx = minIndex; idx <= maxIndex; idx++) {
     if (fromIndex(idx, epoch, cal) >= iso) {
       return idx >= minIndex && idx <= maxIndex ? idx : null;
@@ -205,7 +182,6 @@ function todayIndex(epoch: string, cal: import('./types').Calendar, minIndex: nu
   return null;
 }
 
-// --- axis: gridlines + labels, driven by zoom -------------------------------
 function axis(
   zoom: ZoomLevel, minIndex: number, maxIndex: number,
   xOf: (i: number) => number, epoch: string, cal: import('./types').Calendar,
@@ -221,7 +197,6 @@ function axis(
     const d = new Date(t);
     const x = xOf(idx);
 
-    // top tier: month band label whenever the month changes
     const monthKey = `${d.getUTCFullYear()}-${d.getUTCMonth()}`;
     if (monthKey !== lastMonthKey) {
       lastMonthKey = monthKey;
@@ -229,12 +204,10 @@ function axis(
       out.push(`<text x="${x + 4}" y="${titleH + 16}" fill="${theme.inkSubtle}" font-family="${FONT}" font-size="12" font-weight="600">${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}</text>`);
     }
 
-    // bottom tier: depends on zoom
     if (zoom === 'day') {
       out.push(`<line x1="${x}" y1="${top - 18}" x2="${x}" y2="${height}" stroke="${theme.grid}" stroke-width="0.5" opacity="0.5"/>`);
       out.push(`<text x="${x + 3}" y="${top - 6}" fill="${theme.inkSubtle}" font-family="${FONT}" font-size="10">${d.getUTCDate()}</text>`);
     } else if (zoom === 'week') {
-      // label roughly weekly (every 5 working days)
       if ((idx - Math.max(minIndex, 0)) % 5 === 0) {
         out.push(`<line x1="${x}" y1="${top - 18}" x2="${x}" y2="${height}" stroke="${theme.grid}" stroke-width="0.5" opacity="0.5"/>`);
         out.push(`<text x="${x + 3}" y="${top - 6}" fill="${theme.inkSubtle}" font-family="${FONT}" font-size="10">${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}</text>`);

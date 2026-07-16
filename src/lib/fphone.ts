@@ -28,7 +28,6 @@ const RESERVED: Record<string, () => string> = {
   RU: () => `9${d(9)}`,
 };
 
-// 🇺🇸 from "US" — regional indicator symbols, no image assets needed.
 const flagEmoji = (code: string) =>
   code.toUpperCase().replace(/./g, (c) => String.fromCodePoint(127397 + c.charCodeAt(0)));
 
@@ -37,10 +36,10 @@ try { regionNames = new Intl.DisplayNames(['en'], { type: 'region' }); } catch {
 const nameOf = (code: string) => regionNames?.of(code) ?? code;
 
 export interface PhoneCountry {
-  code: string;      // ISO-3166 alpha-2
+  code: string;      
   name: string;
-  flag: string;      // emoji
-  dialCode: string;  // "+1", "+44", …
+  flag: string;      
+  dialCode: string;  
 }
 
 export const COUNTRIES: PhoneCountry[] = getCountries()
@@ -58,18 +57,17 @@ export interface Phone {
   national: string;
   international: string;
   e164: string;
-  plain: string;   // NSN digits only
+  plain: string;   
 }
 
-// Raw national significant number (digits only) for a country.
 function nsnFor(code: string): string {
   const reserved = RESERVED[code];
   if (reserved) return reserved();
   const ex = getExampleNumber(code as CountryCode, examples);
   const en = ex?.nationalNumber ?? '';
-  if (!en) return d(9); // no example (e.g. AQ) — fall back to 9 random digits
-  const keep = Math.min(2, en.length - 1);          // keep a valid prefix
-  return en.slice(0, keep) + d(en.length - keep);   // randomise the rest, same length
+  if (!en) return d(9); 
+  const keep = Math.min(2, en.length - 1);          
+  return en.slice(0, keep) + d(en.length - keep);   
 }
 
 export function generate(countryCode: string): Phone {

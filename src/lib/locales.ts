@@ -350,7 +350,6 @@ export const LOCALES: readonly Locale[] = [
 
 const LOCALE_BY_KEY = new Map(LOCALES.map((l) => [l.key, l]));
 
-/** Look up a locale by key, or a random one for 'any'/unknown keys. */
 export function getLocale(key: string): Locale {
   return LOCALE_BY_KEY.get(key) ?? pick(LOCALES);
 }

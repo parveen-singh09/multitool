@@ -1,33 +1,22 @@
-// Inline runners for the CSS-generator tools. Each ports the REAL output
-// format of its tool page (src/pages/tools/<slug>.astro) and returns the
-// generated CSS as `text`, using ctx.extract to pull any values the user
-// named and falling back to each tool's own defaults.
-//
-// All are `needs: 'text'` — they work straight from the chat message.
-// Nothing omitted: every one of these tools can produce output from text alone.
 
 import type { Runner } from './toolRunners';
 
-// #rrggbb → "r, g, b" (the exact form the tool scripts use).
 const rgbParts = (hex: string) => {
   const n = parseInt(hex.slice(1), 16);
   return `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`;
 };
 const hexToRgba = (hex: string, a: number) => `rgba(${rgbParts(hex)}, ${a})`;
 
-// First hex color in a string, or a fallback. ponytail: 3/6/8-digit all fine.
 const firstHex = (s: string, fallback: string) =>
   (s.match(/#[0-9a-fA-F]{3,8}/) ?? [fallback])[0];
 
 export const RUNNERS_CSS: Record<string, Runner> = {
-  // --- Gradient: linear/radial/conic from named colors + angle. --------------
-  // Ports gradientCss(): stops spaced 0→100%, `#color pos%` joined by `, `.
   'gradient-generator': {
     needs: 'text',
     async run({ query, extract }) {
       const list = await extract('List ONLY the hex colors the user wants in the gradient, comma-separated (e.g. "#ff0000,#0000ff"). If none named, return nothing.');
       const found = list.match(/#[0-9a-fA-F]{3,8}/g) ?? [];
-      const stops = found.length >= 2 ? found : ['#5e6ad2', '#828fff']; // tool default
+      const stops = found.length >= 2 ? found : ['#5e6ad2', '#828fff']; 
       const type = /radial/i.test(query) ? 'radial' : /conic/i.test(query) ? 'conic' : 'linear';
       const angleStr = (await extract('Return ONLY the gradient angle in degrees (a number 0-360) the user named, else 90.')).trim();
       const angle = /^\d{1,3}$/.test(angleStr) ? angleStr : '90';
@@ -40,22 +29,18 @@ export const RUNNERS_CSS: Record<string, Runner> = {
     },
   },
 
-  // --- Box-shadow: x/y/blur/spread + color + opacity, optional inset. --------
-  // Ports the `${inset }x px y px blur px spread px rgba(...)` value builder.
   'box-shadow-generator': {
     needs: 'text',
     async run({ query, extract }) {
       const color = firstHex(await extract('Return ONLY the shadow hex color the user named, else #5e6ad2.'), '#5e6ad2');
       const inset = /\binset\b/i.test(query);
       const nums = (await extract('Return ONLY four integers "x y blur spread" for the box-shadow the user described (px offsets, blur, spread), else "0 10 30 0".')).match(/-?\d+/g) ?? [];
-      const [x, y, blur, spread] = nums.length >= 4 ? nums : ['0', '10', '30', '0']; // tool defaults
+      const [x, y, blur, spread] = nums.length >= 4 ? nums : ['0', '10', '30', '0']; 
       const value = `${inset ? 'inset ' : ''}${x}px ${y}px ${blur}px ${spread}px ${hexToRgba(color, 0.3)}`;
       return { text: `box-shadow: ${value};`, note: `box-shadow${inset ? ' (inset)' : ''}` };
     },
   },
 
-  // --- Border-radius: 4-value corners in px. ---------------------------------
-  // Ports `border-radius: tl px tr px br px bl px;` (one value → all corners).
   'border-radius-generator': {
     needs: 'text',
     async run({ extract }) {
@@ -65,15 +50,12 @@ export const RUNNERS_CSS: Record<string, Runner> = {
     },
   },
 
-  // --- Glassmorphism: full frosted-glass rule set (.glass-card + ::before/::after).
-  // Ports buildCss('.glass-card') verbatim; tint + blur pulled, rest defaults.
   'glassmorphism-generator': {
     needs: 'text',
     async run({ extract }) {
       const color = firstHex(await extract('Return ONLY the glass tint hex color the user named, else #ffffff.'), '#ffffff');
       const blurStr = (await extract('Return ONLY the blur amount in px the user named (0-40), else 12.')).match(/\d+/)?.[0];
       const blur = blurStr ? Math.min(40, +blurStr) : 12;
-      // tool defaults: alpha .15, sat 180%, refraction .40, depth 10, radius 16, border .30
       const alpha = 0.15, sat = 180, refr = 0.4, depth = 10, radius = 16, bw = 0.3;
       const rgb = rgbParts(color);
       const outer = `0 ${depth}px ${(depth * 2.5).toFixed(0)}px rgba(0, 0, 0, ${(0.08 + depth * 0.008).toFixed(2)})`;
@@ -110,12 +92,9 @@ ${sel}::after {
     },
   },
 
-  // --- CSS animation: @keyframes + animation shorthand from a named effect. --
-  // CATS is the tool's own effect library (copied — it's the real keyframe data).
   'css-animation-generator': {
     needs: 'text',
     async run({ extract }) {
-      // ponytail: mirrors the tool's CATS map; add a category here when the page does.
       const CATS: Record<string, { id: string; label: string; body: string; bg?: boolean }[]> = {
         Basic: [
           { id: 'fade', label: 'Fade', body: '0%{opacity:0}100%{opacity:1}' },
@@ -167,10 +146,9 @@ ${sel}::after {
       const eff =
         all.find((e) => e.id === norm || e.label.toLowerCase() === wanted) ??
         all.find((e) => e.id.includes(norm) || e.label.toLowerCase().includes(wanted)) ??
-        CATS.Basic[0]; // default: fade
+        CATS.Basic[0]; 
       const durStr = (await extract('Return ONLY the animation duration in seconds the user named (a number), else 1.')).match(/[\d.]+/)?.[0];
       const dur = durStr || '1';
-      // tool defaults for the rest: ease · 0s delay · infinite · normal · none · running
       const name = eff.id;
       const keyframes = `@keyframes ${name} {\n  ${eff.body.replace(/}/g, '}\n  ').trim()}\n}`;
       const shorthand = `animation: ${name} ${dur}s ease 0s infinite normal none;`;
@@ -179,9 +157,6 @@ ${sel}::after {
     },
   },
 
-  // --- Media query: @media rule from min/max width. --------------------------
-  // ponytail: width-only — the full tool also does height/orientation/scheme/
-  // aspect-ratio/resolution; add those conditions here if asked.
   'media-query-generator': {
     needs: 'text',
     async run({ extract }) {
@@ -190,15 +165,11 @@ ${sel}::after {
       const conds: string[] = [];
       if (min) conds.push(`(min-width: ${min}px)`);
       if (max) conds.push(`(max-width: ${max}px)`);
-      // Bare `screen` is dropped once real conditions carry the query (tool rule).
       const query = conds.length ? conds.join(' and ') : 'screen';
       return { text: `@media ${query} {\n  \n}`, note: 'media query' };
     },
   },
 
-  // --- Flexbox: container rule. ----------------------------------------------
-  // ponytail: container only — per-item order/grow/shrink/basis need clicking
-  // items in the visual tool; use the page for those.
   'flexbox-generator': {
     needs: 'text',
     async run({ extract }) {

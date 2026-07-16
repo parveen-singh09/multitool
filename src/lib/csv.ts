@@ -186,16 +186,12 @@ class Machine {
   }
 }
 
-/* ─────────────────────── header + value application ─────────────────────── */
 
-// Wraps a Machine to apply skipLines, comments, header extraction, mapHeaders,
-// mapValues, casting, and strict checking — turning raw string[] rows into the
-// caller's chosen row shape (objects or arrays).
 class RowShaper {
   private skipLeft: number;
   private headerNames: string[] | null = null;
   private headerFromFirstRow: boolean;
-  private colMask: number[] | null = null; // surviving column indices after mapHeaders
+  private colMask: number[] | null = null; 
   rowCount = 0;
 
   constructor(private o: Resolved, private emit: (row: CsvRow) => void) {
@@ -222,7 +218,6 @@ class RowShaper {
     }
 
     if (this.headerNames === null) {
-      // No headers: emit arrays (optionally cast).
       this.emit(this.o.cast ? (cells.map((v) => String(castValue(v))) as string[]) : cells);
       this.rowCount++;
       return;
@@ -257,7 +252,7 @@ class RowShaper {
     raw.forEach((h, index) => {
       let name: string | null | false | undefined = h;
       if (this.o.mapHeaders) name = this.o.mapHeaders({ header: h, index });
-      if (name === null || name === false || name === undefined) return; // dropped column
+      if (name === null || name === false || name === undefined) return; 
       names.push(String(name));
       mask.push(index);
     });
@@ -266,7 +261,6 @@ class RowShaper {
   }
 }
 
-// Coerce an unquoted cell into number/boolean where unambiguous, else keep the string.
 export function castValue(v: string): string | number | boolean {
   if (v === 'true') return true;
   if (v === 'false') return false;
@@ -281,9 +275,7 @@ export function castValue(v: string): string | number | boolean {
   return v;
 }
 
-/* ──────────────────────────── public: parse ──────────────────────────── */
 
-/** Parse a whole CSV string into an array of rows (objects by default, arrays if `headers:false`). */
 export function parse<T extends CsvRow = CsvRow>(text: string, opts: CsvOptions = {}): T[] {
   let s = text;
   if ((opts.bom ?? true) && s.charCodeAt(0) === 0xfeff) s = s.slice(1);
@@ -296,7 +288,6 @@ export function parse<T extends CsvRow = CsvRow>(text: string, opts: CsvOptions 
   return out;
 }
 
-/** Parse into a raw matrix of string cells — no header/casting logic. Handy for grids. */
 export function parseMatrix(text: string, opts: CsvOptions = {}): string[][] {
   let s = text;
   if ((opts.bom ?? true) && s.charCodeAt(0) === 0xfeff) s = s.slice(1);
@@ -308,28 +299,17 @@ export function parseMatrix(text: string, opts: CsvOptions = {}): string[][] {
   return out;
 }
 
-/* ──────────────────────── public: incremental push ──────────────────────── */
 
 export interface PushParser {
-  /** Feed a chunk of CSV text. Rows complete inside a chunk are emitted immediately. */
   write(chunk: string): void;
-  /** Flush the final buffered row. Call once when input is done. */
   end(): void;
-  /** Headers seen so far (null until the header row is parsed). */
   readonly headers: string[] | null;
 }
 
-/**
- * Create an incremental parser that calls `onRow` for each completed row.
- * Chunk boundaries may fall anywhere — mid-field, mid-quote, mid-\r\n.
- * This is the framework-free analogue of csv-parser's stream, usable with
- * fetch() ReadableStream readers, File.stream(), etc.
- */
 export function createParser(
   onRow: (row: CsvRow) => void,
   opts: CsvOptions = {},
 ): PushParser {
-  // Without a full sample we can't auto-detect reliably; default to ',' unless told.
   const o = resolve('', { ...opts, detect: opts.separator || opts.delimiter ? false : (opts.detect ?? false) });
   let bomChecked = !(opts.bom ?? true);
   const shaper = new RowShaper(o, onRow);
@@ -351,12 +331,7 @@ export function createParser(
   };
 }
 
-/* ─────────────────────── public: Web Streams + async ─────────────────────── */
 
-/**
- * A TransformStream<string, CsvRow> for the modern streaming pipeline, e.g.:
- *   file.stream().pipeThrough(new TextDecoderStream()).pipeThrough(csvTransform())
- */
 export function csvTransform(opts: CsvOptions = {}): TransformStream<string, CsvRow> {
   let parser: PushParser;
   return new TransformStream<string, CsvRow>({
@@ -372,7 +347,6 @@ export function csvTransform(opts: CsvOptions = {}): TransformStream<string, Csv
   });
 }
 
-/** Async-iterate rows from any async iterable of text chunks (fetch bodies, files, generators). */
 export async function* parseStream(
   chunks: AsyncIterable<string>,
   opts: CsvOptions = {},
@@ -387,23 +361,16 @@ export async function* parseStream(
   while (queue.length) yield queue.shift()!;
 }
 
-/* ──────────────────────────── public: stringify ──────────────────────────── */
 
 export interface StringifyOptions {
   separator?: string;
   delimiter?: string;
   quote?: string;
-  /** Newline between rows. Default '\n'. */
   newline?: string;
-  /** Write a header row from object keys. Default true for object input. */
   header?: boolean;
-  /** Explicit column order / header names. */
   columns?: string[];
-  /** Quote every field, not just those that need it. Default false. */
   quoteAll?: boolean;
-  /** Value used for null/undefined. Default ''. */
   nullValue?: string;
-  /** Append a trailing newline. Default false. */
   eof?: boolean;
 }
 
@@ -422,7 +389,6 @@ function encodeField(v: unknown, sep: string, quote: string, quoteAll: boolean, 
   return s;
 }
 
-/** Serialize rows (array of objects, or array of arrays) back into CSV text. */
 export function stringify(
   rows: Array<Record<string, unknown>> | unknown[][],
   opts: StringifyOptions = {},
@@ -442,7 +408,6 @@ export function stringify(
     }
   } else {
     const objRows = rows as Array<Record<string, unknown>>;
-    // Column union preserving first-seen order, unless explicit columns given.
     let cols = opts.columns;
     if (!cols) {
       const seen = new Set<string>();

@@ -1,10 +1,3 @@
-// Length-bucketed word pools for the domain-name generator's prefix/suffix
-// sliders. Generic short words work in either position (starcloud / cloudstar),
-// so one pool per length serves both prefix and suffix.
-//
-// 2- and 3-letter pools are hand-curated (English simply has no ~300 usable
-// 2-letter words). 4- and 5-letter pools are sliced from the existing word
-// lists rather than retyped.
 import { WORDS } from './wordlist';
 import { WORDS5 } from './words5';
 
@@ -31,9 +24,6 @@ export const AFFIX3 = dedup(three, 3);
 export const AFFIX4 = WORDS.filter((w) => w.length === 4).slice(0, 300);
 export const AFFIX5 = WORDS5.slice(0, 300);
 
-// Pools keyed by length. Slider range is 1–6; lengths outside 2–5 clamp to the
-// nearest available bucket. ponytail: no 1- or 6-letter pools — a single letter
-// makes no affix and 6+ is better served by the AI path.
 export const AFFIX_BY_LEN: Record<number, string[]> = { 2: AFFIX2, 3: AFFIX3, 4: AFFIX4, 5: AFFIX5 };
 
 export function affixPool(len: number): string[] {
@@ -41,8 +31,6 @@ export function affixPool(len: number): string[] {
   return AFFIX_BY_LEN[n];
 }
 
-// ponytail self-check: the sliced buckets must actually hold the right lengths
-// and hit their targets; the hand pools must be non-trivial.
 if (import.meta.env.DEV) {
   console.assert(AFFIX4.length === 300 && AFFIX4.every((w) => w.length === 4), 'AFFIX4: 300 four-letter words');
   console.assert(AFFIX5.length === 300 && AFFIX5.every((w) => w.length === 5), 'AFFIX5: 300 five-letter words');

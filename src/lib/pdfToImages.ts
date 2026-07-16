@@ -1,6 +1,3 @@
-// Render PDF pages to image blobs (pdfjs → canvas → toBlob). Same technique as
-// the pdf-to-jpg tool page; used by the AI chat to convert PDFs inline.
-// 100% client-side — nothing uploaded.
 import * as pdfjsLib from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
@@ -11,17 +8,16 @@ export interface PdfResult { images: PdfImage[]; total: number; truncated: boole
 export async function pdfToImages(
   file: File,
   opts: {
-    to?: string;      // 'image/jpeg' | 'image/png' | 'image/webp'
-    quality?: number; // 0..1 for lossy formats
-    scale?: number;   // render scale (2 ≈ 144 dpi)
-    maxPages?: number; // inline cap; full tool handles bigger docs + ZIP
+    to?: string;      
+    quality?: number; 
+    scale?: number;   
+    maxPages?: number; 
     onProgress?: (done: number, total: number) => void;
   } = {},
 ): Promise<PdfResult> {
   const to = opts.to ?? 'image/jpeg';
   const quality = to === 'image/png' ? undefined : opts.quality ?? 0.92;
   const scale = opts.scale ?? 2;
-  // ponytail: cap inline renders at maxPages; the pdf-to-jpg tool does huge docs + ZIP.
   const maxPages = opts.maxPages ?? 20;
 
   const buf = await file.arrayBuffer();

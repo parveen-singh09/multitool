@@ -40,10 +40,6 @@ export async function aiChat(messages: ChatMsg[], opts: { temperature?: number }
   return text;
 }
 
-// Streaming variant: same request via :streamGenerateContent (SSE), fires
-// onChunk as each token batch lands so the UI can render progressively.
-// Returns the full text. Use for text answers shown directly in a bubble;
-// routing still uses aiChat since its JSON reply must be parsed whole.
 export async function aiChatStream(
   messages: ChatMsg[],
   onChunk: (text: string) => void,
@@ -67,7 +63,6 @@ export async function aiChatStream(
     const { value, done } = await reader.read();
     if (done) break;
     buf += dec.decode(value, { stream: true });
-    // SSE: one "data: {json}" per line; JSON never spans lines with alt=sse.
     let nl: number;
     while ((nl = buf.indexOf('\n')) >= 0) {
       const line = buf.slice(0, nl).trim();
@@ -87,8 +82,6 @@ export async function aiChatStream(
   return full;
 }
 
-// ponytail self-check: dev-only, covers the one non-trivial bit (role mapping
-// + system folding). Runs once when the first tool imports this in dev.
 if (import.meta.env.DEV) {
   const b = toRequestBody(
     [

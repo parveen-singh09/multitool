@@ -23,14 +23,12 @@ async function req(path: string, init?: RequestInit): Promise<any> {
   return r.status === 204 ? null : r.json();
 }
 
-// A-z0-9 local part; 10 chars is plenty to avoid collisions without being ugly.
 const CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
 export function randomLocalPart(len = 10): string {
   const buf = new Uint8Array(len);
   crypto.getRandomValues(buf);
   let s = '';
   for (const b of buf) s += CHARS[b % CHARS.length];
-  // ensure it starts with a letter — some MTAs reject leading digits
   return /^[a-z]/.test(s) ? s : 'x' + s.slice(1);
 }
 
@@ -77,11 +75,8 @@ export async function deleteAccount(token: string, id: string): Promise<void> {
   await req(`/accounts/${id}`, { method: 'DELETE', headers: auth(token) });
 }
 
-// ---- self-check (run: npx tsx src/lib/tempmail.ts) -------------------------
-// @ts-ignore
 if (typeof process !== 'undefined' && process.argv?.[1]?.includes('tempmail')) {
   const assert = (c: boolean, m: string) => { if (!c) throw new Error('FAIL: ' + m); };
-  // crypto.getRandomValues exists in modern node; shim if missing
   const lp = randomLocalPart();
   assert(/^[a-z][a-z0-9]{9}$/.test(lp), 'local part is 10 lowercase alnum starting with a letter');
   assert(new Set(Array.from({ length: 50 }, () => randomLocalPart())).size > 45, 'local parts vary');

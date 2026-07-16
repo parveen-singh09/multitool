@@ -31,10 +31,6 @@ function paragraph(text: string): string {
   return `<w:p><w:r><w:t xml:space="preserve">${xmlEscape(text)}</w:t></w:r></w:p>`;
 }
 
-/**
- * Build a .docx Blob from an array of paragraph strings (one per line/block).
- * Line breaks within a paragraph string are split into separate paragraphs.
- */
 export function makeDocx(paragraphs: string[]): Blob {
   const body = paragraphs
     .flatMap((p) => p.split('\n'))

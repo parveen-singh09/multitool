@@ -18,10 +18,6 @@ export interface PartyOptions {
 const opt = (v: string, selected = false) =>
   `<option value="${v.replace(/"/g, '&quot;')}"${selected ? ' selected' : ''}>${v}</option>`;
 
-/**
- * Render the structured fields into `container`. Field ids are namespaced with
- * the prefix so both parties (and both tools) coexist on one page.
- */
 export function renderParty(container: HTMLElement, o: PartyOptions): void {
   const p = o.prefix;
   const contact = o.contact
@@ -47,11 +43,6 @@ export function renderParty(container: HTMLElement, o: PartyOptions): void {
 
 const el = <T extends HTMLElement>(id: string) => document.getElementById(id) as T | null;
 
-/**
- * Attach change listeners. The state dropdown is only meaningful for India, so
- * it's hidden for every other country (matching the Razorpay behaviour). Calls
- * `onChange` on every edit so the live preview/total stays in sync.
- */
 export function wireParty(prefix: string, onChange: () => void): void {
   const country = el<HTMLSelectElement>(`${prefix}-country`);
   const stateWrap = el<HTMLElement>(`${prefix}-state-wrap`);
@@ -66,11 +57,6 @@ export function wireParty(prefix: string, onChange: () => void): void {
   }
 }
 
-/**
- * Compose the fields into the multi-line block the PDF/preview renders. Empty
- * fields are dropped so a minimal fill (just a company name) stays clean, and
- * the GST id is only emitted when present. State is included only for India.
- */
 export function collectParty(prefix: string): string[] {
   const val = (suffix: string) => el<HTMLInputElement>(`${prefix}-${suffix}`)?.value.trim() ?? '';
   const lines: string[] = [];
@@ -88,7 +74,6 @@ export function collectParty(prefix: string): string[] {
   if (cityState) lines.push(cityState);
   if (country) lines.push(country);
 
-  // Prefix the GST id so a reader sees "GSTIN: 29ABCDE..." not a bare number.
   if (val('gstin')) lines.push(`GSTIN: ${val('gstin')}`);
 
   return lines;

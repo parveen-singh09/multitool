@@ -44,7 +44,6 @@ function esc(s: string): string {
   ));
 }
 
-// A multi-line text block as <text>+<tspan>, top-anchored (first baseline at y).
 function textBlock(
   lines: string[], x: number, y: number, px: number, color: string,
   weight = '400', lineH = 1.35, align: 'start' | 'middle' = 'start',
@@ -66,12 +65,11 @@ function sortedEvents(tl: Timeline): TimelineEvent[] {
   return [...tl.events].sort((a, b) => a.start.sort - b.start.sort);
 }
 
-// ---------------------------------------------------------------------------
 export interface RenderInput {
   tl: Timeline;
   theme: TimelineTheme;
   w: number;
-  h: number; // minimum height; layouts may grow it
+  h: number; 
 }
 
 export function renderSVG(input: RenderInput): { svg: string; width: number; height: number } {
@@ -101,7 +99,6 @@ export function renderSVG(input: RenderInput): { svg: string; width: number; hei
   return { svg, width: w, height };
 }
 
-// --- Vertical: fixed-x spine, events stacked top -> down --------------------
 function layoutVertical(events: TimelineEvent[], t: TimelineTheme, w: number, top: number) {
   const spineX = 84;
   const textX = 120;
@@ -125,7 +122,6 @@ function layoutVertical(events: TimelineEvent[], t: TimelineTheme, w: number, to
     const accent = ev.color || t.accent;
     const dotY = y + 8;
     if (ev.end) {
-      // range: a short rounded bar on the spine
       parts.push(`<rect x="${spineX - 5}" y="${dotY - 6}" width="10" height="34" rx="5" fill="${accent}"/>`);
     } else {
       parts.push(`<circle cx="${spineX}" cy="${dotY}" r="7" fill="${accent}"/>`);
@@ -139,7 +135,6 @@ function layoutVertical(events: TimelineEvent[], t: TimelineTheme, w: number, to
   return { body: parts.join(''), height: y + 20 };
 }
 
-// --- Horizontal: mid spine, events spaced proportional to time --------------
 function layoutHorizontal(events: TimelineEvent[], t: TimelineTheme, w: number, h: number, top: number) {
   const height = Math.max(h, 460);
   const midY = Math.round((top + height) / 2);
@@ -184,7 +179,6 @@ function layoutHorizontal(events: TimelineEvent[], t: TimelineTheme, w: number, 
   return { body: parts.join(''), height };
 }
 
-// --- Alternating: centered spine, odd left / even right cards ---------------
 function layoutAlternating(events: TimelineEvent[], t: TimelineTheme, w: number, top: number) {
   const spineX = Math.round(w / 2);
   const cardW = Math.min(w / 2 - 60, 420);
@@ -208,12 +202,10 @@ function layoutAlternating(events: TimelineEvent[], t: TimelineTheme, w: number,
     const cardX = left ? spineX - gap - cardW : spineX + gap;
     const dotY = y + cardH / 2;
 
-    // connector + dot
     parts.push(`<line x1="${spineX}" y1="${dotY}" x2="${left ? spineX - gap : spineX + gap}" y2="${dotY}" stroke="${accent}" stroke-width="1.5"/>`);
     parts.push(`<circle cx="${spineX}" cy="${dotY}" r="7" fill="${accent}"/>`);
     parts.push(`<circle cx="${spineX}" cy="${dotY}" r="3" fill="${t.bg}"/>`);
 
-    // card
     parts.push(`<rect x="${cardX}" y="${y}" width="${cardW}" height="${cardH}" rx="10" fill="${t.bg}" stroke="${t.spine}" stroke-width="1"/>`);
     const px = cardX + 16;
     parts.push(textBlock([dateLabel(ev)], px, y + 12, 12, accent, '600'));

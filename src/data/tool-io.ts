@@ -1,86 +1,57 @@
-// Tool I/O contracts for the AI chat router.
-//
-// The AI chat needs to know, for any tool the user's request routes to:
-//   1. what INPUT the tool needs (and what that input looks like),
-//   2. what the tool DOES with it,
-//   3. what OUTPUT comes back (and what it looks like),
-//   4. HOW the chat should show that output.
-//
-// Display category (tools.ts) does NOT map to I/O — "Generators" alone spans
-// text, image and PDF outputs. So we classify by I/O ARCHETYPE instead: the
-// contract IS the archetype. Every tool maps to exactly one archetype; the
-// archetype is defined once. Per-tool nuance goes in OVERRIDES.
-//
-// getToolIO(slug) is what the router calls. The dev self-check at the bottom
-// asserts every tool in tools.ts is classified — that's the coverage guarantee.
 
 import { tools } from './tools';
 
-// What the tool needs from the user.
 export type InputType =
-  | 'text'    // freeform text pasted/typed into the chat
-  | 'file'    // a single uploaded file (image, pdf, audio, video)
-  | 'files'   // two or more files
-  | 'numbers' // one or more numeric values / measurements
-  | 'date'    // a date (or dates)
-  | 'color'   // a color value (hex/rgb/name)
-  | 'options' // config only — no user content (e.g. "length 16, include symbols")
-  | 'none';   // nothing to supply; the tool is a live interaction (device, game)
+  | 'text'    
+  | 'file'    
+  | 'files'   
+  | 'numbers' 
+  | 'date'    
+  | 'color'   
+  | 'options' 
+  | 'none';   
 
-// What the tool produces.
 export type OutputType =
-  | 'text'        // a string result
-  | 'data'        // structured facts (valid/invalid, stats, parsed fields)
-  | 'number'      // a computed number or set of numbers
-  | 'image'       // a raster/vector image
-  | 'file'        // a downloadable file (pdf, zip, audio, video, docx…)
-  | 'interactive';// no static result — the user must operate the tool live
+  | 'text'        
+  | 'data'        
+  | 'number'      
+  | 'image'       
+  | 'file'        
+  | 'interactive';
 
-// How the chat surfaces the result.
 export type RenderMode =
-  | 'inline-text'   // print the text in the assistant card (copyable)
-  | 'inline-result' // small card of computed values / facts
-  | 'inline-image'  // image preview + download button
-  | 'inline-file'   // download button (+ short note)
-  | 'embed'         // iframe the live tool page inside the chat
-  | 'link';         // open the tool in a new tab
+  | 'inline-text'   
+  | 'inline-result' 
+  | 'inline-image'  
+  | 'inline-file'   
+  | 'embed'         
+  | 'link';         
 
 export interface ToolIO {
   input: InputType;
-  /** One line: what the input looks like, so the AI can ask for it correctly. */
   inputShape: string;
-  /** One line: what the tool does with the input. */
   does: string;
   output: OutputType;
-  /** One line: what the output looks like. */
   outputShape: string;
   render: RenderMode;
-  /**
-   * Can the chat produce this result itself (inline), or must it hand off to
-   * the live tool (embed/link)? The 6 image format-conversions + pdf-to-jpg are
-   * the only jobs wired to run inline today (see AiToolChat.astro INLINE map);
-   * everything else with runnableInChat=false is embedded/linked. This flags
-   * intent — the router decides embed vs link from render.
-   */
   runnableInChat: boolean;
 }
 
-// --- archetypes: the contract, defined once each -----------------------------
 
 export type Archetype =
-  | 'text-transform'  // text in  → transformed text out
-  | 'text-analyze'    // text in  → stats / validation / parsed data out
-  | 'number-calc'     // numbers in → computed result
-  | 'date-calc'       // date(s) in → computed result
-  | 'color-transform' // color in → converted color(s) out
-  | 'image-convert'   // image file in → image file out
-  | 'image-analyze'   // image file in → data (metadata, colors) out
-  | 'file-transform'  // file(s) in → file out (pdf/audio/video/docx)
-  | 'generate-text'   // options in → generated text out
-  | 'generate-image'  // options in → generated image out
-  | 'generate-file'   // options in → generated downloadable file out
-  | 'ai-text'         // options/text in → AI-written text out
-  | 'interactive';    // live tool — device, game, editor, tester
+  | 'text-transform'  
+  | 'text-analyze'    
+  | 'number-calc'     
+  | 'date-calc'       
+  | 'color-transform' 
+  | 'image-convert'   
+  | 'image-analyze'   
+  | 'file-transform'  
+  | 'generate-text'   
+  | 'generate-image'  
+  | 'generate-file'   
+  | 'ai-text'         
+  | 'interactive';    
 
 export const ARCHETYPES: Record<Archetype, ToolIO> = {
   'text-transform': {
@@ -163,8 +134,6 @@ export const ARCHETYPES: Record<Archetype, ToolIO> = {
   },
 };
 
-// --- slug → archetype: every tool classified ---------------------------------
-// Grouped by archetype for compact authoring. Coverage is asserted below.
 
 const BY_ARCHETYPE: Record<Archetype, string[]> = {
   'text-transform': [
@@ -273,36 +242,27 @@ const BY_ARCHETYPE: Record<Archetype, string[]> = {
     'career-predictor', 'recipe-idea-generator',
   ],
   'interactive': [
-    // Device / sensor access — needs live hardware, can't run from pasted input.
     'text-to-speech', 'speech-to-text', 'internet-speed-test', 'gps-speedometer', 'dpi-analyzer',
     'screen-tester', 'keyboard-tester', 'color-blindness-tester', 'typing-speed-tester',
     'reaction-time-tester', 'click-speed-tester', 'music-analyzer', 'bpm-analyzer',
-    // Live prices / network lookups.
     'currency-converter', 'crypto-converter', 'sitemap-generator',
-    // Games, simulators, fun spinners.
     'dice-roller', 'coin-flip', 'random-picker', 'team-generator', 'probability-simulator',
     'roulette-simulator', 'slot-machine-simulator', 'monty-hall-simulator', 'savings-goal-simulator',
     'kanoodle-solver', 'pokemon-generator', 'pokemon-team-planner', 'pokemon-team-builder',
     'tarot-card-generator', 'random-animal-generator', 'zodiac-generator', 'emoji-generator',
     'gender-predictor', 'love-predictor', 'life-expectancy-predictor', 'child-height-predictor',
     'fake-email-generator',
-    // Visual editors / builders — drag-and-drop, needs the live canvas.
     'collage-maker', 'meme-generator', 'gif-maker', 'sticker-maker', 'watermark-generator',
     'sprite-sheet-maker', 'timeline-creator', 'gantt-chart-creator',
     'org-chart-creator', 'checklist-creator', 'seating-chart-creator', 'pride-pfp-maker',
   ],
 };
 
-// Invert to slug → archetype. A slug listed under two archetypes is a bug the
-// self-check catches.
 const TOOL_ARCHETYPE: Record<string, Archetype> = {};
 for (const [arch, slugs] of Object.entries(BY_ARCHETYPE) as [Archetype, string[]][])
   for (const slug of slugs) TOOL_ARCHETYPE[slug] = arch;
 
-// --- per-tool overrides: only where the archetype default needs sharpening ---
-// Partial — merged over the archetype contract. Add entries sparingly.
 const OVERRIDES: Record<string, Partial<ToolIO>> = {
-  // The 6 canvas image conversions + pdf-to-jpg actually run inline in chat today.
   'jpg-to-png': { does: 'Re-encodes a JPEG as lossless PNG.' },
   'png-to-jpg': { does: 'Flattens and re-encodes a PNG as JPEG (quality adjustable).' },
   'png-to-webp': { does: 'Re-encodes a PNG as WebP (quality adjustable).' },
@@ -315,45 +275,34 @@ const OVERRIDES: Record<string, Partial<ToolIO>> = {
     output: 'image', outputShape: 'One image per page, each downloadable.',
     render: 'inline-image', runnableInChat: true,
   },
-  // Multi-file inputs — the AI must ask for more than one.
   'pdf-merge': { input: 'files', inputShape: 'Two or more PDF files to attach, in order.' },
   'image-to-pdf': { input: 'files', inputShape: 'One or more JPG/PNG images to attach.' },
-  // PDF in, but the output is an AI-written recap, not a file.
   'pdf-summarizer': {
     inputShape: 'A PDF file (paperclip attach).',
     does: 'Reads the PDF and writes a short, faithful summary.',
     output: 'text', outputShape: 'A few paragraphs summarizing the document.',
     render: 'embed',
   },
-  // Not a generated string — a real disposable inbox the user watches live.
   'fake-email-generator': {
     inputShape: 'Nothing — it hands you a throwaway address and shows incoming mail live.',
     does: 'Creates a disposable inbox that actually receives email.',
     outputShape: 'A live inbox address plus arriving messages.',
   },
-  // Validators return a verdict, not just stats — make that explicit.
   'json-validator': { does: 'Checks JSON syntax and pinpoints the first error.', outputShape: 'Valid/invalid + error location.' },
   'email-validator': { does: 'Checks syntax, MX/DNS, disposable and role addresses.', outputShape: 'Valid/invalid + per-check details.' },
 };
 
-// --- public API --------------------------------------------------------------
 
-/** The I/O contract for a tool slug, or null if the slug is unknown. */
 export function getToolIO(slug: string): ToolIO | null {
   const arch = TOOL_ARCHETYPE[slug];
   if (!arch) return null;
   return { ...ARCHETYPES[arch], ...OVERRIDES[slug] };
 }
 
-/** The archetype a tool belongs to (null if unknown). */
 export function getArchetype(slug: string): Archetype | null {
   return TOOL_ARCHETYPE[slug] ?? null;
 }
 
-// --- dev self-check: coverage is the whole point ------------------------------
-// Asserts every tool in tools.ts is classified exactly once, and no override
-// targets an unknown slug. If this fires, a new tool was added without an I/O
-// contract — the router would treat it as unroutable.
 if (import.meta.env.DEV) {
   const missing = tools.filter((t) => !TOOL_ARCHETYPE[t.slug]).map((t) => t.slug);
   console.assert(missing.length === 0, `tool-io: unclassified tools (add to BY_ARCHETYPE): ${missing.join(', ')}`);

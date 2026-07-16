@@ -36,7 +36,6 @@ function mulberry32(seed: number) {
 
 const hsl = (h: number, s: number, l: number) => `hsl(${h}, ${s}%, ${l}%)`;
 
-/* ------------------------------- templates ------------------------------- */
 
 function confetti(): TemplateFrame[] {
   const N = 20;

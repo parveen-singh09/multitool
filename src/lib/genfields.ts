@@ -90,7 +90,6 @@ export const FIELD_TYPES: FieldType[] = [
   { key: 'password', label: 'Password', group: 'Person',
     gen: () => { let s = ''; for (let i = 0; i < 12; i++) s += PW_CHARS[randInt(0, PW_CHARS.length - 1)]; return s; } },
 
-  // ---- Contact / Location ----
   { key: 'phone', label: 'Phone', group: 'Contact', gen: (c) => c.locale.phone() },
   { key: 'street', label: 'Street address', group: 'Contact',
     gen: (c) => c.locale.streetLine(randInt(1, 9999), pick(c.locale.streets), c.locale.streetTypes.length ? pick(c.locale.streetTypes) : '') },
@@ -99,7 +98,6 @@ export const FIELD_TYPES: FieldType[] = [
   { key: 'postcode', label: 'Postcode', group: 'Contact', gen: (c) => c.locale.postcode() },
   { key: 'country', label: 'Country', group: 'Contact', gen: (c) => c.locale.label },
 
-  // ---- Numbers / Dates ----
   { key: 'number', label: 'Number (range)', group: 'Numbers', needsOpts: 'range', placeholder: 'min,max',
     gen: (c) => { const [lo, hi] = range(c.opts, 1, 100); return randInt(lo, hi); } },
   { key: 'decimal', label: 'Decimal', group: 'Numbers', needsOpts: 'range', placeholder: 'min,max',
@@ -109,19 +107,16 @@ export const FIELD_TYPES: FieldType[] = [
   { key: 'latitude', label: 'Latitude', group: 'Numbers', gen: () => +(randFloat() * 180 - 90).toFixed(6) },
   { key: 'longitude', label: 'Longitude', group: 'Numbers', gen: () => +(randFloat() * 360 - 180).toFixed(6) },
 
-  // ---- Commerce ----
   { key: 'company', label: 'Company', group: 'Commerce', gen: () => companyName() },
   { key: 'creditCard', label: 'Credit card', group: 'Commerce', gen: () => creditCard() },
   { key: 'currency', label: 'Currency amount', group: 'Commerce',
     gen: () => `${pick(CURRENCIES)}${(randInt(1, 999999) / 100).toFixed(2)}` },
   { key: 'color', label: 'Color hex', group: 'Commerce', gen: () => '#' + randString(6, '0123456789abcdef') },
 
-  // ---- List ----
   { key: 'pickList', label: 'Pick from list', group: 'List', needsOpts: 'list', placeholder: 'red, green, blue',
     gen: (c) => { const items = c.opts.split(',').map((s) => s.trim()).filter(Boolean); return items.length ? pick(items) : ''; } },
 ];
 
 export const FIELD_BY_KEY = new Map(FIELD_TYPES.map((f) => [f.key, f]));
 
-// Group keys in declaration order, for building <optgroup>s.
 export const FIELD_GROUPS: string[] = [...new Set(FIELD_TYPES.map((f) => f.group))];

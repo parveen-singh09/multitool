@@ -1,16 +1,3 @@
-// Inline tool runners for the AI chat: produce a real result (file or text)
-// from the user's input, in-browser, instead of embedding the tool's page.
-//
-// Each runner declares what it `needs` (so the chat can ask for the right
-// attachment) and returns files and/or text. The chat renders the result
-// generically. Bespoke image/pdf-render/merge runners still live in the chat
-// component (they carry sliders + step-chaining); everything else lives here.
-//
-// Adding a tool = one entry. Port the tool's REAL logic (its lib), don't guess.
-//
-// Per-category runners live in sibling files (toolRunners.codes/css/docs.ts)
-// and are merged into RUNNERS at the bottom. They import canvasBlob/textFile
-// from here — safe circular import (used only inside run() closures).
 
 import { RUNNERS_CODES } from './toolRunners.codes';
 import { RUNNERS_CSS } from './toolRunners.css';
@@ -22,9 +9,6 @@ import { RUNNERS_IMAGES } from './toolRunners.images';
 export type RunFile = { name: string; blob: Blob; kind: 'image' | 'file' };
 export type RunResult = { files?: RunFile[]; text?: string; note?: string };
 
-// `extract` runs a one-shot AI call to pull the exact input out of a chat
-// message ("make a qr for example.com" → "example.com"). Injected by the chat
-// so this module stays free of the AI client.
 export type RunCtx = {
   query: string;
   files: File[];
@@ -32,23 +16,18 @@ export type RunCtx = {
 };
 
 export type Runner = {
-  // What the chat must have before running. 'text' = works from the message
-  // (may still use extract); 'image'/'pdf'/'svg' = needs a fitting attachment.
   needs: 'text' | 'image' | 'pdf' | 'svg';
   run: (ctx: RunCtx) => Promise<RunResult>;
 };
 
 const isPdf = (f: File) => f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
 
-/** Encode a canvas to a Blob (png by default). Shared by runner files. */
 export const canvasBlob = (c: HTMLCanvasElement, type = 'image/png', q?: number): Promise<Blob> =>
   new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('encode failed'))), type, q));
 
-/** Wrap a text string as a downloadable file result. */
 export const textFile = (name: string, text: string, mime = 'text/plain'): RunFile =>
   ({ name, blob: new Blob([text], { type: mime }), kind: 'file' });
 
-// Parse "1-3, 5, 8-10" against a page count → sorted, de-duped 0-based indices.
 function parseRange(str: string, pageCount: number): number[] {
   const idx: number[] = [];
   for (const part of str.split(',')) {
@@ -62,7 +41,6 @@ function parseRange(str: string, pageCount: number): number[] {
 }
 
 export const RUNNERS: Record<string, Runner> = {
-  // --- QR code: encode a URL/text the user names into a PNG. -----------------
   'qr-code-generator': {
     needs: 'text',
     async run({ extract }) {
@@ -76,7 +54,6 @@ export const RUNNERS: Record<string, Runner> = {
     },
   },
 
-  // --- Barcode: Code 128 from named data (the safe default symbology). -------
   'barcode-generator': {
     needs: 'text',
     async run({ extract }) {
@@ -93,7 +70,6 @@ export const RUNNERS: Record<string, Runner> = {
     },
   },
 
-  // --- PDF split: extract a page range (or every page) from an attached PDF. -
   'pdf-split': {
     needs: 'pdf',
     async run({ query, files }) {
@@ -103,8 +79,6 @@ export const RUNNERS: Record<string, Runner> = {
       const bytes = await src.arrayBuffer();
       const doc = await PDFDocument.load(bytes);
       const count = doc.getPageCount();
-      // A range named in the message ("pages 1-3, 5") → extract those into one
-      // PDF; otherwise split every page into its own file.
       const rangeText = (query.match(/\d+\s*-\s*\d+|\d+/g) ?? []).join(',');
       const base = src.name.replace(/\.pdf$/i, '') || 'pdf';
       if (rangeText) {
@@ -125,8 +99,6 @@ export const RUNNERS: Record<string, Runner> = {
     },
   },
 
-  // --- PDF → text: read the embedded text layer (reading order). -------------
-  // ponytail: text-layer only — scanned PDFs need OCR; the full tool has it.
   'pdf-to-text': {
     needs: 'pdf',
     async run({ files }) {
@@ -139,7 +111,6 @@ export const RUNNERS: Record<string, Runner> = {
       let text = '';
       for (let n = 1; n <= pdf.numPages; n++) {
         const content = await (await pdf.getPage(n)).getTextContent();
-        // Group items into visual lines by baseline y, left→right.
         const rows: { y: number; parts: { x: number; s: string }[] }[] = [];
         for (const it of content.items as any[]) {
           const s = it.str; if (!s) continue;
@@ -158,7 +129,6 @@ export const RUNNERS: Record<string, Runner> = {
     },
   },
 
-  // --- Images → one PDF (fit-to-image pages, auto-rotate). -------------------
   'image-to-pdf': {
     needs: 'image',
     async run({ files }) {
@@ -171,7 +141,6 @@ export const RUNNERS: Record<string, Runner> = {
         if (f.type === 'image/jpeg' || f.type === 'image/png') {
           bytes = await f.arrayBuffer(); isPng = f.type === 'image/png';
         } else {
-          // webp/gif/bmp → PNG via canvas (lossless, first frame for GIF).
           const bmp = await createImageBitmap(f, { imageOrientation: 'from-image' });
           const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height;
           c.getContext('2d')!.drawImage(bmp, 0, 0); bmp.close?.();
@@ -186,7 +155,6 @@ export const RUNNERS: Record<string, Runner> = {
     },
   },
 
-  // --- SVG → PNG (rasterize attached SVGs at 512px). -------------------------
   'svg-downloader': {
     needs: 'svg',
     async run({ files }) {
@@ -209,22 +177,18 @@ export const RUNNERS: Record<string, Runner> = {
     },
   },
 
-  // --- Favicon: an attached image → multi-size .ico; else a letter/emoji. -----
-  // The site tool is text-only, but "make a favicon from this image" is the
-  // common ask — so this runner uses an attached image when present.
   'favicon-generator': {
     needs: 'text', // works from a message; uses an attached image if one is present
     async run({ files, extract }) {
       const sizes = [16, 32, 48];
       const img = files.find((f) => /^image\//.test(f.type) && f.type !== 'image/svg+xml');
 
-      // Render each size to a canvas: cover-crop the image, or draw the letter.
       const canvases = await Promise.all(sizes.concat(256).map(async (s) => {
         const c = document.createElement('canvas'); c.width = s; c.height = s;
         const ctx = c.getContext('2d')!;
         if (img) {
           const bmp = await createImageBitmap(img);
-          const scale = Math.max(s / bmp.width, s / bmp.height); // cover
+          const scale = Math.max(s / bmp.width, s / bmp.height); 
           const dw = bmp.width * scale, dh = bmp.height * scale;
           ctx.drawImage(bmp, (s - dw) / 2, (s - dh) / 2, dw, dh); bmp.close?.();
         } else {
@@ -238,7 +202,6 @@ export const RUNNERS: Record<string, Runner> = {
       }));
       const label = img ? `from ${img.name}` : 'from text';
 
-      // Pack 16/32/48 PNGs into a multi-size .ico (ported from the tool's logic).
       const pngs = await Promise.all(sizes.map((s, i) =>
         canvasBlob(canvases[i]).then(async (b) => new Uint8Array(await b.arrayBuffer()))));
       const header = 6 + sizes.length * 16;
@@ -266,12 +229,10 @@ export const RUNNERS: Record<string, Runner> = {
   },
 };
 
-// --- Random Pokémon: live PokéAPI draw (classified interactive, but it's a
-// generator with real data + CORS, so it runs inline fine). --------------------
 RUNNERS['pokemon-generator'] = {
   needs: 'text',
   async run() {
-    const id = 1 + Math.floor(Math.random() * 1025); // ponytail: all gens; filters live on the full tool
+    const id = 1 + Math.floor(Math.random() * 1025); 
     const d = await (await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`)).json();
     const name = (d.name as string).replace(/-/g, ' ');
     const types = d.types.map((t: any) => t.type.name).join(', ');
@@ -280,7 +241,6 @@ RUNNERS['pokemon-generator'] = {
     const text = `#${String(d.id).padStart(4, '0')} ${name[0].toUpperCase() + name.slice(1)}\n` +
       `Type: ${types}\nHeight: ${(d.height / 10).toFixed(1)} m · Weight: ${(d.weight / 10).toFixed(1)} kg\n` +
       `${stats}\nTotal: ${total}`;
-    // Official artwork is a CORS-enabled PNG; embed it, but don't fail if it 404s.
     const art = d.sprites?.other?.['official-artwork']?.front_default ?? d.sprites?.front_default;
     const files: RunFile[] = [];
     if (art) {
@@ -290,8 +250,6 @@ RUNNERS['pokemon-generator'] = {
   },
 };
 
-// --- Tarot: draw a real card from the deck (image asset + meaning). Classified
-// interactive, but it's a random draw — runs inline like pokemon. --------------
 RUNNERS['tarot-card-generator'] = {
   needs: 'text',
   async run() {
@@ -303,19 +261,16 @@ RUNNERS['tarot-card-generator'] = {
     const arcana = card.arcana === 'Major' ? 'Major Arcana' : `${card.suit} · Minor Arcana`;
     const text = `${card.name}${reversed ? ' (reversed)' : ''}\n${arcana} · ${card.element} · ${card.astrology}\n\n${meaning}\n\n${card.keywords.join(' · ')}`;
     const files: RunFile[] = [];
-    // Card art is a public asset; embed it, don't fail the draw if it 404s.
     try { files.push({ name: `${card.name}.jpg`, blob: await (await fetch(card.img)).blob(), kind: 'image' }); } catch {}
     return { files, text, note: `Tarot · ${card.name}${reversed ? ' (reversed)' : ''}` };
   },
 };
 
-// --- Image ⇄ Base64: real byte work the AI can't do (it can't see raw bytes). -
 RUNNERS['image-to-base64'] = {
   needs: 'image',
   async run({ files }) {
     const img = files.find((f) => /^image\//.test(f.type));
     if (!img) throw new Error('Attach an image to encode.');
-    // readAsDataURL gives the full `data:<mime>;base64,…` URI directly.
     const dataUri = await new Promise<string>((res, rej) => {
       const r = new FileReader();
       r.onload = () => res(r.result as string);
@@ -331,7 +286,6 @@ RUNNERS['base64-to-image'] = {
   async run({ extract }) {
     const raw = (await extract('Return ONLY the Base64 string or data URI the user wants decoded — no quotes, no explanation.')).trim();
     if (!raw) throw new Error('Paste a Base64 string (or data URI) to decode.');
-    // Accept a full data URI or bare base64; default mime to png.
     const m = raw.match(/^data:([^;]+);base64,(.*)$/s);
     const mime = m ? m[1] : 'image/png';
     const b64 = (m ? m[2] : raw).replace(/\s/g, '');
@@ -345,16 +299,10 @@ RUNNERS['base64-to-image'] = {
   },
 };
 
-// base64-file-downloader is the same base64→file job — router lands here for
-// "convert this base64 to png". base64-to-image sniffs the data URI's mime.
 RUNNERS['base64-file-downloader'] = RUNNERS['base64-to-image'];
 
-// ico-converter (image → multi-size .ico) is the same job as the favicon
-// runner — the router often lands here for "make a favicon from this image".
 RUNNERS['ico-converter'] = RUNNERS['favicon-generator'];
 
-// Merge the per-category runner files (2D codes, CSS, docs, …). Safe circular
-// import: those files only use canvasBlob/textFile inside run() closures.
 Object.assign(RUNNERS, RUNNERS_CODES, RUNNERS_CSS, RUNNERS_DOCS, RUNNERS_FILES, RUNNERS_MISC, RUNNERS_IMAGES);
 
 export const getRunner = (slug: string): Runner | null => RUNNERS[slug] ?? null;

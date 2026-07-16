@@ -75,27 +75,20 @@ const D = {
   cap: svg('<path d="M50 30 L14 44 L50 58 L86 44z" fill="#1e293b"/><path d="M32 50 v14 q18 12 36 0 v-14" fill="#334155"/><rect x="83" y="44" width="4" height="20" fill="#eab308"/><circle cx="85" cy="66" r="4" fill="#eab308"/>'),
 } as const;
 
-// ---------------------------------------------------------------------------
-// Arrangements: slot layouts for 3-6 photos. Frame color is applied per-theme.
-// All slots sit within y 0.22..0.92 so the top band is free for the heading.
-// ---------------------------------------------------------------------------
 type Slot = { x: number; y: number; w: number; h: number; angle: number };
 
 const ARRANGEMENTS: Slot[][] = [
-  // grid4
   [
     { x: 0.08, y: 0.26, w: 0.40, h: 0.32, angle: -4 },
     { x: 0.52, y: 0.28, w: 0.40, h: 0.32, angle: 4 },
     { x: 0.10, y: 0.60, w: 0.40, h: 0.30, angle: 3 },
     { x: 0.50, y: 0.58, w: 0.40, h: 0.30, angle: -3 },
   ],
-  // row3
   [
     { x: 0.06, y: 0.34, w: 0.28, h: 0.42, angle: -6 },
     { x: 0.36, y: 0.30, w: 0.28, h: 0.42, angle: 3 },
     { x: 0.66, y: 0.34, w: 0.28, h: 0.42, angle: 7 },
   ],
-  // feature5 (big left + 4 small)
   [
     { x: 0.06, y: 0.30, w: 0.44, h: 0.52, angle: -3 },
     { x: 0.54, y: 0.28, w: 0.20, h: 0.24, angle: 4 },
@@ -103,7 +96,6 @@ const ARRANGEMENTS: Slot[][] = [
     { x: 0.54, y: 0.56, w: 0.20, h: 0.26, angle: -3 },
     { x: 0.76, y: 0.56, w: 0.18, h: 0.26, angle: 5 },
   ],
-  // grid6 (3x2)
   [
     { x: 0.06, y: 0.26, w: 0.28, h: 0.30, angle: -3 },
     { x: 0.36, y: 0.24, w: 0.28, h: 0.30, angle: 3 },
@@ -112,7 +104,6 @@ const ARRANGEMENTS: Slot[][] = [
     { x: 0.36, y: 0.62, w: 0.28, h: 0.30, angle: -4 },
     { x: 0.66, y: 0.60, w: 0.28, h: 0.30, angle: 3 },
   ],
-  // scatter5
   [
     { x: 0.08, y: 0.28, w: 0.30, h: 0.36, angle: -8 },
     { x: 0.40, y: 0.24, w: 0.26, h: 0.34, angle: 5 },
@@ -120,7 +111,6 @@ const ARRANGEMENTS: Slot[][] = [
     { x: 0.18, y: 0.58, w: 0.30, h: 0.34, angle: 7 },
     { x: 0.52, y: 0.58, w: 0.32, h: 0.34, angle: -5 },
   ],
-  // big3
   [
     { x: 0.06, y: 0.30, w: 0.40, h: 0.50, angle: -4 },
     { x: 0.50, y: 0.26, w: 0.42, h: 0.28, angle: 4 },
@@ -128,7 +118,6 @@ const ARRANGEMENTS: Slot[][] = [
   ],
 ];
 
-// Corner slots for decorations (auto-placed, cycling the theme's deco svgs).
 const CORNERS = [
   { x: 0.11, y: 0.10, angle: -14 },
   { x: 0.89, y: 0.10, angle: 14 },
@@ -142,10 +131,10 @@ interface Theme {
   border?: string;
   font: string;
   headingColor: string;
-  frame: string;         // matte color for photo slots
+  frame: string;         
   italic?: boolean;
-  deco: string[];        // decorative svgs, cycled across the 4 corners
-  headings: string[];    // one per template (5-6)
+  deco: string[];        
+  headings: string[];    
 }
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');

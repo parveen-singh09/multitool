@@ -66,23 +66,19 @@ export function parseDate(raw: string): TLDate | null {
     const year = parseInt(iso[1], 10);
     const month = iso[2] ? parseInt(iso[2], 10) : undefined;
     const day = iso[3] ? parseInt(iso[3], 10) : undefined;
-    // A bare 1-2 digit number with no separators is likelier a day/quarter typo
-    // than a year, but we still treat it as a year — the user anchored on it.
     return { raw, year, month, day, sort: sortKey(year, month, day) };
   }
 
-  // "March 2024" / "15 March 2024" / "March 15, 2024"
   if (monthName >= 0) {
     const yearM = s.match(/(\d{1,6})/g);
     const year = sign * parseInt(yearM?.[yearM.length - 1] ?? '0', 10);
-    const dayM = s.match(/\b(\d{1,2})\b(?!.*\d)/); // a small number = day (rough)
+    const dayM = s.match(/\b(\d{1,2})\b(?!.*\d)/); 
     const month = monthName + 1;
     const day = dayM && parseInt(dayM[1], 10) <= 31 && parseInt(dayM[1], 10) !== Math.abs(year)
       ? parseInt(dayM[1], 10) : undefined;
     if (year) return { raw, year, month, day, sort: sortKey(year, month, day) };
   }
 
-  // US "M/D/YYYY" or "D/M/YYYY" — assume M/D/Y
   const slash = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{1,4})/);
   if (slash) {
     const year = sign * parseInt(slash[3], 10);
@@ -92,7 +88,6 @@ export function parseDate(raw: string): TLDate | null {
     };
   }
 
-  // Last resort: any number is the year.
   const anyNum = s.match(/(\d{1,6})/);
   if (anyNum) {
     const year = sign * parseInt(anyNum[1], 10);
@@ -110,7 +105,6 @@ const MONTHS_FULL = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
-// Human label for a parsed date, used when the event has no displayDate.
 export function formatDate(d: TLDate): string {
   const era = d.year < 0 ? ' BC' : '';
   const y = Math.abs(d.year);
@@ -119,12 +113,6 @@ export function formatDate(d: TLDate): string {
   return `${y}${era}`;
 }
 
-// ---------------------------------------------------------------------------
-// ponytail: one self-check on the only non-trivial logic — the BC-aware sort.
-// Run with:  npx tsx src/lib/timeline/types.ts
-// Guard is a no-op in the browser (process is undefined there), so this never
-// runs in the Astro bundle — only under tsx/node when this file is the entry.
-// ---------------------------------------------------------------------------
 declare const process: any;
 if (typeof process !== 'undefined' && process.argv?.[1]?.endsWith('types.ts')) {
   const assert = (c: boolean, m: string) => { if (!c) throw new Error('FAIL: ' + m); };

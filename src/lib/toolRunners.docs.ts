@@ -1,11 +1,3 @@
-// Inline runners for the PDF-document generators (invoice, receipt, purchase
-// order, certificate, plain text→PDF). Same contract as toolRunners.ts: each
-// pulls the document content out of the chat message with `extract` (as JSON),
-// then reuses the tool's REAL builder to produce the PDF.
-//
-// The line-item docs (invoice / PO / receipt) all route through pdfdoc.ts's
-// buildDocPdf / buildReceiptPdf — the same functions the tool pages call — so
-// layout, totals math and currency handling stay identical.
 
 import type { Runner, RunCtx, RunResult } from './toolRunners';
 import { canvasBlob } from './toolRunners';
@@ -20,8 +12,6 @@ const today = () => new Date().toISOString().slice(0, 10);
 const pdfFile = (name: string, bytes: Uint8Array): RunResult['files'] =>
   [{ name, blob: new Blob([bytes.slice() as BlobPart], { type: 'application/pdf' }), kind: 'file' }];
 
-// Ask `extract` for JSON, tolerate ```-fences / stray prose, shallow-merge over
-// the defaults so any missing field falls back rather than throwing.
 async function askJson<T extends object>(extract: RunCtx['extract'], instruction: string, fallback: T): Promise<T> {
   try {
     const raw = await extract(instruction + ' Return ONLY a JSON object, no prose, no code fences.');
@@ -32,7 +22,6 @@ async function askJson<T extends object>(extract: RunCtx['extract'], instruction
   }
 }
 
-// Coerce the model's loose item list into clean LineItems; drop blank rows.
 function normItems(raw: any): LineItem[] {
   const arr = Array.isArray(raw) ? raw : [];
   const items = arr.map((it: any): LineItem => ({
@@ -47,7 +36,6 @@ const toLines = (v: any): string[] =>
   (Array.isArray(v) ? v : typeof v === 'string' && v ? v.split(/\n|,\s*/) : [])
     .map((s) => String(s).trim()).filter(Boolean);
 
-// Shared extract → DocData for invoice + purchase order (both buildDocPdf docs).
 type DocShape = {
   number: string; date: string; dueDate: string; terms: string;
   currencyCode: string; from: any; to: any; items: any;
@@ -74,7 +62,6 @@ async function extractDoc(ctx: RunCtx, defaults: Partial<DocShape>, fromLabel: s
 }
 
 export const RUNNERS_DOCS: Record<string, Runner> = {
-  // --- Invoice: line items + tax/discount/shipping → A4 PDF (buildDocPdf). ----
   'invoice-generator': {
     needs: 'text',
     async run(ctx) {
@@ -85,7 +72,6 @@ export const RUNNERS_DOCS: Record<string, Runner> = {
     },
   },
 
-  // --- Purchase order: buyer/vendor + ordered items → A4 PDF (buildDocPdf). ---
   'purchase-order-generator': {
     needs: 'text',
     async run(ctx) {
@@ -96,7 +82,6 @@ export const RUNNERS_DOCS: Record<string, Runner> = {
     },
   },
 
-  // --- Receipt: itemized sale + payment/change → thermal or A4 (buildReceiptPdf).
   'receipt-generator': {
     needs: 'text',
     async run({ extract }) {
@@ -129,17 +114,15 @@ export const RUNNERS_DOCS: Record<string, Runner> = {
     },
   },
 
-  // --- Text → PDF: wrap + paginate the message's text (ports pdf-generator). --
   'pdf-generator': {
     needs: 'text',
     async run({ query, extract }) {
-      // Prefer the model's cleaned document text; fall back to the raw message.
       const body = (await extract('Return the exact text the user wants turned into a PDF, verbatim, with no commentary. If they only described it, write that text.')).trim() || query.trim();
       if (!body) throw new Error('Tell me what text to put in the PDF.');
       const title = (await extract('Return ONLY a short document title if the user named one, else an empty string.')).trim().slice(0, 80);
 
       const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
-      const [pw, ph] = [595, 842]; // A4 portrait
+      const [pw, ph] = [595, 842]; 
       const fontSize = 12, margin = 56, lineHeight = fontSize * 1.4, maxWidth = pw - margin * 2;
       const pdf = await PDFDocument.create();
       const font = await pdf.embedFont(StandardFonts.Helvetica);
@@ -166,10 +149,6 @@ export const RUNNERS_DOCS: Record<string, Runner> = {
     },
   },
 
-  // --- Certificate: draw on a canvas, embed as a PDF page. --------------------
-  // ponytail: single "classic" template + double border only. The full tool has
-  // 10 themed templates, 6 border styles and image upload; the runner ports the
-  // core text layout (positions/fonts) faithfully and drops the theme picker.
   'certificate-generator': {
     needs: 'text',
     async run({ extract }) {
@@ -185,7 +164,6 @@ export const RUNNERS_DOCS: Record<string, Runner> = {
       canvas.width = W; canvas.height = H;
       const ctx = canvas.getContext('2d')!;
       ctx.fillStyle = '#fffdf8'; ctx.fillRect(0, 0, W, H);
-      // Double border (classic).
       ctx.strokeStyle = accent;
       ctx.lineWidth = 6; ctx.strokeRect(24, 24, W - 48, H - 48);
       ctx.lineWidth = 2; ctx.strokeRect(40, 40, W - 80, H - 80);
@@ -199,7 +177,6 @@ export const RUNNERS_DOCS: Record<string, Runner> = {
       ctx.fillText(d.name || 'Recipient', W / 2, 340);
       ctx.strokeStyle = '#cccccc'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(W / 2 - 250, 360); ctx.lineTo(W / 2 + 250, 360); ctx.stroke();
-      // Description, wrapped to width.
       ctx.fillStyle = '#444444'; ctx.font = `22px ${family}`;
       const words = (d.description || '').split(/\s+/).filter(Boolean);
       const lines: string[] = []; let ln = '';
@@ -209,7 +186,6 @@ export const RUNNERS_DOCS: Record<string, Runner> = {
       }
       if (ln) lines.push(ln);
       lines.forEach((l, i) => ctx.fillText(l, W / 2, 420 + i * 30));
-      // Date + signature.
       ctx.strokeStyle = '#888888'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(180, 620); ctx.lineTo(400, 620); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(600, 620); ctx.lineTo(820, 620); ctx.stroke();

@@ -215,9 +215,7 @@ function yamlError(line: YamlLine, msg: string): Error {
   return new Error(`YAML error on line ${line.lineNo}: ${msg}`);
 }
 
-/* ─────────────────────────────── CSV ───────────────────────────────── */
 
-// Detect the most likely delimiter from the first non-empty line.
 export function detectDelimiter(text: string): ',' | ';' | '\t' {
   const line = text.replace(/\r\n?/g, '\n').split('\n').find((l) => l.trim() !== '') ?? '';
   const counts: [string, number][] = [
@@ -229,7 +227,6 @@ export function detectDelimiter(text: string): ',' | ';' | '\t' {
   return counts[0][1] > 0 ? (counts[0][0] as ',' | ';' | '\t') : ',';
 }
 
-// Parse CSV text into a matrix of string cells (RFC-4180 style quoting).
 export function parseCsv(text: string, delimiter: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
@@ -254,13 +251,10 @@ export function parseCsv(text: string, delimiter: string): string[][] {
       field += c;
     }
   }
-  // Final field/row (unless file ended on a newline with nothing after).
   if (field !== '' || row.length > 0) { row.push(field); rows.push(row); }
-  // Drop a trailing fully-empty row produced by a terminal newline.
   return rows.filter((r, idx) => !(idx === rows.length - 1 && r.length === 1 && r[0] === ''));
 }
 
-// Convert a CSV matrix to JSON. With header, each row becomes an object.
 export function csvToJson(text: string, delimiter: string, hasHeader: boolean): Json {
   const matrix = parseCsv(text, delimiter);
   if (matrix.length === 0) return [];
@@ -275,7 +269,6 @@ export function csvToJson(text: string, delimiter: string, hasHeader: boolean): 
   });
 }
 
-// Coerce a CSV cell into number/bool where unambiguous, else keep string.
 function csvCell(v: string): Json {
   if (v === '') return '';
   if (v === 'true') return true;
@@ -291,9 +284,7 @@ function csvCell(v: string): Json {
   return v;
 }
 
-/* ─────────────────────────── JSON → CSV ────────────────────────────── */
 
-// Flatten one level of nested objects into dot-separated keys.
 function flattenOneLevel(obj: { [k: string]: Json }): { [k: string]: Json } {
   const out: { [k: string]: Json } = {};
   for (const [k, v] of Object.entries(obj)) {
@@ -306,14 +297,12 @@ function flattenOneLevel(obj: { [k: string]: Json }): { [k: string]: Json } {
   return out;
 }
 
-// Render one value as a CSV field string.
 function csvValue(v: Json): string {
   if (v === null || v === undefined) return '';
   if (typeof v === 'object') return JSON.stringify(v);
   return String(v);
 }
 
-// Quote a field if it contains the delimiter, quotes, or newlines.
 function quoteField(s: string, delimiter: string): string {
   if (s.includes('"') || s.includes('\n') || s.includes('\r') || s.includes(delimiter)) {
     return '"' + s.replace(/"/g, '""') + '"';
@@ -321,7 +310,6 @@ function quoteField(s: string, delimiter: string): string {
   return s;
 }
 
-// Convert an array of JSON objects into CSV text.
 export function jsonToCsv(data: Json, delimiter: string): string {
   if (!Array.isArray(data)) {
     throw new Error('Input must be a JSON array of objects.');
@@ -332,7 +320,6 @@ export function jsonToCsv(data: Json, delimiter: string): string {
     }
     return flattenOneLevel(item as { [k: string]: Json });
   });
-  // Union of keys, preserving first-seen order.
   const keys: string[] = [];
   const seen = new Set<string>();
   for (const r of rows) {
@@ -348,9 +335,7 @@ export function jsonToCsv(data: Json, delimiter: string): string {
   return lines.join('\n');
 }
 
-/* ─────────────────────────── JSON → YAML ───────────────────────────── */
 
-// Serialize a JSON value to YAML (block style). Mirrors parseYaml's subset.
 export function jsonToYaml(data: Json, indent = 0): string {
   const pad = '  '.repeat(indent);
   if (Array.isArray(data)) {
@@ -399,15 +384,11 @@ function xmlBody(obj: Json, indent: number): string {
   return `${pad}${xmlEsc(String(obj))}\n`;
 }
 
-// Serialize a JSON value to a pretty-printed XML document.
 export function jsonToXml(data: Json): string {
   return '<?xml version="1.0" encoding="UTF-8"?>\n<root>\n' + xmlBody(data, 1) + '</root>';
 }
 
-/* ─────────────────────────────── TOML ──────────────────────────────── */
 
-// Minimal TOML parser: [table], [a.b] nested tables, key = value pairs
-// (strings, ints, floats, bools, arrays, and dates kept as strings).
 export function parseToml(text: string): Json {
   const root: { [k: string]: Json } = {};
   let current = root;
@@ -465,7 +446,6 @@ function tomlKey(raw: string): string {
 
 function parseTablePath(raw: string, lineNo: number): string[] {
   if (raw === '') throw new Error(`TOML error on line ${lineNo}: empty table name`);
-  // Split on dots not inside quotes.
   const parts: string[] = [];
   let cur = '', inS = false, inD = false;
   for (let i = 0; i < raw.length; i++) {
@@ -537,9 +517,8 @@ function parseTomlValue(raw: string, lineNo: number): Json {
   }
   if (t === 'true') return true;
   if (t === 'false') return false;
-  // Dates / date-times → keep as strings.
   if (/^\d{4}-\d{2}-\d{2}([Tt ].*)?$/.test(t) || /^\d{2}:\d{2}:\d{2}/.test(t)) return t;
-  const cleaned = t.replace(/_/g, ''); // TOML allows underscores in numbers
+  const cleaned = t.replace(/_/g, ''); 
   if (/^[+-]?\d+$/.test(cleaned)) {
     const n = Number(cleaned);
     if (Number.isSafeInteger(n)) return n;

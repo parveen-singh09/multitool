@@ -52,11 +52,6 @@ function normalizeTask(t: any, i: number): Task {
   };
 }
 
-// --- CSV --------------------------------------------------------------------
-// Columns: name,start,end,duration,progress,assignee,dependencies,outline
-// `dependencies` = ;-separated 1-based predecessor row numbers (MS-Project-style).
-// `end` is derived on export (informational); start+duration+deps are the source
-// of truth on import.
 const CSV_COLS = ['name', 'start', 'end', 'duration', 'progress', 'assignee', 'dependencies', 'outline'];
 
 export function toCSV(p: GanttProject): string {
@@ -88,12 +83,10 @@ export function fromCSV(text: string): GanttProject {
     deps: col('dependencies'), outline: col('outline'),
   };
   const body = rows.slice(1).filter((r) => r.some((c) => c.trim() !== ''));
-  // First pass: create tasks with placeholder ids so row numbers resolve.
   const ids = body.map(() => newId());
   const tasks: Task[] = body.map((r, i) => {
     const rawDeps = ci.deps >= 0 ? (r[ci.deps] ?? '') : '';
     const deps: Dependency[] = rawDeps.split(';').map((s) => s.trim()).filter(Boolean).map((tok) => {
-      // token like "2FS+3" / "2" / "2SS-1"
       const m = tok.match(/^(\d+)\s*(FS|SS|FF|SF)?\s*([+-]\d+)?$/i);
       if (!m) return null;
       const rowNum = parseInt(m[1], 10);
@@ -210,7 +203,6 @@ export function fromMSProjectXML(text: string): GanttProject {
   const get = (el: Element, tag: string) => el.getElementsByTagName(tag)[0]?.textContent?.trim() ?? '';
 
   const taskEls = Array.from(doc.getElementsByTagName('Task'));
-  // Map UID -> generated id first so predecessor links resolve.
   const idByUid = new Map<string, string>();
   for (const el of taskEls) idByUid.set(get(el, 'UID'), newId());
 
@@ -247,26 +239,18 @@ export function fromMSProjectXML(text: string): GanttProject {
   };
 }
 
-// ---------------------------------------------------------------------------
-// ponytail: self-check on the pure MS-Project conversions + CSV round-trip.
-// The XML *parse* half needs DOMParser (browser only), so it's checked in the
-// manual E2E pass, not here. Run:  npx tsx src/lib/gantt/interop.ts
-// ---------------------------------------------------------------------------
 declare const process: any;
 if (typeof process !== 'undefined' && process.argv?.[1]?.endsWith('interop.ts')) {
   const assert = (c: boolean, m: string) => { if (!c) throw new Error('FAIL: ' + m); };
 
-  // Duration <-> PT hours at 8h/day.
   assert(durationToPT(5) === 'PT40H0M0S', '5 days -> PT40H0M0S');
   assert(durationToPT(0) === 'PT0H0M0S', 'milestone -> PT0H0M0S');
   assert(ptToDuration('PT40H0M0S') === 5, 'PT40H -> 5 days');
   assert(ptToDuration('PT8H0M0S') === 1, 'PT8H -> 1 day');
 
-  // Dependency type numbering — FS must be 1, not 0.
   assert(TYPE_TO_NUM.FS === 1 && TYPE_TO_NUM.FF === 0 && TYPE_TO_NUM.SF === 2 && TYPE_TO_NUM.SS === 3, 'MS Project type map');
   assert(NUM_TO_TYPE[1] === 'FS', 'inverse type map: 1 -> FS');
 
-  // CSV round-trip (pure string, no DOM).
   const proj: GanttProject = {
     title: 'X', start: '2026-01-05', zoom: 'week', themeId: 'linear-dark', sizeId: 'landscape',
     calendar: { workdays: [...DEFAULT_CALENDAR.workdays], holidays: [] },
@@ -284,7 +268,6 @@ if (typeof process !== 'undefined' && process.argv?.[1]?.endsWith('interop.ts'))
   assert(back.tasks[1].deps.length === 1 && back.tasks[1].deps[0].type === 'FS' && back.tasks[1].deps[0].lag === 2, 'CSV dependency (type + lag) survives');
   assert(back.tasks[1].deps[0].pred === back.tasks[0].id, 'CSV dep resolves to row 1');
 
-  // XML export string shape (parse tested manually in browser).
   const xml = toMSProjectXML(proj);
   assert(xml.includes('<Duration>PT24H0M0S</Duration>'), 'XML encodes 3-day duration');
   assert(xml.includes('<Type>1</Type>'), 'XML encodes FS dependency as Type 1');

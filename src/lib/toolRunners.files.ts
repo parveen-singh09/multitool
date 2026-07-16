@@ -1,9 +1,3 @@
-// Inline runners for the text / data-file generators (legal docs, CSV test
-// data, email signature, ICS calendar). Same contract as toolRunners.ts: each
-// pulls its input out of the chat message with `extract` (JSON where useful),
-// then reuses the tool's REAL output logic — legal templates, the fakegen
-// column generators, generatePolicy, and RFC-5545 ICS assembly — so the file
-// the chat hands back matches what the tool page would produce.
 
 import type { Runner, RunCtx } from './toolRunners';
 import { textFile } from './toolRunners';
@@ -12,8 +6,6 @@ import { firstName, lastName, email as fakeEmail, phoneUS, companyName, address,
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-// Ask `extract` for JSON, tolerate ```-fences / stray prose, shallow-merge over
-// the defaults so any missing field falls back rather than throwing.
 async function askJson<T extends object>(extract: RunCtx['extract'], instruction: string, fallback: T): Promise<T> {
   try {
     const raw = await extract(instruction + ' Return ONLY a JSON object, no prose, no code fences.');
@@ -25,10 +17,6 @@ async function askJson<T extends object>(extract: RunCtx['extract'], instruction
 }
 
 export const RUNNERS_FILES: Record<string, Runner> = {
-  // --- Terms & conditions: fill the page's clause template → .txt. -----------
-  // ponytail: emits the page's default clause set (accounts, prohibited,
-  // cookies, links, warranty). The full tool toggles 12 clauses + md/html; add
-  // clause extraction only if users start asking to drop specific ones.
   'terms-conditions-generator': {
     needs: 'text',
     async run({ extract }) {
@@ -66,7 +54,6 @@ export const RUNNERS_FILES: Record<string, Runner> = {
     },
   },
 
-  // --- Privacy policy: reuse the tool's generatePolicy() → Markdown .txt. -----
   'privacy-policy-generator': {
     needs: 'text',
     async run({ extract }) {
@@ -74,7 +61,6 @@ export const RUNNERS_FILES: Record<string, Runner> = {
         'Extract privacy-policy details from the user\'s request. JSON: {entityName (company/person), siteName, siteUrl, contactEmail, country, effectiveDate (YYYY-MM-DD), entityType ("company" | "person"), collectsPII (bool), usesCookies (bool), gdpr (bool), ccpa (bool), children (bool), services (array of third-party service names they mention, e.g. ["Google Analytics","Stripe"])}. Use empty strings / true / false / [] sensibly for anything missing.',
         { entityName: '', siteName: '', siteUrl: '', contactEmail: '', country: '', effectiveDate: '', entityType: 'company', collectsPII: true, usesCookies: true, gdpr: true, ccpa: true, children: false, services: [] as string[] },
       );
-      // Map the loosely-named services back to the known SERVICES ids.
       const names = (Array.isArray(d.services) ? d.services : []).map((n) => String(n).toLowerCase());
       const serviceIds = SERVICES.filter((sv) => names.some((n) => n.includes(sv.name.toLowerCase()) || sv.name.toLowerCase().includes(n))).map((sv) => sv.id);
       const data: PolicyData = {
@@ -88,7 +74,6 @@ export const RUNNERS_FILES: Record<string, Runner> = {
     },
   },
 
-  // --- CSV test data: reuse the fakegen column generators → .csv. ------------
   'csv-test-data-generator': {
     needs: 'text',
     async run({ extract }) {
@@ -119,10 +104,6 @@ export const RUNNERS_FILES: Record<string, Runner> = {
     },
   },
 
-  // --- Email signature: the default "accent bar" template as inline HTML. -----
-  // ponytail: ports the accent-bar template + text links (the page's default).
-  // The full tool has 10 templates, photo/logo, and CDN social icons; those are
-  // interactive picks that don't survive a one-shot chat call.
   'email-signature-creator': {
     needs: 'text',
     async run({ extract }) {
@@ -160,10 +141,6 @@ export const RUNNERS_FILES: Record<string, Runner> = {
     },
   },
 
-  // --- ICS calendar: a valid single VEVENT (RFC 5545) → event.ics. -----------
-  // ponytail: one non-recurring event, floating or UTC time. The full tool does
-  // recurrence, IANA TZID, reminders and multi-event calendars — those are
-  // multi-field interactive choices, not a one-shot ask.
   'ics-calendar-downloader': {
     needs: 'text',
     async run({ extract }) {
@@ -176,7 +153,7 @@ export const RUNNERS_FILES: Record<string, Runner> = {
       const pad = (n: number) => String(n).padStart(2, '0');
       const escapeText = (v: string) => v.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r\n|\n|\r/g, '\\n');
       const utcStamp = (dt: Date) => `${dt.getUTCFullYear()}${pad(dt.getUTCMonth() + 1)}${pad(dt.getUTCDate())}T${pad(dt.getUTCHours())}${pad(dt.getUTCMinutes())}${pad(dt.getUTCSeconds())}Z`;
-      const wallStamp = (v: string) => v.replace(/[-:]/g, '') + '00'; // "YYYY-MM-DDTHH:MM" → "YYYYMMDDTHHMM00"
+      const wallStamp = (v: string) => v.replace(/[-:]/g, '') + '00'; 
       const dayStamp = (v: string) => v.replace(/-/g, '');
       const addDay = (v: string) => { const t = new Date(`${v}T00:00:00`); t.setDate(t.getDate() + 1); return `${t.getFullYear()}${pad(t.getMonth() + 1)}${pad(t.getDate())}`; };
       const fold = (line: string) => {
@@ -196,18 +173,15 @@ export const RUNNERS_FILES: Record<string, Runner> = {
       if (d.allDay) {
         const startDay = d.startDay || today();
         lines.push(`DTSTART;VALUE=DATE:${dayStamp(startDay)}`);
-        lines.push(`DTEND;VALUE=DATE:${d.endDay ? addDay(d.endDay) : addDay(startDay)}`); // DTEND is exclusive
+        lines.push(`DTEND;VALUE=DATE:${d.endDay ? addDay(d.endDay) : addDay(startDay)}`); 
       } else {
         if (!d.start) throw new Error('Tell me the event start date and time.');
         const s = new Date(d.start);
         if (isNaN(s.getTime())) throw new Error('The start time is invalid.');
-        // No end given → default to one hour after start, in local wall-clock
-        // digits so it matches DTSTART (which uses the raw digits, not UTC).
         const endStr = d.end || (() => {
           const t = new Date(s.getTime() + 3600000);
           return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}T${pad(t.getHours())}:${pad(t.getMinutes())}`;
         })();
-        // Floating wall-clock time: valid and unambiguous when no TZ is given.
         lines.push(`DTSTART:${wallStamp(d.start)}`);
         lines.push(`DTEND:${wallStamp(endStr)}`);
       }

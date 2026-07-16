@@ -268,9 +268,6 @@ export const TAROT_DECK: TarotCard[] = [
   ),
 ];
 
-/* ------------------------------------------------------------------ *
- * Pokémon — Gen 1 (Kanto) names + primary/secondary types
- * ------------------------------------------------------------------ */
 export interface Pokemon {
   id: number;
   name: string;
@@ -356,7 +353,6 @@ export const POKEMON_GEN1: Pokemon[] = [
   { id: 151, name: 'Mew', types: ['Psychic'] },
 ];
 
-// Hex colours for each Pokémon type, used to tint the result card.
 export const POKEMON_TYPE_COLORS: Record<string, string> = {
   Normal: '#9099a1', Fire: '#ff9d55', Water: '#4d90d5', Electric: '#f4d23c',
   Grass: '#63bc5a', Ice: '#73cec0', Fighting: '#ce4069', Poison: '#ab6ac8',
@@ -365,7 +361,6 @@ export const POKEMON_TYPE_COLORS: Record<string, string> = {
   Steel: '#5a8ea1', Fairy: '#ec8fe6',
 };
 
-// Coined, non-trademarked "Pokémon-style" name parts for the fantasy generator.
 export const FAKEMON_PREFIX = [
   'Char', 'Bulb', 'Squir', 'Pika', 'Eev', 'Vulp', 'Growl', 'Gast', 'Machop', 'Drat',
   'Mag', 'Zap', 'Flare', 'Aqua', 'Terra', 'Pyro', 'Cryo', 'Volt', 'Umbra', 'Lumi',
@@ -377,12 +372,6 @@ export const FAKEMON_SUFFIX = [
   'ny', 'go', 'zor', 'rex', 'dile', 'monk', 'roo', 'oth', 'ika', 'una',
 ];
 
-/* ------------------------------------------------------------------ *
- * Pet names
- * ------------------------------------------------------------------ */
-// Each category carries masculine-leaning (m), feminine-leaning (f) and
-// neutral/unisex (u) name lists. Gender "any" draws from m+f+u, "boy" from
-// m+u, "girl" from f+u. Vibe categories put everything in u (gender-agnostic).
 export interface PetNameCategory {
   label: string;
   group: 'By pet' | 'By vibe';
@@ -452,11 +441,10 @@ export const PET_NAME_BANK: Record<string, PetNameCategory> = {
   },
 };
 
-/** Names for a category filtered by gender lean. any=m+f+u, boy=m+u, girl=f+u. */
 export function petNamePool(key: string, gender: 'any' | 'boy' | 'girl'): string[] {
   const c = PET_NAME_BANK[key] ?? PET_NAME_BANK.any;
   const base = gender === 'boy' ? [...c.m, ...c.u] : gender === 'girl' ? [...c.f, ...c.u] : [...c.m, ...c.f, ...c.u];
-  return [...new Set(base)]; // u overlaps m/f in some banks; dedupe
+  return [...new Set(base)]; 
 }
 
 export const PET_TRAITS = [
@@ -464,9 +452,6 @@ export const PET_TRAITS = [
   'speedy', 'clumsy', 'regal', 'mischievous', 'cuddly', 'brave', 'goofy', 'curious',
 ];
 
-/* ------------------------------------------------------------------ *
- * Gamertag parts
- * ------------------------------------------------------------------ */
 export const GAMERTAG_ADJ = [
   'Shadow', 'Toxic', 'Silent', 'Rapid', 'Frost', 'Blaze', 'Cyber', 'Neon', 'Iron',
   'Ghost', 'Dark', 'Savage', 'Rogue', 'Mystic', 'Crimson', 'Venom', 'Hyper', 'Turbo',
@@ -483,11 +468,6 @@ export const GAMERTAG_SUFFIX = [
   'X', 'YT', 'TTV', 'HD', 'Pro', 'GG', 'FX', 'Zz', 'xX', '99', '007', '360', 'OP',
 ];
 
-/**
- * Per-theme noun banks for the gamertag generator. Picking a theme swaps the
- * noun pool (and folds in a few themed adjectives); "auto" uses the base banks
- * above. Mirrors usernamegenerator.com's category set.
- */
 export const GAMERTAG_THEMES: Record<string, { adj: string[]; noun: string[] }> = {
   action:    { adj: ['Rapid', 'Turbo', 'Savage', 'Elite', 'Hyper'], noun: ['Striker', 'Gunner', 'Breaker', 'Blitz', 'Trooper', 'Commando', 'Ranger', 'Assault', 'Recon', 'Vanguard'] },
   adventure: { adj: ['Bold', 'Wild', 'Roaming', 'Daring', 'Lost'],   noun: ['Wanderer', 'Nomad', 'Voyager', 'Pioneer', 'Trekker', 'Seeker', 'Pathfinder', 'Explorer', 'Drifter', 'Scout'] },
@@ -500,11 +480,6 @@ export const GAMERTAG_THEMES: Record<string, { adj: string[]; noun: string[] }> 
   strategy:  { adj: ['Silent', 'Calculating', 'Shadow', 'Prime', 'Master'], noun: ['Tactician', 'Overlord', 'Commander', 'Strategist', 'Sentinel', 'Architect', 'Marshal', 'General', 'Warden', 'Mastermind'] },
 };
 
-/* ------------------------------------------------------------------ *
- * Username themes — shared adjectives plus per-category noun banks.
- * Mirrors the NordPass category set (Movies, Music, Animals, Space,
- * Food, Nature, Sports) and drives the username generator.
- * ------------------------------------------------------------------ */
 export const USERNAME_ADJ = [
   'Cosmic', 'Silent', 'Golden', 'Crimson', 'Hidden', 'Electric', 'Frozen', 'Gentle',
   'Brave', 'Wild', 'Radiant', 'Velvet', 'Endless', 'Shining', 'Lonely', 'Sacred',

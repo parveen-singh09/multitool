@@ -1,19 +1,7 @@
-// Inline runners for the 2D-barcode and SVG-graphic tools. Same contract as
-// toolRunners.ts — one entry per tool, porting each tool's REAL logic (its lib
-// or its page's generation code), never guessing at output.
-//
-// Code generators (data-matrix/pdf417/aztec) reuse ./barcode's `toCanvas`, the
-// exact bcid values their pages use, and export PNG via `canvasBlob` — mirroring
-// the existing `barcode-generator` runner. SVG generators port the path/markup
-// logic straight from their .astro pages (wave/blob) or ./patterns (pattern).
-//
-// ponytail: chat runners take a single named input via `extract` + sane defaults;
-// the full pages keep the sliders/color pickers/randomize controls.
 
 import type { Runner, RunFile } from './toolRunners';
 import { canvasBlob } from './toolRunners';
 
-/** Parse a hex color out of extracted text → "rrggbb" (no #), or a fallback. */
 function hexColor(raw: string, fallback: string): string {
   const m = (raw || '').match(/#?([0-9a-f]{6}|[0-9a-f]{3})\b/i);
   if (!m) return fallback;
@@ -25,7 +13,6 @@ const svgFile = (name: string, svg: string): RunFile =>
   ({ name, blob: new Blob([svg], { type: 'image/svg+xml' }), kind: 'image' });
 
 export const RUNNERS_CODES: Record<string, Runner> = {
-  // --- Data Matrix: encode named text into a Data Matrix (ECC 200) PNG. ------
   'data-matrix-generator': {
     needs: 'text',
     async run({ extract }) {
@@ -42,7 +29,6 @@ export const RUNNERS_CODES: Record<string, Runner> = {
     },
   },
 
-  // --- PDF417: encode named data into a stacked PDF417 PNG. ------------------
   'pdf417-generator': {
     needs: 'text',
     async run({ extract }) {
@@ -59,7 +45,6 @@ export const RUNNERS_CODES: Record<string, Runner> = {
     },
   },
 
-  // --- Aztec: encode named content into an Aztec code PNG (full range). ------
   'aztec-generator': {
     needs: 'text',
     async run({ extract }) {
@@ -76,7 +61,6 @@ export const RUNNERS_CODES: Record<string, Runner> = {
     },
   },
 
-  // --- SVG wave divider: ported from svg-wave-generator.astro. ---------------
   'svg-wave-generator': {
     needs: 'text',
     async run({ extract }) {
@@ -100,7 +84,6 @@ export const RUNNERS_CODES: Record<string, Runner> = {
     },
   },
 
-  // --- Organic blob shape: ported from blob-generator.astro. -----------------
   'blob-generator': {
     needs: 'text',
     async run({ extract }) {
@@ -127,8 +110,6 @@ export const RUNNERS_CODES: Record<string, Runner> = {
     },
   },
 
-  // --- Seamless pattern tile: reuses ./patterns (PATTERNS + generateSVG). -----
-  // Matches a pattern by the name the user asks for; default palette + 1:1 tile.
   'pattern-generator': {
     needs: 'text',
     async run({ extract }) {

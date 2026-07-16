@@ -80,11 +80,9 @@ function short(kw: string): string {
 }
 
 function realWords(kw: string): string {
-  // Two plain dictionary words — no coinage — one of them the keyword.
   return randInt(0, 1) ? `${cap(kw)} & ${cap(pick(NOUNS))}` : `${cap(pick(ADJECTIVES))} ${cap(kw)}`;
 }
 
-/** Produce a single idea for the requested style (auto rotates through styles). */
 function oneIdea(kw: string, style: NameStyle, r: Randomness): NameIdea {
   const s: NameStyle =
     style === 'auto'
@@ -110,10 +108,6 @@ export interface GenerateOptions {
   count?: number;
 }
 
-/**
- * Generate up to `count` distinct name ideas from the given keywords.
- * Falls back to a generic word bank when no usable keyword is supplied.
- */
 export function generateNames(opts: GenerateOptions): NameIdea[] {
   const style = opts.style ?? 'auto';
   const randomness = opts.randomness ?? 1;
@@ -124,7 +118,7 @@ export function generateNames(opts: GenerateOptions): NameIdea[] {
 
   const seen = new Set<string>();
   const out: NameIdea[] = [];
-  let guard = count * 40; // bounded attempts so a tiny keyword set can't loop forever
+  let guard = count * 40; 
   while (out.length < count && guard-- > 0) {
     const idea = oneIdea(pick(pool), style, randomness);
     const key = idea.name.toLowerCase();
@@ -135,8 +129,6 @@ export function generateNames(opts: GenerateOptions): NameIdea[] {
   return out;
 }
 
-// ---- self-check -------------------------------------------------------------
-// Run with:  npx tsx src/lib/naming.ts   (crypto is global in Node >= 22)
 export function runSelfCheck(): void {
   const assert = (c: boolean, m: string) => { if (!c) throw new Error('naming self-check: ' + m); };
 
@@ -145,23 +137,18 @@ export function runSelfCheck(): void {
   assert(a.every((x) => x.name.length >= 2), 'empty/too-short name produced');
   assert(new Set(a.map((x) => x.name.toLowerCase())).size === a.length, 'duplicate names');
 
-  // Low randomness brandable should keep the keyword stem recognizable.
   const b = generateNames({ keywords: ['cloud'], style: 'brandable', randomness: 0, count: 30 });
   assert(b.some((x) => /cloud|cld/i.test(x.name)), 'low-randomness lost the keyword');
 
-  // Empty / junk keywords still yield names from the fallback pool.
   const c = generateNames({ keywords: ['', '!!'], style: 'auto', count: 10 });
   assert(c.length === 10, `fallback count ${c.length} != 10`);
 
-  // Tiny keyword + big count must terminate (guard), not hang.
   const d = generateNames({ keywords: ['ai'], style: 'real', count: 100 });
   assert(d.length > 0 && d.length <= 100, `bounded count ${d.length}`);
 
-  // eslint-disable-next-line no-console
   console.log('naming self-check OK:', { auto: a.length, brandable: b.length, sample: a.slice(0, 4).map((x) => x.name) });
 }
 
-// Node ESM entry guard — runs the self-check only when executed directly.
 if (typeof process !== 'undefined' && process.argv?.[1] && /naming\.ts$/.test(process.argv[1])) {
   runSelfCheck();
 }

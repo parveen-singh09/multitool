@@ -51,14 +51,13 @@ export function email(first: string, last: string): string {
   return `${first}${sep}${last}${tail}`.toLowerCase().replace(/[^a-z0-9._]/g, '') + '@' + pick(EMAIL_DOMAINS);
 }
 
-// US-style phone using the 555-01xx reserved fictional range.
 export function phoneUS(): string {
   const area = randInt(200, 989);
   return `(${area}) 555-01${String(randInt(0, 99)).padStart(2, '0')}`;
 }
 
 export function phoneUK(): string {
-  return `+44 7700 ${String(randInt(900000, 900999)).slice(0)}`; // Ofcom drama range 07700 900xxx
+  return `+44 7700 ${String(randInt(900000, 900999)).slice(0)}`; 
 }
 
 export function phoneIntl(): string {
@@ -82,7 +81,6 @@ export function companyName(withSuffix = true): string {
   return withSuffix ? `${base} ${pick(COMPANY_SUFFIX)}` : base;
 }
 
-// ISO date (YYYY-MM-DD) between two years, inclusive.
 export function birthDate(minAge = 18, maxAge = 80): string {
   const now = new Date();
   const year = now.getFullYear() - randInt(minAge, maxAge);
@@ -91,12 +89,10 @@ export function birthDate(minAge = 18, maxAge = 80): string {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
-// ---- Rich locale-aware user profile (for the profile generator) ----
 
 const TITLES_M = ['Mr', 'Dr', 'Prof'];
 const TITLES_F = ['Ms', 'Mrs', 'Miss', 'Dr', 'Prof'];
 const PW_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%';
-// IANA-ish offsets with a representative zone label.
 const TIMEZONES = [
   { offset: '-08:00', name: 'America/Los_Angeles' }, { offset: '-05:00', name: 'America/New_York' },
   { offset: '+00:00', name: 'Europe/London' }, { offset: '+01:00', name: 'Europe/Paris' },
@@ -107,10 +103,9 @@ const TIMEZONES = [
 
 export interface ProfileOptions {
   sex?: Sex;
-  nat?: string; // locale key, or 'any'
+  nat?: string; 
 }
 
-/** RFC-4122 v4 UUID drawn from the shared (seedable) RNG. */
 export function uuid(): string {
   const h = randHex(32).split('');
   h[12] = '4';
@@ -125,7 +120,6 @@ function password(len = 12): string {
   return out;
 }
 
-// YYYY-MM-DD `years` before now (offset by the random day/month), plus the age.
 function dateYearsAgo(years: number): { date: string; age: number } {
   const now = new Date();
   const d = new Date(now.getFullYear() - years, randInt(0, 11), randInt(1, 28));

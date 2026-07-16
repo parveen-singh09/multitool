@@ -52,8 +52,6 @@ function yamlScalar(v: unknown): string {
   if (v == null) return 'null';
   if (typeof v === 'number' || typeof v === 'boolean') return String(v);
   const s = String(v);
-  // Quote when the value could be misread as non-string YAML, has specials, or
-  // contains control chars (newlines/tabs) that would break block layout.
   return /^\s|\s$|[\n\r\t:#\-?&*!|>'"%@`{}\[\],]|^(true|false|null|~|\d)/i.test(s)
     ? `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t')}"`
     : s;
@@ -78,9 +76,6 @@ export function toYAML(rows: Row[]): string {
   ).join('\n');
 }
 
-// CREATE TABLE + INSERTs. Column SQL type is inferred from the data:
-// all-number -> INT/DECIMAL, all-boolean -> BOOLEAN, else VARCHAR(255).
-// ponytail: single generic dialect; add per-dialect (MySQL/Postgres) only if asked.
 export function toSQL(rows: Row[], table = 'mock_data'): string {
   const flat = rows.map((r) => flatten(r));
   const cols = [...new Set(flat.flatMap((r) => Object.keys(r)))];

@@ -83,28 +83,26 @@ export function buildArgs(conv: MediaConversion, o: ConvertOptions, input: strin
   if (o.normalize) af.push('loudnorm=I=-16:TP=-1.5:LRA=11');
 
   const out: string[] = [];
-  out.push('-vn'); // audio-only path (video returned above)
+  out.push('-vn'); 
   if (o.sampleRate && o.sampleRate > 0) out.push('-ar', String(o.sampleRate));
   if (o.channels && o.channels > 0) out.push('-ac', String(o.channels));
   if (af.length) out.push('-af', af.join(','));
 
-  // Codec + quality per output family.
   const q = o.quality || '';
   if (conv.out === 'mp3') {
     out.push('-c:a', 'libmp3lame');
-    if (q.startsWith('v')) out.push('-q:a', q.slice(1)); // VBR quality 0..9
-    else out.push('-b:a', (q || '192') + 'k'); // CBR kbps
+    if (q.startsWith('v')) out.push('-q:a', q.slice(1)); 
+    else out.push('-b:a', (q || '192') + 'k'); 
   } else if (conv.out === 'aac') {
     out.push('-c:a', 'aac', '-b:a', (q || '192') + 'k');
   } else if (conv.out === 'ogg') {
-    out.push('-c:a', 'libvorbis', '-q:a', q || '5'); // 0..10
+    out.push('-c:a', 'libvorbis', '-q:a', q || '5'); 
   } else if (conv.out === 'wav') {
-    out.push('-c:a', q || 'pcm_s16le'); // bit depth
+    out.push('-c:a', q || 'pcm_s16le'); 
   }
   return [...pre, ...out, output];
 }
 
-/** Default quality token for a conversion's output family. */
 export function defaultQuality(out: OutFamily): string {
   switch (out) {
     case 'mp3': return 'v2';

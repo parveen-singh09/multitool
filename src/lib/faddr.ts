@@ -50,7 +50,6 @@ const upper = (n: number) => {
 function numStreet(streets: readonly string[], types: readonly string[]): string {
   return `${randInt(1, 9999)} ${pick(streets)} ${pick(types)}`;
 }
-// "Streetname 123" (DE/NL/IT/ES/FR/Nordic style — number after the name).
 function streetNum(streets: readonly string[], suffix = ''): string {
   return `${pick(streets)}${suffix} ${randInt(1, 299)}`;
 }
@@ -222,7 +221,6 @@ export const COUNTRIES: Country[] = [
       { city: 'Sapporo', region: 'Hokkaido' }, { city: 'Fukuoka', region: 'Fukuoka' },
       { city: 'Kyoto', region: 'Kyoto' }, { city: 'Kobe', region: 'Hyogo' },
     ],
-    // Japanese addresses run district-block-number rather than named streets.
     street() { return `${randInt(1, 5)}-${randInt(1, 30)}-${randInt(1, 20)} ${pick(['Chuo', 'Kita', 'Minami', 'Higashi', 'Nishi', 'Sakae', 'Honmachi'])}`; },
     postal: () => `${digits(3)}-${digits(4)}`,
     phone: () => `+81 90-${digits(4)}-${digits(4)}`,
@@ -327,7 +325,6 @@ export interface FullAddress {
 }
 
 function coord(min: number, max: number): string {
-  // 5 decimal places ≈ 1 m precision; enough to look like a real fix.
   return (min + (randInt(0, 100000) / 100000) * (max - min)).toFixed(5);
 }
 
@@ -354,13 +351,11 @@ export function generate(countryCode: string, sex: Sex): FullAddress {
   };
 }
 
-/** One-line "street, city, region postal, country". Uses region abbr when present. */
 export function oneLine(a: FullAddress): string {
   const reg = a.regionAbbr ?? a.region;
   return `${a.street}, ${a.city}, ${reg} ${a.postal}, ${a.country}`;
 }
 
-/** Multi-line postal block. */
 export function multiLine(a: FullAddress): string {
   const reg = a.regionAbbr ?? a.region;
   return `${a.street}\n${a.city}, ${reg} ${a.postal}\n${a.country}`;

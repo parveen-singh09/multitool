@@ -63,17 +63,11 @@ export function isMilestone(t: Task): boolean {
   return t.duration === 0;
 }
 
-// A task is a summary if the NEXT task in display order sits at a deeper outline
-// level — it "owns" the contiguous run of following deeper tasks. This mirrors
-// MS Project's positional outline, so import/export is a trivial outline<->level
-// shift with no re-parenting bookkeeping.
 export function isSummary(tasks: Task[], i: number): boolean {
   const next = tasks[i + 1];
   return !!next && next.outline > tasks[i].outline;
 }
 
-// Indices of the contiguous descendants a summary task owns (all following tasks
-// with a strictly greater outline, until outline returns to <= the summary's).
 export function childrenOf(tasks: Task[], i: number): number[] {
   const base = tasks[i].outline;
   const kids: number[] = [];
@@ -81,17 +75,11 @@ export function childrenOf(tasks: Task[], i: number): number[] {
   return kids;
 }
 
-// ---------------------------------------------------------------------------
-// ponytail: one self-check on the only non-trivial logic here — positional
-// summary/child detection. Run:  npx tsx src/lib/gantt/types.ts
-// Guard is a no-op in the browser (process is undefined), so it never runs in
-// the Astro bundle.
-// ---------------------------------------------------------------------------
 declare const process: any;
 if (typeof process !== 'undefined' && process.argv?.[1]?.endsWith('types.ts')) {
   const assert = (c: boolean, m: string) => { if (!c) throw new Error('FAIL: ' + m); };
   const t = (outline: number): Task => ({ id: newId(), name: '', start: '2026-01-05', duration: 1, progress: 0, deps: [], outline });
-  const tasks = [t(0), t(1), t(1), t(0)]; // parent, child, child, sibling
+  const tasks = [t(0), t(1), t(1), t(0)]; 
   assert(isSummary(tasks, 0) === true, 'task followed by deeper outline is a summary');
   assert(isSummary(tasks, 1) === false, 'task followed by same outline is a leaf');
   assert(isSummary(tasks, 2) === false, 'task followed by shallower outline is a leaf');

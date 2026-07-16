@@ -1,12 +1,8 @@
-// Canvas-based image format conversion, shared by the landing-page AI chat.
-// Same technique the per-tool converter pages use (draw to canvas → toBlob):
-// 100% client-side, nothing uploaded. This is the single source of truth for
-// programmatic conversion outside the interactive tool pages.
 
 export interface ConvertOpts {
-  to: string;        // target MIME, e.g. 'image/png'
-  quality?: number;  // 0..1, only honored by lossy encoders (jpeg/webp)
-  flatten?: boolean; // fill white first — required when target has no alpha (jpeg)
+  to: string;        
+  quality?: number;  
+  flatten?: boolean; 
 }
 
 export function convertImage(file: File, opts: ConvertOpts): Promise<Blob> {
@@ -40,8 +36,6 @@ export function convertImage(file: File, opts: ConvertOpts): Promise<Blob> {
   });
 }
 
-// Dev self-check: encode a generated 1×1 PNG to JPEG, assert a real blob back.
-// Mirrors the pattern in lib/ai.ts. Canvas is available in the dev browser only.
 if (import.meta.env.DEV && typeof document !== 'undefined') {
   const c = document.createElement('canvas');
   c.width = c.height = 1;

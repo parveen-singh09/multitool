@@ -550,15 +550,11 @@ export function secToTime(sec: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-// Numeric value of a cell for comparison (time cells -> seconds), or null when blank.
 function cellValue(cell: Cell, isTime: boolean): number | null {
   if (cell === null) return null;
   return isTime ? timeToSec(String(cell)) : Number(cell);
 }
 
-// Score a raw performance against an event's standards for the given group.
-// raw: reps/lb/meters for non-time events, SECONDS for time events.
-// Returns the highest point value the raw performance meets (0 if below the floor).
 export function scoreEvent(event: EventStd, sex: Sex, ageIndex: number, raw: number): number {
   const ci = colIndex(ageIndex, sex);
   let best = 0;

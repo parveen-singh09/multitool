@@ -102,8 +102,6 @@ function balanceCheck(code: string): Issue[] {
   return issues;
 }
 
-// Supplementary lint notes over the stripped skeleton. These catch things a
-// formatter tolerates (SELECT with no FROM, clause misordering, trailing commas).
 function structureCheck(code: string): Issue[] {
   const issues: Issue[] = [];
   const statements = code.split(';').map((s) => s.trim()).filter(Boolean);
@@ -128,8 +126,6 @@ function structureCheck(code: string): Issue[] {
   return issues;
 }
 
-// sql-formatter throws e.g. "Parse error: Unexpected \"foo\" ... at line 2 column 5".
-// Normalize that into a single error Issue with a line number when present.
 function parseError(sql: string, dialect: SqlLanguage): Issue | null {
   try {
     format(sql, { language: dialect });
@@ -148,8 +144,6 @@ export function validate(sql: string, dialect: SqlLanguage): Result {
   const { code, issues } = scan(sql);
   const scanErrors = issues.some((x) => x.level === 'error');
 
-  // Only ask sql-formatter to parse if the literals/comments are terminated —
-  // an unterminated string produces a confusing lexer error otherwise.
   if (!scanErrors) {
     const pe = parseError(sql, dialect);
     if (pe) issues.push(pe);
@@ -158,7 +152,6 @@ export function validate(sql: string, dialect: SqlLanguage): Result {
   issues.push(...balanceCheck(code));
   issues.push(...structureCheck(code));
 
-  // De-dupe identical messages (scan + parser can both flag e.g. unbalanced parens).
   const seen = new Set<string>();
   const deduped = issues.filter((x) => {
     const k = x.level + x.msg;
@@ -171,8 +164,6 @@ export function validate(sql: string, dialect: SqlLanguage): Result {
   return { issues: deduped, statementCount };
 }
 
-// ponytail: node self-check — `npx tsx src/lib/sqlvalidate.ts`.
-// Guarded so it never runs in the browser bundle.
 if (typeof process !== 'undefined' && process.argv?.[1]?.includes('sqlvalidate')) {
   const err = (r: Result) => r.issues.filter((i) => i.level === 'error').length;
   console.assert(err(validate('SELECT id, name FROM users WHERE age > 21', 'sql')) === 0, 'valid query should have no errors');

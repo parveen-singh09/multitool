@@ -51,10 +51,9 @@ export function parseField(field: string, index: number): Set<number> {
     } else {
       const v = aliasValue(range, index);
       if (v === null) throw new Error(`Invalid value "${range}" in ${name} field.`);
-      lo = v; hi = slash.length === 2 ? max : v; // "n/step" means from n to max
+      lo = v; hi = slash.length === 2 ? max : v; 
     }
 
-    // Day-of-week 7 == Sunday (0).
     if (index === 4) { if (lo === 7) lo = 0; if (hi === 7) hi = 0; }
 
     if (lo < min || lo > max || hi < min || hi > max) {
@@ -77,7 +76,6 @@ export function describe(fields: string[]): string {
   const minStep = minF.match(/^\*\/(\d+)$/);
   const hourStep = hourF.match(/^\*\/(\d+)$/);
 
-  // Time-of-day phrase.
   if (minF === '*' && hourF === '*') {
     parts.push('Every minute');
   } else if (minStep && hourF === '*') {
@@ -94,20 +92,17 @@ export function describe(fields: string[]): string {
     parts.push(`At ${minPhrase} past ${hourPhrase}`);
   }
 
-  // Day-of-month.
   if (domF !== '*') {
     const domVals = [...parseField(domF, 2)].sort((a, b) => a - b);
     const domStep = domF.match(/^\*\/(\d+)$/);
     parts.push(domStep ? `every ${domStep[1]} days of the month` : `on day ${domVals.join(', ')} of the month`);
   }
 
-  // Month.
   if (monF !== '*') {
     const monVals = [...parseField(monF, 3)].sort((a, b) => a - b);
     parts.push('in ' + monVals.map((m) => MONTHS[m - 1]).join(', '));
   }
 
-  // Day-of-week.
   if (dowF !== '*') {
     const dowVals = [...parseField(dowF, 4)].sort((a, b) => a - b);
     parts.push('on ' + dowVals.map((d) => DOW[d]).join(', '));
@@ -128,21 +123,19 @@ function matches(date: Date, sets: Set<number>[]): boolean {
   const domOk = domS.has(date.getDate());
   const dowOk = dowS.has(date.getDay());
 
-  // Standard cron: if both DOM and DOW are restricted, either match counts.
   if (domRestricted && dowRestricted) return domOk || dowOk;
   if (domRestricted) return domOk;
   if (dowRestricted) return dowOk;
   return true;
 }
 
-// Compute next `count` run times from now. Returns [] if none within the bound.
 export function nextRuns(fields: string[], count: number): Date[] {
   const sets = fields.map((f, i) => parseField(f, i));
   const runs: Date[] = [];
   const d = new Date();
   d.setSeconds(0, 0);
   d.setMinutes(d.getMinutes() + 1);
-  const limit = 366 * 4 * 24 * 60; // ~4 years of minutes, safety bound.
+  const limit = 366 * 4 * 24 * 60; 
   for (let i = 0; i < limit && runs.length < count; i++) {
     if (matches(d, sets)) runs.push(new Date(d));
     d.setMinutes(d.getMinutes() + 1);

@@ -32,20 +32,19 @@ function esc(s: string): string {
 
 export interface RenderResult {
   svg: string;
-  boxes: BoxGeom[]; // includes the header offset — ready for hit-testing
+  boxes: BoxGeom[]; 
   byId: Map<string, BoxGeom>;
   width: number;
   height: number;
 }
 
-const LOGO_H = 64; // header band reserved when a logo is present
+const LOGO_H = 64; 
 
 export function renderSVG(chart: OrgChart, theme: OrgTheme): RenderResult {
   const base = layoutChart(chart);
   const orientation = getLayout(chart.layoutId).orientation;
   const offsetY = chart.logo ? LOGO_H : 0;
 
-  // Shift all geometry down by the header band so hit-testing matches the draw.
   const boxes: BoxGeom[] = base.boxes.map((b) => ({ ...b, y: b.y + offsetY }));
   const byId = new Map(boxes.map((b) => [b.id, b]));
   const width = base.width;
@@ -57,12 +56,10 @@ export function renderSVG(chart: OrgChart, theme: OrgTheme): RenderResult {
 
   parts.push(`<rect width="${width}" height="${height}" fill="${theme.bg}"/>`);
 
-  // optional logo, top-left
   if (chart.logo) {
     parts.push(`<image x="32" y="16" width="160" height="${LOGO_H - 24}" href="${esc(chart.logo)}" preserveAspectRatio="xMinYMid meet"/>`);
   }
 
-  // --- connectors (drawn under the boxes) ------------------------------------
   for (const person of chart.people) {
     const parent = byId.get(person.id);
     if (!parent) continue;
@@ -70,7 +67,6 @@ export function renderSVG(chart: OrgChart, theme: OrgTheme): RenderResult {
     if (kids.length) parts.push(connectors(parent, kids, orientation, theme.border));
   }
 
-  // --- boxes ------------------------------------------------------------------
   const rootIds = new Set(rootsOf(chart.people).map((p) => p.id));
   for (const box of boxes) {
     const person = byPersonId.get(box.id);
@@ -87,10 +83,6 @@ export function renderSVG(chart: OrgChart, theme: OrgTheme): RenderResult {
   return { svg, boxes, byId, width, height };
 }
 
-// Classic "bus" connectors: a stub from the parent edge to a mid line, a bar
-// spanning the children, and a stub from the bar to each child edge. The bus is
-// perpendicular to the growth axis, so it works for all four orientations by
-// swapping which axis is "cross".
 function connectors(parent: BoxGeom, kids: BoxGeom[], o: string, color: string): string {
   const line = (x1: number, y1: number, x2: number, y2: number) =>
     `<line x1="${r(x1)}" y1="${r(y1)}" x2="${r(x2)}" y2="${r(y2)}" stroke="${color}" stroke-width="1.5"/>`;
@@ -130,10 +122,8 @@ function drawBox(box: BoxGeom, person: Person, isRoot: boolean, theme: OrgTheme,
   const subColor = isRoot ? theme.inkRoot : theme.inkSubtle;
   const stroke = isRoot ? theme.boxRoot : theme.border;
 
-  // box
   out.push(`<rect x="${r(box.x)}" y="${r(box.y)}" width="${box.w}" height="${box.h}" rx="8" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>`);
 
-  // per-person accent stripe on the left edge (non-root only, if a color is set)
   if (!isRoot && person.color) {
     out.push(`<path d="M ${r(box.x)} ${r(box.y + 8)} a 8 8 0 0 1 8 -8 v ${box.h} a 8 8 0 0 1 -8 -8 z" fill="${person.color}"/>`);
   }
@@ -141,7 +131,6 @@ function drawBox(box: BoxGeom, person: Person, isRoot: boolean, theme: OrgTheme,
   let textX = box.x + 14;
   const photoSize = box.h - 20;
 
-  // photo chip (clipped circle) on the left
   if (person.photo) {
     const cx = box.x + 12 + photoSize / 2;
     const cy = box.y + box.h / 2;
@@ -168,7 +157,6 @@ function drawBox(box: BoxGeom, person: Person, isRoot: boolean, theme: OrgTheme,
   return out;
 }
 
-// Round to 2dp to keep the SVG string compact and avoid float noise.
 function r(n: number): number {
   return Math.round(n * 100) / 100;
 }

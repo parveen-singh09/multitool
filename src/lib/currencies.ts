@@ -171,11 +171,6 @@ export function symbolOf(code: string): string {
   return BY_CODE.get(code)?.symbol ?? `${code} `;
 }
 
-/**
- * WinAnsi-safe prefix for the PDF. Uses the currency's `pdf` override when the
- * symbol is representable by pdf-lib's standard fonts, otherwise the ISO code
- * followed by a space (e.g. "INR ") — always unambiguous, never a "?".
- */
 export function pdfPrefixOf(code: string): string {
   const c = BY_CODE.get(code);
   return c?.pdf ?? `${code} `;

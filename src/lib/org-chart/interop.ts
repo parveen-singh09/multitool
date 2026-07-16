@@ -25,8 +25,6 @@ function normalizeChart(o: any): OrgChart {
     photo: typeof p.photo === 'string' && p.photo.startsWith('data:') ? p.photo : undefined,
     color: typeof p.color === 'string' ? p.color : undefined,
   }));
-  // Drop manager references that don't resolve, so a hand-edited file can't
-  // point a person at a deleted id (which would orphan-render but confuse edits).
   const ids = new Set(people.map((p) => p.id));
   for (const p of people) if (p.managerId && !ids.has(p.managerId)) p.managerId = null;
   return {
@@ -39,9 +37,6 @@ function normalizeChart(o: any): OrgChart {
   };
 }
 
-// --- CSV --------------------------------------------------------------------
-// Columns: Name, Title, Department, Reports To. Header names are matched
-// case-insensitively and tolerate a few common aliases.
 const CSV_COLS = ['Name', 'Title', 'Department', 'Reports To'];
 
 export function toCSV(c: OrgChart): string {
@@ -59,7 +54,7 @@ export function toCSV(c: OrgChart): string {
 }
 
 export function fromCSV(text: string): OrgChart {
-  const rows = parseCSV(text.replace(/^﻿/, '')); // strip BOM from Excel exports
+  const rows = parseCSV(text.replace(/^﻿/, '')); 
   if (!rows.length) throw new Error('Empty CSV');
   const header = rows[0].map((h) => h.trim().toLowerCase());
   const find = (...names: string[]) => { for (const n of names) { const i = header.indexOf(n); if (i >= 0) return i; } return -1; };
@@ -80,7 +75,6 @@ export function fromCSV(text: string): OrgChart {
     managerId: null, // resolved below
   }));
 
-  // Resolve "Reports To" (a name) to a person id. First match wins on dupes.
   const idByName = new Map<string, string>();
   people.forEach((p) => { const k = p.name.toLowerCase(); if (k && !idByName.has(k)) idByName.set(k, p.id); });
   body.forEach((r, i) => {

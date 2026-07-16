@@ -59,10 +59,9 @@ export async function loadGenreModel(onProgress?: (note: string) => void): Promi
   return loadingPromise;
 }
 
-// ---- Slaney mel scale (matches librosa htk=False / Essentia slaneyMel) ----
 const F_SP = 200 / 3;
 const MIN_LOG_HZ = 1000;
-const MIN_LOG_MEL = MIN_LOG_HZ / F_SP; // 15
+const MIN_LOG_MEL = MIN_LOG_HZ / F_SP; 
 const LOGSTEP = Math.log(6.4) / 27;
 
 function hzToMel(hz: number): number {
@@ -72,10 +71,8 @@ function melToHz(mel: number): number {
   return mel < MIN_LOG_MEL ? mel * F_SP : MIN_LOG_HZ * Math.exp(LOGSTEP * (mel - MIN_LOG_MEL));
 }
 
-// Precompute the mel filterbank as triangular weights over spectrum bins.
-// unit-area normalization (Slaney): each filter scaled by 2/(f[i+2]-f[i]).
 function buildMelFilters(): { weights: Float32Array; start: number; end: number }[] {
-  const nFftBins = FRAME_SIZE / 2 + 1; // 257
+  const nFftBins = FRAME_SIZE / 2 + 1; 
   const fMin = 0, fMax = 8000;
   const melMin = hzToMel(fMin), melMax = hzToMel(fMax);
   const points = new Float32Array(N_MELS + 2);
@@ -85,7 +82,7 @@ function buildMelFilters(): { weights: Float32Array; start: number; end: number 
   for (let m = 1; m <= N_MELS; m++) {
     const fLeft = points[m - 1], fCenter = points[m], fRight = points[m + 1];
     const weights = new Float32Array(nFftBins);
-    const norm = 2 / (fRight - fLeft); // Slaney unit-area
+    const norm = 2 / (fRight - fLeft); 
     let start = nFftBins, end = 0;
     for (let k = 0; k < nFftBins; k++) {
       const f = k * binHz;
@@ -101,8 +98,6 @@ function buildMelFilters(): { weights: Float32Array; start: number; end: number 
 
 let MEL_FILTERS: ReturnType<typeof buildMelFilters> | null = null;
 
-// Resample an AudioBuffer to 16 kHz mono using an OfflineAudioContext (good
-// quality, browser-native) and return the raw Float32 samples.
 async function resampleTo16kMono(buf: AudioBuffer): Promise<Float32Array> {
   const durationFrames = Math.ceil((buf.duration * TARGET_SR));
   const OAC = (window.OfflineAudioContext || (window as any).webkitOfflineAudioContext);
@@ -115,7 +110,6 @@ async function resampleTo16kMono(buf: AudioBuffer): Promise<Float32Array> {
   return rendered.getChannelData(0).slice();
 }
 
-// Compute the full log-mel spectrogram: returns nFrames × 96.
 function melSpectrogram(mono: Float32Array): Float32Array[] {
   if (!MEL_FILTERS) MEL_FILTERS = buildMelFilters();
   const win = new Float32Array(FRAME_SIZE);
@@ -133,7 +127,6 @@ function melSpectrogram(mono: Float32Array): Float32Array[] {
       const { weights, start, end } = MEL_FILTERS[m];
       let s = 0;
       for (let k = start; k <= end; k++) s += mag[k] * weights[k];
-      // Essentia compression: log10(10000 * mel + 1).
       melRow[m] = Math.log10(10000 * s + 1);
     }
     frames.push(melRow);
@@ -141,14 +134,11 @@ function melSpectrogram(mono: Float32Array): Float32Array[] {
   return frames;
 }
 
-// Classify a decoded AudioBuffer. Averages predictions over all 187-frame
-// patches (non-overlapping) spanning the track.
 export async function classifyGenre(buf: AudioBuffer): Promise<GenreResult> {
   if (!session || !meta || !ortMod) throw new Error('Genre model not loaded');
   const mono = await resampleTo16kMono(buf);
   const frames = melSpectrogram(mono);
   if (frames.length < PATCH_FRAMES) {
-    // Pad by repeating so short clips still yield one patch.
     while (frames.length < PATCH_FRAMES) frames.push(frames[frames.length % Math.max(1, frames.length)] || new Float32Array(N_MELS));
   }
 
@@ -163,8 +153,6 @@ export async function classifyGenre(buf: AudioBuffer): Promise<GenreResult> {
       const row = frames[p * PATCH_FRAMES + f];
       patch.set(row, f * N_MELS);
     }
-    // The exported model expects a batch dimension: [1, 187, 96] (rank 3).
-    // The metadata JSON lists [187, 96]; the actual ONNX graph adds batch.
     const tensor = new ortMod.Tensor('float32', patch, [1, PATCH_FRAMES, N_MELS]);
     const out = await session.run({ [inputName]: tensor });
     const probs = out[outputName].data as Float32Array;

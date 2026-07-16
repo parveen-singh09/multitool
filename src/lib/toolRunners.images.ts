@@ -1,15 +1,7 @@
-// Canvas/image generator runners — placeholder, avatar, banner, square-face.
-// Ported from each tool's real page logic. business-card-generator is omitted:
-// it's a genuine multi-field editor (front/back, logo + bg upload, vCard QR,
-// drag-to-position) with no sensible one-shot chat result — it stays embed-only.
-//
-// favicon-generator lives in toolRunners.ts (image-capable version).
 
 import type { Runner, RunFile } from './toolRunners';
 import { canvasBlob } from './toolRunners';
 
-// Rasterize an SVG string to a PNG blob at size×size (square). Shared by the
-// avatar + square-face runners, both of which produce SVG.
 function svgToPng(svg: string, size: number): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
@@ -32,7 +24,6 @@ const rgba = (hex: string, a: number) => {
 };
 
 export const RUNNERS_IMAGES: Record<string, Runner> = {
-  // --- Placeholder image: extract W×H + optional caption → PNG. --------------
   'placeholder-image-generator': {
     needs: 'text',
     async run({ extract }) {
@@ -49,9 +40,6 @@ export const RUNNERS_IMAGES: Record<string, Runner> = {
     },
   },
 
-  // --- Avatar: dicebear avataaars from a seed the user names → PNG. ----------
-  // ponytail: seed-driven default; the page's 34-hair/eyes/mouth pickers are the
-  // full-tool upgrade.
   'avatar-generator': {
     needs: 'text',
     async run({ extract }) {
@@ -63,9 +51,6 @@ export const RUNNERS_IMAGES: Record<string, Runner> = {
     },
   },
 
-  // --- Banner: classic gradient template, heading + subtext → PNG (OG size). -
-  // ponytail: 'classic' template at 1200×630; the page has 11 templates, size
-  // presets, and photo upload.
   'banner-generator': {
     needs: 'text',
     async run({ extract }) {
@@ -78,7 +63,6 @@ export const RUNNERS_IMAGES: Record<string, Runner> = {
       const g = ctx.createLinearGradient(0, 0, w, h); g.addColorStop(0, c1); g.addColorStop(1, c2);
       ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
       ctx.fillStyle = fg; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      // fitFont: shrink until it fits 86% width.
       let ts = h * 0.22;
       do { ctx.font = `700 ${ts}px Inter, system-ui, sans-serif`; if (ctx.measureText(title).width <= w * 0.86 || ts <= 12) break; ts -= Math.max(1, Math.round(ts * 0.04)); } while (ts > 12);
       ctx.font = `700 ${ts}px Inter, system-ui, sans-serif`;
@@ -88,8 +72,6 @@ export const RUNNERS_IMAGES: Record<string, Runner> = {
     },
   },
 
-  // --- Square face: randomize parts → PNG (the page's 🎲, one-shot). ---------
-  // Parts are ported from the page verbatim below.
   'square-face-generator': {
     needs: 'text',
     async run() {
@@ -101,7 +83,6 @@ export const RUNNERS_IMAGES: Record<string, Runner> = {
   },
 };
 
-// --- square-face parts (ported from the tool page) ----------------------------
 function buildFaceSvg(rand: (n: number) => number, pick: <T>(a: T[]) => T): string {
   const eyes = ['<circle cx="96" cy="120" r="7" fill="{{C}}"/><circle cx="144" cy="120" r="7" fill="{{C}}"/>', '<circle cx="96" cy="120" r="13" fill="#fff" stroke="{{C}}" stroke-width="3"/><circle cx="144" cy="120" r="13" fill="#fff" stroke="{{C}}" stroke-width="3"/><circle cx="98" cy="122" r="6" fill="{{C}}"/><circle cx="146" cy="122" r="6" fill="{{C}}"/>', '<path d="M84 124 q12 -16 24 0" fill="none" stroke="{{C}}" stroke-width="5" stroke-linecap="round"/><path d="M132 124 q12 -16 24 0" fill="none" stroke="{{C}}" stroke-width="5" stroke-linecap="round"/>'];
   const brows = ['', '<line x1="82" y1="100" x2="110" y2="100" stroke="{{C}}" stroke-width="5" stroke-linecap="round"/><line x1="130" y1="100" x2="158" y2="100" stroke="{{C}}" stroke-width="5" stroke-linecap="round"/>', '<rect x="82" y="96" width="28" height="7" rx="3.5" fill="{{C}}"/><rect x="130" y="96" width="28" height="7" rx="3.5" fill="{{C}}"/>'];
@@ -120,7 +101,6 @@ function buildFaceSvg(rand: (n: number) => number, pick: <T>(a: T[]) => T): stri
   const DARK = '#1f1f27';
 
   const skin = pick(skins), hairCol = pick(hairCols);
-  // Draw order matches the page: clothes, hair, brows, eyes, nose, cheeks, mouth, beard, accessory.
   const layers: [string[], string][] = [
     [clothes, pick(clothesCols)], [hair, hairCol], [brows, hairCol], [eyes, DARK],
     [nose, skin], [cheeks, pick(cheekCols)], [mouth, DARK], [beard, hairCol], [accessory, DARK],

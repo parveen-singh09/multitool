@@ -88,20 +88,14 @@ export function secToTime(sec: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-// Numeric value of a cell (time cells -> seconds), or null when blank.
 function cellValue(cell: Cell, isTime: boolean): number | null {
   if (cell === null || cell === undefined) return null;
   return isTime ? timeToSec(String(cell)) : Number(cell);
 }
 
-// Score a raw performance by interpolating between the published tier anchors.
-// raw: reps for rep events, SECONDS for time events. Returns rounded points
-// clamped to [0, event.max]. Extrapolates linearly beyond the outermost anchors
-// so results above the top tier or below the 40 tier still degrade smoothly.
 export function scoreEvent(event: EventStd, sex: Sex, ageIndex: number, raw: number): number {
   const ci = colIndex(ageIndex, sex);
 
-  // Collect (value, points) anchors for this column, sorted by value ascending.
   const anchors: { val: number; pts: number }[] = [];
   for (const row of event.rows) {
     const val = cellValue(row[ci], event.isTime);
@@ -112,7 +106,6 @@ export function scoreEvent(event: EventStd, sex: Sex, ageIndex: number, raw: num
   anchors.sort((a, b) => a.val - b.val);
   if (anchors.length === 1) return clamp(anchors[0].pts, event.max);
 
-  // Find the bracketing pair, or the outermost pair for extrapolation.
   let lo = 0;
   for (let i = 0; i < anchors.length - 1; i++) {
     if (raw >= anchors[i].val && raw <= anchors[i + 1].val) {

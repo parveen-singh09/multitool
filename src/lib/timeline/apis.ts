@@ -12,8 +12,6 @@ function ev(date: string, title: string, desc?: string, media?: string): Timelin
   };
 }
 
-// Wikimedia "On this day" — historical events for a month/day.
-// GET https://api.wikimedia.org/feed/v1/wikipedia/{lang}/onthisday/events/{MM}/{DD}
 export async function onThisDay(month: number, day: number, lang = 'en'): Promise<TimelineEvent[]> {
   const mm = String(month).padStart(2, '0');
   const dd = String(day).padStart(2, '0');

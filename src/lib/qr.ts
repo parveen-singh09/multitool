@@ -109,11 +109,9 @@ export function buildPayload(type: string, f: Fields): string {
   }
 }
 
-// ---- geometry --------------------------------------------------------------
 
-// A drawing sink: canvas or SVG. Coordinates are in device pixels.
 interface Sink {
-  useFill(paint: string): void; // paint = css color OR gradient ref
+  useFill(paint: string): void; 
   rect(x: number, y: number, w: number, h: number, r?: number): void;
   circle(cx: number, cy: number, radius: number): void;
 }
@@ -124,7 +122,6 @@ const isFinder = (r: number, c: number, size: number) => {
   return inBox(0, 0) || inBox(0, size - 7) || inBox(size - 7, 0);
 };
 
-// Draw the body modules (everything except the three finder patterns).
 function drawBody(
   sink: Sink,
   mods: { size: number; get: (r: number, c: number) => number },
@@ -149,7 +146,6 @@ function drawBody(
           sink.rect(x, y, cell, cell, cell * 0.5);
           break;
         case 'diamond':
-          // square rotated 45° ≈ circle sink can't do; approximate with small rect radius
           sink.rect(x + cell * 0.12, y + cell * 0.12, cell * 0.76, cell * 0.76, cell * 0.18);
           break;
         default:
@@ -159,7 +155,6 @@ function drawBody(
   }
 }
 
-// Draw one finder pattern (7x7 frame + 3x3 ball) at module row/col origin.
 function drawEye(
   sink: Sink,
   br: number,
@@ -177,9 +172,6 @@ function drawEye(
 
   sink.useFill(frameColor);
   if (frame === 'circle') {
-    // ring: outer circle minus inner. Sink has no even-odd; draw thick ring via two circles won't subtract.
-    // Emulate ring with a stroked look: outer filled circle then punch bg? Instead draw square-ring of dots.
-    // Simpler: rounded frame with large radius reads as circle.
     sink.rect(x, y, s, s, s / 2);
     sink.useFill('__ERASE__');
     sink.rect(x + cell, y + cell, 5 * cell, 5 * cell, (5 * cell) / 2);
@@ -192,7 +184,6 @@ function drawEye(
     sink.useFill(frameColor);
   }
 
-  // ball 3x3 centered
   sink.useFill(ballColor);
   const bx = x + 2 * cell;
   const by = y + 2 * cell;
@@ -218,7 +209,6 @@ function layout(text: string, opts: QROptions, targetPx: number): Rendered {
   return { mods, cell, off, px };
 }
 
-// ---- canvas renderer -------------------------------------------------------
 
 export function renderToCanvas(canvas: HTMLCanvasElement, text: string, opts: QROptions, targetPx = 1024) {
   const { mods, cell, off, px } = layout(text, opts, targetPx);
@@ -287,7 +277,6 @@ export function renderToCanvas(canvas: HTMLCanvasElement, text: string, opts: QR
   if (opts.logo) {
     const lw = px * opts.logoRatio;
     const lx = (px - lw) / 2;
-    // knock out a padded square so the logo sits on a clean field
     const pad = lw * 0.12;
     if (opts.bg) {
       ctx.fillStyle = opts.bg;
@@ -300,7 +289,6 @@ export function renderToCanvas(canvas: HTMLCanvasElement, text: string, opts: QR
   return px;
 }
 
-// ---- SVG renderer ----------------------------------------------------------
 
 export function renderToSvg(text: string, opts: QROptions, targetPx = 1024): string {
   const { mods, cell, off, px } = layout(text, opts, targetPx);
@@ -330,7 +318,6 @@ export function renderToSvg(text: string, opts: QROptions, targetPx = 1024): str
     },
   };
 
-  // gradient def
   if (opts.paint.gradient === 'radial') {
     defs.push(
       `<radialGradient id="qrfg"><stop offset="0" stop-color="${opts.paint.fg}"/><stop offset="1" stop-color="${opts.paint.gradTo}"/></radialGradient>`
@@ -371,8 +358,6 @@ export function renderToSvg(text: string, opts: QROptions, targetPx = 1024): str
   )}</defs>${bgRect}${body.join('')}${eyes.join('')}${logo}</svg>`;
 }
 
-// ---- self-check (run: npx tsx src/lib/qr.ts) -------------------------------
-// @ts-ignore import.meta.main is set under tsx/node --import
 if (typeof process !== 'undefined' && process.argv?.[1]?.includes('qr')) {
   const assert = (c: boolean, m: string) => {
     if (!c) throw new Error('FAIL: ' + m);
@@ -389,10 +374,8 @@ if (typeof process !== 'undefined' && process.argv?.[1]?.includes('qr')) {
   const v = buildPayload('vcard', { firstName: 'Ada', lastName: 'Lovelace', email: 'a@b.co' });
   assert(v.includes('FN:Ada Lovelace') && v.includes('EMAIL:a@b.co'), 'vcard');
   assert(buildPayload('geo', { lat: '1.5', lng: '2.5' }) === 'geo:1.5,2.5', 'geo');
-  // finder detection on a 21-module matrix
   assert(isFinder(0, 0, 21) && isFinder(0, 20, 21) && isFinder(20, 0, 21), 'finder corners');
   assert(!isFinder(20, 20, 21) && !isFinder(10, 10, 21), 'non-finder');
-  // svg renders and contains our gradient + a rect
   const svg = renderToSvg('hello', { ...DEFAULT_OPTIONS, paint: { ...DEFAULT_OPTIONS.paint, gradient: 'linear' } });
   assert(svg.startsWith('<svg') && svg.includes('linearGradient') && svg.includes('<rect'), 'svg output');
   console.log('qr.ts self-check passed');

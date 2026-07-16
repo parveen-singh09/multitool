@@ -87,24 +87,18 @@ export function hyphenate(isbn13: string): string {
   return `${prefix}-${group}-${middle.slice(0, cut)}-${middle.slice(cut)}-${check}`;
 }
 
-// --- self-check: node --experimental-strip-types src/lib/isbn.ts ---
 function demo() {
   const assert = (c: unknown, m: string) => { if (!c) throw new Error('FAIL: ' + m); };
-  // Known-good ISBN-13 check digit (Angus & Robertson sample).
   assert(isbn13CheckDigit('978030640615') === 7, 'isbn13 check 9780306406157');
-  // ISBN-10 check char, including the X case.
   assert(isbn10CheckDigit('030640615') === '2', 'isbn10 check 0306406152');
   assert(isbn10CheckDigit('097522980') === 'X', 'isbn10 X check');
-  // Round-trip conversion.
   assert(isbn10to13('0306406152') === '9780306406157', '10→13');
   assert(isbn13to10('9780306406157') === '0306406152', '13→10');
   assert(isbn13to10('9791234567896') === null, '979 has no isbn-10');
-  // Parse fixes a wrong check digit and reports the input as invalid.
   const p = parseIsbn('978-0-306-40615-0')!;
   assert(p.isbn13 === '9780306406157' && !p.inputValid, 'parse corrects check');
   const ok = parseIsbn('9780306406157')!;
   assert(ok.inputValid, 'parse accepts valid');
   console.log('isbn.ts self-check passed');
 }
-// Run only when executed directly, never on import.
 if (typeof process !== 'undefined' && process.argv?.[1]?.replace(/\\/g, '/').endsWith('src/lib/isbn.ts')) demo();

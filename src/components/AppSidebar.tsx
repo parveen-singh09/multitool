@@ -79,13 +79,10 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
     setOpenCategories(nextOpen);
   }, [searchQuery, normalizedPath]);
 
-  // Filter tools using the shared header logic — same matcher, same fields.
   const filteredTools = tools.filter((tool) =>
     matchesQuery(toolHaystack(tool), searchQuery)
   );
 
-  // While searching, show a flat ranked list (name-prefix first, alphabetical),
-  // matching the explore grid and header dropdown.
   const isSearching = searchQuery.trim() !== "";
   const rankedTools = isSearching
     ? [...filteredTools].sort((a, b) => compareByQuery(a.name, b.name, searchQuery))

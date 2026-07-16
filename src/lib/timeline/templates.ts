@@ -167,8 +167,6 @@ export function getTemplate(id: string): TimelineTemplate | undefined {
   return TEMPLATES.find((t) => t.id === id);
 }
 
-// Turn a template into a fresh Timeline (fresh event ids so edits don't alias
-// the shared template objects).
 export function templateToTimeline(t: TimelineTemplate): Timeline {
   return {
     title: t.label,
