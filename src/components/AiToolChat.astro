@@ -931,6 +931,16 @@ const index = tools.map((t) => ({
   }
 
   function localRouted(query: string): Routed {
+    // Offline chit-chat guard: the AI path returns empty tools for greetings and
+    // non-tasks, but this keyword fallback would match noise to a tool ("ji" hits
+    // the "jitter" keyword → Internet Speed Test). Gate the obvious non-tasks: a
+    // query that's only a greeting, or has no word of 3+ chars.
+    // ponytail: heuristic, not intent detection — real 1-2 char tool queries
+    // ("qr") route via the header search, not this chat fallback.
+    const greetingOnly = /^\s*(hi|hey+|hello|hiya|howdy|yo|sup|thanks?|thank you|thx|ty|ok|okay|cool|nice|lol|help|who are you|what can you do)[\s!?.]*$/i.test(query);
+    if (greetingOnly || !/[a-z0-9]{3,}/i.test(query)) {
+      return { reply: 'Hey — tell me what you need, like “convert my JPG to PNG”, “compress a PDF”, or “make a QR code”.', tools: [] };
+    }
     const strict = index
       .filter((t) => matchesQuery(toolHaystack(t), query))
       .sort((a, b) => compareByQuery(a.name, b.name, query))
