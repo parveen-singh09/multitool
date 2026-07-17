@@ -40,7 +40,63 @@ function parseRange(str: string, pageCount: number): number[] {
   return [...new Set(idx)];
 }
 
+export function parseBirthDate(q: string): { date: Date; assumedMdy: boolean } | null {
+  const s = q.trim();
+  const iso = s.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/);
+  if (iso) {
+    const d = new Date(+iso[1], +iso[2] - 1, +iso[3]);
+    return isValid(d, +iso[1], +iso[2], +iso[3]) ? { date: d, assumedMdy: false } : null;
+  }
+  const num = s.match(/\b(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})\b/);
+  if (num) {
+    let [, a, b, y] = num.map(Number) as unknown as [string, number, number, number];
+    let assumedMdy = false;
+    let mm = a, dd = b;                 
+    if (a > 12 && b <= 12) { dd = a; mm = b; }   
+    else if (a <= 12 && b > 12) { mm = a; dd = b; } 
+    else assumedMdy = true;            
+    const d = new Date(y, mm - 1, dd);
+    return isValid(d, y, mm, dd) ? { date: d, assumedMdy } : null;
+  }
+  const parsed = new Date(s.replace(/\bcalculate age\b/i, '').trim());
+  return isNaN(parsed.getTime()) ? null : { date: parsed, assumedMdy: false };
+}
+
+function isValid(d: Date, y: number, m: number, day: number): boolean {
+  return d.getFullYear() === y && d.getMonth() === m - 1 && d.getDate() === day;
+}
+
+export function ageParts(birth: Date, now: Date) {
+  let years = now.getFullYear() - birth.getFullYear();
+  let months = now.getMonth() - birth.getMonth();
+  let days = now.getDate() - birth.getDate();
+  if (days < 0) { months--; days += new Date(now.getFullYear(), now.getMonth(), 0).getDate(); }
+  if (months < 0) { years--; months += 12; }
+  const totalDays = Math.floor((now.getTime() - birth.getTime()) / 86400000);
+  return { years, months, days, totalDays };
+}
+
 export const RUNNERS: Record<string, Runner> = {
+  'age-calculator': {
+    needs: 'text',
+    async run({ query }) {
+      const parsed = parseBirthDate(query);
+      if (!parsed) throw new Error('Give me a birthdate, e.g. “1990-05-23” or “May 23 1990”.');
+      const now = new Date();
+      if (parsed.date.getTime() > now.getTime()) throw new Error('That date is in the future — give me a birthdate.');
+      const { years, months, days, totalDays } = ageParts(parsed.date, now);
+      const born = parsed.date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+      const text =
+        `${years} years, ${months} months, ${days} days\n` +
+        `Born: ${born}\n` +
+        `Total: ${totalDays.toLocaleString()} days`;
+      const note = parsed.assumedMdy
+        ? `Read the date as MM-DD-YYYY (${born}). If it was day-first, say so.`
+        : undefined;
+      return { text, note };
+    },
+  },
+
   'qr-code-generator': {
     needs: 'text',
     async run({ extract }) {
@@ -306,3 +362,12 @@ RUNNERS['ico-converter'] = RUNNERS['favicon-generator'];
 Object.assign(RUNNERS, RUNNERS_CODES, RUNNERS_CSS, RUNNERS_DOCS, RUNNERS_FILES, RUNNERS_MISC, RUNNERS_IMAGES);
 
 export const getRunner = (slug: string): Runner | null => RUNNERS[slug] ?? null;
+
+if (import.meta.env.DEV) {
+  const a = ageParts(new Date(2000, 0, 15), new Date(2020, 2, 10));
+  console.assert(a.years === 20 && a.months === 1 && a.days === 24, 'age borrow across month', a);
+  console.assert(parseBirthDate('25/12/1990')?.date.getMonth() === 11, '25/12 → December');
+  const amb = parseBirthDate('02-09-2004');
+  console.assert(amb?.date.getMonth() === 1 && amb.assumedMdy, '02-09 → Feb, assumed', amb);
+  console.assert(parseBirthDate('1990-02-30') === null, 'Feb 30 rejected');
+}
