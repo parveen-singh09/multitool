@@ -33,7 +33,7 @@ export async function aiChat(messages: ChatMsg[], opts: { temperature?: number }
     },
   );
   if (!res.ok) throw new Error(`ai ${res.status}`);
-  const data = await res.json();
+  const data = (await res.json()) as any;
   const parts = data?.candidates?.[0]?.content?.parts;
   const text: string = Array.isArray(parts) ? parts.map((p: { text?: string }) => p.text ?? '').join('') : '';
   if (!text) throw new Error('empty reply');

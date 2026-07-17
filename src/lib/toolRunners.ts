@@ -289,7 +289,7 @@ RUNNERS['pokemon-generator'] = {
   needs: 'text',
   async run() {
     const id = 1 + Math.floor(Math.random() * 1025); 
-    const d = await (await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`)).json();
+    const d = (await (await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`)).json()) as any;
     const name = (d.name as string).replace(/-/g, ' ');
     const types = d.types.map((t: any) => t.type.name).join(', ');
     const stats = (d.stats as any[]).map((s) => `${s.stat.name}: ${s.base_stat}`).join(' · ');
@@ -351,7 +351,7 @@ RUNNERS['base64-to-image'] = {
       bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
     } catch { throw new Error('That doesn’t look like valid Base64.'); }
     const ext = mime.split('/')[1]?.replace('+xml', '') || 'png';
-    return { files: [{ name: `decoded.${ext}`, blob: new Blob([bytes], { type: mime }), kind: 'image' }], note: `Base64 → ${ext.toUpperCase()} image` };
+    return { files: [{ name: `decoded.${ext}`, blob: new Blob([bytes as BlobPart], { type: mime }), kind: 'image' }], note: `Base64 → ${ext.toUpperCase()} image` };
   },
 };
 

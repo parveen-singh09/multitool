@@ -1,5 +1,5 @@
 
-import type { Runner, RunFile } from './toolRunners';
+import type { Runner } from './toolRunners';
 import { canvasBlob } from './toolRunners';
 
 function svgToPng(svg: string, size: number): Promise<Blob> {
@@ -17,11 +17,6 @@ function svgToPng(svg: string, size: number): Promise<Blob> {
   });
 }
 
-const rgba = (hex: string, a: number) => {
-  const h = hex.replace('#', '');
-  const n = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
-  return `rgba(${parseInt(n.slice(0, 2), 16)},${parseInt(n.slice(2, 4), 16)},${parseInt(n.slice(4, 6), 16)},${a})`;
-};
 
 export const RUNNERS_IMAGES: Record<string, Runner> = {
   'placeholder-image-generator': {

@@ -19,7 +19,7 @@ export async function onThisDay(month: number, day: number, lang = 'en'): Promis
   try {
     const res = await fetch(url, { headers: { Accept: 'application/json' } });
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = (await res.json()) as any;
     const items: any[] = Array.isArray(data.events) ? data.events : [];
     return items
       .sort((a, b) => (a.year ?? 0) - (b.year ?? 0))

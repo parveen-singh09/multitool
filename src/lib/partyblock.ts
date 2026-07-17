@@ -41,7 +41,7 @@ export function renderParty(container: HTMLElement, o: PartyOptions): void {
     </div>`;
 }
 
-const el = <T extends HTMLElement>(id: string) => document.getElementById(id) as T | null;
+const el = <T = HTMLElement>(id: string) => document.getElementById(id) as unknown as T | null;
 
 export function wireParty(prefix: string, onChange: () => void): void {
   const country = el<HTMLSelectElement>(`${prefix}-country`);

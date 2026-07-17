@@ -102,7 +102,6 @@ class Machine {
   private afterQuote = false; 
   private pendingCR = false; 
   private rowChars = 0;
-  private started = false;
 
   constructor(private o: Resolved, private onRow: (row: string[]) => void) {}
 
@@ -181,7 +180,6 @@ class Machine {
     this.rowChars = 0;
     const out = this.row;
     this.row = [];
-    this.started = true;
     this.onRow(out);
   }
 }

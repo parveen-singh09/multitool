@@ -1,7 +1,6 @@
 
 
 import type { Timeline, TimelineEvent, TLDate } from './types';
-import { formatDate } from './types';
 
 export function toJSON(tl: Timeline): string {
   return JSON.stringify(tl, null, 2);

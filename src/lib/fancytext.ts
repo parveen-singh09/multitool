@@ -1,8 +1,6 @@
 
 
 const UP = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-const LO = 'abcdefghijklmnopqrstuvwxyz';
-const DG = '0123456789';
 
 type Overrides = Record<string, string>;
 

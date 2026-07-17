@@ -1,6 +1,6 @@
 
 
-import { randInt, randFloat, pick, randString, luhnCheckDigit, UNAMBIGUOUS } from './random';
+import { randInt, randFloat, pick, randString, luhnCheckDigit } from './random';
 import type { Locale } from './locales';
 import { email as mkEmail, username as mkUsername, uuid as mkUuid, companyName } from './fakegen';
 

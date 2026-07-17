@@ -2,7 +2,7 @@
 
 import type { OrgChart, Person } from './types';
 import { childrenOf, rootsOf } from './types';
-import { getLayout, getSize, type Orientation } from './presets';
+import { getLayout, getSize } from './presets';
 
 export interface BoxGeom {
   id: string;

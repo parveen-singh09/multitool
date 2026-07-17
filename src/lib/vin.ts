@@ -1,6 +1,6 @@
 
 
-import { randInt, pick } from './random';
+import { pick } from './random';
 
 export const VIN_CHARS = 'ABCDEFGHJKLMNPRSTUVWXYZ0123456789';
 const WEIGHTS = [8, 7, 6, 5, 4, 3, 2, 10, 0, 9, 8, 7, 6, 5, 4, 3, 2];

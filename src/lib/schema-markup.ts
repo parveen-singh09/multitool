@@ -238,8 +238,6 @@ export const SCHEMA_TYPES: SchemaType[] = [
       },
     ],
     build: (v) => {
-      const online =
-        v.attendanceMode && v.attendanceMode.includes('Online');
       const location: any[] = [];
       if (has(v, 'venueName') || has(v, 'street') || has(v, 'city')) {
         location.push({ '@type': 'Place', name: v.venueName, address: postalAddress(v) });
