@@ -34,7 +34,7 @@ const accept = from ? `.${from}` : '';
       <button id="ac-pick-more" type="button" aria-label="Choose upload source" class="btn btn-primary px-2" style="border-top-left-radius:0;border-bottom-left-radius:0;border-left:1px solid rgba(255,255,255,0.22)">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
       </button>
-      <div id="ac-src-menu" class="hidden absolute left-1/2 top-[calc(100%+6px)] z-20 w-52 -translate-x-1/2 overflow-hidden rounded-lg border border-hairline bg-surface-2 text-left shadow-xl">
+      <div id="ac-src-menu" class="hidden absolute left-1/2 top-[calc(100%+6px)] z-30 w-[min(13rem,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-lg border border-hairline bg-surface-2 text-left shadow-xl">
         <button type="button" data-src="device" class="ac-src flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-ink hover:bg-surface-3">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-ink-subtle"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
           From this device
@@ -89,6 +89,13 @@ const accept = from ? `.${from}` : '';
   /* Light canvas: dark drop shadow so the card lifts off white. */
   :global(html[data-theme='light']) .ac-drop { box-shadow: 0 1px 2px rgba(16,18,20,0.08), 0 12px 40px -8px rgba(16,18,20,0.22); }
   :global(html[data-theme='light']) .ac-drop:hover { box-shadow: 0 2px 4px rgba(16,18,20,0.10), 0 16px 48px -8px rgba(16,18,20,0.30); }
+  /* Google Drive picker injects .picker-dialog-bg as its backdrop into our page —
+     blur the page behind it instead of a flat dim. */
+  :global(.picker-dialog-bg) {
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    background: rgba(1, 1, 2, 0.5) !important;
+  }
 </style>
 
 <script>
@@ -215,8 +222,18 @@ const accept = from ? `.${from}` : '';
   const moreBtn = $('ac-pick-more') as HTMLButtonElement;
   const srcMenu = $('ac-src-menu');
   const srcNote = $('ac-src-note');
-  const openPicker = () => fileInput.click();
+  const openPicker = () => { keepScroll(); fileInput.click(); };
   const toggleMenu = (show?: boolean) => srcMenu.classList.toggle('hidden', show === undefined ? undefined : !show);
+
+  // Picker SDKs / hidden inputs inject focus-stealing elements that make the
+  // page jump. Pin the scroll position back for a short window when opening one.
+  function keepScroll(ms = 1500) {
+    const y = window.scrollY;
+    const snap = () => window.scrollTo({ top: y, behavior: 'instant' as ScrollBehavior });
+    window.addEventListener('scroll', snap);
+    const stop = setInterval(snap, 100);
+    setTimeout(() => { clearInterval(stop); window.removeEventListener('scroll', snap); }, ms);
+  }
 
   fileInput.addEventListener('change', () => fileInput.files?.[0] && load(fileInput.files[0]));
 
@@ -245,6 +262,7 @@ const accept = from ? `.${from}` : '';
       }
       srcNote.classList.add('hidden');
       dropLabel.textContent = `Opening ${label}…`;
+      keepScroll(2500);
       try {
         await pickFromDrive(src, (file) => load(file));
       } catch (err) {
