@@ -1,0 +1,283 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="fraction-to-decimal">
+  <div class="flex flex-col gap-6">
+
+    <div class="flex flex-col gap-3">
+      <span class="eyebrow text-primary-hover">Fraction → decimal &amp; percent</span>
+      <div class="flex flex-wrap items-center gap-3">
+        <input id="fd-whole" type="number" class="field w-20 text-center" placeholder="0" aria-label="Whole number" />
+        <div class="flex flex-col items-center">
+          <input id="fd-num" type="number" class="field w-24 text-center" placeholder="1" aria-label="Numerator" />
+          <div class="my-1 h-px w-24 bg-hairline-strong"></div>
+          <input id="fd-den" type="number" class="field w-24 text-center" placeholder="4" aria-label="Denominator" />
+        </div>
+        <span class="text-ink-tertiary">=</span>
+        <div class="flex flex-col gap-1">
+          <span id="fd-dec" class="font-mono text-lg text-ink">0.25</span>
+          <span id="fd-pct" class="font-mono text-[13px] text-ink-subtle">25%</span>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="flex items-center gap-2 text-[13px] text-ink-subtle">
+          Round to
+          <select id="fd-round" class="field w-auto py-1">
+            <option value="exact" selected>Exact</option>
+            <option value="0">0 places</option>
+            <option value="2">2 places</option>
+            <option value="3">3 places</option>
+            <option value="4">4 places</option>
+            <option value="6">6 places</option>
+            <option value="8">8 places</option>
+            <option value="10">10 places</option>
+          </select>
+        </label>
+        <button id="fd-copy-dec" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy decimal</button>
+        <button id="fd-copy-pct" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy percent</button>
+      </div>
+
+      <p id="fd-note" class="text-[13px] text-ink-tertiary"></p>
+
+      <details class="text-[13px] text-ink-subtle">
+        <summary class="cursor-pointer select-none text-ink-subtle hover:text-ink">Show the steps</summary>
+        <div id="fd-steps" class="mt-2 flex flex-col gap-1 border-l border-hairline pl-3 font-mono text-ink-subtle"></div>
+      </details>
+    </div>
+
+    <div class="border-t border-hairline pt-5">
+      <span class="eyebrow text-primary-hover">Decimal → fraction</span>
+      <div class="mt-3 flex flex-wrap items-center gap-3">
+        <input id="fd-decin" type="text" class="field w-40 font-mono" placeholder="0.375" inputmode="decimal" spellcheck="false" />
+        <span class="text-ink-tertiary">=</span>
+        <span id="fd-frac" class="font-mono text-lg text-ink">3/8</span>
+        <span id="fd-mixed" class="font-mono text-[13px] text-ink-subtle"></span>
+        <button id="fd-copy-frac" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy</button>
+      </div>
+      <p class="mt-2 text-[13px] text-ink-tertiary">Repeating decimals: enter with a trailing “…”, e.g. <span class="font-mono">0.333…</span></p>
+    </div>
+
+    <div class="border-t border-hairline pt-5">
+      <span class="eyebrow text-primary-hover">Common fractions</span>
+      <p class="mt-1 text-[13px] text-ink-tertiary">Tap any fraction to load it above.</p>
+      <div id="fd-presets" class="mt-3 flex flex-wrap gap-2"></div>
+    </div>
+
+    <p id="fd-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free fraction to decimal converter turns any fraction — including
+      mixed numbers and improper fractions — into its decimal and percentage
+      form, and converts decimals back into a simplified fraction. Choose exact
+      output or round to a fixed number of decimal places, then copy the result
+      with one click.
+    </p>
+    <p>
+      Unlike most converters, it shows true repeating-decimal notation: 1/3
+      renders as 0.<span style="text-decoration:overline">3</span> rather than a
+      truncated 0.333. It reduces fractions to lowest terms using the greatest
+      common divisor, shows the division steps behind each answer, and handles
+      repeating decimals in reverse too (0.333… → 1/3). A table of common
+      fractions is one tap away.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const whole = document.getElementById('fd-whole') as HTMLInputElement;
+  const num = document.getElementById('fd-num') as HTMLInputElement;
+  const den = document.getElementById('fd-den') as HTMLInputElement;
+  const roundSel = document.getElementById('fd-round') as HTMLSelectElement;
+  const dec = document.getElementById('fd-dec')!;
+  const pct = document.getElementById('fd-pct')!;
+  const note = document.getElementById('fd-note')!;
+  const steps = document.getElementById('fd-steps')!;
+  const decin = document.getElementById('fd-decin') as HTMLInputElement;
+  const frac = document.getElementById('fd-frac')!;
+  const mixed = document.getElementById('fd-mixed')!;
+  const presets = document.getElementById('fd-presets')!;
+  const errEl = document.getElementById('fd-error')!;
+
+  const copyDec = document.getElementById('fd-copy-dec') as HTMLButtonElement;
+  const copyPct = document.getElementById('fd-copy-pct') as HTMLButtonElement;
+  const copyFrac = document.getElementById('fd-copy-frac') as HTMLButtonElement;
+
+  const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a);
+
+  const trim = (s: string) => s.indexOf('.') >= 0 ? s.replace(/\.?0+$/, '') : s;
+
+  function longDivide(numer: number, denom: number) {
+    const intPart = Math.floor(numer / denom);
+    let rem = numer % denom;
+    const digits: number[] = [];
+    const seen = new Map<number, number>();
+    let repeatStart = -1;
+    const CAP = 4096;
+    while (rem !== 0 && digits.length < CAP) {
+      if (seen.has(rem)) { repeatStart = seen.get(rem)!; break; }
+      seen.set(rem, digits.length);
+      rem *= 10;
+      digits.push(Math.floor(rem / denom));
+      rem = rem % denom;
+    }
+    return { intPart, digits, repeatStart, truncated: rem !== 0 && repeatStart === -1 };
+  }
+
+  function exactPlain(sign: number, numer: number, denom: number): string {
+    const { intPart, digits, repeatStart } = longDivide(numer, denom);
+    const s = sign < 0 ? '-' : '';
+    if (digits.length === 0) return s + String(intPart);
+    if (repeatStart < 0) return s + intPart + '.' + digits.join('');
+    const nonRep = digits.slice(0, repeatStart).join('');
+    const rep = digits.slice(repeatStart).join('');
+    return s + intPart + '.' + nonRep + '(' + rep + ')';
+  }
+
+  function exactHtml(sign: number, numer: number, denom: number): string {
+    const { intPart, digits, repeatStart, truncated } = longDivide(numer, denom);
+    const s = sign < 0 ? '-' : '';
+    if (digits.length === 0) return s + String(intPart);
+    if (repeatStart < 0) {
+      return s + intPart + '.' + digits.join('') + (truncated ? '…' : '');
+    }
+    const nonRep = digits.slice(0, repeatStart).join('');
+    const rep = digits.slice(repeatStart).join('');
+    return s + intPart + '.' + nonRep + '<span style="text-decoration:overline">' + rep + '</span>';
+  }
+
+  let lastDecPlain = '';
+  let lastPctPlain = '';
+
+  function fwd() {
+    const w = Number(whole.value) || 0;
+    const n = Number(num.value);
+    const d = Number(den.value);
+    if (!d || isNaN(n) || isNaN(d)) {
+      dec.textContent = '—'; pct.textContent = '';
+      note.textContent = 'Enter a numerator and a non-zero denominator.';
+      steps.textContent = ''; lastDecPlain = ''; lastPctPlain = '';
+      return;
+    }
+
+    const sign = (w < 0 || (w === 0 && n < 0) || (w === 0 && n === 0 && d < 0)) ? -1 : 1;
+
+    const aw = Math.abs(w), an = Math.abs(n), ad = Math.abs(d);
+    const numer = aw * ad + an;
+    const value = (numer / ad) * sign;
+
+    const mode = roundSel.value;
+    if (mode === 'exact') {
+      dec.innerHTML = exactHtml(sign, numer, ad);
+      lastDecPlain = exactPlain(sign, numer, ad);
+    } else {
+      const k = Number(mode);
+      const fixed = value.toFixed(k);
+      dec.textContent = fixed;
+      lastDecPlain = fixed;
+    }
+
+    const pctVal = value * 100;
+    if (mode === 'exact') {
+      lastPctPlain = trim(pctVal.toFixed(10));
+    } else {
+      lastPctPlain = pctVal.toFixed(Math.min(Number(mode) + 2, 12));
+      lastPctPlain = trim(lastPctPlain);
+    }
+    pct.textContent = lastPctPlain + '%';
+
+    const g = gcd(an, ad) || 1;
+    const sn = (sign < 0 ? -an : an) / g;
+    const sd = ad / g;
+    note.textContent = (w !== 0)
+      ? `As an improper fraction: ${sign < 0 ? '-' : ''}${numer / (gcd(numer, ad) || 1)}/${ad / (gcd(numer, ad) || 1)}`
+      : (g > 1 ? `Simplified: ${sn}/${sd}` : '');
+
+    // steps
+    const gg = gcd(numer, ad) || 1;
+    const rN = numer / gg, rD = ad / gg;
+    const lines: string[] = [];
+    if (w !== 0) lines.push(`${sign < 0 ? '-' : ''}${aw} ${an}/${ad}  →  ${sign < 0 ? '-' : ''}${numer}/${ad}`);
+    if (gg > 1) lines.push(`Reduce by GCD ${gg}:  ${rN}/${rD}`);
+    lines.push(`Divide:  ${rN} ÷ ${rD} = ${exactPlain(sign, rN, rD)}`);
+    lines.push(`Percent:  × 100 = ${lastPctPlain}%`);
+    steps.innerHTML = lines.map((l) => `<div>${l}</div>`).join('');
+  }
+
+  function dwf() {
+    const raw = decin.value.trim();
+    if (!raw) { frac.textContent = '—'; mixed.textContent = ''; return; }
+    const repeating = /…$|\.\.\.$/.test(raw);
+    const clean = raw.replace(/…$|\.\.\.$/, '');
+    const v = Number(clean);
+    if (isNaN(v) || clean === '') { frac.textContent = 'Invalid'; mixed.textContent = ''; return; }
+    let n: number, d: number;
+    if (repeating) {
+      const [, decPart = ''] = clean.split('.');
+      const intPart = Math.trunc(Math.abs(v));
+      const rep = decPart || '0';
+      const denom = Number('9'.repeat(rep.length));
+      n = Number(rep); d = denom;
+      const g = gcd(n, d) || 1; n /= g; d /= g;
+      n += intPart * d;
+      if (v < 0) n = -n;
+    } else {
+      const decimals = (clean.split('.')[1] || '').length;
+      d = Math.pow(10, decimals);
+      n = Math.round(v * d);
+      const g = gcd(Math.abs(n), d) || 1; n /= g; d /= g;
+    }
+    frac.textContent = d === 1 ? String(n) : `${n}/${d}`;
+    // mixed-number form when improper
+    if (d !== 1 && Math.abs(n) > d) {
+      const whole = Math.trunc(n / d);
+      const rem = Math.abs(n % d);
+      mixed.textContent = `= ${whole} ${rem}/${d}`;
+    } else {
+      mixed.textContent = '';
+    }
+  }
+
+  function copy(btn: HTMLButtonElement, text: string) {
+    if (!text || text === '—') return;
+    navigator.clipboard.writeText(text).then(() => {
+      const prev = btn.textContent;
+      btn.textContent = 'Copied';
+      setTimeout(() => { btn.textContent = prev; }, 1200);
+    }).catch(() => {
+      errEl.textContent = 'Clipboard unavailable in this browser.';
+      errEl.classList.remove('hidden');
+    });
+  }
+
+  // common fractions presets
+  const COMMON: [number, number][] = [
+    [1, 2], [1, 3], [2, 3], [1, 4], [3, 4], [1, 5], [2, 5], [1, 6],
+    [1, 8], [3, 8], [5, 8], [1, 10], [1, 16], [1, 32],
+  ];
+  for (const [pn, pd] of COMMON) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn btn-tertiary px-2 py-1 text-[13px] font-mono';
+    b.textContent = `${pn}/${pd}`;
+    b.addEventListener('click', () => {
+      whole.value = ''; num.value = String(pn); den.value = String(pd);
+      fwd();
+      whole.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    presets.appendChild(b);
+  }
+
+  [whole, num, den].forEach((el) => el.addEventListener('input', fwd));
+  roundSel.addEventListener('change', fwd);
+  decin.addEventListener('input', dwf);
+  copyDec.addEventListener('click', () => copy(copyDec, lastDecPlain));
+  copyPct.addEventListener('click', () => copy(copyPct, lastPctPlain + '%'));
+  copyFrac.addEventListener('click', () => copy(copyFrac, frac.textContent || ''));
+
+  num.value = '1'; den.value = '4'; fwd();
+  decin.value = '0.375'; dwf();
+</script>

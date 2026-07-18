@@ -1,0 +1,100 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pdf-generator">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Text
+      <div class="copy-wrap">
+        <textarea id="pg-text" class="field min-h-64 resize-y text-sm leading-relaxed" placeholder="Paste or write your text here…">Your document text goes here.
+
+The Text to PDF generator wraps your text to the page width, paginates automatically, and produces a clean multi-page PDF — all in your browser.</textarea>
+        <button type="button" class="copy-icon" data-copy-target="#pg-text" aria-label="Copy"></button>
+      </div>
+    </label>
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Page size
+        <select id="pg-size" class="field"><option value="a4">A4</option><option value="letter">Letter</option></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Font size
+        <input id="pg-font" type="number" min="8" max="24" value="12" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Margin (pt)
+        <input id="pg-margin" type="number" min="20" max="120" value="56" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Title (optional)
+        <input id="pg-title" class="field" placeholder="Document" />
+      </label>
+    </div>
+    <button id="pg-dl" class="btn btn-primary w-fit">Download PDF</button>
+    <p id="pg-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free text to PDF generator turns plain text into a clean, downloadable
+      PDF. Choose A4 or Letter page size, font size and margins; the text wraps to
+      the page width and paginates across as many pages as needed.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const err = $('pg-error')!;
+
+  $('pg-dl').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    btn.disabled = true; btn.textContent = 'Generating…';
+    err.classList.add('hidden');
+    try {
+      const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
+      const text = ($('pg-text') as HTMLTextAreaElement).value;
+      const size = ($('pg-size') as HTMLSelectElement).value;
+      const fontSize = Math.max(8, Math.min(24, Number(($('pg-font') as HTMLInputElement).value) || 12));
+      const margin = Math.max(20, Math.min(120, Number(($('pg-margin') as HTMLInputElement).value) || 56));
+      const title = ($('pg-title') as HTMLInputElement).value;
+      const [pw, ph] = size === 'letter' ? [612, 792] : [595, 842];
+
+      const pdf = await PDFDocument.create();
+      const font = await pdf.embedFont(StandardFonts.Helvetica);
+      const lineHeight = fontSize * 1.4;
+      const maxWidth = pw - margin * 2;
+
+      let page = pdf.addPage([pw, ph]);
+      let y = ph - margin;
+
+      const drawLine = (s: string) => {
+        if (y < margin) { page = pdf.addPage([pw, ph]); y = ph - margin; }
+        page.drawText(s, { x: margin, y, size: fontSize, font, color: rgb(0.1, 0.1, 0.1) });
+        y -= lineHeight;
+      };
+
+      if (title) {
+        page.drawText(title, { x: margin, y, size: fontSize * 1.6, font, color: rgb(0.1, 0.1, 0.1) });
+        y -= lineHeight * 2;
+      }
+
+      for (const raw of text.split('\n')) {
+        if (raw === '') { y -= lineHeight; continue; }
+        const words = raw.split(/\s+/);
+        let line = '';
+        for (const w of words) {
+          const test = line ? line + ' ' + w : w;
+          if (font.widthOfTextAtSize(test, fontSize) > maxWidth && line) { drawLine(line); line = w; }
+          else line = test;
+        }
+        if (line) drawLine(line);
+      }
+
+      const bytes = await pdf.save();
+      const url = URL.createObjectURL(new Blob([bytes.slice()], { type: 'application/pdf' }));
+      const a = document.createElement('a'); a.href = url; a.download = (title || 'document') + '.pdf'; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (ex) {
+      err.textContent = 'Could not generate the PDF.'; err.classList.remove('hidden');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Download PDF';
+    }
+  });
+</script>

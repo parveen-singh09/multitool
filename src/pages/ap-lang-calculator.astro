@@ -1,0 +1,106 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="ap-lang-calculator">
+  <div class="flex flex-col gap-5">
+    <div class="flex flex-col gap-3">
+      <span class="eyebrow text-primary-hover">Section I — Multiple choice</span>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Questions correct (of 45)
+        <input id="apl-mc" type="number" min="0" max="45" class="field" value="34" inputmode="numeric" />
+      </label>
+    </div>
+
+    <div class="flex flex-col gap-3">
+      <span class="eyebrow text-primary-hover">Section II — Free response (0–6 each)</span>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Synthesis
+          <input id="apl-q1" type="number" min="0" max="6" class="field" value="4" inputmode="numeric" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Rhetorical analysis
+          <input id="apl-q2" type="number" min="0" max="6" class="field" value="4" inputmode="numeric" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Argument
+          <input id="apl-q3" type="number" min="0" max="6" class="field" value="4" inputmode="numeric" />
+        </label>
+      </div>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div class="text-sm text-ink-subtle">Predicted AP score</div>
+      <div id="apl-score" class="mt-1 font-display text-5xl font-semibold text-primary-hover">—</div>
+      <div id="apl-composite" class="mt-2 text-sm text-ink-muted"></div>
+    </div>
+
+    <div id="apl-scale" class="flex flex-col gap-1.5 text-[13px] text-ink-subtle"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free AP English Language & Composition score calculator predicts your
+      1–5 exam score from your multiple-choice count and your three essay scores
+      (synthesis, rhetorical analysis and argument, each out of 6). It weights the
+      45-question multiple-choice section at 45% and the free-response section at
+      55% to build a composite score, then maps that composite to a 1–5 scale
+      using a typical curve. College Board re-curves every year, so treat this as
+      an estimate for practice tests, not a guarantee. Everything runs in your
+      browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+
+  const MC_W = 1.2295;
+  const FRQ_W = 5.4738;
+
+  const CUTS: { min: number; score: number }[] = [
+    { min: 104, score: 5 },
+    { min: 92, score: 4 },
+    { min: 76, score: 3 },
+    { min: 57, score: 2 },
+    { min: 0, score: 1 },
+  ];
+
+  function clamp(v: number, lo: number, hi: number) {
+    return Math.max(lo, Math.min(hi, v));
+  }
+
+  function calc() {
+    const mc = clamp(Number($('apl-mc').value) || 0, 0, 45);
+    const q1 = clamp(Number($('apl-q1').value) || 0, 0, 6);
+    const q2 = clamp(Number($('apl-q2').value) || 0, 0, 6);
+    const q3 = clamp(Number($('apl-q3').value) || 0, 0, 6);
+
+    const composite = mc * MC_W + (q1 + q2 + q3) * FRQ_W;
+    const rounded = Math.round(composite);
+    const score = CUTS.find((c) => rounded >= c.min)!.score;
+
+    document.getElementById('apl-score')!.textContent = String(score);
+    document.getElementById('apl-composite')!.textContent =
+      `Composite ${rounded} / 150`;
+
+    // Render scale with the active band highlighted.
+    const bands = [
+      ['5', '104–150'],
+      ['4', '92–103'],
+      ['3', '76–91'],
+      ['2', '57–75'],
+      ['1', '0–56'],
+    ];
+    document.getElementById('apl-scale')!.innerHTML = bands
+      .map(([s, range]) => {
+        const active = Number(s) === score;
+        return `<div class="flex items-center justify-between rounded-sm px-3 py-1.5 ${active ? 'bg-surface-2 text-ink' : ''}">
+          <span>Score ${s}</span><span class="font-mono">${range}</span>
+        </div>`;
+      })
+      .join('');
+  }
+
+  document
+    .querySelectorAll('#apl-mc, #apl-q1, #apl-q2, #apl-q3')
+    .forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

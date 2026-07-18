@@ -1,0 +1,310 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="structured-data-validator">
+  <div class="flex flex-col gap-4">
+    <div id="sd-status" class="hidden rounded-md border px-3 py-2 text-sm" role="status"></div>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Paste JSON-LD or a full HTML page
+      <div class="copy-wrap">
+        <div class="hl-edit field p-0" style="height:24rem;resize:vertical;overflow:hidden">
+          <pre class="hl-block" aria-hidden="true"><code id="sd-in-hl" class="hljs" style="background:transparent"></code></pre>
+          <textarea id="sd-in" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder='Paste JSON-LD, e.g. {"@context":"https://schema.org","@type":"Product","name":"Shoe"} — or paste a whole HTML page and it will extract every <script type="application/ld+json"> block.'></textarea>
+        </div>
+        <button type="button" class="copy-icon" data-copy-target="#sd-in" aria-label="Copy"></button>
+      </div>
+    </label>
+
+    <div id="sd-results" class="hidden flex-col gap-4"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free structured data validator checks schema.org JSON-LD markup for
+      Google rich results. Paste raw JSON-LD or an entire HTML page — the tool
+      extracts every <code>&lt;script type="application/ld+json"&gt;</code> block,
+      confirms the JSON parses, verifies each item declares an
+      <code>@context</code> and <code>@type</code>, and checks the required and
+      recommended properties for common types (Product, Article, Recipe,
+      Organization, LocalBusiness, Event, FAQPage, BreadcrumbList and more).
+    </p>
+    <p>
+      Unlike a plain linter it validates <strong>nested items</strong> too — an
+      <code>offers</code>, <code>author</code> or <code>address</code> object is
+      checked against its own type — and it validates <strong>property
+      values</strong>: dates and date-times must be ISO 8601, durations must be
+      ISO 8601 (<code>PT30M</code>), URLs must be absolute, prices and ratings
+      must be numeric, and enum fields (availability, condition, event status)
+      must be real schema.org values. Each eligible item is labelled with the
+      <strong>Google rich result</strong> it qualifies for.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { wireInput } from '../lib/highlight';
+
+  const input = document.getElementById('sd-in') as HTMLTextAreaElement;
+  const inHl = document.getElementById('sd-in-hl')!;
+  const status = document.getElementById('sd-status')!;
+  const results = document.getElementById('sd-results')!;
+
+  const SPECS: Record<string, { required: string[]; recommended: string[] }> = {
+    Product: { required: ['name'], recommended: ['image', 'description', 'offers', 'aggregateRating', 'review', 'brand', 'sku'] },
+    Offer: { required: ['price', 'priceCurrency'], recommended: ['availability', 'url', 'priceValidUntil'] },
+    AggregateOffer: { required: ['lowPrice', 'priceCurrency'], recommended: ['highPrice', 'offerCount'] },
+    Article: { required: ['headline'], recommended: ['image', 'datePublished', 'dateModified', 'author'] },
+    NewsArticle: { required: ['headline'], recommended: ['image', 'datePublished', 'dateModified', 'author'] },
+    BlogPosting: { required: ['headline'], recommended: ['image', 'datePublished', 'author'] },
+    Recipe: { required: ['name'], recommended: ['image', 'recipeIngredient', 'recipeInstructions', 'author', 'aggregateRating'] },
+    Organization: { required: ['name'], recommended: ['url', 'logo', 'sameAs', 'contactPoint'] },
+    LocalBusiness: { required: ['name', 'address'], recommended: ['telephone', 'openingHoursSpecification', 'geo', 'priceRange', 'image'] },
+    Event: { required: ['name', 'startDate'], recommended: ['location', 'endDate', 'image', 'offers', 'performer'] },
+    Person: { required: ['name'], recommended: ['url', 'jobTitle', 'image', 'sameAs'] },
+    FAQPage: { required: ['mainEntity'], recommended: [] },
+    Question: { required: ['name', 'acceptedAnswer'], recommended: [] },
+    Answer: { required: ['text'], recommended: [] },
+    BreadcrumbList: { required: ['itemListElement'], recommended: [] },
+    ListItem: { required: ['position', 'name'], recommended: ['item'] },
+    Review: { required: ['reviewRating', 'author'], recommended: ['itemReviewed', 'reviewBody', 'datePublished'] },
+    Rating: { required: ['ratingValue'], recommended: ['bestRating', 'worstRating'] },
+    AggregateRating: { required: ['ratingValue'], recommended: ['reviewCount', 'ratingCount', 'bestRating'] },
+    VideoObject: { required: ['name', 'thumbnailUrl', 'uploadDate'], recommended: ['description', 'contentUrl', 'duration'] },
+    JobPosting: { required: ['title', 'description', 'datePosted', 'hiringOrganization'], recommended: ['jobLocation', 'baseSalary', 'employmentType', 'validThrough'] },
+    SoftwareApplication: { required: ['name'], recommended: ['applicationCategory', 'operatingSystem', 'offers', 'aggregateRating'] },
+    WebSite: { required: ['name', 'url'], recommended: ['potentialAction'] },
+    PostalAddress: { required: [], recommended: ['streetAddress', 'addressLocality', 'addressRegion', 'postalCode', 'addressCountry'] },
+    HowTo: { required: ['name', 'step'], recommended: ['image', 'totalTime', 'estimatedCost'] },
+  };
+
+  const RICH: Record<string, string> = {
+    Product: 'Product snippet', Offer: 'Product snippet', AggregateOffer: 'Product snippet',
+    Recipe: 'Recipe', Article: 'Article', NewsArticle: 'Article', BlogPosting: 'Article',
+    Event: 'Event', FAQPage: 'FAQ', BreadcrumbList: 'Breadcrumbs', JobPosting: 'Job posting',
+    LocalBusiness: 'Local business', Organization: 'Organization / Logo', VideoObject: 'Video',
+    Review: 'Review snippet', AggregateRating: 'Review snippet', SoftwareApplication: 'Software app',
+    WebSite: 'Sitelinks search box', HowTo: 'How-to',
+  };
+
+  const ENUMS: Record<string, string[]> = {
+    availability: ['InStock', 'OutOfStock', 'PreOrder', 'Discontinued', 'BackOrder', 'LimitedAvailability', 'SoldOut', 'InStoreOnly', 'OnlineOnly', 'PreSale'],
+    condition: ['NewCondition', 'UsedCondition', 'RefurbishedCondition', 'DamagedCondition'],
+    eventStatus: ['EventScheduled', 'EventCancelled', 'EventPostponed', 'EventRescheduled', 'EventMovedOnline'],
+    attendance: ['OfflineEventAttendanceMode', 'OnlineEventAttendanceMode', 'MixedEventAttendanceMode'],
+    employment: ['FULL_TIME', 'PART_TIME', 'CONTRACTOR', 'TEMPORARY', 'INTERN', 'VOLUNTEER', 'PER_DIEM', 'OTHER'],
+  };
+
+  const FMT: Record<string, string> = {
+    url: 'url', logo: 'url', image: 'url', thumbnailUrl: 'url', contentUrl: 'url', embedUrl: 'url', sameAs: 'url',
+    datePublished: 'date', dateModified: 'date', datePosted: 'date', validThrough: 'date', uploadDate: 'date', priceValidUntil: 'date',
+    startDate: 'date', endDate: 'date',
+    duration: 'duration', totalTime: 'duration', prepTime: 'duration', cookTime: 'duration',
+    price: 'number', lowPrice: 'number', highPrice: 'number', ratingValue: 'number', reviewCount: 'number',
+    ratingCount: 'number', bestRating: 'number', worstRating: 'number', latitude: 'number', longitude: 'number', position: 'number',
+    availability: 'enum:availability', itemCondition: 'enum:condition',
+    eventStatus: 'enum:eventStatus', eventAttendanceMode: 'enum:attendance', employmentType: 'enum:employment',
+  };
+
+  const trunc = (s: string) => (s.length > 40 ? s.slice(0, 40) + '…' : s);
+  const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?)?$/.test(s);
+  const isDuration = (s: string) => /^P(?=[\dT])(\d+Y)?(\d+M)?(\d+W)?(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+S)?)?$/.test(s);
+
+  function fmtError(prop: string, val: any): string | null {
+    const kind = FMT[prop];
+    if (!kind) return null;
+    for (const raw of Array.isArray(val) ? val : [val]) {
+      if (raw && typeof raw === 'object') continue; 
+      const s = String(raw).trim();
+      if (s === '') continue;
+      if (kind === 'url' && !/^https?:\/\//i.test(s)) return `"${prop}" should be a URL starting with http:// or https:// (got "${trunc(s)}").`;
+      if (kind === 'date' && !isDate(s)) return `"${prop}" should be an ISO 8601 date, e.g. 2024-01-31 (got "${trunc(s)}").`;
+      if (kind === 'duration' && !isDuration(s)) return `"${prop}" should be an ISO 8601 duration, e.g. PT30M (got "${trunc(s)}").`;
+      if (kind === 'number' && isNaN(Number(s))) return `"${prop}" should be numeric (got "${trunc(s)}").`;
+      if (kind.startsWith('enum:')) {
+        const set = ENUMS[kind.slice(5)];
+        const norm = s.replace(/^https?:\/\/schema\.org\//, '');
+        if (!set.includes(norm)) return `"${prop}" = "${trunc(s)}" is not a recognised value (expected e.g. ${set.slice(0, 3).join(', ')}…).`;
+      }
+    }
+    return null;
+  }
+
+  function showStatus(msg: string, ok: boolean) {
+    status.textContent = msg;
+    status.classList.remove('hidden');
+    status.style.borderColor = ok ? '#27a644' : '#d14d4d';
+    status.style.color = ok ? '#27a644' : '#e08585';
+  }
+
+  function extractBlocks(text: string): string[] {
+    const t = text.trim();
+    if (!t) return [];
+
+    if (t.startsWith('{') || t.startsWith('[')) return [t];
+
+    const blocks: string[] = [];
+    const re = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+    let m;
+    while ((m = re.exec(text)) !== null) blocks.push(m[1].trim());
+    return blocks;
+  }
+
+  function collectItems(parsed: any): any[] {
+    const items: any[] = [];
+    const walk = (node: any) => {
+      if (Array.isArray(node)) { node.forEach(walk); return; }
+      if (node && typeof node === 'object') {
+        if (Array.isArray(node['@graph'])) node['@graph'].forEach(walk);
+        if (node['@type']) items.push(node);
+      }
+    };
+    walk(parsed);
+    return items;
+  }
+
+  function typeName(item: any): string {
+    const t = item['@type'];
+    return Array.isArray(t) ? t.join(', ') : String(t ?? '(none)');
+  }
+
+  function hasProp(item: any, prop: string): boolean {
+    const v = item[prop];
+    return v !== undefined && v !== null && !(typeof v === 'string' && v.trim() === '') && !(Array.isArray(v) && v.length === 0);
+  }
+
+  function checkNode(item: any, issues: { level: string; msg: string }[], top: boolean) {
+    if (!item || typeof item !== 'object') return;
+    const label = typeName(item);
+    const types = Array.isArray(item['@type']) ? item['@type'] : [item['@type']];
+    let matched = false;
+    for (const ty of types) {
+      const spec = SPECS[ty];
+      if (!spec) continue;
+      matched = true;
+      for (const req of spec.required) {
+        if (!hasProp(item, req)) issues.push({ level: 'error', msg: `Missing required property "${req}" for ${ty}.` });
+      }
+      for (const rec of spec.recommended) {
+        if (!hasProp(item, rec)) issues.push({ level: 'warning', msg: `Missing recommended property "${rec}" for ${ty}.` });
+      }
+    }
+    if (!matched && top) issues.push({ level: 'warning', msg: `No property rules known for "${label}" — checked structure and values only.` });
+
+    for (const key of Object.keys(item)) {
+      if (key.startsWith('@')) continue;
+      const err = fmtError(key, item[key]);
+      if (err) issues.push({ level: 'error', msg: err });
+    }
+
+    if (hasProp(item, 'ratingValue')) {
+      const rv = Number(item.ratingValue);
+      const best = hasProp(item, 'bestRating') ? Number(item.bestRating) : 5;
+      const worst = hasProp(item, 'worstRating') ? Number(item.worstRating) : 1;
+      if (!isNaN(rv) && !isNaN(best) && !isNaN(worst) && (rv > best || rv < worst)) {
+        issues.push({ level: 'error', msg: `ratingValue ${rv} is outside the ${worst}–${best} range.` });
+      }
+    }
+
+    // Recurse into nested typed objects (skip @-keys already handled).
+    for (const key of Object.keys(item)) {
+      if (key.startsWith('@')) continue;
+      const v = item[key];
+      for (const child of Array.isArray(v) ? v : [v]) {
+        if (child && typeof child === 'object' && child['@type']) checkNode(child, issues, false);
+      }
+    }
+  }
+
+  function validate() {
+    results.classList.add('hidden');
+    results.innerHTML = '';
+    const text = input.value;
+    if (!text.trim()) { status.classList.add('hidden'); return; }
+
+    const blocks = extractBlocks(text);
+    if (blocks.length === 0) {
+      showStatus('No JSON-LD found. Paste JSON, or HTML containing a <script type="application/ld+json"> block.', false);
+      return;
+    }
+
+    const cards: string[] = [];
+    let totalItems = 0, totalErrors = 0, totalWarnings = 0;
+
+    blocks.forEach((block, bi) => {
+      let parsed: any;
+      try {
+        parsed = JSON.parse(block);
+      } catch (e) {
+        totalErrors++;
+        cards.push(card(`Block ${bi + 1}`, '(invalid JSON)', [
+          { level: 'error', msg: `JSON did not parse: ${(e as Error).message}` },
+        ]));
+        return;
+      }
+      const items = collectItems(parsed);
+      if (items.length === 0) {
+        totalWarnings++;
+        cards.push(card(`Block ${bi + 1}`, '(no @type)', [
+          { level: 'warning', msg: 'No item with an @type was found in this block.' },
+        ]));
+        return;
+      }
+      const ctx = parsed['@context'] || (items[0] && items[0]['@context']);
+      items.forEach((item) => {
+        totalItems++;
+        const issues: { level: string; msg: string }[] = [];
+        const itemCtx = item['@context'] || ctx;
+        if (!itemCtx) { issues.push({ level: 'error', msg: 'Missing @context (expected "https://schema.org").' }); }
+        else if (!String(itemCtx).includes('schema.org')) { issues.push({ level: 'warning', msg: `@context is "${itemCtx}" — expected to reference schema.org.` }); }
+
+        checkNode(item, issues, true);
+
+        totalErrors += issues.filter((x) => x.level === 'error').length;
+        totalWarnings += issues.filter((x) => x.level === 'warning').length;
+        const rich = RICH[Array.isArray(item['@type']) ? item['@type'][0] : item['@type']];
+        cards.push(card(typeName(item), item.name ? String(item.name).slice(0, 60) : '', issues.length ? issues : [{ level: 'ok', msg: 'All required and recommended properties present.' }], rich));
+      });
+    });
+
+    if (totalErrors === 0) {
+      showStatus(`Valid ✓ — ${totalItems} item${totalItems === 1 ? '' : 's'}, ${totalErrors} errors, ${totalWarnings} warning${totalWarnings === 1 ? '' : 's'}.`, true);
+    } else {
+      showStatus(`${totalErrors} error${totalErrors === 1 ? '' : 's'} across ${totalItems} item${totalItems === 1 ? '' : 's'}.`, false);
+    }
+    results.classList.remove('hidden');
+    results.innerHTML = cards.join('');
+  }
+
+  function card(type: string, name: string, issues: { level: string; msg: string }[], rich?: string): string {
+    const errCount = issues.filter((x) => x.level === 'error').length;
+    const rows = issues
+      .map((x) => {
+        const color = x.level === 'error' ? '#e08585' : x.level === 'warning' ? '#e0c185' : '#27a644';
+        const label = x.level === 'error' ? 'Error' : x.level === 'warning' ? 'Warn' : 'OK';
+        return `<li class="flex items-start gap-2 text-[13px]">
+          <span class="mt-0.5 shrink-0 rounded-xs px-1.5 py-0.5 text-[11px] font-medium" style="color:${color};border:1px solid ${color}55">${label}</span>
+          <span class="text-ink-muted">${x.msg}</span>
+        </li>`;
+      })
+      .join('');
+    // Eligible for the rich result only when no errors block it.
+    const badge = rich
+      ? `<span class="ml-auto shrink-0 rounded-xs px-1.5 py-0.5 text-[11px] font-medium" style="color:${errCount ? '#e0c185' : '#5e6ad2'};border:1px solid ${errCount ? '#e0c185' : '#5e6ad2'}55" title="${errCount ? 'Fix errors to become eligible' : 'Eligible for this Google rich result'}">${errCount ? '⚠ ' : '✓ '}${rich}</span>`
+      : '';
+    return `<div class="panel panel-lift flex flex-col gap-3 p-4">
+      <div class="flex items-baseline gap-2">
+        <span class="font-display text-[15px] font-medium text-ink">${type}</span>
+        ${name ? `<span class="truncate text-[13px] text-ink-tertiary">${name}</span>` : ''}
+        ${badge}
+      </div>
+      <ul class="flex flex-col gap-1.5">${rows}</ul>
+    </div>`;
+  }
+
+  const refresh = wireInput(input, inHl, () => 'json', () => validate());
+  input.value = '{\n  "@context": "https://schema.org",\n  "@type": "Product",\n  "name": "Trail Runner Shoe",\n  "image": "https://example.com/shoe.jpg"\n}';
+  refresh();
+  validate();
+</script>

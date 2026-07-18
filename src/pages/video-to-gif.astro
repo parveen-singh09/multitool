@@ -1,0 +1,579 @@
+?---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="video-to-gif">
+  <div class="flex flex-col gap-4">
+    <label id="vg-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a video or drop it here</span>
+      <input id="vg-file" type="file" accept="video/*" class="sr-only" />
+    </label>
+
+    <div id="vg-panel" class="hidden flex-col gap-4">
+
+      <div class="panel flex flex-col gap-3 p-3">
+        <div id="vg-stage" class="relative mx-auto w-fit max-w-full overflow-hidden rounded-md">
+          <video id="vg-video" controls class="block max-h-90 w-auto max-w-full rounded-md bg-black"></video>
+          <div id="vg-textlayer" class="pointer-events-none absolute inset-0 overflow-hidden rounded-md"></div>
+          <div id="vg-crop" class="hidden">
+            <span id="vg-crop-handle" class="vg-crop-handle" aria-label="Resize crop"></span>
+          </div>
+        </div>
+        <div class="flex flex-col gap-2">
+          <div class="relative h-8">
+            <input id="vg-range-start" type="range" min="0" max="100" value="0" step="0.1" class="vg-range absolute inset-x-0" aria-label="Clip start" />
+            <input id="vg-range-end" type="range" min="0" max="100" value="30" step="0.1" class="vg-range absolute inset-x-0" aria-label="Clip end" />
+          </div>
+          <div class="flex flex-wrap items-center gap-2 text-[13px] text-ink-subtle">
+            <button id="vg-set-start" class="btn btn-tertiary" style="min-height:28px;padding:2px 10px;font-size:12px">Set start to playhead</button>
+            <button id="vg-set-end" class="btn btn-tertiary" style="min-height:28px;padding:2px 10px;font-size:12px">Set end to playhead</button>
+            <span id="vg-clip" class="ml-auto font-mono text-ink"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel flex flex-col gap-3 p-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-sm text-ink">Text</span>
+          <span class="text-[13px] text-ink-tertiary">Drag any caption on the preview to place it anywhere</span>
+          <span class="grow"></span>
+          <button id="vg-add-text" class="btn btn-secondary" style="min-height:30px;padding:4px 12px;font-size:13px">Add text</button>
+        </div>
+        <div id="vg-text-list" class="flex flex-col gap-3"></div>
+      </div>
+
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Width (px)
+          <input id="vg-width" type="number" class="field w-24" value="480" min="80" max="1280" step="20" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">FPS
+          <select id="vg-fps" class="field w-24"><option>10</option><option selected>15</option><option>20</option><option>25</option><option>30</option></select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Speed
+          <select id="vg-speed" class="field w-28"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1× (normal)</option><option value="1.5">1.5×</option><option value="2">2×</option><option value="3">3×</option><option value="4">4×</option></select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Colors
+          <select id="vg-colors" class="field w-28"><option value="256" selected>256 (best)</option><option value="128">128</option><option value="64">64 (small)</option><option value="32">32 (tiny)</option></select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Smoothing
+          <select id="vg-dither" class="field w-36">
+            <option value="sierra2_4a" selected>Sierra (default)</option>
+            <option value="floyd_steinberg">Floyd–Steinberg</option>
+            <option value="bayer">Bayer (patterned)</option>
+            <option value="none">None (flat)</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Loop
+          <select id="vg-loop" class="field w-32"><option value="0" selected>Forever</option><option value="1">Once</option><option value="3">3 times</option></select>
+        </label>
+        <label class="flex items-center gap-2 pb-2.5 text-sm text-ink-subtle"><input id="vg-reverse" type="checkbox" class="accent-primary" /> Reverse</label>
+        <label class="flex items-center gap-2 pb-2.5 text-sm text-ink-subtle" title="Play forward then backward"><input id="vg-boomerang" type="checkbox" class="accent-primary" /> Boomerang</label>
+        <label class="flex items-center gap-2 pb-2.5 text-sm text-ink-subtle" title="Drag the box on the preview to crop"><input id="vg-crop-on" type="checkbox" class="accent-primary" /> Crop</label>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <button id="vg-go" class="btn btn-primary">Make GIF</button>
+        <span id="vg-estimate" class="text-[13px] text-ink-subtle"></span>
+      </div>
+
+      <div id="vg-progwrap" class="hidden flex-col gap-1">
+        <div class="h-1.5 w-full overflow-hidden rounded-full bg-surface-3"><div id="vg-bar" class="h-full w-0 rounded-full transition-all" style="background:var(--color-primary)"></div></div>
+        <span id="vg-status" class="text-[13px] text-ink-subtle"></span>
+      </div>
+
+      <div id="vg-result" class="hidden flex-col gap-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <span id="vg-info" class="text-[13px]" style="color:var(--color-success)"></span>
+          <button id="vg-download" class="btn btn-primary">Download GIF</button>
+        </div>
+        <div class="panel flex justify-center overflow-hidden p-4"><img id="vg-preview" class="max-h-96 w-auto max-w-full rounded-md" alt="GIF preview" /></div>
+      </div>
+    </div>
+    <p id="vg-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free video to GIF converter turns a clip from any video into an
+      animated GIF. Scrub the video and drag the two handles to pick the exact
+      start and end, then set the width, frame rate, color count and smoothing.
+      Add text captions and drag them anywhere on the frame — pick the size,
+      color, bold weight and an optional background box, and the text is burned
+      right into the GIF. Drag a crop box to keep just the part of the frame you
+      want, speed the clip up or slow it down, reverse it or make a boomerang that
+      plays forward then back, choose how many times it loops, and see an estimated
+      file size and output dimensions before you render. A two-pass palette keeps
+      colors clean.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+
+  .vg-range { -webkit-appearance:none; appearance:none; width:100%; height:100%; background:transparent; pointer-events:none; margin:0; }
+  .vg-range::-webkit-slider-thumb { -webkit-appearance:none; pointer-events:auto; width:16px; height:16px; border-radius:9999px; background:var(--color-primary); border:2px solid var(--color-ink); cursor:pointer; }
+  .vg-range::-moz-range-thumb { pointer-events:auto; width:16px; height:16px; border-radius:9999px; background:var(--color-primary); border:2px solid var(--color-ink); cursor:pointer; }
+  .vg-range::-webkit-slider-runnable-track { height:4px; border-radius:9999px; }
+  .vg-range::-moz-range-track { height:4px; border-radius:9999px; background:var(--color-surface-3); }
+
+  #vg-textlayer { container-type:size; }
+
+  :global(.vg-text) {
+    position:absolute; pointer-events:auto; cursor:move; white-space:pre;
+    line-height:1.25; user-select:none; touch-action:none; max-width:100%;
+    outline:1px dashed transparent; outline-offset:2px;
+  }
+  :global(.vg-text:hover), :global(.vg-text.vg-active) { outline-color:var(--color-primary); }
+  :global(.vg-text.vg-stroke) { -webkit-text-stroke:0.06em rgba(0,0,0,0.85); paint-order:stroke fill; }
+  :global(.vg-text.vg-bg) { background:rgba(0,0,0,0.6); padding:0.25em; border-radius:0.15em; }
+
+  #vg-crop {
+    position:absolute; cursor:move; touch-action:none;
+    outline:1px solid var(--color-primary); outline-offset:-1px;
+    box-shadow:0 0 0 9999px rgba(0,0,0,0.5);
+  }
+  .vg-crop-handle {
+    position:absolute; right:-6px; bottom:-6px; width:14px; height:14px;
+    border-radius:9999px; background:var(--color-primary);
+    border:2px solid var(--color-ink); cursor:nwse-resize; touch-action:none;
+  }
+</style>
+
+<script>
+  import { getFFmpeg, fetchFile } from '../lib/ffmpeg';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const fileInput = $('vg-file') as HTMLInputElement;
+  const drop = $('vg-drop');
+  const panel = $('vg-panel');
+  const video = $('vg-video') as HTMLVideoElement;
+  const textLayer = $('vg-textlayer');
+  const textList = $('vg-text-list');
+  const rStart = $('vg-range-start') as HTMLInputElement;
+  const rEnd = $('vg-range-end') as HTMLInputElement;
+  const clipEl = $('vg-clip');
+  const goBtn = $('vg-go') as HTMLButtonElement;
+  const progWrap = $('vg-progwrap');
+  const bar = $('vg-bar');
+  const statusEl = $('vg-status');
+  const result = $('vg-result');
+  const info = $('vg-info');
+  const estimate = $('vg-estimate');
+  const preview = $('vg-preview') as HTMLImageElement;
+  const err = $('vg-error');
+
+  const cropBox = $('vg-crop');
+  const cropHandle = $('vg-crop-handle');
+  const cropOn = $('vg-crop-on') as HTMLInputElement;
+
+  let file: File | null = null;
+  let duration = 0;
+  let outUrl = '';
+  let videoUrl = '';
+
+  const crop = { x: 10, y: 10, w: 80, h: 80 };
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+  const fmtSize = (n: number) => n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(2)} MB`;
+  const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}.${String(Math.floor((s % 1) * 10))}`;
+
+  const startSec = () => (Number(rStart.value) / 100) * duration;
+  const endSec = () => (Number(rEnd.value) / 100) * duration;
+
+  // ---- Text overlays ----
+  interface TextItem {
+    id: number;
+    text: string;
+    xPct: number;   // top-left, % of frame
+    yPct: number;
+    sizeFrac: number; // font size as fraction of frame height
+    color: string;
+    bold: boolean;
+    bg: boolean;
+  }
+  let texts: TextItem[] = [];
+  let nextId = 1;
+  const activeTexts = () => texts.filter((t) => t.text.trim() !== '');
+
+  // Render the draggable preview boxes over the video.
+  function renderBoxes() {
+    textLayer.replaceChildren();
+    for (const t of texts) {
+      const box = document.createElement('div');
+      box.className = 'vg-text' + (t.bg ? ' vg-bg' : ' vg-stroke');
+      box.dataset.id = String(t.id);
+      box.textContent = t.text || 'Text';
+      box.style.left = t.xPct + '%';
+      box.style.top = t.yPct + '%';
+      box.style.color = t.color;
+      box.style.fontWeight = t.bold ? '700' : '400';
+      box.style.fontSize = `calc(${t.sizeFrac * 100} * 1cqh)`;
+      if (!t.text) box.style.opacity = '0.5';
+      attachDrag(box, t);
+      textLayer.appendChild(box);
+    }
+  }
+
+  function attachDrag(box: HTMLElement, t: TextItem) {
+    box.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // Measure the layer/box once at grab time. Listen on window (not the box)
+      // so the drag survives the pointer passing over the video's controls.
+      const layerRect = textLayer.getBoundingClientRect();
+      const boxRect = box.getBoundingClientRect();
+      const offX = e.clientX - boxRect.left;
+      const offY = e.clientY - boxRect.top;
+      box.classList.add('vg-active');
+      const move = (ev: PointerEvent) => {
+        ev.preventDefault();
+        const nx = ((ev.clientX - offX - layerRect.left) / layerRect.width) * 100;
+        const ny = ((ev.clientY - offY - layerRect.top) / layerRect.height) * 100;
+        t.xPct = Math.min(98, Math.max(0, nx));
+        t.yPct = Math.min(98, Math.max(0, ny));
+        box.style.left = t.xPct + '%';
+        box.style.top = t.yPct + '%';
+      };
+      const up = () => {
+        box.classList.remove('vg-active');
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+        window.removeEventListener('pointercancel', up);
+      };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+      window.addEventListener('pointercancel', up);
+    });
+  }
+
+  // Render the editor rows below the preview.
+  function renderTextList() {
+    textList.replaceChildren();
+    if (!texts.length) {
+      const hint = document.createElement('p');
+      hint.className = 'text-[13px] text-ink-tertiary';
+      hint.textContent = 'No text yet. Click “Add text” to place a caption on the GIF.';
+      textList.appendChild(hint);
+      return;
+    }
+    texts.forEach((t, i) => {
+      const row = document.createElement('div');
+      row.className = 'panel flex flex-col gap-2 p-3';
+
+      const head = document.createElement('div');
+      head.className = 'flex items-center gap-2';
+      const label = document.createElement('span');
+      label.className = 'text-[13px] text-ink-muted';
+      label.textContent = `Text ${i + 1}`;
+      const del = document.createElement('button');
+      del.className = 'btn btn-tertiary'; del.style.cssText = 'min-height:26px;padding:2px 10px;font-size:12px';
+      del.textContent = 'Remove';
+      del.addEventListener('click', () => { texts = texts.filter((x) => x.id !== t.id); renderTextList(); renderBoxes(); });
+      head.append(label, document.createElement('span'), del);
+      (head.children[1] as HTMLElement).className = 'grow';
+
+      const ta = document.createElement('textarea');
+      ta.className = 'field'; ta.rows = 2; ta.value = t.text; ta.placeholder = 'Caption text (press Enter for a new line)';
+      ta.addEventListener('input', () => { t.text = ta.value; renderBoxes(); });
+
+      const ctrls = document.createElement('div');
+      ctrls.className = 'flex flex-wrap items-center gap-3';
+
+      // Color
+      const colWrap = document.createElement('label');
+      colWrap.className = 'flex items-center gap-2 text-[13px] text-ink-subtle';
+      colWrap.append('Color');
+      const col = document.createElement('input');
+      col.type = 'color'; col.value = t.color; col.className = 'h-7 w-9 cursor-pointer rounded border-0 bg-transparent p-0';
+      col.addEventListener('input', () => { t.color = col.value; renderBoxes(); });
+      colWrap.appendChild(col);
+
+      // Size
+      const sizeWrap = document.createElement('label');
+      sizeWrap.className = 'flex items-center gap-2 text-[13px] text-ink-subtle';
+      sizeWrap.append('Size');
+      const size = document.createElement('input');
+      size.type = 'range'; size.min = '3'; size.max = '25'; size.step = '0.5';
+      size.value = String(t.sizeFrac * 100); size.className = 'accent-primary';
+      size.addEventListener('input', () => { t.sizeFrac = Number(size.value) / 100; renderBoxes(); });
+      sizeWrap.appendChild(size);
+
+      // Bold
+      const boldWrap = document.createElement('label');
+      boldWrap.className = 'flex items-center gap-2 text-[13px] text-ink-subtle';
+      const bold = document.createElement('input');
+      bold.type = 'checkbox'; bold.checked = t.bold; bold.className = 'accent-primary';
+      bold.addEventListener('change', () => { t.bold = bold.checked; renderBoxes(); });
+      boldWrap.append(bold, document.createTextNode('Bold'));
+
+      // Background
+      const bgWrap = document.createElement('label');
+      bgWrap.className = 'flex items-center gap-2 text-[13px] text-ink-subtle';
+      const bg = document.createElement('input');
+      bg.type = 'checkbox'; bg.checked = t.bg; bg.className = 'accent-primary';
+      bg.addEventListener('change', () => { t.bg = bg.checked; renderBoxes(); });
+      bgWrap.append(bg, document.createTextNode('Background'));
+
+      ctrls.append(colWrap, sizeWrap, boldWrap, bgWrap);
+      row.append(head, ta, ctrls);
+      textList.appendChild(row);
+    });
+  }
+
+  $('vg-add-text').addEventListener('click', () => {
+    texts.push({ id: nextId++, text: 'Your text', xPct: 8, yPct: 8, sizeFrac: 0.08, color: '#ffffff', bold: true, bg: false });
+    renderTextList(); renderBoxes();
+  });
+
+  // Compute the output dimensions the GIF will use (width fixed, height from aspect).
+  function outputDims(): { w: number; h: number } {
+    const w = Number(($('vg-width') as HTMLInputElement).value) || 480;
+    const vw = video.videoWidth || 16;
+    const vh = video.videoHeight || 9;
+    // Output aspect follows the crop rect when cropping, else the full frame.
+    const ar = cropOn.checked ? (vw * crop.w) / (vh * crop.h) : vw / vh;
+    const h = Math.max(2, Math.round(w / ar));
+    return { w, h };
+  }
+
+  // Keep the text layer aligned to the visible output region so overlay % stay
+  // pixel-accurate: it covers the crop rect when cropping, else the whole frame.
+  function syncTextLayer() {
+    const on = cropOn.checked;
+    textLayer.style.left = on ? crop.x + '%' : '';
+    textLayer.style.top = on ? crop.y + '%' : '';
+    textLayer.style.width = on ? crop.w + '%' : '';
+    textLayer.style.height = on ? crop.h + '%' : '';
+    textLayer.style.right = on ? 'auto' : '';
+    textLayer.style.bottom = on ? 'auto' : '';
+  }
+
+  function syncCropBox() {
+    cropBox.style.left = crop.x + '%';
+    cropBox.style.top = crop.y + '%';
+    cropBox.style.width = crop.w + '%';
+    cropBox.style.height = crop.h + '%';
+  }
+
+  // Move (drag body) or resize (drag handle) the crop rect, clamped to 0–100.
+  function attachCropDrag() {
+    const grab = (e: PointerEvent, mode: 'move' | 'resize') => {
+      e.preventDefault(); e.stopPropagation();
+      const layer = video.getBoundingClientRect();
+      const sx = e.clientX, sy = e.clientY;
+      const o = { ...crop };
+      const move = (ev: PointerEvent) => {
+        const dx = ((ev.clientX - sx) / layer.width) * 100;
+        const dy = ((ev.clientY - sy) / layer.height) * 100;
+        if (mode === 'move') {
+          crop.x = Math.min(100 - crop.w, Math.max(0, o.x + dx));
+          crop.y = Math.min(100 - crop.h, Math.max(0, o.y + dy));
+        } else {
+          crop.w = Math.min(100 - crop.x, Math.max(5, o.w + dx));
+          crop.h = Math.min(100 - crop.y, Math.max(5, o.h + dy));
+        }
+        syncCropBox(); syncTextLayer(); updateEstimate();
+      };
+      const up = () => {
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+      };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+    };
+    cropBox.addEventListener('pointerdown', (e) => grab(e as PointerEvent, 'move'));
+    cropHandle.addEventListener('pointerdown', (e) => grab(e as PointerEvent, 'resize'));
+  }
+  attachCropDrag();
+
+  cropOn.addEventListener('change', () => {
+    cropBox.classList.toggle('hidden', !cropOn.checked);
+    if (cropOn.checked) syncCropBox();
+    syncTextLayer(); renderBoxes(); updateEstimate();
+  });
+
+  // Draw all active text onto a transparent PNG at the output resolution.
+  async function buildOverlayPng(outW: number, outH: number): Promise<Blob> {
+    const canvas = document.createElement('canvas');
+    canvas.width = outW; canvas.height = outH;
+    const ctx = canvas.getContext('2d')!;
+    try { await (document as any).fonts?.ready; } catch {}
+    const fam = getComputedStyle(document.body).fontFamily || 'Inter, system-ui, sans-serif';
+    for (const t of activeTexts()) {
+      const fs = Math.max(1, t.sizeFrac * outH);
+      ctx.font = `${t.bold ? '700' : '400'} ${fs}px ${fam}`;
+      ctx.textBaseline = 'top';
+      const lines = t.text.replace(/\r/g, '').split('\n');
+      const lh = fs * 1.25;
+      const x = (t.xPct / 100) * outW;
+      const y = (t.yPct / 100) * outH;
+      const pad = fs * 0.25;
+      if (t.bg) {
+        let w = 0;
+        for (const ln of lines) w = Math.max(w, ctx.measureText(ln).width);
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        roundRect(ctx, x - pad, y - pad, w + pad * 2, lines.length * lh + pad * 2, fs * 0.15);
+        ctx.fill();
+      }
+      lines.forEach((ln, i) => {
+        const ly = y + i * lh;
+        if (!t.bg) {
+          ctx.lineWidth = Math.max(1, fs * 0.14);
+          ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+          ctx.lineJoin = 'round';
+          ctx.strokeText(ln, x, ly);
+        }
+        ctx.fillStyle = t.color;
+        ctx.fillText(ln, x, ly);
+      });
+    }
+    return await new Promise<Blob>((res, rej) =>
+      canvas.toBlob((b) => (b ? res(b) : rej(new Error('canvas export failed'))), 'image/png'));
+  }
+
+  function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function refreshClip() {
+    // Keep start below end with a small minimum gap.
+    if (Number(rStart.value) > Number(rEnd.value) - 1) rStart.value = String(Math.max(0, Number(rEnd.value) - 1));
+    const s = startSec(), e = endSec();
+    clipEl.textContent = `${fmtTime(s)} → ${fmtTime(e)}  (${(e - s).toFixed(1)}s)`;
+    updateEstimate();
+  }
+  function updateEstimate() {
+    const dur = Math.max(0, endSec() - startSec());
+    const fps = Number(($('vg-fps') as HTMLSelectElement).value) || 15;
+    const colors = Number(($('vg-colors') as HTMLSelectElement).value) || 256;
+    const speed = Number(($('vg-speed') as HTMLSelectElement).value) || 1;
+    const boomerang = ($('vg-boomerang') as HTMLInputElement).checked;
+    const outDur = dur / speed; // speed changes playback length
+    const frames = Math.max(1, Math.round(outDur * fps)) * (boomerang ? 2 : 1);
+    const { w, h } = outputDims();
+    // Rough GIF bytes: frames × pixels × bits-per-pixel(from palette)/8 × LZW factor.
+    const bpp = Math.log2(colors) / 8;
+    const bytes = frames * w * h * bpp * 0.5;
+    estimate.textContent = dur > 0 ? `~${frames} frames · ${w}×${h} · est. ${fmtSize(bytes)}` : '';
+  }
+
+  rStart.addEventListener('input', () => { refreshClip(); video.currentTime = startSec(); });
+  rEnd.addEventListener('input', () => { refreshClip(); video.currentTime = endSec(); });
+  $('vg-set-start').addEventListener('click', () => { rStart.value = String((video.currentTime / duration) * 100); refreshClip(); });
+  $('vg-set-end').addEventListener('click', () => { rEnd.value = String((video.currentTime / duration) * 100); refreshClip(); });
+  ['vg-width', 'vg-fps', 'vg-colors', 'vg-boomerang', 'vg-speed'].forEach((id) => $(id).addEventListener('input', updateEstimate));
+
+  function pick(f: File) {
+    file = f; setErr('');
+    if (videoUrl) URL.revokeObjectURL(videoUrl);
+    videoUrl = URL.createObjectURL(f);
+    video.src = videoUrl;
+    video.onloadedmetadata = () => {
+      duration = isFinite(video.duration) ? video.duration : 0;
+      // The video sits in normal flow and defines the stage box; the text layer
+      // (absolute inset-0) covers exactly the video's pixels — no letterbox drift.
+      rStart.value = '0';
+      rEnd.value = String(Math.min(100, (Math.min(duration, 5) / duration) * 100));
+      refreshClip();
+    };
+    panel.classList.remove('hidden'); panel.classList.add('flex');
+    result.classList.add('hidden');
+    renderTextList(); renderBoxes();
+  }
+
+  async function make() {
+    if (!file) return;
+    setErr(''); goBtn.disabled = true;
+    progWrap.classList.remove('hidden'); progWrap.classList.add('flex'); result.classList.add('hidden'); bar.style.width = '0%';
+    const start = startSec();
+    const dur = Math.max(0.2, endSec() - startSec());
+    const { w: outW, h: outH } = outputDims();
+    const fps = Number(($('vg-fps') as HTMLSelectElement).value) || 15;
+    const colors = Number(($('vg-colors') as HTMLSelectElement).value) || 256;
+    const dither = ($('vg-dither') as HTMLSelectElement).value;
+    const loop = ($('vg-loop') as HTMLSelectElement).value;
+    const reverse = ($('vg-reverse') as HTMLInputElement).checked;
+    const boomerang = ($('vg-boomerang') as HTMLInputElement).checked;
+    const speed = Number(($('vg-speed') as HTMLSelectElement).value) || 1;
+    const hasText = activeTexts().length > 0;
+    // Source-stream prefix applied before fps/scale: optional retime + crop.
+    // setpts=PTS/speed changes clip length; crop uses source-pixel fractions.
+    const speedF = speed !== 1 ? `setpts=PTS/${speed},` : '';
+    const cropF = cropOn.checked
+      ? `crop=iw*${(crop.w / 100).toFixed(4)}:ih*${(crop.h / 100).toFixed(4)}:iw*${(crop.x / 100).toFixed(4)}:ih*${(crop.y / 100).toFixed(4)},`
+      : '';
+    const pre = speedF + cropF;
+    try {
+      const ff = await getFFmpeg({
+        onProgress: (r) => { bar.style.width = Math.min(100, Math.round(r * 100)) + '%'; },
+        onDownload: (n) => { if (n) statusEl.textContent = n; },
+      });
+      statusEl.textContent = 'Generating palette…';
+      const inName = 'in.' + (file.name.split('.').pop() || 'mp4');
+      await ff.writeFile(inName, await fetchFile(file));
+
+      const cleanup: string[] = [inName, 'palette.png', 'out.gif'];
+
+      if (hasText) {
+        // Composite a transparent PNG of the text onto every frame via `overlay`.
+        // Scale is forced to the exact overlay dimensions so they align pixel-for-pixel.
+        const png = await buildOverlayPng(outW, outH);
+        await ff.writeFile('overlay.png', await fetchFile(png));
+        cleanup.push('overlay.png');
+        // Shared processing chain: fps + scale + text overlay + optional reverse/boomerang.
+        let proc = `[0:v]${pre}fps=${fps},scale=${outW}:${outH}:flags=lanczos[b0];[b0][1:v]overlay=0:0`;
+        if (boomerang) proc += `,split[sa][sb];[sb]reverse[sr];[sa][sr]concat`;
+        else if (reverse) proc += `,reverse`;
+        proc += `[proc]`;
+        // pass 1: palette
+        await ff.exec(['-ss', String(start), '-t', String(dur), '-i', inName, '-i', 'overlay.png',
+          '-filter_complex', `${proc};[proc]palettegen=max_colors=${colors}[p]`, '-map', '[p]', 'palette.png']);
+        statusEl.textContent = 'Encoding GIF…';
+        // pass 2: apply palette with the chosen dithering
+        await ff.exec(['-ss', String(start), '-t', String(dur), '-i', inName, '-i', 'overlay.png', '-i', 'palette.png',
+          '-filter_complex', `${proc};[proc][2:v]paletteuse=dither=${dither}[o]`, '-map', '[o]', '-loop', loop, 'out.gif']);
+      } else {
+        // No text: original single-filter path (keeps auto height via scale=-1).
+        let chain = `${pre}fps=${fps},scale=${outW}:-1:flags=lanczos`;
+        if (boomerang) chain += `,split[a][b];[b]reverse[r];[a][r]concat`;
+        else if (reverse) chain += `,reverse`;
+        await ff.exec(['-ss', String(start), '-t', String(dur), '-i', inName, '-vf', `${chain},palettegen=max_colors=${colors}`, 'palette.png']);
+        statusEl.textContent = 'Encoding GIF…';
+        await ff.exec(['-ss', String(start), '-t', String(dur), '-i', inName, '-i', 'palette.png',
+          '-lavfi', `${chain} [x]; [x][1:v] paletteuse=dither=${dither}`, '-loop', loop, 'out.gif']);
+      }
+
+      const data = await ff.readFile('out.gif');
+      const blob = new Blob([data as BlobPart], { type: 'image/gif' });
+      if (outUrl) URL.revokeObjectURL(outUrl);
+      outUrl = URL.createObjectURL(blob);
+      for (const f of cleanup) { try { await ff.deleteFile(f); } catch {} }
+      preview.src = outUrl;
+      info.textContent = `Done — ${fmtSize(blob.size)} GIF`;
+      progWrap.classList.add('hidden');
+      result.classList.remove('hidden'); result.classList.add('flex');
+    } catch (e) { progWrap.classList.add('hidden'); setErr('Could not make the GIF: ' + (e as Error).message); }
+    finally { goBtn.disabled = false; }
+  }
+
+  $('vg-download').addEventListener('click', () => {
+    if (!outUrl || !file) return;
+    const a = document.createElement('a'); a.href = outUrl; a.download = file.name.replace(/\.[^.]+$/, '') + '.gif'; a.click();
+  });
+
+  fileInput.addEventListener('change', () => fileInput.files?.[0] && pick(fileInput.files[0]));
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) pick(f); });
+  goBtn.addEventListener('click', make);
+
+  renderTextList();
+</script>

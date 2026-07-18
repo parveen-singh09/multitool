@@ -1,0 +1,270 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="html-formatter">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="hf-beautify" class="btn btn-primary">Beautify</button>
+      <button id="hf-minify" class="btn btn-secondary">Minify</button>
+      <button id="hf-download" class="btn btn-secondary">Download</button>
+      <label class="btn btn-secondary cursor-pointer">
+        Upload
+        <input id="hf-file" type="file" accept=".html,.htm,.xhtml,.xml,text/*" class="hidden" />
+      </label>
+      <button id="hf-clear" class="btn btn-tertiary">Clear</button>
+      <label class="ml-auto flex items-center gap-2 text-sm text-ink-subtle">
+        Indent
+        <select id="hf-indent" class="field w-auto py-1">
+          <option value="2">2 spaces</option>
+          <option value="3">3 spaces</option>
+          <option value="4">4 spaces</option>
+          <option value="tab">Tab</option>
+        </select>
+      </label>
+    </div>
+
+    <label class="flex items-center gap-2 text-sm text-ink-subtle">
+      Upload encoding
+      <select id="hf-charset" class="field w-auto py-1">
+        <optgroup label="Unicode">
+          <option value="utf-8" selected>UTF-8</option>
+          <option value="utf-16le">UTF-16 LE</option>
+          <option value="utf-16be">UTF-16 BE</option>
+        </optgroup>
+        <optgroup label="Western / Latin">
+          <option value="windows-1252">Windows-1252 (Latin)</option>
+          <option value="iso-8859-1">ISO-8859-1 (Latin-1)</option>
+          <option value="iso-8859-2">ISO-8859-2 (Central Eur.)</option>
+          <option value="iso-8859-15">ISO-8859-15 (Latin-9)</option>
+          <option value="macintosh">Mac Roman</option>
+          <option value="us-ascii">US-ASCII</option>
+        </optgroup>
+        <optgroup label="Cyrillic">
+          <option value="windows-1251">Windows-1251</option>
+          <option value="iso-8859-5">ISO-8859-5</option>
+          <option value="koi8-r">KOI8-R</option>
+          <option value="koi8-u">KOI8-U</option>
+          <option value="ibm866">IBM866</option>
+          <option value="x-mac-cyrillic">Mac Cyrillic</option>
+        </optgroup>
+        <optgroup label="Greek / Hebrew / Arabic / Turkish / Baltic">
+          <option value="windows-1253">Windows-1253 (Greek)</option>
+          <option value="iso-8859-7">ISO-8859-7 (Greek)</option>
+          <option value="windows-1255">Windows-1255 (Hebrew)</option>
+          <option value="iso-8859-8">ISO-8859-8 (Hebrew)</option>
+          <option value="windows-1256">Windows-1256 (Arabic)</option>
+          <option value="iso-8859-6">ISO-8859-6 (Arabic)</option>
+          <option value="windows-1254">Windows-1254 (Turkish)</option>
+          <option value="iso-8859-9">ISO-8859-9 (Turkish)</option>
+          <option value="windows-1257">Windows-1257 (Baltic)</option>
+          <option value="iso-8859-4">ISO-8859-4 (Baltic)</option>
+          <option value="windows-1258">Windows-1258 (Vietnamese)</option>
+          <option value="windows-874">Windows-874 (Thai)</option>
+        </optgroup>
+        <optgroup label="East Asian">
+          <option value="shift_jis">Shift_JIS (Japanese)</option>
+          <option value="euc-jp">EUC-JP (Japanese)</option>
+          <option value="iso-2022-jp">ISO-2022-JP (Japanese)</option>
+          <option value="gbk">GBK (Simplified Chinese)</option>
+          <option value="gb18030">GB18030 (Chinese)</option>
+          <option value="big5">Big5 (Traditional Chinese)</option>
+          <option value="euc-kr">EUC-KR (Korean)</option>
+        </optgroup>
+      </select>
+    </label>
+
+    <div id="hf-status" class="hidden rounded-md border px-3 py-2 text-sm" role="status"></div>
+
+    <div class="hl-edit field p-0" style="height:18rem;resize:vertical;overflow:hidden">
+      <pre class="hl-block" aria-hidden="true"><code id="hf-input-hl" class="hljs" style="background:transparent"></code></pre>
+      <textarea
+        id="hf-input"
+        spellcheck="false"
+        autocapitalize="off"
+        autocomplete="off"
+        autocorrect="off"
+        placeholder="Paste HTML here, e.g. <ul><li>one</li><li>two</li></ul>"
+        aria-label="HTML input"
+      ></textarea>
+      <button type="button" class="copy-icon" data-copy-target="#hf-input" aria-label="Copy"></button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free HTML formatter cleans up messy markup with consistent, tag-aware
+      indentation, or minifies it for production with a configurable indent size
+      (2, 3 or 4 spaces, or tabs). Void elements such as <code>br</code>,
+      <code>img</code> and <code>input</code> are handled correctly, and the
+      contents of raw-text elements — <code>pre</code>, <code>script</code>,
+      <code>style</code> and <code>textarea</code> — are preserved exactly so
+      your code and whitespace-sensitive blocks are never mangled. Simple
+      elements such as <code>&lt;li&gt;one&lt;/li&gt;</code> stay on a single
+      line for readable output.
+    </p>
+    <p>
+      Load markup by pasting, or upload a file in any of 30+ character
+      encodings — UTF-8, UTF-16, every ISO-8859 and Windows code page, KOI8,
+      Shift_JIS, GBK, Big5, EUC-KR and more — which is decoded to Unicode
+      automatically. Then copy the result or download it as a file.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { wireInput } from '../lib/highlight';
+
+  const input = document.getElementById('hf-input') as HTMLTextAreaElement;
+  const inHl = document.getElementById('hf-input-hl')!;
+  const status = document.getElementById('hf-status')!;
+  const indentSel = document.getElementById('hf-indent') as HTMLSelectElement;
+  const fileInput = document.getElementById('hf-file') as HTMLInputElement;
+  const charsetSel = document.getElementById('hf-charset') as HTMLSelectElement;
+
+  const refresh = wireInput(input, inHl, () => 'html');
+
+  const VOID = new Set([
+    'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+    'link', 'meta', 'param', 'source', 'track', 'wbr',
+  ]);
+
+  const RAW = new Set(['pre', 'script', 'style', 'textarea']);
+
+  function getIndent(): string {
+    const v = indentSel.value;
+    return v === 'tab' ? '\t' : ' '.repeat(Number(v));
+  }
+
+  function showStatus(msg: string, ok: boolean) {
+    status.textContent = msg;
+    status.classList.remove('hidden');
+    status.style.borderColor = ok ? '#27a644' : '#d14d4d';
+    status.style.color = ok ? '#27a644' : '#e08585';
+  }
+
+  type Tok = { type: 'tag' | 'text' | 'comment'; raw: string };
+
+  function tokenize(html: string): Tok[] {
+    const toks: Tok[] = [];
+    const parts = html.match(/<!--[\s\S]*?-->|<[^>]+>|[^<]+/g) || [];
+    for (const p of parts) {
+      if (p.startsWith('<!--')) toks.push({ type: 'comment', raw: p });
+      else if (p.startsWith('<')) toks.push({ type: 'tag', raw: p });
+      else toks.push({ type: 'text', raw: p });
+    }
+    return toks;
+  }
+
+  // Raw elements whose inner text must survive formatting untouched.
+  const rawRe = new RegExp(`<(${[...RAW].join('|')})\\b[^>]*>[\\s\\S]*?</\\1>`, 'gi');
+
+  function minify(html: string): string {
+    const stash: string[] = [];
+    let result = html.replace(rawRe, (m) => {
+      stash.push(m);
+      return `\u0000${stash.length - 1}\u0000`;
+    });
+    result = result
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/>\s+</g, '><')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+    result = result.replace(/\u0000(\d+)\u0000/g, (_, n) => stash[Number(n)]);
+    return result;
+  }
+
+  function beautify(html: string, indent: string): string {
+    const stash: string[] = [];
+    const protectedHtml = html.replace(rawRe, (m) => {
+      stash.push(m);
+      return `\u0000${stash.length - 1}\u0000`;
+    });
+    const restore = (s: string) =>
+      s.replace(/\u0000(\d+)\u0000/g, (_, n) => stash[Number(n)]);
+
+    const toks = tokenize(protectedHtml);
+    const out: string[] = [];
+    let depth = 0;
+    const pad = () => indent.repeat(Math.max(0, depth));
+
+    for (const t of toks) {
+      if (t.type === 'text') {
+        const text = t.raw.trim();
+        if (text) out.push(pad() + restore(text));
+        continue;
+      }
+      if (t.type === 'comment') {
+        out.push(pad() + t.raw.trim());
+        continue;
+      }
+      const tag = t.raw;
+      const m = tag.match(/^<\/?\s*([a-zA-Z0-9-]+)/);
+      const name = m ? m[1].toLowerCase() : '';
+      const isClose = /^<\//.test(tag);
+      const selfClose = /\/>$/.test(tag) || VOID.has(name);
+      if (isClose) {
+        depth = Math.max(0, depth - 1);
+        out.push(pad() + tag);
+      } else if (selfClose) {
+        out.push(pad() + tag);
+      } else {
+        out.push(pad() + tag);
+        depth++;
+      }
+    }
+    return out.join('\n');
+  }
+
+  function process(doMinify: boolean) {
+    const src = input.value.trim();
+    if (!src) return;
+    try {
+      input.value = doMinify ? minify(src) : beautify(src, getIndent());
+      refresh();
+      showStatus(doMinify ? 'Minified ✓' : 'Formatted ✓', true);
+    } catch (e) {
+      showStatus('Could not process input.', false);
+    }
+  }
+
+  document.getElementById('hf-beautify')!.addEventListener('click', () => process(false));
+  document.getElementById('hf-minify')!.addEventListener('click', () => process(true));
+
+  document.getElementById('hf-clear')!.addEventListener('click', () => {
+    input.value = '';
+    refresh();
+    status.classList.add('hidden');
+  });
+
+  document.getElementById('hf-download')!.addEventListener('click', () => {
+    if (!input.value) return;
+    const blob = new Blob([input.value], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'formatted.html';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // Upload decodes the file's bytes using the selected charset, so legacy
+  // (non-UTF-8) documents come in as correct Unicode. TextDecoder covers the
+  // full WHATWG Encoding set — every label in the dropdown is supported.
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    try {
+      const buf = await file.arrayBuffer();
+      const label = charsetSel.value || 'utf-8';
+      const text = new TextDecoder(label as any).decode(buf);
+      input.value = text;
+      refresh();
+      showStatus(`Loaded ${file.name} as ${label} ✓`, true);
+    } catch (e) {
+      showStatus('Could not read that file with the selected encoding.', false);
+    } finally {
+      fileInput.value = '';
+    }
+  });
+</script>

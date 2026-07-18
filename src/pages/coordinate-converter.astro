@@ -1,0 +1,408 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="coordinate-converter">
+  <div class="flex flex-col gap-5">
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Latitude (decimal degrees)
+        <input id="co-lat" type="number" step="any" class="field font-mono" placeholder="51.5074" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Longitude (decimal degrees)
+        <input id="co-lng" type="number" step="any" class="field font-mono" placeholder="-0.1278" />
+      </label>
+    </div>
+
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Decimals
+        <select id="co-prec" class="field w-auto py-1">
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6" selected>6</option>
+          <option value="7">7</option>
+          <option value="8">8</option>
+        </select>
+      </label>
+      <button id="co-locate" type="button" class="btn btn-secondary">Use my location</button>
+      <button id="co-all" type="button" class="btn btn-secondary">Copy all</button>
+      <button id="co-clear" type="button" class="btn btn-tertiary">Clear</button>
+    </div>
+
+    <p id="co-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="panel p-3">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] uppercase tracking-wide text-ink-tertiary">Decimal degrees (DD)</span>
+        </div>
+        <div class="copy-wrap">
+          <div id="co-dd" class="mt-1 break-all font-mono text-sm text-ink"></div>
+          <button type="button" class="copy-icon" data-copy-target="#co-dd" aria-label="Copy"></button>
+        </div>
+      </div>
+      <div class="panel p-3">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] uppercase tracking-wide text-ink-tertiary">DMS (degrees minutes seconds)</span>
+        </div>
+        <div class="copy-wrap">
+          <div id="co-dms" class="mt-1 break-all font-mono text-sm text-ink"></div>
+          <button type="button" class="copy-icon" data-copy-target="#co-dms" aria-label="Copy"></button>
+        </div>
+      </div>
+      <div class="panel p-3">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] uppercase tracking-wide text-ink-tertiary">DDM (degrees decimal minutes)</span>
+        </div>
+        <div class="copy-wrap">
+          <div id="co-ddm" class="mt-1 break-all font-mono text-sm text-ink"></div>
+          <button type="button" class="copy-icon" data-copy-target="#co-ddm" aria-label="Copy"></button>
+        </div>
+      </div>
+      <div class="panel p-3">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] uppercase tracking-wide text-ink-tertiary">UTM</span>
+        </div>
+        <div class="copy-wrap">
+          <div id="co-utm" class="mt-1 break-all font-mono text-sm text-ink"></div>
+          <button type="button" class="copy-icon" data-copy-target="#co-utm" aria-label="Copy"></button>
+        </div>
+      </div>
+      <div class="panel p-3">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] uppercase tracking-wide text-ink-tertiary">MGRS grid reference</span>
+        </div>
+        <div class="copy-wrap">
+          <div id="co-mgrs" class="mt-1 break-all font-mono text-sm text-ink"></div>
+          <button type="button" class="copy-icon" data-copy-target="#co-mgrs" aria-label="Copy"></button>
+        </div>
+      </div>
+      <div class="panel p-3">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] uppercase tracking-wide text-ink-tertiary">Geohash</span>
+        </div>
+        <div class="copy-wrap">
+          <div id="co-geohash" class="mt-1 break-all font-mono text-sm text-ink"></div>
+          <button type="button" class="copy-icon" data-copy-target="#co-geohash" aria-label="Copy"></button>
+        </div>
+      </div>
+      <div class="panel p-3">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] uppercase tracking-wide text-ink-tertiary">Plus Code (Open Location Code)</span>
+        </div>
+        <div class="copy-wrap">
+          <div id="co-plus" class="mt-1 break-all font-mono text-sm text-ink"></div>
+          <button type="button" class="copy-icon" data-copy-target="#co-plus" aria-label="Copy"></button>
+        </div>
+      </div>
+      <div class="panel p-3">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] uppercase tracking-wide text-ink-tertiary">Geo URI</span>
+        </div>
+        <div class="copy-wrap">
+          <div id="co-geo" class="mt-1 break-all font-mono text-sm text-ink"></div>
+          <button type="button" class="copy-icon" data-copy-target="#co-geo" aria-label="Copy"></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap gap-3 text-sm">
+      <a id="co-osm" class="btn btn-tertiary" href="#" target="_blank" rel="noopener noreferrer">Open in OpenStreetMap</a>
+      <a id="co-gmaps" class="btn btn-tertiary" href="#" target="_blank" rel="noopener noreferrer">Open in Google Maps</a>
+    </div>
+
+    <div class="border-t border-hairline pt-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Paste any coordinates to convert (DD, DMS, DDM or geo URI)
+        <input id="co-parse" class="field font-mono" spellcheck="false" autocomplete="off"
+          placeholder={"51.5074, -0.1278   ·   51°30'26.6\"N 0°7'40.1\"W"} />
+      </label>
+      <p id="co-parse-msg" class="mt-1 hidden text-[13px] text-ink-tertiary"></p>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free coordinate converter turns GPS latitude and longitude between
+      decimal degrees (DD), degrees-minutes-seconds (DMS), degrees-decimal-minutes
+      (DDM), UTM, MGRS military grid references, Geohash and Plus Codes (Open
+      Location Code), and builds a shareable geo URI plus one-click map links.
+      Paste almost any coordinate string — decimal pairs, DMS, DDM or a geo URI —
+      into the parse box and it fills the fields automatically. Grab your current
+      position with one click, tune output precision, and copy any single format
+      or all of them at once.
+    </p>
+    <p>
+      Useful for maps, GIS, surveying, geocaching, aviation and marine navigation.
+      UTM and MGRS use the WGS84 ellipsoid and are accurate to about a
+      metre across the standard 80°S–84°N band; polar regions fall back to a clear
+      "N/A" note rather than a wrong grid reference.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const latEl = document.getElementById('co-lat') as HTMLInputElement;
+  const lngEl = document.getElementById('co-lng') as HTMLInputElement;
+  const precEl = document.getElementById('co-prec') as HTMLSelectElement;
+  const dd = document.getElementById('co-dd')!;
+  const dms = document.getElementById('co-dms')!;
+  const ddm = document.getElementById('co-ddm')!;
+  const utm = document.getElementById('co-utm')!;
+  const mgrs = document.getElementById('co-mgrs')!;
+  const geohashEl = document.getElementById('co-geohash')!;
+  const plusEl = document.getElementById('co-plus')!;
+  const geo = document.getElementById('co-geo')!;
+  const errEl = document.getElementById('co-error')!;
+  const osmLink = document.getElementById('co-osm') as HTMLAnchorElement;
+  const gmapsLink = document.getElementById('co-gmaps') as HTMLAnchorElement;
+  const parseEl = document.getElementById('co-parse') as HTMLInputElement;
+  const parseMsg = document.getElementById('co-parse-msg')!;
+
+  const DASH = '—';
+
+  function decimals(): number {
+    return Number(precEl.value);
+  }
+
+  function toDms(dec: number, pos: string, neg: string): string {
+    const dir = dec >= 0 ? pos : neg;
+    const abs = Math.abs(dec);
+    const d = Math.floor(abs);
+    const mFloat = (abs - d) * 60;
+    const m = Math.floor(mFloat);
+    const s = ((mFloat - m) * 60).toFixed(1);
+    return `${d}°${m}'${s}"${dir}`;
+  }
+  function toDdm(dec: number, pos: string, neg: string): string {
+    const dir = dec >= 0 ? pos : neg;
+    const abs = Math.abs(dec);
+    const d = Math.floor(abs);
+    const m = ((abs - d) * 60).toFixed(3);
+    return `${d}° ${m}'${dir}`;
+  }
+
+  type Utm = { zone: number; band: string; easting: number; northing: number; hemi: 'N' | 'S' };
+  function toUtm(lat: number, lng: number): Utm | null {
+    if (Math.abs(lat) > 84) return null;
+    const a = 6378137, e = 0.0818191908;
+    const zone = Math.floor((lng + 180) / 6) + 1;
+    const lng0 = ((zone - 1) * 6 - 180 + 3) * Math.PI / 180;
+    const phi = lat * Math.PI / 180, lam = lng * Math.PI / 180;
+    const N = a / Math.sqrt(1 - e * e * Math.sin(phi) ** 2);
+    const T = Math.tan(phi) ** 2;
+    const C = (e * e / (1 - e * e)) * Math.cos(phi) ** 2;
+    const A = Math.cos(phi) * (lam - lng0);
+    const e2 = e * e, e4 = e2 * e2, e6 = e4 * e2;
+    const M = a * ((1 - e2 / 4 - 3 * e4 / 64 - 5 * e6 / 256) * phi
+      - (3 * e2 / 8 + 3 * e4 / 32 + 45 * e6 / 1024) * Math.sin(2 * phi)
+      + (15 * e4 / 256 + 45 * e6 / 1024) * Math.sin(4 * phi)
+      - (35 * e6 / 3072) * Math.sin(6 * phi));
+    const k0 = 0.9996;
+    let easting = k0 * N * (A + (1 - T + C) * A ** 3 / 6 + (5 - 18 * T + T * T + 72 * C - 58 * (e2 / (1 - e2))) * A ** 5 / 120) + 500000;
+    let northing = k0 * (M + N * Math.tan(phi) * (A * A / 2 + (5 - T + 9 * C + 4 * C * C) * A ** 4 / 24 + (61 - 58 * T + T * T + 600 * C - 330 * (e2 / (1 - e2))) * A ** 6 / 720));
+    if (lat < 0) northing += 10000000;
+    const band = 'CDEFGHJKLMNPQRSTUVWX'[Math.floor((lat + 80) / 8)] || '?';
+    return { zone, band, easting, northing, hemi: lat < 0 ? 'S' : 'N' };
+  }
+  function utmString(u: Utm): string {
+    return `${u.zone}${u.band} ${Math.round(u.easting)}E ${Math.round(u.northing)}N`;
+  }
+
+  // MGRS from UTM components (WGS84). 100km-square lettering per NGA scheme.
+  function toMgrs(u: Utm): string {
+    const set = ((u.zone - 1) % 3);
+    const eLetters = ['ABCDEFGH', 'JKLMNPQR', 'STUVWXYZ'][set];
+    const nLetters = u.zone % 2 === 1 ? 'ABCDEFGHJKLMNPQRSTUV' : 'FGHJKLMNPQRSTUVABCDE';
+    const col = Math.floor(u.easting / 100000); // 1..8
+    const eLetter = eLetters[col - 1] || '?';
+    const nLetter = nLetters[Math.floor(u.northing / 100000) % 20] || '?';
+    const e = String(Math.floor(u.easting % 100000)).padStart(5, '0');
+    const n = String(Math.floor(u.northing % 100000)).padStart(5, '0');
+    return `${u.zone}${u.band} ${eLetter}${nLetter} ${e} ${n}`;
+  }
+
+  // Geohash encode (base32), ~5m at 9 chars.
+  const GEO32 = '0123456789bcdefghjkmnpqrstuvwxyz';
+  function toGeohash(lat: number, lng: number, precision = 9): string {
+    let latMin = -90, latMax = 90, lngMin = -180, lngMax = 180;
+    let hash = '', bit = 0, bits = 0, even = true;
+    while (hash.length < precision) {
+      if (even) {
+        const mid = (lngMin + lngMax) / 2;
+        if (lng >= mid) { bit = (bit << 1) + 1; lngMin = mid; } else { bit = bit << 1; lngMax = mid; }
+      } else {
+        const mid = (latMin + latMax) / 2;
+        if (lat >= mid) { bit = (bit << 1) + 1; latMin = mid; } else { bit = bit << 1; latMax = mid; }
+      }
+      even = !even;
+      if (++bits === 5) { hash += GEO32[bit]; bits = 0; bit = 0; }
+    }
+    return hash;
+  }
+
+  // Plus Code / Open Location Code: 10 pair digits + 1 grid digit (~3m).
+  const OLC = '23456789CFGHJMPQRVWX';
+  function toPlusCode(lat: number, lng: number): string {
+    lat = Math.min(89.999999, Math.max(-90, lat));
+    lng = ((((lng + 180) % 360) + 360) % 360) - 180;
+    let aLat = lat + 90, aLng = lng + 180;
+    let latRes = 20, lngRes = 20;
+    let digits = '';
+    for (let i = 0; i < 5; i++) {
+      const latDigit = Math.min(19, Math.floor(aLat / latRes));
+      const lngDigit = Math.min(19, Math.floor(aLng / lngRes));
+      aLat -= latDigit * latRes; aLng -= lngDigit * lngRes;
+      latRes /= 20; lngRes /= 20;
+      digits += OLC[latDigit] + OLC[lngDigit];
+    }
+    // One grid refinement digit: 4 cols x 5 rows within the final pair cell.
+    const rowRes = latRes * 20 / 5, colRes = lngRes * 20 / 4;
+    const row = Math.min(4, Math.floor(aLat / rowRes));
+    const col = Math.min(3, Math.floor(aLng / colRes));
+    digits += OLC[row * 4 + col];
+    return `${digits.slice(0, 8)}+${digits.slice(8)}`;
+  }
+
+  function showError(msg: string) {
+    errEl.textContent = msg;
+    errEl.classList.remove('hidden');
+  }
+  function clearOutputs() {
+    dd.textContent = dms.textContent = ddm.textContent = utm.textContent =
+      mgrs.textContent = geohashEl.textContent = plusEl.textContent = geo.textContent = DASH;
+    osmLink.removeAttribute('href'); gmapsLink.removeAttribute('href');
+  }
+
+  let last: { lat: number; lng: number } | null = null;
+
+  function render() {
+    errEl.classList.add('hidden');
+    last = null;
+    if (latEl.value === '' || lngEl.value === '') { clearOutputs(); return; }
+    const lat = Number(latEl.value), lng = Number(lngEl.value);
+    if (isNaN(lat) || isNaN(lng)) { clearOutputs(); showError('Latitude and longitude must be numbers.'); return; }
+    if (lat < -90 || lat > 90) { clearOutputs(); showError('Latitude must be between -90 and 90.'); return; }
+    if (lng < -180 || lng > 180) { clearOutputs(); showError('Longitude must be between -180 and 180.'); return; }
+
+    const p = decimals();
+    dd.textContent = `${lat.toFixed(p)}, ${lng.toFixed(p)}`;
+    dms.textContent = `${toDms(lat, 'N', 'S')} ${toDms(lng, 'E', 'W')}`;
+    ddm.textContent = `${toDdm(lat, 'N', 'S')} ${toDdm(lng, 'E', 'W')}`;
+    const u = toUtm(lat, lng);
+    utm.textContent = u ? utmString(u) : 'N/A (polar — outside 80°S–84°N)';
+    mgrs.textContent = u ? toMgrs(u) : 'N/A (polar — use UPS)';
+    geohashEl.textContent = toGeohash(lat, lng);
+    plusEl.textContent = toPlusCode(lat, lng);
+    geo.textContent = `geo:${lat},${lng}`;
+    osmLink.href = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=16/${lat}/${lng}`;
+    gmapsLink.href = `https://www.google.com/maps?q=${lat},${lng}`;
+    last = { lat, lng };
+  }
+
+  // Universal parser: geo URI, plain decimal pair, or DMS/DDM with directions.
+  function parseCoords(raw: string): { lat: number; lng: number } | null {
+    let str = raw.trim();
+    if (!str) return null;
+    str = str.replace(/^geo:/i, '');
+
+    // DMS/DDM with N/S/E/W markers (minutes & seconds optional → also DDM).
+    const re = /(\d+(?:\.\d+)?)[°\s]+(?:(\d+(?:\.\d+)?)['\s]+)?(?:(\d+(?:\.\d+)?)["\s]*)?([NSEW])/gi;
+    const matches = [...str.matchAll(re)];
+    if (matches.length >= 2) {
+      const val = (m: RegExpMatchArray) => {
+        let dec = Number(m[1]) + Number(m[2] || 0) / 60 + Number(m[3] || 0) / 3600;
+        if (/[SW]/i.test(m[4])) dec = -dec;
+        return dec;
+      };
+      const parts = matches.map((m) => ({ dec: val(m), dir: m[4].toUpperCase() }));
+      const lat = parts.find((x) => 'NS'.includes(x.dir))?.dec;
+      const lng = parts.find((x) => 'EW'.includes(x.dir))?.dec;
+      if (lat !== undefined && lng !== undefined) return { lat, lng };
+    }
+
+    // Plain decimal pair: "51.5, -0.12" (comma, space, or semicolon separated).
+    const nums = str.match(/-?\d+(?:\.\d+)?/g);
+    if (nums && nums.length >= 2) {
+      const lat = Number(nums[0]), lng = Number(nums[1]);
+      if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
+    }
+    return null;
+  }
+
+  const round = (n: number) => Math.round(n * 1e8) / 1e8;
+
+  function copyText(text: string, btn: HTMLButtonElement) {
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => (btn.textContent = orig), 1400);
+    });
+  }
+
+  [latEl, lngEl].forEach((el) => el.addEventListener('input', render));
+  precEl.addEventListener('change', render);
+
+  parseEl.addEventListener('input', () => {
+    parseMsg.classList.add('hidden');
+    if (!parseEl.value.trim()) return;
+    const r = parseCoords(parseEl.value);
+    if (r) {
+      latEl.value = String(round(r.lat));
+      lngEl.value = String(round(r.lng));
+      render();
+      parseMsg.textContent = 'Parsed and applied.';
+      parseMsg.classList.remove('hidden');
+    } else {
+      parseMsg.textContent = 'Could not recognize those coordinates.';
+      parseMsg.classList.remove('hidden');
+    }
+  });
+
+  document.getElementById('co-all')!.addEventListener('click', (e) => {
+    if (!last) return;
+    const block = [
+      `Decimal: ${dd.textContent}`,
+      `DMS:     ${dms.textContent}`,
+      `DDM:     ${ddm.textContent}`,
+      `UTM:     ${utm.textContent}`,
+      `MGRS:    ${mgrs.textContent}`,
+      `Geohash: ${geohashEl.textContent}`,
+      `Plus:    ${plusEl.textContent}`,
+      `Geo URI: ${geo.textContent}`,
+    ].join('\n');
+    copyText(block, e.currentTarget as HTMLButtonElement);
+  });
+
+  document.getElementById('co-clear')!.addEventListener('click', () => {
+    latEl.value = ''; lngEl.value = ''; parseEl.value = '';
+    parseMsg.classList.add('hidden');
+    clearOutputs();
+    errEl.classList.add('hidden');
+  });
+
+  document.getElementById('co-locate')!.addEventListener('click', (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    if (!navigator.geolocation) { showError('Geolocation is not supported by this browser.'); return; }
+    const orig = btn.textContent;
+    btn.textContent = 'Locating…'; btn.disabled = true;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        latEl.value = String(round(pos.coords.latitude));
+        lngEl.value = String(round(pos.coords.longitude));
+        render();
+        btn.textContent = orig; btn.disabled = false;
+      },
+      (geoErr) => {
+        showError(`Location unavailable: ${geoErr.message}`);
+        btn.textContent = orig; btn.disabled = false;
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  });
+
+  latEl.value = '51.5074'; lngEl.value = '-0.1278'; render();
+</script>

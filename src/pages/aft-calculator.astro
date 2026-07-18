@@ -1,0 +1,241 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="aft-calculator">
+  <div class="flex flex-col gap-5">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Sex
+        <select id="aft-sex" class="field">
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Age group
+        <select id="aft-age" class="field">
+          <option value="0">17–21</option>
+          <option value="1">22–26</option>
+          <option value="2" selected>27–31</option>
+          <option value="3">32–36</option>
+          <option value="4">37–41</option>
+          <option value="5">42–46</option>
+          <option value="6">47–51</option>
+          <option value="7">52–56</option>
+          <option value="8">57–61</option>
+          <option value="9">62+</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">3-Rep Max Deadlift (lb)
+        <input id="aft-mdl" type="number" min="0" class="field" value="240" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Standing Power Throw (m)
+        <input id="aft-spt" type="number" min="0" step="0.1" class="field" value="8.5" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Hand-Release Push-ups (reps)
+        <input id="aft-hrp" type="number" min="0" class="field" value="30" inputmode="numeric" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Sprint-Drag-Carry (mm:ss)
+        <input id="aft-sdc" type="text" class="field font-mono" value="1:55" placeholder="1:55" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Plank (mm:ss)
+        <input id="aft-plk" type="text" class="field font-mono" value="2:10" placeholder="2:10" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">2-Mile Run (mm:ss)
+        <input id="aft-run" type="text" class="field font-mono" value="16:30" placeholder="16:30" />
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-6">
+      <div class="flex items-baseline justify-between">
+        <span class="text-sm text-ink-subtle">Total score</span>
+        <span id="aft-total" class="font-display text-4xl font-semibold text-primary-hover">—</span>
+      </div>
+      <div id="aft-status" class="mt-1 text-right text-sm"></div>
+      <div id="aft-breakdown" class="mt-5 flex flex-col gap-2 text-sm"></div>
+    </div>
+
+    <div class="panel panel-lift p-6">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex flex-col gap-1">
+          <span class="eyebrow text-primary-hover">Scoring standards</span>
+          <span id="aft-ref-caption" class="text-sm text-ink-subtle"></span>
+        </div>
+        <button id="aft-download" type="button" class="btn-secondary shrink-0 text-sm">Download PDF</button>
+      </div>
+      <div class="mt-4 overflow-x-auto">
+        <table id="aft-ref-table" class="w-full border-collapse text-[13px]"></table>
+      </div>
+      <p class="mt-3 text-xs leading-relaxed text-ink-tertiary">
+        Values transcribed from the official AFT standards (as of March 23, 2022).
+        A “—” means no raw value maps to that point score for this group. Cross-check
+        against your source chart; report anything that looks off.
+      </p>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free Army Fitness Test (AFT) calculator scores all six events — the
+      three-rep-max deadlift, standing power throw, hand-release push-ups,
+      sprint-drag-carry, plank and two-mile run — each out of 100 points for a
+      total out of 600. Enter your raw results with your age group and sex to see
+      per-event points and whether you cleared the 60-point minimum on each.
+    </p>
+    <p>
+      Scoring is an exact lookup against the published AFT standards (as of March
+      23, 2022), and the full scoring chart for your selected age group and sex is
+      shown right on the page so you can verify every reading on the spot.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import {
+    STANDARDS,
+    AGE_GROUPS,
+    scoreEvent,
+    timeToSec,
+    secToTime,
+    colIndex,
+    type Sex,
+  } from '../data/aftStandards';
+
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const sel = (id: string) => document.getElementById(id) as unknown as HTMLSelectElement;
+
+  const INPUT_IDS: Record<string, string> = {
+    mdl: 'aft-mdl',
+    spt: 'aft-spt',
+    hrp: 'aft-hrp',
+    sdc: 'aft-sdc',
+    plk: 'aft-plk',
+    run: 'aft-run',
+  };
+
+  function rawFor(key: string, isTime: boolean): number | null {
+    const v = $(INPUT_IDS[key]).value.trim();
+    if (!v) return null;
+    const n = isTime ? timeToSec(v) : Number(v);
+    return isFinite(n) ? n : null;
+  }
+
+  function rowHtml(label: string, pts: string, pass: boolean | null): string {
+    const color = pass === null ? 'var(--color-ink-tertiary)' : pass ? '#27a644' : '#e5484d';
+    return `<div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0">
+      <span class="text-ink-subtle">${label}</span>
+      <span class="font-mono" style="color:${color}">${pts}</span>
+    </div>`;
+  }
+
+  function calc() {
+    const sex = sel('aft-sex').value as Sex;
+    const ageIndex = Number(sel('aft-age').value);
+
+    const rows: string[] = [];
+    let total = 0;
+    let failed = false;
+    let complete = true;
+
+    for (const event of STANDARDS) {
+      const raw = rawFor(event.key, event.isTime);
+      if (raw === null) {
+        complete = false;
+        rows.push(rowHtml(event.shortLabel, '—', null));
+        continue;
+      }
+      const pts = scoreEvent(event, sex, ageIndex, raw);
+      total += pts;
+      if (pts < 60) failed = true;
+      rows.push(rowHtml(event.shortLabel, String(pts), pts >= 60));
+    }
+
+    document.getElementById('aft-breakdown')!.innerHTML = rows.join('');
+    const totalEl = document.getElementById('aft-total')!;
+    const statusEl = document.getElementById('aft-status')!;
+
+    if (!complete) {
+      totalEl.textContent = '—';
+      statusEl.textContent = 'Enter all six events';
+      statusEl.style.color = 'var(--color-ink-subtle)';
+      return;
+    }
+    totalEl.textContent = `${total} / 600`;
+    if (failed) {
+      statusEl.textContent = 'FAIL — below 60 on an event';
+      statusEl.style.color = '#e5484d';
+    } else {
+      statusEl.textContent = 'PASS';
+      statusEl.style.color = '#27a644';
+    }
+  }
+
+  // Build the reference table for the currently selected sex + age group.
+  function buildReference() {
+    const sex = sel('aft-sex').value as Sex;
+    const ageIndex = Number(sel('aft-age').value);
+    const ci = colIndex(ageIndex, sex);
+
+    document.getElementById('aft-ref-caption')!.textContent =
+      `${sex === 'male' ? 'Male' : 'Female'} · ${AGE_GROUPS[ageIndex]} · points needed per event`;
+
+    // Collect every point value that appears in any event, high -> low.
+    const pointSet = new Set<number>();
+    for (const event of STANDARDS) for (const row of event.rows) pointSet.add(row[0] as number);
+    const points = [...pointSet].sort((a, b) => b - a);
+
+    const fmt = (cell: unknown, isTime: boolean): string => {
+      if (cell === null || cell === undefined) return '<span class="text-ink-tertiary">—</span>';
+      if (isTime) return secToTime(timeToSec(String(cell)));
+      return String(cell);
+    };
+
+    // Map points -> cell value per event for quick row rendering.
+    const byPoints: Record<string, Record<number, unknown>> = {};
+    for (const event of STANDARDS) {
+      const m: Record<number, unknown> = {};
+      for (const row of event.rows) m[row[0] as number] = row[ci];
+      byPoints[event.key] = m;
+    }
+
+    const head = `<thead><tr class="text-left text-xs text-ink-subtle">
+      <th class="py-1.5 pr-3 font-medium">Pts</th>
+      ${STANDARDS.map((e) => `<th class="py-1.5 px-2 font-medium">${e.shortLabel}${e.unit !== 'time' && e.unit !== 'reps' ? ` (${e.unit})` : ''}</th>`).join('')}
+    </tr></thead>`;
+
+    const body = points
+      .map((p) => {
+        const cells = STANDARDS.map((e) => {
+          const val = byPoints[e.key][p];
+          return `<td class="py-1.5 px-2 font-mono text-ink-muted">${fmt(val, e.isTime)}</td>`;
+        }).join('');
+        return `<tr class="border-t border-hairline">
+          <td class="py-1.5 pr-3 font-mono text-ink">${p}</td>${cells}
+        </tr>`;
+      })
+      .join('');
+
+    document.getElementById('aft-ref-table')!.innerHTML = head + `<tbody>${body}</tbody>`;
+  }
+
+  function update() {
+    calc();
+    buildReference();
+  }
+
+  document
+    .querySelectorAll('#aft-sex, #aft-age, #aft-mdl, #aft-spt, #aft-hrp, #aft-sdc, #aft-plk, #aft-run')
+    .forEach((el) => el.addEventListener('input', update));
+  update();
+
+  document.getElementById('aft-download')?.addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.href = '/ACFT_scoring_scales_220323.pdf';
+    a.download = 'ACFT_scoring_scales.pdf';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+</script>

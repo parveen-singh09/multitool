@@ -1,0 +1,293 @@
+?---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="video-compressor">
+  <div class="flex flex-col gap-4">
+    <label id="vc-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a video or drop it here</span>
+      <input id="vc-file" type="file" accept="video/*" class="sr-only" />
+    </label>
+
+    <div id="vc-panel" class="hidden flex-col gap-4">
+
+      <div class="flex flex-wrap gap-1 rounded-full bg-surface-1 p-1 w-fit border border-hairline">
+        <button id="vc-mode-quality" class="vc-tab rounded-full px-4 py-1.5 text-[13px] font-medium">By quality</button>
+        <button id="vc-mode-size" class="vc-tab rounded-full px-4 py-1.5 text-[13px] font-medium">Target file size</button>
+      </div>
+
+      <div id="vc-quality-opts" class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Quality
+          <select id="vc-crf" class="field w-48">
+            <option value="23">High (larger file)</option>
+            <option value="28" selected>Balanced</option>
+            <option value="32">Small (lower quality)</option>
+            <option value="36">Tiny (lowest quality)</option>
+          </select>
+        </label>
+      </div>
+
+      <div id="vc-size-opts" class="hidden flex-col gap-3">
+        <div class="flex flex-wrap gap-2">
+          <button class="vc-preset btn btn-secondary" data-mb="8">8 MB · Discord</button>
+          <button class="vc-preset btn btn-secondary" data-mb="10">10 MB · Discord</button>
+          <button class="vc-preset btn btn-secondary" data-mb="25">25 MB · Email</button>
+          <button class="vc-preset btn btn-secondary" data-mb="50">50 MB</button>
+          <button class="vc-preset btn btn-secondary" data-mb="100">100 MB</button>
+        </div>
+        <label class="flex w-48 flex-col gap-1 text-sm text-ink-subtle">Target size (MB)
+          <input id="vc-target" type="number" min="1" step="1" value="25" class="field" />
+        </label>
+        <p class="text-xs text-ink-tertiary">Uses two-pass encoding to hit the target as closely as possible. Very small targets on long videos will look soft.</p>
+      </div>
+
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Max width
+          <select id="vc-scale" class="field w-40">
+            <option value="0">Keep original</option>
+            <option value="1920">1080p (1920)</option>
+            <option value="1280" selected>720p (1280)</option>
+            <option value="854">480p (854)</option>
+            <option value="640">360p (640)</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Frame rate
+          <select id="vc-fps" class="field w-36">
+            <option value="0" selected>Keep original</option>
+            <option value="30">30 fps</option>
+            <option value="24">24 fps</option>
+            <option value="15">15 fps</option>
+          </select>
+        </label>
+        <label class="flex items-center gap-2 pb-2.5 text-sm text-ink-subtle">
+          <input id="vc-mute" type="checkbox" class="accent-primary" /> Remove audio
+        </label>
+      </div>
+
+      <details class="group">
+        <summary class="cursor-pointer select-none text-[13px] text-ink-subtle hover:text-ink">Trim (optional)</summary>
+        <div class="mt-3 flex flex-wrap gap-3">
+          <label class="flex w-32 flex-col gap-1 text-sm text-ink-subtle">Start (s)
+            <input id="vc-trimstart" type="number" min="0" step="0.5" placeholder="0" class="field" />
+          </label>
+          <label class="flex w-32 flex-col gap-1 text-sm text-ink-subtle">End (s)
+            <input id="vc-trimend" type="number" min="0" step="0.5" placeholder="end" class="field" />
+          </label>
+        </div>
+      </details>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <button id="vc-go" class="btn btn-primary">Compress</button>
+        <span id="vc-estimate" class="text-[13px] text-ink-subtle"></span>
+      </div>
+      <p class="text-[13px] text-ink-tertiary">Video re-encoding is CPU-intensive — expect roughly real-time speed.</p>
+
+      <div id="vc-progwrap" class="hidden flex-col gap-1">
+        <div class="h-1.5 w-full overflow-hidden rounded-full bg-surface-3"><div id="vc-bar" class="h-full w-0 rounded-full transition-all" style="background:var(--color-primary)"></div></div>
+        <span id="vc-status" class="text-[13px] text-ink-subtle"></span>
+      </div>
+
+      <div id="vc-result" class="hidden flex-col gap-3">
+        <div class="grid grid-cols-2 gap-3 text-center">
+          <div class="panel p-4"><div id="vc-before" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Original</div></div>
+          <div class="panel p-4"><div id="vc-after" class="font-mono text-lg" style="color:var(--color-success)">—</div><div class="mt-1 text-[13px] text-ink-subtle">Compressed (<span id="vc-saved">0%</span> smaller)</div></div>
+        </div>
+        <button id="vc-download" class="btn btn-primary w-fit">Download</button>
+        <div class="panel flex justify-center overflow-hidden p-4"><video id="vc-preview" controls class="max-h-96 w-auto max-w-full rounded-md"></video></div>
+      </div>
+    </div>
+    <p id="vc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free video compressor shrinks video file size two ways: by quality (pick a
+      level and let H.264 do the rest) or by target file size — hit a specific size
+      like 8 MB for Discord or 25 MB for email using two-pass encoding. Optionally
+      scale down the resolution, drop the frame rate, remove the audio track or trim
+      to a clip. See the before-and-after sizes and preview the result before
+      downloading. There is no file-size limit.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+  .vc-tab { color: var(--color-ink-subtle); transition: background-color .15s, color .15s; }
+  .vc-tab[data-active] { background-color: var(--color-surface-3); color: var(--color-ink); }
+</style>
+
+<script>
+  import { getFFmpeg, fetchFile } from '../lib/ffmpeg';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const fileInput = $('vc-file') as HTMLInputElement;
+  const drop = $('vc-drop');
+  const panel = $('vc-panel');
+  const goBtn = $('vc-go') as HTMLButtonElement;
+  const progWrap = $('vc-progwrap');
+  const bar = $('vc-bar');
+  const statusEl = $('vc-status');
+  const result = $('vc-result');
+  const beforeEl = $('vc-before');
+  const afterEl = $('vc-after');
+  const savedEl = $('vc-saved');
+  const preview = $('vc-preview') as HTMLVideoElement;
+  const estimate = $('vc-estimate');
+  const err = $('vc-error');
+
+  let file: File | null = null;
+  let duration = 0;
+  let outUrl = '';
+  let mode: 'quality' | 'size' = 'quality';
+
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+  const fmtSize = (n: number) => n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(2)} MB`;
+  const numVal = (id: string) => { const v = Number(($(id) as HTMLInputElement).value); return Number.isFinite(v) && v > 0 ? v : 0; };
+
+  function setMode(m: 'quality' | 'size') {
+    mode = m;
+    $('vc-mode-quality').toggleAttribute('data-active', m === 'quality');
+    $('vc-mode-size').toggleAttribute('data-active', m === 'size');
+    $('vc-quality-opts').classList.toggle('hidden', m === 'size');
+    $('vc-size-opts').classList.toggle('hidden', m === 'quality');
+    $('vc-size-opts').classList.toggle('flex', m === 'size');
+    updateEstimate();
+  }
+  $('vc-mode-quality').addEventListener('click', () => setMode('quality'));
+  $('vc-mode-size').addEventListener('click', () => setMode('size'));
+  document.querySelectorAll<HTMLButtonElement>('.vc-preset').forEach((b) => b.addEventListener('click', () => {
+    ($('vc-target') as HTMLInputElement).value = b.dataset.mb!;
+    updateEstimate();
+  }));
+
+  // Rough size estimate before running. In target mode it's the requested size;
+  // in quality mode it's a crude bitrate model from CRF and resolution.
+  function updateEstimate() {
+    if (!file) { estimate.textContent = ''; return; }
+    if (mode === 'size') {
+      estimate.textContent = `Target ≈ ${numVal('vc-target')} MB`;
+      return;
+    }
+    const crf = Number(($('vc-crf') as HTMLSelectElement).value);
+    // Approximate bitrate (kbps) for 720p at various CRF, scaled by width.
+    const w = Number(($('vc-scale') as HTMLSelectElement).value) || 1280;
+    const base: Record<number, number> = { 23: 2500, 28: 1400, 32: 800, 36: 450 };
+    const kbps = (base[crf] || 1200) * Math.min(1, w / 1280);
+    const bytes = (kbps * 1000 / 8) * (duration || 0);
+    estimate.textContent = duration ? `Estimated ≈ ${fmtSize(bytes)}` : '';
+  }
+  ['vc-crf', 'vc-scale', 'vc-fps', 'vc-target'].forEach((id) => $(id).addEventListener('input', updateEstimate));
+
+  function probe(f: File) {
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    const url = URL.createObjectURL(f);
+    v.onloadedmetadata = () => { duration = isFinite(v.duration) ? v.duration : 0; URL.revokeObjectURL(url); updateEstimate(); };
+    v.src = url;
+  }
+
+  function pick(f: File) {
+    file = f; duration = 0;
+    panel.classList.remove('hidden'); panel.classList.add('flex');
+    result.classList.add('hidden'); setErr('');
+    probe(f);
+    if (!$('vc-mode-quality').hasAttribute('data-active') && !$('vc-mode-size').hasAttribute('data-active')) setMode('quality');
+  }
+
+  function vf(): string | null {
+    const parts: string[] = [];
+    const scale = Number(($('vc-scale') as HTMLSelectElement).value);
+    if (scale) parts.push(`scale='min(${scale},iw)':-2`);
+    return parts.length ? parts.join(',') : null;
+  }
+  function commonArgs(): string[] {
+    const a: string[] = [];
+    const f = vf(); if (f) a.push('-vf', f);
+    const fps = Number(($('vc-fps') as HTMLSelectElement).value); if (fps) a.push('-r', String(fps));
+    return a;
+  }
+  function trimPre(): string[] {
+    const s = numVal('vc-trimstart');
+    return s > 0 ? ['-ss', String(s)] : [];
+  }
+  function trimPost(): string[] {
+    const s = numVal('vc-trimstart'), e = numVal('vc-trimend');
+    return e > s ? ['-to', String(e - s)] : [];
+  }
+  function effectiveDuration(): number {
+    const s = numVal('vc-trimstart'), e = numVal('vc-trimend');
+    if (e > s) return e - s;
+    return Math.max(0, (duration || 0) - s);
+  }
+
+  async function compress() {
+    if (!file) return;
+    setErr(''); goBtn.disabled = true;
+    progWrap.classList.remove('hidden'); progWrap.classList.add('flex'); result.classList.add('hidden'); bar.style.width = '0%';
+    const mute = ($('vc-mute') as HTMLInputElement).checked;
+    const audioBitrate = 128; // kbps when audio kept
+    try {
+      const ff = await getFFmpeg({
+        onProgress: (r) => { bar.style.width = Math.min(100, Math.round(r * 100)) + '%'; },
+        onDownload: (n) => { if (n) statusEl.textContent = n; },
+      });
+      const inName = 'in.' + (file.name.split('.').pop() || 'mp4');
+      await ff.writeFile(inName, await fetchFile(file));
+
+      if (mode === 'size') {
+        const targetMB = numVal('vc-target') || 25;
+        const dur = effectiveDuration() || duration || 1;
+        // Total budget → video bitrate = total − audio, with a small safety margin.
+        const totalKbps = (targetMB * 8192) / dur; // kbit total
+        const aKbps = mute ? 0 : audioBitrate;
+        let vKbps = Math.floor((totalKbps - aKbps) * 0.97);
+        if (vKbps < 80) vKbps = 80; // floor so ffmpeg doesn't choke
+        const common = commonArgs();
+        statusEl.textContent = 'Pass 1 of 2…';
+        // Pass 1 only gathers stats; the null muxer writes no media (a plain
+        // MEMFS filename is used since /dev/null isn't present in the wasm FS).
+        await ff.exec([...trimPre(), '-i', inName, ...trimPost(), '-c:v', 'libx264', '-preset', 'veryfast',
+          '-b:v', `${vKbps}k`, ...common, '-pass', '1', '-an', '-f', 'null', '-y', 'pass1.null']);
+        statusEl.textContent = 'Pass 2 of 2…';
+        const audio = mute ? ['-an'] : ['-c:a', 'aac', '-b:a', `${audioBitrate}k`];
+        await ff.exec([...trimPre(), '-i', inName, ...trimPost(), '-c:v', 'libx264', '-preset', 'veryfast',
+          '-b:v', `${vKbps}k`, ...common, '-pass', '2', ...audio, '-movflags', '+faststart', '-y', 'out.mp4']);
+        for (const f of ['ffmpeg2pass-0.log', 'ffmpeg2pass-0.log.mbtree']) { try { await ff.deleteFile(f); } catch {} }
+      } else {
+        const crf = ($('vc-crf') as HTMLSelectElement).value;
+        const common = commonArgs();
+        const audio = mute ? ['-an'] : ['-c:a', 'aac', '-b:a', `${audioBitrate}k`];
+        statusEl.textContent = 'Compressing…';
+        await ff.exec([...trimPre(), '-i', inName, ...trimPost(), '-c:v', 'libx264', '-preset', 'veryfast',
+          '-crf', crf, ...common, ...audio, '-movflags', '+faststart', 'out.mp4']);
+      }
+
+      const data = await ff.readFile('out.mp4');
+      const blob = new Blob([data as BlobPart], { type: 'video/mp4' });
+      if (outUrl) URL.revokeObjectURL(outUrl);
+      outUrl = URL.createObjectURL(blob);
+      try { await ff.deleteFile(inName); await ff.deleteFile('out.mp4'); } catch {}
+      preview.src = outUrl;
+      beforeEl.textContent = fmtSize(file.size);
+      afterEl.textContent = fmtSize(blob.size);
+      savedEl.textContent = Math.max(0, Math.round((1 - blob.size / file.size) * 100)) + '%';
+      progWrap.classList.add('hidden');
+      result.classList.remove('hidden'); result.classList.add('flex');
+    } catch (e) { progWrap.classList.add('hidden'); setErr('Compression failed: ' + (e as Error).message); }
+    finally { goBtn.disabled = false; }
+  }
+
+  $('vc-download').addEventListener('click', () => {
+    if (!outUrl || !file) return;
+    const a = document.createElement('a'); a.href = outUrl; a.download = file.name.replace(/\.[^.]+$/, '') + '-compressed.mp4'; a.click();
+  });
+
+  fileInput.addEventListener('change', () => fileInput.files?.[0] && pick(fileInput.files[0]));
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) pick(f); });
+  goBtn.addEventListener('click', compress);
+  setMode('quality');
+</script>

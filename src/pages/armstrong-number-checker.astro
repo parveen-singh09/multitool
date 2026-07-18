@@ -1,0 +1,87 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="armstrong-number-checker">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Whole number
+      <input id="arm-in" class="field font-mono text-[13px]" type="text" inputmode="numeric" placeholder="e.g. 153" spellcheck="false" value="153" />
+    </label>
+
+    <p id="arm-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="grid grid-cols-1 gap-3 text-center sm:grid-cols-3">
+      <div class="panel panel-lift p-4"><div id="arm-verdict" class="font-display text-xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Verdict</div></div>
+      <div class="panel p-4"><div id="arm-digits" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Digits</div></div>
+      <div class="panel p-4"><div id="arm-sum" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Digit-power sum</div></div>
+    </div>
+
+    <div class="panel p-4">
+      <div class="text-[13px] text-ink-subtle">Working</div>
+      <div id="arm-working" class="mt-1 font-mono text-[13px] text-ink break-all">—</div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free Armstrong number checker tests whether a number is an Armstrong
+      number — also called a narcissistic number. A number is Armstrong if the
+      sum of its digits, each raised to the power of the digit count, equals the
+      number itself. For example 153 = 1³ + 5³ + 3³. The tool shows the full
+      working line so you can follow the math.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('arm-in') as HTMLInputElement;
+  const err = document.getElementById('arm-error')!;
+  const verdictEl = document.getElementById('arm-verdict')!;
+  const digitsEl = document.getElementById('arm-digits')!;
+  const sumEl = document.getElementById('arm-sum')!;
+  const workingEl = document.getElementById('arm-working')!;
+
+  function reset(msg?: string) {
+    verdictEl.textContent = '—';
+    verdictEl.className = 'font-display text-xl font-semibold text-primary-hover';
+    digitsEl.textContent = '—';
+    sumEl.textContent = '—';
+    workingEl.textContent = '—';
+    if (msg) {
+      err.textContent = msg;
+      err.classList.remove('hidden');
+    } else {
+      err.classList.add('hidden');
+    }
+  }
+
+  function check() {
+    const raw = input.value.trim();
+    if (raw === '') { reset(); return; }
+    if (!/^\d+$/.test(raw)) { reset('Please enter a non-negative whole number.'); return; }
+    const n = Number(raw);
+    if (!Number.isSafeInteger(n)) { reset('Number is too large to check accurately.'); return; }
+    err.classList.add('hidden');
+
+    const digits = raw.split('').map(Number);
+    const power = digits.length;
+    const terms = digits.map((d) => Math.pow(d, power));
+    const sum = terms.reduce((a, b) => a + b, 0);
+    const isArmstrong = sum === n;
+
+    verdictEl.textContent = isArmstrong ? 'Armstrong number' : 'Not Armstrong';
+    verdictEl.className = isArmstrong
+      ? 'font-display text-xl font-semibold text-primary-hover'
+      : 'font-display text-xl font-semibold text-ink';
+    digitsEl.textContent = String(power);
+    sumEl.textContent = String(sum);
+    workingEl.textContent =
+      digits.map((d) => `${d}^${power}`).join(' + ') +
+      ' = ' + terms.join(' + ') +
+      ' = ' + sum + (isArmstrong ? ` = ${n} ✓` : ` ≠ ${n}`);
+  }
+
+  input.addEventListener('input', check);
+  check();
+</script>

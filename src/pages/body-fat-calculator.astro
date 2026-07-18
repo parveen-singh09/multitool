@@ -1,0 +1,185 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="body-fat-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap gap-2" role="tablist" aria-label="Units">
+      <button type="button" data-unit="metric" class="bf-tab btn btn-primary" aria-selected="true">Metric</button>
+      <button type="button" data-unit="imperial" class="bf-tab btn btn-secondary" aria-selected="false">Imperial</button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Sex
+        <select id="bf-sex" class="field">
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Age (years)
+        <input id="bf-age" type="number" min="1" class="field" value="30" inputmode="numeric" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle"><span class="bf-len-lbl">Height (cm)</span>
+        <input id="bf-height" type="number" min="0" class="field" value="175" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle"><span class="bf-wt-lbl">Weight (kg)</span>
+        <input id="bf-weight" type="number" min="0" class="field" value="70" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle"><span class="bf-len-lbl">Neck (cm)</span>
+        <input id="bf-neck" type="number" min="0" class="field" value="38" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle"><span class="bf-len-lbl">Waist (cm)</span>
+        <input id="bf-waist" type="number" min="0" class="field" value="85" inputmode="decimal" />
+      </label>
+      <label id="bf-hip-wrap" class="hidden flex-col gap-1 text-sm text-ink-subtle"><span class="bf-len-lbl">Hip (cm)</span>
+        <input id="bf-hip" type="number" min="0" class="field" value="95" inputmode="decimal" />
+      </label>
+    </div>
+
+    <p id="bf-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <div class="panel panel-lift p-6 text-center">
+      <div class="copy-wrap">
+        <div id="bf-value" class="font-display text-4xl font-semibold text-primary-hover">—</div>
+        <button type="button" class="copy-icon" data-copy-target="#bf-value" aria-label="Copy"></button>
+      </div>
+      <div id="bf-cat" class="mt-2 text-sm text-ink-muted"></div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
+      <div class="panel p-4"><div id="bf-fatmass" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Fat mass</div></div>
+      <div class="panel p-4"><div id="bf-leanmass" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Lean body mass</div></div>
+      <div class="panel p-4"><div id="bf-ideal" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Ideal body fat (age)</div></div>
+      <div class="panel p-4"><div id="bf-tolose" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Fat to lose</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free body fat calculator estimates your body fat percentage using the
+      US Navy circumference method, which needs only a tape measure. Enter your
+      height, neck and waist (plus hip for women) along with your weight to get
+      your body fat percentage, fat mass, lean body mass, the ideal body fat for
+      your age (Jackson &amp; Pollock), and how much fat you'd need to lose to
+      reach it. Switch between metric and imperial units. Circumference methods
+      are approximate.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const sexEl = document.getElementById('bf-sex') as HTMLSelectElement;
+  const hipWrap = document.getElementById('bf-hip-wrap')!;
+  const err = document.getElementById('bf-error')!;
+  let unit: 'metric' | 'imperial' = 'metric';
+
+  const JP_IDEAL: Record<number, { m: number; f: number }> = {
+    20: { m: 8.5, f: 17.7 }, 25: { m: 10.5, f: 18.4 }, 30: { m: 12.7, f: 19.3 },
+    35: { m: 13.7, f: 21.5 }, 40: { m: 15.3, f: 22.2 }, 45: { m: 16.4, f: 22.9 },
+    50: { m: 18.9, f: 25.2 }, 55: { m: 20.9, f: 26.3 },
+  };
+  function idealBf(age: number, male: boolean): number {
+    const ages = Object.keys(JP_IDEAL).map(Number);
+    const minA = ages[0], maxA = ages[ages.length - 1];
+    const clamped = Math.min(Math.max(age, minA), maxA);
+    const lower = Math.floor(clamped / 5) * 5;
+    const upper = Math.min(lower + 5, maxA);
+    const t = upper === lower ? 0 : (clamped - lower) / (upper - lower);
+    const a = JP_IDEAL[lower], b = JP_IDEAL[upper];
+    return male ? a.m + (b.m - a.m) * t : a.f + (b.f - a.f) * t;
+  }
+
+  function category(bf: number, male: boolean): [string, string] {
+    if (male) {
+      if (bf < 6) return ['Essential fat', '#5e9fd2'];
+      if (bf < 14) return ['Athletes', '#27a644'];
+      if (bf < 18) return ['Fitness', '#27a644'];
+      if (bf < 25) return ['Average', '#d2a05e'];
+      return ['Above average', '#e5484d'];
+    }
+    if (bf < 14) return ['Essential fat', '#5e9fd2'];
+    if (bf < 21) return ['Athletes', '#27a644'];
+    if (bf < 25) return ['Fitness', '#27a644'];
+    if (bf < 32) return ['Average', '#d2a05e'];
+    return ['Above average', '#e5484d'];
+  }
+
+  function clearOut() {
+    document.getElementById('bf-value')!.textContent = '—';
+    document.getElementById('bf-cat')!.textContent = '';
+    ['bf-fatmass', 'bf-leanmass', 'bf-ideal', 'bf-tolose'].forEach((id) => (document.getElementById(id)!.textContent = '—'));
+  }
+
+  function calc() {
+    const male = sexEl.value === 'male';
+    hipWrap.classList.toggle('hidden', male);
+    hipWrap.classList.toggle('flex', !male);
+    err.classList.add('hidden');
+
+    const toCm = (v: number) => (unit === 'imperial' ? v * 2.54 : v);
+    const h = toCm(Number($('bf-height').value));
+    const neck = toCm(Number($('bf-neck').value));
+    const waist = toCm(Number($('bf-waist').value));
+    const hip = toCm(Number($('bf-hip').value));
+    const age = Number($('bf-age').value);
+    const weightKg = (unit === 'imperial' ? Number($('bf-weight').value) * 0.45359237 : Number($('bf-weight').value));
+
+    let bf: number;
+    if (male) {
+      if (waist - neck <= 0 || h <= 0) { err.textContent = 'Waist must be greater than neck.'; err.classList.remove('hidden'); clearOut(); return; }
+      bf = 495 / (1.0324 - 0.19077 * Math.log10(waist - neck) + 0.15456 * Math.log10(h)) - 450;
+    } else {
+      if (waist + hip - neck <= 0 || h <= 0) { err.textContent = 'Check your measurements.'; err.classList.remove('hidden'); clearOut(); return; }
+      bf = 495 / (1.29579 - 0.35004 * Math.log10(waist + hip - neck) + 0.22100 * Math.log10(h)) - 450;
+    }
+    if (!isFinite(bf) || bf <= 0) { clearOut(); return; }
+
+    document.getElementById('bf-value')!.textContent = bf.toFixed(1) + '%';
+    const [label, color] = category(bf, male);
+    const catEl = document.getElementById('bf-cat')!;
+    catEl.textContent = label;
+    catEl.style.color = color;
+
+    const wUnit = unit === 'imperial' ? 'lb' : 'kg';
+    const toDisplay = (kg: number) => (unit === 'imperial' ? kg / 0.45359237 : kg);
+    if (weightKg > 0) {
+      const fatKg = weightKg * (bf / 100);
+      const leanKg = weightKg - fatKg;
+      document.getElementById('bf-fatmass')!.textContent = `${toDisplay(fatKg).toFixed(1)} ${wUnit}`;
+      document.getElementById('bf-leanmass')!.textContent = `${toDisplay(leanKg).toFixed(1)} ${wUnit}`;
+      if (age > 0) {
+        const target = idealBf(age, male);
+        document.getElementById('bf-ideal')!.textContent = target.toFixed(1) + '%';
+        const targetFatKg = weightKg * (target / 100);
+        const loseKg = fatKg - targetFatKg;
+        document.getElementById('bf-tolose')!.textContent =
+          loseKg > 0 ? `${toDisplay(loseKg).toFixed(1)} ${wUnit}` : 'At/below ideal';
+      }
+    } else {
+      ['bf-fatmass', 'bf-leanmass', 'bf-tolose'].forEach((id) => (document.getElementById(id)!.textContent = '—'));
+      if (age > 0) document.getElementById('bf-ideal')!.textContent = idealBf(age, male).toFixed(1) + '%';
+    }
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.bf-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      unit = tab.dataset.unit as 'metric' | 'imperial';
+      document.querySelectorAll('.bf-tab').forEach((t) => {
+        const active = t === tab;
+        t.setAttribute('aria-selected', String(active));
+        t.classList.toggle('btn-primary', active);
+        t.classList.toggle('btn-secondary', !active);
+      });
+      const lenUnit = unit === 'imperial' ? 'in' : 'cm';
+      document.querySelectorAll('.bf-len-lbl').forEach((s, i) => {
+        const names = ['Height', 'Neck', 'Waist', 'Hip'];
+        s.textContent = `${names[i]} (${lenUnit})`;
+      });
+      document.querySelector('.bf-wt-lbl')!.textContent = `Weight (${unit === 'imperial' ? 'lb' : 'kg'})`;
+      calc();
+    });
+  });
+
+  document.querySelectorAll('#bf-sex, #bf-age, #bf-height, #bf-weight, #bf-neck, #bf-waist, #bf-hip').forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

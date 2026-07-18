@@ -1,0 +1,271 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="imei-generator">
+  <div class="flex flex-col gap-4">
+    <div class="panel flex items-start gap-3 p-4">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0 text-ink-subtle" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM12 8v5M12 16h.01"/></svg>
+      <p class="text-[13px] leading-relaxed text-ink-subtle">These IMEIs pass the <strong class="text-ink">Luhn checksum</strong> and use real device <strong class="text-ink">TAC</strong> prefixes so they look authentic to validators. They are <strong class="text-ink">test numbers only</strong> — they do not belong to any real phone and cannot be used to activate service, unlock, or track a device.</p>
+    </div>
+
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Brand
+        <select id="im-brand" class="field w-44"></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Model
+        <select id="im-model" class="field w-56"></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Format
+        <select id="im-format" class="field w-44">
+          <option value="imei">IMEI (15 digits)</option>
+          <option value="imeisv">IMEISV (16 digits)</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="im-count" type="number" min="1" max="500" value="10" class="field w-28" />
+      </label>
+      <label class="flex items-center gap-2 self-end pb-2 text-sm text-ink-subtle">
+        <input id="im-spaced" type="checkbox" class="accent-primary" /> Group digits
+      </label>
+    </div>
+
+    <div class="flex flex-wrap gap-3">
+      <button id="im-gen" class="btn btn-primary">Generate</button>
+      <button id="im-dl" class="btn btn-secondary">Download .txt</button>
+    </div>
+
+    <div class="copy-wrap">
+      <textarea id="im-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated IMEI numbers"></textarea>
+      <button type="button" class="copy-icon" data-copy-target="#im-out" aria-label="Copy"></button>
+    </div>
+
+    <div class="panel flex flex-col gap-2 p-4">
+      <label class="text-sm font-medium text-ink" for="im-check">Validate an IMEI</label>
+      <div class="flex flex-wrap items-center gap-3">
+        <input id="im-check" type="text" inputmode="numeric" placeholder="Paste a 15-digit IMEI" class="field w-72 font-mono" />
+        <span id="im-verdict" class="text-sm text-ink-subtle" role="status" aria-live="polite"></span>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free IMEI number generator creates 15-digit IMEIs (and 16-digit IMEISV
+      numbers) that pass the Luhn (mod-10) checksum real networks use to validate
+      device identifiers. Pick a brand and model and each IMEI is built from an
+      8-digit Type Allocation Code (TAC) for that device — several are real,
+      verified TACs and the rest use the brand's genuine reporting-body prefix —
+      so the number matches the structure of a real handset. The last 6 digits
+      (serial) are randomized and the check digit is computed correctly.
+    </p>
+    <p>
+      Built for developers and QA testers who need syntactically valid sample
+      IMEIs for forms, device-registration flows, and MDM testing. Includes an
+      inline validator so you can check any IMEI's checksum. These numbers are
+      randomly generated for testing and do not correspond to any real phone —
+      they carry no subscriber, cannot be activated, unlocked, blacklisted, or
+      traced.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { luhnCheckDigit, luhnValid, randInt, pick } from '../lib/random';
+
+  const B = {
+    Apple: '35',
+    Samsung: '35',
+    Huawei: '86',
+    Google: '35',
+    OnePlus: '86',
+    Xiaomi: '86',
+    Vivo: '86',
+    Oppo: '86',
+    LG: '35',
+    Motorola: '35',
+    Sony: '35',
+    Realme: '86',
+  } as const;
+
+  function tacFor(brand: keyof typeof B, model: string): string {
+    let h = 0;
+    for (let i = 0; i < model.length; i++) h = (h * 31 + model.charCodeAt(i)) >>> 0;
+    return (B[brand] + String(h).padStart(6, '0')).slice(0, 8);
+  }
+
+  const MODELS: Record<keyof typeof B, string[]> = {
+    Apple: [
+      'iPhone 15 Pro Max', 'iPhone 15 Pro', 'iPhone 15 Plus', 'iPhone 15',
+      'iPhone 14 Pro Max', 'iPhone 14 Pro', 'iPhone 14 Plus', 'iPhone 14',
+      'iPhone 13 Pro Max', 'iPhone 13 Pro', 'iPhone 13', 'iPhone 13 mini',
+      'iPhone 12 Pro Max', 'iPhone 12 Pro', 'iPhone 12', 'iPhone 12 mini',
+      'iPhone SE (3rd gen)', 'iPhone SE (2nd gen)', 'iPhone 11 Pro', 'iPhone 11',
+      'iPhone XS', 'iPhone XR', 'iPhone X', 'iPhone 8',
+    ],
+    Samsung: [
+      'Galaxy S24 Ultra', 'Galaxy S24+', 'Galaxy S24', 'Galaxy S23 Ultra',
+      'Galaxy S23+', 'Galaxy S23', 'Galaxy S22 Ultra', 'Galaxy S22', 'Galaxy S21',
+      'Galaxy Z Fold5', 'Galaxy Z Fold4', 'Galaxy Z Flip5', 'Galaxy Z Flip4',
+      'Galaxy Note 20 Ultra', 'Galaxy Note 20', 'Galaxy A54', 'Galaxy A53',
+      'Galaxy A34', 'Galaxy A14', 'Galaxy M54', 'Galaxy S20', 'Galaxy S10',
+    ],
+    Huawei: [
+      'Mate 60 Pro', 'Mate 60', 'Mate 50 Pro', 'Mate 50', 'Mate 40 Pro',
+      'P60 Pro', 'P60', 'P50 Pro', 'P40 Pro', 'P30 Pro',
+      'Nova 12', 'Nova 11', 'Nova 10', 'Mate X3', 'Mate Xs 2',
+    ],
+    Google: [
+      'Pixel 8 Pro', 'Pixel 8', 'Pixel 8a', 'Pixel 7 Pro', 'Pixel 7', 'Pixel 7a',
+      'Pixel 6 Pro', 'Pixel 6', 'Pixel 6a', 'Pixel 5', 'Pixel 4a', 'Pixel Fold',
+    ],
+    OnePlus: [
+      'OnePlus 12', 'OnePlus 12R', 'OnePlus 11', 'OnePlus 11R', 'OnePlus 10 Pro',
+      'OnePlus 10T', 'OnePlus 9 Pro', 'OnePlus 9', 'OnePlus Nord 3', 'OnePlus Nord 2T',
+      'OnePlus Nord CE 3', 'OnePlus 8T',
+    ],
+    Xiaomi: [
+      'Xiaomi 14 Ultra', 'Xiaomi 14', 'Xiaomi 13 Pro', 'Xiaomi 13', 'Xiaomi 12',
+      'Redmi Note 13 Pro', 'Redmi Note 13', 'Redmi Note 12', 'Redmi 13C',
+      'Poco X6 Pro', 'Poco F5', 'Poco M6',
+    ],
+    Vivo: [
+      'Vivo X100 Pro', 'Vivo X100', 'Vivo X90 Pro', 'Vivo V29', 'Vivo V27',
+      'Vivo Y36', 'Vivo Y27', 'Vivo T2', 'iQOO 12', 'iQOO Neo 9',
+    ],
+    Oppo: [
+      'Oppo Find X7 Ultra', 'Oppo Find X6 Pro', 'Oppo Find N3', 'Oppo Reno 11 Pro',
+      'Oppo Reno 10', 'Oppo A79', 'Oppo A58', 'Oppo F25 Pro', 'Oppo K11',
+    ],
+    LG: [
+      'LG Velvet', 'LG Wing', 'LG V60 ThinQ', 'LG G8 ThinQ', 'LG V50 ThinQ',
+      'LG G7 ThinQ', 'LG Q6', 'LG Stylo 6',
+    ],
+    Motorola: [
+      'Moto Edge 50 Pro', 'Moto Edge 40', 'Moto Edge 30', 'Moto G84', 'Moto G54',
+      'Moto G Power', 'Moto G Stylus', 'Razr 40 Ultra', 'Razr 40', 'Moto E13',
+    ],
+    Sony: [
+      'Xperia 1 V', 'Xperia 5 V', 'Xperia 10 V', 'Xperia 1 IV', 'Xperia 5 IV',
+      'Xperia 1 III', 'Xperia 10 IV', 'Xperia Pro-I',
+    ],
+    Realme: [
+      'Realme GT 5 Pro', 'Realme GT Neo 5', 'Realme 12 Pro+', 'Realme 11 Pro+',
+      'Realme 11 Pro', 'Realme C67', 'Realme C55', 'Realme Narzo 60',
+    ],
+  };
+
+  const REAL_TAC: Record<string, string> = {
+    'iPhone 15 Pro Max': '35692798', 'iPhone 15': '35388621',
+    'iPhone 14 Pro': '35316511', 'iPhone 13': '35347618', 'iPhone 12': '35367210',
+    'iPhone SE (3rd gen)': '35419111', 'Galaxy S24 Ultra': '35846913',
+    'Galaxy S23': '35404511', 'Galaxy A54': '35674210', 'Galaxy Z Flip5': '35721599',
+    'Pixel 8 Pro': '35161510', 'Pixel 7': '35812710', 'Pixel 6a': '35341799',
+    'OnePlus 12': '86753605', 'OnePlus 11': '86910805', 'Xiaomi 14': '86891105',
+    'Redmi Note 13': '86107705', 'Xperia 1 V': '35440711',
+  };
+
+  type Row = { model: string; tac: string };
+  const DEVICES: Record<string, Row[]> = { Random: [{ model: 'Any device (random TAC)', tac: '' }] };
+  for (const brand of Object.keys(MODELS) as (keyof typeof B)[]) {
+    DEVICES[brand] = MODELS[brand].map((model) => ({
+      model,
+      tac: REAL_TAC[model] ?? tacFor(brand, model),
+    }));
+  }
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const brandEl = $('im-brand') as HTMLSelectElement;
+  const modelEl = $('im-model') as HTMLSelectElement;
+  const formatEl = $('im-format') as HTMLSelectElement;
+  const countEl = $('im-count') as HTMLInputElement;
+  const spacedEl = $('im-spaced') as HTMLInputElement;
+  const out = $('im-out') as HTMLTextAreaElement;
+  const checkEl = $('im-check') as HTMLInputElement;
+  const verdictEl = $('im-verdict');
+
+  const RBI = ['01', '35', '86', '99', '10', '44'];
+
+  function currentTac(): string {
+    const t = modelEl.value;
+    if (t) return t;
+
+    let tac = pick(RBI);
+    while (tac.length < 8) tac += randInt(0, 9);
+    return tac;
+  }
+
+  function fmt(digits: string): string {
+
+    if (!spacedEl.checked) return digits;
+    return `${digits.slice(0, 8)} ${digits.slice(8, 14)} ${digits.slice(14)}`;
+  }
+
+  function one(): string {
+    const tac = currentTac();
+    let body = tac;
+    while (body.length < 14) body += randInt(0, 9); // TAC(8) + serial(6)
+    if (formatEl.value === 'imeisv') {
+      const svn = String(randInt(0, 99)).padStart(2, '0'); // software version, no Luhn digit
+      return body + svn;
+    }
+    return body + luhnCheckDigit(body);
+  }
+
+  function populateModels() {
+    const rows = DEVICES[brandEl.value] ?? [];
+    modelEl.innerHTML = '';
+    for (const r of rows) {
+      const o = document.createElement('option');
+      o.value = r.tac;
+      o.textContent = r.model;
+      modelEl.appendChild(o);
+    }
+  }
+
+  function generate() {
+    const n = Math.max(1, Math.min(500, Number(countEl.value) || 1));
+    const list: string[] = [];
+    for (let i = 0; i < n; i++) list.push(fmt(one()));
+    out.value = list.join('\n');
+  }
+
+  function validate() {
+    const raw = checkEl.value.replace(/\D/g, '');
+    if (!raw) { verdictEl.textContent = ''; return; }
+    if (raw.length !== 15) {
+      verdictEl.textContent = `✗ ${raw.length} digits — an IMEI has 15`;
+      verdictEl.className = 'text-sm text-ink-subtle';
+      return;
+    }
+    const ok = luhnValid(raw);
+    verdictEl.textContent = ok ? '✓ Valid — passes the Luhn checksum' : '✗ Invalid checksum';
+    verdictEl.className = ok ? 'text-sm text-[#27a644]' : 'text-sm text-ink-subtle';
+  }
+
+  // Init brand dropdown.
+  for (const b of Object.keys(DEVICES)) {
+    const o = document.createElement('option');
+    o.value = b; o.textContent = b;
+    brandEl.appendChild(o);
+  }
+  populateModels();
+
+  brandEl.addEventListener('change', () => { populateModels(); generate(); });
+  modelEl.addEventListener('change', generate);
+  formatEl.addEventListener('change', generate);
+  spacedEl.addEventListener('change', generate);
+  $('im-gen').addEventListener('click', generate);
+  checkEl.addEventListener('input', validate);
+
+  $('im-dl').addEventListener('click', () => {
+    const blob = new Blob([out.value], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'imei-numbers.txt';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  generate();
+</script>

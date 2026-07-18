@@ -1,0 +1,246 @@
+---
+export interface Props {
+  slug: string;
+  from?: string;
+  to?: string;
+  targets?: string[];
+  noun?: string;
+  smart?: boolean;
+  syncTarget?: boolean;
+}
+const ARCHIVE_TARGETS = [
+  'zip', '7z', 'tar',
+  'tar.gz', 'tgz', 'tar.bz2', 'tbz2', 'tbz', 'tar.xz', 'txz',
+  'tar.7z', 'tar.z', 'tz', 'tar.lzo', 'tzo',
+  'gz', 'bz2', 'xz', 'z', 'lzo', 'rz',
+];
+const { from, to, targets = ARCHIVE_TARGETS, noun = 'archive', smart = false, syncTarget = false } = Astro.props;
+const TARGETS = targets;
+const accept = from ? `.${from}` : '';
+---
+
+<div id="ac-root" class="flex flex-col gap-4" data-from={from ?? ''} data-to={to ?? ''} data-smart={String(smart)} data-sync={String(syncTarget)}>
+  <div id="ac-drop" class="ac-drop flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-hairline bg-surface-1 px-6 py-11 text-center transition-colors hover:border-hairline-strong hover:bg-surface-2">
+    <span id="ac-drop-label" class="text-lg font-medium text-ink">
+      {from ? `Drop your .${from} file here to convert` : 'Drop your file here to convert'}
+    </span>
+    <span class="text-sm text-ink-subtle">choose a source below, or drag a file in</span>
+
+    <div class="relative mt-1 inline-flex items-stretch">
+      <button id="ac-pick" type="button" class="btn btn-primary inline-flex items-center gap-2" style="border-top-right-radius:0;border-bottom-right-radius:0">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 12v6M9 15h6"/></svg>
+        Select File
+      </button>
+      <button id="ac-pick-more" type="button" aria-label="Choose upload source" class="btn btn-primary px-2" style="border-top-left-radius:0;border-bottom-left-radius:0;border-left:1px solid rgba(255,255,255,0.22)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <div id="ac-src-menu" class="hidden absolute left-1/2 top-[calc(100%+6px)] z-20 w-52 -translate-x-1/2 overflow-hidden rounded-lg border border-hairline bg-surface-2 text-left shadow-xl">
+        <button type="button" data-src="device" class="ac-src flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-ink hover:bg-surface-3">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-ink-subtle"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
+          From this device
+        </button>
+        <button type="button" data-src="gdrive" class="ac-src flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-ink hover:bg-surface-3">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-ink-subtle"><path d="M8 3h8l5 9-4 7H7l-4-7z"/></svg>
+          Google Drive
+        </button>
+        <button type="button" data-src="dropbox" class="ac-src flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-ink hover:bg-surface-3">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-ink-subtle"><path d="m7 3 5 3-5 3-5-3zM17 3l5 3-5 3-5-3zM2 12l5 3 5-3-5-3zM17 9l5 3-5 3-5-3zM7 18l5-3 5 3-5 3z"/></svg>
+          Dropbox
+        </button>
+        <button type="button" data-src="onedrive" class="ac-src flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-ink hover:bg-surface-3">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-ink-subtle"><path d="M6 17a4 4 0 0 1 0-8 5 5 0 0 1 9.6-1.5A4 4 0 0 1 19 17z"/></svg>
+          OneDrive
+        </button>
+      </div>
+    </div>
+
+    <span id="ac-src-note" class="hidden text-[13px] text-ink-tertiary"></span>
+    <input id="ac-file" type="file" accept={accept} class="sr-only" />
+  </div>
+
+  <div class="flex flex-wrap items-center gap-3">
+    {!to && !syncTarget && (
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        Convert to
+        <select id="ac-target" class="field w-auto">
+          {TARGETS.map((f) => <option value={f}>{f.toUpperCase()}</option>)}
+        </select>
+      </label>
+    )}
+    <button id="ac-run" class:list={["btn btn-primary", syncTarget && "hidden"]} disabled>Convert</button>
+    <a id="ac-download" class="btn btn-secondary hidden" download>Download</a>
+    <span id="ac-status" class="text-[13px] text-ink-subtle" aria-live="polite"></span>
+  </div>
+
+  {!syncTarget && (
+    <p class="text-[13px] text-ink-tertiary">
+      Files are securely uploaded to our servers for conversion and returned as a download link.
+    </p>
+  )}
+
+  <p id="ac-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+</div>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+  /* Dark canvas: soft white glow so the card lifts off near-black. */
+  .ac-drop { box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 10px 45px -8px rgba(255,255,255,0.14); }
+  .ac-drop:hover { box-shadow: 0 0 0 1px rgba(255,255,255,0.10), 0 12px 55px -8px rgba(255,255,255,0.20); }
+  /* Light canvas: dark drop shadow so the card lifts off white. */
+  :global(html[data-theme='light']) .ac-drop { box-shadow: 0 1px 2px rgba(16,18,20,0.08), 0 12px 40px -8px rgba(16,18,20,0.22); }
+  :global(html[data-theme='light']) .ac-drop:hover { box-shadow: 0 2px 4px rgba(16,18,20,0.10), 0 16px 48px -8px rgba(16,18,20,0.30); }
+</style>
+
+<script>
+  const root = document.getElementById('ac-root') as HTMLElement;
+  const presetTo = root.dataset.to || '';
+  const smart = root.dataset.smart === 'true';
+  const sync = root.dataset.sync === 'true';
+
+  // In sync mode the target comes from the hero's right format card (#fmt-to).
+  const syncTargetFmt = () => (document.getElementById('fmt-to')?.textContent || 'pdf').trim().toLowerCase();
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const fileInput = $('ac-file') as HTMLInputElement;
+  const drop = $('ac-drop');
+  const dropLabel = $('ac-drop-label');
+  const target = document.getElementById('ac-target') as HTMLSelectElement | null;
+  const runBtn = $('ac-run') as HTMLButtonElement;
+  const dlBtn = $('ac-download') as HTMLAnchorElement;
+  const status = $('ac-status');
+  const err = $('ac-error');
+
+  let picked: File | null = null;
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  const CATEGORY: Record<string, string[]> = {
+    image: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'tiff', 'tif', 'svg', 'ico', 'avif', 'heic', 'psd', 'eps'],
+    document: ['pdf', 'docx', 'doc', 'odt', 'rtf', 'txt', 'html', 'md', 'pages', 'wpd'],
+    audio: ['mp3', 'wav', 'flac', 'aac', 'm4a', 'ogg', 'opus', 'aiff', 'wma'],
+    video: ['mp4', 'webm', 'mkv', 'mov', 'avi', 'flv', 'ogv', 'wmv', '3gp', 'mpeg', 'mpg', 'ts', 'vob'],
+    spreadsheet: ['xlsx', 'xls', 'ods', 'csv', 'numbers'],
+    presentation: ['pptx', 'ppt', 'odp', 'key', 'pps'],
+    ebook: ['epub', 'mobi', 'azw', 'azw3', 'fb2', 'lit', 'pdb'],
+    archive: ['zip', '7z', 'tar', 'gz', 'bz2', 'xz', 'rar'],
+  };
+  const ALLOWED: Record<string, string[]> = {
+    image: ['image', 'document'],
+    document: ['document', 'image'],
+    audio: ['audio'],
+    video: ['video', 'audio', 'image'],
+    spreadsheet: ['spreadsheet', 'document'],
+    presentation: ['presentation', 'document'],
+    ebook: ['ebook', 'document'],
+    archive: ['archive'],
+  };
+  const catOf = (ext: string) => Object.keys(CATEGORY).find((c) => CATEGORY[c].includes(ext));
+  const targetCat = (fmt: string) => catOf(fmt.split('.').pop() || fmt);
+
+  function narrowTargets(inExt: string) {
+    if (!smart || !target) return;
+    const inCat = catOf(inExt);
+    const allowedCats = inCat ? ALLOWED[inCat] : null;
+    let firstVisible: HTMLOptionElement | null = null;
+    for (const opt of Array.from(target.options)) {
+      const oc = targetCat(opt.value);
+      const show = (!allowedCats || (oc && allowedCats.includes(oc))) && opt.value !== inExt;
+      opt.hidden = !show;
+      if (show && !firstVisible) firstVisible = opt;
+    }
+    if (firstVisible) target.value = firstVisible.value;
+  }
+
+  function load(file: File) {
+    setErr('');
+    picked = file;
+    dropLabel.textContent = file.name;
+    runBtn.disabled = false;
+    dlBtn.classList.add('hidden');
+    status.textContent = '';
+    narrowTargets((file.name.split('.').pop() || '').toLowerCase());
+    if (sync) {
+      runBtn.classList.remove('hidden');           // reveal Convert only after upload
+      const inExt = (file.name.split('.').pop() || '').toLowerCase();
+      document.dispatchEvent(new CustomEvent('fmt-lock', { detail: { from: inExt } }));
+    }
+  }
+
+  async function asJson(res: Response) {
+    const text = await res.text();
+    try { return JSON.parse(text); }
+    catch {
+      throw new Error('The conversion service is not available here. It runs on the deployed site (or via `wrangler pages dev`), not in plain dev mode.');
+    }
+  }
+
+  const MAX_BYTES = 100 * 1024 * 1024;
+
+  async function convert() {
+    if (!picked) return;
+    setErr('');
+    if (picked.size > MAX_BYTES) {
+      setErr('File is too large (max 100 MB for online conversion). Try a smaller file.');
+      return;
+    }
+    runBtn.disabled = true;
+    runBtn.textContent = 'Converting…';
+    dlBtn.classList.add('hidden');
+    const outFormat = sync ? syncTargetFmt() : (presetTo || target?.value || 'zip');
+    const inFormat = (picked.name.split('.').pop() || '').toLowerCase();
+
+    try {
+      const fd = new FormData();
+      fd.append('inputFormat', inFormat);
+      fd.append('outputFormat', outFormat);
+      fd.append('file', picked);
+      const res = await fetch('/api/cc-job', { method: 'POST', body: fd });
+      const out = await asJson(res);
+      if (!res.ok) throw new Error(out.error || 'Conversion failed.');
+
+      dlBtn.href = out.downloadUrl;
+      if (out.filename) dlBtn.setAttribute('download', out.filename);
+      dlBtn.classList.remove('hidden');
+    } catch (e) {
+      setErr((e as Error).message);
+      status.textContent = '';
+    } finally {
+      runBtn.disabled = false;
+      runBtn.textContent = 'Convert';
+    }
+  }
+
+  const pickBtn = $('ac-pick') as HTMLButtonElement;
+  const moreBtn = $('ac-pick-more') as HTMLButtonElement;
+  const srcMenu = $('ac-src-menu');
+  const srcNote = $('ac-src-note');
+  const openPicker = () => fileInput.click();
+  const toggleMenu = (show?: boolean) => srcMenu.classList.toggle('hidden', show === undefined ? undefined : !show);
+
+  fileInput.addEventListener('change', () => fileInput.files?.[0] && load(fileInput.files[0]));
+
+  // Click the card body opens the picker; clicks on the button group are handled separately.
+  drop.addEventListener('click', (ev) => {
+    if ((ev.target as HTMLElement).closest('#ac-pick, #ac-pick-more, #ac-src-menu')) return;
+    openPicker();
+  });
+  pickBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(false); openPicker(); });
+  moreBtn.addEventListener('click', (e) => { e.stopPropagation(); srcMenu.classList.toggle('hidden'); });
+  document.addEventListener('click', (e) => { if (!(e.target as HTMLElement).closest('#ac-src-menu, #ac-pick-more')) toggleMenu(false); });
+
+  srcMenu.querySelectorAll<HTMLButtonElement>('.ac-src').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleMenu(false);
+      const src = btn.dataset.src;
+      if (src === 'device') { srcNote.classList.add('hidden'); openPicker(); return; }
+      // Drive sources need OAuth apps that aren't connected yet.
+      srcNote.textContent = `${btn.textContent!.trim()} isn't connected yet — use “From this device” for now.`;
+      srcNote.classList.remove('hidden');
+    });
+  });
+
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) load(f); });
+  runBtn.addEventListener('click', convert);
+</script>

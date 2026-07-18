@@ -1,0 +1,250 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="headline-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-4">
+      <label class="flex flex-1 flex-col gap-1 text-sm text-ink-subtle" style="min-width:220px">Topic
+        <input id="hd-topic" class="field" value="remote work" spellcheck="false" placeholder="e.g. website design" maxlength="120" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Tone
+        <select id="hd-tone" class="field w-44">
+          <option value="catchy">Catchy &amp; click-worthy</option>
+          <option value="professional">Professional</option>
+          <option value="casual">Casual &amp; friendly</option>
+          <option value="emotional">Emotional &amp; bold</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Per category
+        <input id="hd-count" type="number" min="1" max="8" value="4" class="field w-28" />
+      </label>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <button id="hd-gen" class="btn btn-primary">Generate headlines</button>
+      <button id="hd-copy" class="btn btn-secondary">Copy all</button>
+      <span class="text-[13px] text-ink-subtle">
+        Ideal length: <span class="text-ink">50–60 characters</span> so titles aren't cut off in search.
+      </span>
+    </div>
+
+    <div id="hd-out" class="flex flex-col gap-6"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free headline generator turns any topic into catchy, click-worthy blog
+      and article headlines using proven copywriting formulas. Pick a tone, and
+      it groups ideas into <strong>How-To &amp; Guides</strong>, <strong>Listicles</strong>,
+      <strong>Questions</strong> and <strong>Curiosity hooks</strong> — the four angles that
+      earn the most clicks — so you can test different approaches at a glance.
+    </p>
+    <p>
+      Each headline shows a live character count with a green marker in the
+      <strong>50–60 character</strong> sweet spot, the ideal length before Google truncates
+      your title. Generate an unlimited batch, copy the winners, and refine from
+      there. No sign-up and no limits.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { shuffle, sample, pick, randInt } from '../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const topicEl = $('hd-topic') as HTMLInputElement;
+  const toneEl = $('hd-tone') as HTMLSelectElement;
+  const countEl = $('hd-count') as HTMLInputElement;
+  const out = $('hd-out')!;
+
+  const YEAR = new Date().getFullYear();
+  const NUM = () => randInt(5, 21);
+  const cap = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase());
+
+  type Tone = 'catchy' | 'professional' | 'casual' | 'emotional';
+  type Tmpl = (t: string) => string;
+
+  const CATEGORIES: { label: string; byTone: Record<Tone, Tmpl[]> }[] = [
+    {
+      label: 'How-To & Guides',
+      byTone: {
+        catchy: [
+          (t) => `How to Master ${cap(t)} in ${randInt(7, 60)} Days`,
+          (t) => `The Ultimate Guide to ${cap(t)} (${YEAR} Edition)`,
+          (t) => `${cap(t)} Made Simple: A Step-by-Step Guide`,
+          (t) => `How to Nail ${cap(t)} Without the Overwhelm`,
+        ],
+        professional: [
+          (t) => `A Complete Guide to ${cap(t)} for ${YEAR}`,
+          (t) => `How to Implement ${cap(t)}: Best Practices`,
+          (t) => `The Definitive ${cap(t)} Framework`,
+          (t) => `How to Approach ${cap(t)} Strategically`,
+        ],
+        casual: [
+          (t) => `How I Finally Got the Hang of ${cap(t)}`,
+          (t) => `Your No-Stress Guide to ${cap(t)}`,
+          (t) => `${cap(t)} for Beginners (No Jargon)`,
+          (t) => `How to Actually Enjoy ${cap(t)}`,
+        ],
+        emotional: [
+          (t) => `How to Transform Your ${cap(t)} Forever`,
+          (t) => `The ${cap(t)} Guide That Changed Everything`,
+          (t) => `How to Finally Conquer ${cap(t)}`,
+          (t) => `Master ${cap(t)} Before It's Too Late`,
+        ],
+      },
+    },
+    {
+      label: 'Listicles',
+      byTone: {
+        catchy: [
+          (t) => `${NUM()} ${cap(t)} Tips You Wish You Knew Sooner`,
+          (t) => `${NUM()} Tools That Make ${cap(t)} Effortless`,
+          (t) => `${NUM()} ${cap(t)} Hacks the Pros Swear By`,
+          (t) => `${NUM()} Best ${cap(t)} Ideas for ${YEAR}`,
+        ],
+        professional: [
+          (t) => `${NUM()} Proven ${cap(t)} Strategies That Work`,
+          (t) => `${NUM()} ${cap(t)} Best Practices for ${YEAR}`,
+          (t) => `${NUM()} Key ${cap(t)} Metrics to Track`,
+          (t) => `${NUM()} Essential ${cap(t)} Principles`,
+        ],
+        casual: [
+          (t) => `${NUM()} ${cap(t)} Tips I Wish Someone Told Me`,
+          (t) => `${NUM()} Simple ${cap(t)} Wins for Busy People`,
+          (t) => `${NUM()} ${cap(t)} Things That Just Work`,
+          (t) => `${NUM()} Everyday ${cap(t)} Tricks`,
+        ],
+        emotional: [
+          (t) => `${NUM()} ${cap(t)} Mistakes That Are Costing You`,
+          (t) => `${NUM()} ${cap(t)} Secrets Nobody Talks About`,
+          (t) => `${NUM()} ${cap(t)} Truths You Can't Ignore`,
+          (t) => `${NUM()} ${cap(t)} Lessons Learned the Hard Way`,
+        ],
+      },
+    },
+    {
+      label: 'Questions',
+      byTone: {
+        catchy: [
+          (t) => `Is Your ${cap(t)} Strategy Holding You Back?`,
+          (t) => `Are You Making These ${cap(t)} Mistakes?`,
+          (t) => `What's the Secret to Great ${cap(t)}?`,
+          (t) => `Ready to Level Up Your ${cap(t)}?`,
+        ],
+        professional: [
+          (t) => `What Does Effective ${cap(t)} Look Like?`,
+          (t) => `How Much Should You Invest in ${cap(t)}?`,
+          (t) => `Is ${cap(t)} Worth It in ${YEAR}?`,
+          (t) => `What Are the ROI Drivers of ${cap(t)}?`,
+        ],
+        casual: [
+          (t) => `Struggling With ${cap(t)}? You're Not Alone`,
+          (t) => `Why Is ${cap(t)} So Hard (and How to Fix It)?`,
+          (t) => `Ever Wonder Why ${cap(t)} Feels Impossible?`,
+          (t) => `What If ${cap(t)} Were Actually Easy?`,
+        ],
+        emotional: [
+          (t) => `Is ${cap(t)} Quietly Ruining Your Results?`,
+          (t) => `What If You've Been Doing ${cap(t)} Wrong?`,
+          (t) => `Why Does ${cap(t)} Keep Letting You Down?`,
+          (t) => `Could ${cap(t)} Be Your Biggest Opportunity?`,
+        ],
+      },
+    },
+    {
+      label: 'Curiosity Hooks',
+      byTone: {
+        catchy: [
+          (t) => `The Surprising Truth About ${cap(t)}`,
+          (t) => `What Nobody Tells You About ${cap(t)}`,
+          (t) => `${cap(t)}: What the Experts Won't Say`,
+          (t) => `The ${cap(t)} Trick Everyone's Talking About`,
+        ],
+        professional: [
+          (t) => `Rethinking ${cap(t)} for the Modern Era`,
+          (t) => `The Hidden Cost of Ignoring ${cap(t)}`,
+          (t) => `Why ${cap(t)} Matters More Than You Think`,
+          (t) => `The Data Behind Successful ${cap(t)}`,
+        ],
+        casual: [
+          (t) => `I Tried ${cap(t)} for a Week — Here's What Happened`,
+          (t) => `The Weird Thing About ${cap(t)}`,
+          (t) => `Turns Out ${cap(t)} Isn't What You Think`,
+          (t) => `My Honest Take on ${cap(t)}`,
+        ],
+        emotional: [
+          (t) => `Stop Wasting Time — Do ${cap(t)} the Right Way`,
+          (t) => `The ${cap(t)} Mistake That's Holding You Back`,
+          (t) => `Why ${cap(t)} Is More Important Than You Think`,
+          (t) => `From Zero to Pro: Your ${cap(t)} Roadmap`,
+        ],
+      },
+    },
+  ];
+
+  // Character-count badge: green in the 50-60 sweet spot, amber if close, muted otherwise.
+  function lenBadge(len: number): string {
+    let cls = 'text-ink-subtle';
+    let hint = '';
+    if (len >= 50 && len <= 60) { cls = 'text-emerald-400'; hint = ' • ideal'; }
+    else if (len > 60 && len <= 70) { cls = 'text-amber-400'; hint = ' • a bit long'; }
+    else if (len > 70) { cls = 'text-amber-400'; hint = ' • may be truncated'; }
+    return `<span class="shrink-0 font-mono text-[12px] ${cls}">${len}${hint}</span>`;
+  }
+
+  function row(h: string): string {
+    return `<li class="panel flex items-center gap-3 px-4 py-2.5">
+      <span class="flex-1 text-[15px] text-ink">${h}</span>
+      ${lenBadge(h.length)}
+      <button class="hd-copy1 btn btn-secondary shrink-0 !px-2.5 !py-1 text-[12px]" data-h="${h.replace(/"/g, '&quot;')}">Copy</button>
+    </li>`;
+  }
+
+  function generate() {
+    const topic = topicEl.value.trim() || 'productivity';
+    const tone = toneEl.value as Tone;
+    const n = Math.max(1, Math.min(8, Number(countEl.value) || 4));
+
+    out.innerHTML = CATEGORIES.map((cat) => {
+      const templates = cat.byTone[tone];
+      // Draw n distinct templates; if n exceeds the pool, top up with random picks.
+      const chosen = sample(templates, n);
+      while (chosen.length < n) chosen.push(pick(templates));
+      const items = shuffle(chosen).map((f) => f(topic));
+      return `<section class="flex flex-col gap-2">
+        <h3 class="eyebrow text-primary-hover">${cat.label}</h3>
+        <ol class="flex flex-col gap-2">${items.map(row).join('')}</ol>
+      </section>`;
+    }).join('');
+  }
+
+  function allText(): string {
+    return [...out.querySelectorAll('li span:first-child')].map((s) => s.textContent).join('\n');
+  }
+
+  function flash(btn: HTMLButtonElement, label = 'Copy') {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = orig || label), 1200);
+  }
+
+  [topicEl, toneEl, countEl].forEach((el) => el.addEventListener('input', generate));
+  $('hd-gen').addEventListener('click', generate);
+
+  $('hd-copy').addEventListener('click', async (e) => {
+    await navigator.clipboard.writeText(allText());
+    flash(e.currentTarget as HTMLButtonElement, 'Copy all');
+  });
+
+  // Per-headline copy via delegation.
+  out.addEventListener('click', async (e) => {
+    const btn = (e.target as HTMLElement).closest('.hd-copy1') as HTMLButtonElement | null;
+    if (!btn) return;
+    await navigator.clipboard.writeText(btn.dataset.h || '');
+    flash(btn);
+  });
+
+  generate();
+</script>

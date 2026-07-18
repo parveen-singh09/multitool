@@ -1,0 +1,658 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="chart-maker">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-1.5">
+      <span class="text-sm text-ink-subtle">Chart type</span>
+      <select id="chm-type" class="field" hidden>
+          <optgroup label="Bar & column">
+            <option value="bar">Bar (column)</option>
+            <option value="bar-horizontal">Horizontal bar</option>
+            <option value="bar-stacked">Stacked bar</option>
+            <option value="bar-stacked-100">100% stacked (Marimekko)</option>
+            <option value="histogram">Histogram</option>
+          </optgroup>
+          <optgroup label="Line & area">
+            <option value="line">Line</option>
+            <option value="line-smooth">Smooth line</option>
+            <option value="area">Area</option>
+            <option value="area-stacked">Stacked area</option>
+          </optgroup>
+          <optgroup label="Pie & radial">
+            <option value="pie">Pie</option>
+            <option value="doughnut">Doughnut</option>
+            <option value="half-doughnut">Half doughnut</option>
+            <option value="gauge">Gauge</option>
+            <option value="polarArea">Polar area</option>
+            <option value="radar">Radar</option>
+          </optgroup>
+          <optgroup label="Distribution & relationship">
+            <option value="scatter">Scatter</option>
+            <option value="bubble">Bubble</option>
+            <option value="boxplot">Box plot</option>
+            <option value="funnel">Funnel</option>
+            <option value="pyramid">Pyramid</option>
+          </optgroup>
+          <optgroup label="Advanced">
+            <option value="treemap">Treemap</option>
+            <option value="heatmap">Heatmap</option>
+            <option value="candlestick">Candlestick</option>
+            <option value="mixed">Bar + line (dual axis)</option>
+          </optgroup>
+        </select>
+      <div id="chm-tiles" class="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6"></div>
+    </div>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Title
+      <input id="chm-title" type="text" class="field" placeholder="Chart title" value="Monthly totals" />
+    </label>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      <span class="flex items-center justify-between gap-2">
+        Data (CSV — paste from a spreadsheet)
+        <button id="chm-example" type="button" class="text-[12px] text-primary-hover hover:underline">Load example for this type</button>
+      </span>
+      <div class="copy-wrap">
+        <textarea id="chm-data" class="field min-h-40 resize-y font-mono text-[13px]" spellcheck="false"></textarea>
+        <button type="button" class="copy-icon" data-copy-target="#chm-data" aria-label="Copy"></button>
+      </div>
+      <span id="chm-hint" class="text-[12px] text-ink-tertiary"></span>
+    </label>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Base color
+        <input id="chm-color" type="color" value="#5e6ad2" class="field h-10 cursor-pointer p-1" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Background
+        <input id="chm-bg" type="color" value="#ffffff" class="field h-10 cursor-pointer p-1" />
+      </label>
+      <label class="flex items-end gap-2 text-sm text-ink-subtle">
+        <input id="chm-legend" type="checkbox" checked class="h-4 w-4 accent-primary" />
+        <span class="pb-2">Show legend</span>
+      </label>
+    </div>
+
+    <p id="chm-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="panel p-4">
+      <div class="relative mx-auto" style="width:100%;max-width:820px;height:512px">
+        <canvas id="chm-canvas" aria-label="Chart preview"></canvas>
+      </div>
+    </div>
+
+    <div class="flex gap-2">
+      <button id="chm-download" class="btn btn-primary">Download PNG</button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free chart maker turns spreadsheet data into 24 kinds of chart — bar,
+      column, horizontal, stacked and 100% stacked bars, line, smooth line, area
+      and stacked area, pie, doughnut, half-doughnut, gauge, polar area and radar,
+      scatter, bubble, box plot, funnel, pyramid, treemap, heatmap, candlestick,
+      and a dual-axis bar-plus-line combo. Pick a type, paste your CSV, set a
+      title, colors and legend, then download a high-resolution PNG.
+    </p>
+    <p>
+      Paste straight from Excel, Google Sheets or Numbers: the first column is
+      your labels and each extra column becomes a series, so multi-line and
+      stacked charts work with no extra setup. Use the "Load example for this
+      type" link to see the exact data shape any chart expects. Everything is
+      rendered with Chart.js.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { Chart, registerables } from 'chart.js';
+  import { TreemapController, TreemapElement } from 'chartjs-chart-treemap';
+  import { MatrixController, MatrixElement } from 'chartjs-chart-matrix';
+  import { BoxPlotController, BoxAndWiskers } from '@sgratzl/chartjs-chart-boxplot';
+  import { CandlestickController, CandlestickElement } from 'chartjs-chart-financial';
+
+  (Chart.register as (...items: unknown[]) => void)(
+    ...registerables,
+    TreemapController, TreemapElement,
+    MatrixController, MatrixElement,
+    BoxPlotController, BoxAndWiskers,
+    CandlestickController, CandlestickElement,
+  );
+
+  const dataEl = document.getElementById('chm-data') as HTMLTextAreaElement;
+  const typeEl = document.getElementById('chm-type') as HTMLSelectElement;
+  const titleEl = document.getElementById('chm-title') as HTMLInputElement;
+  const colorEl = document.getElementById('chm-color') as HTMLInputElement;
+  const bgEl = document.getElementById('chm-bg') as HTMLInputElement;
+  const legendEl = document.getElementById('chm-legend') as HTMLInputElement;
+  const hintEl = document.getElementById('chm-hint')!;
+  const err = document.getElementById('chm-error')!;
+  const canvas = document.getElementById('chm-canvas') as HTMLCanvasElement;
+  const tilesEl = document.getElementById('chm-tiles')!;
+
+  const G = {
+    bars: '<rect x="3" y="11" width="4" height="9"/><rect x="10" y="6" width="4" height="14"/><rect x="17" y="9" width="4" height="11"/>',
+    barsH: '<rect x="3" y="4" width="14" height="4"/><rect x="3" y="10" width="9" height="4"/><rect x="3" y="16" width="18" height="4"/>',
+    stacked: '<rect x="4" y="12" width="6" height="8"/><rect x="4" y="6" width="6" height="6" opacity=".55"/><rect x="14" y="9" width="6" height="11"/><rect x="14" y="4" width="6" height="5" opacity=".55"/>',
+    line: '<polyline points="3,17 9,10 14,13 21,5" fill="none" stroke-width="2"/>',
+    smooth: '<path d="M3 16 C7 6 11 18 14 12 S19 5 21 6" fill="none" stroke-width="2"/>',
+    area: '<path d="M3 17 L9 10 L14 13 L21 5 V20 H3 Z" fill-opacity=".35" stroke-width="1.5"/>',
+    areaStacked: '<path d="M3 18 L9 13 L14 15 L21 11 V20 H3Z" fill-opacity=".3"/><path d="M3 13 L9 8 L14 11 L21 6 V11 L14 15 L9 13 L3 18Z" fill-opacity=".55"/>',
+    pie: '<circle cx="12" cy="12" r="9" fill-opacity=".25"/><path d="M12 12 V3 A9 9 0 0 1 20 15 Z"/>',
+    doughnut: '<circle cx="12" cy="12" r="9" fill-opacity=".25"/><path d="M12 3 A9 9 0 0 1 20 15 L15 12 A5 5 0 0 0 12 8 Z"/>',
+    half: '<path d="M3 13 A9 9 0 0 1 21 13 L16 13 A4 4 0 0 0 8 13 Z"/>',
+    gauge: '<path d="M3 15 A9 9 0 0 1 21 15" fill="none" stroke-width="2.5"/><line x1="12" y1="15" x2="16" y2="9" stroke-width="2"/>',
+    radar: '<polygon points="12,3 20,9 17,19 7,19 4,9" fill-opacity=".25"/><polygon points="12,7 16,10 15,16 9,16 8,10" fill-opacity=".55"/>',
+    scatter: '<circle cx="6" cy="16" r="2"/><circle cx="11" cy="9" r="2"/><circle cx="15" cy="14" r="2"/><circle cx="19" cy="6" r="2"/>',
+    bubble: '<circle cx="7" cy="15" r="3" fill-opacity=".5"/><circle cx="15" cy="9" r="4.5" fill-opacity=".5"/><circle cx="18" cy="17" r="2" fill-opacity=".5"/>',
+    box: '<line x1="7" y1="4" x2="7" y2="20"/><rect x="3" y="8" width="8" height="8" fill-opacity=".3"/><line x1="17" y1="6" x2="17" y2="20"/><rect x="13" y="10" width="8" height="7" fill-opacity=".3"/>',
+    funnel: '<path d="M3 5 H21 L15 12 V19 L9 19 V12 Z" fill-opacity=".35"/>',
+    pyramid: '<polygon points="12,4 21,20 3,20" fill-opacity=".3"/><line x1="7.5" y1="12" x2="16.5" y2="12"/>',
+    treemap: '<rect x="3" y="3" width="11" height="12" fill-opacity=".45"/><rect x="15" y="3" width="6" height="7" fill-opacity=".25"/><rect x="15" y="11" width="6" height="4" fill-opacity=".6"/><rect x="3" y="16" width="18" height="5" fill-opacity=".3"/>',
+    heatmap: '<rect x="3" y="3" width="5" height="5" fill-opacity=".3"/><rect x="9" y="3" width="5" height="5" fill-opacity=".7"/><rect x="15" y="3" width="5" height="5" fill-opacity=".45"/><rect x="3" y="9" width="5" height="5" fill-opacity=".8"/><rect x="9" y="9" width="5" height="5" fill-opacity=".2"/><rect x="15" y="9" width="5" height="5" fill-opacity=".55"/><rect x="3" y="15" width="5" height="5" fill-opacity=".5"/><rect x="9" y="15" width="5" height="5" fill-opacity=".65"/><rect x="15" y="15" width="5" height="5" fill-opacity=".3"/>',
+    candle: '<line x1="7" y1="3" x2="7" y2="21"/><rect x="4" y="8" width="6" height="8" fill-opacity=".4"/><line x1="17" y1="4" x2="17" y2="20"/><rect x="14" y="7" width="6" height="9" fill-opacity=".4"/>',
+    mixed: '<rect x="3" y="12" width="4" height="8" fill-opacity=".4"/><rect x="10" y="9" width="4" height="11" fill-opacity=".4"/><rect x="17" y="13" width="4" height="7" fill-opacity=".4"/><polyline points="5,10 12,5 19,8" fill="none" stroke-width="2"/>',
+  };
+  const TYPE_GLYPH: Record<string, string> = {
+    bar: G.bars, 'bar-horizontal': G.barsH, 'bar-stacked': G.stacked, 'bar-stacked-100': G.stacked, histogram: G.bars,
+    line: G.line, 'line-smooth': G.smooth, area: G.area, 'area-stacked': G.areaStacked,
+    pie: G.pie, doughnut: G.doughnut, 'half-doughnut': G.half, gauge: G.gauge, polarArea: G.pie, radar: G.radar,
+    scatter: G.scatter, bubble: G.bubble, boxplot: G.box, funnel: G.funnel, pyramid: G.pyramid,
+    treemap: G.treemap, heatmap: G.heatmap, candlestick: G.candle, mixed: G.mixed,
+  };
+
+  const PALETTE = ['#5e6ad2', '#26a69a', '#ef6c57', '#f2b84b', '#7e57c2', '#42a5f5', '#ec407a', '#66bb6a', '#8d6e63', '#78909c'];
+
+  const MODE: Record<string, string> = {
+    scatter: 'xy', bubble: 'bubble', boxplot: 'box',
+    heatmap: 'matrix', candlestick: 'ohlc',
+  };
+
+  const HINTS: Record<string, string> = {
+    series: 'First column = labels, each extra column = a series. e.g. "Month,Sales,Costs".',
+    xy: 'Two numbers per line: x,y.',
+    bubble: 'Three numbers per line: x,y,size.',
+    box: 'One group per line: name, then all the raw numbers for that group.',
+    matrix: 'Three values per line: column,row,value.',
+    ohlc: 'Per line: label,open,high,low,close.',
+  };
+
+  const EXAMPLES: Record<string, string> = {
+    series: 'Month,Sales,Costs\nJan,120,80\nFeb,90,60\nMar,150,100\nApr,60,40',
+    xy: '10,22\n15,35\n20,26\n25,52\n30,44',
+    bubble: '10,22,8\n15,35,16\n20,26,6\n25,52,22\n30,44,12',
+    box: 'Group A,12,15,14,10,18,20,13,16\nGroup B,22,25,19,30,28,24,26\nGroup C,8,11,9,14,7,12',
+    matrix: 'Mon,Morning,5\nMon,Noon,9\nMon,Night,2\nTue,Morning,3\nTue,Noon,7\nTue,Night,6',
+    ohlc: 'Mon,20,25,18,22\nTue,22,28,21,27\nWed,27,29,24,25\nThu,25,31,24,30\nFri,30,33,28,29',
+  };
+
+  const modeOf = (type: string) => MODE[type] || 'series';
+
+  let userEdited = false;
+  let chart: Chart | null = null;
+
+  const num = (s: string) => Number(String(s ?? '').trim());
+
+  function hexToRgb(hex: string) {
+    return { r: parseInt(hex.slice(1, 3), 16), g: parseInt(hex.slice(3, 5), 16), b: parseInt(hex.slice(5, 7), 16) };
+  }
+  function withAlpha(hex: string, a: number) {
+    const { r, g, b } = hexToRgb(hex);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+  function isDark(hex: string) {
+    const { r, g, b } = hexToRgb(hex);
+    return 0.299 * r + 0.587 * g + 0.114 * b < 140;
+  }
+  const paletteAt = (i: number) => (i === 0 ? colorEl.value : PALETTE[i % PALETTE.length]);
+
+  // Parse CSV into { headers, rows }. Header row detected when a non-first cell
+  // in line 1 is non-numeric.
+  function parseCSV(text: string) {
+    const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+    if (!lines.length) return { headers: null as string[] | null, rows: [] as string[][] };
+    const cells = lines.map((l) => l.split(',').map((c) => c.trim()));
+    const first = cells[0];
+    const headerish = first.length > 1 && first.slice(1).some((c) => c !== '' && Number.isNaN(Number(c)));
+    return headerish ? { headers: first, rows: cells.slice(1) } : { headers: null, rows: cells };
+  }
+
+  // Fill the canvas background so exported PNGs aren't transparent.
+  const bgPlugin = {
+    id: 'bg',
+    beforeDraw(c: Chart) {
+      const ctx = c.ctx;
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-over';
+      ctx.fillStyle = bgEl.value;
+      ctx.fillRect(0, 0, c.width, c.height);
+      ctx.restore();
+    },
+  };
+
+  // ---- config builder --------------------------------------------------
+  function buildConfig(type: string): any {
+    const { headers, rows } = parseCSV(dataEl.value);
+    if (!rows.length) throw new Error('Add some data first.');
+
+    const fg = isDark(bgEl.value) ? '#e6e6ea' : '#33333a';
+    const grid = isDark(bgEl.value) ? 'rgba(255,255,255,.12)' : 'rgba(0,0,0,.08)';
+    const showLegend = legendEl.checked;
+
+    Chart.defaults.color = fg;
+    Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+
+    const labels = rows.map((r) => r[0]);
+    const seriesCount = Math.max(0, ...rows.map((r) => r.length - 1));
+    const seriesName = (i: number) => (headers ? headers[i + 1] : seriesCount > 1 ? `Series ${i + 1}` : 'Value');
+    const seriesVals = (i: number) => rows.map((r) => num(r[i + 1]));
+
+    const title = {
+      display: !!titleEl.value,
+      text: titleEl.value,
+      color: fg,
+      font: { size: 18, weight: 600 as const },
+      padding: { top: 4, bottom: 16 },
+    };
+    const legend = (pos: any = 'top') => ({ display: showLegend, position: pos, labels: { color: fg } });
+    const cartesian = (stacked = false) => ({
+      x: { stacked, grid: { color: grid }, ticks: { color: fg } },
+      y: { stacked, grid: { color: grid }, ticks: { color: fg }, beginAtZero: true },
+    });
+    const base = (plugins: any = {}, options: any = {}) => ({
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        devicePixelRatio: 2,
+        plugins: { title, legend: legend(), tooltip: { enabled: true }, ...plugins },
+        ...options,
+      },
+      plugins: [bgPlugin],
+    });
+
+    // ----- bar / column family -----
+    if (type === 'bar' || type === 'bar-horizontal' || type === 'bar-stacked' || type === 'bar-stacked-100' || type === 'histogram') {
+      const horizontal = type === 'bar-horizontal';
+      const stacked = type === 'bar-stacked' || type === 'bar-stacked-100';
+      let datasets = Array.from({ length: seriesCount }, (_, i) => ({
+        label: seriesName(i),
+        data: seriesVals(i),
+        backgroundColor: seriesCount > 1 ? withAlpha(paletteAt(i), 0.85) : withAlpha(colorEl.value, 0.85),
+        borderColor: seriesCount > 1 ? paletteAt(i) : colorEl.value,
+        borderWidth: 1,
+      }));
+
+      // Marimekko approximation: normalise each stack to 100%. ponytail: true
+      // variable-width Marimekko isn't native to Chart.js; this is the 100%-stacked
+      // stand-in, upgrade to a dedicated plugin if variable widths are needed.
+      if (type === 'bar-stacked-100') {
+        const totals = labels.map((_, r) => datasets.reduce((s, d) => s + (Number(d.data[r]) || 0), 0) || 1);
+        datasets = datasets.map((d) => ({ ...d, data: d.data.map((v: number, r: number) => (v / totals[r]) * 100) }));
+      }
+
+      const bar = type === 'histogram'
+        ? { categoryPercentage: 1.0, barPercentage: 1.0 } // touching bars
+        : {};
+      datasets = datasets.map((d) => ({ ...d, ...bar }));
+
+      return {
+        type: 'bar',
+        data: { labels, datasets },
+        ...base(
+          { legend: legend('top') },
+          { indexAxis: horizontal ? 'y' : 'x', scales: cartesian(stacked) },
+        ),
+      };
+    }
+
+    // ----- funnel / pyramid (horizontal bars, sorted) -----
+    if (type === 'funnel' || type === 'pyramid') {
+      // ponytail: real funnels centre each bar; Chart.js can't, so these are
+      // sorted horizontal bars (desc=funnel, asc=pyramid). Swap in a funnel
+      // plugin if centred stages are required.
+      const pairs = labels.map((l, i) => ({ l, v: num(rows[i][1]) }));
+      pairs.sort((a, b) => (type === 'funnel' ? b.v - a.v : a.v - b.v));
+      return {
+        type: 'bar',
+        data: {
+          labels: pairs.map((p) => p.l),
+          datasets: [{
+            label: seriesName(0),
+            data: pairs.map((p) => p.v),
+            backgroundColor: pairs.map((_, i) => withAlpha(paletteAt(i), 0.85)),
+            borderColor: pairs.map((_, i) => paletteAt(i)),
+            borderWidth: 1,
+          }],
+        },
+        ...base({ legend: { display: false } }, { indexAxis: 'y', scales: cartesian(false) }),
+      };
+    }
+
+    // ----- line / area family -----
+    if (type === 'line' || type === 'line-smooth' || type === 'area' || type === 'area-stacked') {
+      const fill = type === 'area' || type === 'area-stacked';
+      const stacked = type === 'area-stacked';
+      const tension = type === 'line-smooth' ? 0.4 : 0;
+      const datasets = Array.from({ length: seriesCount }, (_, i) => {
+        const c = seriesCount > 1 ? paletteAt(i) : colorEl.value;
+        return {
+          label: seriesName(i),
+          data: seriesVals(i),
+          borderColor: c,
+          backgroundColor: fill ? withAlpha(c, 0.25) : c,
+          fill: fill ? (stacked ? (i === 0 ? 'origin' : '-1') : 'origin') : false,
+          tension,
+          pointRadius: 3,
+          pointBackgroundColor: c,
+          borderWidth: 2.5,
+        };
+      });
+      return {
+        type: 'line',
+        data: { labels, datasets },
+        ...base({}, { scales: cartesian(stacked) }),
+      };
+    }
+
+    // ----- pie / doughnut / half / gauge / polar -----
+    if (type === 'pie' || type === 'doughnut' || type === 'half-doughnut' || type === 'gauge' || type === 'polarArea') {
+      const colors = labels.map((_, i) => paletteAt(i));
+
+      if (type === 'gauge') {
+        // ponytail: no native gauge; a half-doughnut of value vs (max-value).
+        // Data = "value" on row 1, optional "max" on row 2 (default 100). No
+        // needle (Chart.js has none) — add a needle plugin if you need one.
+        const value = num(rows[0][1] ?? rows[0][0]);
+        const max = rows[1] ? num(rows[1][1] ?? rows[1][0]) : 100;
+        return {
+          type: 'doughnut',
+          data: {
+            labels: [labels[0] || 'Value', 'Remaining'],
+            datasets: [{ data: [value, Math.max(0, max - value)], backgroundColor: [colorEl.value, withAlpha(fg, 0.12)], borderWidth: 0 }],
+          },
+          ...base(
+            { legend: legend('bottom'), tooltip: { enabled: true } },
+            { rotation: -90, circumference: 180, cutout: '70%' },
+          ),
+        };
+      }
+
+      const cfgType = type === 'polarArea' ? 'polarArea' : type === 'pie' ? 'pie' : 'doughnut';
+      const half = type === 'half-doughnut';
+      return {
+        type: cfgType,
+        data: {
+          labels,
+          datasets: [{
+            label: seriesName(0),
+            data: seriesVals(0),
+            backgroundColor: type === 'polarArea' ? colors.map((c) => withAlpha(c, 0.7)) : colors,
+            borderColor: isDark(bgEl.value) ? '#1a1a1f' : '#fff',
+            borderWidth: 2,
+          }],
+        },
+        ...base(
+          { legend: legend('right') },
+          half
+            ? { rotation: -90, circumference: 180 }
+            : type === 'polarArea'
+              ? { scales: { r: { grid: { color: grid }, ticks: { color: fg, backdropColor: 'transparent' } } } }
+              : {},
+        ),
+      };
+    }
+
+    // ----- radar -----
+    if (type === 'radar') {
+      const datasets = Array.from({ length: seriesCount }, (_, i) => {
+        const c = paletteAt(i);
+        return {
+          label: seriesName(i),
+          data: seriesVals(i),
+          borderColor: c,
+          backgroundColor: withAlpha(c, 0.2),
+          pointBackgroundColor: c,
+          borderWidth: 2,
+        };
+      });
+      return {
+        type: 'radar',
+        data: { labels, datasets },
+        ...base({}, { scales: { r: { grid: { color: grid }, angleLines: { color: grid }, ticks: { color: fg, backdropColor: 'transparent' }, pointLabels: { color: fg } } } }),
+      };
+    }
+
+    // ----- scatter -----
+    if (type === 'scatter') {
+      const pts = rows.map((r) => ({ x: num(r[0]), y: num(r[1]) }));
+      return {
+        type: 'scatter',
+        data: { datasets: [{ label: titleEl.value || 'Points', data: pts, backgroundColor: colorEl.value }] },
+        ...base({ legend: { display: false } }, { scales: cartesian(false) }),
+      };
+    }
+
+    // ----- bubble -----
+    if (type === 'bubble') {
+      const pts = rows.map((r) => ({ x: num(r[0]), y: num(r[1]), r: Math.max(2, num(r[2]) || 6) }));
+      return {
+        type: 'bubble',
+        data: { datasets: [{ label: titleEl.value || 'Points', data: pts, backgroundColor: withAlpha(colorEl.value, 0.6), borderColor: colorEl.value }] },
+        ...base({ legend: { display: false } }, { scales: cartesian(false) }),
+      };
+    }
+
+    // ----- box plot -----
+    if (type === 'boxplot') {
+      const groups = rows.map((r) => r.slice(1).map(num).filter((n) => !Number.isNaN(n)));
+      return {
+        type: 'boxplot',
+        data: {
+          labels,
+          datasets: [{
+            label: seriesName(0),
+            data: groups,
+            backgroundColor: withAlpha(colorEl.value, 0.4),
+            borderColor: colorEl.value,
+            borderWidth: 1.5,
+          }],
+        },
+        ...base({ legend: { display: false } }, { scales: cartesian(false) }),
+      };
+    }
+
+    // ----- treemap -----
+    if (type === 'treemap') {
+      const tree = rows.map((r, i) => ({ label: r[0], value: num(r[1]), _i: i }));
+      return {
+        type: 'treemap',
+        data: {
+          datasets: [{
+            tree,
+            key: 'value',
+            labels: { display: true, color: '#fff', font: { size: 13 } },
+            backgroundColor: (c: any) => (c.type === 'data' ? paletteAt(c.raw._data._i) : 'transparent'),
+            borderColor: bgEl.value,
+            borderWidth: 2,
+          }],
+        },
+        ...base({ legend: { display: false }, tooltip: { enabled: true } }),
+      };
+    }
+
+    // ----- heatmap (matrix) -----
+    if (type === 'heatmap') {
+      const xs = [...new Set(rows.map((r) => r[0]))];
+      const ys = [...new Set(rows.map((r) => r[1]))];
+      const vals = rows.map((r) => num(r[2]));
+      const min = Math.min(...vals), max = Math.max(...vals), span = max - min || 1;
+      const data = rows.map((r) => ({ x: r[0], y: r[1], v: num(r[2]) }));
+      return {
+        type: 'matrix',
+        data: {
+          datasets: [{
+            label: titleEl.value || 'Heatmap',
+            data,
+            backgroundColor: (c: any) => withAlpha(colorEl.value, 0.15 + 0.85 * ((c.raw.v - min) / span)),
+            borderColor: bgEl.value,
+            borderWidth: 2,
+            width: (c: any) => (c.chart.chartArea?.width || 0) / xs.length - 3,
+            height: (c: any) => (c.chart.chartArea?.height || 0) / ys.length - 3,
+          }],
+        },
+        ...base(
+          { legend: { display: false }, tooltip: { callbacks: { title: () => '', label: (i: any) => `${i.raw.x} / ${i.raw.y}: ${i.raw.v}` } } },
+          { scales: { x: { type: 'category', labels: xs, grid: { display: false }, ticks: { color: fg } }, y: { type: 'category', labels: ys, offset: true, grid: { display: false }, ticks: { color: fg } } } },
+        ),
+      };
+    }
+
+    // ----- candlestick -----
+    if (type === 'candlestick') {
+      // ponytail: category x-axis avoids pulling in a date adapter; swap x to a
+      // time scale + chartjs-adapter-date-fns if real dated candles are needed.
+      const data = rows.map((r, i) => ({ x: i, o: num(r[1]), h: num(r[2]), l: num(r[3]), c: num(r[4]) }));
+      return {
+        type: 'candlestick',
+        data: { labels, datasets: [{ label: titleEl.value || 'OHLC', data }] },
+        ...base(
+          { legend: { display: false } },
+          { scales: { x: { type: 'category', labels, grid: { color: grid }, ticks: { color: fg } }, y: { grid: { color: grid }, ticks: { color: fg } } } },
+        ),
+      };
+    }
+
+    // ----- mixed: bar + line dual axis -----
+    if (type === 'mixed') {
+      const datasets = Array.from({ length: seriesCount }, (_, i) => {
+        const c = paletteAt(i);
+        return i === 0
+          ? { type: 'bar', label: seriesName(i), data: seriesVals(i), backgroundColor: withAlpha(c, 0.8), borderColor: c, borderWidth: 1, yAxisID: 'y' }
+          : { type: 'line', label: seriesName(i), data: seriesVals(i), borderColor: c, backgroundColor: c, borderWidth: 2.5, pointRadius: 3, yAxisID: seriesCount > 1 ? 'y1' : 'y' };
+      });
+      return {
+        type: 'bar',
+        data: { labels, datasets },
+        ...base({}, {
+          scales: {
+            x: { grid: { color: grid }, ticks: { color: fg } },
+            y: { position: 'left', grid: { color: grid }, ticks: { color: fg }, beginAtZero: true },
+            y1: { position: 'right', grid: { drawOnChartArea: false }, ticks: { color: fg }, beginAtZero: true },
+          },
+        }),
+      };
+    }
+
+    throw new Error('Unknown chart type.');
+  }
+
+  // ---- render ----------------------------------------------------------
+  function render() {
+    err.classList.add('hidden');
+    try {
+      const config = buildConfig(typeEl.value);
+      if (chart) chart.destroy();
+      chart = new Chart(canvas, config);
+    } catch (e: any) {
+      if (chart) { chart.destroy(); chart = null; }
+      err.textContent = e?.message || 'Could not draw that chart. Check your data format.';
+      err.classList.remove('hidden');
+    }
+  }
+
+  function syncHint() {
+    hintEl.textContent = HINTS[modeOf(typeEl.value)] || '';
+  }
+
+  function loadExample() {
+    dataEl.value = EXAMPLES[modeOf(typeEl.value)] || EXAMPLES.series;
+    userEdited = false;
+  }
+
+  // Build a clickable icon tile per <option>, grouped by <optgroup>. Tiles are
+  // just a visual proxy for the hidden <select>, so all render logic is reused.
+  function buildTiles() {
+    tilesEl.innerHTML = '';
+    let colorIdx = 0;
+    Array.from(typeEl.querySelectorAll('optgroup')).forEach((group) => {
+      const header = document.createElement('div');
+      header.className = 'col-span-full mt-2 text-[11px] font-medium uppercase tracking-wide text-ink-tertiary first:mt-0';
+      header.textContent = group.label;
+      tilesEl.appendChild(header);
+      Array.from(group.querySelectorAll('option')).forEach((opt) => {
+        const val = opt.value;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.dataset.value = val;
+        btn.setAttribute('aria-pressed', 'false');
+        btn.title = opt.textContent || val;
+        btn.className =
+          'chm-tile flex flex-col items-center gap-1.5 rounded-md border border-hairline bg-surface-1 px-1 py-2.5 text-[11px] leading-tight text-ink-subtle transition-colors hover:border-hairline-strong hover:text-ink';
+        const glyphColor = PALETTE[colorIdx++ % PALETTE.length];
+        btn.innerHTML =
+          `<svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" stroke="currentColor" stroke-linejoin="round" aria-hidden="true" style="color:${glyphColor}">${TYPE_GLYPH[val] || ''}</svg>` +
+          `<span class="text-center">${opt.textContent}</span>`;
+        btn.addEventListener('click', () => {
+          typeEl.value = val;
+          typeEl.dispatchEvent(new Event('change'));
+        });
+        tilesEl.appendChild(btn);
+      });
+    });
+    syncTiles();
+  }
+
+  function syncTiles() {
+    tilesEl.querySelectorAll<HTMLButtonElement>('.chm-tile').forEach((b) => {
+      const on = b.dataset.value === typeEl.value;
+      b.setAttribute('aria-pressed', String(on));
+      b.classList.toggle('border-primary', on);
+      b.classList.toggle('text-ink', on);
+      b.classList.toggle('bg-surface-2', on);
+    });
+  }
+
+  typeEl.addEventListener('change', () => {
+    syncHint();
+    syncTiles();
+    // Auto-swap sample data when the new type needs a different shape and the
+    // user hasn't typed their own.
+    if (!userEdited) loadExample();
+    else {
+      const prevMode = dataEl.dataset.mode;
+      if (prevMode && prevMode !== modeOf(typeEl.value)) loadExample();
+    }
+    dataEl.dataset.mode = modeOf(typeEl.value);
+    render();
+  });
+
+  dataEl.addEventListener('input', () => { userEdited = true; render(); });
+  [titleEl, colorEl, bgEl].forEach((el) => el.addEventListener('input', render));
+  legendEl.addEventListener('change', render);
+  document.getElementById('chm-example')!.addEventListener('click', () => { loadExample(); render(); });
+
+  document.getElementById('chm-download')!.addEventListener('click', () => {
+    if (!chart) {
+      err.textContent = 'Draw a chart first.';
+      err.classList.remove('hidden');
+      return;
+    }
+    const url = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.download = 'toolsilk-chart.png';
+    link.href = url;
+    link.click();
+  });
+
+  // init
+  dataEl.value = EXAMPLES.series;
+  dataEl.dataset.mode = 'series';
+  buildTiles();
+  syncHint();
+  render();
+</script>

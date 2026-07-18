@@ -1,0 +1,291 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+import UnitConverter from '../components/UnitConverter.astro';
+---
+
+<ToolLayout slug="cooking-converter">
+  <div class="flex flex-col gap-10">
+
+    <section class="flex flex-col gap-3">
+      <span class="eyebrow text-ink-subtle">Volume</span>
+      <UnitConverter slug="cooking-converter" />
+    </section>
+
+    <section class="flex flex-col gap-4">
+      <div class="flex flex-col gap-1">
+        <span class="eyebrow text-ink-subtle">Ingredient weight</span>
+        <p class="text-[13px] text-ink-tertiary">
+          Cups and spoons are volume, grams are weight — the conversion depends on the ingredient. Pick one for an accurate result.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_1.4fr]">
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-ink-subtle" for="cc-ing-amt">Amount</label>
+          <input id="cc-ing-amt" type="number" class="field" value="1" min="0" step="any" inputmode="decimal" />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-ink-subtle" for="cc-ing-unit">Unit</label>
+          <select id="cc-ing-unit" class="field"></select>
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-ink-subtle" for="cc-ing-name">Ingredient</label>
+          <select id="cc-ing-name" class="field"></select>
+        </div>
+      </div>
+
+      <div id="cc-ing-out" class="panel grid grid-cols-2 gap-x-6 gap-y-2 p-4 text-[14px] sm:grid-cols-3"></div>
+      <p id="cc-ing-err" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    </section>
+
+    <section class="flex flex-col gap-4">
+      <span class="eyebrow text-ink-subtle">Oven temperature</span>
+
+      <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto]">
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-ink-subtle" for="cc-oven-val">Temperature</label>
+          <div class="flex gap-2">
+            <input id="cc-oven-val" type="number" class="field" value="180" step="any" inputmode="decimal" />
+            <select id="cc-oven-unit" class="field w-auto">
+              <option value="C">°C</option>
+              <option value="F">°F</option>
+              <option value="gas">Gas Mark</option>
+            </select>
+          </div>
+        </div>
+        <p id="cc-oven-out" class="pb-2 text-[14px] text-ink-muted"></p>
+      </div>
+
+      <div class="overflow-hidden rounded-md border border-hairline">
+        <table class="w-full text-[13px]">
+          <thead>
+            <tr class="border-b border-hairline text-left text-ink-subtle">
+              <th class="px-3 py-2 font-medium">°C</th>
+              <th class="px-3 py-2 font-medium">°F</th>
+              <th class="px-3 py-2 font-medium">Gas Mark</th>
+              <th class="px-3 py-2 font-medium">Description</th>
+            </tr>
+          </thead>
+          <tbody id="cc-oven-table"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="flex flex-col gap-4">
+      <div class="flex flex-col gap-1">
+        <span class="eyebrow text-ink-subtle">Recipe scaler</span>
+        <p class="text-[13px] text-ink-tertiary">Resize a whole recipe. Enter what it makes now and what you want, then scale any quantity.</p>
+      </div>
+
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-ink-subtle" for="cc-scale-from">Original servings</label>
+          <input id="cc-scale-from" type="number" class="field" value="4" min="0" step="any" inputmode="decimal" />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-ink-subtle" for="cc-scale-to">Desired servings</label>
+          <input id="cc-scale-to" type="number" class="field" value="6" min="0" step="any" inputmode="decimal" />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-ink-subtle" for="cc-scale-qty">Ingredient quantity</label>
+          <input id="cc-scale-qty" type="number" class="field" value="200" step="any" inputmode="decimal" />
+        </div>
+      </div>
+
+      <p id="cc-scale-out" class="text-[15px] text-ink-muted"></p>
+    </section>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free cooking and recipe converter does four jobs in one place. The <strong class="text-ink-muted">volume converter</strong> moves recipe measurements between cups, tablespoons, teaspoons, millilitres, litres and fluid ounces, with US and imperial spoons and cups kept separate so recipes from anywhere line up.
+    </p>
+    <p>
+      The <strong class="text-ink-muted">ingredient weight converter</strong> turns cups and spoons into grams and ounces per ingredient. Because a cup of flour, a cup of sugar and a cup of honey all weigh different amounts, it uses ingredient-specific densities for flours, sugars, butter, oils, dairy, honey, rice, oats, cocoa, salt and more — the accurate way to switch a volume recipe to a metric kitchen scale.
+    </p>
+    <p>
+      The <strong class="text-ink-muted">oven temperature converter</strong> maps between Celsius, Fahrenheit and UK Gas Mark, with a full reference table from cool to very hot. The <strong class="text-ink-muted">recipe scaler</strong> resizes a whole recipe by servings so you can halve or double any quantity in one step.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+
+  const ML_PER_CUP = 236.5882365;
+  const GRAMS_PER_OZ = 28.349523125;
+
+  const INGREDIENTS: Record<string, number> = {
+    'Water': 236.59,
+    'Milk': 245,
+    'All-purpose flour': 125,
+    'Bread flour': 130,
+    'Cake flour': 114,
+    'Whole wheat flour': 120,
+    'Granulated sugar': 200,
+    'Brown sugar (packed)': 220,
+    'Powdered / icing sugar': 120,
+    'Butter': 227,
+    'Vegetable / olive oil': 218,
+    'Honey / syrup': 340,
+    'Milk / heavy cream': 240,
+    'Cocoa powder': 100,
+    'Cornstarch': 120,
+    'Uncooked rice': 185,
+    'Rolled oats': 90,
+    'Table salt': 273,
+    'Chocolate chips': 170,
+    'Yogurt': 245,
+  };
+
+  const UNITS: Record<string, number | 'g' | 'oz'> = {
+    'Cup (US)': ML_PER_CUP,
+    'Tablespoon (US)': 14.7867648,
+    'Teaspoon (US)': 4.92892159,
+    'Fluid ounce (US)': 29.5735296,
+    'Millilitre': 1,
+    'Litre': 1000,
+    'Gram': 'g',
+    'Ounce (weight)': 'oz',
+  };
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const ingAmt = $<HTMLInputElement>('cc-ing-amt');
+  const ingUnit = $<HTMLSelectElement>('cc-ing-unit');
+  const ingName = $<HTMLSelectElement>('cc-ing-name');
+  const ingOut = $<HTMLElement>('cc-ing-out');
+  const ingErr = $<HTMLElement>('cc-ing-err');
+
+  ingUnit.innerHTML = Object.keys(UNITS).map((u) => `<option>${u}</option>`).join('');
+  ingName.innerHTML = Object.keys(INGREDIENTS).map((n) => `<option>${n}</option>`).join('');
+  ingName.value = 'All-purpose flour';
+
+  function fmt(n: number): string {
+    if (!isFinite(n)) return '—';
+    if (n === 0) return '0';
+    const abs = Math.abs(n);
+    if (abs >= 1000) return Math.round(n).toLocaleString();
+    if (abs >= 10) return String(Math.round(n * 10) / 10);
+    return String(Math.round(n * 1000) / 1000);
+  }
+
+  // Reduce any amount+unit for an ingredient down to grams.
+  function toGrams(amount: number, unit: string, gPerCup: number): number {
+    const spec = UNITS[unit];
+    if (spec === 'g') return amount;
+    if (spec === 'oz') return amount * GRAMS_PER_OZ;
+    const ml = amount * (spec as number);
+    return (ml / ML_PER_CUP) * gPerCup;
+  }
+
+  function convertIngredient() {
+    const amount = Number(ingAmt.value);
+    ingErr.classList.add('hidden');
+    if (ingAmt.value.trim() === '' || isNaN(amount) || amount < 0) {
+      ingOut.innerHTML = '';
+      if (ingAmt.value.trim() !== '') {
+        ingErr.textContent = 'Enter a valid non-negative amount.';
+        ingErr.classList.remove('hidden');
+      }
+      return;
+    }
+    const gPerCup = INGREDIENTS[ingName.value];
+    const grams = toGrams(amount, ingUnit.value, gPerCup);
+    const mlPerCup = ML_PER_CUP;
+    const ml = (grams / gPerCup) * mlPerCup;
+    const rows: [string, number][] = [
+      ['Grams', grams],
+      ['Ounces', grams / GRAMS_PER_OZ],
+      ['Cups (US)', ml / mlPerCup],
+      ['Tablespoons', ml / 14.7867648],
+      ['Teaspoons', ml / 4.92892159],
+      ['Millilitres', ml],
+    ];
+    ingOut.innerHTML = rows
+      .map(
+        ([label, val]) =>
+          `<div class="flex flex-col"><span class="text-ink-tertiary text-[12px]">${label}</span><span class="font-mono text-ink">${fmt(val)}</span></div>`,
+      )
+      .join('');
+  }
+
+  [ingAmt, ingUnit, ingName].forEach((el) =>
+    el.addEventListener(el === ingAmt ? 'input' : 'change', convertIngredient),
+  );
+  convertIngredient();
+
+  // ---- Oven temperature ----
+  // Gas Mark → °C reference (UK standard). °F derived from °C.
+  const GAS: { gas: string; c: number; desc: string }[] = [
+    { gas: '¼', c: 110, desc: 'Very cool / slow' },
+    { gas: '½', c: 120, desc: 'Very cool / slow' },
+    { gas: '1', c: 140, desc: 'Cool' },
+    { gas: '2', c: 150, desc: 'Cool' },
+    { gas: '3', c: 170, desc: 'Warm / moderate' },
+    { gas: '4', c: 180, desc: 'Moderate' },
+    { gas: '5', c: 190, desc: 'Moderately hot' },
+    { gas: '6', c: 200, desc: 'Fairly hot' },
+    { gas: '7', c: 220, desc: 'Hot' },
+    { gas: '8', c: 230, desc: 'Very hot' },
+    { gas: '9', c: 240, desc: 'Very hot' },
+  ];
+  const cToF = (c: number) => c * 9 / 5 + 32;
+  const fToC = (f: number) => (f - 32) * 5 / 9;
+
+  function nearestGas(c: number): { gas: string; desc: string } {
+    return GAS.reduce((best, row) =>
+      Math.abs(row.c - c) < Math.abs(best.c - c) ? row : best,
+    );
+  }
+
+  const ovenVal = $<HTMLInputElement>('cc-oven-val');
+  const ovenUnit = $<HTMLSelectElement>('cc-oven-unit');
+  const ovenOut = $<HTMLElement>('cc-oven-out');
+
+  function convertOven() {
+    const raw = Number(ovenVal.value);
+    if (ovenVal.value.trim() === '' || isNaN(raw)) { ovenOut.textContent = ''; return; }
+    let c: number;
+    if (ovenUnit.value === 'C') c = raw;
+    else if (ovenUnit.value === 'F') c = fToC(raw);
+    else {
+      const match = GAS.find((g) => g.gas === String(raw) || Number(g.gas) === raw);
+      c = match ? match.c : NaN;
+      if (isNaN(c)) { ovenOut.textContent = 'Gas Mark ranges ¼ to 9.'; return; }
+    }
+    const g = nearestGas(c);
+    ovenOut.innerHTML = `<span class="text-ink">${fmt(c)}°C</span> · <span class="text-ink">${fmt(cToF(c))}°F</span> · <span class="text-ink">Gas ${g.gas}</span> — ${g.desc}`;
+  }
+
+  $<HTMLElement>('cc-oven-table').innerHTML = GAS
+    .map(
+      (r) =>
+        `<tr class="border-t border-hairline"><td class="px-3 py-1.5 font-mono text-ink">${r.c}</td><td class="px-3 py-1.5 font-mono text-ink">${Math.round(cToF(r.c))}</td><td class="px-3 py-1.5 text-ink-muted">${r.gas}</td><td class="px-3 py-1.5 text-ink-subtle">${r.desc}</td></tr>`,
+    )
+    .join('');
+  ovenVal.addEventListener('input', convertOven);
+  ovenUnit.addEventListener('change', convertOven);
+  convertOven();
+
+  // ---- Recipe scaler ----
+  const sFrom = $<HTMLInputElement>('cc-scale-from');
+  const sTo = $<HTMLInputElement>('cc-scale-to');
+  const sQty = $<HTMLInputElement>('cc-scale-qty');
+  const sOut = $<HTMLElement>('cc-scale-out');
+
+  function scale() {
+    const from = Number(sFrom.value), to = Number(sTo.value), qty = Number(sQty.value);
+    if ([from, to, qty].some((n) => isNaN(n)) || from <= 0) { sOut.textContent = 'Enter servings (greater than 0) and a quantity.'; return; }
+    const factor = to / from;
+    sOut.innerHTML = `Scale factor <span class="text-ink font-mono">×${fmt(factor)}</span> — <span class="text-ink font-mono">${fmt(qty)}</span> becomes <span class="text-ink font-mono">${fmt(qty * factor)}</span>.`;
+  }
+  [sFrom, sTo, sQty].forEach((el) => el.addEventListener('input', scale));
+  scale();
+
+  // ponytail: one self-check for the money paths (density math + gas lookup).
+  if (import.meta.env.DEV) {
+    console.assert(Math.abs(toGrams(1, 'Cup (US)', 125) - 125) < 1e-6, 'flour cup = 125g');
+    console.assert(Math.abs(toGrams(16, 'Tablespoon (US)', 200) - 200) < 1e-6, '16 tbsp = 1 cup');
+    console.assert(Math.abs(cToF(180) - 356) < 1e-9, '180C = 356F');
+    console.assert(nearestGas(180).gas === '4', '180C ≈ Gas 4');
+  }
+</script>

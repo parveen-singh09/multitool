@@ -1,0 +1,229 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="css-formatter">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="cf-beautify" class="btn btn-primary">Beautify</button>
+      <button id="cf-minify" class="btn btn-secondary">Minify</button>
+      <button id="cf-upload" class="btn btn-secondary">Upload file</button>
+      <button id="cf-download" class="btn btn-secondary">Download</button>
+      <button id="cf-clear" class="btn btn-tertiary">Clear</button>
+      <input id="cf-file" type="file" accept=".css,text/css,text/plain" class="hidden" />
+      <label class="ml-auto flex items-center gap-2 text-sm text-ink-subtle">
+        Indent
+        <select id="cf-indent" class="field w-auto py-1">
+          <option value="2">2 spaces</option>
+          <option value="3">3 spaces</option>
+          <option value="4">4 spaces</option>
+          <option value="tab">Tab</option>
+        </select>
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        Encoding
+        <select id="cf-encoding" class="field w-auto py-1">
+          <option value="utf-8">UTF-8</option>
+          <option value="utf-16le">UTF-16 LE</option>
+          <option value="utf-16be">UTF-16 BE</option>
+          <option value="windows-1252">Windows-1252 (Latin)</option>
+          <option value="iso-8859-1">ISO-8859-1</option>
+          <option value="iso-8859-2">ISO-8859-2 (Central Eur.)</option>
+          <option value="iso-8859-5">ISO-8859-5 (Cyrillic)</option>
+          <option value="iso-8859-7">ISO-8859-7 (Greek)</option>
+          <option value="iso-8859-9">ISO-8859-9 (Turkish)</option>
+          <option value="iso-8859-15">ISO-8859-15</option>
+          <option value="windows-1250">Windows-1250 (Central Eur.)</option>
+          <option value="windows-1251">Windows-1251 (Cyrillic)</option>
+          <option value="windows-1253">Windows-1253 (Greek)</option>
+          <option value="windows-1254">Windows-1254 (Turkish)</option>
+          <option value="windows-1255">Windows-1255 (Hebrew)</option>
+          <option value="windows-1256">Windows-1256 (Arabic)</option>
+          <option value="windows-1257">Windows-1257 (Baltic)</option>
+          <option value="koi8-r">KOI8-R</option>
+          <option value="koi8-u">KOI8-U</option>
+          <option value="gbk">GBK (Simplified Chinese)</option>
+          <option value="big5">Big5 (Traditional Chinese)</option>
+          <option value="shift_jis">Shift_JIS (Japanese)</option>
+          <option value="euc-jp">EUC-JP (Japanese)</option>
+          <option value="euc-kr">EUC-KR (Korean)</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="cf-status" class="hidden rounded-md border px-3 py-2 text-sm" role="status"></div>
+
+    <div class="copy-wrap">
+      <div class="hl-edit field p-0" style="height:18rem;resize:vertical;overflow:hidden">
+        <pre class="hl-block" aria-hidden="true"><code id="cf-input-hl" class="hljs" style="background:transparent"></code></pre>
+        <textarea
+          id="cf-input"
+          spellcheck="false"
+          autocapitalize="off"
+          autocomplete="off"
+          autocorrect="off"
+          placeholder="Paste CSS here, e.g. body{margin:0;color:red}"
+          aria-label="CSS input"
+        ></textarea>
+      </div>
+      <button type="button" class="copy-icon" data-copy-target="#cf-input" aria-label="Copy"></button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free CSS formatter beautifies stylesheets with tidy indentation and
+      spacing, putting each rule and declaration on its own line, or minifies
+      them to save bytes for production. Choose 2, 3, 4-space or tab indentation
+      and comments are preserved. You can upload a <code>.css</code> file in any
+      of 20+ character encodings — UTF-8/16, the ISO-8859 and Windows code page
+      families, plus CJK sets like GBK, Big5, Shift_JIS and EUC — then download
+      the cleaned result, with live syntax highlighting.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { wireInput } from '../lib/highlight';
+
+  const input = document.getElementById('cf-input') as HTMLTextAreaElement;
+  const inHl = document.getElementById('cf-input-hl')!;
+  const status = document.getElementById('cf-status')!;
+  const indentSel = document.getElementById('cf-indent') as HTMLSelectElement;
+  const encSel = document.getElementById('cf-encoding') as HTMLSelectElement;
+  const fileInput = document.getElementById('cf-file') as HTMLInputElement;
+
+  const refresh = wireInput(input, inHl, () => 'css');
+
+  function getIndent(): string {
+    const v = indentSel.value;
+    return v === 'tab' ? '\t' : ' '.repeat(Number(v));
+  }
+
+  function showStatus(msg: string, ok: boolean) {
+    status.textContent = msg;
+    status.classList.remove('hidden');
+    status.style.borderColor = ok ? '#27a644' : '#d14d4d';
+    status.style.color = ok ? '#27a644' : '#e08585';
+  }
+
+  function beautify(css: string, unit: string): string {
+    const src = css.replace(/\r\n/g, '\n');
+    let out = '';
+    let indent = 0;
+    let i = 0;
+    const n = src.length;
+    const pad = () => unit.repeat(indent);
+    const skipWs = () => {
+      while (i < n && /\s/.test(src[i])) i++;
+    };
+
+    while (i < n) {
+      const c = src[i];
+      if (c === '/' && src[i + 1] === '*') {
+        const end = src.indexOf('*/', i + 2);
+        const comment = src.slice(i, end === -1 ? n : end + 2).trim();
+        out = out.replace(/[ \t]+$/, '');
+        if (out && !out.endsWith('\n')) out += '\n';
+        out += pad() + comment + '\n' + pad();
+        i = end === -1 ? n : end + 2;
+        skipWs();
+        continue;
+      }
+      if (c === '{') {
+        out = out.replace(/\s+$/, '') + ' {\n';
+        indent += 1;
+        i++;
+        skipWs();
+        out += pad();
+        continue;
+      }
+      if (c === '}') {
+        out = out.replace(/\s+$/, '');
+        indent = Math.max(indent - 1, 0);
+        if (out && !out.endsWith('\n')) out += '\n';
+        out += pad() + '}\n';
+        i++;
+        skipWs();
+        out += pad();
+        continue;
+      }
+      if (c === ';') {
+        out = out.replace(/[ \t]+$/, '') + ';\n';
+        i++;
+        skipWs();
+        out += pad();
+        continue;
+      }
+      if (/\s/.test(c)) {
+        if (!/\s$/.test(out) && out.length > 0) out += ' ';
+        i++;
+        continue;
+      }
+      out += c;
+      i++;
+    }
+
+    return out
+      .split('\n')
+      .map((line) => {
+        const t = line.replace(/\s+$/, '');
+        if (/;\s*$/.test(t) && t.includes(':')) return t.replace(/\s*:\s*/, ': ');
+        return t;
+      })
+      .filter((line, idx, arr) => !(line === '' && (arr[idx - 1] === '' || idx === 0)))
+      .join('\n')
+      .trim();
+  }
+
+  function minify(css: string): string {
+    return css
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\s+/g, ' ')
+      .replace(/\s*([{}:;,])\s*/g, '$1')
+      .replace(/;}/g, '}')
+      .trim();
+  }
+
+  function process(doMinify: boolean) {
+    const src = input.value.trim();
+    if (!src) return;
+    input.value = doMinify ? minify(src) : beautify(src, getIndent());
+    refresh();
+    showStatus(doMinify ? 'Minified ✓' : 'Formatted ✓', true);
+  }
+
+  document.getElementById('cf-beautify')!.addEventListener('click', () => process(false));
+  document.getElementById('cf-minify')!.addEventListener('click', () => process(true));
+
+  document.getElementById('cf-upload')!.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      input.value = new TextDecoder(encSel.value, { fatal: false }).decode(bytes);
+      refresh();
+      showStatus(`Loaded ${file.name} as ${encSel.value} ✓`, true);
+    } catch (e) {
+      showStatus(`Could not decode file: ${(e as Error).message}`, false);
+    }
+    fileInput.value = '';
+  });
+
+  // Download: output is always written UTF-8 (the web's standard); encoding picker drives reads.
+  document.getElementById('cf-download')!.addEventListener('click', () => {
+    const blob = new Blob([input.value], { type: 'text/css;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'formatted.css';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+  document.getElementById('cf-clear')!.addEventListener('click', () => {
+    input.value = '';
+    refresh();
+    status.classList.add('hidden');
+  });
+</script>

@@ -1,0 +1,335 @@
+---
+// Universal client-side image converter used by every raster tool page.
+// One `to` target drives three output shapes:
+//   image formats (png/jpg/webp/avif/bmp/tiff/gif/ico/psd/svg) -> per-file download + zip-all
+//   text (base64/html)                                         -> per-file snippet + copy
+//   doc  (word/excel/powerpoint/pdf)                           -> combine every image into one file
+export interface Props {
+  to: string;            // target token (see above)
+  accept?: string;       // file input accept attribute
+  fromLabel?: string;    // e.g. "JPG", "BMP", "JFIF"
+  quality?: boolean;     // show quality slider (lossy)
+  matte?: boolean;       // show background flatten colour
+}
+const { to, accept = 'image/*', fromLabel = 'image', quality = false, matte = false } = Astro.props;
+---
+
+<div id="rb-root" data-to={to} data-quality={String(quality)} data-matte={String(matte)} class="flex flex-col gap-4">
+  <label id="rb-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+    <span class="text-sm text-ink">Choose {fromLabel} images or drop them here</span>
+    <input id="rb-file" type="file" accept={accept} multiple class="sr-only" />
+  </label>
+
+  <div id="rb-panel" class="hidden flex-col gap-4">
+    <div class="panel panel-lift flex flex-wrap items-end gap-4 p-4">
+      <label class="flex flex-col gap-1">
+        <span class="eyebrow text-ink-subtle">Resize (longest side, px)</span>
+        <input id="rb-resize" type="number" min="0" placeholder="original" class="field" style="width:9rem" />
+      </label>
+      {quality && (
+        <label class="flex flex-col gap-1">
+          <span class="eyebrow text-ink-subtle">Quality <span id="rb-qval" class="text-ink-subtle">90%</span></span>
+          <input id="rb-q" type="range" min="10" max="100" value="90" class="accent-primary" style="width:10rem" />
+        </label>
+      )}
+      {matte && (
+        <label class="flex flex-col gap-1">
+          <span class="eyebrow text-ink-subtle">Background</span>
+          <span class="flex items-center gap-2">
+            <input id="rb-bg" type="color" value="#ffffff" class="field" style="width:2.75rem;height:2.4rem;padding:0.15rem;cursor:pointer" aria-label="Flatten transparency onto this colour" />
+            <span class="text-[13px] text-ink-tertiary">for transparent pixels</span>
+          </span>
+        </label>
+      )}
+      <div id="rb-batch-wrap" class="hidden flex-col gap-1">
+        <span class="eyebrow text-ink-subtle">Output format</span>
+        <select id="rb-batch-fmt" class="field" style="width:auto">
+          <option value="image/png">PNG</option>
+          <option value="image/jpeg">JPG</option>
+          <option value="image/webp">WebP</option>
+          <option value="image/avif">AVIF</option>
+          <option value="bmp">BMP</option>
+          <option value="tiff">TIFF</option>
+          <option value="gif">GIF</option>
+          <option value="ico">ICO</option>
+        </select>
+      </div>
+      <div class="ml-auto flex flex-wrap items-center gap-3">
+        <button id="rb-primary" class="btn btn-primary hidden"></button>
+        <button id="rb-download-all" class="btn btn-secondary hidden">Download all (.zip)</button>
+        <button id="rb-add" class="btn btn-tertiary">Add more</button>
+        <button id="rb-clear" class="btn btn-tertiary">Clear</button>
+        <span id="rb-summary" class="text-[13px] text-ink-subtle" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div id="rb-list" class="grid gap-4" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr))"></div>
+  </div>
+
+  <p id="rb-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+</div>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+  .rb-checker {
+    background-image:
+      linear-gradient(45deg,#2a2a2e 25%,transparent 25%),
+      linear-gradient(-45deg,#2a2a2e 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#2a2a2e 75%),
+      linear-gradient(-45deg,transparent 75%,#2a2a2e 75%);
+    background-size:16px 16px; background-position:0 0,0 8px,8px -8px,-8px 0;
+  }
+</style>
+
+<script>
+  import { encodeCanvas, type RasterFormat } from '../lib/imageEncoders';
+  import { imagesToDocx, imagesToXlsx, imagesToPptx, imagesToPdf, type DocImage } from '../lib/imageDocs';
+  import { makeZip } from '../lib/zip';
+
+  const root = document.getElementById('rb-root') as HTMLElement;
+  const to = root.dataset.to!;
+  const useQuality = root.dataset.quality === 'true';
+  const useMatte = root.dataset.matte === 'true';
+
+  const IMAGE_FORMATS = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'bmp', 'tiff', 'gif', 'ico', 'psd', 'svg'];
+  const DOC_FORMATS = ['word', 'excel', 'powerpoint', 'pdf'];
+  const isText = to === 'base64' || to === 'html';
+  const isDoc = DOC_FORMATS.includes(to);
+  const isBatch = to === 'batch';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const fileInput = $('rb-file') as HTMLInputElement;
+  const drop = $('rb-drop');
+  const panel = $('rb-panel');
+  const list = $('rb-list');
+  const summary = $('rb-summary');
+  const err = $('rb-error');
+  const q = document.getElementById('rb-q') as HTMLInputElement | null;
+  const qval = document.getElementById('rb-qval');
+  const bg = document.getElementById('rb-bg') as HTMLInputElement | null;
+  const resizeEl = $('rb-resize') as HTMLInputElement;
+  const primaryBtn = $('rb-primary') as HTMLButtonElement;
+  const downloadAll = $('rb-download-all') as HTMLButtonElement;
+  const batchWrap = $('rb-batch-wrap');
+  const batchFmt = document.getElementById('rb-batch-fmt') as HTMLSelectElement | null;
+
+  type Item = { id: number; name: string; base: string; srcSize: number; canvas: HTMLCanvasElement | null; error: string | null;
+    out: { blob: Blob; ext: string; mime: string } | null; url: string | null };
+  let items: Item[] = [];
+  let uid = 0;
+
+  const fmtSize = (n: number) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`;
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+  const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+  const download = (url: string, name: string) => { const a = document.createElement('a'); a.href = url; a.download = name; a.click(); };
+
+  // Current image target (batch mode swaps between png/jpg).
+  function targetFormat(): RasterFormat { return (isBatch ? (batchFmt?.value || 'image/png') : to) as RasterFormat; }
+  function targetExt(): string {
+    const map: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/avif': 'avif', bmp: 'bmp', tiff: 'tif', gif: 'gif', ico: 'ico', psd: 'psd', svg: 'svg' };
+    return map[targetFormat()] || 'png';
+  }
+
+  // Draw source onto a fresh canvas at the resized dimensions, optional matte.
+  function renderTarget(src: HTMLCanvasElement): HTMLCanvasElement {
+    const max = Math.max(0, Math.floor(Number(resizeEl.value) || 0));
+    let w = src.width, h = src.height;
+    if (max > 0 && Math.max(w, h) > max) { const s = max / Math.max(w, h); w = Math.max(1, Math.round(w * s)); h = Math.max(1, Math.round(h * s)); }
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const ctx = c.getContext('2d')!;
+    if (useMatte && bg) { ctx.fillStyle = bg.value; ctx.fillRect(0, 0, w, h); }
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(src, 0, 0, w, h);
+    return c;
+  }
+
+  async function encodeItem(it: Item) {
+    if (!it.canvas || it.error) return;
+    if (it.url) { URL.revokeObjectURL(it.url); it.url = null; }
+    try {
+      const c = renderTarget(it.canvas);
+      const opts = { quality: useQuality && q ? Number(q.value) / 100 : undefined, matte: useMatte && bg ? bg.value : null };
+      it.out = await encodeCanvas(c, targetFormat(), opts);
+      it.url = URL.createObjectURL(it.out.blob);
+    } catch (e) { it.error = (e as Error).message; it.out = null; }
+  }
+
+  async function processAll() {
+    if (isDoc) { render(); return; }         // docs render source thumbnails; encode on demand
+    for (const it of items) await encodeItem(it);
+    render();
+  }
+
+  // ---- Base64 / HTML snippet builders ----
+  async function toDataUrl(it: Item): Promise<string> {
+    const c = renderTarget(it.canvas!);
+    const q2 = useQuality && q ? Number(q.value) / 100 : undefined;
+    return c.toDataURL('image/png', q2);   // canvas dataURL for text output (keeps it simple + lossless)
+  }
+
+  function render() {
+    list.innerHTML = '';
+    const ok = items.filter((i) => !i.error);
+    const bad = items.length - ok.length;
+    summary.textContent = items.length ? `${ok.length} ready${bad ? `, ${bad} failed` : ''}` : '';
+
+    // primary/zip button visibility
+    if (isDoc) { primaryBtn.classList.toggle('hidden', ok.length === 0); primaryBtn.textContent = `Create ${docLabel()}`; downloadAll.classList.add('hidden'); }
+    else if (isText) { primaryBtn.classList.add('hidden'); downloadAll.classList.add('hidden'); }
+    else { primaryBtn.classList.add('hidden'); downloadAll.classList.toggle('hidden', ok.length < 2); }
+    batchWrap.classList.toggle('hidden', !isBatch);
+    batchWrap.classList.toggle('flex', isBatch);
+
+    for (const it of items) {
+      const card = document.createElement('div');
+      card.className = 'panel flex flex-col gap-3 p-4';
+      if (it.error) {
+        card.innerHTML = `<span class="truncate text-sm text-ink" title="${esc(it.name)}">${esc(it.name)}</span><p class="text-[13px]" style="color:#e5484d">${esc(it.error)}</p>`;
+        const rm = document.createElement('button'); rm.className = 'btn btn-tertiary self-start'; rm.textContent = 'Remove';
+        rm.addEventListener('click', () => removeItem(it.id)); card.appendChild(rm);
+        list.appendChild(card); continue;
+      }
+
+      // preview (source thumbnail; SVG/PSD/TIFF have no inline preview, use source canvas)
+      const wrap = document.createElement('div');
+      wrap.className = 'rb-checker flex justify-center overflow-hidden rounded-md p-3';
+      const im = document.createElement('img');
+      im.className = 'max-h-56 w-auto max-w-full rounded-sm';
+      im.alt = it.base;
+      im.src = (it.out && it.out.mime.startsWith('image/') && it.out.mime !== 'image/tiff' && it.out.mime !== 'image/vnd.adobe.photoshop' && it.url) ? it.url : (it.canvas ? it.canvas.toDataURL('image/png') : '');
+      wrap.appendChild(im); card.appendChild(wrap);
+
+      const meta = document.createElement('div'); meta.className = 'flex flex-col gap-0.5';
+      const dim = it.canvas ? `${it.canvas.width}×${it.canvas.height}` : '';
+      meta.innerHTML = `<span class="truncate text-sm text-ink" title="${esc(it.name)}">${esc(it.base)}.${isText ? 'txt' : (it.out?.ext || targetExt())}</span>` +
+        `<span class="text-[13px] text-ink-subtle">${dim}${it.out ? ` · ${fmtSize(it.srcSize)} → ${fmtSize(it.out.blob.size)}` : ''}</span>`;
+      card.appendChild(meta);
+
+      if (isText) {
+        const pre = document.createElement('textarea');
+        pre.className = 'field'; pre.readOnly = true; pre.rows = 4; pre.style.fontFamily = 'var(--font-mono,ui-monospace,monospace)'; pre.style.fontSize = '12px';
+        pre.value = 'Generating…';
+        toDataUrl(it).then((dataUrl) => { pre.value = to === 'html' ? `<img src="${dataUrl}" alt="${esc(it.base)}" width="${it.canvas!.width}" height="${it.canvas!.height}" />` : dataUrl; });
+        const copy = document.createElement('button'); copy.className = 'btn btn-secondary self-start'; copy.textContent = 'Copy';
+        copy.addEventListener('click', async () => { try { await navigator.clipboard.writeText(pre.value); copy.textContent = 'Copied'; } catch { copy.textContent = 'Copy failed'; } setTimeout(() => (copy.textContent = 'Copy'), 1500); });
+        card.append(pre, copy);
+      } else if (!isDoc && it.out) {
+        const actions = document.createElement('div'); actions.className = 'flex flex-wrap gap-2';
+        const dl = document.createElement('button'); dl.className = 'btn btn-secondary'; dl.textContent = `Download ${it.out.ext.toUpperCase()}`;
+        dl.addEventListener('click', () => download(it.url!, `${it.base}.${it.out!.ext}`));
+        const rm = document.createElement('button'); rm.className = 'btn btn-tertiary'; rm.textContent = 'Remove';
+        rm.addEventListener('click', () => removeItem(it.id));
+        actions.append(dl, rm); card.appendChild(actions);
+      } else {
+        const rm = document.createElement('button'); rm.className = 'btn btn-tertiary self-start'; rm.textContent = 'Remove';
+        rm.addEventListener('click', () => removeItem(it.id)); card.appendChild(rm);
+      }
+      list.appendChild(card);
+    }
+  }
+
+  function docLabel() { return to === 'word' ? 'Word doc' : to === 'excel' ? 'Excel file' : to === 'powerpoint' ? 'PowerPoint' : 'PDF'; }
+
+  function removeItem(id: number) {
+    const it = items.find((i) => i.id === id);
+    if (it?.url) URL.revokeObjectURL(it.url);
+    items = items.filter((i) => i.id !== id);
+    if (!items.length) { panel.classList.add('hidden'); panel.classList.remove('flex'); }
+    render();
+  }
+
+  // Decode a file into a source canvas.
+  function loadFile(f: File): Promise<Item> {
+    const base = f.name.replace(/\.[^.]+$/, '') || 'image';
+    const it: Item = { id: ++uid, name: f.name, base, srcSize: f.size, canvas: null, error: null, out: null, url: null };
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(f);
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth || 512; c.height = img.naturalHeight || 512;
+        c.getContext('2d')!.drawImage(img, 0, 0);
+        it.canvas = c; URL.revokeObjectURL(url); resolve(it);
+      };
+      img.onerror = () => { it.error = 'Could not decode this image — it may be corrupt or an unsupported format.'; URL.revokeObjectURL(url); resolve(it); };
+      img.src = url;
+    });
+  }
+
+  async function addFiles(files: FileList | File[]) {
+    setErr('');
+    const arr = Array.from(files);
+    if (!arr.length) return;
+    panel.classList.remove('hidden'); panel.classList.add('flex');
+    const loaded = await Promise.all(arr.map(loadFile));
+    items.push(...loaded);
+    await processAll();
+  }
+
+  // ---- Combined document build ----
+  async function buildDoc() {
+    const ok = items.filter((i) => i.canvas && !i.error);
+    if (!ok.length) return;
+    setErr(''); primaryBtn.disabled = true; primaryBtn.textContent = 'Building…';
+    try {
+      // PDF embeds jpg for photos (smaller); everything else uses png.
+      const useJpg = to === 'pdf' || to === 'powerpoint';
+      const docImages: DocImage[] = await Promise.all(ok.map(async (it) => {
+        const c = renderTarget(it.canvas!);
+        const mime = useJpg ? 'image/jpeg' : 'image/png';
+        const q2 = useQuality && q ? Number(q.value) / 100 : 0.92;
+        const blob = await new Promise<Blob>((res, rej) => c.toBlob((b) => b ? res(b) : rej(new Error('encode failed')), mime, q2));
+        return { bytes: new Uint8Array(await blob.arrayBuffer()), ext: useJpg ? 'jpg' : 'png', w: c.width, h: c.height };
+      }));
+      let blob: Blob; let ext: string;
+      if (to === 'word') { blob = imagesToDocx(docImages); ext = 'docx'; }
+      else if (to === 'excel') { blob = imagesToXlsx(docImages); ext = 'xlsx'; }
+      else if (to === 'powerpoint') { blob = imagesToPptx(docImages); ext = 'pptx'; }
+      else { blob = await imagesToPdf(docImages); ext = 'pdf'; }
+      const url = URL.createObjectURL(blob);
+      download(url, `${ok.length === 1 ? ok[0].base : 'images'}.${ext}`);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } catch (e) { setErr('Could not build the document: ' + (e as Error).message); }
+    finally { primaryBtn.disabled = false; primaryBtn.textContent = `Create ${docLabel()}`; }
+  }
+
+  // ---- Download-all as zip ----
+  async function downloadAllZip() {
+    const ok = items.filter((i) => i.out && !i.error);
+    if (!ok.length) return;
+    if (ok.length === 1) { download(ok[0].url!, `${ok[0].base}.${ok[0].out!.ext}`); return; }
+    const seen = new Map<string, number>();
+    const entries = await Promise.all(ok.map(async (i) => {
+      let name = `${i.base}.${i.out!.ext}`;
+      const n = seen.get(name) || 0; seen.set(name, n + 1);
+      if (n) name = `${i.base} (${n}).${i.out!.ext}`;
+      return { name, data: new Uint8Array(await i.out!.blob.arrayBuffer()) };
+    }));
+    const url = URL.createObjectURL(makeZip(entries));
+    download(url, `converted-${targetExt()}.zip`);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  // ---- Wiring ----
+  q?.addEventListener('input', () => { if (qval) qval.textContent = q.value + '%'; });
+  q?.addEventListener('change', processAll);
+  bg?.addEventListener('change', processAll);
+  resizeEl.addEventListener('change', processAll);
+  batchFmt?.addEventListener('change', processAll);
+  primaryBtn.addEventListener('click', () => { if (isDoc) buildDoc(); });
+  downloadAll.addEventListener('click', downloadAllZip);
+  fileInput.addEventListener('change', () => { if (fileInput.files) addFiles(fileInput.files); fileInput.value = ''; });
+  $('rb-add').addEventListener('click', () => fileInput.click());
+  $('rb-clear').addEventListener('click', () => {
+    items.forEach((i) => i.url && URL.revokeObjectURL(i.url));
+    items = []; panel.classList.add('hidden'); panel.classList.remove('flex'); setErr(''); render();
+  });
+
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files; if (f?.length) addFiles(f); });
+  root.addEventListener('dragover', (ev) => ev.preventDefault());
+  root.addEventListener('drop', (ev) => { if ((ev.target as HTMLElement)?.closest?.('#rb-drop')) return; ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files; if (f?.length) addFiles(f); });
+</script>

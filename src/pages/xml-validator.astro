@@ -1,0 +1,116 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="xml-validator">
+  <div class="flex flex-col gap-4">
+    <div id="xv-status" class="hidden rounded-md border px-3 py-2 text-sm" role="status"></div>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      XML to validate
+      <div class="hl-edit field p-0" style="height:24rem;resize:vertical;overflow:hidden">
+        <pre class="hl-block" aria-hidden="true"><code id="xv-in-hl" class="hljs" style="background:transparent"></code></pre>
+        <textarea id="xv-in" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Paste XML here, e.g. <root><item>value</item></root>"></textarea>
+      </div>
+    </label>
+
+    <div id="xv-preview-wrap" class="hidden">
+      <div class="eyebrow">Formatted view</div>
+      <div class="copy-wrap mt-2">
+        <pre id="xv-preview" class="hl-block field" style="overflow:auto"><code id="xv-preview-code" class="hljs" style="background:transparent;padding:0"></code></pre>
+        <button type="button" class="copy-icon" data-copy-target="#xv-preview-code" aria-label="Copy"></button>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free XML validator uses the browser's built-in DOM parser to check
+      whether pasted XML is well-formed. If the document has a syntax problem it
+      surfaces the parser's error message and location; when it is well-formed
+      it confirms so and shows a tidy, indented view of the document.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { hl, wireInput } from '../lib/highlight';
+
+  const input = document.getElementById('xv-in') as HTMLTextAreaElement;
+  const inHl = document.getElementById('xv-in-hl')!;
+  const status = document.getElementById('xv-status')!;
+  const previewWrap = document.getElementById('xv-preview-wrap')!;
+  const preview = document.getElementById('xv-preview-code')!;
+  let rawOutput = '';
+
+  function showStatus(msg: string, ok: boolean) {
+    status.textContent = msg;
+    status.classList.remove('hidden');
+    status.style.borderColor = ok ? '#27a644' : '#d14d4d';
+    status.style.color = ok ? '#27a644' : '#e08585';
+  }
+
+  function serialize(node: Node, indent: string, out: string[]): void {
+    node.childNodes.forEach((child) => {
+      if (child.nodeType === Node.ELEMENT_NODE) {
+        const el = child as Element;
+        const serializer = new XMLSerializer();
+        const hasElementChildren = Array.from(el.childNodes).some(
+          (c) => c.nodeType === Node.ELEMENT_NODE,
+        );
+        const openTag = serializer
+          .serializeToString(el)
+          .match(/^<[^>]*>/)?.[0] ?? `<${el.nodeName}>`;
+
+        if (!hasElementChildren) {
+          // Leaf element: serialize inline (keeps text content on one line).
+          const single = serializer.serializeToString(el);
+          out.push(indent + single);
+        } else {
+          out.push(indent + openTag);
+          serialize(el, indent + '  ', out);
+          out.push(indent + `</${el.nodeName}>`);
+        }
+      } else if (child.nodeType === Node.COMMENT_NODE) {
+        out.push(indent + ``);
+      } else if (child.nodeType === Node.PROCESSING_INSTRUCTION_NODE) {
+        const pi = child as ProcessingInstruction;
+        out.push(indent + `<?${pi.target} ${pi.data}?>`);
+      }
+    });
+  }
+
+  function prettyPrint(doc: Document): string {
+    const out: string[] = [];
+    serialize(doc, '', out);
+    return out.join('\n');
+  }
+
+  function validate() {
+    previewWrap.classList.add('hidden');
+    const text = input.value;
+    if (!text.trim()) {
+      status.classList.add('hidden');
+      return;
+    }
+    const doc = new DOMParser().parseFromString(text, 'application/xml');
+    const errorNode = doc.querySelector('parsererror');
+    if (errorNode) {
+      // The parser error text is browser-specific; show it as-is, trimmed.
+      const msg = (errorNode.textContent ?? 'XML is not well-formed.').replace(/\s+/g, ' ').trim();
+      showStatus(`Not well-formed: ${msg}`, false);
+      return;
+    }
+    showStatus('Well-formed XML ✓', true);
+    try {
+      rawOutput = prettyPrint(doc);
+    } catch {
+      rawOutput = new XMLSerializer().serializeToString(doc);
+    }
+    hl(preview, rawOutput, 'xml');
+    previewWrap.classList.remove('hidden');
+  }
+
+  wireInput(input, inHl, () => 'xml', () => validate());
+  validate();
+</script>

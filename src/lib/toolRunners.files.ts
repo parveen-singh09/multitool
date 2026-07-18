@@ -201,5 +201,5 @@ export const RUNNERS_FILES: Record<string, Runner> = {
   // subtitle-maker: omitted. Its real output is timed captions synced to a video
   // playhead (or an imported .srt/.vtt), which needs an interactive timeline and
   // a loaded media file — neither survives a one-shot inline chat call. Use the
-  // full tool at /tools/subtitle-maker to sync and export SRT/VTT.
+  // full tool at /subtitle-maker to sync and export SRT/VTT.
 };

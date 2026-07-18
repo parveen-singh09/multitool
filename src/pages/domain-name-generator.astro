@@ -1,0 +1,753 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="domain-name-generator">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Your keyword or idea
+      <input
+        id="dn-word"
+        class="field text-lg"
+        value="tool"
+        spellcheck="false"
+        autocomplete="off"
+        placeholder="type an idea…"
+      />
+    </label>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Word style
+        <select id="dn-style" class="field">
+          <option value="common">Common words</option>
+          <option value="daily">Daily-use words</option>
+          <option value="professional">Professional</option>
+          <option value="creative">Creative / invented</option>
+          <option value="techy">Techy / startup</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Syllables (approx.)
+        <input id="dn-syl" type="number" min="1" max="6" value="2" class="field" />
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="panel flex items-center justify-between gap-3 px-3 py-2">
+        <label class="flex items-center gap-2 text-sm text-ink-subtle">
+          <input id="dn-prefix-on" type="checkbox" class="h-4 w-4 accent-primary" />
+          Add a prefix
+        </label>
+        <label class="flex items-center gap-1.5 text-[13px] text-ink-tertiary">
+          letters
+          <input id="dn-prefix-n" type="number" min="1" max="6" value="2" class="field w-16 py-1" />
+        </label>
+      </div>
+      <div class="panel flex items-center justify-between gap-3 px-3 py-2">
+        <label class="flex items-center gap-2 text-sm text-ink-subtle">
+          <input id="dn-suffix-on" type="checkbox" class="h-4 w-4 accent-primary" />
+          Add a suffix
+        </label>
+        <label class="flex items-center gap-1.5 text-[13px] text-ink-tertiary">
+          letters
+          <input id="dn-suffix-n" type="number" min="1" max="6" value="2" class="field w-16 py-1" />
+        </label>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-1.5">
+      <div class="flex items-center gap-3 text-sm text-ink-subtle">
+        <span>Domain types</span>
+        <button id="dn-all" type="button" class="text-[12px] text-ink-tertiary hover:text-ink">Select all</button>
+        <button id="dn-none" type="button" class="text-[12px] text-ink-tertiary hover:text-ink">Clear</button>
+      </div>
+      <div id="dn-tlds" class="flex flex-wrap gap-1.5" role="group" aria-label="Filter domain types"></div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2.5">
+      <button id="dn-gen" type="button" class="btn btn-primary">Generate names</button>
+      <button id="dn-ai-gen" type="button" class="btn btn-primary bg-linear-to-r from-primary via-[#7c5cff] to-[#a855f7] hover:opacity-90">✦ AI generate</button>
+      <button id="dn-more" type="button" class="btn btn-secondary ml-auto hidden">Show more</button>
+    </div>
+
+    <div id="dn-status" class="text-[13px] text-ink-tertiary" aria-live="polite">Type an idea and hit Generate.</div>
+    <div id="dn-out" class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3"></div>
+    <p class="text-[13px] text-ink">
+      Availability is a live DNS check — a green dot means the domain isn't
+      resolving and is likely free, but only a registrar can confirm. Click any
+      name to search it at a registrar.
+    </p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink">
+    <p>
+      This free domain name generator turns a keyword into domain ideas across
+      popular TLDs — .com, .io, .app, .dev, .co and more. Tune the word style
+      (common, daily-use, professional, creative or techy), the number of
+      syllables, and whether to add a short prefix or suffix of a given length,
+      and the generator drafts brandable names to match. Each idea is then checked
+      live against public DNS: a green dot means the name isn't resolving and is
+      probably available, while a taken name is dimmed. The DNS check is a
+      strong hint, not a guarantee — a registered domain that simply has no DNS
+      records can still read as free — so click any name to confirm and register
+      it.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { shuffle } from '../lib/random';
+  import { aiChat } from '../lib/ai';
+  import { affixPool } from '../lib/domain-affixes';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const wordEl = $('dn-word') as HTMLInputElement;
+  const styleEl = $('dn-style') as unknown as HTMLSelectElement;
+  const sylEl = $('dn-syl') as HTMLInputElement;
+  const prefixOnEl = $('dn-prefix-on') as HTMLInputElement;
+  const prefixNEl = $('dn-prefix-n') as HTMLInputElement;
+  const suffixOnEl = $('dn-suffix-on') as HTMLInputElement;
+  const suffixNEl = $('dn-suffix-n') as HTMLInputElement;
+  const statusEl = $('dn-status')!;
+  const out = $('dn-out')!;
+
+  const TLDS = [
+    'com', 'io', 'app', 'dev', 'co', 'net', 'org', 'ai', 'xyz', 'tech',
+    'online', 'store', 'site', 'me', 'info', 'biz', 'cloud', 'digital',
+    'studio', 'design', 'agency', 'space', 'live', 'world', 'shop', 'club',
+    'pro', 'tv', 'gg', 'sh',
+  ];
+
+  const PREFIX = [
+    'get', 'try', 'go', 'my', 'the', 'join', 'use', 'best', 'top', 'pro',
+    'super', 'smart', 'quick', 'easy', 'meta', 'nova', 'hey', 'with', 'on',
+    'up', 'we', 'all', 'one', 'real', 'true', 'pure', 'prime', 'peak', 'core',
+    'main', 'lead', 'first', 'next', 'new', 'now', 'live', 'open', 'free',
+    'bold', 'bright', 'clear', 'clean', 'fresh', 'fast', 'swift', 'rapid',
+    'agile', 'nimble', 'ready', 'able', 'active', 'alive', 'awake', 'aware',
+    'grand', 'great', 'mega', 'ultra', 'hyper', 'omni', 'multi', 'poly',
+    'uni', 'mono', 'duo', 'tri', 'quad', 'max', 'plus', 'extra', 'over',
+    'high', 'sky', 'star', 'moon', 'sun', 'sol', 'luna', 'aura', 'zen',
+    'flux', 'flow', 'wave', 'pulse', 'spark', 'flash', 'blaze', 'flame',
+    'fire', 'ember', 'glow', 'shine', 'gleam', 'beam', 'ray', 'lux',
+    'lume', 'vivid', 'vibe', 'buzz', 'boom', 'bang', 'pop', 'zap', 'zip',
+    'dash', 'rush', 'jet', 'rocket', 'turbo', 'nitro', 'boost', 'lift',
+    'rise', 'soar', 'fly', 'jump', 'leap', 'bound', 'sprint', 'race',
+    'run', 'move', 'shift', 'drive', 'push', 'pull', 'drag', 'draw',
+    'true', 'trust', 'safe', 'secure', 'shield', 'guard', 'vault', 'lock',
+    'key', 'gate', 'door', 'path', 'road', 'route', 'trail', 'track',
+    'link', 'bond', 'tie', 'knot', 'net', 'web', 'mesh', 'grid', 'node',
+    'hub', 'dock', 'port', 'bay', 'cove', 'harbor', 'anchor', 'pier',
+    'wave', 'tide', 'surf', 'stream', 'river', 'lake', 'sea', 'ocean',
+    'deep', 'blue', 'aqua', 'hydro', 'aero', 'astro', 'cosmo', 'nebula',
+    'orbit', 'lunar', 'solar', 'stellar', 'galaxy', 'comet', 'meteor',
+    'atom', 'ion', 'volt', 'watt', 'ampere', 'ohm', 'joule', 'quark',
+    'nano', 'micro', 'macro', 'giga', 'tera', 'peta', 'kilo', 'centi',
+    'bit', 'byte', 'code', 'data', 'logic', 'cyber', 'digi', 'tech',
+    'techno', 'robo', 'auto', 'mech', 'gear', 'cog', 'bolt', 'nut',
+    'forge', 'craft', 'build', 'make', 'shape', 'form', 'mold', 'cast',
+    'weld', 'tool', 'work', 'labor', 'toil', 'grind', 'hustle', 'grit',
+    'brave', 'bold', 'daring', 'fierce', 'wild', 'raw', 'rugged', 'tough',
+    'hardy', 'sturdy', 'solid', 'stone', 'rock', 'iron', 'steel', 'metal',
+    'gold', 'silver', 'copper', 'bronze', 'brass', 'tin', 'zinc', 'lead',
+    'ruby', 'jade', 'pearl', 'amber', 'coral', 'onyx', 'opal', 'topaz',
+    'crystal', 'gem', 'jewel', 'stone', 'shard', 'prism', 'facet', 'quartz',
+    'noble', 'royal', 'regal', 'crown', 'king', 'queen', 'lord', 'duke',
+    'baron', 'knight', 'squire', 'page', 'herald', 'scout', 'ranger',
+    'hunter', 'seeker', 'finder', 'tracker', 'hawk', 'eagle', 'falcon',
+    'raven', 'crow', 'owl', 'wolf', 'fox', 'bear', 'lion', 'tiger',
+    'puma', 'lynx', 'panther', 'jaguar', 'cheetah', 'leopard', 'cobra',
+    'viper', 'python', 'dragon', 'phoenix', 'griffin', 'hydra', 'kraken',
+    'titan', 'atlas', 'apollo', 'hermes', 'zeus', 'thor', 'odin', 'loki',
+    'hero', 'legend', 'myth', 'saga', 'epic', 'tale', 'story', 'chronicle',
+    'echo', 'voice', 'sound', 'tone', 'note', 'chord', 'tune', 'song',
+    'beat', 'rhythm', 'tempo', 'melody', 'harmony', 'anthem', 'ballad',
+    'muse', 'inspire', 'dream', 'vision', 'idea', 'think', 'mind', 'brain',
+    'genius', 'wise', 'sage', 'clever', 'sharp', 'keen', 'acute', 'astute',
+    'lucid', 'savvy', 'canny', 'shrewd', 'brilliant', 'radiant', 'lumina',
+    'glimmer', 'twinkle', 'sparkle', 'dazzle', 'shimmer', 'glisten',
+    'crisp', 'brisk', 'cool', 'chill', 'frost', 'ice', 'snow', 'winter',
+    'polar', 'arctic', 'nordic', 'alpine', 'summit', 'crest', 'ridge',
+    'apex', 'zenith', 'pinnacle', 'crown', 'top', 'height', 'altitude',
+    'above', 'beyond', 'ahead', 'forward', 'onward', 'upward', 'skyward',
+    'true', 'honest', 'loyal', 'faithful', 'steady', 'stable', 'firm',
+    'grounded', 'rooted', 'anchored', 'bound', 'sworn', 'vowed', 'pledged',
+    'vital', 'lively', 'spry', 'peppy', 'zesty', 'snappy', 'lush', 'ripe',
+    'bloom', 'blossom', 'sprout', 'seed', 'root', 'stem', 'leaf', 'branch',
+    'grove', 'forest', 'wood', 'timber', 'pine', 'oak', 'maple', 'cedar',
+    'birch', 'elm', 'ash', 'willow', 'ivy', 'fern', 'moss', 'reed',
+    'meadow', 'field', 'plain', 'valley', 'canyon', 'gorge', 'ravine',
+    'mesa', 'butte', 'dune', 'delta', 'basin', 'plateau', 'terrain',
+    'earth', 'soil', 'clay', 'sand', 'dust', 'ash', 'coal', 'ore',
+    'spring', 'well', 'fount', 'source', 'origin', 'genesis', 'dawn',
+    'morning', 'sunrise', 'daybreak', 'noon', 'dusk', 'sunset', 'twilight',
+    'evening', 'night', 'midnight', 'star', 'shadow', 'shade', 'dark',
+    'ghost', 'spirit', 'soul', 'essence', 'aura', 'vibe', 'mood', 'tone',
+    'flavor', 'taste', 'zest', 'spice', 'herb', 'mint', 'sage', 'basil',
+    'thyme', 'clove', 'ginger', 'honey', 'sugar', 'cream', 'butter', 'silk',
+    'velvet', 'satin', 'linen', 'wool', 'cotton', 'canvas', 'thread',
+    'yarn', 'weave', 'stitch', 'seam', 'fold', 'pleat', 'drape', 'flow',
+    'grace', 'poise', 'flair', 'style', 'chic', 'vogue', 'trend', 'mode',
+    'brand', 'label', 'mark', 'stamp', 'seal', 'badge', 'crest', 'sigil',
+    'emblem', 'icon', 'symbol', 'token', 'crest', 'banner', 'flag',
+    'pixel', 'vector', 'render', 'frame', 'lens', 'focus', 'zoom', 'scope',
+    'view', 'sight', 'look', 'gaze', 'glance', 'peek', 'watch', 'observe',
+    'signal', 'beacon', 'lantern', 'torch', 'candle', 'wick', 'flame',
+    'volt', 'circuit', 'wire', 'cable', 'plug', 'socket', 'switch', 'relay',
+    'engine', 'motor', 'piston', 'valve', 'pump', 'fan', 'blade', 'rotor',
+    'wing', 'sail', 'mast', 'helm', 'rudder', 'keel', 'hull', 'deck',
+    'cabin', 'berth', 'quay', 'wharf', 'jetty', 'buoy', 'reef', 'shoal',
+  ];
+  const SUFFIX = [
+    'app', 'hq', 'ly', 'hub', 'lab', 'io', 'now', 'kit', 'ify', 'ist',
+    'ster', 'zone', 'spot', 'base', 'box', 'flow', 'wise', 'genius', 'pro',
+    'works', 'stack', 'space', 'yard', 'craft', 'ware', 'wares', 'store',
+    'shop', 'mart', 'market', 'bazaar', 'depot', 'outlet', 'stand', 'kiosk',
+    'desk', 'office', 'studio', 'atelier', 'workshop', 'foundry', 'forge',
+    'mill', 'factory', 'plant', 'works', 'shed', 'barn', 'loft', 'attic',
+    'nest', 'den', 'lair', 'hive', 'colony', 'roost', 'perch', 'burrow',
+    'nook', 'corner', 'alcove', 'niche', 'pocket', 'vault', 'cache', 'store',
+    'bank', 'reserve', 'stash', 'trove', 'chest', 'crate', 'bin', 'tote',
+    'bag', 'sack', 'pouch', 'pack', 'bundle', 'batch', 'lot', 'set',
+    'suite', 'kit', 'toolkit', 'gear', 'tackle', 'rig', 'setup', 'array',
+    'bay', 'port', 'dock', 'pier', 'harbor', 'haven', 'refuge', 'shelter',
+    'lodge', 'inn', 'cabin', 'cottage', 'villa', 'manor', 'estate', 'court',
+    'hall', 'chamber', 'room', 'suite', 'loft', 'floor', 'level', 'tier',
+    'deck', 'stage', 'platform', 'stand', 'podium', 'dais', 'stage', 'set',
+    'scene', 'act', 'show', 'gig', 'event', 'fest', 'gala', 'fair',
+    'expo', 'summit', 'forum', 'conclave', 'meet', 'meetup', 'gathering',
+    'circle', 'club', 'guild', 'league', 'union', 'alliance', 'coalition',
+    'crew', 'squad', 'team', 'band', 'troupe', 'gang', 'posse', 'pack',
+    'tribe', 'clan', 'family', 'kin', 'folk', 'people', 'crowd', 'throng',
+    'flock', 'herd', 'swarm', 'colony', 'nation', 'realm', 'domain', 'land',
+    'zone', 'region', 'district', 'sector', 'quarter', 'ward', 'block',
+    'grid', 'net', 'web', 'mesh', 'net', 'link', 'node', 'point', 'dot',
+    'hub', 'nexus', 'core', 'center', 'heart', 'root', 'base', 'ground',
+    'field', 'plain', 'range', 'span', 'reach', 'scope', 'realm', 'sphere',
+    'orbit', 'circle', 'ring', 'loop', 'arc', 'curve', 'bend', 'turn',
+    'way', 'path', 'route', 'trail', 'track', 'lane', 'road', 'street',
+    'avenue', 'drive', 'court', 'close', 'row', 'walk', 'trek', 'quest',
+    'journey', 'voyage', 'trip', 'tour', 'ride', 'run', 'sprint', 'dash',
+    'flow', 'stream', 'current', 'flux', 'wave', 'tide', 'surge', 'rush',
+    'burst', 'blast', 'boom', 'bang', 'pop', 'snap', 'zap', 'buzz',
+    'hum', 'pulse', 'beat', 'throb', 'tick', 'tock', 'chime', 'ring',
+    'bell', 'tone', 'note', 'sound', 'echo', 'voice', 'call', 'shout',
+    'cry', 'yell', 'roar', 'howl', 'whistle', 'song', 'tune', 'melody',
+    'anthem', 'chorus', 'verse', 'lyric', 'ode', 'ballad', 'sonnet',
+    'lore', 'tale', 'story', 'saga', 'myth', 'legend', 'epic', 'chronicle',
+    'log', 'journal', 'diary', 'record', 'ledger', 'archive', 'vault',
+    'library', 'shelf', 'stack', 'volume', 'tome', 'book', 'page', 'sheet',
+    'scroll', 'script', 'text', 'word', 'phrase', 'line', 'note', 'memo',
+    'brief', 'digest', 'summary', 'report', 'wire', 'feed', 'stream',
+    'wave', 'signal', 'beacon', 'pulse', 'ping', 'pong', 'echo', 'relay',
+    'link', 'bridge', 'span', 'crossing', 'gate', 'gateway', 'portal',
+    'door', 'entry', 'access', 'pass', 'key', 'code', 'cipher', 'lock',
+    'bolt', 'latch', 'clasp', 'catch', 'hook', 'clip', 'pin', 'tack',
+    'anchor', 'mooring', 'tether', 'cord', 'rope', 'line', 'thread', 'wire',
+    'cable', 'chain', 'strand', 'fiber', 'weave', 'braid', 'twist', 'coil',
+    'spring', 'source', 'well', 'fount', 'origin', 'seed', 'root', 'sprout',
+    'bud', 'bloom', 'blossom', 'flower', 'petal', 'leaf', 'branch', 'twig',
+    'stem', 'trunk', 'bark', 'grove', 'wood', 'forest', 'jungle', 'thicket',
+    'garden', 'orchard', 'meadow', 'lawn', 'patch', 'plot', 'acre', 'farm',
+    'ranch', 'range', 'pasture', 'valley', 'vale', 'glen', 'dale', 'hollow',
+    'hill', 'mount', 'peak', 'crest', 'ridge', 'summit', 'apex', 'crown',
+    'cliff', 'bluff', 'ledge', 'slope', 'grade', 'incline', 'ramp', 'rise',
+    'height', 'altitude', 'sky', 'cloud', 'star', 'moon', 'sun', 'dawn',
+    'dusk', 'noon', 'day', 'night', 'era', 'age', 'epoch', 'time',
+    'moment', 'instant', 'flash', 'spark', 'glint', 'gleam', 'glow', 'ray',
+    'beam', 'shine', 'light', 'lume', 'lux', 'aura', 'halo', 'nimbus',
+    'mist', 'haze', 'fog', 'vapor', 'steam', 'smoke', 'ash', 'dust',
+    'sand', 'grain', 'speck', 'mote', 'fleck', 'dot', 'spot', 'mark',
+    'stamp', 'seal', 'badge', 'crest', 'emblem', 'icon', 'sign', 'token',
+    'flag', 'banner', 'ensign', 'pennant', 'standard', 'label', 'brand',
+    'edge', 'rim', 'brink', 'verge', 'margin', 'border', 'bound', 'limit',
+    'line', 'seam', 'fold', 'crease', 'ridge', 'groove', 'notch', 'slot',
+    'gap', 'void', 'space', 'room', 'berth', 'slot', 'niche', 'cell',
+    'unit', 'module', 'block', 'cube', 'sphere', 'orb', 'globe', 'ball',
+    'ring', 'band', 'loop', 'hoop', 'circle', 'wheel', 'disc', 'plate',
+    'grid', 'panel', 'board', 'deck', 'slate', 'tile', 'brick', 'stone',
+    'rock', 'boulder', 'pebble', 'gravel', 'flint', 'crystal', 'gem', 'jewel',
+    'engine', 'motor', 'gear', 'gears', 'cog', 'rotor', 'turbine', 'drive',
+    'boost', 'thrust', 'push', 'pull', 'lift', 'jack', 'crane', 'hoist',
+    'labs', 'systems', 'tech', 'digital', 'media', 'studios', 'group', 'co',
+  ];
+  const MAX = 60;
+
+  const TARGET = 30;
+
+  const MAX_ROUNDS = 5;
+  const MAX_CHECK = 300;
+
+  const active = new Set<string>(['com', 'net', 'org', 'ai', 'io']);
+
+  type State = 'checking' | 'free' | 'taken' | 'error';
+
+  interface Settings {
+    word: string;
+    style: string;
+    syllables: number;
+    prefixLen: number; 
+    suffixLen: number; 
+  }
+
+  function readSettings(): Settings {
+    return {
+      word: wordEl.value.trim().toLowerCase().replace(/[^a-z0-9]/g, ''),
+      style: styleEl.value,
+      syllables: clampNum(sylEl.value, 1, 6, 2),
+      prefixLen: prefixOnEl.checked ? clampNum(prefixNEl.value, 1, 6, 2) : 0,
+      suffixLen: suffixOnEl.checked ? clampNum(suffixNEl.value, 1, 6, 2) : 0,
+    };
+  }
+  const clampNum = (v: string, lo: number, hi: number, dflt: number) =>
+    Math.max(lo, Math.min(hi, Number(v) || dflt));
+
+  const STYLE_HINT: Record<string, string> = {
+    common: 'plain, common English words everyone knows',
+    daily: 'everyday, daily-use conversational words',
+    professional: 'polished, professional, business-appropriate words',
+    creative: 'creative, invented, made-up brandable coinages',
+    techy: 'modern techy / startup-flavored words',
+  };
+
+  function buildPrompt(s: Settings, exclude: string[] = []): string {
+    const w = s.word;
+
+    const parts = [
+      `Generate 24 brandable domain name ideas. Every single name MUST contain the exact word "${w}" as a literal substring — do not replace it with synonyms or themed words.`,
+    ];
+    const style = STYLE_HINT[s.style] ?? 'brandable';
+
+    if (s.prefixLen && s.suffixLen) {
+      parts.push(`Build each name as: a ~${s.prefixLen}-letter prefix, then "${w}", then a ~${s.suffixLen}-letter suffix (e.g. "go${w}ify").`);
+    } else if (s.prefixLen) {
+      parts.push(`Build each name by prepending a ~${s.prefixLen}-letter prefix directly before "${w}" (e.g. "get${w}").`);
+    } else if (s.suffixLen) {
+      parts.push(`Build each name by appending a ~${s.suffixLen}-letter suffix directly after "${w}" (e.g. "${w}zone").`);
+    } else {
+      parts.push(`Combine "${w}" with another short word to make each name (e.g. "${w}hub", "my${w}").`);
+    }
+    parts.push(`Use ${style} vocabulary for the added prefix/suffix, roughly ${s.syllables} syllable(s) each.`);
+    if (exclude.length) {
+      // Keep the exclusion list bounded so the prompt can't balloon over rounds.
+      const recent = exclude.slice(-80).join(', ');
+      parts.push(`Do NOT reuse any of these already-suggested names: ${recent}. Give fresh, different ideas.`);
+    }
+    parts.push(
+      'Return ONLY a JSON array of lowercase strings — just the name part, no TLD, no dots, no spaces, letters and digits only. No prose.',
+    );
+    return parts.join(' ');
+  }
+
+  /**
+   * Extract clean second-level labels (no TLD) from the reply. Tolerates a
+   * bare array, a ```json fence, or an array embedded in prose.
+   */
+  function parseNames(text: string): string[] {
+    let arr: unknown;
+    const match = text.match(/\[[\s\S]*\]/);
+    try {
+      arr = JSON.parse(match ? match[0] : text);
+    } catch {
+      return [];
+    }
+    if (!Array.isArray(arr)) return [];
+    const seen = new Set<string>();
+    for (const item of arr) {
+      if (typeof item !== 'string') continue;
+
+      const label = item.split('.')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (label.length >= 2 && label.length <= 30) seen.add(label);
+    }
+    return [...seen];
+  }
+
+  async function aiNames(s: Settings, exclude: string[] = []): Promise<string[]> {
+    const content = await aiChat(
+      [
+        { role: 'system', content: 'You are a brandable domain name generator. You reply with a JSON array of lowercase name labels and nothing else.' },
+        { role: 'user', content: buildPrompt(s, exclude) },
+      ],
+      { temperature: 0.9 },
+    );
+
+    const names = parseNames(content).filter((n) => n.includes(s.word));
+    if (!names.length) throw new Error('no names parsed');
+    return names;
+  }
+
+  function fallbackNames(s: Settings): string[] {
+    const w = s.word;
+    const labels = new Set<string>([w]);
+    // Slider on → draw affixes of the requested length; off → 0-length pool.
+    const prefixes = s.prefixLen ? affixPool(s.prefixLen) : [];
+    const suffixes = s.suffixLen ? affixPool(s.suffixLen) : [];
+    if (!prefixes.length && !suffixes.length) {
+      // No affix requested — fall back to the curated domain-flavored lists.
+      for (const p of PREFIX) labels.add(`${p}${w}`);
+      for (const suf of SUFFIX) labels.add(`${w}${suf}`);
+      return [...labels];
+    }
+    for (const p of prefixes) labels.add(`${p}${w}`);
+    for (const suf of suffixes) labels.add(`${w}${suf}`);
+    // Both sliders on → also offer prefix+word+suffix, sampled to stay bounded.
+    if (prefixes.length && suffixes.length) {
+      const ps = shuffle([...prefixes]).slice(0, 30);
+      const ss = shuffle([...suffixes]).slice(0, 30);
+      for (const p of ps) for (const suf of ss) labels.add(`${p}${w}${suf}`);
+    }
+    return [...labels];
+  }
+
+  /** Expand name labels into full domains across the active TLDs, capped at MAX. */
+  function expand(labels: string[]): string[] {
+    const domains = new Set<string>();
+    for (const label of labels) {
+      for (const tld of TLDS) if (active.has(tld)) domains.add(`${label}.${tld}`);
+    }
+    return shuffle([...domains]).slice(0, MAX);
+  }
+
+  /**
+   * Cloudflare DNS-over-HTTPS (CORS-enabled). Status 3 = NXDOMAIN → the name
+   * doesn't resolve, so it's likely unregistered. Anything that resolves is
+   * treated as taken. Network/parse failure → 'error' (shown as unknown).
+   * ponytail: DNS is a heuristic, not a registry lookup — good enough for a
+   * "which of these is free?" scan; the UI says so and links out to confirm.
+   */
+  async function checkDoh(domain: string, signal: AbortSignal): Promise<State> {
+    try {
+      const res = await fetch(
+        `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=A`,
+        { headers: { accept: 'application/dns-json' }, signal },
+      );
+      if (!res.ok) return 'error';
+      const data = await res.json() as { Status: number };
+      return data.Status === 3 ? 'free' : 'taken';
+    } catch (e) {
+      if ((e as Error).name === 'AbortError') throw e;
+      return 'error';
+    }
+  }
+
+  const DOT: Record<State, string> = {
+    checking: 'bg-hairline-strong animate-pulse',
+    free: 'bg-success',
+    taken: 'bg-ink-tertiary',
+    error: 'bg-ink-tertiary',
+  };
+  const LABEL: Record<State, string> = {
+    checking: 'Checking…',
+    free: 'Available',
+    taken: 'Taken',
+    error: 'Unknown',
+  };
+
+  function row(domain: string, state: State): string {
+    const registrar = `https://www.namecheap.com/domains/registration/results/?domain=${encodeURIComponent(domain)}`;
+    return `<a href="${registrar}" target="_blank" rel="noopener"
+      class="panel flex items-center gap-3 px-4 py-2.5 font-mono text-sm text-ink hover:border-hairline-strong ${state === 'taken' ? 'opacity-55' : ''}"
+      data-domain="${domain}">
+      <span class="inline-block h-2 w-2 shrink-0 rounded-full ${DOT[state]}"></span>
+      <span class="truncate">${domain}</span>
+      <span class="ml-auto shrink-0 text-[12px] ${state === 'free' ? 'text-success' : 'text-ink-tertiary'}">${LABEL[state]}</span>
+    </a>`;
+  }
+
+  // Bump on every new run so stale in-flight checks can bail out.
+  let runId = 0;
+  const CONCURRENCY = 8;
+  // Last generated name labels, so TLD toggles re-expand without a new request.
+  let currentLabels: string[] = [];
+
+  // Persistent AI-run state so "Show more" resumes the same search instead of
+  // restarting: results and tried labels accumulate across clicks.
+  const moreEl = $('dn-more') as HTMLButtonElement;
+  const genEl = $('dn-gen') as HTMLButtonElement;
+  const aiGenEl = $('dn-ai-gen') as HTMLButtonElement;
+
+  /** Toggle a button into a disabled "working" state, restoring its label after. */
+  function setBusy(btn: HTMLButtonElement, on: boolean, label = '') {
+    if (on) {
+      if (btn.dataset.label == null) btn.dataset.label = btn.textContent ?? '';
+      btn.textContent = label;
+      btn.disabled = true;
+      btn.classList.add('opacity-70', 'cursor-wait');
+    } else {
+      if (btn.dataset.label != null) btn.textContent = btn.dataset.label;
+      delete btn.dataset.label;
+      btn.disabled = false;
+      btn.classList.remove('opacity-70', 'cursor-wait');
+    }
+  }
+  let aiStates: Map<string, State> | null = null;
+  let aiTried: string[] = [];
+  let aiSettings: Settings | null = null;
+  // Each "Show more" click looks for this many additional available domains.
+  const MORE_TARGET = 15;
+
+  /** Hide the Show-more button and drop any resumable AI state. */
+  function resetAi() {
+    aiStates = null;
+    aiTried = [];
+    aiSettings = null;
+    moreEl.classList.add('hidden');
+  }
+
+  /** Render the state map: available first, keyword-exact first, then short & alphabetical. */
+  function renderStates(states: Map<string, State>, w: string) {
+    const order: Record<State, number> = { free: 0, checking: 1, error: 2, taken: 3 };
+    const sld = (d: string) => d.split('.')[0];
+    const sorted = [...states].sort(([da, sa], [db, sb]) => {
+      if (order[sa] !== order[sb]) return order[sa] - order[sb];
+      const ma = sld(da) === w ? 0 : 1, mb = sld(db) === w ? 0 : 1;
+      if (ma !== mb) return ma - mb;
+      if (da.length !== db.length) return da.length - db.length;
+      return da.localeCompare(db);
+    });
+    out.innerHTML = sorted.map(([d, s]) => row(d, s)).join('');
+  }
+
+  const freeCount = (states: Map<string, State>) =>
+    [...states.values()].filter((s) => s === 'free').length;
+
+  /**
+   * DNS-check `list`, writing results into the shared `states` map and
+   * re-rendering as each lands. Domains already in the map are left untouched,
+   * so this can be called repeatedly to accumulate across AI rounds.
+   */
+  async function checkList(
+    states: Map<string, State>,
+    list: string[],
+    controller: AbortController,
+    mine: number,
+    w: string,
+  ) {
+    for (const d of list) if (!states.has(d)) states.set(d, 'checking');
+    renderStates(states, w);
+
+    const queue = [...list];
+    async function worker() {
+      while (queue.length) {
+        const domain = queue.shift()!;
+        let state: State;
+        try {
+          state = await checkDoh(domain, controller.signal);
+        } catch {
+          return; // aborted — a newer run took over
+        }
+        if (mine !== runId) return; // superseded while awaiting
+        states.set(domain, state);
+        renderStates(states, w);
+      }
+    }
+    await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+  }
+
+  /** One-shot check of a full domain list (local path + TLD re-checks). */
+  async function checkAll(list: string[], controller: AbortController) {
+    const mine = runId;
+    const w = readSettings().word;
+    const states = new Map<string, State>();
+    await checkList(states, list, controller, mine, w);
+  }
+
+  /** Re-expand the current labels across the active TLDs and re-check. */
+  function recheck() {
+    if (!currentLabels.length) return;
+    runId++;
+    resetAi(); // TLD re-check owns the display now — drop resumable AI state.
+    const list = expand(currentLabels);
+    if (!list.length) {
+      out.innerHTML = '';
+      statusEl.textContent = 'Pick at least one domain type above.';
+      return;
+    }
+    checkAll(list, new AbortController());
+  }
+
+  /** Local single pass: build affix names, then DNS-check them once. */
+  async function generateLocal() {
+    const s = readSettings();
+    if (!s.word) {
+      out.innerHTML = '';
+      currentLabels = [];
+      statusEl.textContent = 'Type a keyword to see available domains.';
+      resetAi();
+      return;
+    }
+    const mine = ++runId;
+    resetAi();
+    const labels = fallbackNames(s);
+    currentLabels = labels;
+    // Always check the exact keyword itself first — renderStates already sorts
+    // the keyword-exact match to the top, so an available one shows first.
+    const exact = TLDS.filter((t) => active.has(t)).map((t) => `${s.word}.${t}`);
+    const list = [...new Set([...exact, ...expand(labels)])];
+    if (!list.length) {
+      out.innerHTML = '';
+      statusEl.textContent = 'Pick at least one domain type above.';
+      return;
+    }
+    if (mine !== runId) return;
+    await checkAll(list, new AbortController());
+  }
+
+  /**
+   * Shared AI loop: ask the model for fresh labels and DNS-check them,
+   * accumulating into the module-scope aiStates/aiTried until `target` domains
+   * look available or a backstop trips (MAX_ROUNDS requests / MAX_CHECK names
+   * per invocation). Returns false if a newer run superseded this one.
+   */
+  async function runAiRounds(mine: number, controller: AbortController, target: number): Promise<boolean> {
+    const s = aiSettings!;
+    const states = aiStates!;
+    const w = s.word;
+    let checked = 0; // fresh per-invocation budget, so each "Show more" can work
+
+    for (let round = 0; round < MAX_ROUNDS; round++) {
+      if (freeCount(states) >= target || checked >= MAX_CHECK) break;
+
+      let labels: string[];
+      try {
+        labels = await aiNames(s, aiTried);
+      } catch {
+        if (mine !== runId) return false;
+        // First AI call of a fresh run failed — degrade to a single local
+        // pass. Any later failure just stops and keeps what we've found.
+        if (states.size === 0 && round === 0) {
+          const fb = fallbackNames(s);
+          currentLabels = fb;
+          await checkList(states, expand(fb), controller, mine, w);
+        }
+        break;
+      }
+      if (mine !== runId) return false;
+
+      // Only labels we haven't tried yet, expanded to unchecked domains,
+      // trimmed to stay within this invocation's MAX_CHECK budget.
+      const fresh = labels.filter((l) => !aiTried.includes(l));
+      aiTried.push(...fresh);
+      currentLabels = [...aiTried];
+      let list = expand(fresh).filter((d) => !states.has(d));
+      const remaining = MAX_CHECK - checked;
+      if (list.length > remaining) list = list.slice(0, remaining);
+      if (!list.length) continue;
+      checked += list.length;
+
+      await checkList(states, list, controller, mine, w);
+      if (mine !== runId) return false;
+    }
+    return true;
+  }
+
+  /** Settle the AI status line and reveal "Show more" once results exist. */
+  function finishAi() {
+    const states = aiStates!;
+    if (states.size === 0) {
+      out.innerHTML = '';
+      statusEl.textContent = 'No names to check — try a different keyword.';
+      resetAi();
+      return;
+    }
+    moreEl.classList.remove('hidden');
+  }
+
+  /**
+   * AI run: keep asking the model until TARGET (30) domains look available.
+   * Taken names stay visible, dimmed below the available ones. "Show more"
+   * then resumes this same search for another batch.
+   */
+  async function generateAi() {
+    const s = readSettings();
+    if (!s.word) {
+      out.innerHTML = '';
+      currentLabels = [];
+      statusEl.textContent = 'Type a keyword to see available domains.';
+      resetAi();
+      return;
+    }
+    if (active.size === 0) {
+      out.innerHTML = '';
+      statusEl.textContent = 'Pick at least one domain type above.';
+      resetAi();
+      return;
+    }
+
+    const mine = ++runId;
+    aiSettings = s;
+    aiStates = new Map<string, State>();
+    aiTried = [];
+    moreEl.classList.add('hidden');
+
+    const ok = await runAiRounds(mine, new AbortController(), TARGET);
+    if (!ok || mine !== runId) return;
+    finishAi();
+  }
+
+  /** Resume the last AI search, looking for MORE_TARGET additional available names. */
+  async function showMoreAi() {
+    if (!aiStates || !aiSettings) return;
+    const mine = ++runId;
+    moreEl.disabled = true;
+    const target = freeCount(aiStates) + MORE_TARGET;
+    const ok = await runAiRounds(mine, new AbortController(), target);
+    moreEl.disabled = false;
+    if (!ok || mine !== runId) return;
+    finishAi();
+  }
+
+  // ---- TLD filter chips ----
+  const tldsEl = $('dn-tlds')!;
+  function renderChips() {
+    tldsEl.innerHTML = TLDS.map((tld) => {
+      const on = active.has(tld);
+      return `<button type="button" data-tld="${tld}" aria-pressed="${on}"
+        class="rounded-full border px-2.5 py-1 font-mono text-[12px] transition-colors ${
+          on
+            ? 'border-primary/50 bg-primary/15 text-ink'
+            : 'border-hairline text-ink hover:border-hairline-strong'
+        }">.${tld}</button>`;
+    }).join('');
+  }
+  tldsEl.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('button');
+    if (!btn) return;
+    const tld = btn.dataset.tld!;
+    if (active.has(tld)) active.delete(tld);
+    else active.add(tld);
+    renderChips();
+    recheck(); 
+  });
+  $('dn-all').addEventListener('click', () => {
+    TLDS.forEach((t) => active.add(t));
+    renderChips();
+    recheck();
+  });
+  $('dn-none').addEventListener('click', () => {
+    active.clear();
+    renderChips();
+    recheck();
+  });
+  renderChips();
+
+  async function runLocal() {
+    setBusy(genEl, true, 'Checking…');
+    try { await generateLocal(); } finally { setBusy(genEl, false); }
+  }
+  async function runAi() {
+    setBusy(aiGenEl, true, '✦ Generating…');
+    try { await generateAi(); } finally { setBusy(aiGenEl, false); }
+  }
+  $('dn-gen').addEventListener('click', () => runLocal());
+  $('dn-ai-gen').addEventListener('click', () => runAi());
+  moreEl.addEventListener('click', () => showMoreAi());
+  wordEl.addEventListener('keydown', (e) => {
+    if ((e as KeyboardEvent).key === 'Enter') runLocal();
+  });
+
+  if (import.meta.env.DEV) {
+    console.assert(JSON.stringify(parseNames('```json\n["Pixel","pixel.com","a b","zz"]\n```')) === JSON.stringify(['pixel', 'zz']), 'parseNames should clean, dedupe, strip TLDs');
+    console.assert(parseNames('not json').length === 0, 'parseNames tolerates junk');
+  }
+
+  generateLocal(); 
+</script>

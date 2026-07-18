@@ -1,0 +1,101 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="markdown-table-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Rows (+ header)
+        <input id="md-rows" type="number" min="1" max="30" value="3" class="field w-28" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Columns
+        <input id="md-cols" type="number" min="1" max="12" value="3" class="field w-24" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Alignment
+        <select id="md-align" class="field"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select>
+      </label>
+    </div>
+
+    <div class="overflow-auto rounded-md border border-hairline p-3">
+      <table id="md-grid" class="w-full border-collapse text-sm"></table>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <label class="text-sm text-ink-subtle">Markdown output</label>
+      <div class="copy-wrap"><pre class="hl-block field min-h-40" style="resize:vertical;overflow:auto"><code id="md-out" class="hljs" style="background:transparent;padding:0"></code></pre><button type="button" class="copy-icon" data-copy-target="#md-out" aria-label="Copy"></button></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free Markdown table generator turns an editable grid into a clean,
+      aligned Markdown table — the format GitHub, GitLab and most docs tools use.
+      Set the size, type your content, choose column alignment, and copy the
+      result straight into a README or issue. The columns are padded so the raw
+      Markdown stays readable too.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { hl } from '../lib/highlight';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const grid = $('md-grid') as HTMLTableElement;
+  const out = $('md-out') as HTMLElement;
+  let rawOutput = '';
+  let data: string[][] = [];
+
+  function ensureData(rows: number, cols: number) {
+    const next: string[][] = [];
+    for (let r = 0; r < rows; r++) {
+      next[r] = [];
+      for (let c = 0; c < cols; c++) next[r][c] = data[r]?.[c] ?? (r === 0 ? `Header ${c + 1}` : `Cell ${r}`);
+    }
+    data = next;
+  }
+
+  function renderGrid() {
+    grid.innerHTML = '';
+    data.forEach((row, r) => {
+      const tr = document.createElement('tr');
+      row.forEach((val, c) => {
+        const cell = document.createElement('td');
+        cell.contentEditable = 'true';
+        cell.className = 'border border-hairline px-2 py-1 outline-none focus:bg-surface-2 ' + (r === 0 ? 'font-semibold text-ink' : 'text-ink');
+        cell.textContent = val;
+        cell.addEventListener('input', () => { data[r][c] = cell.textContent || ''; buildOut(); });
+        tr.appendChild(cell);
+      });
+      grid.appendChild(tr);
+    });
+  }
+
+  function buildOut() {
+    const align = ($('md-align') as HTMLSelectElement).value;
+    const cols = data[0]?.length ?? 0;
+    const widths: number[] = [];
+    for (let c = 0; c < cols; c++) widths[c] = Math.max(3, ...data.map((r) => (r[c] || '').length));
+    const sep = (c: number) => {
+      const dashes = '-'.repeat(widths[c]);
+      if (align === 'center') return ':' + dashes.slice(1, -1) + ':';
+      if (align === 'right') return dashes.slice(0, -1) + ':';
+      return dashes;
+    };
+    const rowStr = (cells: string[]) => '| ' + cells.map((v, c) => (v || '').padEnd(widths[c])).join(' | ') + ' |';
+    const lines = [rowStr(data[0]), '| ' + widths.map((_, c) => sep(c)).join(' | ') + ' |'];
+    for (let r = 1; r < data.length; r++) lines.push(rowStr(data[r]));
+    rawOutput = lines.join('\n');
+    hl(out, rawOutput, 'markdown');
+  }
+
+  function rebuild() {
+    const rows = Math.max(1, Math.min(30, Number(($('md-rows') as HTMLInputElement).value) || 3));
+    const cols = Math.max(1, Math.min(12, Number(($('md-cols') as HTMLInputElement).value) || 3));
+    ensureData(rows, cols); renderGrid(); buildOut();
+  }
+
+  ['md-rows', 'md-cols'].forEach((id) => $(id).addEventListener('input', rebuild));
+  $('md-align').addEventListener('change', buildOut);
+  rebuild();
+</script>

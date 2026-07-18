@@ -1,0 +1,162 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="oligo-analyzer">
+  <div class="flex flex-col gap-5">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-end">
+      <label class="flex flex-1 flex-col gap-1 text-sm text-ink-subtle">Oligo sequence (5′ → 3′)
+        <textarea id="ol-in" class="field min-h-20 resize-y font-mono text-sm tracking-wider" placeholder="e.g. ATGCGTACCGGTATCGGAATTCGCTAGC" spellcheck="false"></textarea>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Type
+        <select id="ol-type" class="field w-32">
+          <option value="dna">DNA</option>
+          <option value="rna">RNA</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="ol-status" class="hidden rounded-md border px-3 py-2 text-sm"></div>
+
+    <div id="ol-grid" class="grid grid-cols-2 gap-3 sm:grid-cols-3"></div>
+
+    <div id="ol-extra" class="hidden flex-col gap-4">
+      <div class="panel p-4">
+        <div class="eyebrow mb-2">Base composition</div>
+        <div id="ol-comp" class="flex flex-col gap-2"></div>
+      </div>
+      <div class="panel p-4">
+        <div class="eyebrow">Reverse complement (5′ → 3′)</div>
+        <div class="copy-wrap">
+          <p id="ol-revcomp" class="mt-2 break-all font-mono text-sm tracking-wider text-ink"></p>
+          <button type="button" class="copy-icon" data-copy-target="#ol-revcomp" aria-label="Copy"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free oligo analyzer computes the key properties of a DNA or RNA
+      oligonucleotide for PCR primer design and lab work: length, GC content,
+      melting temperature (T<sub>m</sub>) by the basic Wallace rule and a
+      nearest-neighbor-style salt-adjusted estimate, molecular weight, the µg/OD
+      and nmol/OD extinction coefficient, base composition, and the reverse
+      complement. Paste a sequence 5′→3′ and it recalculates instantly.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('ol-in') as HTMLTextAreaElement;
+  const typeEl = document.getElementById('ol-type') as HTMLSelectElement;
+  const status = document.getElementById('ol-status')!;
+  const grid = document.getElementById('ol-grid')!;
+  const extra = document.getElementById('ol-extra')!;
+
+  const DNA_MW: Record<string, number> = { A: 313.21, T: 304.2, C: 289.18, G: 329.21 };
+  const RNA_MW: Record<string, number> = { A: 329.21, U: 306.17, C: 305.18, G: 345.21 };
+
+  const EXT: Record<string, number> = { A: 15400, C: 7400, G: 11500, T: 8700, U: 9900 };
+
+  function showStatus(msg: string) {
+    status.textContent = msg;
+    status.classList.remove('hidden');
+    status.style.borderColor = '#d14d4d';
+    status.style.color = '#e08585';
+  }
+
+  function tile(label: string, value: string, sub = ''): string {
+    return `<div class="panel panel-lift flex flex-col gap-1 p-4">
+      <span class="text-xs text-ink-tertiary">${label}</span>
+      <span class="font-display text-2xl font-semibold text-ink">${value}</span>
+      ${sub ? `<span class="text-xs text-ink-tertiary">${sub}</span>` : ''}
+    </div>`;
+  }
+
+  function bar(base: string, count: number, total: number, color: string): string {
+    const pct = total ? (count / total) * 100 : 0;
+    return `<div class="flex items-center gap-3">
+      <span class="w-6 font-mono text-ink">${base}</span>
+      <div class="h-2 flex-1 overflow-hidden rounded-full bg-surface-3">
+        <div class="h-full rounded-full" style="width:${pct}%;background:${color}"></div>
+      </div>
+      <span class="w-24 text-right text-[13px] text-ink-subtle">${count} · ${pct.toFixed(0)}%</span>
+    </div>`;
+  }
+
+  function analyze() {
+    const isRna = typeEl.value === 'rna';
+    const valid = isRna ? 'ACGU' : 'ACGT';
+    const raw = input.value.toUpperCase().replace(/\s+/g, '');
+    grid.innerHTML = '';
+    extra.classList.add('hidden');
+
+    if (!raw) { status.classList.add('hidden'); return; }
+
+    // Auto-detect a mismatch: T in RNA or U in DNA.
+    const badChars = [...raw].filter((c) => !valid.includes(c));
+    if (badChars.length) {
+      const uniq = [...new Set(badChars)].join(', ');
+      showStatus(`Invalid character(s) for ${isRna ? 'RNA' : 'DNA'}: ${uniq}. Allowed bases: ${valid.split('').join(', ')}.`);
+      return;
+    }
+    status.classList.add('hidden');
+
+    const n = raw.length;
+    const counts: Record<string, number> = {};
+    for (const c of valid) counts[c] = 0;
+    for (const c of raw) counts[c]++;
+
+    const gc = counts['G'] + counts['C'];
+    const gcPct = (gc / n) * 100;
+
+    // Tm: Wallace rule (<14 nt) and salt-adjusted for longer.
+    const at = n - gc;
+    let tmWallace = 2 * at + 4 * gc;
+    let tmSalt = 64.9 + 41 * (gc - 16.4) / n; // Marmur-Doty style approximation
+    const tm = n < 14 ? tmWallace : tmSalt;
+
+    // Molecular weight (ssDNA/ssRNA, minus one phosphate for the free 5'-OH ~ +79 correction).
+    const mwTable = isRna ? RNA_MW : DNA_MW;
+    let mw = 0;
+    for (const c of raw) mw += mwTable[c];
+    mw -= 61.96; // account for removal of HPO2 and addition of H2O across phosphodiester bonds
+
+    // Extinction coefficient (sum of per-base, then hypochromicity ~0.9).
+    let extSum = 0;
+    for (const c of raw) extSum += EXT[c];
+    const extCoef = extSum * 0.9;
+    const ugPerOD = (mw / extCoef) * 1e6; // µg per OD260 unit
+    const nmolPerOD = (1 / extCoef) * 1e9; // nmol per OD260 unit
+
+    grid.innerHTML =
+      tile('Length', `${n} nt`) +
+      tile('GC content', `${gcPct.toFixed(1)}%`) +
+      tile('Tm', `${tm.toFixed(1)} °C`, n < 14 ? 'Wallace rule' : 'Salt-adjusted') +
+      tile('Molecular weight', `${mw.toFixed(1)}`, 'g/mol (ss)') +
+      tile('µg / OD₂₆₀', ugPerOD.toFixed(1)) +
+      tile('nmol / OD₂₆₀', nmolPerOD.toFixed(1));
+
+    const colors: Record<string, string> = { A: '#5e6ad2', C: '#27a644', G: '#e0a055', T: '#d15b8f', U: '#d15b8f' };
+    document.getElementById('ol-comp')!.innerHTML = valid
+      .split('')
+      .map((b) => bar(b, counts[b], n, colors[b]))
+      .join('');
+
+    // Reverse complement.
+    const comp: Record<string, string> = isRna
+      ? { A: 'U', U: 'A', C: 'G', G: 'C' }
+      : { A: 'T', T: 'A', C: 'G', G: 'C' };
+    const revcomp = [...raw].reverse().map((c) => comp[c]).join('');
+    document.getElementById('ol-revcomp')!.textContent = revcomp;
+
+    extra.classList.remove('hidden');
+  }
+
+  input.addEventListener('input', analyze);
+  typeEl.addEventListener('change', analyze);
+
+  input.value = 'ATGCGTACCGGTATCGGAATTCGCTAGC';
+  analyze();
+</script>

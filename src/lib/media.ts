@@ -1,6 +1,6 @@
 
 
-export type OutFamily = 'mp3' | 'aac' | 'ogg' | 'wav' | 'video';
+export type OutFamily = 'mp3' | 'aac' | 'ogg' | 'opus' | 'flac' | 'ac3' | 'aiff' | 'wav' | 'video';
 
 export interface MediaConversion {
   slug: string;
@@ -96,9 +96,17 @@ export function buildArgs(conv: MediaConversion, o: ConvertOptions, input: strin
   } else if (conv.out === 'aac') {
     out.push('-c:a', 'aac', '-b:a', (q || '192') + 'k');
   } else if (conv.out === 'ogg') {
-    out.push('-c:a', 'libvorbis', '-q:a', q || '5'); 
+    out.push('-c:a', 'libvorbis', '-q:a', q || '5');
+  } else if (conv.out === 'opus') {
+    out.push('-c:a', 'libopus', '-b:a', (q || '128') + 'k');
+  } else if (conv.out === 'flac') {
+    out.push('-c:a', 'flac', '-compression_level', q || '5'); // lossless; q = compression level 0–12
+  } else if (conv.out === 'ac3') {
+    out.push('-c:a', 'ac3', '-b:a', (q || '192') + 'k');
+  } else if (conv.out === 'aiff') {
+    out.push('-c:a', q || 'pcm_s16be'); // AIFF is big-endian PCM
   } else if (conv.out === 'wav') {
-    out.push('-c:a', q || 'pcm_s16le'); 
+    out.push('-c:a', q || 'pcm_s16le');
   }
   return [...pre, ...out, output];
 }
@@ -108,6 +116,10 @@ export function defaultQuality(out: OutFamily): string {
     case 'mp3': return 'v2';
     case 'aac': return '192';
     case 'ogg': return '5';
+    case 'opus': return '128';
+    case 'flac': return '5';
+    case 'ac3': return '192';
+    case 'aiff': return 'pcm_s16be';
     case 'wav': return 'pcm_s16le';
     default: return '';
   }

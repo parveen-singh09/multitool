@@ -1,0 +1,391 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="js-beautifier">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <div class="flex gap-2" role="tablist" aria-label="Mode">
+        <button data-mode="beautify" class="jb-tab btn btn-primary" aria-selected="true">Beautify</button>
+        <button data-mode="minify" class="jb-tab btn btn-secondary" aria-selected="false">Minify</button>
+      </div>
+
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        Indent
+        <select id="jb-indent" class="field w-auto py-1">
+          <option value="2">2 spaces</option>
+          <option value="4">4 spaces</option>
+          <option value="tab">Tab</option>
+        </select>
+      </label>
+
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        Quotes
+        <select id="jb-quote" class="field w-auto py-1">
+          <option value="double">Double</option>
+          <option value="single">Single</option>
+        </select>
+      </label>
+
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="jb-semi" type="checkbox" class="accent-primary" checked />
+        Semicolons
+      </label>
+
+      <label class="btn btn-secondary cursor-pointer">
+        Upload
+        <input id="jb-file" type="file" accept=".js,.mjs,.cjs,.jsx,.json,.ts,text/javascript,application/json,text/plain" class="hidden" />
+      </label>
+      <button id="jb-sample" type="button" class="btn btn-tertiary">Sample</button>
+      <button id="jb-clear" type="button" class="btn btn-tertiary">Clear</button>
+    </div>
+
+    <div id="jb-status" class="hidden rounded-md border px-3 py-2 text-sm" role="status"></div>
+
+    <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        <div class="flex h-8 items-center">JavaScript / JSON input</div>
+        <div class="jb-edit-wrap field min-h-80 p-0" style="resize:vertical;overflow:hidden">
+          <pre class="jb-hl hl-block" aria-hidden="true"><code id="jb-in-hl" class="hljs" style="background:transparent"></code></pre>
+          <textarea
+            id="jb-in"
+            spellcheck="false"
+            autocapitalize="off"
+            autocomplete="off"
+            autocorrect="off"
+            placeholder="Paste code, drag a .js file in, or upload…"
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        <div class="flex h-8 items-center justify-between gap-2">
+          <span>Preview</span>
+          <span class="flex items-center gap-2">
+            <span id="jb-stats" class="text-xs text-ink-tertiary"></span>
+            <button id="jb-download" type="button" class="btn btn-secondary py-1">Download</button>
+          </span>
+        </div>
+        <div class="jb-preview-wrap copy-wrap field min-h-80 p-0" style="resize:vertical;overflow:hidden">
+          <button type="button" class="copy-icon" data-copy-target="#jb-out" aria-label="Copy"></button>
+          <div id="jb-preview" class="jb-preview overflow-auto" style="height:100%">
+            <div class="jb-gutter" id="jb-gutter" aria-hidden="true"></div>
+            <pre class="jb-code hl-block" style="margin:0"><code id="jb-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free JavaScript beautifier and minifier reformats code two ways.
+      Beautify runs your code through the Prettier engine to add consistent
+      indentation, line breaks, quote style and spacing — turning minified or
+      messy code into readable, standards-compliant JavaScript. Minify strips
+      comments and unnecessary whitespace to shrink file size while preserving
+      strings, template literals and regular expressions. The live preview is
+      syntax-highlighted with line numbers so you can read the result at a
+      glance. Choose 2-space, 4-space or tab indentation, single or double
+      quotes, and toggle semicolons. Paste text, upload a file, or drag one in,
+      then copy or download the result.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('jb-in') as HTMLTextAreaElement;
+  const inHl = document.getElementById('jb-in-hl')!;
+  const outCode = document.getElementById('jb-out')!;
+  const gutter = document.getElementById('jb-gutter')!;
+  const previewWrap = document.getElementById('jb-preview')!;
+  const indentSel = document.getElementById('jb-indent') as HTMLSelectElement;
+  const quoteSel = document.getElementById('jb-quote') as HTMLSelectElement;
+  const semiChk = document.getElementById('jb-semi') as HTMLInputElement;
+  const stats = document.getElementById('jb-stats')!;
+  const status = document.getElementById('jb-status')!;
+  let mode: 'beautify' | 'minify' = 'beautify';
+  let rawOutput = '';
+
+  function indentInfo() {
+    const v = indentSel.value;
+    return v === 'tab'
+      ? { useTabs: true, tabWidth: 2, unit: '\t' }
+      : { useTabs: false, tabWidth: Number(v), unit: ' '.repeat(Number(v)) };
+  }
+
+  function showStatus(msg: string, ok: boolean) {
+    status.textContent = msg;
+    status.classList.remove('hidden');
+    status.style.borderColor = ok ? '#27a644' : '#d14d4d';
+    status.style.color = ok ? '#27a644' : '#e08585';
+  }
+
+  let prettier: any = null;
+  let prettierPlugins: any[] = [];
+  let hljs: any = null;
+  let loading: Promise<void> | null = null;
+  function loadEngines() {
+    if (prettier && hljs) return Promise.resolve();
+    if (loading) return loading;
+    loading = Promise.all([
+      import('prettier/standalone'),
+      import('prettier/plugins/babel'),
+      import('prettier/plugins/estree'),
+      import('highlight.js/lib/core'),
+      import('highlight.js/lib/languages/javascript'),
+    ]).then(([p, babel, estree, core, js]) => {
+      prettier = (p as any).default ?? p;
+      prettierPlugins = [(babel as any).default ?? babel, (estree as any).default ?? estree];
+      hljs = (core as any).default ?? core;
+      hljs.registerLanguage('javascript', (js as any).default ?? js);
+    });
+    return loading;
+  }
+
+  function tokenize(src: string): { t: 'code' | 'str' | 'comment'; v: string }[] {
+    const out: { t: 'code' | 'str' | 'comment'; v: string }[] = [];
+    let i = 0;
+    let prevSignificant = '';
+    while (i < src.length) {
+      const c = src[i];
+      const two = src.slice(i, i + 2);
+      if (two === '//') { let j = i + 2; while (j < src.length && src[j] !== '\n') j++; out.push({ t: 'comment', v: src.slice(i, j) }); i = j; continue; }
+      if (two === '/*') { let j = i + 2; while (j < src.length && src.slice(j, j + 2) !== '*/') j++; j += 2; out.push({ t: 'comment', v: src.slice(i, j) }); i = j; continue; }
+      if (c === '"' || c === "'" || c === '`') {
+        let j = i + 1; while (j < src.length && src[j] !== c) { if (src[j] === '\\') j++; j++; }
+        out.push({ t: 'str', v: src.slice(i, j + 1) }); i = j + 1; prevSignificant = 'str'; continue;
+      }
+      if (c === '/' && /^$|[=(\[{,;:!&|?+\-*%^~<>]|return|typeof|case|in|of|do|else/.test(prevSignificant)) {
+        let j = i + 1, inClass = false;
+        while (j < src.length && (src[j] !== '/' || inClass)) { if (src[j] === '\\') j++; else if (src[j] === '[') inClass = true; else if (src[j] === ']') inClass = false; j++; }
+        j++; while (j < src.length && /[a-z]/i.test(src[j])) j++;
+        out.push({ t: 'code', v: src.slice(i, j) }); i = j; prevSignificant = 'regex'; continue;
+      }
+      out.push({ t: 'code', v: c });
+      if (!/\s/.test(c)) prevSignificant = /[a-zA-Z0-9_$]/.test(c) ? (prevSignificant.match(/[a-z]+$/i) ? prevSignificant + c : c) : c;
+      i++;
+    }
+    return out;
+  }
+
+  function squeeze(toks: { t: string; v: string }[]): string {
+    let out = '';
+    let pending = '';
+    const flush = () => {
+      let s = pending.replace(/[ \t\r\n]+/g, ' ');
+      s = s.replace(/\s*([{}()\[\];,:<>=+\-*/%&|!?~^])\s*/g, '$1');
+      out += s; pending = '';
+    };
+    for (const tk of toks) {
+      if (tk.t === 'comment') continue;
+      if (tk.t === 'str' || (tk.t === 'code' && tk.v.length > 1)) { flush(); out += tk.v; }
+      else pending += tk.v;
+    }
+    flush();
+    return out.trim();
+  }
+
+  function fallbackBeautify(src: string): string {
+    const ind = indentInfo().unit;
+    const toks = tokenize(src);
+    let level = 0;
+    let out = '';
+    let atLineStart = true;
+    const push = (s: string) => { out += s; atLineStart = false; };
+    const newline = () => { out = out.replace(/[ \t]+$/, ''); out += '\n' + ind.repeat(Math.max(0, level)); atLineStart = true; };
+    for (const tk of toks) {
+      if (tk.t === 'str') { push(tk.v); continue; }
+      if (tk.t === 'comment') { if (!atLineStart) push(' '); push(tk.v); if (tk.v.startsWith('//')) newline(); continue; }
+      if (tk.v.length > 1) { push(tk.v); continue; }
+      const c = tk.v;
+      if (/\s/.test(c)) { if (!atLineStart && !/\s$/.test(out)) push(' '); continue; }
+      if (c === '{') { push(' {'); level++; newline(); }
+      else if (c === '}') { level--; if (!atLineStart) newline(); out = out.replace(/\n(\s*)$/, ''); newline(); push('}'); }
+      else if (c === ';') { push(';'); newline(); }
+      else { if (atLineStart) out = out.replace(/[ ]+$/, ''); push(c); }
+    }
+    return out.split('\n').map((l) => l.replace(/\s+$/, '')).filter((l, i, a) => !(l === '' && a[i - 1] === '')).join('\n').trim();
+  }
+
+  async function beautify(src: string): Promise<string> {
+    const { useTabs, tabWidth } = indentInfo();
+    try {
+      return (await prettier.format(src, {
+        parser: 'babel',
+        plugins: prettierPlugins,
+        useTabs,
+        tabWidth,
+        singleQuote: quoteSel.value === 'single',
+        semi: semiChk.checked,
+      })).replace(/\n$/, '');
+    } catch (e) {
+
+      showStatus(`Formatted with fallback (Prettier couldn't parse: ${(e as Error).message.split('\n')[0]})`, false);
+      return fallbackBeautify(src);
+    }
+  }
+
+  function renderPreview(code: string) {
+    rawOutput = code;
+    outCode.innerHTML = hljs.highlight(code, { language: 'javascript', ignoreIllegal: true }).value;
+    const lineCount = code.length ? code.split('\n').length : 0;
+    gutter.textContent = Array.from({ length: lineCount }, (_, i) => i + 1).join('\n');
+  }
+
+  // Highlight the input by mirroring its text into an underlaid <pre>. The
+  // textarea sits transparent on top so the caret and selection stay native.
+  function highlightInput() {
+    const code = input.value;
+    if (hljs) inHl.innerHTML = hljs.highlight(code, { language: 'javascript', ignoreIllegal: true }).value;
+    else inHl.textContent = code;
+    // trailing newline needs a placeholder so the <pre> height matches the textarea
+    if (code.endsWith('\n')) inHl.innerHTML += '\n';
+    inHl.parentElement!.scrollTop = input.scrollTop;
+    inHl.parentElement!.scrollLeft = input.scrollLeft;
+  }
+  input.addEventListener('scroll', () => {
+    inHl.parentElement!.scrollTop = input.scrollTop;
+    inHl.parentElement!.scrollLeft = input.scrollLeft;
+  });
+
+  async function run() {
+    const src = input.value;
+    if (!src.trim()) { renderPreview(''); highlightInput(); stats.textContent = ''; status.classList.add('hidden'); return; }
+    await loadEngines();
+    highlightInput();
+    status.classList.add('hidden');
+    let result: string;
+    if (mode === 'minify') result = squeeze(tokenize(src));
+    else result = await beautify(src);
+    renderPreview(result);
+    const before = src.length, after = result.length;
+    if (mode === 'minify' && before) {
+      stats.textContent = `${before} → ${after} chars (${Math.round((1 - after / before) * 100)}% smaller)`;
+    } else {
+      stats.textContent = `${after} chars · ${result.split('\n').length} lines`;
+    }
+  }
+
+  // Highlight the input immediately on every keystroke; debounce the (heavier)
+  // Prettier/minify pass that feeds the output preview.
+  let timer: number;
+  input.addEventListener('input', () => {
+    highlightInput();
+    clearTimeout(timer); timer = window.setTimeout(run, 250);
+  });
+  indentSel.addEventListener('change', run);
+  quoteSel.addEventListener('change', run);
+  semiChk.addEventListener('change', run);
+
+  document.querySelectorAll<HTMLButtonElement>('.jb-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      mode = tab.dataset.mode as typeof mode;
+      document.querySelectorAll('.jb-tab').forEach((t) => {
+        const active = t === tab;
+        t.setAttribute('aria-selected', String(active));
+        t.classList.toggle('btn-primary', active);
+        t.classList.toggle('btn-secondary', !active);
+      });
+      run();
+    });
+  });
+
+  document.getElementById('jb-download')!.addEventListener('click', () => {
+    if (!rawOutput) return;
+    const name = mode === 'minify' ? 'script.min.js' : 'script.js';
+    const blob = new Blob([rawOutput], { type: 'text/javascript' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById('jb-clear')!.addEventListener('click', () => {
+    input.value = ''; run();
+  });
+
+  const fileInput = document.getElementById('jb-file') as HTMLInputElement;
+  async function loadFile(file: File) { input.value = await file.text(); run(); }
+  fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) loadFile(fileInput.files[0]); });
+  input.addEventListener('dragover', (e) => e.preventDefault());
+  input.addEventListener('drop', (e) => {
+    const file = (e as DragEvent).dataTransfer?.files?.[0];
+    if (file) { e.preventDefault(); loadFile(file); }
+  });
+
+  const SAMPLE = 'function greet(name){const msg="Hello, "+name+"!";if(name){console.log(msg)}return msg}';
+  document.getElementById('jb-sample')!.addEventListener('click', () => { input.value = SAMPLE; run(); });
+
+  input.value = SAMPLE;
+  run();
+</script>
+
+<style is:global>
+  .jb-preview {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .jb-edit-wrap {
+    position: relative;
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 13px;
+    line-height: 1.55;
+    tab-size: 2;
+  }
+  .jb-edit-wrap > .jb-hl,
+  .jb-edit-wrap > textarea {
+    margin: 0;
+    padding: 0.75rem;
+    border: 0;
+    font: inherit;
+    tab-size: inherit;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  .jb-edit-wrap > .jb-hl {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    background: transparent;
+  }
+  .jb-edit-wrap > .jb-hl code { background: transparent; padding: 0; }
+  .jb-edit-wrap > textarea {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    resize: none;
+    overflow: auto;
+    background: transparent;
+    color: transparent;
+    caret-color: var(--color-ink);
+    outline: none;
+  }
+  .jb-edit-wrap > textarea::selection { background: color-mix(in srgb, var(--color-primary) 35%, transparent); }
+  .jb-gutter {
+    position: sticky;
+    left: 0;
+    padding: 0.75rem 0.6rem 0.75rem 0.75rem;
+    text-align: right;
+    color: var(--color-ink-tertiary);
+    background: var(--color-surface-2);
+    border-right: 1px solid var(--color-hairline);
+    white-space: pre;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .jb-code {
+    padding: 0.75rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+</style>

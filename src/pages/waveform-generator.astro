@@ -1,0 +1,241 @@
+?---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="waveform-generator">
+  <div class="flex flex-col gap-4">
+    <label id="wf-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose an audio file or drop it here</span>
+      <input id="wf-file" type="file" accept="audio/*" class="sr-only" />
+    </label>
+
+    <div id="wf-panel" class="hidden flex-col gap-4">
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Style
+          <select id="wf-style" class="field"><option value="bars">Bars</option><option value="filled">Filled</option><option value="line">Line</option></select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Wave color
+          <input id="wf-color" type="color" value="#5e6ad2" class="field h-10 cursor-pointer p-1" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Gradient to
+          <input id="wf-color2" type="color" value="#828fff" class="field h-10 cursor-pointer p-1" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Background
+          <input id="wf-bg" type="color" value="#010102" class="field h-10 cursor-pointer p-1" />
+        </label>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Width (px)
+          <input id="wf-w" type="number" min="200" max="4000" step="20" value="1200" class="field" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Height (px)
+          <input id="wf-h" type="number" min="60" max="1200" step="10" value="300" class="field" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Bars: <span id="wf-barsval" class="text-ink">800</span>
+          <input id="wf-bars" type="range" min="60" max="2000" step="20" value="800" class="w-full accent-primary" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Bar gap: <span id="wf-gapval" class="text-ink">1px</span>
+          <input id="wf-gap" type="range" min="0" max="10" step="1" value="1" class="w-full accent-primary" />
+        </label>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-4">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Preset size
+          <select id="wf-preset" class="field w-48">
+            <option value="">Custom</option>
+            <option value="1200x300" selected>Banner 1200×300</option>
+            <option value="1080x1080">Square 1080×1080</option>
+            <option value="1080x1920">Story 1080×1920</option>
+            <option value="1280x720">16:9 1280×720</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Export scale
+          <select id="wf-scale" class="field w-32"><option value="1">1×</option><option value="2" selected>2× (retina)</option><option value="3">3×</option></select>
+        </label>
+        <label class="flex items-center gap-2 pt-6 text-sm text-ink-subtle"><input id="wf-mirror" type="checkbox" checked class="accent-primary" /> Mirror</label>
+        <label class="flex items-center gap-2 pt-6 text-sm text-ink-subtle"><input id="wf-transparent" type="checkbox" class="accent-primary" /> Transparent bg</label>
+        <label class="flex items-center gap-2 pt-6 text-sm text-ink-subtle"><input id="wf-vgrad" type="checkbox" class="accent-primary" /> Vertical gradient</label>
+      </div>
+
+      <p id="wf-status" class="text-[13px] text-ink-subtle"></p>
+      <div class="overflow-auto rounded-lg border border-hairline p-2">
+        <canvas id="wf-canvas" class="w-full"></canvas>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button id="wf-dl" class="btn btn-primary">Download PNG</button>
+        <button id="wf-dl-svg" class="btn btn-secondary">Download SVG</button>
+      </div>
+    </div>
+    <p id="wf-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free waveform generator renders any audio file as a clean waveform
+      image. Load an MP3, WAV, OGG or M4A and control everything: bars, filled or
+      a single line; a solid color or a gradient between two colors; exact width
+      and height with social presets; bar count and gap; a mirrored (center-line)
+      look; and a transparent background. Export a crisp PNG at up to 3× for
+      retina and print, or a scalable SVG you can edit in any vector tool. The
+      audio is decoded with the Web Audio API.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)! as HTMLInputElement;
+  const el = (id: string) => document.getElementById(id)!;
+  const fileInput = $('wf-file');
+  const drop = el('wf-drop');
+  const panel = el('wf-panel');
+  const canvas = el('wf-canvas') as HTMLCanvasElement;
+  const err = el('wf-error');
+  let peaks: number[] = [];
+
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+  const opt = {
+    w: () => Math.max(200, Number($('wf-w').value) || 1200),
+    h: () => Math.max(60, Number($('wf-h').value) || 300),
+    bars: () => Math.max(20, Number($('wf-bars').value) || 800),
+    gap: () => Math.max(0, Number($('wf-gap').value) || 0),
+    color: () => $('wf-color').value,
+    color2: () => $('wf-color2').value,
+    bg: () => $('wf-bg').value,
+    style: () => (el('wf-style') as HTMLSelectElement).value,
+    mirror: () => $('wf-mirror').checked,
+    transparent: () => $('wf-transparent').checked,
+    vgrad: () => $('wf-vgrad').checked,
+  };
+
+  async function load(file: File) {
+    setErr(''); el('wf-status').textContent = 'Decoding audio…';
+    try {
+      const ac = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const buf = await ac.decodeAudioData(await file.arrayBuffer());
+      const data = buf.getChannelData(0);
+      computePeaks(data);
+      panel.classList.remove('hidden'); panel.classList.add('flex');
+      el('wf-status').textContent = `${file.name} · ${buf.duration.toFixed(1)}s`;
+      draw();
+    } catch {
+      setErr('Could not decode that audio file.');
+    }
+  }
+
+  // Keep the decoded samples so the bar count can be re-bucketed without re-decoding.
+  let rawData: Float32Array | null = null;
+  function computePeaks(data: Float32Array) {
+    rawData = data;
+    resample();
+  }
+  function resample() {
+    if (!rawData) return;
+    const buckets = opt.bars();
+    const block = Math.floor(rawData.length / buckets) || 1;
+    peaks = [];
+    for (let i = 0; i < buckets; i++) {
+      let max = 0;
+      for (let j = 0; j < block; j++) { const v = Math.abs(rawData[i * block + j] || 0); if (v > max) max = v; }
+      peaks.push(max);
+    }
+  }
+
+  function fillStyleFor(ctx: CanvasRenderingContext2D, W: number, H: number): string | CanvasGradient {
+    const c1 = opt.color(), c2 = opt.color2();
+    if (c1.toLowerCase() === c2.toLowerCase()) return c1;
+    const g = opt.vgrad() ? ctx.createLinearGradient(0, 0, 0, H) : ctx.createLinearGradient(0, 0, W, 0);
+    g.addColorStop(0, c1); g.addColorStop(1, c2);
+    return g;
+  }
+
+  function draw() {
+    const scale = Number((el('wf-scale') as HTMLSelectElement).value) || 1;
+    const W = opt.w() * scale, H = opt.h() * scale;
+    canvas.width = W; canvas.height = H;
+    canvas.style.aspectRatio = `${opt.w()} / ${opt.h()}`;
+    const ctx = canvas.getContext('2d')!;
+    const mid = opt.mirror() ? H / 2 : H;
+    ctx.clearRect(0, 0, W, H);
+    if (!opt.transparent()) { ctx.fillStyle = opt.bg(); ctx.fillRect(0, 0, W, H); }
+    const paint = fillStyleFor(ctx, W, H);
+    ctx.fillStyle = paint; ctx.strokeStyle = paint as string; ctx.lineWidth = 2 * scale;
+    const n = peaks.length, slot = W / n, gap = opt.gap() * scale;
+    const style = opt.style();
+
+    if (style === 'line') {
+      ctx.beginPath();
+      peaks.forEach((p, i) => { const y = mid - p * (opt.mirror() ? mid : H); i === 0 ? ctx.moveTo(0, y) : ctx.lineTo(i * slot, y); });
+      ctx.stroke();
+    } else {
+      peaks.forEach((p, i) => {
+        const bw = Math.max(1, slot - gap);
+        if (opt.mirror()) {
+          const h = Math.max(1, p * mid);
+          ctx.fillRect(i * slot, mid - h, bw, h * 2);
+        } else {
+          const h = Math.max(1, p * H);
+          ctx.fillRect(i * slot, H - h, bw, h);
+        }
+      });
+    }
+  }
+
+  function toSvg(): string {
+    const W = opt.w(), H = opt.h(), mid = opt.mirror() ? H / 2 : H;
+    const n = peaks.length, slot = W / n, gap = opt.gap();
+    const style = opt.style();
+    const c1 = opt.color(), c2 = opt.color2();
+    const useGrad = c1.toLowerCase() !== c2.toLowerCase();
+    const fill = useGrad ? 'url(#g)' : c1;
+    let defs = '';
+    if (useGrad) {
+      const coords = opt.vgrad() ? 'x1="0" y1="0" x2="0" y2="1"' : 'x1="0" y1="0" x2="1" y2="0"';
+      defs = `<defs><linearGradient id="g" ${coords}><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>`;
+    }
+    const bgRect = opt.transparent() ? '' : `<rect width="${W}" height="${H}" fill="${opt.bg()}"/>`;
+    let body = '';
+    if (style === 'line') {
+      const pts = peaks.map((p, i) => `${(i * slot).toFixed(1)},${(mid - p * (opt.mirror() ? mid : H)).toFixed(1)}`).join(' ');
+      body = `<polyline points="${pts}" fill="none" stroke="${fill}" stroke-width="2"/>`;
+    } else {
+      const bw = Math.max(1, slot - gap);
+      body = peaks.map((p, i) => {
+        if (opt.mirror()) { const h = Math.max(1, p * mid); return `<rect x="${(i * slot).toFixed(1)}" y="${(mid - h).toFixed(1)}" width="${bw.toFixed(1)}" height="${(h * 2).toFixed(1)}" fill="${fill}"/>`; }
+        const h = Math.max(1, p * H); return `<rect x="${(i * slot).toFixed(1)}" y="${(H - h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${fill}"/>`;
+      }).join('');
+    }
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${defs}${bgRect}${body}</svg>`;
+  }
+
+  // Preset applies width/height then redraws.
+  el('wf-preset').addEventListener('change', () => {
+    const v = (el('wf-preset') as HTMLSelectElement).value;
+    if (v) { const [w, h] = v.split('x'); $('wf-w').value = w; $('wf-h').value = h; }
+    peaks.length && draw();
+  });
+  $('wf-bars').addEventListener('input', () => { el('wf-barsval').textContent = $('wf-bars').value; resample(); peaks.length && draw(); });
+  $('wf-gap').addEventListener('input', () => { el('wf-gapval').textContent = $('wf-gap').value + 'px'; peaks.length && draw(); });
+  ['wf-color', 'wf-color2', 'wf-bg', 'wf-style', 'wf-mirror', 'wf-transparent', 'wf-vgrad', 'wf-w', 'wf-h', 'wf-scale'].forEach((id) =>
+    el(id).addEventListener('input', () => peaks.length && draw()));
+
+  fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) load(fileInput.files[0]); });
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) load(f); });
+
+  el('wf-dl').addEventListener('click', () => {
+    const a = document.createElement('a'); a.href = canvas.toDataURL('image/png'); a.download = 'waveform.png'; a.click();
+  });
+  el('wf-dl-svg').addEventListener('click', () => {
+    const blob = new Blob([toSvg()], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'waveform.svg'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+</script>

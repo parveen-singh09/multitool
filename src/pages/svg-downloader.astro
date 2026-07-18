@@ -1,0 +1,615 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="svg-downloader">
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+
+    <div class="flex flex-col gap-4">
+
+      <div
+        id="svgd-drop"
+        class="panel flex cursor-pointer flex-col items-center justify-center gap-2 border border-dashed border-hairline-strong px-6 py-8 text-center text-sm text-ink-subtle transition-colors hover:bg-surface-2"
+        role="button"
+        tabindex="0"
+      >
+        <span class="text-ink">Drop SVG files here, or click to browse</span>
+        <span class="text-[13px]">You can add many at once</span>
+        <input id="svgd-file" type="file" accept=".svg,image/svg+xml" multiple class="hidden" />
+      </div>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        …or paste SVG markup
+        <div class="flex gap-2">
+          <textarea id="svgd-input" class="field min-h-24 flex-1 resize-y font-mono text-[13px]" placeholder="Paste your SVG markup here" spellcheck="false"></textarea>
+          <button id="svgd-add" class="btn btn-secondary self-start">Add</button>
+        </div>
+      </label>
+
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        …or fetch from a URL
+        <div class="flex flex-wrap gap-2">
+          <input id="svgd-url" type="url" class="field min-w-48 flex-1" placeholder="https://example.com/icon.svg — or any page URL" />
+          <button id="svgd-fetch" class="btn btn-secondary">Fetch SVG</button>
+          <button id="svgd-scan" class="btn btn-secondary">Scan page</button>
+        </div>
+        <span class="text-[13px] text-ink-tertiary">Fetched through a public proxy, so the URL is visible to that service. Nothing else leaves your browser.</span>
+      </div>
+
+      <p id="svgd-status" class="hidden text-[13px] text-ink-subtle" role="status"></p>
+      <p id="svgd-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+      <div id="svgd-batchbar" class="hidden flex-wrap items-center gap-2 text-[13px] text-ink-subtle">
+        <span id="svgd-count"></span>
+        <span class="flex-1"></span>
+        <button id="svgd-selall" class="btn btn-secondary">Select all</button>
+        <button id="svgd-selnone" class="btn btn-secondary">Deselect all</button>
+        <button id="svgd-zip" class="btn btn-primary">Download selected as ZIP</button>
+        <button id="svgd-clear" class="btn btn-secondary">Clear</button>
+      </div>
+
+      <div id="svgd-items" class="grid grid-cols-2 gap-3 sm:grid-cols-3"></div>
+    </div>
+
+    <div class="flex h-max flex-col gap-4 panel p-4">
+      <h2 class="font-display text-[15px] font-medium text-ink">Export options</h2>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Save as
+        <select id="svgd-format" class="field">
+          <option value="svg">SVG (original)</option>
+          <option value="png">PNG image</option>
+          <option value="ico">ICO favicon (16/32/48)</option>
+        </select>
+      </label>
+
+      <label id="svgd-width-row" class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Width (px)
+        <input id="svgd-width" type="number" min="1" max="8192" value="512" class="field" />
+      </label>
+
+      <label id="svgd-bg-row" class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Background
+        <select id="svgd-bg" class="field">
+          <option value="transparent">Transparent</option>
+          <option value="#ffffff">White</option>
+          <option value="#000000">Black</option>
+        </select>
+      </label>
+
+      <p class="text-[13px] leading-relaxed text-ink-subtle">
+        Options apply to every download. Add several files, then grab them all as a ZIP.
+      </p>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free SVG downloader lets you drop or paste one or many SVGs, preview each with
+      its dimensions, file size and element count, then save them as the original
+      <code>.svg</code>, rasterize to a PNG at any width, or build a multi-size
+      <code>.ico</code> favicon (16, 32 and 48&nbsp;px). Choose a transparent, white or
+      black background for raster output, and download a whole batch as a single ZIP.
+      You can also fetch an SVG straight from a URL, or scan any webpage to pull out
+      every SVG on it — both inline <code>&lt;svg&gt;</code> markup and linked
+      <code>.svg</code> files. Parsing, conversion and ZIP packaging all happen in
+      your browser; only remote URLs are retrieved through a public proxy so the
+      browser can reach across domains.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  type Item = { id: number; svg: string; name: string; selected: boolean };
+
+  const dropZone = document.getElementById('svgd-drop') as HTMLDivElement;
+  const fileInput = document.getElementById('svgd-file') as HTMLInputElement;
+  const input = document.getElementById('svgd-input') as HTMLTextAreaElement;
+  const addBtn = document.getElementById('svgd-add') as HTMLButtonElement;
+  const urlEl = document.getElementById('svgd-url') as HTMLInputElement;
+  const fetchBtn = document.getElementById('svgd-fetch') as HTMLButtonElement;
+  const scanBtn = document.getElementById('svgd-scan') as HTMLButtonElement;
+  const statusEl = document.getElementById('svgd-status') as HTMLParagraphElement;
+  const err = document.getElementById('svgd-error') as HTMLParagraphElement;
+  const itemsEl = document.getElementById('svgd-items') as HTMLDivElement;
+  const batchbar = document.getElementById('svgd-batchbar') as HTMLDivElement;
+  const countEl = document.getElementById('svgd-count') as HTMLSpanElement;
+  const formatEl = document.getElementById('svgd-format') as HTMLSelectElement;
+  const widthEl = document.getElementById('svgd-width') as HTMLInputElement;
+  const widthRow = document.getElementById('svgd-width-row') as HTMLLabelElement;
+  const bgEl = document.getElementById('svgd-bg') as HTMLSelectElement;
+  const bgRow = document.getElementById('svgd-bg-row') as HTMLLabelElement;
+
+  let items: Item[] = [];
+  let nextId = 1;
+
+  function showError(msg: string): void {
+    err.textContent = msg;
+    err.classList.remove('hidden');
+  }
+  function clearError(): void {
+    err.classList.add('hidden');
+  }
+  function showStatus(msg: string): void {
+    statusEl.textContent = msg;
+    statusEl.classList.toggle('hidden', !msg);
+  }
+
+  function normalizeSvg(text: string): string | null {
+    const trimmed = text.trim();
+    if (!trimmed) return null;
+    const doc = new DOMParser().parseFromString(trimmed, 'image/svg+xml');
+    if (doc.querySelector('parsererror')) return null;
+    const svg = doc.querySelector('svg');
+    if (!svg) return null;
+    return new XMLSerializer().serializeToString(svg);
+  }
+
+  function svgMeta(svgStr: string) {
+    const doc = new DOMParser().parseFromString(svgStr, 'image/svg+xml');
+    const svg = doc.querySelector('svg')!;
+    const elements = svg.getElementsByTagName('*').length;
+    let w = Number(svg.getAttribute('width')) || 0;
+    let h = Number(svg.getAttribute('height')) || 0;
+    if (!w || !h) {
+      const vb = (svg.getAttribute('viewBox') || '').split(/[\s,]+/).map(Number);
+      if (vb.length === 4) {
+        w = w || vb[2];
+        h = h || vb[3];
+      }
+    }
+    const bytes = new Blob([svgStr]).size;
+    return { w, h, elements, bytes };
+  }
+
+  function fmtBytes(n: number): string {
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  function addSvg(svgStr: string, name: string): void {
+    const clean = normalizeSvg(svgStr);
+    if (!clean) {
+      showError(`"${name}" does not look like valid SVG markup.`);
+      return;
+    }
+    clearError();
+    items.push({ id: nextId++, svg: clean, name: baseName(name), selected: true });
+    render();
+  }
+
+  function baseName(name: string): string {
+    return (name || 'image').replace(/\.svg$/i, '').replace(/[^a-z0-9_-]+/gi, '-') || 'image';
+  }
+
+  function render(): void {
+    itemsEl.innerHTML = '';
+    for (const it of items) {
+      const meta = svgMeta(it.svg);
+      const card = document.createElement('div');
+      card.className = 'panel panel-lift flex flex-col gap-2 p-2 text-[12px] text-ink-subtle';
+      card.innerHTML = `
+        <div class="flex aspect-square w-full items-center justify-center overflow-hidden rounded-sm bg-surface-2 p-3 [&_svg]:max-h-full [&_svg]:max-w-full">${it.svg}</div>
+        <label class="flex items-center gap-1.5 text-ink">
+          <input type="checkbox" data-sel="${it.id}" ${it.selected ? 'checked' : ''} />
+          <input class="field flex-1 !py-1 text-[12px]" data-name="${it.id}" value="${it.name}" />
+        </label>
+        <div class="leading-snug">${meta.w || '?'}×${meta.h || '?'} · ${fmtBytes(meta.bytes)} · ${meta.elements} el.</div>
+        <div class="flex gap-1">
+          <button class="btn btn-secondary flex-1 !px-2 !py-1 text-[12px]" data-dl="${it.id}">Download</button>
+          <button class="btn btn-secondary !px-2 !py-1 text-[12px]" data-code="${it.id}">Copy</button>
+          <button class="btn btn-secondary !px-2 !py-1 text-[12px]" data-rm="${it.id}">✕</button>
+        </div>`;
+      itemsEl.appendChild(card);
+    }
+    countEl.textContent = `${items.length} SVG${items.length === 1 ? '' : 's'} · ${items.filter((i) => i.selected).length} selected`;
+    batchbar.classList.toggle('hidden', items.length === 0);
+    batchbar.classList.toggle('flex', items.length > 0);
+  }
+
+  // ── Export helpers ──────────────────────────────────────────────
+
+  function triggerDownload(blob: Blob, filename: string): void {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.download = filename;
+    a.href = url;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // Rasterize an SVG string to a canvas at the given width (height keeps aspect,
+  // unless `square` forces a WxW canvas — used for favicons).
+  function rasterize(svgStr: string, targetW: number, square = false): Promise<HTMLCanvasElement> {
+    return new Promise((resolve, reject) => {
+      const blob = new Blob([svgStr], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        const ratio = img.height && img.width ? img.height / img.width : 1;
+        const canvas = document.createElement('canvas');
+        canvas.width = targetW;
+        canvas.height = square ? targetW : Math.max(1, Math.round(targetW * ratio));
+        const ctx = canvas.getContext('2d');
+        URL.revokeObjectURL(url);
+        if (!ctx) return reject(new Error('no canvas'));
+        if (bgEl.value !== 'transparent') {
+          ctx.fillStyle = bgEl.value;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('rasterize failed'));
+      };
+      img.src = url;
+    });
+  }
+
+  function canvasToPng(canvas: HTMLCanvasElement): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/png');
+    });
+  }
+
+  // Build a .ico from PNG entries at 16/32/48 px. ICO wraps raw PNG data.
+  async function buildIco(svgStr: string): Promise<Blob> {
+    const sizes = [16, 32, 48];
+    const pngs = await Promise.all(
+      sizes.map(async (s) => {
+        const canvas = await rasterize(svgStr, s, true);
+        return new Uint8Array(await (await canvasToPng(canvas)).arrayBuffer());
+      })
+    );
+    const header = 6 + pngs.length * 16;
+    let offset = header;
+    const dir: number[] = [];
+    for (let i = 0; i < pngs.length; i++) {
+      const s = sizes[i];
+      dir.push(s >= 256 ? 0 : s, s >= 256 ? 0 : s, 0, 0, 1, 0, 32, 0);
+      const len = pngs[i].length;
+      pushU32(dir, len);
+      pushU32(dir, offset);
+      offset += len;
+    }
+    const out = new Uint8Array(offset);
+    // ICONDIR: reserved=0, type=1 (icon), count
+    out.set([0, 0, 1, 0, pngs.length & 0xff, (pngs.length >> 8) & 0xff], 0);
+    out.set(dir, 6);
+    let o = header;
+    for (const p of pngs) {
+      out.set(p, o);
+      o += p.length;
+    }
+    return new Blob([out], { type: 'image/x-icon' });
+  }
+
+  function pushU32(arr: number[], n: number): void {
+    arr.push(n & 0xff, (n >>> 8) & 0xff, (n >>> 16) & 0xff, (n >>> 24) & 0xff);
+  }
+
+  // Produce the export blob + extension for one item, honoring the format select.
+  async function exportItem(it: Item): Promise<{ blob: Blob; ext: string }> {
+    const fmt = formatEl.value;
+    if (fmt === 'svg') return { blob: new Blob([it.svg], { type: 'image/svg+xml' }), ext: 'svg' };
+    const width = Math.max(1, Math.min(8192, Number(widthEl.value) || 512));
+    if (fmt === 'ico') return { blob: await buildIco(it.svg), ext: 'ico' };
+    const png = await canvasToPng(await rasterize(it.svg, width));
+    return { blob: png, ext: 'png' };
+  }
+
+  async function downloadItem(it: Item): Promise<void> {
+    try {
+      const { blob, ext } = await exportItem(it);
+      triggerDownload(blob, `${it.name}.${ext}`);
+    } catch {
+      showError(`Could not export "${it.name}".`);
+    }
+  }
+
+  // ── Store-only ZIP (no compression, no dependency) ──────────────
+  // ponytail: store-only zip; PNG/ICO/SVG are already compact enough. Add DEFLATE only if archive size matters.
+
+  function crc32(bytes: Uint8Array): number {
+    let crc = ~0;
+    for (let i = 0; i < bytes.length; i++) {
+      crc ^= bytes[i];
+      for (let j = 0; j < 8; j++) crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
+    }
+    return ~crc >>> 0;
+  }
+
+  async function buildZip(entries: { name: string; data: Uint8Array }[]): Promise<Blob> {
+    const chunks: Uint8Array[] = [];
+    const central: Uint8Array[] = [];
+    let offset = 0;
+    const enc = new TextEncoder();
+
+    for (const e of entries) {
+      const nameBytes = enc.encode(e.name);
+      const crc = crc32(e.data);
+      const size = e.data.length;
+
+      const local = new Uint8Array(30 + nameBytes.length);
+      const lv = new DataView(local.buffer);
+      lv.setUint32(0, 0x04034b50, true); // local file header sig
+      lv.setUint16(4, 20, true); // version needed
+      lv.setUint16(6, 0, true); // flags
+      lv.setUint16(8, 0, true); // method = store
+      lv.setUint32(14, crc, true);
+      lv.setUint32(18, size, true); // compressed size
+      lv.setUint32(22, size, true); // uncompressed size
+      lv.setUint16(26, nameBytes.length, true);
+      local.set(nameBytes, 30);
+      chunks.push(local, e.data);
+
+      const cen = new Uint8Array(46 + nameBytes.length);
+      const cv = new DataView(cen.buffer);
+      cv.setUint32(0, 0x02014b50, true); // central dir sig
+      cv.setUint16(4, 20, true); // version made by
+      cv.setUint16(6, 20, true); // version needed
+      cv.setUint16(10, 0, true); // method
+      cv.setUint32(16, crc, true);
+      cv.setUint32(20, size, true);
+      cv.setUint32(24, size, true);
+      cv.setUint16(28, nameBytes.length, true);
+      cv.setUint32(42, offset, true); // local header offset
+      cen.set(nameBytes, 46);
+      central.push(cen);
+
+      offset += local.length + size;
+    }
+
+    const centralSize = central.reduce((a, c) => a + c.length, 0);
+    const end = new Uint8Array(22);
+    const ev = new DataView(end.buffer);
+    ev.setUint32(0, 0x06054b50, true); // end of central dir sig
+    ev.setUint16(8, entries.length, true);
+    ev.setUint16(10, entries.length, true);
+    ev.setUint32(12, centralSize, true);
+    ev.setUint32(16, offset, true);
+
+    return new Blob([...chunks, ...central, end] as BlobPart[], { type: 'application/zip' });
+  }
+
+  async function downloadZip(): Promise<void> {
+    const chosen = items.filter((i) => i.selected);
+    if (!chosen.length) {
+      showError('Select at least one SVG to include in the ZIP.');
+      return;
+    }
+    clearError();
+    try {
+      const seen = new Map<string, number>();
+      const entries = [];
+      for (const it of chosen) {
+        const { blob, ext } = await exportItem(it);
+        let name = `${it.name}.${ext}`;
+        const dup = seen.get(name) || 0;
+        if (dup) name = `${it.name}-${dup}.${ext}`;
+        seen.set(`${it.name}.${ext}`, dup + 1);
+        entries.push({ name, data: new Uint8Array(await blob.arrayBuffer()) });
+      }
+      triggerDownload(await buildZip(entries), 'svgs.zip');
+    } catch {
+      showError('Could not build the ZIP archive.');
+    }
+  }
+
+  // ── Fetch from URL (via public CORS proxy) ──────────────────────
+  // ponytail: allorigins proxy. Swap for own /api route if privacy/uptime matters.
+
+  function proxied(url: string): string {
+    return `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+  }
+
+  async function proxyText(url: string): Promise<string> {
+    const res = await fetch(proxied(url));
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.text();
+  }
+
+  function nameFromUrl(url: string): string {
+    try {
+      const last = new URL(url).pathname.split('/').filter(Boolean).pop() || 'image';
+      return baseName(last);
+    } catch {
+      return 'image';
+    }
+  }
+
+  async function fetchFromUrl(): Promise<void> {
+    const url = urlEl.value.trim();
+    if (!url) return;
+    clearError();
+    showStatus('Fetching SVG…');
+    try {
+      const text = await proxyText(url);
+      if (!normalizeSvg(text)) {
+        showError('That URL did not return valid SVG. Try "Scan page" instead.');
+        return;
+      }
+      addSvg(text, nameFromUrl(url));
+    } catch {
+      showError('Could not fetch that URL. Check the address or try again.');
+    } finally {
+      showStatus('');
+    }
+  }
+
+  // Scan a webpage for both inline <svg> and linked .svg files (convertico misses inline).
+  async function scanPage(): Promise<void> {
+    const pageUrl = urlEl.value.trim();
+    if (!pageUrl) return;
+    clearError();
+    showStatus('Scanning page…');
+    try {
+      const html = await proxyText(pageUrl);
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+
+      let added = 0;
+      // Inline SVGs
+      doc.querySelectorAll('svg').forEach((svg) => {
+        if (addSvgQuiet(svg.outerHTML, `inline-${added + 1}`)) added++;
+      });
+
+      // Linked .svg references (img/src, object/data, anchors, inline styles omitted)
+      const links = new Set<string>();
+      doc.querySelectorAll('img[src], object[data], a[href]').forEach((el) => {
+        const raw = el.getAttribute('src') || el.getAttribute('data') || el.getAttribute('href') || '';
+        if (/\.svg(\?|#|$)/i.test(raw)) {
+          try {
+            links.add(new URL(raw, pageUrl).href);
+          } catch {}
+        }
+      });
+
+      showStatus(`Found ${added} inline · fetching ${links.size} linked…`);
+      for (const link of links) {
+        try {
+          const text = await proxyText(link);
+          if (addSvgQuiet(text, nameFromUrl(link))) added++;
+        } catch {}
+      }
+
+      if (!added) showError('No SVGs found on that page.');
+    } catch {
+      showError('Could not load that page. Check the address or try again.');
+    } finally {
+      showStatus('');
+    }
+  }
+
+  // Like addSvg but returns success and never shows a per-item error (used in bulk scan).
+  function addSvgQuiet(svgStr: string, name: string): boolean {
+    const clean = normalizeSvg(svgStr);
+    if (!clean) return false;
+    items.push({ id: nextId++, svg: clean, name: baseName(name), selected: true });
+    render();
+    return true;
+  }
+
+  // ── Wiring ──────────────────────────────────────────────────────
+
+  function readFiles(files: FileList | null): void {
+    if (!files) return;
+    for (const file of Array.from(files)) {
+      file.text().then((text) => addSvg(text, file.name));
+    }
+  }
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      fileInput.click();
+    }
+  });
+  fileInput.addEventListener('change', () => {
+    readFiles(fileInput.files);
+    fileInput.value = '';
+  });
+  ['dragover', 'dragenter'].forEach((ev) =>
+    dropZone.addEventListener(ev, (e) => {
+      e.preventDefault();
+      dropZone.classList.add('bg-surface-2');
+    })
+  );
+  ['dragleave', 'drop'].forEach((ev) =>
+    dropZone.addEventListener(ev, (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('bg-surface-2');
+    })
+  );
+  dropZone.addEventListener('drop', (e) => readFiles((e as DragEvent).dataTransfer?.files ?? null));
+
+  addBtn.addEventListener('click', () => {
+    addSvg(input.value, 'image');
+    input.value = '';
+  });
+
+  fetchBtn.addEventListener('click', fetchFromUrl);
+  scanBtn.addEventListener('click', scanPage);
+  urlEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      fetchFromUrl();
+    }
+  });
+
+  itemsEl.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement;
+    const dl = t.getAttribute('data-dl');
+    const rm = t.getAttribute('data-rm');
+    const code = t.getAttribute('data-code');
+    if (dl) {
+      const it = items.find((i) => i.id === Number(dl));
+      if (it) downloadItem(it);
+    } else if (rm) {
+      items = items.filter((i) => i.id !== Number(rm));
+      render();
+    } else if (code) {
+      const it = items.find((i) => i.id === Number(code));
+      if (it && navigator.clipboard) {
+        navigator.clipboard.writeText(it.svg).then(
+          () => {
+            t.textContent = 'Copied';
+            setTimeout(() => (t.textContent = 'Copy'), 1200);
+          },
+          () => showError('Could not copy to clipboard.')
+        );
+      }
+    }
+  });
+
+  itemsEl.addEventListener('change', (e) => {
+    const t = e.target as HTMLInputElement;
+    const sel = t.getAttribute('data-sel');
+    if (sel) {
+      const it = items.find((i) => i.id === Number(sel));
+      if (it) it.selected = t.checked;
+      countEl.textContent = `${items.length} SVG${items.length === 1 ? '' : 's'} · ${items.filter((i) => i.selected).length} selected`;
+    }
+  });
+
+  itemsEl.addEventListener('input', (e) => {
+    const t = e.target as HTMLInputElement;
+    const nm = t.getAttribute('data-name');
+    if (nm) {
+      const it = items.find((i) => i.id === Number(nm));
+      if (it) it.name = baseName(t.value);
+    }
+  });
+
+  document.getElementById('svgd-selall')!.addEventListener('click', () => {
+    items.forEach((i) => (i.selected = true));
+    render();
+  });
+  document.getElementById('svgd-selnone')!.addEventListener('click', () => {
+    items.forEach((i) => (i.selected = false));
+    render();
+  });
+  document.getElementById('svgd-clear')!.addEventListener('click', () => {
+    items = [];
+    clearError();
+    render();
+  });
+  document.getElementById('svgd-zip')!.addEventListener('click', downloadZip);
+
+  function syncFormatRows(): void {
+    const raster = formatEl.value !== 'svg';
+    widthRow.classList.toggle('hidden', !raster || formatEl.value === 'ico');
+    bgRow.classList.toggle('hidden', !raster);
+  }
+  formatEl.addEventListener('change', syncFormatRows);
+  syncFormatRows();
+
+  // Seed with a sample so the page isn't empty.
+  addSvg(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><circle cx="50" cy="50" r="40" fill="#5e6ad2"/></svg>',
+    'sample'
+  );
+</script>

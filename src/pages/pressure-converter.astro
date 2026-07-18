@@ -1,0 +1,232 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pressure-converter">
+  <div id="pc-root" class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="pc-from-val">From</label>
+        <input id="pc-from-val" type="number" class="field" value="1" inputmode="decimal" />
+        <select id="pc-from-unit" class="field mt-1"></select>
+      </div>
+      <button
+        id="pc-swap"
+        type="button"
+        class="btn btn-secondary mb-1 h-10 w-10 shrink-0 justify-self-center p-0"
+        aria-label="Swap units"
+        title="Swap units"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
+      </button>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="pc-to-val">To</label>
+        <div class="copy-wrap">
+          <input id="pc-to-val" type="text" class="field" readonly />
+          <button type="button" class="copy-icon" data-copy-target="#pc-to-val" aria-label="Copy"></button>
+        </div>
+        <select id="pc-to-unit" class="field mt-1"></select>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-ink-subtle">
+      <label class="flex items-center gap-2">
+        Precision
+        <select id="pc-precision" class="field w-auto py-1">
+          <option value="auto" selected>Auto</option>
+          <option value="0">0 decimals</option>
+          <option value="2">2 decimals</option>
+          <option value="4">4 decimals</option>
+          <option value="6">6 decimals</option>
+          <option value="8">8 decimals</option>
+          <option value="sig">6 significant figures</option>
+        </select>
+      </label>
+    </div>
+
+    <p id="pc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <p id="pc-formula" class="text-[13px] text-ink-tertiary"></p>
+
+    <div>
+      <div class="mb-2 flex items-center justify-between">
+        <p class="text-[13px] text-ink-subtle" id="pc-table-caption">All units</p>
+        <button id="pc-copy-all" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Copy all</button>
+      </div>
+      <div id="pc-table" class="overflow-hidden rounded-md border border-hairline"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free pressure converter converts between more than two dozen pressure
+      units — pascals, kilopascals, megapascals, hectopascals, bar, millibar,
+      psi, ksi, atmospheres, technical atmospheres, torr, mmHg, cmHg, inHg,
+      millimetres and inches of water, kgf/cm², kgf/m², N/mm², dyne/cm² and more.
+      Great for engineering, HVAC, vacuum work, weather and tyre pressures.
+    </p>
+    <p>
+      Enter a value, pick your two units and the result updates live, with the
+      exact conversion formula shown beneath. The <strong>All units</strong>
+      table converts your input into every supported unit at once, so you can
+      read off (and copy) any equivalent without re-picking. Use the precision
+      control to switch between an automatic sensible rounding, a fixed number of
+      decimal places, or six significant figures. Copy a single result, copy the
+      whole table, or swap the two units in one click.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+
+  const UNITS: Record<string, number> = {
+    'Pascal (Pa)': 1,
+    'Kilopascal (kPa)': 1000,
+    'Megapascal (MPa)': 1e6,
+    'Hectopascal (hPa)': 100,
+    'Bar': 100000,
+    'Millibar (mbar)': 100,
+    'Microbar (µbar)': 0.1,
+    'Psi (lbf/in²)': 6894.757293168,
+    'Ksi (kip/in²)': 6894757.293168,
+    'Pound-force / ft² (psf)': 47.8802589804,
+    'Atmosphere (atm)': 101325,
+    'Technical atmosphere (at)': 98066.5,
+    'Torr': 101325 / 760,
+    'mmHg (0°C)': 133.322387415,
+    'cmHg (0°C)': 1333.22387415,
+    'inHg (32°F)': 3386.389,
+    'inHg (60°F)': 3376.85,
+    'mmH₂O (4°C)': 9.80665,
+    'cmH₂O (4°C)': 98.0665,
+    'inH₂O (4°C)': 249.0889,
+    'ftH₂O (4°C)': 2989.0669,
+    'kgf/cm²': 98066.5,
+    'kgf/m²': 9.80665,
+    'kgf/mm²': 9806650,
+    'N/m²': 1,
+    'N/cm²': 10000,
+    'N/mm²': 1e6,
+    'dyne/cm²': 0.1,
+  };
+  const NAMES = Object.keys(UNITS);
+  const DEFAULT_FROM = 'Bar';
+  const DEFAULT_TO = 'Psi (lbf/in²)';
+
+  const fromVal = document.getElementById('pc-from-val') as HTMLInputElement;
+  const toVal = document.getElementById('pc-to-val') as HTMLInputElement;
+  const fromUnit = document.getElementById('pc-from-unit') as HTMLSelectElement;
+  const toUnit = document.getElementById('pc-to-unit') as HTMLSelectElement;
+  const swap = document.getElementById('pc-swap') as HTMLButtonElement;
+  const precision = document.getElementById('pc-precision') as HTMLSelectElement;
+  const formula = document.getElementById('pc-formula') as HTMLElement;
+  const table = document.getElementById('pc-table') as HTMLElement;
+  const err = document.getElementById('pc-error') as HTMLElement;
+  const copyAllBtn = document.getElementById('pc-copy-all') as HTMLButtonElement;
+
+  function convert(value: number, from: string, to: string): number {
+    return (value * UNITS[from]) / UNITS[to];
+  }
+
+  function fmt(n: number): string {
+    if (!isFinite(n)) return '∞';
+    if (n === 0) return '0';
+    const p = precision.value;
+    if (p === 'sig') return trimZeros(n.toPrecision(6));
+    if (p !== 'auto') return n.toFixed(Number(p));
+    const abs = Math.abs(n);
+    if (abs >= 1e15 || abs < 1e-6) return n.toExponential(6);
+    return trimZeros(String(Math.round(n * 1e9) / 1e9));
+  }
+  function trimZeros(s: string): string {
+    if (s.indexOf('.') === -1 || s.indexOf('e') !== -1 || s.indexOf('E') !== -1) return s;
+    return s.replace(/\.?0+$/, '');
+  }
+
+  function fillUnits() {
+    for (const sel of [fromUnit, toUnit]) {
+      sel.innerHTML = NAMES.map((u) => `<option>${u}</option>`).join('');
+    }
+    fromUnit.value = DEFAULT_FROM;
+    toUnit.value = DEFAULT_TO;
+  }
+
+  function renderTable(v: number, from: string, valid: boolean) {
+    const rows = NAMES.map((u) => {
+      const cell = valid ? fmt(convert(v, from, u)) : '—';
+      return `<tr class="border-t border-hairline">
+        <td class="px-3 py-2 text-ink-subtle">${u}</td>
+        <td class="px-3 py-2 text-right font-mono text-ink"><span data-val="${valid ? cell : ''}">${cell}</span></td>
+      </tr>`;
+    }).join('');
+    table.innerHTML = `<table class="w-full text-[13px]">${rows}</table>`;
+  }
+
+  function convertAll() {
+    err.classList.add('hidden');
+    const raw = fromVal.value.trim();
+    const v = Number(raw);
+    const from = fromUnit.value, to = toUnit.value;
+
+    if (raw === '' || isNaN(v)) {
+      toVal.value = '';
+      formula.textContent = '';
+      renderTable(NaN, from, false);
+      if (raw !== '' && isNaN(v)) {
+        err.textContent = `“${raw}” is not a valid number.`;
+        err.classList.remove('hidden');
+      }
+      return;
+    }
+
+    const result = convert(v, from, to);
+    toVal.value = fmt(result);
+    const factor = UNITS[from] / UNITS[to];
+    formula.textContent =
+      `${fmt(v)} ${from} = ${fmt(result)} ${to}` +
+      (from !== to ? `  ·  multiply ${from} by ${fmt(factor)} to get ${to}` : '');
+    renderTable(v, from, true);
+  }
+
+  fromVal.addEventListener('input', convertAll);
+  fromUnit.addEventListener('change', convertAll);
+  toUnit.addEventListener('change', convertAll);
+  precision.addEventListener('change', convertAll);
+
+  swap.addEventListener('click', () => {
+    const a = fromUnit.value;
+    fromUnit.value = toUnit.value;
+    toUnit.value = a;
+    if (toVal.value !== '' && toVal.value !== '∞') fromVal.value = toVal.value;
+    convertAll();
+  });
+
+  async function flash(btn: HTMLButtonElement, ok = true) {
+    const old = btn.textContent;
+    btn.textContent = ok ? 'Copied!' : 'Failed';
+    setTimeout(() => (btn.textContent = old), 1400);
+  }
+
+  copyAllBtn.addEventListener('click', async () => {
+    const v = Number(fromVal.value);
+    if (fromVal.value.trim() === '' || isNaN(v)) return;
+    const from = fromUnit.value;
+    const text = NAMES.map((u) => `${fmt(convert(v, from, u))}\t${u}`).join('\n');
+    try { await navigator.clipboard.writeText(text); await flash(copyAllBtn); }
+    catch { await flash(copyAllBtn, false); }
+  });
+
+  fillUnits();
+  convertAll();
+
+  // ponytail: inline self-check — factor round-trips must be exact-ish.
+  // Runs only with ?selftest in the URL so it never touches normal loads.
+  if (location.search.includes('selftest')) {
+    const near = (a: number, b: number) => Math.abs(a - b) < 1e-6 * Math.max(1, Math.abs(b));
+    console.assert(near(convert(1, 'Bar', 'Kilopascal (kPa)'), 100), 'bar→kPa');
+    console.assert(near(convert(1, 'Atmosphere (atm)', 'Pascal (Pa)'), 101325), 'atm→Pa');
+    console.assert(near(convert(760, 'Torr', 'Atmosphere (atm)'), 1), 'torr→atm');
+    console.assert(near(convert(1, 'Psi (lbf/in²)', 'Pascal (Pa)'), 6894.757293168), 'psi→Pa');
+    console.log('pressure-converter selftest done');
+  }
+</script>

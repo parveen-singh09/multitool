@@ -1,0 +1,284 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="invoice-generator">
+  <div class="flex flex-col gap-5">
+
+    <div class="flex items-center gap-4">
+      <div id="iv-logo-preview" class="hidden h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-md border border-hairline bg-surface-1">
+        <img id="iv-logo-img" class="max-h-full max-w-full object-contain" alt="Logo preview" />
+      </div>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Logo (optional)
+        <div class="flex items-center gap-2">
+          <input id="iv-logo" type="file" accept="image/png,image/jpeg" class="field text-[13px] file:mr-3 file:rounded file:border-0 file:bg-surface-2 file:px-3 file:py-1 file:text-ink" />
+          <button id="iv-logo-clear" class="btn btn-secondary hidden px-3 py-1 text-[13px]" type="button">Remove</button>
+        </div>
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <div class="flex flex-col gap-2 text-sm text-ink-subtle">From (your business)
+        <div id="iv-from"></div>
+      </div>
+      <div class="flex flex-col gap-2 text-sm text-ink-subtle">Bill to (client)
+        <div id="iv-to"></div>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Invoice #
+        <input id="iv-number" class="field" value="INV-001" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Date
+        <input id="iv-date" type="date" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Due date
+        <input id="iv-due" type="date" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Currency
+        <select id="iv-currency" class="field"></select>
+      </label>
+    </div>
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Payment terms
+      <input id="iv-terms" class="field" placeholder="Net 30" />
+    </label>
+
+    <div class="flex flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <span class="text-sm text-ink-subtle">Line items</span>
+        <button id="iv-add" class="btn btn-secondary py-1 text-[13px]">+ Add item</button>
+      </div>
+      <div id="iv-items" class="flex flex-col gap-2"></div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">Tax
+        <div class="flex gap-2">
+          <select id="iv-tax-mode" class="field w-24"><option value="percent">%</option><option value="flat">Flat</option><option value="off">Off</option></select>
+          <input id="iv-tax" type="number" min="0" step="0.01" value="0" class="field flex-1" />
+        </div>
+      </div>
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">Discount
+        <div class="flex gap-2">
+          <select id="iv-disc-mode" class="field w-24"><option value="off">Off</option><option value="percent">%</option><option value="flat">Flat</option></select>
+          <input id="iv-disc" type="number" min="0" step="0.01" value="0" class="field flex-1" />
+        </div>
+      </div>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Shipping
+        <input id="iv-ship" type="number" min="0" step="0.01" value="0" class="field" />
+      </label>
+    </div>
+
+    <div class="flex items-center justify-between border-t border-hairline pt-4">
+      <span class="text-sm text-ink-subtle">Total</span>
+      <span id="iv-total" class="font-mono text-xl text-ink"></span>
+    </div>
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Notes
+      <input id="iv-notes" class="field" placeholder="Payment due within 30 days. Thank you!" />
+    </label>
+
+    <button id="iv-dl" class="btn btn-primary w-fit">Download PDF</button>
+
+    <div class="flex flex-col gap-2">
+      <span class="text-sm text-ink-subtle">Preview</span>
+      <div id="iv-preview" class="rounded-lg border border-hairline bg-white p-8 text-[13px] text-[#08090a] shadow-lg"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free invoice generator lets you create professional invoices in
+      minutes. Add your logo, business and client details, and line items with
+      quantities and prices, then apply tax, a discount, or shipping — the totals
+      update automatically and a live preview shows the finished invoice as you
+      type. Download a clean PDF in any of the world's currencies.
+    </p>
+    <p>
+      Unlike tools that lock invoice history or PDF export behind a signup,
+      everything here runs in your browser, and there's no account to create.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { buildDocPdf, downloadPdf, computeTotals, money, type LineItem, type DocData } from '../lib/pdfdoc';
+  import { CURRENCIES, symbolOf, pdfPrefixOf } from '../lib/currencies';
+  import { renderParty, wireParty, collectParty } from '../lib/partyblock';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const itemsWrap = $('iv-items')!;
+  let items: LineItem[] = [
+    { description: 'Design services', qty: 10, price: 75 },
+    { description: 'Consulting', qty: 4, price: 120 },
+  ];
+  let logo: { bytes: Uint8Array; type: 'png' | 'jpg'; url: string } | null = null;
+
+  ($('iv-currency') as HTMLSelectElement).innerHTML = CURRENCIES
+    .map((c) => `<option value="${c.code}"${c.code === 'USD' ? ' selected' : ''}>${c.code} — ${c.name} (${c.symbol})</option>`)
+    .join('');
+
+  ($('iv-date') as HTMLInputElement).value = new Date().toISOString().slice(0, 10);
+
+  renderParty($('iv-from'), {
+    prefix: 'iv-from',
+    companyPlaceholder: 'Company Name',
+    taxLabel: 'GSTIN',
+    addressLabel: 'Company Address',
+    addressPlaceholder: 'Company Address',
+    contact: true,
+    contactPlaceholder: 'Contact Person',
+    defaultCompany: 'Acme Studio',
+    defaultAddress: '123 Main St',
+  });
+  renderParty($('iv-to'), {
+    prefix: 'iv-to',
+    companyPlaceholder: 'Client Company',
+    taxLabel: 'Client GSTIN',
+    addressLabel: 'Client Address',
+    addressPlaceholder: 'Client Address',
+    defaultCompany: 'Client Co',
+    defaultAddress: '456 Oak Ave',
+  });
+
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+
+  function renderItems() {
+    itemsWrap.innerHTML = items.map((it, i) => `
+      <div class="flex gap-2" data-i="${i}">
+        <input class="iv-desc field flex-1 text-[13px]" placeholder="Description" value="${esc(it.description)}" />
+        <input class="iv-qty field w-20 text-[13px]" type="number" min="0" step="1" value="${it.qty}" />
+        <input class="iv-price field w-24 text-[13px]" type="number" min="0" step="0.01" value="${it.price}" />
+        <button class="iv-del btn btn-secondary px-3" title="Remove">×</button>
+      </div>`).join('');
+    itemsWrap.querySelectorAll<HTMLElement>('[data-i]').forEach((row) => {
+      const i = Number(row.dataset.i);
+      row.querySelector('.iv-desc')!.addEventListener('input', (e) => { items[i].description = (e.target as HTMLInputElement).value; update(); });
+      row.querySelector('.iv-qty')!.addEventListener('input', (e) => { items[i].qty = Number((e.target as HTMLInputElement).value) || 0; update(); });
+      row.querySelector('.iv-price')!.addEventListener('input', (e) => { items[i].price = Number((e.target as HTMLInputElement).value) || 0; update(); });
+      row.querySelector('.iv-del')!.addEventListener('click', () => { items.splice(i, 1); renderItems(); update(); });
+    });
+  }
+
+  // Build DocData from the form. `withLogo` controls whether logo bytes are
+  // attached (needed for the PDF, skipped for the preview which uses the URL).
+  function getData(withLogo: boolean): DocData {
+    const taxMode = ($('iv-tax-mode') as HTMLSelectElement).value;
+    const discMode = ($('iv-disc-mode') as HTMLSelectElement).value;
+    const d: DocData = {
+      docType: 'INVOICE',
+      number: ($('iv-number') as HTMLInputElement).value,
+      date: ($('iv-date') as HTMLInputElement).value,
+      dueDate: ($('iv-due') as HTMLInputElement).value,
+      terms: ($('iv-terms') as HTMLInputElement).value,
+      fromLabel: 'From', from: collectParty('iv-from'),
+      toLabel: 'Bill To', to: collectParty('iv-to'),
+      items,
+      // Preview uses the pretty Unicode symbol; the PDF uses a WinAnsi-safe prefix.
+      currency: withLogo ? pdfPrefixOf(($('iv-currency') as HTMLSelectElement).value) : symbolOf(($('iv-currency') as HTMLSelectElement).value),
+      taxMode: taxMode === 'flat' ? 'flat' : 'percent',
+      taxRate: taxMode === 'off' ? 0 : (Number(($('iv-tax') as HTMLInputElement).value) || 0),
+      shipping: Number(($('iv-ship') as HTMLInputElement).value) || 0,
+      notes: ($('iv-notes') as HTMLInputElement).value,
+    };
+    if (discMode !== 'off') {
+      d.discount = { mode: discMode === 'flat' ? 'flat' : 'percent', value: Number(($('iv-disc') as HTMLInputElement).value) || 0 };
+    }
+    if (withLogo && logo) d.logo = { bytes: logo.bytes, type: logo.type };
+    return d;
+  }
+
+  function renderPreview(d: DocData) {
+    const t = computeTotals(d);
+    const cur = d.currency;
+    const meta = [
+      `<div style="font-weight:600">#${esc(d.number)}</div>`,
+      `<div>Date: ${esc(d.date)}</div>`,
+      d.dueDate ? `<div>Due: ${esc(d.dueDate)}</div>` : '',
+      d.terms ? `<div>Terms: ${esc(d.terms)}</div>` : '',
+    ].join('');
+    const rows = d.items.map((it) => `
+      <tr>
+        <td style="padding:4px 0">${esc(it.description)}</td>
+        <td style="padding:4px 0;text-align:right">${it.qty}</td>
+        <td style="padding:4px 0;text-align:right">${esc(money(it.price, cur))}</td>
+        <td style="padding:4px 0;text-align:right">${esc(money(it.qty * it.price, cur))}</td>
+      </tr>`).join('');
+    const totalLine = (label: string, val: string, strong = false) =>
+      `<div style="display:flex;justify-content:space-between;gap:24px;${strong ? 'font-weight:700;color:#5e6ad2' : ''}"><span>${label}</span><span>${esc(val)}</span></div>`;
+    const totals = [
+      totalLine('Subtotal', money(t.subtotal, cur)),
+      t.discount ? totalLine(d.discount!.mode === 'percent' ? `Discount (${d.discount!.value}%)` : 'Discount', `-${money(t.discount, cur)}`) : '',
+      t.tax ? totalLine(d.taxMode === 'flat' ? 'Tax' : `Tax (${d.taxRate}%)`, money(t.tax, cur)) : '',
+      t.shipping ? totalLine('Shipping', money(t.shipping, cur)) : '',
+      totalLine('Total', money(t.total, cur), true),
+    ].join('');
+
+    $('iv-preview').innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">
+        <div>
+          ${logo ? `<img src="${logo.url}" style="max-height:48px;max-width:120px;margin-bottom:8px" alt="" />` : ''}
+          <div style="font-size:24px;font-weight:700;color:#5e6ad2;letter-spacing:-0.5px">INVOICE</div>
+        </div>
+        <div style="text-align:right;color:#4a4d55;font-size:12px">${meta}</div>
+      </div>
+      <div style="display:flex;gap:32px;margin-top:24px">
+        <div style="flex:1"><div style="font-size:11px;font-weight:700;color:#8a8f98;letter-spacing:0.4px">FROM</div>${d.from.filter(Boolean).map((l) => `<div>${esc(l)}</div>`).join('')}</div>
+        <div style="flex:1"><div style="font-size:11px;font-weight:700;color:#8a8f98;letter-spacing:0.4px">BILL TO</div>${d.to.filter(Boolean).map((l) => `<div>${esc(l)}</div>`).join('')}</div>
+      </div>
+      <table style="width:100%;margin-top:24px;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#f2f2f4;color:#8a8f98;font-size:10px;letter-spacing:0.4px">
+          <th style="padding:6px 8px;text-align:left">DESCRIPTION</th><th style="padding:6px 8px;text-align:right">QTY</th><th style="padding:6px 8px;text-align:right">PRICE</th><th style="padding:6px 8px;text-align:right">AMOUNT</th>
+        </tr></thead><tbody>${rows}</tbody>
+      </table>
+      <div style="margin-top:16px;margin-left:auto;width:240px;display:flex;flex-direction:column;gap:4px;border-top:1px solid #ddd;padding-top:12px">${totals}</div>
+      ${d.notes ? `<div style="margin-top:24px"><div style="font-size:11px;font-weight:700;color:#8a8f98;letter-spacing:0.4px">NOTES</div><div style="color:#4a4d55">${esc(d.notes)}</div></div>` : ''}
+    `;
+  }
+
+  function update() {
+    const d = getData(false);
+    const t = computeTotals(d);
+    $('iv-total').textContent = money(t.total, d.currency);
+    renderPreview(d);
+  }
+
+  $('iv-add').addEventListener('click', () => { items.push({ description: '', qty: 1, price: 0 }); renderItems(); update(); });
+  ['iv-currency', 'iv-tax', 'iv-tax-mode', 'iv-disc', 'iv-disc-mode', 'iv-ship', 'iv-number', 'iv-date', 'iv-due', 'iv-terms', 'iv-notes']
+    .forEach((id) => $(id).addEventListener('input', update));
+  wireParty('iv-from', update);
+  wireParty('iv-to', update);
+
+  $('iv-logo').addEventListener('change', async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    const buf = new Uint8Array(await file.arrayBuffer());
+    const type: 'png' | 'jpg' = file.type === 'image/png' ? 'png' : 'jpg';
+    if (logo) URL.revokeObjectURL(logo.url);
+    logo = { bytes: buf, type, url: URL.createObjectURL(new Blob([buf.slice()], { type: file.type })) };
+    ($('iv-logo-img') as HTMLImageElement).src = logo.url;
+    $('iv-logo-preview').classList.remove('hidden');
+    $('iv-logo-preview').classList.add('flex');
+    $('iv-logo-clear').classList.remove('hidden');
+    update();
+  });
+  $('iv-logo-clear').addEventListener('click', () => {
+    if (logo) URL.revokeObjectURL(logo.url);
+    logo = null;
+    ($('iv-logo') as HTMLInputElement).value = '';
+    $('iv-logo-preview').classList.add('hidden');
+    $('iv-logo-preview').classList.remove('flex');
+    $('iv-logo-clear').classList.add('hidden');
+    update();
+  });
+
+  $('iv-dl').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    btn.disabled = true; btn.textContent = 'Generating…';
+    try {
+      const bytes = await buildDocPdf(getData(true));
+      downloadPdf(bytes, `${($('iv-number') as HTMLInputElement).value || 'invoice'}.pdf`);
+    } finally { btn.disabled = false; btn.textContent = 'Download PDF'; }
+  });
+
+  renderItems(); update();
+</script>

@@ -1,0 +1,132 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="project-cost-estimator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-2">
+      <div class="hidden grid-cols-[1fr_5rem_6rem_5rem_2rem] gap-2 px-1 text-[13px] text-ink-subtle sm:grid">
+        <span>Task</span><span>Hours</span><span>Rate</span><span>Cost</span><span></span>
+      </div>
+      <div id="pce-rows" class="flex flex-col gap-2"></div>
+    </div>
+
+    <div>
+      <button id="pce-add" type="button" class="btn btn-secondary">+ Add task</button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Contingency (%)
+        <input id="pce-contingency" type="number" min="0" step="1" class="field" value="10" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-3">
+      <div class="panel p-4"><div id="pce-hours" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total hours</div></div>
+      <div class="panel p-4"><div id="pce-subtotal" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Subtotal</div></div>
+      <div class="panel panel-lift p-4"><div id="pce-total" class="font-display text-xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total with contingency</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free project cost estimator turns a task list into a labor cost
+      estimate. Add each task with its estimated hours and hourly rate to see the
+      per-task cost, the subtotal and a total that includes a contingency buffer
+      for the unexpected. Add or remove rows as your scope changes. All figures
+      are calculated in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  interface Task { name: string; hours: string; rate: string; }
+
+  const rowsEl = document.getElementById('pce-rows') as HTMLDivElement;
+  const contingency = document.getElementById('pce-contingency') as HTMLInputElement;
+
+  const money = (n: number) =>
+    n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+
+  const tasks: Task[] = [
+    { name: 'Design', hours: '12', rate: '75' },
+    { name: 'Development', hours: '40', rate: '90' },
+    { name: 'Testing', hours: '8', rate: '65' },
+  ];
+
+  function render() {
+    rowsEl.innerHTML = '';
+    tasks.forEach((task, i) => {
+      const row = document.createElement('div');
+      row.className = 'grid grid-cols-[1fr_5rem_2rem] items-center gap-2 sm:grid-cols-[1fr_5rem_6rem_5rem_2rem]';
+
+      const name = document.createElement('input');
+      name.type = 'text';
+      name.className = 'field';
+      name.placeholder = 'Task name';
+      name.value = task.name;
+      name.addEventListener('input', () => { tasks[i].name = name.value; });
+
+      const hours = document.createElement('input');
+      hours.type = 'number';
+      hours.min = '0';
+      hours.step = 'any';
+      hours.className = 'field';
+      hours.value = task.hours;
+      hours.setAttribute('inputmode', 'decimal');
+      hours.addEventListener('input', () => { tasks[i].hours = hours.value; calc(); });
+
+      const rate = document.createElement('input');
+      rate.type = 'number';
+      rate.min = '0';
+      rate.step = 'any';
+      rate.className = 'field';
+      rate.value = task.rate;
+      rate.setAttribute('inputmode', 'decimal');
+      rate.addEventListener('input', () => { tasks[i].rate = rate.value; calc(); });
+
+      const cost = document.createElement('div');
+      cost.className = 'pce-cost hidden font-mono text-[13px] text-ink-subtle sm:block';
+      cost.textContent = money((Number(task.hours) || 0) * (Number(task.rate) || 0));
+
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'btn btn-tertiary px-2';
+      remove.setAttribute('aria-label', 'Remove task');
+      remove.textContent = '×';
+      remove.addEventListener('click', () => { tasks.splice(i, 1); render(); calc(); });
+
+      row.append(name, hours, rate, cost, remove);
+      rowsEl.append(row);
+    });
+  }
+
+  function calc() {
+    const costCells = rowsEl.querySelectorAll<HTMLDivElement>('.pce-cost');
+    let subtotal = 0;
+    let totalHours = 0;
+    tasks.forEach((task, i) => {
+      const h = Number(task.hours) || 0;
+      const c = h * (Number(task.rate) || 0);
+      totalHours += h;
+      subtotal += c;
+      if (costCells[i]) costCells[i].textContent = money(c);
+    });
+    const pct = Math.max(0, Number(contingency.value) || 0);
+    const total = subtotal * (1 + pct / 100);
+
+    document.getElementById('pce-hours')!.textContent = totalHours.toLocaleString();
+    document.getElementById('pce-subtotal')!.textContent = money(subtotal);
+    document.getElementById('pce-total')!.textContent = money(total);
+  }
+
+  document.getElementById('pce-add')!.addEventListener('click', () => {
+    tasks.push({ name: '', hours: '0', rate: '0' });
+    render();
+    calc();
+  });
+  contingency.addEventListener('input', calc);
+
+  render();
+  calc();
+</script>

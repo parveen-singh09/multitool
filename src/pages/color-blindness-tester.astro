@@ -1,0 +1,1067 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="color-blindness-tester">
+  <div class="flex flex-col gap-8">
+
+    <nav class="flex flex-wrap gap-2" role="tablist" aria-label="Color vision tests">
+      <button class="cb-tab btn btn-secondary inline-flex items-center gap-2" role="tab" aria-selected="true" data-test="plate">
+        <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="#1a1a24"/><circle cx="7" cy="8" r="2" fill="#c56b52"/><circle cx="12" cy="7" r="1.8" fill="#5e8f4f"/><circle cx="9.5" cy="12" r="2" fill="#c98b53"/><circle cx="13" cy="12" r="1.6" fill="#6a9457"/><circle cx="6" cy="12" r="1.5" fill="#b06048"/></svg>
+        Ishihara plates
+      </button>
+      <button class="cb-tab btn btn-tertiary inline-flex items-center gap-2" role="tab" aria-selected="false" data-test="d15">
+        <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="6" width="2.2" height="8" rx="0.5" fill="#d24b4b"/><rect x="5" y="6" width="2.2" height="8" rx="0.5" fill="#d2a24b"/><rect x="8" y="6" width="2.2" height="8" rx="0.5" fill="#7bd24b"/><rect x="11" y="6" width="2.2" height="8" rx="0.5" fill="#4bd2c4"/><rect x="14" y="6" width="2.2" height="8" rx="0.5" fill="#5e6ad2"/></svg>
+        Hue arrangement (D-15)
+      </button>
+      <button class="cb-tab btn btn-tertiary inline-flex items-center gap-2" role="tab" aria-selected="false" data-test="anomalo">
+        <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><defs><linearGradient id="an-ico"><stop offset="0" stop-color="#d24b3a"/><stop offset="1" stop-color="#4bbf5e"/></linearGradient></defs><path d="M2 10 A8 8 0 0 1 18 10 Z" fill="url(#an-ico)"/><path d="M2 10 A8 8 0 0 0 18 10 Z" fill="#e0c24b"/></svg>
+        Anomaloscope
+      </button>
+      <button class="cb-tab btn btn-tertiary inline-flex items-center gap-2" role="tab" aria-selected="false" data-test="cambridge">
+        <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="6" fill="none" stroke="#c94b3a" stroke-width="3" stroke-dasharray="28 10" transform="rotate(-40 10 10)"/></svg>
+        Cambridge (Landolt-C)
+      </button>
+      <button class="cb-tab btn btn-tertiary inline-flex items-center gap-2" role="tab" aria-selected="false" data-test="lantern">
+        <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="6" r="3.4" fill="#d24b3a"/><circle cx="10" cy="14" r="3.4" fill="#4bbf5e"/></svg>
+        Farnsworth Lantern
+      </button>
+    </nav>
+
+    <section class="cb-panel flex flex-col gap-4" data-test="plate">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="font-display text-lg font-semibold text-ink">Color vision plate test</h2>
+        <div class="flex flex-wrap items-center gap-4">
+          <div class="flex items-center gap-2" role="group" aria-label="Symbol mode">
+            <button id="cb-mode-digits" class="btn btn-secondary" aria-pressed="true">Numbers</button>
+            <button id="cb-mode-shapes" class="btn btn-tertiary" aria-pressed="false">Shapes</button>
+          </div>
+          <div class="flex items-center gap-2" role="group" aria-label="Difficulty">
+            <button id="cb-diff-easy" class="btn btn-secondary" aria-pressed="true">Easy</button>
+            <button id="cb-diff-medium" class="btn btn-tertiary" aria-pressed="false">Medium</button>
+            <button id="cb-diff-hard" class="btn btn-tertiary" aria-pressed="false">Hard</button>
+          </div>
+        </div>
+      </div>
+      <p class="text-[13px] text-ink-subtle">
+        For a reliable screen: set your display brightness high, remove any tinted glasses,
+        turn off night-shift / blue-light filters, and view on an uncalibrated-but-normal
+        monitor. Results shift with your screen.
+      </p>
+      <div class="flex flex-col items-center gap-4">
+        <canvas id="cb-plate" width="280" height="280" class="rounded-full" aria-label="Color vision plate"></canvas>
+        <div class="text-[13px] text-ink-subtle">Plate <span id="cb-num">1</span> of <span id="cb-total">14</span> · What <span id="cb-prompt-word">number</span> do you see?</div>
+        <div id="cb-choices" class="flex flex-wrap justify-center gap-2"></div>
+        <div id="cb-feedback" class="hidden text-sm" role="status"></div>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <button id="cb-restart" class="btn btn-secondary">Restart test</button>
+        <div class="panel panel-lift ml-auto p-3 text-center"><span id="cb-progress" class="font-display text-lg font-semibold text-primary-hover">0</span> <span class="text-[13px] text-ink-subtle">/ <span id="cb-progress-total">14</span> plates</span></div>
+      </div>
+
+      <div id="cb-report" class="panel panel-lift hidden flex-col gap-4 p-5">
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <div>
+            <div class="eyebrow">Screening result</div>
+            <div id="cb-result-headline" class="font-display display-md text-primary-hover"></div>
+          </div>
+          <span id="cb-result-severity" class="hidden rounded-full border border-hairline px-3 py-1 text-[13px] text-ink"></span>
+        </div>
+        <div id="cb-result-note" class="text-sm text-ink-subtle"></div>
+        <div class="flex flex-col gap-2">
+          <div class="eyebrow">Accuracy by axis</div>
+          <div id="cb-bars" class="flex flex-col gap-2"></div>
+        </div>
+        <div id="cb-confidence" class="hidden text-[13px] text-ink-subtle"></div>
+        <p class="text-[13px] text-ink-subtle border-t border-hairline pt-3">
+          This is a browser-based screening aid on an uncalibrated display — not a medical
+          diagnosis. Type classification is a best-guess lean, not a determination. See an
+          eye-care professional for a proper assessment.
+        </p>
+      </div>
+    </section>
+
+    <section class="cb-panel hidden flex-col gap-4" data-test="d15">
+      <h2 class="font-display text-lg font-semibold text-ink">Hue arrangement (D-15)</h2>
+      <p class="text-[13px] text-ink-subtle">
+        Order the caps into a smooth color circle. Drag each cap so neighbouring
+        colors flow as gradually as possible, starting from the fixed reference
+        cap on the left. A deficiency shows up as a specific crossing pattern.
+      </p>
+      <div class="flex items-center gap-2">
+        <div class="flex h-14 w-10 shrink-0 items-center justify-center rounded-md border border-hairline-strong text-[11px] text-ink-subtle" id="d15-ref">ref</div>
+        <ul id="d15-caps" class="flex flex-1 flex-wrap gap-1.5" aria-label="Color caps to arrange"></ul>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <button id="d15-score" class="btn btn-primary">Score arrangement</button>
+        <button id="d15-shuffle" class="btn btn-secondary">Shuffle</button>
+      </div>
+      <div id="d15-report" class="panel panel-lift hidden flex-col gap-3 p-5">
+        <div class="eyebrow">Result</div>
+        <div id="d15-headline" class="font-display display-md text-primary-hover"></div>
+        <div id="d15-note" class="text-sm text-ink-subtle"></div>
+        <div class="text-[13px] text-ink-subtle border-t border-hairline pt-3">
+          Total error score <span id="d15-error" class="text-ink"></span>. Lower is better;
+          a normal arrangement is near the minimum. The axis of confusion (protan /
+          deutan / tritan) is inferred from where the order crosses.
+        </div>
+      </div>
+    </section>
+
+    <section class="cb-panel hidden flex-col gap-4" data-test="anomalo">
+      <h2 class="font-display text-lg font-semibold text-ink">Anomaloscope (Rayleigh match)</h2>
+      <p class="text-[13px] text-ink-subtle">
+        The classic Rayleigh match. Mix red and green in the top half to match the
+        fixed yellow below, then set the yellow's brightness. Where you land — and
+        how wide a range still "matches" for you — indicates the deficiency type.
+      </p>
+      <div class="flex flex-col items-center gap-0">
+        <canvas id="an-top" width="240" height="120" class="rounded-t-full border border-hairline" aria-label="Adjustable red-green mix"></canvas>
+        <canvas id="an-bot" width="240" height="120" class="rounded-b-full border border-t-0 border-hairline" aria-label="Reference yellow"></canvas>
+      </div>
+      <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">
+        Red ↔ green mix
+        <input id="an-mix" type="range" min="0" max="100" value="50" class="accent-primary" />
+      </label>
+      <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">
+        Yellow brightness
+        <input id="an-bright" type="range" min="30" max="100" value="70" class="accent-primary" />
+      </label>
+      <div class="flex flex-wrap items-center gap-3">
+        <button id="an-match" class="btn btn-primary">This matches</button>
+        <button id="an-reset" class="btn btn-secondary">Reset</button>
+      </div>
+      <div id="an-report" class="panel panel-lift hidden flex-col gap-2 p-5">
+        <div class="eyebrow">Result</div>
+        <div id="an-headline" class="font-display display-md text-primary-hover"></div>
+        <div id="an-note" class="text-sm text-ink-subtle"></div>
+      </div>
+    </section>
+
+    <section class="cb-panel hidden flex-col gap-4" data-test="cambridge">
+      <h2 class="font-display text-lg font-semibold text-ink">Cambridge colour test (Landolt-C)</h2>
+      <p class="text-[13px] text-ink-subtle">
+        A colored "C" hides in a field of grey dots, its color drifting closer to
+        the background each round. Click the side the gap points to. The fainter
+        the color you can still resolve, the better your discrimination on that axis.
+      </p>
+      <div class="flex flex-col items-center gap-4">
+        <canvas id="cam-canvas" width="280" height="280" class="rounded-lg" aria-label="Landolt C target"></canvas>
+        <div class="text-[13px] text-ink-subtle">Round <span id="cam-num">1</span> of <span id="cam-total">12</span> · Which way does the gap point?</div>
+        <div class="grid grid-cols-3 gap-2" style="width:150px">
+          <span></span>
+          <button class="cam-dir btn btn-secondary" data-dir="up" aria-label="Up">▲</button>
+          <span></span>
+          <button class="cam-dir btn btn-secondary" data-dir="left" aria-label="Left">◀</button>
+          <button class="cam-dir btn btn-tertiary" data-dir="none" aria-label="Can't tell">?</button>
+          <button class="cam-dir btn btn-secondary" data-dir="right" aria-label="Right">▶</button>
+          <span></span>
+          <button class="cam-dir btn btn-secondary" data-dir="down" aria-label="Down">▼</button>
+          <span></span>
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <button id="cam-restart" class="btn btn-secondary">Restart</button>
+      </div>
+      <div id="cam-report" class="panel panel-lift hidden flex-col gap-2 p-5">
+        <div class="eyebrow">Result</div>
+        <div id="cam-headline" class="font-display display-md text-primary-hover"></div>
+        <div id="cam-note" class="text-sm text-ink-subtle"></div>
+      </div>
+    </section>
+
+    <section class="cb-panel hidden flex-col gap-4" data-test="lantern">
+      <h2 class="font-display text-lg font-semibold text-ink">Farnsworth lantern test</h2>
+      <p class="text-[13px] text-ink-subtle">
+        A signal-lantern screen used for aviation and maritime roles. Two lights
+        show at a time — name each color. Red, green and white in the dim,
+        desaturated tones that trip up mild deficiencies.
+      </p>
+      <div class="flex flex-col items-center gap-5">
+        <div class="flex items-center gap-6 rounded-lg bg-black px-10 py-6">
+          <span id="lan-a" class="h-12 w-12 rounded-full"></span>
+          <span id="lan-b" class="h-12 w-12 rounded-full"></span>
+        </div>
+        <div class="text-[13px] text-ink-subtle">Pair <span id="lan-num">1</span> of <span id="lan-total">9</span></div>
+        <div class="flex flex-col items-center gap-2">
+          <span class="text-[13px] text-ink-subtle">Top light:</span>
+          <div id="lan-choices-a" class="flex gap-2"></div>
+          <span class="mt-2 text-[13px] text-ink-subtle">Bottom light:</span>
+          <div id="lan-choices-b" class="flex gap-2"></div>
+          <button id="lan-submit" class="btn btn-primary mt-2">Submit pair</button>
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <button id="lan-restart" class="btn btn-secondary">Restart</button>
+      </div>
+      <div id="lan-report" class="panel panel-lift hidden flex-col gap-2 p-5">
+        <div class="eyebrow">Result</div>
+        <div id="lan-headline" class="font-display display-md text-primary-hover"></div>
+        <div id="lan-note" class="text-sm text-ink-subtle"></div>
+      </div>
+    </section>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free color blindness tester bundles five screening tests in one place. The
+      <strong>Ishihara plate test</strong> spans all three color-vision axes with
+      selectable difficulty; the <strong>D-15 hue arrangement</strong> asks you to
+      order color caps and scores the crossing pattern; the
+      <strong>anomaloscope</strong> reproduces the classic Rayleigh red-green
+      match; the <strong>Cambridge Landolt-C</strong> fades a colored gap toward
+      the background to measure discrimination threshold; and the
+      <strong>Farnsworth lantern</strong> mimics the signal-light test used for
+      aviation and maritime roles.
+    </p>
+    <p>
+      Accuracy limits you should know: the result is <strong>display-dependent</strong> —
+      brightness, contrast, dark mode, night-shift filters and ambient light all
+      shift the colors, which is the single biggest limitation of any web plate
+      test. The plates are procedurally generated, not the validated clinical
+      Ishihara set. The protan-vs-deutan lean relies on an approximate
+      luminosity model applied in sRGB without per-display calibration, so it
+      reports a likely type (or "type undetermined"), not a determination. It
+      cannot reliably separate full dichromacy from anomalous trichromacy, the
+      mild / moderate / strong bands are ordinal screening buckets rather than
+      clinical grades, and blue-yellow (tritan) detection is the weakest because
+      it is hard to reproduce on sRGB. This is a screening aid to build
+      intuition, not a diagnosis — see an eye-care professional for a proper
+      assessment.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+
+  type Axis = 'control' | 'protan' | 'deutan' | 'rg' | 'tritan';
+  interface Plate {
+    figure: number | string;             
+    axis: Axis;
+    fig: [number, number, number][];      
+    bg: [number, number, number][];       
+    choices: (number | string)[];
+  }
+
+  const DIGIT_PLATES: Plate[] = [
+
+    { figure: 5, axis: 'control',
+      fig: [[64, 64, 74], [72, 70, 80], [58, 58, 68]],
+      bg: [[188, 188, 198], [196, 196, 204], [180, 182, 192]],
+      choices: [2, 5, 8, 3] },
+
+    { figure: 2, axis: 'protan',
+      fig: [[205, 95, 75], [213, 104, 84], [197, 88, 68]],
+      bg: [[65, 118, 55], [74, 126, 62], [58, 110, 48]],
+      choices: [7, 2, 1, 6] },
+
+    { figure: 7, axis: 'deutan',
+      fig: [[200, 110, 85], [208, 118, 94], [192, 102, 78]],
+      bg: [[105, 158, 95], [114, 166, 103], [98, 150, 88]],
+      choices: [7, 4, 1, 9] },
+
+    { figure: 8, axis: 'rg',
+      fig: [[198, 108, 82], [210, 120, 92], [188, 98, 72]],
+      bg: [[112, 152, 92], [124, 162, 102], [104, 142, 84]],
+      choices: [3, 8, 6, 0] },
+
+    { figure: 6, axis: 'tritan',
+      fig: [[92, 132, 204], [102, 140, 210], [84, 124, 196]],
+      bg: [[96, 150, 96], [106, 158, 104], [88, 142, 88]],
+      choices: [9, 6, 0, 4] },
+    { figure: 4, axis: 'protan',
+      fig: [[212, 102, 80], [220, 110, 90], [204, 94, 72]],
+      bg: [[72, 124, 60], [80, 132, 68], [64, 116, 52]],
+      choices: [1, 4, 7, 9] },
+    { figure: 3, axis: 'deutan',
+      fig: [[206, 116, 90], [214, 124, 98], [198, 108, 82]],
+      bg: [[112, 164, 100], [120, 172, 108], [104, 156, 92]],
+      choices: [8, 3, 5, 2] },
+    { figure: 5, axis: 'rg',
+      fig: [[204, 120, 96], [214, 130, 106], [194, 110, 86]],
+      bg: [[124, 158, 104], [136, 168, 114], [116, 148, 96]],
+      choices: [2, 5, 9, 4] },
+
+    { figure: 9, axis: 'control',
+      fig: [[70, 66, 60], [78, 74, 68], [62, 60, 54]],
+      bg: [[196, 192, 182], [204, 200, 190], [188, 184, 176]],
+      choices: [6, 9, 4, 1] },
+    { figure: 6, axis: 'protan',
+      fig: [[198, 90, 72], [206, 98, 80], [190, 84, 64]],
+      bg: [[60, 112, 52], [68, 120, 60], [54, 104, 46]],
+      choices: [5, 6, 8, 0] },
+    { figure: 1, axis: 'deutan',
+      fig: [[194, 104, 80], [202, 112, 88], [186, 96, 72]],
+      bg: [[98, 152, 90], [106, 160, 98], [90, 144, 82]],
+      choices: [1, 7, 4, 2] },
+    { figure: 2, axis: 'rg',
+      fig: [[190, 100, 76], [200, 110, 86], [182, 92, 68]],
+      bg: [[104, 146, 88], [116, 156, 98], [96, 138, 80]],
+      choices: [7, 1, 2, 6] },
+    { figure: 8, axis: 'tritan',
+      fig: [[110, 120, 206], [120, 128, 212], [100, 112, 198]],
+      bg: [[128, 140, 72], [138, 148, 80], [118, 132, 64]],
+      choices: [3, 8, 6, 5] },
+    { figure: 7, axis: 'rg',
+      fig: [[208, 116, 88], [218, 126, 98], [198, 106, 78]],
+      bg: [[118, 156, 98], [130, 166, 108], [110, 146, 90]],
+      choices: [7, 4, 1, 9] },
+    { figure: 0, axis: 'protan',
+      fig: [[202, 92, 74], [210, 100, 82], [194, 86, 66]],
+      bg: [[66, 116, 56], [74, 124, 64], [58, 108, 48]],
+      choices: [0, 8, 6, 3] },
+    { figure: 9, axis: 'deutan',
+      fig: [[198, 108, 84], [206, 116, 92], [190, 100, 76]],
+      bg: [[108, 160, 96], [116, 168, 104], [100, 152, 88]],
+      choices: [9, 5, 3, 8] },
+    { figure: 3, axis: 'rg',
+      fig: [[196, 106, 82], [206, 116, 92], [188, 98, 74]],
+      bg: [[110, 150, 90], [122, 160, 100], [102, 142, 82]],
+      choices: [3, 8, 5, 2] },
+    { figure: 5, axis: 'tritan',
+      fig: [[100, 126, 208], [110, 134, 214], [90, 118, 200]],
+      bg: [[122, 138, 74], [132, 146, 82], [112, 130, 66]],
+      choices: [5, 2, 8, 6] },
+    { figure: 1, axis: 'protan',
+      fig: [[208, 98, 78], [216, 106, 86], [200, 90, 70]],
+      bg: [[70, 120, 58], [78, 128, 66], [62, 112, 50]],
+      choices: [1, 7, 4, 2] },
+    { figure: 4, axis: 'deutan',
+      fig: [[200, 112, 86], [208, 120, 94], [192, 104, 78]],
+      bg: [[110, 162, 98], [118, 170, 106], [102, 154, 90]],
+      choices: [4, 1, 7, 9] },
+    { figure: 8, axis: 'control',
+      fig: [[68, 64, 58], [76, 72, 66], [60, 58, 52]],
+      bg: [[192, 188, 178], [200, 196, 186], [184, 180, 172]],
+      choices: [8, 3, 6, 0] },
+    { figure: 6, axis: 'rg',
+      fig: [[202, 112, 88], [212, 122, 98], [192, 102, 78]],
+      bg: [[116, 154, 96], [128, 164, 106], [108, 144, 88]],
+      choices: [6, 5, 0, 8] },
+  ];
+
+  const SHAPE_KEYS = ['circle', 'triangle', 'square', 'diamond', 'cross', 'heart', 'star'];
+  const SHAPE_GLYPH: Record<string, string> = {
+    circle: '●', triangle: '▲', square: '■', diamond: '◆', cross: '✚', heart: '♥', star: '★',
+  };
+  const SHAPE_PLATES: Plate[] = DIGIT_PLATES.map((p, i) => ({
+    ...p,
+    figure: SHAPE_KEYS[i % SHAPE_KEYS.length],
+    choices: SHAPE_KEYS,
+  }));
+
+  const plateCanvas = $('cb-plate') as HTMLCanvasElement;
+  const pctx = plateCanvas.getContext('2d')!;
+  const numEl = $('cb-num');
+  const choicesEl = $('cb-choices');
+  const feedbackEl = $('cb-feedback');
+  const progressEl = $('cb-progress');
+  const promptWordEl = $('cb-prompt-word');
+
+  const glyphs: Record<number | string, string[]> = {
+    0: ['01110', '10001', '10011', '10101', '11001', '10001', '01110'],
+    1: ['00100', '01100', '00100', '00100', '00100', '00100', '01110'],
+    2: ['01110', '10001', '00001', '00010', '00100', '01000', '11111'],
+    3: ['11111', '00010', '00100', '00010', '00001', '10001', '01110'],
+    4: ['00010', '00110', '01010', '10010', '11111', '00010', '00010'],
+    5: ['11111', '10000', '11110', '00001', '00001', '10001', '01110'],
+    6: ['00110', '01000', '10000', '11110', '10001', '10001', '01110'],
+    7: ['11111', '00001', '00010', '00100', '01000', '01000', '01000'],
+    8: ['01110', '10001', '10001', '01110', '10001', '10001', '01110'],
+    9: ['01110', '10001', '10001', '01111', '00001', '00010', '01100'],
+    circle: ['0011100', '0111110', '1111111', '1111111', '1111111', '0111110', '0011100'],
+    square: ['1111111', '1111111', '1100011', '1100011', '1100011', '1111111', '1111111'],
+    triangle: ['0001000', '0011100', '0011100', '0111110', '0111110', '1111111', '1111111'],
+    diamond: ['0001000', '0011100', '0111110', '1111111', '0111110', '0011100', '0001000'],
+    cross: ['0011100', '0011100', '1111111', '1111111', '1111111', '0011100', '0011100'],
+    heart: ['0110110', '1111111', '1111111', '1111111', '0111110', '0011100', '0001000'],
+    star: ['0001000', '0011100', '1111111', '0111110', '0111110', '1100011', '1000001'],
+  };
+
+  function inGlyph(figure: number | string, nx: number, ny: number): boolean {
+
+    const g = glyphs[figure];
+    const rows = g.length, cols = g[0].length;
+    const gx = (nx - 0.2) / 0.6;
+    const gy = (ny - 0.15) / 0.7;
+    if (gx < 0 || gx >= 1 || gy < 0 || gy >= 1) return false;
+    const col = Math.floor(gx * cols);
+    const row = Math.floor(gy * rows);
+    return g[row][col] === '1';
+  }
+
+  interface Answer { axis: Axis; correct: boolean; sawNothing: boolean; }
+  type Difficulty = 'easy' | 'medium' | 'hard';
+  const TEST_SIZE = 15;   
+  let plates: Plate[] = [];
+  let mode: 'digits' | 'shapes' = 'digits';
+  let difficulty: Difficulty = 'easy';
+  let plateIndex = 0;
+  let answered = false;
+  let answers: Answer[] = [];
+
+  const DIFF: Record<Difficulty, { blend: number; choices: number }> = {
+    easy:   { blend: 0.0,  choices: 4 },
+    medium: { blend: 0.28, choices: 6 },
+    hard:   { blend: 0.46, choices: 8 },
+  };
+
+  function drawPlate() {
+    const plate = plates[plateIndex];
+    const blend = DIFF[difficulty].blend;
+
+    const bgMean: [number, number, number] = [
+      plate.bg.reduce((s, c) => s + c[0], 0) / plate.bg.length,
+      plate.bg.reduce((s, c) => s + c[1], 0) / plate.bg.length,
+      plate.bg.reduce((s, c) => s + c[2], 0) / plate.bg.length,
+    ];
+    const W = plateCanvas.width, H = plateCanvas.height;
+    pctx.clearRect(0, 0, W, H);
+    pctx.fillStyle = '#12121a';
+    pctx.beginPath();
+    pctx.arc(W / 2, H / 2, W / 2, 0, Math.PI * 2);
+    pctx.fill();
+
+    const cx = W / 2, cy = H / 2, R = W / 2 - 2;
+    const dots = 900;
+    for (let i = 0; i < dots; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const rad = Math.sqrt(Math.random()) * R;
+      const x = cx + Math.cos(ang) * rad;
+      const y = cy + Math.sin(ang) * rad;
+      const r = 3 + Math.random() * 5;
+      const nx = x / W, ny = y / H;
+      const isFig = inGlyph(plate.figure, nx, ny);
+      const pal = isFig ? plate.fig : plate.bg;
+      let c = pal[Math.floor(Math.random() * pal.length)];
+
+      if (isFig && blend > 0) {
+        c = [
+          Math.round(c[0] + (bgMean[0] - c[0]) * blend),
+          Math.round(c[1] + (bgMean[1] - c[1]) * blend),
+          Math.round(c[2] + (bgMean[2] - c[2]) * blend),
+        ];
+      }
+      pctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
+      pctx.beginPath();
+      pctx.arc(x, y, r, 0, Math.PI * 2);
+      pctx.fill();
+    }
+  }
+
+  function labelFor(choice: number | string): string {
+    return typeof choice === 'string' ? (SHAPE_GLYPH[choice] ?? choice) : String(choice);
+  }
+
+  // Build the answer set for the current difficulty: always the correct
+  // figure, topped up with distinct distractors from the full pool, shuffled.
+  // More options on harder levels cut the odds of a lucky guess.
+  function buildChoices(plate: Plate): (number | string)[] {
+    const want = DIFF[difficulty].choices;
+    const pool: (number | string)[] = mode === 'shapes'
+      ? SHAPE_KEYS
+      : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    const set = new Set<number | string>([plate.figure, ...plate.choices]);
+    for (const c of pool) {
+      if (set.size >= want) break;
+      set.add(c);
+    }
+    const arr = [...set].slice(0, want);
+    if (!arr.includes(plate.figure)) arr[0] = plate.figure;
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function renderChoices() {
+    const plate = plates[plateIndex];
+    choicesEl.innerHTML = '';
+    answered = false;
+    feedbackEl.classList.add('hidden');
+    buildChoices(plate).forEach((choice) => {
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-secondary';
+      btn.textContent = labelFor(choice);
+      if (typeof choice === 'string') {
+        btn.setAttribute('aria-label', String(choice));
+        btn.style.fontSize = '22px';   // shape glyphs read as icons, not tiny text
+        btn.style.lineHeight = '1';
+      }
+      btn.addEventListener('click', () => pick(choice, btn));
+      choicesEl.appendChild(btn);
+    });
+    const none = document.createElement('button');
+    none.className = 'btn btn-tertiary';
+    none.textContent = 'Nothing';
+    none.addEventListener('click', () => pick('__none__', none));
+    choicesEl.appendChild(none);
+  }
+
+  function pick(choice: number | string, btn: HTMLButtonElement) {
+    if (answered) return;
+    answered = true;
+    const plate = plates[plateIndex];
+    const sawNothing = choice === '__none__';
+    const correct = choice === plate.figure;
+    answers.push({ axis: plate.axis, correct, sawNothing });
+    progressEl.textContent = String(answers.length);
+    // Colour the picked button green (correct) or red (wrong); no popup text.
+    btn.style.background = correct ? '#27a644' : '#e5484d';
+    btn.style.borderColor = correct ? '#27a644' : '#e5484d';
+    btn.style.color = '#fff';
+    // Lock the rest so a second click can't re-answer.
+    Array.from(choicesEl.children).forEach((c) => ((c as HTMLButtonElement).disabled = true));
+    window.setTimeout(next, 700);
+  }
+
+  function next() {
+    plateIndex++;
+    if (plateIndex >= plates.length) {
+      showReport(scoreReport(answers));
+      return;
+    }
+    numEl.textContent = String(plateIndex + 1);
+    drawPlate();
+    renderChoices();
+  }
+
+  // ── Scoring / classification ───────────────────────────────
+  type Classification = 'Normal' | 'Protan' | 'Deutan' | 'Red-green (type undetermined)' | 'Tritan' | 'Inconclusive';
+  type Severity = 'none' | 'mild' | 'moderate' | 'strong';
+  interface Report {
+    classification: Classification;
+    severity: Severity;
+    perAxis: { protan: number; deutan: number; redGreen: number; tritan: number };
+    confidence: 'good' | 'low';
+    note: string;
+  }
+
+  const NOTHING_WEIGHT = 1.0;   // "I see nothing" is exactly what a deficiency produces
+  const GUESS_WEIGHT = 0.7;     // a wrong number could be a mis-click
+
+  function acc(list: Answer[]): number {
+    if (!list.length) return 1;
+    return list.filter((a) => a.correct).length / list.length;
+  }
+  function missRate(list: Answer[]): number {
+    if (!list.length) return 0;
+    const w = list.reduce((s, a) => s + (a.correct ? 0 : a.sawNothing ? NOTHING_WEIGHT : GUESS_WEIGHT), 0);
+    return w / list.length;
+  }
+  function severityFrom(e: number): Severity {
+    return e < 0.2 ? 'none' : e < 0.45 ? 'mild' : e < 0.7 ? 'moderate' : 'strong';
+  }
+
+  function scoreReport(all: Answer[]): Report {
+    const by = (ax: Axis) => all.filter((a) => a.axis === ax);
+    const control = by('control'), protan = by('protan'), deutan = by('deutan');
+    const rg = by('rg'), tritan = by('tritan');
+
+    const perAxis = {
+      protan: acc(protan),
+      deutan: acc(deutan),
+      redGreen: acc([...protan, ...deutan, ...rg]),
+      tritan: acc(tritan),
+    };
+
+    // Reliability gate.
+    const controlErrors = control.filter((a) => !a.correct).length;
+    if (control.length && controlErrors === control.length) {
+      return { classification: 'Inconclusive', severity: 'none', perAxis, confidence: 'low',
+        note: 'Control plates were missed, which usually means a display, brightness or attention issue rather than color blindness. Adjust your screen and try again.' };
+    }
+    const confidence = controlErrors > 0 ? 'low' : 'good';
+
+    const rgError = 1 - perAxis.redGreen;
+    const tritanError = 1 - perAxis.tritan;
+
+    // Normal.
+    if (rgError < 0.2 && tritanError < 0.34) {
+      return { classification: 'Normal', severity: 'none', perAxis, confidence,
+        note: 'Your responses match typical color vision across the plates shown.' };
+    }
+    // Tritan (only when red-green looks clear).
+    if (tritanError >= 0.5 && rgError < 0.2) {
+      return { classification: 'Tritan', severity: severityFrom(tritanError), perAxis, confidence,
+        note: 'Your pattern leans toward a blue-yellow (tritan) deficiency. This is the least reliable result on a web display — treat it with extra skepticism.' };
+    }
+    // Red-green present → vote protan vs deutan.
+    const protanMiss = missRate(protan);
+    const deutanMiss = missRate(deutan);
+    const MARGIN = 0.34;
+    let classification: Classification = 'Red-green (type undetermined)';
+    let note = 'Your pattern suggests a red-green deficiency, but the plates did not lean clearly toward protan or deutan.';
+    if (protanMiss - deutanMiss >= MARGIN) {
+      classification = 'Protan';
+      note = 'Your pattern leans toward protan (reduced red sensitivity). This is a best-guess lean, not a determination.';
+    } else if (deutanMiss - protanMiss >= MARGIN) {
+      classification = 'Deutan';
+      note = 'Your pattern leans toward deutan (reduced green sensitivity). This is a best-guess lean, not a determination.';
+    }
+    return { classification, severity: severityFrom(rgError), perAxis, confidence, note };
+  }
+
+  // ── Report rendering ───────────────────────────────────────
+  function showReport(r: Report) {
+    choicesEl.innerHTML = '';
+    feedbackEl.classList.add('hidden');
+    numEl.textContent = String(plates.length);
+
+    $('cb-result-headline').textContent = r.classification;
+    const sevEl = $('cb-result-severity');
+    if (r.severity !== 'none' && r.classification !== 'Normal' && r.classification !== 'Inconclusive') {
+      sevEl.textContent = `${r.severity} severity`;
+      sevEl.classList.remove('hidden');
+    } else {
+      sevEl.classList.add('hidden');
+    }
+    $('cb-result-note').textContent = r.note;
+
+    const bars = $('cb-bars');
+    bars.innerHTML = '';
+    const rows: [string, number][] = [
+      ['Red-green', r.perAxis.redGreen],
+      ['Protan plates', r.perAxis.protan],
+      ['Deutan plates', r.perAxis.deutan],
+      ['Blue-yellow', r.perAxis.tritan],
+    ];
+    for (const [label, val] of rows) {
+      const pct = Math.round(val * 100);
+      const row = document.createElement('div');
+      row.className = 'flex items-center gap-3 text-[13px]';
+      row.innerHTML =
+        `<span class="w-28 shrink-0 text-ink-subtle">${label}</span>` +
+        `<span class="h-2 flex-1 overflow-hidden rounded-full bg-white/5">` +
+        `<span class="block h-full rounded-full" style="width:${pct}%;background:#5e6ad2"></span></span>` +
+        `<span class="w-10 shrink-0 text-right text-ink">${pct}%</span>`;
+      bars.appendChild(row);
+    }
+
+    const conf = $('cb-confidence');
+    if (r.confidence === 'low' && r.classification !== 'Inconclusive') {
+      conf.textContent = 'Low confidence: a control plate was missed, so treat this result as rough. Re-run for a steadier read.';
+      conf.classList.remove('hidden');
+    } else {
+      conf.classList.add('hidden');
+    }
+    $('cb-report').classList.remove('hidden');
+    $('cb-report').classList.add('flex');
+  }
+
+  // Sample TEST_SIZE plates from the stock: keep every control plate (the
+  // reliability gate needs them), fill the rest from shuffled non-controls,
+  // then shuffle the whole run so order varies each time.
+  function samplePlates(stock: Plate[]): Plate[] {
+    const controls = stock.filter((p) => p.axis === 'control');
+    const rest = shuffle(stock.filter((p) => p.axis !== 'control'));
+    const chosen = [...controls, ...rest].slice(0, TEST_SIZE);
+    return shuffle(chosen);
+  }
+
+  let stock: Plate[] = DIGIT_PLATES;
+
+  function restart() {
+    plates = samplePlates(stock);
+    plateIndex = 0;
+    answers = [];
+    progressEl.textContent = '0';
+    numEl.textContent = '1';
+    $('cb-report').classList.add('hidden');
+    $('cb-report').classList.remove('flex');
+    drawPlate();
+    renderChoices();
+  }
+
+  function setMode(next: 'digits' | 'shapes') {
+    mode = next;
+    stock = next === 'shapes' ? SHAPE_PLATES : DIGIT_PLATES;
+    promptWordEl.textContent = next === 'shapes' ? 'shape' : 'number';
+    const digitsBtn = $('cb-mode-digits'), shapesBtn = $('cb-mode-shapes');
+    digitsBtn.className = next === 'digits' ? 'btn btn-secondary' : 'btn btn-tertiary';
+    shapesBtn.className = next === 'shapes' ? 'btn btn-secondary' : 'btn btn-tertiary';
+    digitsBtn.setAttribute('aria-pressed', String(next === 'digits'));
+    shapesBtn.setAttribute('aria-pressed', String(next === 'shapes'));
+    restart();
+  }
+
+  function setDifficulty(next: Difficulty) {
+    difficulty = next;
+    const btns: [Difficulty, string][] = [['easy', 'cb-diff-easy'], ['medium', 'cb-diff-medium'], ['hard', 'cb-diff-hard']];
+    for (const [d, id] of btns) {
+      const btn = $(id);
+      btn.className = d === next ? 'btn btn-secondary' : 'btn btn-tertiary';
+      btn.setAttribute('aria-pressed', String(d === next));
+    }
+    restart();
+  }
+
+  $('cb-total').textContent = String(TEST_SIZE);
+  $('cb-progress-total').textContent = String(TEST_SIZE);
+  $('cb-restart').addEventListener('click', restart);
+  $('cb-mode-digits').addEventListener('click', () => setMode('digits'));
+  $('cb-mode-shapes').addEventListener('click', () => setMode('shapes'));
+  $('cb-diff-easy').addEventListener('click', () => setDifficulty('easy'));
+  $('cb-diff-medium').addEventListener('click', () => setDifficulty('medium'));
+  $('cb-diff-hard').addEventListener('click', () => setDifficulty('hard'));
+  restart();
+
+  // ── Tab switching ──────────────────────────────────────────
+  const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('.cb-tab'));
+  const panels = Array.from(document.querySelectorAll<HTMLElement>('.cb-panel'));
+  function showTest(key: string) {
+    for (const p of panels) {
+      const on = p.dataset.test === key;
+      p.classList.toggle('hidden', !on);
+      p.classList.toggle('flex', on);
+    }
+    for (const t of tabs) {
+      const on = t.dataset.test === key;
+      t.classList.toggle('btn-secondary', on);
+      t.classList.toggle('btn-tertiary', !on);
+      t.setAttribute('aria-selected', String(on));
+    }
+  }
+  tabs.forEach((t) => t.addEventListener('click', () => showTest(t.dataset.test!)));
+
+  // Shared: euclidean RGB distance.
+  type RGB = [number, number, number];
+  const dist = (a: RGB, b: RGB) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+  function hsl(h: number, s: number, l: number): RGB {
+    // h 0..360, s/l 0..1 → rgb 0..255. Standard conversion.
+    const c = (1 - Math.abs(2 * l - 1)) * s;
+    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+    const m = l - c / 2;
+    let r = 0, g = 0, b = 0;
+    if (h < 60) [r, g, b] = [c, x, 0];
+    else if (h < 120) [r, g, b] = [x, c, 0];
+    else if (h < 180) [r, g, b] = [0, c, x];
+    else if (h < 240) [r, g, b] = [0, x, c];
+    else if (h < 300) [r, g, b] = [x, 0, c];
+    else [r, g, b] = [c, 0, x];
+    return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+  }
+  const rgbStr = (c: RGB) => `rgb(${c[0]},${c[1]},${c[2]})`;
+  function shuffle<T>(a: T[]): T[] {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // ── D-15 hue arrangement ───────────────────────────────────
+  // 15 caps evenly spaced around the hue circle. Correct order = by hue.
+  // Total error = sum of adjacent RGB distances through the placed order
+  // (starting from the fixed reference cap). Confusion axis is inferred from
+  // the orientation of the large "crossing" jumps in hue space.
+  // ponytail: chord-angle axis vote, not the full Vingrys-King-Smith TES vector
+  // analysis — a screening lean on an uncalibrated display, disclaimed as such.
+  const D15_N = 15;
+  const d15Hues = Array.from({ length: D15_N }, (_, i) => (i * 360) / D15_N);
+  const d15Colors: RGB[] = d15Hues.map((h) => hsl(h, 0.5, 0.55));
+  const d15Ref: RGB = hsl(0, 0.5, 0.55); // reference cap = hue 0
+  let d15Order: number[] = [];
+  const capsEl = $('d15-caps');
+  let dragFrom = -1;
+
+  function d15Render() {
+    capsEl.innerHTML = '';
+    ($('d15-ref') as HTMLElement).style.background = rgbStr(d15Ref);
+    ($('d15-ref') as HTMLElement).textContent = '';
+    d15Order.forEach((capIdx, pos) => {
+      const li = document.createElement('li');
+      li.className = 'h-14 w-10 shrink-0 cursor-grab rounded-md border border-hairline';
+      li.style.background = rgbStr(d15Colors[capIdx]);
+      li.draggable = true;
+      li.setAttribute('aria-label', `cap ${pos + 1}`);
+      li.addEventListener('dragstart', () => { dragFrom = pos; });
+      li.addEventListener('dragover', (e) => e.preventDefault());
+      li.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (dragFrom < 0 || dragFrom === pos) return;
+        const [moved] = d15Order.splice(dragFrom, 1);
+        d15Order.splice(pos, 0, moved);
+        dragFrom = -1;
+        d15Render();
+      });
+      capsEl.appendChild(li);
+    });
+  }
+  function d15Shuffle() {
+    d15Order = shuffle(Array.from({ length: D15_N }, (_, i) => i));
+    $('d15-report').classList.add('hidden');
+    $('d15-report').classList.remove('flex');
+    d15Render();
+  }
+  function d15ScoreFn() {
+    // Total error through ref → placed caps.
+    let err = 0;
+    let prev = d15Ref;
+    for (const idx of d15Order) { err += dist(prev, d15Colors[idx]); prev = d15Colors[idx]; }
+    // Minimal (sorted-by-hue) baseline for comparison.
+    const sortedIdx = [...Array(D15_N).keys()].sort((a, b) => d15Hues[a] - d15Hues[b]);
+    let best = 0; prev = d15Ref;
+    for (const idx of sortedIdx) { best += dist(prev, d15Colors[idx]); prev = d15Colors[idx]; }
+    const ratio = err / best;
+
+    // Axis vote from large jumps: chord orientation in hue space maps to a
+    // confusion axis. Protan/deutan sit near the red-green (0-180) hue axis,
+    // tritan near blue-yellow (60-240 region on this wheel).
+    let rgJumps = 0, byJumps = 0;
+    let prevIdx = -1;
+    for (const idx of d15Order) {
+      if (prevIdx >= 0) {
+        const gap = Math.abs(d15Hues[idx] - d15Hues[prevIdx]);
+        if (gap > 96) { // a crossing
+          const mid = ((d15Hues[idx] + d15Hues[prevIdx]) / 2) % 180;
+          if (mid < 45 || mid > 135) rgJumps++; else byJumps++;
+        }
+      }
+      prevIdx = idx;
+    }
+    let axis = 'unclear';
+    if (rgJumps + byJumps > 0) axis = rgJumps >= byJumps ? 'red-green' : 'blue-yellow';
+    return { err: Math.round(err), ratio, axis };
+  }
+  function d15Report() {
+    const { err, ratio, axis } = d15ScoreFn();
+    const pass = ratio < 1.6;
+    $('d15-headline').textContent = pass ? 'Normal arrangement' : `Elevated error (${axis})`;
+    $('d15-note').textContent = pass
+      ? 'Your ordering is close to the smooth hue circle, which is the typical result.'
+      : `Your ordering crosses the circle in a way that leans toward a ${axis} deficiency. This is a screening lean, not a diagnosis.`;
+    $('d15-error').textContent = String(err);
+    $('d15-report').classList.remove('hidden');
+    $('d15-report').classList.add('flex');
+  }
+  $('d15-shuffle').addEventListener('click', d15Shuffle);
+  $('d15-score').addEventListener('click', d15Report);
+  d15Shuffle();
+
+  // ── Anomaloscope (Rayleigh match) ──────────────────────────
+  const anTop = $('an-top') as HTMLCanvasElement;
+  const anBot = $('an-bot') as HTMLCanvasElement;
+  const anTopCtx = anTop.getContext('2d')!;
+  const anBotCtx = anBot.getContext('2d')!;
+  const anMix = $('an-mix') as HTMLInputElement;
+  const anBright = $('an-bright') as HTMLInputElement;
+  function anDraw() {
+    const t = +anMix.value / 100;            // 0 = green, 1 = red
+    const bright = +anBright.value / 100;
+    // Additive red+green → yellow. Top mixes; bottom is reference yellow.
+    const top: RGB = [Math.round(255 * t), Math.round(200 * (1 - t)), 0];
+    anTopCtx.fillStyle = rgbStr(top);
+    anTopCtx.fillRect(0, 0, anTop.width, anTop.height);
+    const yb = Math.round(220 * bright);
+    anBotCtx.fillStyle = rgbStr([yb, Math.round(yb * 0.9), 0]);
+    anBotCtx.fillRect(0, 0, anBot.width, anBot.height);
+  }
+  function anReport() {
+    const t = +anMix.value / 100;
+    // Normal observers match near the middle. Excess red → protan lean
+    // (they need more red for equal brightness); excess green → deutan lean.
+    let head = 'Match in normal range', note = 'Your red-green mix at match sits near the center, the typical Rayleigh match point.';
+    if (t >= 0.68) { head = 'Protan lean'; note = 'You accepted a red-heavy mix as matching the yellow — a pattern associated with reduced red sensitivity (protan). Screening lean only.'; }
+    else if (t <= 0.32) { head = 'Deutan lean'; note = 'You accepted a green-heavy mix as matching — a pattern associated with reduced green sensitivity (deutan). Screening lean only.'; }
+    $('an-headline').textContent = head;
+    $('an-note').textContent = note;
+    $('an-report').classList.remove('hidden');
+    $('an-report').classList.add('flex');
+  }
+  anMix.addEventListener('input', anDraw);
+  anBright.addEventListener('input', anDraw);
+  $('an-match').addEventListener('click', anReport);
+  $('an-reset').addEventListener('click', () => {
+    anMix.value = '50'; anBright.value = '70'; anDraw();
+    $('an-report').classList.add('hidden'); $('an-report').classList.remove('flex');
+  });
+  anDraw();
+
+  // ── Cambridge Landolt-C ────────────────────────────────────
+  const CAM_ROUNDS = 12;
+  const camCanvas = $('cam-canvas') as HTMLCanvasElement;
+  const camCtx = camCanvas.getContext('2d')!;
+  type Dir = 'up' | 'down' | 'left' | 'right';
+  const DIRS: Dir[] = ['up', 'down', 'left', 'right'];
+  const CAM_BG: RGB = [120, 120, 120];
+  let camRound = 0;
+  let camDir: Dir = 'up';
+  let camThreshold = 0;      // lowest saturation still answered correctly (lower = better)
+  let camDone = false;
+
+  function camDraw() {
+    // Colored C fades toward grey as rounds progress. Round 1 = easy (vivid),
+    // last round = near-threshold. Colour along the red-green axis.
+    const frac = camRound / (CAM_ROUNDS - 1);          // 0..1
+    const sat = 0.55 * (1 - frac) + 0.06;              // vivid → nearly grey
+    const target = hsl(camRound % 2 === 0 ? 15 : 135, sat, 0.47); // alternate red / green hue
+    const W = camCanvas.width, H = camCanvas.height;
+    camCtx.clearRect(0, 0, W, H);
+    camCtx.fillStyle = '#0f1011';
+    camCtx.fillRect(0, 0, W, H);
+    const cx = W / 2, cy = H / 2, rOuter = 92, rInner = 48;
+    // Gap angle window (30°) pointing in camDir.
+    const dirAngle: Record<Dir, number> = { right: 0, down: 90, left: 180, up: 270 };
+    const gapCenter = dirAngle[camDir];
+    for (let i = 0; i < 2600; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const rad = Math.sqrt(Math.random()) * (rOuter + 6);
+      const x = cx + Math.cos(ang) * rad;
+      const y = cy + Math.sin(ang) * rad;
+      const r = 2 + Math.random() * 3.5;
+      const degFromCenter = ((Math.atan2(y - cy, x - cx) * 180) / Math.PI + 360) % 360;
+      let angDiff = Math.abs(degFromCenter - gapCenter);
+      if (angDiff > 180) angDiff = 360 - angDiff;
+      const inRing = rad >= rInner && rad <= rOuter && angDiff > 18;
+      const base = inRing ? target : CAM_BG;
+      // jitter each dot slightly so edges aren't crisp
+      const c: RGB = [
+        Math.max(0, Math.min(255, base[0] + (Math.random() * 30 - 15))),
+        Math.max(0, Math.min(255, base[1] + (Math.random() * 30 - 15))),
+        Math.max(0, Math.min(255, base[2] + (Math.random() * 30 - 15))),
+      ];
+      camCtx.fillStyle = rgbStr([Math.round(c[0]), Math.round(c[1]), Math.round(c[2])]);
+      camCtx.beginPath();
+      camCtx.arc(x, y, r, 0, Math.PI * 2);
+      camCtx.fill();
+    }
+  }
+  function camNext(correct: boolean) {
+    if (correct) camThreshold = camRound;   // track deepest correct round
+    camRound++;
+    if (camRound >= CAM_ROUNDS) { camReport(); return; }
+    $('cam-num').textContent = String(camRound + 1);
+    camDir = DIRS[Math.floor(Math.random() * 4)];
+    camDraw();
+  }
+  function camReport() {
+    camDone = true;
+    // Higher threshold round reached = finer discrimination = better.
+    const reached = camThreshold + 1;
+    const pass = reached >= 9;
+    $('cam-headline').textContent = pass ? 'Good discrimination' : 'Reduced discrimination';
+    $('cam-note').textContent = pass
+      ? `You resolved the gap down to round ${reached} of ${CAM_ROUNDS}, where the color is nearly grey — typical of normal color discrimination.`
+      : `You lost the gap by round ${reached} of ${CAM_ROUNDS}, while the color was still distinct from the background. That can indicate reduced red-green discrimination. Screening only.`;
+    $('cam-report').classList.remove('hidden');
+    $('cam-report').classList.add('flex');
+  }
+  function camRestart() {
+    camRound = 0; camThreshold = 0; camDone = false;
+    $('cam-num').textContent = '1';
+    $('cam-report').classList.add('hidden'); $('cam-report').classList.remove('flex');
+    camDir = DIRS[Math.floor(Math.random() * 4)];
+    camDraw();
+  }
+  document.querySelectorAll<HTMLButtonElement>('.cam-dir').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (camDone) return;
+      const d = btn.dataset.dir!;
+      camNext(d === camDir);
+    });
+  });
+  $('cam-restart').addEventListener('click', camRestart);
+  $('cam-total').textContent = String(CAM_ROUNDS);
+  camRestart();
+
+  // ── Farnsworth Lantern ─────────────────────────────────────
+  const LAN_COLORS: Record<string, RGB> = {
+    red: [150, 40, 30], green: [30, 120, 60], white: [210, 205, 195],
+  };
+  const LAN_KEYS = ['red', 'green', 'white'];
+  // 9 pairs — every ordered combination, the classic lantern sequence.
+  const LAN_PAIRS: [string, string][] = [
+    ['red', 'green'], ['green', 'red'], ['white', 'green'], ['red', 'white'],
+    ['green', 'white'], ['white', 'red'], ['red', 'red'], ['green', 'green'], ['white', 'white'],
+  ];
+  let lanRound = 0;
+  let lanErrors = 0;
+  let lanPickA = '', lanPickB = '';
+
+  function lanRenderChoices() {
+    lanPickA = ''; lanPickB = '';
+    for (const [which, elId] of [['a', 'lan-choices-a'], ['b', 'lan-choices-b']] as const) {
+      const wrap = $(elId);
+      wrap.innerHTML = '';
+      LAN_KEYS.forEach((k) => {
+        const b = document.createElement('button');
+        b.className = 'btn btn-tertiary capitalize';
+        b.textContent = k;
+        b.addEventListener('click', () => {
+          if (which === 'a') lanPickA = k; else lanPickB = k;
+          Array.from(wrap.children).forEach((c) => (c as HTMLElement).className = 'btn btn-tertiary capitalize');
+          b.className = 'btn btn-secondary capitalize';
+        });
+        wrap.appendChild(b);
+      });
+    }
+  }
+  function lanDraw() {
+    const [a, b] = LAN_PAIRS[lanRound];
+    ($('lan-a') as HTMLElement).style.background = rgbStr(LAN_COLORS[a]);
+    ($('lan-b') as HTMLElement).style.background = rgbStr(LAN_COLORS[b]);
+    ($('lan-a') as HTMLElement).style.boxShadow = `0 0 16px ${rgbStr(LAN_COLORS[a])}`;
+    ($('lan-b') as HTMLElement).style.boxShadow = `0 0 16px ${rgbStr(LAN_COLORS[b])}`;
+    $('lan-num').textContent = String(lanRound + 1);
+    lanRenderChoices();
+  }
+  function lanSubmit() {
+    if (!lanPickA || !lanPickB) return;
+    const [a, b] = LAN_PAIRS[lanRound];
+    if (lanPickA !== a) lanErrors++;
+    if (lanPickB !== b) lanErrors++;
+    lanRound++;
+    if (lanRound >= LAN_PAIRS.length) { lanReport(); return; }
+    lanDraw();
+  }
+  function lanReport() {
+    // Aviation lantern criterion is strict: any red/green confusion fails.
+    const pass = lanErrors === 0;
+    $('lan-headline').textContent = pass ? 'Pass' : `${lanErrors} error${lanErrors === 1 ? '' : 's'}`;
+    $('lan-note').textContent = pass
+      ? 'You named every signal light correctly — the standard a lantern test requires for color-critical roles.'
+      : 'You misnamed one or more lights. Real lantern tests treat any red-green confusion as a fail for aviation and maritime certification. Screening only — see a professional.';
+    $('lan-report').classList.remove('hidden');
+    $('lan-report').classList.add('flex');
+  }
+  function lanRestart() {
+    lanRound = 0; lanErrors = 0;
+    $('lan-report').classList.add('hidden'); $('lan-report').classList.remove('flex');
+    lanDraw();
+  }
+  $('lan-submit').addEventListener('click', lanSubmit);
+  $('lan-restart').addEventListener('click', lanRestart);
+  $('lan-total').textContent = String(LAN_PAIRS.length);
+  lanRestart();
+
+  // ── Dev self-check ─────────────────────────────────────────
+  // Smallest thing that fails if the vote logic breaks. Runs only on localhost.
+  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+    const mk = (axis: Axis, correct: boolean, sawNothing = false): Answer => ({ axis, correct, sawNothing });
+    const clean = [mk('control', true), mk('control', true), mk('protan', true), mk('protan', true),
+      mk('deutan', true), mk('deutan', true), mk('rg', true), mk('tritan', true)];
+    // Protan pattern: misses protan-diagnostic plates (sees nothing), reads deutan.
+    const protanPat = [mk('control', true), mk('control', true),
+      mk('protan', false, true), mk('protan', false, true), mk('protan', false, true),
+      mk('deutan', true), mk('deutan', true), mk('deutan', true),
+      mk('rg', false, true), mk('rg', false)];
+    const deutanPat = [mk('control', true), mk('control', true),
+      mk('protan', true), mk('protan', true), mk('protan', true),
+      mk('deutan', false, true), mk('deutan', false, true), mk('deutan', false, true),
+      mk('rg', false, true), mk('rg', false)];
+    console.assert(scoreReport(clean).classification === 'Normal', 'clean → Normal');
+    console.assert(scoreReport(protanPat).classification === 'Protan', 'protan pattern → Protan');
+    console.assert(scoreReport(deutanPat).classification === 'Deutan', 'deutan pattern → Deutan');
+
+    // hsl sanity: hue 0 = red, 120 = green, 240 = blue.
+    console.assert(hsl(0, 1, 0.5)[0] === 255 && hsl(0, 1, 0.5)[2] === 0, 'hsl red');
+    console.assert(hsl(120, 1, 0.5)[1] === 255, 'hsl green');
+    // D-15: sorted-by-hue order scores at the minimum ratio (~1.0), a shuffle worse.
+    d15Order = [...Array(D15_N).keys()].sort((a, b) => d15Hues[a] - d15Hues[b]);
+    console.assert(d15ScoreFn().ratio <= 1.001, 'sorted order is minimal');
+    d15Shuffle(); // resync state + UI after the mutation above
+  }
+</script>

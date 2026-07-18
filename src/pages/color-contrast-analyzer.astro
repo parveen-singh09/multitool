@@ -1,0 +1,200 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="color-contrast-analyzer">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div class="flex flex-col gap-2">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Text color
+          <div class="flex items-center gap-2">
+            <input id="cca-fg-color" type="color" value="#ffffff" class="h-9 w-10 cursor-pointer rounded border border-hairline bg-transparent" />
+            <input id="cca-fg-hex" type="text" value="#ffffff" class="field font-mono text-[13px]" spellcheck="false" />
+          </div>
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] text-ink-faint">
+          Lightness <span id="cca-fg-l-val" class="font-mono">100%</span>
+          <input id="cca-fg-l" type="range" min="0" max="100" step="1" value="100" />
+        </label>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Background color
+          <div class="flex items-center gap-2">
+            <input id="cca-bg-color" type="color" value="#010102" class="h-9 w-10 cursor-pointer rounded border border-hairline bg-transparent" />
+            <input id="cca-bg-hex" type="text" value="#010102" class="field font-mono text-[13px]" spellcheck="false" />
+          </div>
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] text-ink-faint">
+          Lightness <span id="cca-bg-l-val" class="font-mono">1%</span>
+          <input id="cca-bg-l" type="range" min="0" max="100" step="1" value="1" />
+        </label>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <button id="cca-swap" class="btn text-[13px]">Swap colors</button>
+      <button id="cca-fix" class="btn text-[13px]">Auto-fix text color to pass AA</button>
+    </div>
+
+    <p id="cca-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div id="cca-sample" class="panel flex min-h-24 flex-col items-center justify-center gap-1 p-6 text-center">
+      <div class="text-xl font-semibold">Sample large text</div>
+      <div class="text-sm">The quick brown fox jumps over the lazy dog.</div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-3">
+      <div class="panel panel-lift p-4"><div class="copy-wrap"><div id="cca-ratio" class="font-display text-xl font-semibold text-primary-hover">—</div><button type="button" class="copy-icon" data-copy-target="#cca-ratio" aria-label="Copy"></button></div><div class="mt-1 text-[13px] text-ink-subtle">Contrast ratio</div></div>
+      <div class="panel p-4"><div id="cca-aa-normal" class="font-mono text-lg">—</div><div class="mt-1 text-[13px] text-ink-subtle">AA normal (4.5)</div></div>
+      <div class="panel p-4"><div id="cca-aaa-normal" class="font-mono text-lg">—</div><div class="mt-1 text-[13px] text-ink-subtle">AAA normal (7)</div></div>
+      <div class="panel p-4"><div id="cca-aa-large" class="font-mono text-lg">—</div><div class="mt-1 text-[13px] text-ink-subtle">AA large (3)</div></div>
+      <div class="panel p-4"><div id="cca-aaa-large" class="font-mono text-lg">—</div><div class="mt-1 text-[13px] text-ink-subtle">AAA large (4.5)</div></div>
+      <div class="panel p-4"><div id="cca-ui" class="font-mono text-lg">—</div><div class="mt-1 text-[13px] text-ink-subtle">UI / graphics (3)</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free color contrast analyzer computes the WCAG contrast ratio between a
+      text color and a background color and tells you whether it passes AA and AAA
+      requirements for normal text, large text, and UI components. Enter hex values,
+      use the native color pickers, or drag the lightness sliders to nudge either
+      color and watch the ratio update live.
+    </p>
+    <p>
+      When a pairing fails, hit <strong>Auto-fix</strong> and the tool finds the
+      nearest lightness for the text color that passes AA (4.5:1), keeping its hue
+      and saturation intact. Meeting 4.5:1 for body text and 3:1 for large text and
+      UI keeps your interface readable.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { hexToRgb, rgbToHex, rgbToHsl, hslToRgb, type RGB } from '../lib/colors';
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const fgColor = $<HTMLInputElement>('cca-fg-color');
+  const fgHex = $<HTMLInputElement>('cca-fg-hex');
+  const fgL = $<HTMLInputElement>('cca-fg-l');
+  const fgLVal = $('cca-fg-l-val');
+  const bgColor = $<HTMLInputElement>('cca-bg-color');
+  const bgHex = $<HTMLInputElement>('cca-bg-hex');
+  const bgL = $<HTMLInputElement>('cca-bg-l');
+  const bgLVal = $('cca-bg-l-val');
+  const err = $('cca-error');
+  const sample = $('cca-sample');
+  const set = (id: string, val: string) => { $(id).textContent = val; };
+
+  function relativeLuminance({ r, g, b }: RGB): number {
+    const chan = (c: number) => {
+      const s = c / 255;
+      return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * chan(r) + 0.7152 * chan(g) + 0.0722 * chan(b);
+  }
+
+  function contrastRatio(a: RGB, b: RGB): number {
+    const l1 = relativeLuminance(a);
+    const l2 = relativeLuminance(b);
+    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+  }
+
+  function verdict(id: string, pass: boolean) {
+    const el = $(id);
+    el.textContent = pass ? '✓ Pass' : '✗ Fail';
+    el.style.color = pass ? '#27a644' : '#e5484d';
+  }
+
+  function suggestPassingLightness(fg: RGB, bg: RGB, target: number): number | null {
+    const { h, s } = rgbToHsl(fg);
+    const l0 = rgbToHsl(fg).l;
+    let best: number | null = null;
+    let bestDist = Infinity;
+    for (let l = 0; l <= 100; l++) {
+      if (contrastRatio(hslToRgb({ h, s, l }), bg) >= target) {
+        const dist = Math.abs(l - l0);
+        if (dist < bestDist) { bestDist = dist; best = l; }
+      }
+    }
+    return best;
+  }
+
+  function withLightness(hex: string, l: number): string {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return hex;
+    const { h, s } = rgbToHsl(rgb);
+    return rgbToHex(hslToRgb({ h, s, l }));
+  }
+
+  function analyze() {
+    err.classList.add('hidden');
+    const fg = hexToRgb(fgHex.value);
+    const bg = hexToRgb(bgHex.value);
+    if (!fg || !bg) {
+      err.textContent = 'Enter valid hex colors (e.g. #ffffff or #fff).';
+      err.classList.remove('hidden');
+      return;
+    }
+
+    const ratio = contrastRatio(fg, bg);
+    set('cca-ratio', `${ratio.toFixed(2)}:1`);
+    verdict('cca-aa-normal', ratio >= 4.5);
+    verdict('cca-aaa-normal', ratio >= 7);
+    verdict('cca-aa-large', ratio >= 3);
+    verdict('cca-aaa-large', ratio >= 4.5);
+    verdict('cca-ui', ratio >= 3);
+
+    sample.style.background = bgHex.value;
+    sample.style.color = fgHex.value;
+  }
+
+  // Push a hex value out to picker + hex field + lightness slider, then analyze.
+  function setColor(which: 'fg' | 'bg', hex: string) {
+    const [picker, hexEl, slider, label] =
+      which === 'fg' ? [fgColor, fgHex, fgL, fgLVal] : [bgColor, bgHex, bgL, bgLVal];
+    const rgb = hexToRgb(hex);
+    if (rgb) {
+      const norm = rgbToHex(rgb);
+      (picker as HTMLInputElement).value = norm;
+      (slider as HTMLInputElement).value = String(Math.round(rgbToHsl(rgb).l));
+      label.textContent = `${(slider as HTMLInputElement).value}%`;
+    }
+    (hexEl as HTMLInputElement).value = hex;
+    analyze();
+  }
+
+  // Picker → hex.
+  fgColor.addEventListener('input', () => setColor('fg', fgColor.value));
+  bgColor.addEventListener('input', () => setColor('bg', bgColor.value));
+  // Hex typing → picker + slider (only when a full valid hex is present).
+  fgHex.addEventListener('input', () => { if (hexToRgb(fgHex.value)) setColor('fg', fgHex.value); else analyze(); });
+  bgHex.addEventListener('input', () => { if (hexToRgb(bgHex.value)) setColor('bg', bgHex.value); else analyze(); });
+  // Lightness slider → new hex.
+  fgL.addEventListener('input', () => { fgLVal.textContent = `${fgL.value}%`; setColor('fg', withLightness(fgHex.value, Number(fgL.value))); });
+  bgL.addEventListener('input', () => { bgLVal.textContent = `${bgL.value}%`; setColor('bg', withLightness(bgHex.value, Number(bgL.value))); });
+
+  $('cca-swap').addEventListener('click', () => {
+    const f = fgHex.value;
+    setColor('fg', bgHex.value);
+    setColor('bg', f);
+  });
+
+  $('cca-fix').addEventListener('click', () => {
+    const fg = hexToRgb(fgHex.value);
+    const bg = hexToRgb(bgHex.value);
+    if (!fg || !bg) return;
+    const l = suggestPassingLightness(fg, bg, 4.5);
+    if (l === null) {
+      err.textContent = 'No lightness of this hue passes AA against that background — try changing the hue or background.';
+      err.classList.remove('hidden');
+      return;
+    }
+    setColor('fg', withLightness(fgHex.value, l));
+  });
+
+  analyze();
+</script>

@@ -1,0 +1,153 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="ebay-fee-calculator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Item sold price ($)
+        <input id="eb-price" type="number" min="0" step="0.01" value="100" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Shipping charged to buyer ($)
+        <input id="eb-shipping" type="number" min="0" step="0.01" value="0" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Category
+        <select id="eb-category" class="field"></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Your item cost ($)
+        <input id="eb-cost" type="number" min="0" step="0.01" value="40" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Shipping label you pay ($)
+        <input id="eb-labelcost" type="number" min="0" step="0.01" value="0" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Promoted listing ad rate (%)
+        <input id="eb-adrate" type="number" min="0" step="0.1" value="0" class="field" />
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="eb-topseller" type="checkbox" class="accent-primary" /> Below-standard seller (+5% fee)
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="eb-intl" type="checkbox" class="accent-primary" /> International fee (+1.65%)
+      </label>
+
+      <div class="mt-2 border-t border-hairline pt-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Goal-seek: target net profit ($)
+          <input id="eb-goal" type="number" min="0" step="1" placeholder="e.g. 30" class="field" />
+        </label>
+        <p id="eb-goal-out" class="mt-2 text-[13px] text-ink-subtle"></p>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-3">
+      <div id="eb-out" class="flex flex-col gap-2"></div>
+      <div id="eb-profit" class="panel panel-lift flex flex-col gap-1 p-5"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free eBay fee calculator estimates what you'll actually pocket on a
+      sale. It applies the final value fee for your category on the item price plus
+      shipping, adds the fixed per-order fee, and layers on optional
+      below-standard-seller and international surcharges — then subtracts your item
+      cost and shipping label to show net profit and margin. Fee rates are based on
+      eBay US published defaults and are estimates; your Store subscription,
+      promoted-listing ad rate and payment specifics can change the exact number.
+      Everything is calculated in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+
+  const CATEGORIES: { name: string; fee: number }[] = [
+    { name: 'Most categories', fee: 13.25 },
+    { name: 'Electronics: Cameras & Photo', fee: 12.35 },
+    { name: 'Books, Movies & Music', fee: 14.95 },
+    { name: 'Clothing, Shoes & Accessories', fee: 13.25 },
+    { name: 'Sneakers over $150', fee: 8 },
+    { name: 'Watches: parts', fee: 15 },
+    { name: 'Jewelry & Watches (most)', fee: 15 },
+    { name: 'Coins & Paper Money', fee: 9.35 },
+    { name: 'Guitars & Basses', fee: 6.7 },
+    { name: 'Musical Instruments & Gear', fee: 6.35 },
+    { name: 'Bullion', fee: 13.25 },
+    { name: 'Athletic shoes over $100', fee: 8 },
+  ];
+
+  const FIXED_FEE = 0.40; 
+  const FIXED_FEE_LOW = 0.30; 
+
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const catEl = document.getElementById('eb-category') as HTMLSelectElement;
+  const out = document.getElementById('eb-out')!;
+  const profitEl = document.getElementById('eb-profit')!;
+
+  catEl.innerHTML = CATEGORIES.map((c, i) => `<option value="${i}">${c.name} — ${c.fee}%</option>`).join('');
+
+  const money = (n: number) => `$${n.toFixed(2)}`;
+
+  function row(label: string, value: string, muted = false): string {
+    return `<div class="flex items-baseline justify-between border-b border-hairline/60 py-2 text-sm">
+      <span class="${muted ? 'text-ink-tertiary' : 'text-ink-subtle'}">${label}</span>
+      <span class="font-mono ${muted ? 'text-ink-subtle' : 'text-ink'}">${value}</span>
+    </div>`;
+  }
+
+  function compute() {
+    const price = parseFloat($('eb-price').value) || 0;
+    const shipping = parseFloat($('eb-shipping').value) || 0;
+    const cost = parseFloat($('eb-cost').value) || 0;
+    const labelCost = parseFloat($('eb-labelcost').value) || 0;
+    const cat = CATEGORIES[Number(catEl.value)];
+
+    const gross = price + shipping;
+    let feePct = cat.fee;
+    if ($('eb-topseller').checked) feePct += 5;
+    if ($('eb-intl').checked) feePct += 1.65;
+    const adRate = parseFloat($('eb-adrate').value) || 0;
+
+    const fvf = gross * (feePct / 100);
+    const adFee = gross * (adRate / 100);
+    const fixed = gross <= 10 ? FIXED_FEE_LOW : FIXED_FEE;
+    const totalFees = fvf + adFee + fixed;
+    const payout = gross - totalFees;
+    const profit = payout - cost - labelCost;
+    const margin = price > 0 ? (profit / price) * 100 : 0;
+
+    out.innerHTML =
+      row('Buyer pays (item + shipping)', money(gross)) +
+      row(`Final value fee (${feePct.toFixed(2)}%)`, `−${money(fvf)}`) +
+      (adRate > 0 ? row(`Promoted listing (${adRate.toFixed(1)}%)`, `−${money(adFee)}`) : '') +
+      row('Fixed per-order fee', `−${money(fixed)}`) +
+      row('Total eBay fees', `−${money(totalFees)}`, true) +
+      row('Your payout', money(payout));
+
+    // Goal-seek: required item price for a target net profit (holds shipping/cost/fees fixed,
+    // assumes the $0.40 per-order fee since goal sales are typically over $10).
+    const goalEl = $('eb-goal');
+    const goalOut = document.getElementById('eb-goal-out')!;
+    const target = parseFloat(goalEl.value);
+    if (isFinite(target) && goalEl.value !== '') {
+      const k = 1 - (feePct + adRate) / 100;
+      if (k > 0) {
+        const requiredPrice = (target + FIXED_FEE + cost + labelCost) / k - shipping;
+        goalOut.textContent = `Sell at ${money(requiredPrice)} to net ${money(target)} profit.`;
+      } else {
+        goalOut.textContent = 'Fee rate too high to reach a positive profit.';
+      }
+    } else {
+      goalOut.textContent = '';
+    }
+
+    const profitColor = profit >= 0 ? '#27a644' : '#e08585';
+    profitEl.innerHTML =
+      `<span class="text-xs text-ink-tertiary">Net profit (after fees, item cost & label)</span>
+       <span class="font-display text-3xl font-semibold" style="color:${profitColor}">${money(profit)}</span>
+       <span class="text-[13px] text-ink-subtle">Margin on sale price: ${margin.toFixed(1)}% · Fees are ${gross > 0 ? ((totalFees / gross) * 100).toFixed(1) : '0'}% of the sale</span>`;
+  }
+
+  ['eb-price', 'eb-shipping', 'eb-cost', 'eb-labelcost', 'eb-topseller', 'eb-intl', 'eb-adrate', 'eb-goal'].forEach((id) => $(id).addEventListener('input', compute));
+  catEl.addEventListener('change', compute);
+  compute();
+</script>

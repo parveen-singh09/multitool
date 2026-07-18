@@ -1,0 +1,102 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="text-analyzer">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Paste or type your text
+      <div class="copy-wrap">
+        <textarea id="ta-in" class="field min-h-32 resize-y font-mono text-[13px]" placeholder="Paste text here to see live statistics…" spellcheck="false"></textarea>
+        <button type="button" class="copy-icon" data-copy-target="#ta-in" aria-label="Copy"></button>
+      </div>
+    </label>
+
+    <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-3">
+      <div class="panel panel-lift p-4"><div id="ta-words" class="font-display text-xl font-semibold text-primary-hover">0</div><div class="mt-1 text-[13px] text-ink-subtle">Words</div></div>
+      <div class="panel p-4"><div id="ta-chars" class="font-mono text-lg text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Characters</div></div>
+      <div class="panel p-4"><div id="ta-chars-ns" class="font-mono text-lg text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Chars (no spaces)</div></div>
+      <div class="panel p-4"><div id="ta-sentences" class="font-mono text-lg text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Sentences</div></div>
+      <div class="panel p-4"><div id="ta-paragraphs" class="font-mono text-lg text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Paragraphs</div></div>
+      <div class="panel p-4"><div id="ta-reading" class="font-mono text-lg text-ink">0s</div><div class="mt-1 text-[13px] text-ink-subtle">Reading time</div></div>
+      <div class="panel p-4"><div id="ta-avg-word" class="font-mono text-lg text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Avg word length</div></div>
+      <div class="panel p-4"><div id="ta-avg-sentence" class="font-mono text-lg text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Avg words/sentence</div></div>
+    </div>
+
+    <div>
+      <h2 class="mb-2 font-display text-sm font-semibold text-ink">Top 10 words</h2>
+      <div id="ta-top" class="text-[13px] text-ink-subtle">Start typing to see the most frequent words.</div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free text analyzer gives you word, character, sentence and paragraph
+      counts along with average word length, average words per sentence, an
+      estimated reading time and the ten most frequent words in your text. It is
+      handy for writers, students and editors checking length or readability.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('ta-in') as HTMLTextAreaElement;
+  const set = (id: string, val: string) => { document.getElementById(id)!.textContent = val; };
+  const topEl = document.getElementById('ta-top')!;
+
+  function readingTime(words: number): string {
+    const seconds = Math.round((words / 200) * 60);
+    if (seconds < 60) return `${seconds}s`;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return s ? `${m}m ${s}s` : `${m}m`;
+  }
+
+  function analyze() {
+    const text = input.value;
+    const trimmed = text.trim();
+    const words = trimmed ? trimmed.split(/\s+/) : [];
+    const wordCount = words.length;
+    const chars = text.length;
+    const charsNoSpace = text.replace(/\s/g, '').length;
+    const sentences = trimmed ? (trimmed.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || []).length : 0;
+    const paragraphs = trimmed ? trimmed.split(/\n\s*\n/).filter((p) => p.trim() !== '').length : 0;
+    const letters = trimmed.replace(/[^A-Za-z0-9]/g, '').length;
+    const avgWord = wordCount ? (letters / wordCount).toFixed(1) : '0';
+    const avgSentence = sentences ? (wordCount / sentences).toFixed(1) : '0';
+
+    set('ta-words', String(wordCount));
+    set('ta-chars', String(chars));
+    set('ta-chars-ns', String(charsNoSpace));
+    set('ta-sentences', String(sentences));
+    set('ta-paragraphs', String(paragraphs));
+    set('ta-reading', readingTime(wordCount));
+    set('ta-avg-word', avgWord);
+    set('ta-avg-sentence', avgSentence);
+
+    const freq = new Map<string, number>();
+    for (const w of words) {
+      const key = w.toLowerCase().replace(/[^a-z0-9']/g, '');
+      if (!key) continue;
+      freq.set(key, (freq.get(key) || 0) + 1);
+    }
+    const top = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+    if (!top.length) {
+      topEl.textContent = 'Start typing to see the most frequent words.';
+    } else {
+      topEl.innerHTML = '';
+      const wrap = document.createElement('div');
+      wrap.className = 'flex flex-wrap gap-2';
+      for (const [word, count] of top) {
+        const chip = document.createElement('span');
+        chip.className = 'panel px-3 py-1 font-mono text-[13px] text-ink';
+        chip.textContent = `${word} · ${count}`;
+        wrap.appendChild(chip);
+      }
+      topEl.appendChild(wrap);
+    }
+  }
+
+  input.addEventListener('input', analyze);
+  analyze();
+</script>

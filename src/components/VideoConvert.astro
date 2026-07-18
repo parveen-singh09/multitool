@@ -1,0 +1,113 @@
+---
+export interface Props { slug: string; from?: string; to?: string; }
+const { from, to } = Astro.props;
+const TARGETS: Record<string, string> = {
+  mp4: 'MP4', webm: 'WebM', mkv: 'MKV', mov: 'MOV', avi: 'AVI', flv: 'FLV', ogv: 'OGV',
+};
+const accept = from ? `.${from},video/*` : 'video/*';
+---
+
+<div id="vc-root" class="flex flex-col gap-4" data-to={to ?? ''}>
+  <label id="vc-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M4 5h16v14H4zM10 9l5 3-5 3z"/></svg>
+    <span class="text-sm text-ink">{from ? `Choose a .${from} file or drop it here` : 'Choose a video or drop it here'}</span>
+    <input id="vc-file" type="file" accept={accept} class="sr-only" />
+  </label>
+
+  <p class="text-[13px] text-ink-tertiary">Video re-encoding runs in your browser and is CPU-intensive — expect roughly real-time speed (a few minutes for a few minutes of footage). Your video is never uploaded.</p>
+
+  <div class="flex flex-wrap items-center gap-3">
+    {!to && (
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        Convert to
+        <select id="vc-target" class="field w-auto">
+          {Object.entries(TARGETS).map(([k, v]) => <option value={k}>{v}</option>)}
+        </select>
+      </label>
+    )}
+    <label class="flex items-center gap-2 text-sm text-ink-subtle">Quality
+      <select id="vc-crf" class="field w-auto">
+        <option value="high">High (larger)</option>
+        <option value="balanced" selected>Balanced</option>
+        <option value="small">Smaller</option>
+      </select>
+    </label>
+    <button id="vc-run" class="btn btn-primary" disabled>Convert</button>
+    <a id="vc-download" class="btn btn-secondary hidden" download>Download</a>
+  </div>
+
+  <div id="vc-progress-wrap" class="hidden h-1 w-full overflow-hidden rounded-full bg-surface-3">
+    <div id="vc-bar" class="h-full w-0 rounded-full transition-all" style="background:var(--color-primary)"></div>
+  </div>
+  <span id="vc-status" class="text-[13px] text-ink-subtle" aria-live="polite"></span>
+  <p id="vc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+</div>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  import { getFFmpeg, fetchFile } from '../lib/ffmpeg';
+  import { VIDEO_MIME as MIME, videoArgs as argsFor } from '../lib/videoConvert';
+
+  const root = document.getElementById('vc-root') as HTMLElement;
+  const presetTo = root.dataset.to || '';
+  const $ = (id: string) => document.getElementById(id)!;
+  const fileInput = $('vc-file') as HTMLInputElement;
+  const drop = $('vc-drop');
+  const target = document.querySelector<HTMLSelectElement>('#vc-target');
+  const crfSel = document.querySelector<HTMLSelectElement>('#vc-crf')!;
+  const runBtn = $('vc-run') as HTMLButtonElement;
+  const dlBtn = $('vc-download') as HTMLAnchorElement;
+  const status = $('vc-status');
+  const barWrap = $('vc-progress-wrap');
+  const bar = $('vc-bar');
+  const err = $('vc-error');
+
+  let picked: File | null = null;
+  let outUrl: string | null = null;
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  function load(file: File) {
+    setErr(''); picked = file;
+    runBtn.disabled = false; dlBtn.classList.add('hidden');
+    status.textContent = `${file.name} ready.`;
+  }
+
+  async function convert() {
+    if (!picked) return;
+    const to = presetTo || target?.value || 'mp4';
+    setErr(''); runBtn.disabled = true; dlBtn.classList.add('hidden');
+    barWrap.classList.remove('hidden'); bar.style.width = '0%';
+    if (outUrl) { URL.revokeObjectURL(outUrl); outUrl = null; }
+    try {
+      const ff = await getFFmpeg({
+        onDownload: (n) => { if (n) status.textContent = n; },
+        onProgress: (r) => { bar.style.width = Math.min(100, Math.round(r * 100)) + '%'; },
+      });
+      status.textContent = 'Converting…';
+      const inName = 'in_' + Math.random().toString(36).slice(2) + '.' + (picked.name.split('.').pop() || 'dat');
+      const outName = 'out.' + to;
+      await ff.writeFile(inName, await fetchFile(picked));
+      await ff.exec(argsFor(to, crfSel.value, inName, outName));
+      const data = (await ff.readFile(outName)) as Uint8Array;
+      try { await ff.deleteFile(inName); await ff.deleteFile(outName); } catch {}
+      outUrl = URL.createObjectURL(new Blob([data as BlobPart], { type: MIME[to] }));
+      dlBtn.href = outUrl;
+      dlBtn.setAttribute('download', picked.name.replace(/\.[^.]+$/, '') + '.' + to);
+      dlBtn.classList.remove('hidden');
+      bar.style.width = '100%';
+      status.textContent = 'Done — ' + (data.length / 1048576).toFixed(2) + ' MB.';
+    } catch (e) {
+      setErr('Conversion failed: ' + (e as Error).message);
+      status.textContent = '';
+    } finally { runBtn.disabled = false; }
+  }
+
+  fileInput.addEventListener('change', () => fileInput.files?.[0] && load(fileInput.files[0]));
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) load(f); });
+  runBtn.addEventListener('click', convert);
+</script>

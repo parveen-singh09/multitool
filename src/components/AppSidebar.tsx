@@ -71,7 +71,7 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
       } else {
         const categoryTools = tools.filter((t) => t.category === cat);
         const isActiveCategory = categoryTools.some(
-          (tool) => `/tools/${tool.slug}` === normalizedPath
+          (tool) => `/${tool.slug}` === normalizedPath
         );
         nextOpen[cat] = isActiveCategory;
       }
@@ -176,12 +176,12 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
                 ) : (
                   <SidebarMenuSub className="ml-2 border-none pl-1">
                     {rankedTools.map((tool) => {
-                      const isToolActive = `/tools/${tool.slug}` === normalizedPath;
+                      const isToolActive = `/${tool.slug}` === normalizedPath;
                       return (
                         <SidebarMenuSubItem key={tool.slug}>
                           <SidebarMenuSubButton asChild isActive={isToolActive}>
                             <a
-                              href={`/tools/${tool.slug}`}
+                              href={`/${tool.slug}`}
                               className={`h-auto min-h-7 items-start overflow-visible whitespace-normal py-1.5 text-sm leading-snug ${
                                 isToolActive
                                   ? "text-primary-hover font-medium"
@@ -227,19 +227,19 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
                       <CollapsibleContent className="data-[state=closed]:animate-collapse-up data-[state=open]:animate-collapse-down overflow-hidden">
                         <SidebarMenuSub className="ml-5 border-l border-sidebar-border/50 pl-2">
                           {categoryTools.map((tool) => {
-                            const isToolActive = `/tools/${tool.slug}` === normalizedPath;
+                            const isToolActive = `/${tool.slug}` === normalizedPath;
                             return (
                               <SidebarMenuSubItem
                                 key={tool.slug}
                                 className={`before:content-[''] before:absolute before:-left-2 before:top-3 before:h-2 before:w-2 before:-translate-x-1/2 before:rounded-full before:ring-2 before:ring-sidebar after:content-[''] after:absolute after:-left-2 after:top-4 after:h-px after:w-3 ${
-                                  `/tools/${tool.slug}` === normalizedPath
+                                  `/${tool.slug}` === normalizedPath
                                     ? "before:bg-primary after:bg-primary/50"
                                     : "before:bg-sidebar-border after:bg-sidebar-border/60"
                                 }`}
                               >
                                 <SidebarMenuSubButton asChild isActive={isToolActive}>
                                   <a
-                                    href={`/tools/${tool.slug}`}
+                                    href={`/${tool.slug}`}
                                     className={`h-auto min-h-7 items-start overflow-visible whitespace-normal py-1.5 text-sm leading-snug ${
                                       isToolActive
                                         ? "text-primary-hover font-medium"

@@ -1,0 +1,135 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="favicon-generator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Text or emoji
+        <input id="fv-text" class="field" value="T" maxlength="4" spellcheck="false" />
+      </label>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Text color
+          <input id="fv-fg" type="color" value="#ffffff" class="field h-10 cursor-pointer p-1" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Background
+          <input id="fv-bg" type="color" value="#5e6ad2" class="field h-10 cursor-pointer p-1" />
+        </label>
+      </div>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Shape
+        <select id="fv-shape" class="field"><option value="rounded">Rounded square</option><option value="circle">Circle</option><option value="square">Square</option></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Font weight
+        <select id="fv-weight" class="field"><option value="600">Semibold</option><option value="700" selected>Bold</option><option value="800">Extra bold</option></select>
+      </label>
+    </div>
+
+    <div class="flex flex-col items-center gap-4">
+      <canvas id="fv-canvas" width="256" height="256" class="h-40 w-40 rounded-lg border border-hairline"></canvas>
+      <div class="flex items-center gap-3">
+        <span class="text-[13px] text-ink-subtle">Preview:</span>
+        <canvas id="fv-16" width="16" height="16" class="border border-hairline"></canvas>
+        <canvas id="fv-32" width="32" height="32" class="border border-hairline"></canvas>
+        <canvas id="fv-48" width="48" height="48" class="border border-hairline"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4 flex flex-wrap gap-2">
+    <button id="fv-ico" class="btn btn-primary">Download .ico</button>
+    <button id="fv-png" class="btn btn-secondary">Download PNG (256)</button>
+    <button id="fv-png32" class="btn btn-secondary">Download PNG (32)</button>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free favicon generator turns a letter, a couple of characters or an
+      emoji into a clean favicon with your choice of colors and shape. It previews
+      the icon at the real 16, 32 and 48 pixel sizes browsers use, and exports a
+      multi-size <code class="font-mono text-ink">.ico</code> file plus PNGs.
+      Everything is drawn on a canvas in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const canvas = $('fv-canvas') as HTMLCanvasElement;
+
+  function draw(cv: HTMLCanvasElement) {
+    const size = cv.width;
+    const ctx = cv.getContext('2d')!;
+    const fg = ($('fv-fg') as HTMLInputElement).value;
+    const bg = ($('fv-bg') as HTMLInputElement).value;
+    const shape = ($('fv-shape') as HTMLSelectElement).value;
+    const weight = ($('fv-weight') as HTMLSelectElement).value;
+    const text = ($('fv-text') as HTMLInputElement).value || 'T';
+    ctx.clearRect(0, 0, size, size);
+    ctx.fillStyle = bg;
+    if (shape === 'circle') {
+      ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2); ctx.fill();
+    } else if (shape === 'rounded') {
+      const r = size * 0.22;
+      ctx.beginPath();
+      ctx.roundRect(0, 0, size, size, r);
+      ctx.fill();
+    } else {
+      ctx.fillRect(0, 0, size, size);
+    }
+    ctx.fillStyle = fg;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `${weight} ${size * 0.6}px Inter, system-ui, sans-serif`;
+    ctx.fillText(text, size / 2, size / 2 + size * 0.04);
+  }
+
+  function drawAll() {
+    [canvas, $('fv-16') as HTMLCanvasElement, $('fv-32') as HTMLCanvasElement, $('fv-48') as HTMLCanvasElement].forEach(draw);
+  }
+
+  ['fv-text', 'fv-fg', 'fv-bg', 'fv-shape', 'fv-weight'].forEach((id) => $(id).addEventListener('input', drawAll));
+
+  function download(href: string, name: string) {
+    const a = document.createElement('a'); a.href = href; a.download = name; a.click();
+  }
+
+  $('fv-png').addEventListener('click', () => download(canvas.toDataURL('image/png'), 'favicon-256.png'));
+  $('fv-png32').addEventListener('click', () => {
+    const c = document.createElement('canvas'); c.width = 32; c.height = 32; draw(c);
+    download(c.toDataURL('image/png'), 'favicon-32.png');
+  });
+
+  // Build a multi-size .ico embedding PNG images (16, 32, 48).
+  $('fv-ico').addEventListener('click', async () => {
+    const sizes = [16, 32, 48];
+    const pngs = await Promise.all(sizes.map((s) => new Promise<Uint8Array>((resolve) => {
+      const c = document.createElement('canvas'); c.width = s; c.height = s; draw(c);
+      c.toBlob(async (b) => resolve(new Uint8Array(await b!.arrayBuffer())), 'image/png');
+    })));
+    const count = sizes.length;
+    const header = 6 + count * 16;
+    let offset = header;
+    const dirs: number[][] = [];
+    for (let i = 0; i < count; i++) {
+      dirs.push([sizes[i] >= 256 ? 0 : sizes[i], sizes[i] >= 256 ? 0 : sizes[i], 0, 0, 1, 32, pngs[i].length, offset]);
+      offset += pngs[i].length;
+    }
+    const buf = new Uint8Array(offset);
+    const dv = new DataView(buf.buffer);
+    dv.setUint16(0, 0, true); dv.setUint16(2, 1, true); dv.setUint16(4, count, true);
+    let p = 6;
+    for (let i = 0; i < count; i++) {
+      const [w, h, cc, r, planes, bpp, len, off] = dirs[i];
+      buf[p] = w; buf[p + 1] = h; buf[p + 2] = cc; buf[p + 3] = r;
+      dv.setUint16(p + 4, planes, true); dv.setUint16(p + 6, bpp, true);
+      dv.setUint32(p + 8, len, true); dv.setUint32(p + 12, off, true);
+      p += 16;
+    }
+    for (let i = 0; i < count; i++) { buf.set(pngs[i], dirs[i][7]); }
+    const url = URL.createObjectURL(new Blob([buf], { type: 'image/x-icon' }));
+    download(url, 'favicon.ico');
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+
+  drawAll();
+</script>

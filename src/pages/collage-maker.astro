@@ -1,0 +1,786 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+import { templateGroups } from '../lib/collage/templates';
+import { SIZE_PRESETS } from '../lib/collage/presets';
+import { STICKER_GROUPS } from '../lib/collage/stickers';
+import { SHAPES } from '../lib/collage/shapes';
+import { FONTS } from '../lib/collage/fonts';
+
+const TABS = [
+  { id: 'photos', label: 'Photos' },
+  { id: 'templates', label: 'Templates' },
+  { id: 'background', label: 'Background' },
+  { id: 'text', label: 'Text' },
+  { id: 'stickers', label: 'Stickers' },
+  { id: 'shapes', label: 'Shapes' },
+  { id: 'draw', label: 'Doodle' },
+  { id: 'stock', label: 'Images' },
+];
+---
+
+<ToolLayout slug="collage-maker">
+  <div class="flex flex-col gap-4">
+
+    <div class="panel flex flex-wrap items-center gap-2 p-3">
+      <select id="cm-size" class="field max-w-[16rem]">
+        {SIZE_PRESETS.map((p) => (
+          <option value={p.id}>{p.label} ({p.w}×{p.h})</option>
+        ))}
+        <option value="custom">Custom…</option>
+      </select>
+      <div id="cm-custom-size" class="hidden items-center gap-1 text-sm text-ink-subtle">
+        <input id="cm-w" type="number" min="200" max="4000" value="1080" class="field w-24" />
+        ×
+        <input id="cm-h" type="number" min="200" max="4000" value="1080" class="field w-24" />
+        <button id="cm-apply-size" class="btn">Apply</button>
+      </div>
+      <span class="mx-1 h-6 w-px bg-hairline"></span>
+      <button id="cm-undo" class="btn" title="Undo (Ctrl+Z)">Undo</button>
+      <button id="cm-redo" class="btn" title="Redo (Ctrl+Y)">Redo</button>
+      <span class="flex-1"></span>
+      <select id="cm-format" class="field w-28">
+        <option value="png">PNG</option>
+        <option value="jpeg">JPEG</option>
+      </select>
+      <button id="cm-download" class="btn btn-primary">Download</button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-[300px_1fr]">
+
+      <div class="panel flex flex-col overflow-hidden p-0">
+        <div class="flex flex-wrap gap-1 border-b border-hairline p-2">
+          {TABS.map((t, i) => (
+            <button
+              class:list={['cm-tab btn px-2 py-1 text-[13px]', i === 0 && 'btn-primary']}
+              data-tab={t.id}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div class="max-h-[70vh] overflow-y-auto p-3">
+
+          <section class="cm-panel" data-panel="photos">
+            <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+              Add photos
+              <label class="btn btn-primary flex cursor-pointer items-center justify-center gap-1">
+                <span aria-hidden="true">+</span> Add
+                <input id="cm-files" type="file" accept="image/*" multiple class="hidden" />
+              </label>
+            </div>
+            <p class="mt-2 text-[12px] text-ink-tertiary">
+              Uploaded photos appear below. Click one to drop it on the canvas.
+            </p>
+            <div id="cm-tray" class="mt-3 grid grid-cols-3 gap-2"></div>
+          </section>
+
+          <section class="cm-panel hidden" data-panel="templates">
+            <p class="mb-3 text-[12px] text-ink-tertiary">
+              Pick a themed design. Its photo frames fill from your uploaded photos in order — add photos in the Photos tab first, then click a template.
+            </p>
+            {templateGroups().map((g) => (
+              <div class="mb-4">
+                <p class="mb-1 text-[12px] font-medium text-ink-subtle">{g.label}</p>
+                <div class="grid grid-cols-2 gap-2">
+                  {g.items.map((t) => (
+                    <button
+                      class="cm-template overflow-hidden rounded-md border border-hairline bg-surface-2 hover:border-hairline-strong"
+                      data-tpl={t.id}
+                      title={t.label}
+                    >
+                      <span class="cm-template-thumb block aspect-[4/3] w-full" data-tpl={t.id}></span>
+                      <span class="block truncate px-1.5 py-1 text-left text-[11px] text-ink-subtle">{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </section>
+
+          <section class="cm-panel hidden flex-col gap-3" data-panel="background">
+            <label class="flex items-center justify-between text-sm text-ink-subtle">
+              Solid color
+              <input id="cm-bg-color" type="color" value="#0f1011" class="field h-9 w-16 cursor-pointer p-1" />
+            </label>
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+              Gradient
+              <div class="flex items-center gap-2">
+                <input id="cm-bg-g1" type="color" value="#5e6ad2" class="field h-9 w-16 cursor-pointer p-1" />
+                <input id="cm-bg-g2" type="color" value="#010102" class="field h-9 w-16 cursor-pointer p-1" />
+                <button id="cm-bg-grad" class="btn flex-1">Apply gradient</button>
+              </div>
+            </label>
+            <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+              Background photo
+              <label class="btn flex cursor-pointer items-center justify-center gap-1">
+                <span aria-hidden="true">+</span> Add
+                <input id="cm-bg-file" type="file" accept="image/*" class="hidden" />
+              </label>
+            </div>
+            <button id="cm-bg-clear" class="btn">Clear background image</button>
+          </section>
+
+          <section class="cm-panel hidden flex-col gap-3" data-panel="text">
+            <button id="cm-add-text" class="btn btn-primary">Add text</button>
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+              Font
+              <select id="cm-font" class="field">
+                {FONTS.map((f) => <option value={f.family}>{f.label}</option>)}
+              </select>
+            </label>
+            <label class="flex items-center justify-between text-sm text-ink-subtle">
+              Size
+              <input id="cm-font-size" type="number" min="8" max="400" value="64" class="field w-24" />
+            </label>
+            <label class="flex items-center justify-between text-sm text-ink-subtle">
+              Color
+              <input id="cm-text-color" type="color" value="#f7f8f8" class="field h-9 w-16 cursor-pointer p-1" />
+            </label>
+            <div class="flex gap-2">
+              <button id="cm-bold" class="btn flex-1" title="Bold">B</button>
+              <button id="cm-italic" class="btn flex-1" title="Italic">I</button>
+              <button id="cm-align" class="btn flex-1" title="Align">⬌</button>
+            </div>
+            <p class="text-[12px] text-ink-tertiary">Double-click text on the canvas to edit it.</p>
+          </section>
+
+          <section class="cm-panel hidden" data-panel="stickers">
+            <div class="mb-3">
+              <p class="mb-1 text-[12px] font-medium text-ink-subtle">Custom sticker</p>
+              <label class="btn flex cursor-pointer items-center justify-center gap-1">
+                <span aria-hidden="true">+</span> Add
+                <input id="cm-sticker-file" type="file" accept="image/*,.svg" multiple class="hidden" />
+              </label>
+              <p class="mt-1 text-[11px] text-ink-tertiary">Upload PNG, SVG or any image to use as a sticker.</p>
+              <div id="cm-custom-stickers" class="mt-2 grid grid-cols-4 gap-2"></div>
+            </div>
+            {STICKER_GROUPS.map((g) => (
+              <div class="mb-3">
+                <p class="mb-1 text-[12px] font-medium text-ink-subtle">{g.label}</p>
+                <div class="grid grid-cols-4 gap-2">
+                  {g.items.map((it) => (
+                    <button
+                      class="cm-sticker aspect-square rounded-md border border-hairline bg-surface-2 p-1 hover:border-hairline-strong"
+                      data-svg={it.svg}
+                      title={it.label}
+                      set:html={it.svg}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </section>
+
+          <section class="cm-panel hidden flex-col gap-3" data-panel="shapes">
+            <div id="cm-shapes" class="grid grid-cols-2 gap-2">
+              {SHAPES.map((sh) => (
+                <button class="cm-shape btn text-[13px]" data-shape={sh.id}>{sh.label}</button>
+              ))}
+            </div>
+            <label class="flex items-center justify-between text-sm text-ink-subtle">
+              Fill
+              <input id="cm-shape-fill" type="color" value="#5e6ad2" class="field h-9 w-16 cursor-pointer p-1" />
+            </label>
+            <label class="flex items-center justify-between text-sm text-ink-subtle">
+              Stroke
+              <input id="cm-shape-stroke" type="color" value="#f7f8f8" class="field h-9 w-16 cursor-pointer p-1" />
+            </label>
+            <label class="flex items-center justify-between text-sm text-ink-subtle">
+              Stroke width
+              <input id="cm-shape-sw" type="number" min="0" max="60" value="0" class="field w-24" />
+            </label>
+          </section>
+
+          <section class="cm-panel hidden flex-col gap-3" data-panel="draw">
+            <button id="cm-draw-toggle" class="btn btn-secondary">Enable drawing</button>
+            <label class="flex items-center justify-between text-sm text-ink-subtle">
+              Brush color
+              <input id="cm-brush-color" type="color" value="#5e6ad2" class="field h-9 w-16 cursor-pointer p-1" />
+            </label>
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+              Brush width <span id="cm-brush-w-val" class="text-ink-tertiary">8px</span>
+              <input id="cm-brush-w" type="range" min="1" max="60" value="8" class="w-full" />
+            </label>
+          </section>
+
+          <section class="cm-panel hidden flex-col gap-3" data-panel="stock">
+            <div id="cm-stock-off" class="hidden text-[13px] text-ink-subtle">
+              Stock photo search is not configured. Add a free Pexels API key as <code>PUBLIC_PEXELS_KEY</code> to enable it.
+            </div>
+            <div id="cm-stock-on" class="hidden flex-col gap-2">
+              <div class="flex gap-2">
+                <input id="cm-stock-q" type="text" placeholder="Search photos…" class="field min-w-0 flex-1" />
+                <button id="cm-stock-search" class="btn btn-primary shrink-0">Search</button>
+              </div>
+              <p class="text-[12px] text-ink-tertiary">Click an image to add it to your Photos.</p>
+              <div id="cm-stock-results" class="grid grid-cols-2 gap-2"></div>
+              <button id="cm-stock-more" class="btn hidden">Load more</button>
+            </div>
+          </section>
+        </div>
+
+        <div class="flex flex-wrap gap-1 border-t border-hairline p-2">
+          <button id="cm-forward" class="btn px-2 py-1 text-[12px]" title="Bring forward">↑</button>
+          <button id="cm-back" class="btn px-2 py-1 text-[12px]" title="Send back">↓</button>
+          <button id="cm-dup" class="btn px-2 py-1 text-[12px]" title="Duplicate">Duplicate</button>
+          <button id="cm-lock" class="btn px-2 py-1 text-[12px]" title="Lock / unlock">Lock</button>
+          <button id="cm-delete" class="btn px-2 py-1 text-[12px]" title="Delete (Del)">Delete</button>
+        </div>
+      </div>
+
+      <div id="cm-stage" class="panel flex items-center justify-center overflow-auto p-4">
+        <div class="inline-block shadow-lg">
+          <canvas id="cm-canvas" aria-label="Collage canvas"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <p id="cm-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This collage maker is a full photo editor: pick a themed template,
+      set the canvas size for Instagram, stories, prints and more, add
+      text with custom fonts, stickers, shapes and freehand doodles, and style
+      the background with colors, gradients or a photo. Arrange, resize, rotate
+      and layer everything on an interactive canvas, then export a high-resolution
+      PNG or JPEG. Save your design as a reusable template and load it back later.
+    </p>
+    <p>
+      Your photos are processed in your browser.
+      The only optional online feature is stock photo search, which queries
+      Pexels when an API key is configured; everything else works offline.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import * as fabric from 'fabric';
+  import { getTemplate, type Template, type TplSlot } from '../lib/collage/templates';
+  import { SIZE_PRESETS } from '../lib/collage/presets';
+  import { makeShape, type ShapeId } from '../lib/collage/shapes';
+  import { ensureFont } from '../lib/collage/fonts';
+  import { hasPexels, searchPhotos, curatedPhotos, type StockPhoto } from '../lib/collage/pexels';
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const err = $('cm-error');
+  const showErr = (m: string) => { err.textContent = m; err.classList.remove('hidden'); };
+  const clearErr = () => err.classList.add('hidden');
+
+  let W = 1080, H = 1080;
+  const canvasEl = $('cm-canvas') as HTMLCanvasElement;
+  const canvas = new fabric.Canvas(canvasEl, { backgroundColor: '#0f1011', preserveObjectStacking: true });
+
+  function fitCanvas() {
+    canvas.setDimensions({ width: W, height: H }); 
+    const stageW = ($('cm-stage') as HTMLElement)?.clientWidth;
+    const maxW = Math.min(720, stageW ? stageW - 32 : 640);
+    const maxH = 620;
+    const scale = Math.min(maxW / W, maxH / H, 1);
+    canvas.setDimensions({ width: `${W * scale}px`, height: `${H * scale}px` }, { cssOnly: true });
+  }
+
+  // --- Uploaded photo tray (data URLs) ---
+  const trayUrls: string[] = [];
+  const trayEl = $('cm-tray');
+
+  function readFile(file: File): Promise<string> {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result as string);
+      r.onerror = () => rej(new Error('Could not read ' + file.name));
+      r.readAsDataURL(file);
+    });
+  }
+
+  function renderTray() {
+    trayEl.innerHTML = '';
+    trayUrls.forEach((url) => {
+      const b = document.createElement('button');
+      b.className = 'aspect-square overflow-hidden rounded-md border border-hairline hover:border-hairline-strong';
+      b.innerHTML = `<img src="${url}" class="h-full w-full object-cover" alt="" />`;
+      b.addEventListener('click', () => addImage(url));
+      trayEl.appendChild(b);
+    });
+  }
+
+  function addToTray(...urls: string[]) {
+    trayUrls.push(...urls);
+    renderTray();
+  }
+
+  $('cm-files').addEventListener('change', async (e) => {
+    const files = (e.target as HTMLInputElement).files;
+    if (!files?.length) return;
+    try {
+      const urls: string[] = [];
+      for (const f of Array.from(files)) urls.push(await readFile(f));
+      addToTray(...urls);
+      clearErr();
+    } catch (ex) { showErr((ex as Error).message); }
+  });
+
+  // --- Add objects ---
+  async function addImage(url: string, opts: Partial<fabric.ImageProps> = {}) {
+    const img = await fabric.FabricImage.fromURL(url, { crossOrigin: 'anonymous' });
+    const scale = Math.min((W * 0.5) / (img.width || 1), (H * 0.5) / (img.height || 1));
+    img.set({ left: W / 2, top: H / 2, originX: 'center', originY: 'center', scaleX: scale, scaleY: scale, ...opts });
+    canvas.add(img);
+    canvas.setActiveObject(img);
+    canvas.renderAll();
+    pushHistory();
+    return img;
+  }
+
+  // --- Templates (full themed scenes) ---
+  // Builds background + border + tilted framed photo slots + decorations + text
+  // from a Template descriptor. Photo slots fill from the upload tray in order;
+  // empty slots get a dashed placeholder. Objects are tagged cmFrame so applying
+  // a layout or another template clears them.
+  async function fillSlot(slot: TplSlot, url: string | undefined) {
+    const cx = slot.x * W + (slot.w * W) / 2;
+    const cy = slot.y * H + (slot.h * H) / 2;
+    const bw = slot.w * W, bh = slot.h * H;
+    const angle = slot.angle || 0;
+    const bt = (slot.border ?? 0.05) * Math.min(bw, bh); // matte thickness
+    const iw = bw - bt * 2, ih = bh - bt * 2;            // inner photo box
+    const rad = (slot.radius || 0) * W;
+
+    if (slot.frame) {
+      const matte = new fabric.Rect({
+        left: cx, top: cy, width: bw, height: bh, rx: rad, ry: rad,
+        originX: 'center', originY: 'center', angle, fill: slot.frame,
+        shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.25)', blur: 18, offsetX: 0, offsetY: 6 }),
+      });
+      (matte as any).cmFrame = true;
+      matte.selectable = false;
+      canvas.add(matte);
+    }
+
+    if (url) {
+      const img = await fabric.FabricImage.fromURL(url, { crossOrigin: 'anonymous' });
+      const scale = Math.max(iw / (img.width || 1), ih / (img.height || 1));
+      const clip = new fabric.Rect({
+        left: cx, top: cy, width: iw, height: ih, rx: rad, ry: rad,
+        originX: 'center', originY: 'center', angle, absolutePositioned: true,
+      });
+      img.set({ left: cx, top: cy, originX: 'center', originY: 'center', angle, scaleX: scale, scaleY: scale, clipPath: clip });
+      (img as any).cmFrame = true;
+      canvas.add(img);
+    } else {
+      const ph = new fabric.Rect({
+        left: cx, top: cy, width: iw, height: ih, rx: rad, ry: rad,
+        originX: 'center', originY: 'center', angle,
+        fill: '#e5e0d5', stroke: '#b9b2a3', strokeDashArray: [8, 6], strokeWidth: 2,
+      });
+      (ph as any).cmFrame = true;
+      ph.selectable = false;
+      canvas.add(ph);
+    }
+  }
+
+  async function buildTemplate(t: Template) {
+    // clear previous template/layout objects, background and text-of-template
+    canvas.getObjects().filter((o) => (o as any).cmFrame).forEach((o) => canvas.remove(o));
+
+    // background
+    canvas.backgroundImage = undefined;
+    if ('gradient' in t.bg) {
+      const grad = new fabric.Gradient({
+        type: 'linear', gradientUnits: 'percentage',
+        coords: { x1: 0, y1: 0, x2: 1, y2: 1 },
+        colorStops: [{ offset: 0, color: t.bg.gradient[0] }, { offset: 1, color: t.bg.gradient[1] }],
+      });
+      canvas.backgroundColor = grad as unknown as string;
+    } else {
+      canvas.backgroundColor = t.bg.color;
+    }
+
+    // decorative outer border
+    if (t.border) {
+      const inset = t.border.inset;
+      const sw = t.border.width * (Math.min(W, H) / 400);
+      const border = new fabric.Rect({
+        left: inset * W, top: inset * H,
+        width: W * (1 - inset * 2), height: H * (1 - inset * 2),
+        fill: '', stroke: t.border.color, strokeWidth: sw, selectable: false,
+      });
+      (border as any).cmFrame = true;
+      canvas.add(border);
+    }
+
+    // photo slots (sequential to keep add-order stable)
+    for (let i = 0; i < t.slots.length; i++) await fillSlot(t.slots[i], trayUrls[i]);
+
+    // decorations
+    for (const d of t.deco) {
+      const { objects } = await fabric.loadSVGFromString(d.svg);
+      const valid = objects.filter(Boolean) as fabric.FabricObject[];
+      const group = fabric.util.groupSVGElements(valid, {});
+      const scale = (d.size * W) / (group.width || 100);
+      group.set({ left: d.x * W, top: d.y * H, originX: 'center', originY: 'center', angle: d.angle || 0, scaleX: scale, scaleY: scale });
+      (group as any).cmFrame = true;
+      canvas.add(group);
+    }
+
+    // text (decorative headings)
+    for (const tx of t.texts) {
+      await ensureFont(tx.family);
+      const txt = new fabric.IText(tx.text, {
+        left: tx.x * W, top: tx.y * H, originX: 'center', originY: 'center',
+        fontFamily: tx.family, fontSize: tx.size * H, fill: tx.color,
+        angle: tx.angle || 0, fontWeight: tx.weight || 'normal',
+        fontStyle: tx.italic ? 'italic' : 'normal', textAlign: tx.align || 'center',
+      });
+      (txt as any).cmFrame = true;
+      canvas.add(txt);
+    }
+
+    canvas.renderAll();
+    pushHistory();
+  }
+
+  // template thumbnails (lightweight SVG previews from the same normalized data)
+  function tplThumbSvg(t: Template): string {
+    const bg = 'gradient' in t.bg ? t.bg.gradient[0] : t.bg.color;
+    const parts: string[] = [`<rect width="100" height="75" fill="${bg}"/>`];
+    if (t.border) parts.push(`<rect x="4" y="3" width="92" height="69" fill="none" stroke="${t.border.color}" stroke-width="1.5"/>`);
+    for (const s of t.slots) {
+      const x = s.x * 100, y = s.y * 75, w = s.w * 100, h = s.h * 75;
+      parts.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${s.frame || '#ffffff'}" transform="rotate(${s.angle || 0} ${x + w / 2} ${y + h / 2})"/>`);
+    }
+    for (const d of t.deco) parts.push(`<circle cx="${d.x * 100}" cy="${d.y * 75}" r="${Math.max(1.5, d.size * 40)}" fill="#00000022"/>`);
+    return `<svg viewBox="0 0 100 75" class="h-full w-full" preserveAspectRatio="none">${parts.join('')}</svg>`;
+  }
+  document.querySelectorAll('.cm-template-thumb').forEach((el) => {
+    const t = getTemplate((el as HTMLElement).dataset.tpl!);
+    if (t) el.innerHTML = tplThumbSvg(t);
+  });
+  document.querySelectorAll('.cm-template').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const t = getTemplate((btn as HTMLElement).dataset.tpl!);
+      if (t) buildTemplate(t).catch((e) => showErr((e as Error).message));
+    });
+  });
+
+  // --- Size ---
+  const sizeSel = $('cm-size') as HTMLSelectElement;
+  sizeSel.addEventListener('change', () => {
+    const custom = $('cm-custom-size');
+    if (sizeSel.value === 'custom') { custom.classList.remove('hidden'); custom.classList.add('flex'); return; }
+    custom.classList.add('hidden'); custom.classList.remove('flex');
+    const p = SIZE_PRESETS.find((x) => x.id === sizeSel.value);
+    if (p) resize(p.w, p.h);
+  });
+  $('cm-apply-size').addEventListener('click', () => {
+    resize(Number(($('cm-w') as HTMLInputElement).value), Number(($('cm-h') as HTMLInputElement).value));
+  });
+
+  function resize(nw: number, nh: number) {
+    nw = Math.max(200, Math.min(4000, nw || W));
+    nh = Math.max(200, Math.min(4000, nh || H));
+    const sx = nw / W, sy = nh / H;
+    canvas.getObjects().forEach((o) => {
+      o.set({ left: (o.left || 0) * sx, top: (o.top || 0) * sy, scaleX: (o.scaleX || 1) * sx, scaleY: (o.scaleY || 1) * sy });
+      if (o.clipPath) {
+        const cp = o.clipPath as fabric.Rect;
+        cp.set({ left: (cp.left || 0) * sx, top: (cp.top || 0) * sy, scaleX: (cp.scaleX || 1) * sx, scaleY: (cp.scaleY || 1) * sy });
+      }
+      o.setCoords();
+    });
+    W = nw; H = nh;
+    fitCanvas();
+    canvas.renderAll();
+    pushHistory();
+  }
+
+  // --- Background ---
+  $('cm-bg-color').addEventListener('input', (e) => {
+    canvas.backgroundImage = undefined;
+    canvas.backgroundColor = (e.target as HTMLInputElement).value;
+    canvas.renderAll(); pushHistory();
+  });
+  $('cm-bg-grad').addEventListener('click', () => {
+    const g1 = ($('cm-bg-g1') as HTMLInputElement).value;
+    const g2 = ($('cm-bg-g2') as HTMLInputElement).value;
+    const grad = new fabric.Gradient({
+      type: 'linear', gradientUnits: 'percentage',
+      coords: { x1: 0, y1: 0, x2: 1, y2: 1 },
+      colorStops: [{ offset: 0, color: g1 }, { offset: 1, color: g2 }],
+    });
+    canvas.backgroundImage = undefined;
+    canvas.backgroundColor = grad as unknown as string;
+    canvas.renderAll(); pushHistory();
+  });
+  $('cm-bg-file').addEventListener('change', async (e) => {
+    const f = (e.target as HTMLInputElement).files?.[0];
+    if (!f) return;
+    const url = await readFile(f);
+    await setBgImage(url);
+  });
+  async function setBgImage(url: string) {
+    // Add as a real, draggable object sent to the back rather than a fixed
+    // canvas.backgroundImage. Tagged cmBg so re-adding replaces it and Clear
+    // can find it.
+    canvas.getObjects().filter((o) => (o as any).cmBg).forEach((o) => canvas.remove(o));
+    const img = await fabric.FabricImage.fromURL(url, { crossOrigin: 'anonymous' });
+    const scale = Math.max(W / (img.width || 1), H / (img.height || 1));
+    img.set({ scaleX: scale, scaleY: scale, originX: 'left', originY: 'top', left: 0, top: 0 });
+    (img as any).cmBg = true;
+    canvas.add(img);
+    canvas.sendObjectToBack(img);
+    canvas.setActiveObject(img);
+    canvas.renderAll(); pushHistory();
+  }
+  $('cm-bg-clear').addEventListener('click', () => {
+    canvas.getObjects().filter((o) => (o as any).cmBg).forEach((o) => canvas.remove(o));
+    canvas.backgroundImage = undefined; canvas.renderAll(); pushHistory();
+  });
+
+  // --- Text ---
+  $('cm-add-text').addEventListener('click', async () => {
+    const family = (($('cm-font') as HTMLSelectElement).value) || 'Inter';
+    await ensureFont(family);
+    const t = new fabric.IText('Double-click to edit', {
+      left: W / 2, top: H / 2, originX: 'center', originY: 'center',
+      fontFamily: family, fontSize: Number(($('cm-font-size') as HTMLInputElement).value) || 64,
+      fill: ($('cm-text-color') as HTMLInputElement).value,
+    });
+    canvas.add(t); canvas.setActiveObject(t); canvas.renderAll(); pushHistory();
+  });
+  function activeText(): fabric.IText | null {
+    const o = canvas.getActiveObject();
+    return o && o.type === 'i-text' ? (o as fabric.IText) : null;
+  }
+  $('cm-font').addEventListener('change', async (e) => {
+    const family = (e.target as HTMLSelectElement).value;
+    await ensureFont(family);
+    const t = activeText(); if (t) { t.set('fontFamily', family); canvas.renderAll(); pushHistory(); }
+  });
+  $('cm-font-size').addEventListener('input', (e) => {
+    const t = activeText(); if (t) { t.set('fontSize', Number((e.target as HTMLInputElement).value)); canvas.renderAll(); }
+  });
+  $('cm-text-color').addEventListener('input', (e) => {
+    const t = activeText(); if (t) { t.set('fill', (e.target as HTMLInputElement).value); canvas.renderAll(); }
+  });
+  $('cm-bold').addEventListener('click', () => {
+    const t = activeText(); if (t) { t.set('fontWeight', t.fontWeight === 'bold' ? 'normal' : 'bold'); canvas.renderAll(); pushHistory(); }
+  });
+  $('cm-italic').addEventListener('click', () => {
+    const t = activeText(); if (t) { t.set('fontStyle', t.fontStyle === 'italic' ? 'normal' : 'italic'); canvas.renderAll(); pushHistory(); }
+  });
+  $('cm-align').addEventListener('click', () => {
+    const t = activeText(); if (!t) return;
+    const order = ['left', 'center', 'right'];
+    t.set('textAlign', order[(order.indexOf(t.textAlign) + 1) % 3]); canvas.renderAll();
+  });
+
+  // --- Stickers ---
+  document.querySelectorAll('.cm-sticker').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const svg = (btn as HTMLElement).dataset.svg!;
+      const { objects } = await fabric.loadSVGFromString(svg);
+      const valid = objects.filter(Boolean) as fabric.FabricObject[];
+      const group = fabric.util.groupSVGElements(valid, {});
+      const scale = (W * 0.25) / (group.width || 100);
+      group.set({ left: W / 2, top: H / 2, originX: 'center', originY: 'center', scaleX: scale, scaleY: scale });
+      canvas.add(group); canvas.setActiveObject(group); canvas.renderAll(); pushHistory();
+    });
+  });
+
+  // Custom stickers: upload any image/SVG, click a thumbnail to drop it on canvas.
+  const customStickersEl = $('cm-custom-stickers');
+  $('cm-sticker-file').addEventListener('change', async (e) => {
+    const files = (e.target as HTMLInputElement).files;
+    if (!files?.length) return;
+    try {
+      for (const f of Array.from(files)) {
+        const url = await readFile(f);
+        const b = document.createElement('button');
+        b.className = 'aspect-square overflow-hidden rounded-md border border-hairline bg-surface-2 p-1 hover:border-hairline-strong';
+        b.innerHTML = `<img src="${url}" class="h-full w-full object-contain" alt="" />`;
+        b.addEventListener('click', () => addImage(url).catch((ex) => showErr((ex as Error).message)));
+        customStickersEl.appendChild(b);
+      }
+      clearErr();
+    } catch (ex) { showErr((ex as Error).message); }
+  });
+
+  // --- Shapes ---
+  document.querySelectorAll('.cm-shape').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = (btn as HTMLElement).dataset.shape as ShapeId;
+      const fill = ($('cm-shape-fill') as HTMLInputElement).value;
+      const sw = Number(($('cm-shape-sw') as HTMLInputElement).value);
+      const stroke = ($('cm-shape-stroke') as HTMLInputElement).value;
+      const shape = makeShape(id, fill);
+      if (sw > 0 && id !== 'line') shape.set({ stroke, strokeWidth: sw });
+      shape.set({ left: W / 2, top: H / 2, originX: 'center', originY: 'center' });
+      canvas.add(shape); canvas.setActiveObject(shape); canvas.renderAll(); pushHistory();
+    });
+  });
+
+  // --- Doodle ---
+  let drawing = false;
+  const drawBtn = $('cm-draw-toggle');
+  function syncBrush() {
+    if (!canvas.freeDrawingBrush) canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+    canvas.freeDrawingBrush.color = ($('cm-brush-color') as HTMLInputElement).value;
+    canvas.freeDrawingBrush.width = Number(($('cm-brush-w') as HTMLInputElement).value);
+  }
+  drawBtn.addEventListener('click', () => {
+    drawing = !drawing;
+    canvas.isDrawingMode = drawing;
+    if (drawing) syncBrush();
+    drawBtn.textContent = drawing ? 'Disable drawing' : 'Enable drawing';
+    drawBtn.classList.toggle('btn-primary', drawing);
+  });
+  $('cm-brush-color').addEventListener('input', syncBrush);
+  $('cm-brush-w').addEventListener('input', (e) => {
+    $('cm-brush-w-val').textContent = (e.target as HTMLInputElement).value + 'px';
+    syncBrush();
+  });
+
+  // --- Stock (Pexels) ---
+  if (hasPexels()) {
+    $('cm-stock-on').classList.remove('hidden');
+    $('cm-stock-on').classList.add('flex');
+    const results = $('cm-stock-results');
+    const moreBtn = $('cm-stock-more') as HTMLButtonElement;
+    let stockQuery = '';   // '' = curated
+    let stockPage = 0;
+    const append = (photos: StockPhoto[]) => {
+      photos.forEach((p) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'flex flex-col gap-0.5';
+        const b = document.createElement('button');
+        b.className = 'aspect-video overflow-hidden rounded-md border border-hairline hover:border-hairline-strong';
+        b.innerHTML = `<img src="${p.thumb}" class="h-full w-full object-cover" alt="" loading="lazy" />`;
+        b.addEventListener('click', () => { addToTray(p.full); clearErr(); });
+        const credit = document.createElement('a');
+        credit.href = p.photographerUrl; credit.target = '_blank'; credit.rel = 'noopener';
+        credit.className = 'truncate text-[10px] text-ink-tertiary hover:text-ink-subtle';
+        credit.textContent = p.photographer;
+        wrap.append(b, credit);
+        results.appendChild(wrap);
+      });
+      // hide "Load more" when a page comes back short (no further results)
+      moreBtn.classList.toggle('hidden', photos.length < 24);
+    };
+    const load = async (reset: boolean) => {
+      if (reset) { results.innerHTML = ''; stockPage = 0; }
+      stockPage += 1;
+      moreBtn.disabled = true;
+      try {
+        const photos = stockQuery
+          ? await searchPhotos(stockQuery, stockPage)
+          : await curatedPhotos(stockPage);
+        append(photos);
+        clearErr();
+      } catch (e) { showErr((e as Error).message); }
+      finally { moreBtn.disabled = false; }
+    };
+    load(true);
+    $('cm-stock-search').addEventListener('click', () => {
+      stockQuery = ($('cm-stock-q') as HTMLInputElement).value.trim();
+      load(true);
+    });
+    moreBtn.addEventListener('click', () => load(false));
+    ($('cm-stock-q') as HTMLInputElement).addEventListener('keydown', (e) => {
+      if ((e as KeyboardEvent).key === 'Enter') $('cm-stock-search').click();
+    });
+  } else {
+    $('cm-stock-off').classList.remove('hidden');
+  }
+
+  // --- Layer controls ---
+  const withActive = (fn: (o: fabric.FabricObject) => void) => {
+    const o = canvas.getActiveObject(); if (o) { fn(o); canvas.renderAll(); pushHistory(); }
+  };
+  $('cm-forward').addEventListener('click', () => withActive((o) => canvas.bringObjectForward(o)));
+  $('cm-back').addEventListener('click', () => withActive((o) => canvas.sendObjectBackwards(o)));
+  $('cm-delete').addEventListener('click', () => withActive((o) => canvas.remove(o)));
+  $('cm-lock').addEventListener('click', () => withActive((o) => {
+    const locked = !o.lockMovementX;
+    o.set({ lockMovementX: locked, lockMovementY: locked, lockRotation: locked, lockScalingX: locked, lockScalingY: locked, hasControls: !locked });
+  }));
+  $('cm-dup').addEventListener('click', async () => {
+    const o = canvas.getActiveObject(); if (!o) return;
+    const clone = await o.clone();
+    clone.set({ left: (o.left || 0) + 20, top: (o.top || 0) + 20 });
+    canvas.add(clone); canvas.setActiveObject(clone); canvas.renderAll(); pushHistory();
+  });
+
+  // --- Undo / redo (bounded full-canvas snapshots) ---
+  // ponytail: coarse toJSON snapshots, cap 30. Fine for a single-canvas editor;
+  // switch to per-op diffs only if history feels heavy.
+  const undoStack: string[] = [];
+  const redoStack: string[] = [];
+  let restoring = false;
+  function pushHistory() {
+    if (restoring) return;
+    undoStack.push(JSON.stringify(canvas.toJSON()));
+    if (undoStack.length > 30) undoStack.shift();
+    redoStack.length = 0;
+  }
+  async function restore(json: string) {
+    restoring = true;
+    await canvas.loadFromJSON(JSON.parse(json));
+    canvas.renderAll();
+    restoring = false;
+  }
+  $('cm-undo').addEventListener('click', async () => {
+    if (undoStack.length < 2) return;
+    redoStack.push(undoStack.pop()!);
+    await restore(undoStack[undoStack.length - 1]);
+  });
+  $('cm-redo').addEventListener('click', async () => {
+    const json = redoStack.pop(); if (!json) return;
+    undoStack.push(json); await restore(json);
+  });
+  canvas.on('object:modified', () => pushHistory());
+  canvas.on('path:created', () => pushHistory());
+
+  document.addEventListener('keydown', (e) => {
+    const tag = (document.activeElement?.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea') return;
+    if (activeText()?.isEditing) return;
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      withActive((o) => canvas.remove(o)); e.preventDefault();
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+      $('cm-undo').click(); e.preventDefault();
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+      $('cm-redo').click(); e.preventDefault();
+    }
+  });
+
+  // --- Export ---
+  $('cm-download').addEventListener('click', () => {
+    const format = ($('cm-format') as HTMLSelectElement).value as 'png' | 'jpeg';
+    const url = canvas.toDataURL({ format, quality: 0.92, multiplier: 1 });
+    const a = document.createElement('a');
+    a.href = url; a.download = `toolsilk-collage.${format === 'jpeg' ? 'jpg' : 'png'}`; a.click();
+  });
+
+  // --- Tabs ---
+  document.querySelectorAll('.cm-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const id = (tab as HTMLElement).dataset.tab;
+      document.querySelectorAll('.cm-tab').forEach((t) => t.classList.remove('btn-primary'));
+      tab.classList.add('btn-primary');
+      document.querySelectorAll('.cm-panel').forEach((p) => {
+        const match = (p as HTMLElement).dataset.panel === id;
+        p.classList.toggle('hidden', !match);
+        // panels that use flex-col keep it when shown
+        if (match && (p as HTMLElement).classList.contains('flex-col')) p.classList.add('flex');
+        else p.classList.remove('flex');
+      });
+    });
+  });
+
+  // --- Init ---
+  fitCanvas();
+  pushHistory();
+  window.addEventListener('resize', fitCanvas);
+</script>

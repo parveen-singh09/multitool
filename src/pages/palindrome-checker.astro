@@ -1,0 +1,67 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="palindrome-checker">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Word, phrase or number
+      <input id="pal-in" class="field font-mono text-[13px]" placeholder="e.g. A man, a plan, a canal: Panama" spellcheck="false" value="A man, a plan, a canal: Panama" />
+    </label>
+
+    <label class="flex items-center gap-2 text-sm text-ink-subtle">
+      <input id="pal-strict" type="checkbox" />
+      Strict mode (keep case, spaces and punctuation)
+    </label>
+
+    <div class="grid grid-cols-1 gap-3 text-center sm:grid-cols-3">
+      <div class="panel panel-lift p-4"><div id="pal-verdict" class="font-display text-xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Verdict</div></div>
+      <div class="panel p-4"><div class="copy-wrap"><div id="pal-clean" class="font-mono text-lg text-ink break-all">—</div><button type="button" class="copy-icon" data-copy-target="#pal-clean" aria-label="Copy"></button></div><div class="mt-1 text-[13px] text-ink-subtle">Cleaned</div></div>
+      <div class="panel p-4"><div class="copy-wrap"><div id="pal-reversed" class="font-mono text-lg text-ink break-all">—</div><button type="button" class="copy-icon" data-copy-target="#pal-reversed" aria-label="Copy"></button></div><div class="mt-1 text-[13px] text-ink-subtle">Reversed</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free palindrome checker tests whether a word, phrase or number reads
+      the same backward as forward. By default it ignores case, spaces and
+      punctuation, so classics like “A man, a plan, a canal: Panama” count. Turn
+      on strict mode to compare the text exactly as typed. It shows the cleaned
+      string, its reverse and the verdict.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('pal-in') as HTMLInputElement;
+  const strict = document.getElementById('pal-strict') as HTMLInputElement;
+  const verdictEl = document.getElementById('pal-verdict')!;
+  const cleanEl = document.getElementById('pal-clean')!;
+  const reversedEl = document.getElementById('pal-reversed')!;
+
+  function check() {
+    const raw = input.value;
+    const cleaned = strict.checked ? raw : raw.toLowerCase().replace(/[^a-z0-9]/gi, '');
+    const reversed = [...cleaned].reverse().join('');
+
+    if (cleaned === '') {
+      verdictEl.textContent = '—';
+      verdictEl.className = 'font-display text-xl font-semibold text-primary-hover';
+      cleanEl.textContent = '—';
+      reversedEl.textContent = '—';
+      return;
+    }
+
+    const isPalindrome = cleaned === reversed;
+    verdictEl.textContent = isPalindrome ? 'Palindrome' : 'Not a palindrome';
+    verdictEl.className = isPalindrome
+      ? 'font-display text-xl font-semibold text-primary-hover'
+      : 'font-display text-xl font-semibold text-ink';
+    cleanEl.textContent = cleaned;
+    reversedEl.textContent = reversed;
+  }
+
+  input.addEventListener('input', check);
+  strict.addEventListener('change', check);
+  check();
+</script>

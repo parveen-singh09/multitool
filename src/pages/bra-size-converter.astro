@@ -1,0 +1,252 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="bra-size-converter">
+  <div class="flex flex-col gap-6">
+
+    <div class="flex flex-col gap-3">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Your bra size
+          <input id="br-size" class="field font-mono" placeholder="34C" spellcheck="false" autocomplete="off" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          in region
+          <select id="br-region" class="field w-full sm:w-44">
+            <option value="US">US / CA</option>
+            <option value="UK">UK</option>
+            <option value="EU">EU</option>
+            <option value="FR">FR / ES / BE</option>
+            <option value="AU">AU / NZ</option>
+            <option value="IT">IT</option>
+            <option value="JP">JP / KR</option>
+          </select>
+        </label>
+      </div>
+      <p class="text-[13px] text-ink-tertiary">Enter band and cup together, e.g. <span class="font-mono">34C</span>, <span class="font-mono">75C</span> or <span class="font-mono">90D</span>. Don't know your size? Use the measurement calculator below.</p>
+    </div>
+
+    <div class="panel p-4">
+      <span class="eyebrow text-ink-subtle">Find my size from measurements</span>
+      <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-[1fr_1fr_auto_auto]">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Underbust
+          <input id="br-under" class="field" type="number" min="0" step="0.5" inputmode="decimal" placeholder="76" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Bust
+          <input id="br-bust" class="field" type="number" min="0" step="0.5" inputmode="decimal" placeholder="88" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Units
+          <select id="br-units" class="field w-full sm:w-24">
+            <option value="cm">cm</option>
+            <option value="in">inches</option>
+          </select>
+        </label>
+        <div class="flex items-end">
+          <button id="br-calc" type="button" class="btn btn-secondary w-full sm:w-auto">Calculate</button>
+        </div>
+      </div>
+      <p class="mt-2 text-[13px] text-ink-tertiary">Measure your underbust snugly and your bust at the fullest point. Band = underbust, cup = bust − underbust.</p>
+    </div>
+
+    <p id="br-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div>
+      <div class="flex items-center justify-between">
+        <span class="text-[13px] text-ink-subtle">Equivalent sizes</span>
+      </div>
+      <div class="copy-wrap">
+        <div id="br-result" class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4"></div>
+        <button id="br-copy" type="button" class="copy-icon hidden" aria-label="Copy all sizes"></button>
+      </div>
+      <p class="mt-2 text-[12px] text-ink-tertiary">Tap any card to copy that size.</p>
+    </div>
+
+    <div id="br-sister-wrap" class="hidden">
+      <span class="text-[13px] text-ink-subtle">Sister sizes <span class="text-ink-tertiary">(same cup volume, different band — shown in your selected region)</span></span>
+      <div id="br-sister" class="mt-2 flex flex-wrap gap-2"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free bra size converter translates band and cup sizes across seven
+      systems: US/Canada, UK, European, French/Spanish/Belgian, Australian/NZ,
+      Italian and Japanese/Korean. Band numbers differ (a US 34 is an EU 75, an
+      FR 90, an AU 12 and an IT 3) and cup letters diverge above D, which this
+      converter handles per region. Enter a size you already know, or use the
+      measurement calculator to find your size from an underbust and bust
+      measurement in centimetres or inches.
+    </p>
+    <p>
+      It also lists <strong>sister sizes</strong> — nearby band/cup combinations
+      with the same cup volume (a 34C, 32D and 36B all share a cup). Sister sizes
+      are useful when your usual size runs tight or loose in a given brand: go
+      down a band and up a cup, or up a band and down a cup. Fit still varies by
+      brand and style, so treat every result as a starting point.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+
+  const US_BANDS = [28, 30, 32, 34, 36, 38, 40, 42, 44];          
+  const EU_BANDS = [60, 65, 70, 75, 80, 85, 90, 95, 100];         
+  const FR_BANDS = EU_BANDS.map((b) => b + 15);                   
+  const AU_BANDS = US_BANDS.map((b) => b - 22);                   
+  const IT_BANDS = EU_BANDS.map((b) => b / 5 - 12);               
+
+  const CUPS_US = ['AA', 'A', 'B', 'C', 'D', 'DD', 'DDD', 'G', 'H', 'I', 'J'];
+  const CUPS_UK = ['AA', 'A', 'B', 'C', 'D', 'DD', 'E', 'F', 'FF', 'G', 'GG'];
+  const CUPS_EU = ['AA', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+
+  type Region = { label: string; bands: number[]; cups: string[] };
+
+  const REGIONS: Record<string, Region> = {
+    US: { label: 'US / CA', bands: US_BANDS, cups: CUPS_US },
+    UK: { label: 'UK', bands: US_BANDS, cups: CUPS_UK },
+    EU: { label: 'EU', bands: EU_BANDS, cups: CUPS_EU },
+    FR: { label: 'FR / ES', bands: FR_BANDS, cups: CUPS_EU },
+    AU: { label: 'AU / NZ', bands: AU_BANDS, cups: CUPS_UK },
+    IT: { label: 'IT', bands: IT_BANDS, cups: CUPS_EU },
+    JP: { label: 'JP / KR', bands: EU_BANDS, cups: CUPS_EU },
+  };
+  const ORDER = ['US', 'UK', 'EU', 'FR', 'AU', 'IT', 'JP'];
+
+  const sizeEl = document.getElementById('br-size') as HTMLInputElement;
+  const regionEl = document.getElementById('br-region') as HTMLSelectElement;
+  const underEl = document.getElementById('br-under') as HTMLInputElement;
+  const bustEl = document.getElementById('br-bust') as HTMLInputElement;
+  const unitsEl = document.getElementById('br-units') as HTMLSelectElement;
+  const calcBtn = document.getElementById('br-calc') as HTMLButtonElement;
+  const result = document.getElementById('br-result')!;
+  const sisterWrap = document.getElementById('br-sister-wrap')!;
+  const sisterBox = document.getElementById('br-sister')!;
+  const copyBtn = document.getElementById('br-copy') as HTMLButtonElement;
+  const err = document.getElementById('br-error')!;
+
+  function showErr(msg: string) { err.textContent = msg; err.classList.remove('hidden'); }
+  function clearOut() { result.innerHTML = ''; sisterWrap.classList.add('hidden'); copyBtn.classList.add('hidden'); }
+
+  function parse(raw: string): { band: number; cup: string } | null {
+
+    const m = raw.trim().toUpperCase().match(/^(\d{1,3})\s*([A-K]{1,3})$/);
+    if (!m) return null;
+    return { band: Number(m[1]), cup: m[2] };
+  }
+
+  function toIndices(regionKey: string, band: number, cup: string): { bandIdx: number; cupIdx: number } | null {
+    const r = REGIONS[regionKey];
+    const bandIdx = r.bands.indexOf(band);
+    const cupIdx = r.cups.indexOf(cup);
+    if (bandIdx < 0 || cupIdx < 0) return null;
+    return { bandIdx, cupIdx };
+  }
+
+  function sizeIn(regionKey: string, bandIdx: number, cupIdx: number): string {
+    const r = REGIONS[regionKey];
+    return `${r.bands[bandIdx]}${r.cups[cupIdx] ?? '—'}`;
+  }
+
+  function renderIndices(bandIdx: number, cupIdx: number) {
+    result.innerHTML = ORDER.map((k) =>
+      `<div class="panel panel-lift p-3 cursor-pointer br-card" role="button" tabindex="0" data-size="${sizeIn(k, bandIdx, cupIdx)}" title="Click to copy"><span class="text-[11px] uppercase tracking-wide text-ink-tertiary">${REGIONS[k].label}</span><div class="mt-1 font-mono text-lg text-ink">${sizeIn(k, bandIdx, cupIdx)}</div></div>`
+    ).join('');
+    copyBtn.classList.remove('hidden');
+
+    // Sister sizes in the selected region: keep volume by trading band for cup.
+    const rk = regionEl.value;
+    const r = REGIONS[rk];
+    const sisters: string[] = [];
+    for (let d = -2; d <= 2; d++) {
+      if (d === 0) continue;
+      const b = bandIdx + d, c = cupIdx - d;
+      if (b >= 0 && b < r.bands.length && c >= 0 && c < r.cups.length) {
+        sisters.push(`${r.bands[b]}${r.cups[c]}`);
+      }
+    }
+    if (sisters.length) {
+      sisterBox.innerHTML = sisters.map((s) =>
+        `<span class="panel px-3 py-1 font-mono text-sm text-ink-muted">${s}</span>`).join('');
+      sisterWrap.classList.remove('hidden');
+    } else {
+      sisterWrap.classList.add('hidden');
+    }
+  }
+
+  function render() {
+    err.classList.add('hidden');
+    const raw = sizeEl.value.trim();
+    if (!raw) { clearOut(); return; }
+    const p = parse(raw);
+    if (!p) { clearOut(); showErr('Enter a size like 34C or 75D — band number followed by cup letters.'); return; }
+    const idx = toIndices(regionEl.value, p.band, p.cup);
+    if (!idx) { clearOut(); showErr(`${p.band}${p.cup} is outside the supported ${REGIONS[regionEl.value].label} range.`); return; }
+    renderIndices(idx.bandIdx, idx.cupIdx);
+  }
+
+  // Measurement → US size, then fill the known-size field and render everything.
+  function calculate() {
+    err.classList.add('hidden');
+    let under = Number(underEl.value);
+    let bust = Number(bustEl.value);
+    if (!under || !bust || under <= 0 || bust <= 0) { showErr('Enter both an underbust and a bust measurement.'); return; }
+    if (bust < under) { showErr('Bust should be larger than underbust — check the two fields.'); return; }
+    if (unitsEl.value === 'cm') { under /= 2.54; bust /= 2.54; } // work in inches
+
+    // Band: round underbust to nearest whole inch, bump odd → even (US even-band convention).
+    let band = Math.round(under);
+    if (band % 2 !== 0) band += 1;
+    let bandIdx = US_BANDS.indexOf(band);
+    if (bandIdx < 0) { // clamp into the supported range
+      band = Math.min(44, Math.max(28, band));
+      bandIdx = US_BANDS.indexOf(band);
+      if (bandIdx < 0) bandIdx = band < 28 ? 0 : US_BANDS.length - 1;
+    }
+    // Cup: one letter per inch of (bust − band). 0" → AA, 1" → A, 4" → D …
+    let cupIdx = Math.max(0, Math.round(bust - band));
+    if (cupIdx > CUPS_US.length - 1) cupIdx = CUPS_US.length - 1;
+
+    // Show the result as a US size in the known-size field, switch region to US, render.
+    regionEl.value = 'US';
+    sizeEl.value = `${US_BANDS[bandIdx]}${CUPS_US[cupIdx]}`;
+    renderIndices(bandIdx, cupIdx);
+  }
+
+  // Click / keyboard copy on a result card.
+  result.addEventListener('click', (e) => copyCard(e.target as HTMLElement));
+  result.addEventListener('keydown', (e) => {
+    if ((e as KeyboardEvent).key === 'Enter' || (e as KeyboardEvent).key === ' ') { e.preventDefault(); copyCard(e.target as HTMLElement); }
+  });
+  async function copyCard(target: HTMLElement) {
+    const card = target.closest('.br-card') as HTMLElement | null;
+    if (!card) return;
+    const size = card.dataset.size ?? '';
+    try { await navigator.clipboard.writeText(size); } catch { return; }
+    const val = card.querySelector('div')!;
+    const prev = val.textContent;
+    val.textContent = 'Copied!';
+    setTimeout(() => { val.textContent = prev; }, 1000);
+  }
+
+  copyBtn.addEventListener('click', async () => {
+    const cards = Array.from(result.querySelectorAll<HTMLElement>('.br-card'));
+    const text = cards.map((c) => `${c.querySelector('span')!.textContent}: ${c.dataset.size}`).join('\n');
+    if (!text) return;
+    try { await navigator.clipboard.writeText(text); } catch { return; }
+    copyBtn.classList.add('copied');
+    setTimeout(() => copyBtn.classList.remove('copied'), 1200);
+  });
+
+  sizeEl.addEventListener('input', render);
+  regionEl.addEventListener('change', render);
+  calcBtn.addEventListener('click', calculate);
+  underEl.addEventListener('keydown', (e) => { if ((e as KeyboardEvent).key === 'Enter') calculate(); });
+  bustEl.addEventListener('keydown', (e) => { if ((e as KeyboardEvent).key === 'Enter') calculate(); });
+
+  sizeEl.value = '34C';
+  render();
+</script>

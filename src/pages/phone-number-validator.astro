@@ -1,0 +1,320 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="phone-number-validator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        <span>Default country</span>
+        <div id="pnv-country-wrap" class="relative">
+          <select id="pnv-country" class="sr-only" tabindex="-1" aria-hidden="true"></select>
+          <button id="pnv-country-btn" type="button" class="field flex w-auto items-center gap-2 text-left" aria-haspopup="listbox" aria-expanded="false">
+            <img id="pnv-country-btn-flag" alt="" width="20" height="15" class="rounded-[2px]" />
+            <span id="pnv-country-btn-label" class="text-ink">United States of America (+1)</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ml-auto text-ink-subtle"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div id="pnv-country-pop" class="absolute left-0 z-20 mt-1 hidden w-72 max-w-[90vw] overflow-hidden rounded-md border border-hairline bg-surface-1 shadow-xl">
+            <input id="pnv-country-search" type="text" placeholder="Search country…" class="field w-full rounded-none border-x-0 border-t-0" spellcheck="false" autocomplete="off" />
+            <ul id="pnv-country-list" role="listbox" class="max-h-64 overflow-y-auto py-1"></ul>
+          </div>
+        </div>
+      </div>
+      <label class="flex flex-1 flex-col gap-1 text-sm text-ink-subtle">
+        Phone number
+        <input id="pnv-in" class="field font-mono text-[13px]" placeholder="(202) 555-0143 or +44 20 7946 0958" spellcheck="false" inputmode="tel" autocomplete="off" value="(202) 555-0143" />
+      </label>
+    </div>
+
+    <p class="text-[13px] text-ink-tertiary">
+      Type a number with a <span class="font-mono">+</span> country code and it's detected automatically. Without one, it's read against the default country above.
+    </p>
+
+    <div class="panel panel-lift flex items-center gap-3 p-4">
+      <span id="pnv-status" class="font-display text-xl font-semibold">—</span>
+      <span id="pnv-status-note" class="text-[13px] text-ink-subtle"></span>
+    </div>
+
+    <div id="pnv-details" class="hidden grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="panel p-4"><div class="copy-wrap"><div id="pnv-country-out" class="font-mono text-[15px] text-ink break-all">—</div><button type="button" class="copy-icon" data-copy-target="#pnv-country-out" aria-label="Copy"></button></div><div class="mt-1 text-[13px] text-ink-subtle">Country / region</div></div>
+      <div class="panel p-4"><div class="copy-wrap"><div id="pnv-type" class="font-mono text-[15px] text-ink break-all">—</div><button type="button" class="copy-icon" data-copy-target="#pnv-type" aria-label="Copy"></button></div><div class="mt-1 text-[13px] text-ink-subtle">Line type</div></div>
+      <div class="panel p-4"><div class="copy-wrap"><div id="pnv-e164" class="font-mono text-[15px] text-ink break-all">—</div><button type="button" class="copy-icon" data-copy-target="#pnv-e164" aria-label="Copy"></button></div><div class="mt-1 text-[13px] text-ink-subtle">E.164</div></div>
+      <div class="panel p-4"><div class="copy-wrap"><div id="pnv-intl" class="font-mono text-[15px] text-ink break-all">—</div><button type="button" class="copy-icon" data-copy-target="#pnv-intl" aria-label="Copy"></button></div><div class="mt-1 text-[13px] text-ink-subtle">International</div></div>
+      <div class="panel p-4"><div class="copy-wrap"><div id="pnv-national" class="font-mono text-[15px] text-ink break-all">—</div><button type="button" class="copy-icon" data-copy-target="#pnv-national" aria-label="Copy"></button></div><div class="mt-1 text-[13px] text-ink-subtle">National</div></div>
+      <div class="panel p-4"><div class="copy-wrap"><div id="pnv-uri" class="font-mono text-[15px] text-ink break-all">—</div><button type="button" class="copy-icon" data-copy-target="#pnv-uri" aria-label="Copy"></button></div><div class="mt-1 text-[13px] text-ink-subtle">tel: URI</div></div>
+      <div class="panel p-4"><div class="copy-wrap"><div id="pnv-carrier" class="font-mono text-[15px] text-ink break-all">—</div><button type="button" class="copy-icon" data-copy-target="#pnv-carrier" aria-label="Copy"></button></div><div class="mt-1 text-[13px] text-ink-subtle">Carrier</div></div>
+      <div class="panel p-4"><div class="copy-wrap"><div id="pnv-location" class="font-mono text-[15px] text-ink break-all">—</div><button type="button" class="copy-icon" data-copy-target="#pnv-location" aria-label="Copy"></button></div><div class="mt-1 text-[13px] text-ink-subtle">Location</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free phone number validator checks whether a number is valid for its
+      country and tells you the <strong>country and region</strong>, the
+      <strong>line type</strong> — mobile, fixed line, toll-free, VoIP,
+      premium-rate and more — and formats the number four ways:
+      <strong>E.164</strong> (for storing and dialing), international, national
+      and a <span class="font-mono">tel:</span> URI. Numbers written with a
+      <span class="font-mono">+</span> country code are detected automatically;
+      otherwise they're read against the default country you pick.
+    </p>
+    <p>
+      Format and line-type validation uses Google's libphonenumber metadata and
+      runs in your browser. For valid numbers we also look up the
+      <strong>carrier</strong> and <strong>location</strong> through a live
+      network lookup, so those two fields — and only those — send the number to
+      our server. Validation confirms a number is <em>correctly formatted and
+      assigned</em> to a real numbering range; it does not dial the number, so it
+      can't confirm the line is currently active or flag a disposable number,
+      which needs a dedicated fraud API.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import {
+    parsePhoneNumberFromString,
+    getCountries,
+    getCountryCallingCode,
+    type PhoneNumber,
+    type CountryCode,
+  } from 'libphonenumber-js/max';
+
+  const input = document.getElementById('pnv-in') as HTMLInputElement;
+  const country = document.getElementById('pnv-country') as HTMLSelectElement;
+
+  let regionNames: Intl.DisplayNames | undefined;
+  try {
+    regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
+  } catch {
+    regionNames = undefined;
+  }
+  const nameOf = (code: string) => regionNames?.of(code) ?? code;
+  const COUNTRIES = getCountries()
+    .map((code) => ({ code, name: nameOf(code), cc: getCountryCallingCode(code as CountryCode) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  country.append(
+    ...COUNTRIES.map((o) => {
+      const el = document.createElement('option');
+      el.value = o.code;
+      el.textContent = `${o.name} (+${o.cc})`;
+      return el;
+    }),
+  );
+
+  const flagUrl = (code: string) => `https://flagcdn.com/40x30/${code.toLowerCase()}.png`;
+  const btn = document.getElementById('pnv-country-btn') as HTMLButtonElement;
+  const btnFlag = document.getElementById('pnv-country-btn-flag') as HTMLImageElement;
+  const btnLabel = document.getElementById('pnv-country-btn-label')!;
+  const pop = document.getElementById('pnv-country-pop')!;
+  const search = document.getElementById('pnv-country-search') as HTMLInputElement;
+  const list = document.getElementById('pnv-country-list')!;
+
+  const rows = COUNTRIES.map((o) => {
+    const li = document.createElement('li');
+    li.role = 'option';
+    li.dataset.code = o.code;
+    li.className = 'flex cursor-pointer items-center gap-2 px-3 py-1.5 text-[13px] text-ink hover:bg-surface-2 aria-selected:bg-surface-2';
+    const img = document.createElement('img');
+    img.width = 20; img.height = 15; img.alt = '';
+    img.className = 'rounded-[2px]';
+    img.src = flagUrl(o.code);
+    img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
+    const span = document.createElement('span');
+    span.textContent = `${o.name} (+${o.cc})`;
+    li.append(img, span);
+    li.addEventListener('click', () => selectCountry(o.code));
+    return li;
+  });
+  list.append(...rows);
+
+  function syncButton() {
+    const o = COUNTRIES.find((c) => c.code === country.value);
+    if (!o) return;
+    btnFlag.src = flagUrl(o.code);
+    btnFlag.style.visibility = 'visible';
+    btnLabel.textContent = `${o.name} (+${o.cc})`;
+  }
+  btnFlag.addEventListener('error', () => { btnFlag.style.visibility = 'hidden'; });
+
+  function filterList(q: string) {
+    const needle = q.trim().toLowerCase();
+    rows.forEach((li, i) => {
+      const o = COUNTRIES[i];
+      const hit = !needle || o.name.toLowerCase().includes(needle) || o.cc.includes(needle) || o.code.toLowerCase().includes(needle);
+      li.classList.toggle('hidden', !hit);
+    });
+  }
+
+  function openPop() {
+    pop.classList.remove('hidden');
+    btn.setAttribute('aria-expanded', 'true');
+    search.value = '';
+    filterList('');
+    search.focus();
+  }
+  function closePop() {
+    pop.classList.add('hidden');
+    btn.setAttribute('aria-expanded', 'false');
+  }
+  function selectCountry(code: string) {
+    country.value = code;
+    syncButton();
+    closePop();
+    country.dispatchEvent(new Event('change'));
+    btn.focus();
+  }
+
+  btn.addEventListener('click', () => (pop.classList.contains('hidden') ? openPop() : closePop()));
+  search.addEventListener('input', () => filterList(search.value));
+  // Enter in the search box picks the first visible row.
+  search.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const first = rows.find((li) => !li.classList.contains('hidden'));
+      if (first?.dataset.code) selectCountry(first.dataset.code);
+    } else if (e.key === 'Escape') {
+      closePop(); btn.focus();
+    }
+  });
+  document.addEventListener('click', (e) => {
+    if (!(e.target as Element).closest('#pnv-country-wrap')) closePop();
+  });
+
+  country.value = 'US';
+  syncButton();
+
+  const statusEl = document.getElementById('pnv-status')!;
+  const statusNote = document.getElementById('pnv-status-note')!;
+  const details = document.getElementById('pnv-details')!;
+  const countryOut = document.getElementById('pnv-country-out')!;
+  const typeEl = document.getElementById('pnv-type')!;
+  const e164El = document.getElementById('pnv-e164')!;
+  const intlEl = document.getElementById('pnv-intl')!;
+  const nationalEl = document.getElementById('pnv-national')!;
+  const uriEl = document.getElementById('pnv-uri')!;
+  const carrierEl = document.getElementById('pnv-carrier')!;
+  const locationEl = document.getElementById('pnv-location')!;
+
+  // libphonenumber's getType() codes → human labels.
+  const TYPE_LABELS: Record<string, string> = {
+    MOBILE: 'Mobile',
+    FIXED_LINE: 'Fixed line (landline)',
+    FIXED_LINE_OR_MOBILE: 'Fixed line or mobile',
+    TOLL_FREE: 'Toll-free',
+    PREMIUM_RATE: 'Premium rate',
+    SHARED_COST: 'Shared cost',
+    VOIP: 'VoIP',
+    PERSONAL_NUMBER: 'Personal number',
+    PAGER: 'Pager',
+    UAN: 'UAN (company)',
+    VOICEMAIL: 'Voicemail',
+  };
+
+  // Best-effort region name from the ISO country code. Falls back to the code.
+  const regionName = (code?: string): string => {
+    if (!code) return '—';
+    try {
+      const dn = new Intl.DisplayNames(['en'], { type: 'region' });
+      return `${dn.of(code) ?? code} (${code})`;
+    } catch {
+      return code;
+    }
+  };
+
+  function setStatus(text: string, color: string, note: string) {
+    statusEl.textContent = text;
+    statusEl.style.color = color;
+    statusNote.textContent = note;
+  }
+
+  function clearDetails() {
+    details.classList.add('hidden');
+  }
+
+  function validate() {
+    const raw = input.value.trim();
+    if (raw === '') {
+      setStatus('—', '', '');
+      statusEl.style.color = '';
+      clearDetails();
+      return;
+    }
+
+    let phone: PhoneNumber | undefined;
+    try {
+      phone = parsePhoneNumberFromString(raw, country.value as any);
+    } catch {
+      phone = undefined;
+    }
+
+    if (!phone) {
+      setStatus('Invalid ✕', '#e5484d', "Couldn't parse this as a phone number.");
+      clearDetails();
+      return;
+    }
+
+    const valid = phone.isValid();
+    const possible = phone.isPossible();
+
+    if (valid) {
+      setStatus('Valid ✓', '#27a644', 'Correctly formatted and assigned to a real numbering range.');
+    } else if (possible) {
+      setStatus('Possible', '#d99e3a', 'Right length, but not a recognized number for this region.');
+    } else {
+      setStatus('Invalid ✕', '#e5484d', 'Not a valid number for the detected country.');
+    }
+
+    const type = phone.getType();
+    countryOut.textContent = regionName(phone.country);
+    typeEl.textContent = type ? (TYPE_LABELS[type] ?? type) : 'Unknown';
+    e164El.textContent = phone.format('E.164');
+    intlEl.textContent = phone.formatInternational();
+    nationalEl.textContent = phone.formatNational();
+    uriEl.textContent = phone.getURI();
+    details.classList.remove('hidden');
+
+    // Carrier + location come from the server proxy (Numverify). Only look up
+    // valid numbers, debounced, so typing doesn't burn API quota.
+    carrierEl.textContent = '—';
+    locationEl.textContent = '—';
+    if (valid) scheduleLookup(phone.format('E.164'));
+  }
+
+  // Cache per E.164 number so re-checking the same number is free.
+  const lookupCache = new Map<string, { carrier: string; location: string }>();
+  let lookupTimer: number | undefined;
+
+  function scheduleLookup(e164: string) {
+    const cached = lookupCache.get(e164);
+    if (cached) {
+      carrierEl.textContent = cached.carrier || 'Unknown';
+      locationEl.textContent = cached.location || 'Unknown';
+      return;
+    }
+    carrierEl.textContent = 'Looking up…';
+    locationEl.textContent = 'Looking up…';
+    clearTimeout(lookupTimer);
+    lookupTimer = window.setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/phone-lookup?number=${encodeURIComponent(e164)}`);
+        // Current input may have changed while the request was in flight.
+        if (input.value.trim() === '') return;
+        if (!res.ok) throw new Error();
+        const d = await res.json();
+        const out = { carrier: d.carrier || '', location: d.location || '' };
+        lookupCache.set(e164, out);
+        carrierEl.textContent = out.carrier || 'Unknown';
+        locationEl.textContent = out.location || 'Unknown';
+      } catch {
+        carrierEl.textContent = 'Unavailable';
+        locationEl.textContent = 'Unavailable';
+      }
+    }, 500);
+  }
+
+  input.addEventListener('input', validate);
+  country.addEventListener('change', validate);
+  validate();
+</script>

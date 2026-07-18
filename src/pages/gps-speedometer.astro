@@ -1,0 +1,386 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="gps-speedometer">
+  <div id="sp-root" class="flex flex-col gap-5">
+
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Units
+        <select id="sp-unit" class="field w-auto py-1">
+          <option value="kmh">km/h</option>
+          <option value="mph">mph</option>
+          <option value="kn">knots</option>
+          <option value="ms">m/s</option>
+        </select>
+      </label>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Speed limit
+        <div class="flex items-center gap-2">
+          <input id="sp-limit" type="number" min="0" step="5" placeholder="off" class="field w-24 py-1" />
+          <span id="sp-limit-unit" class="text-[13px] text-ink-tertiary">km/h</span>
+        </div>
+      </label>
+
+      <button id="sp-toggle" class="btn btn-primary ml-auto">Start</button>
+      <button id="sp-hud" class="btn btn-secondary" aria-pressed="false" title="Mirror the display for a windshield head-up reflection">HUD</button>
+      <button id="sp-reset" class="btn btn-secondary">Reset trip</button>
+    </div>
+
+    <div id="sp-status" class="text-[13px] text-ink-subtle">Press Start and allow location access to begin.</div>
+    <p id="sp-error" class="hidden text-[13px] leading-relaxed text-[#e5484d]"></p>
+
+    <div id="sp-display" class="panel flex flex-col items-center gap-2 rounded-xl p-6 md:p-8">
+      <div class="relative w-full max-w-[420px]">
+        <svg id="sp-gauge" viewBox="0 0 200 200" class="w-full select-none" role="img" aria-label="Speed gauge">
+
+          <path id="sp-track" fill="none" stroke="#23252a" stroke-width="10" stroke-linecap="round" />
+
+          <path id="sp-arc" fill="none" stroke="#5e6ad2" stroke-width="10" stroke-linecap="round" />
+
+          <g id="sp-ticks"></g>
+
+          <g id="sp-needle">
+            <line x1="100" y1="100" x2="100" y2="28" stroke="#f7f8f8" stroke-width="2.5" stroke-linecap="round" />
+            <circle cx="100" cy="100" r="6" fill="#f7f8f8" />
+            <circle cx="100" cy="100" r="2.5" fill="#010102" />
+          </g>
+        </svg>
+
+        <div class="pointer-events-none absolute inset-x-0 bottom-1 flex flex-col items-center">
+          <div id="sp-speed" class="font-display text-5xl font-semibold leading-none text-ink md:text-6xl" style="font-variant-numeric:tabular-nums">0</div>
+          <div id="sp-unit-label" class="mt-1 text-[13px] uppercase tracking-wide text-ink-subtle">km/h</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-3 lg:grid-cols-6">
+      <div class="panel p-3"><div id="sp-max" class="font-mono text-lg text-primary-hover" style="font-variant-numeric:tabular-nums">0</div><div class="mt-1 text-[12px] text-ink-subtle">Max</div></div>
+      <div class="panel p-3"><div id="sp-avg" class="font-mono text-lg text-ink" style="font-variant-numeric:tabular-nums">0</div><div class="mt-1 text-[12px] text-ink-subtle">Average</div></div>
+      <div class="panel p-3"><div id="sp-dist" class="font-mono text-lg text-ink" style="font-variant-numeric:tabular-nums">0</div><div class="mt-1 text-[12px] text-ink-subtle">Distance</div></div>
+      <div class="panel p-3"><div id="sp-alt" class="font-mono text-lg text-ink" style="font-variant-numeric:tabular-nums">—</div><div class="mt-1 text-[12px] text-ink-subtle">Altitude</div></div>
+      <div class="panel p-3"><div id="sp-head" class="font-mono text-lg text-ink" style="font-variant-numeric:tabular-nums">—</div><div class="mt-1 text-[12px] text-ink-subtle">Heading</div></div>
+      <div class="panel p-3"><div id="sp-acc" class="font-mono text-lg text-ink" style="font-variant-numeric:tabular-nums">—</div><div class="mt-1 text-[12px] text-ink-subtle">GPS ± m</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free GPS speedometer turns your phone, tablet or laptop into a live speed
+      display using the device's built-in GPS. Press Start, allow location access, and
+      it reads your real ground speed straight from the satellites — no app install
+      and no account.
+    </p>
+    <p>
+      Alongside the analog dial and large digital readout you get your top speed,
+      running average, trip distance, current altitude, compass heading and live GPS
+      accuracy. Switch freely between km/h, mph, knots and m/s. Set an optional speed
+      limit and the dial turns red with an alert the moment you cross it. Turn on HUD
+      mode to mirror the display for a head-up reflection on your windshield at night,
+      and the screen stays awake while you drive on supported devices.
+    </p>
+    <p>
+      GPS speed is most accurate outdoors with a clear view of the sky and can take a
+      few seconds to settle after you start moving. Accuracy drops indoors, in tunnels
+      or between tall buildings. Use it as a handy reference, not a replacement for
+      your vehicle's certified speedometer.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+
+  type Unit = 'kmh' | 'mph' | 'kn' | 'ms';
+  const UNITS: Record<Unit, { label: string; fromMs: number; scale: number; step: number }> = {
+
+    kmh: { label: 'km/h', fromMs: 3.6, scale: 120, step: 20 },
+    mph: { label: 'mph', fromMs: 2.236936, scale: 80, step: 20 },
+    kn: { label: 'knots', fromMs: 1.943844, scale: 60, step: 10 },
+    ms: { label: 'm/s', fromMs: 1, scale: 40, step: 10 },
+  };
+
+  const unitSel = $('sp-unit') as HTMLSelectElement;
+  const limitInput = $('sp-limit') as HTMLInputElement;
+  const limitUnit = $('sp-limit-unit');
+  const toggleBtn = $('sp-toggle') as HTMLButtonElement;
+  const hudBtn = $('sp-hud') as HTMLButtonElement;
+  const resetBtn = $('sp-reset') as HTMLButtonElement;
+  const statusEl = $('sp-status');
+  const errEl = $('sp-error');
+  const displayEl = $('sp-display');
+  const speedEl = $('sp-speed');
+  const unitLabelEl = $('sp-unit-label');
+  const arcEl = $('sp-arc') as unknown as SVGPathElement;
+  const trackEl = $('sp-track') as unknown as SVGPathElement;
+  const ticksEl = $('sp-ticks');
+  const needleEl = $('sp-needle');
+  const maxEl = $('sp-max');
+  const avgEl = $('sp-avg');
+  const distEl = $('sp-dist');
+  const altEl = $('sp-alt');
+  const headEl = $('sp-head');
+  const accEl = $('sp-acc');
+
+  const CX = 100, CY = 100, R = 78;
+  const START = 135, SWEEP = 270;
+
+  const polar = (deg: number, r = R) => {
+    const rad = (deg * Math.PI) / 180;
+    return { x: CX + r * Math.cos(rad), y: CY + r * Math.sin(rad) };
+  };
+  const angleFor = (frac: number) => START + SWEEP * Math.min(1, Math.max(0, frac));
+
+  const arcPath = (fromFrac: number, toFrac: number) => {
+    const a0 = angleFor(fromFrac), a1 = angleFor(toFrac);
+    const p0 = polar(a0), p1 = polar(a1);
+    const large = a1 - a0 > 180 ? 1 : 0;
+    return `M ${p0.x} ${p0.y} A ${R} ${R} 0 ${large} 1 ${p1.x} ${p1.y}`;
+  };
+
+  trackEl.setAttribute('d', arcPath(0, 1));
+
+  let gaugeMax = UNITS.kmh.scale;
+
+  function buildTicks(u: Unit) {
+    const cfg = UNITS[u];
+    const step = cfg.step;
+    // top is a multiple of step, at least the default scale, and covers current max
+    const top = Math.max(cfg.scale, Math.ceil(gaugeMax / step) * step);
+    gaugeMax = top;
+    ticksEl.innerHTML = '';
+    for (let v = 0; v <= top; v += step) {
+      const frac = v / top;
+      const a = angleFor(frac);
+      const rad = (a * Math.PI) / 180;
+      const outer = polar(a);
+      const inner = polar(a, R - 9);
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', inner.x.toFixed(2));
+      line.setAttribute('y1', inner.y.toFixed(2));
+      line.setAttribute('x2', outer.x.toFixed(2));
+      line.setAttribute('y2', outer.y.toFixed(2));
+      line.setAttribute('stroke', '#3e3e44');
+      line.setAttribute('stroke-width', '1.5');
+      ticksEl.appendChild(line);
+
+      const lp = polar(a, R - 20);
+      const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      t.setAttribute('x', lp.x.toFixed(2));
+      t.setAttribute('y', lp.y.toFixed(2));
+      t.setAttribute('fill', '#8a8f98');
+      t.setAttribute('font-size', '7');
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('dominant-baseline', 'central');
+      t.textContent = String(v);
+      ticksEl.appendChild(t);
+    }
+  }
+
+  function setNeedle(frac: number) {
+    // Needle art points straight up (to y=28); rotate to the target angle.
+    const rot = angleFor(frac) + 90;
+    needleEl.setAttribute('transform', `rotate(${rot.toFixed(2)} ${CX} ${CY})`);
+  }
+
+  // ---- state ---------------------------------------------------------------
+  let unit: Unit = 'kmh';
+  let watchId: number | null = null;
+  let wakeLock: any = null;
+  let running = false;
+
+  let maxSpeedMs = 0;
+  let distanceM = 0;
+  let movingTimeS = 0;
+  let last: { lat: number; lon: number; t: number } | null = null;
+  let overLimit = false;
+
+  const fmt = (n: number) => Math.round(n).toString();
+  const toUnit = (ms: number) => ms * UNITS[unit].fromMs;
+
+  function convDist(m: number): string {
+    if (unit === 'mph' || unit === 'kn') {
+      const mi = m / 1609.344;
+      return (mi < 10 ? mi.toFixed(2) : mi.toFixed(1)) + ' mi';
+    }
+    const km = m / 1000;
+    return (km < 10 ? km.toFixed(2) : km.toFixed(1)) + ' km';
+  }
+  function convAlt(m: number): string {
+    if (unit === 'mph' || unit === 'kn') return Math.round(m * 3.28084) + ' ft';
+    return Math.round(m) + ' m';
+  }
+
+  function haversine(aLat: number, aLon: number, bLat: number, bLon: number): number {
+    const rE = 6371000;
+    const dLat = ((bLat - aLat) * Math.PI) / 180;
+    const dLon = ((bLon - aLon) * Math.PI) / 180;
+    const s =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((aLat * Math.PI) / 180) * Math.cos((bLat * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+    return 2 * rE * Math.asin(Math.min(1, Math.sqrt(s)));
+  }
+
+  const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  const compass = (deg: number) => COMPASS[Math.round(deg / 45) % 8];
+
+  function updateDerivedStats() {
+    maxEl.textContent = fmt(toUnit(maxSpeedMs));
+    const avgMs = movingTimeS > 0 ? distanceM / movingTimeS : 0;
+    avgEl.textContent = fmt(toUnit(avgMs));
+    distEl.textContent = convDist(distanceM);
+  }
+
+  function render(speedMs: number) {
+    const spd = toUnit(speedMs);
+    if (spd > gaugeMax) buildTicks(unit); // grow dial if we blow past the top
+    const frac = spd / gaugeMax;
+    speedEl.textContent = fmt(spd);
+    setNeedle(frac);
+    arcEl.setAttribute('d', arcPath(0, frac));
+
+    const limit = parseFloat(limitInput.value);
+    const over = !isNaN(limit) && limit > 0 && spd > limit;
+    if (over !== overLimit) {
+      overLimit = over;
+      arcEl.setAttribute('stroke', over ? '#e5484d' : '#5e6ad2');
+      speedEl.style.color = over ? '#e5484d' : '';
+      if (over) navigator.vibrate?.(200);
+    }
+
+    updateDerivedStats();
+  }
+
+  function onPosition(pos: GeolocationPosition) {
+    errEl.classList.add('hidden');
+    const c = pos.coords;
+    const now = pos.timestamp;
+
+    const deviceSpeed = typeof c.speed === 'number' && c.speed >= 0 && !Number.isNaN(c.speed);
+    let speedMs = deviceSpeed ? c.speed! : 0;
+
+    if (last) {
+      const dt = (now - last.t) / 1000;
+      if (dt > 0) {
+        const d = haversine(last.lat, last.lon, c.latitude, c.longitude);
+        if (!deviceSpeed) speedMs = d / dt; // fall back to displacement
+        if (speedMs > 0.5) { // only count genuine movement, filtering GPS jitter
+          distanceM += d;
+          movingTimeS += dt;
+        }
+      }
+    }
+    last = { lat: c.latitude, lon: c.longitude, t: now };
+
+    if (speedMs > maxSpeedMs) maxSpeedMs = speedMs;
+
+    altEl.textContent =
+      typeof c.altitude === 'number' && !Number.isNaN(c.altitude) ? convAlt(c.altitude) : '—';
+    if (typeof c.heading === 'number' && !Number.isNaN(c.heading)) {
+      headEl.textContent = `${Math.round(c.heading)}° ${compass(c.heading)}`;
+    }
+    accEl.textContent = typeof c.accuracy === 'number' ? `±${Math.round(c.accuracy)}` : '—';
+    statusEl.textContent = `Tracking · updated ${new Date(now).toLocaleTimeString()}`;
+
+    render(speedMs);
+  }
+
+  function onError(err: GeolocationPositionError) {
+    const msg =
+      err.code === err.PERMISSION_DENIED
+        ? 'Location permission denied. Allow it in your browser’s site settings, then start again.'
+        : err.code === err.POSITION_UNAVAILABLE
+          ? 'Position unavailable — make sure GPS/location is on and you have a clear view of the sky.'
+          : 'Timed out getting your location. Retrying…';
+    errEl.textContent = msg;
+    errEl.classList.remove('hidden');
+  }
+
+  async function requestWakeLock() {
+    try {
+      wakeLock = await (navigator as any).wakeLock?.request('screen');
+    } catch {}
+  }
+  function releaseWakeLock() {
+    try { wakeLock?.release?.(); } catch {}
+    wakeLock = null;
+  }
+
+  function start() {
+    if (!('geolocation' in navigator)) {
+      errEl.textContent = 'Geolocation is not supported by this browser.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+    running = true;
+    toggleBtn.textContent = 'Stop';
+    toggleBtn.classList.replace('btn-primary', 'btn-secondary');
+    statusEl.textContent = 'Acquiring GPS signal…';
+    errEl.classList.add('hidden');
+    last = null;
+    watchId = navigator.geolocation.watchPosition(onPosition, onError, {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 15000,
+    });
+    requestWakeLock();
+  }
+
+  function stop() {
+    running = false;
+    toggleBtn.textContent = 'Start';
+    toggleBtn.classList.replace('btn-secondary', 'btn-primary');
+    if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+    releaseWakeLock();
+    statusEl.textContent = 'Stopped. Press Start to resume.';
+    render(0);
+  }
+
+  function resetTrip() {
+    maxSpeedMs = 0;
+    distanceM = 0;
+    movingTimeS = 0;
+    last = null;
+    altEl.textContent = '—';
+    headEl.textContent = '—';
+    render(0);
+  }
+
+  function applyUnit() {
+    unit = unitSel.value as Unit;
+    gaugeMax = UNITS[unit].scale;
+    unitLabelEl.textContent = UNITS[unit].label;
+    limitUnit.textContent = UNITS[unit].label;
+    buildTicks(unit);
+    render(0);
+  }
+
+  // ---- events --------------------------------------------------------------
+  toggleBtn.addEventListener('click', () => (running ? stop() : start()));
+  resetBtn.addEventListener('click', resetTrip);
+  unitSel.addEventListener('change', applyUnit);
+  hudBtn.addEventListener('click', () => {
+    const on = displayEl.classList.toggle('sp-hud-on');
+    hudBtn.setAttribute('aria-pressed', String(on));
+    hudBtn.classList.toggle('btn-primary', on);
+    hudBtn.classList.toggle('btn-secondary', !on);
+  });
+  limitInput.addEventListener('input', updateDerivedStats);
+
+  // re-acquire wake lock when the tab becomes visible again
+  document.addEventListener('visibilitychange', () => {
+    if (running && document.visibilityState === 'visible' && !wakeLock) requestWakeLock();
+  });
+
+  // init
+  applyUnit();
+  render(0);
+</script>
+
+<style>
+
+  #sp-display.sp-hud-on {
+    transform: scaleX(-1);
+    background: #000;
+  }
+</style>

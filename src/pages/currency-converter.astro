@@ -1,0 +1,330 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="currency-converter">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="cu-from-val">From</label>
+        <div class="relative">
+          <span id="cu-from-sym" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ink-tertiary"></span>
+          <input id="cu-from-val" type="number" class="field pl-8" value="100" inputmode="decimal" />
+        </div>
+        <select id="cu-from" class="field mt-1"></select>
+      </div>
+      <button id="cu-swap" type="button" class="btn btn-secondary mb-1 h-10 w-10 shrink-0 justify-self-center p-0" aria-label="Swap currencies" title="Swap">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
+      </button>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="cu-to-val">To</label>
+        <div class="relative">
+          <span id="cu-to-sym" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ink-tertiary"></span>
+          <div class="copy-wrap">
+            <input id="cu-to-val" type="number" class="field pl-8 pr-10" inputmode="decimal" />
+            <button type="button" class="copy-icon" data-copy-target="#cu-to-val" aria-label="Copy"></button>
+          </div>
+        </div>
+        <select id="cu-to" class="field mt-1"></select>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <p id="cu-rate" class="text-[13px] text-ink-tertiary"></p>
+      <label class="flex items-center gap-1.5 text-[13px] text-ink-subtle">
+        Decimals
+        <select id="cu-dp" class="field h-7 w-auto py-0 pl-2 pr-6 text-[13px]">
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4" selected>4</option>
+          <option value="6">6</option>
+          <option value="8">8</option>
+        </select>
+      </label>
+    </div>
+
+    <div>
+      <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <p class="text-[13px] text-ink-subtle">Rate history</p>
+        <div id="cu-periods" class="flex gap-1"></div>
+      </div>
+      <div class="rounded-md border border-hairline p-3">
+        <div id="cu-chart-wrap" class="relative">
+          <svg id="cu-chart" viewBox="0 0 600 160" preserveAspectRatio="none" class="h-40 w-full" aria-label="Exchange rate history chart" role="img"></svg>
+          <p id="cu-chart-msg" class="absolute inset-0 flex items-center justify-center text-[13px] text-ink-tertiary">Loading history…</p>
+        </div>
+        <div id="cu-stats" class="mt-3 grid grid-cols-2 gap-2 text-[13px] sm:grid-cols-4"></div>
+      </div>
+    </div>
+
+    <div>
+      <p class="mb-2 text-[13px] text-ink-subtle">Quick amounts</p>
+      <div id="cu-table" class="overflow-hidden rounded-md border border-hairline"></div>
+    </div>
+
+    <p id="cu-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free currency converter uses live daily exchange rates to convert
+      between more than 160 world currencies. Enter an amount, pick your
+      currencies, and see the converted value plus a quick reference table.
+      Rates are fetched directly from your browser to a public rates service —
+      no account, and the amounts you type are never stored.
+    </p>
+    <p>
+      Type in either field to convert in both directions, swap the pair with a
+      click, and copy the result. A rate-history chart shows how the pair has
+      moved over the last week, month, six months, year, or five years, with
+      the period high, low, average, and change. Choose how many decimal places
+      you want, from 2 up to 8 for precise conversions. All rates are
+      mid-market (interbank) rates shown for reference and update once per day —
+      they do not include the margin a bank or transfer service may add.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const NAMES: Record<string, string> = {
+    AED: 'United Arab Emirates Dirham', AFN: 'Afghan Afghani', ALL: 'Albanian Lek', AMD: 'Armenian Dram',
+    ANG: 'Netherlands Antillean Guilder', AOA: 'Angolan Kwanza', ARS: 'Argentine Peso', AUD: 'Australian Dollar',
+    AWG: 'Aruban Florin', AZN: 'Azerbaijani Manat', BAM: 'Bosnia-Herzegovina Convertible Mark', BBD: 'Barbadian Dollar',
+    BDT: 'Bangladeshi Taka', BGN: 'Bulgarian Lev', BHD: 'Bahraini Dinar', BIF: 'Burundian Franc',
+    BMD: 'Bermudan Dollar', BND: 'Brunei Dollar', BOB: 'Bolivian Boliviano', BRL: 'Brazilian Real',
+    BSD: 'Bahamian Dollar', BTN: 'Bhutanese Ngultrum', BWP: 'Botswanan Pula', BYN: 'Belarusian Ruble',
+    BZD: 'Belize Dollar', CAD: 'Canadian Dollar', CDF: 'Congolese Franc', CHF: 'Swiss Franc',
+    CLF: 'Chilean Unit of Account (UF)', CLP: 'Chilean Peso', CNH: 'Chinese Yuan (offshore)', CNY: 'Chinese Yuan',
+    COP: 'Colombian Peso', CRC: 'Costa Rican Colón', CUP: 'Cuban Peso', CVE: 'Cape Verdean Escudo',
+    CZK: 'Czech Koruna', DJF: 'Djiboutian Franc', DKK: 'Danish Krone', DOP: 'Dominican Peso',
+    DZD: 'Algerian Dinar', EGP: 'Egyptian Pound', ERN: 'Eritrean Nakfa', ETB: 'Ethiopian Birr',
+    EUR: 'Euro', FJD: 'Fijian Dollar', FKP: 'Falkland Islands Pound', FOK: 'Faroese Króna',
+    GBP: 'British Pound', GEL: 'Georgian Lari', GGP: 'Guernsey Pound', GHS: 'Ghanaian Cedi',
+    GIP: 'Gibraltar Pound', GMD: 'Gambian Dalasi', GNF: 'Guinean Franc', GTQ: 'Guatemalan Quetzal',
+    GYD: 'Guyanaese Dollar', HKD: 'Hong Kong Dollar', HNL: 'Honduran Lempira', HRK: 'Croatian Kuna',
+    HTG: 'Haitian Gourde', HUF: 'Hungarian Forint', IDR: 'Indonesian Rupiah', ILS: 'Israeli New Shekel',
+    IMP: 'Isle of Man Pound', INR: 'Indian Rupee', IQD: 'Iraqi Dinar', IRR: 'Iranian Rial',
+    ISK: 'Icelandic Króna', JEP: 'Jersey Pound', JMD: 'Jamaican Dollar', JOD: 'Jordanian Dinar',
+    JPY: 'Japanese Yen', KES: 'Kenyan Shilling', KGS: 'Kyrgystani Som', KHR: 'Cambodian Riel',
+    KID: 'Kiribati Dollar', KMF: 'Comorian Franc', KRW: 'South Korean Won', KWD: 'Kuwaiti Dinar',
+    KYD: 'Cayman Islands Dollar', KZT: 'Kazakhstani Tenge', LAK: 'Laotian Kip', LBP: 'Lebanese Pound',
+    LKR: 'Sri Lankan Rupee', LRD: 'Liberian Dollar', LSL: 'Lesotho Loti', LYD: 'Libyan Dinar',
+    MAD: 'Moroccan Dirham', MDL: 'Moldovan Leu', MGA: 'Malagasy Ariary', MKD: 'Macedonian Denar',
+    MMK: 'Myanmar Kyat', MNT: 'Mongolian Tugrik', MOP: 'Macanese Pataca', MRU: 'Mauritanian Ouguiya',
+    MUR: 'Mauritian Rupee', MVR: 'Maldivian Rufiyaa', MWK: 'Malawian Kwacha', MXN: 'Mexican Peso',
+    MYR: 'Malaysian Ringgit', MZN: 'Mozambican Metical', NAD: 'Namibian Dollar', NGN: 'Nigerian Naira',
+    NIO: 'Nicaraguan Córdoba', NOK: 'Norwegian Krone', NPR: 'Nepalese Rupee', NZD: 'New Zealand Dollar',
+    OMR: 'Omani Rial', PAB: 'Panamanian Balboa', PEN: 'Peruvian Sol', PGK: 'Papua New Guinean Kina',
+    PHP: 'Philippine Peso', PKR: 'Pakistani Rupee', PLN: 'Polish Zloty', PYG: 'Paraguayan Guarani',
+    QAR: 'Qatari Riyal', RON: 'Romanian Leu', RSD: 'Serbian Dinar', RUB: 'Russian Ruble',
+    RWF: 'Rwandan Franc', SAR: 'Saudi Riyal', SBD: 'Solomon Islands Dollar', SCR: 'Seychellois Rupee',
+    SDG: 'Sudanese Pound', SEK: 'Swedish Krona', SGD: 'Singapore Dollar', SHP: 'St. Helena Pound',
+    SLE: 'Sierra Leonean Leone', SLL: 'Sierra Leonean Leone (1964–2022)', SOS: 'Somali Shilling', SRD: 'Surinamese Dollar',
+    SSP: 'South Sudanese Pound', STN: 'São Tomé & Príncipe Dobra', SYP: 'Syrian Pound', SZL: 'Swazi Lilangeni',
+    THB: 'Thai Baht', TJS: 'Tajikistani Somoni', TMT: 'Turkmenistani Manat', TND: 'Tunisian Dinar',
+    TOP: 'Tongan Paʻanga', TRY: 'Turkish Lira', TTD: 'Trinidad & Tobago Dollar', TVD: 'Tuvaluan Dollar',
+    TWD: 'New Taiwan Dollar', TZS: 'Tanzanian Shilling', UAH: 'Ukrainian Hryvnia', UGX: 'Ugandan Shilling',
+    USD: 'US Dollar', UYU: 'Uruguayan Peso', UZS: 'Uzbekistani Som', VES: 'Venezuelan Bolívar',
+    VND: 'Vietnamese Dong', VUV: 'Vanuatu Vatu', WST: 'Samoan Tala', XAF: 'Central African CFA Franc',
+    XCD: 'East Caribbean Dollar', XCG: 'Caribbean Guilder', XDR: 'Special Drawing Rights', XOF: 'West African CFA Franc',
+    XPF: 'CFP Franc', YER: 'Yemeni Rial', ZAR: 'South African Rand', ZMW: 'Zambian Kwacha',
+    ZWG: 'Zimbabwean Gold', ZWL: 'Zimbabwean Dollar (2009–2024)',
+  };
+
+  const SYMBOLS: Record<string, string> = {
+    AED: 'د.إ', AFN: '؋', AMD: '֏', AOA: 'Kz', ARS: '$', AUD: 'A$', AWG: 'ƒ', AZN: '₼',
+    BAM: 'KM', BBD: '$', BDT: '৳', BOB: 'Bs', BRL: 'R$', BSD: '$', BWP: 'P', BYN: 'Br',
+    BZD: '$', CAD: 'C$', CHF: 'CHF', CLP: '$', CNH: '¥', CNY: '¥', COP: '$', CRC: '₡',
+    CUP: '$', CZK: 'Kč', DKK: 'kr', DOP: '$', EGP: 'E£', EUR: '€', FJD: '$', FKP: '£',
+    GBP: '£', GEL: '₾', GHS: 'GH₵', GIP: '£', GNF: 'FG', GTQ: 'Q', GYD: '$', HKD: 'HK$',
+    HNL: 'L', HRK: 'kn', HUF: 'Ft', IDR: 'Rp', ILS: '₪', IMP: '£', INR: '₹', ISK: 'kr',
+    JEP: '£', JMD: '$', JPY: '¥', KGS: '⃀', KHR: '៛', KMF: 'CF', KRW: '₩', KYD: '$',
+    KZT: '₸', LAK: '₭', LBP: 'L£', LKR: 'Rs', LRD: '$', MGA: 'Ar', MMK: 'K', MNT: '₮',
+    MUR: 'Rs', MXN: 'Mex$', MYR: 'RM', NAD: '$', NGN: '₦', NIO: 'C$', NOK: 'kr', NPR: 'Rs',
+    NZD: 'NZ$', PHP: '₱', PKR: 'Rs', PLN: 'zł', PYG: '₲', RON: 'lei', RSD: 'дин', RUB: '₽',
+    RWF: 'RF', SBD: '$', SEK: 'kr', SGD: 'S$', SHP: '£', SRD: '$', SSP: '£', STN: 'Db',
+    SYP: '£', THB: '฿', TOP: 'T$', TRY: '₺', TTD: '$', TWD: 'NT$', UAH: '₴', USD: '$',
+    UYU: '$', VES: 'Bs', VND: '₫', WST: 'T', XAF: 'FCFA', XCD: '$', XCG: 'Cg.', XOF: 'F CFA',
+    XPF: '₣', ZAR: 'R', ZMW: 'ZK',
+  };
+  const sym = (c: string) => SYMBOLS[c] ?? c;
+
+  const fromVal = document.getElementById('cu-from-val') as HTMLInputElement;
+  const toVal = document.getElementById('cu-to-val') as HTMLInputElement;
+  const fromSel = document.getElementById('cu-from') as HTMLSelectElement;
+  const toSel = document.getElementById('cu-to') as HTMLSelectElement;
+  const fromSym = document.getElementById('cu-from-sym')!;
+  const toSym = document.getElementById('cu-to-sym')!;
+  const rateLine = document.getElementById('cu-rate')!;
+  const table = document.getElementById('cu-table')!;
+  const err = document.getElementById('cu-error')!;
+  const dpSel = document.getElementById('cu-dp') as HTMLSelectElement;
+  const periods = document.getElementById('cu-periods')!;
+  const chart = document.getElementById('cu-chart')!;
+  const chartMsg = document.getElementById('cu-chart-msg')!;
+  const stats = document.getElementById('cu-stats')!;
+
+  let rates: Record<string, number> = {};
+  let lastUpdate = '';
+  let dp = 4;               
+  let period = '1M';        
+
+  const dpFmt = (n: number) => new Intl.NumberFormat(undefined, { maximumFractionDigits: dp }).format(n);
+  const fmt = (n: number) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 4 }).format(n);
+  const round = (n: number, d: number) => { const p = 10 ** d; return Math.round(n * p) / p; };
+
+  function fillSelects() {
+    const codes = Object.keys(NAMES);
+
+    const opts = codes.map((c) => {
+      const s = sym(c);
+      const prefix = s !== c ? `${s} ` : '';
+      return `<option value="${c}">${prefix}${c} — ${NAMES[c]}</option>`;
+    }).join('');
+    fromSel.innerHTML = opts; toSel.innerHTML = opts;
+    fromSel.value = 'USD'; toSel.value = 'EUR';
+  }
+
+  // Convert `amount` of `a` into `b` using USD-relative rates.
+  const cross = (amount: number, a: string, b: string) => (amount / rates[a]) * rates[b];
+
+  // Recompute from a given side; `src` is which field the user last edited.
+  function convert(src: 'from' | 'to' = 'from') {
+    const from = fromSel.value, to = toSel.value;
+    fromSym.textContent = sym(from);
+    toSym.textContent = sym(to);
+    if (!Object.keys(rates).length) return;
+    if (!rates[from] || !rates[to]) return;
+
+    if (src === 'to') {
+      const v = Number(toVal.value);
+      fromVal.value = (toVal.value === '' || isNaN(v)) ? '' : String(round(cross(v, to, from), dp));
+    } else {
+      const v = Number(fromVal.value);
+      toVal.value = (fromVal.value === '' || isNaN(v)) ? '' : String(round(cross(v, from, to), dp));
+    }
+
+    const one = cross(1, from, to);
+    rateLine.textContent =
+      `${sym(from)}1 ${from} = ${sym(to)}${dpFmt(one)} ${to}  ·  ${sym(to)}1 ${to} = ${sym(from)}${dpFmt(1 / one)} ${from}`
+      + (lastUpdate ? `  ·  mid-market rate, updated ${lastUpdate}` : '');
+    renderTable(from, to);
+  }
+
+  function renderTable(from: string, to: string) {
+    const amounts = [1, 5, 10, 25, 50, 100, 500, 1000];
+    const one = cross(1, from, to);
+    table.innerHTML = `<table class="w-full text-[13px]">${amounts.map((a) => `
+      <tr class="border-t border-hairline">
+        <td class="px-3 py-2 text-ink-subtle">${sym(from)}${fmt(a)} ${from}</td>
+        <td class="px-3 py-2 text-right font-mono text-ink">${sym(to)}${fmt(round(a * one, 2))} ${to}</td>
+      </tr>`).join('')}</table>`;
+  }
+
+  async function loadRates() {
+    try {
+      const res = await fetch('https://open.er-api.com/v6/latest/USD');
+      if (!res.ok) throw new Error('bad status ' + res.status);
+      const data = await res.json();
+      if (data.result !== 'success' || !data.rates) throw new Error('bad payload');
+      rates = { USD: 1, ...data.rates };
+      if (data.time_last_update_utc) lastUpdate = String(data.time_last_update_utc).replace(/ \d{2}:\d{2}:\d{2}.*/, '');
+      convert();
+    } catch (e) {
+      err.textContent = 'Could not load live exchange rates. Check your connection and refresh — the converter needs an internet connection to fetch rates.';
+      err.classList.remove('hidden');
+    }
+  }
+
+  const PERIODS: Record<string, number> = { '1W': 7, '1M': 30, '6M': 182, '1Y': 365, '5Y': 1825 };
+
+  function renderPeriods() {
+    periods.innerHTML = Object.keys(PERIODS).map((p) =>
+      `<button type="button" data-p="${p}" class="btn ${p === period ? 'btn-secondary' : 'btn-tertiary'} h-7 px-2 text-[12px]">${p}</button>`
+    ).join('');
+  }
+
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+  async function loadHistory() {
+    const from = fromSel.value, to = toSel.value;
+    stats.innerHTML = '';
+    chart.innerHTML = '';
+    chartMsg.classList.remove('hidden');
+    if (from === to) { chartMsg.textContent = 'Pick two different currencies to see rate history.'; return; }
+    chartMsg.textContent = 'Loading history…';
+    const end = new Date();
+    const start = new Date(end.getTime() - PERIODS[period] * 864e5);
+    try {
+      const url = `https://api.frankfurter.app/${iso(start)}..${iso(end)}?from=${from}&to=${to}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('bad status ' + res.status);
+      const data = await res.json();
+      const days = Object.keys(data.rates || {}).sort();
+      const series = days.map((d) => data.rates[d][to]).filter((n: number) => typeof n === 'number');
+      if (series.length < 2) throw new Error('no series');
+      drawChart(series, from, to);
+    } catch (e) {
+      // Frankfurter only covers major (ECB) currencies; degrade gracefully.
+      chartMsg.textContent = `Rate history isn't available for ${from}/${to}.`;
+    }
+  }
+
+  function drawChart(series: number[], from: string, to: string) {
+    chartMsg.classList.add('hidden');
+    const W = 600, H = 160, pad = 4;
+    const min = Math.min(...series), max = Math.max(...series);
+    const span = max - min || 1;
+    const x = (i: number) => pad + (i / (series.length - 1)) * (W - 2 * pad);
+    const y = (v: number) => H - pad - ((v - min) / span) * (H - 2 * pad);
+    const line = series.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
+    const area = `M${x(0).toFixed(1)} ${H} ` + series.map((v, i) => `L${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ') + ` L${x(series.length - 1).toFixed(1)} ${H} Z`;
+    chart.innerHTML =
+      `<defs><linearGradient id="cu-grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#5e6ad2" stop-opacity="0.25"/>
+        <stop offset="100%" stop-color="#5e6ad2" stop-opacity="0"/>
+      </linearGradient></defs>
+      <path d="${area}" fill="url(#cu-grad)"/>
+      <path d="${line}" fill="none" stroke="#5e6ad2" stroke-width="2" vector-effect="non-scaling-stroke"/>`;
+
+    const first = series[0], last = series[series.length - 1];
+    const avg = series.reduce((a, b) => a + b, 0) / series.length;
+    const chg = ((last - first) / first) * 100;
+    const chgColor = chg >= 0 ? '#27a644' : '#e5484d';
+    const cell = (label: string, val: string, color?: string) =>
+      `<div class="rounded-xs border border-hairline px-2 py-1.5">
+        <div class="text-ink-tertiary">${label}</div>
+        <div class="font-mono text-ink"${color ? ` style="color:${color}"` : ''}>${val}</div>
+      </div>`;
+    stats.innerHTML =
+      cell('Low', dpFmt(min)) +
+      cell('High', dpFmt(max)) +
+      cell('Average', dpFmt(avg)) +
+      cell(`Change`, `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%`, chgColor);
+  }
+
+  fromVal.addEventListener('input', () => convert('from'));
+  toVal.addEventListener('input', () => convert('to'));
+  fromSel.addEventListener('change', () => { convert('from'); loadHistory(); });
+  toSel.addEventListener('change', () => { convert('from'); loadHistory(); });
+  dpSel.addEventListener('change', () => { dp = Number(dpSel.value); convert('from'); loadHistory(); });
+  periods.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest('button[data-p]') as HTMLElement | null;
+    if (!b) return;
+    period = b.dataset.p!;
+    renderPeriods();
+    loadHistory();
+  });
+  document.getElementById('cu-swap')!.addEventListener('click', () => {
+    const a = fromSel.value; fromSel.value = toSel.value; toSel.value = a;
+    if (toVal.value) fromVal.value = toVal.value;
+    convert('from');
+    loadHistory();
+  });
+
+  fillSelects();
+  renderPeriods();
+  convert(); // show currency symbols immediately, before live rates arrive
+  loadRates();
+  loadHistory();
+</script>

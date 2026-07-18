@@ -1,0 +1,55 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="random-sentence-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="rs-count" type="number" min="1" max="100" value="5" class="field w-28" />
+      </label>
+      <button id="rs-gen" class="btn btn-primary ml-auto">Generate</button>
+    </div>
+    <div class="copy-wrap"><textarea id="rs-out" class="field min-h-56 resize-y text-[15px] leading-relaxed" readonly aria-label="Generated sentences"></textarea><button type="button" class="copy-icon" data-copy-target="#rs-out" aria-label="Copy"></button></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free random sentence generator builds grammatically-structured random
+      sentences by assembling an article, adjective, noun, verb and object. They're
+      great for writing prompts, typing and language practice, placeholder copy,
+      and shaking loose a new idea. Generate one or many at once. Everything runs
+      in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { pick } from '../lib/random';
+  import { NOUNS, VERBS, ADJECTIVES } from '../lib/fakedata';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const countEl = $('rs-count') as HTMLInputElement;
+  const out = $('rs-out') as HTMLTextAreaElement;
+
+  const ADVERBS = ['quietly', 'quickly', 'often', 'rarely', 'boldly', 'gently', 'suddenly', 'always', 'slowly', 'eagerly'];
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  const art = (w: string) => (/^[aeiou]/i.test(w) ? 'an' : 'a');
+
+  function sentence(): string {
+    const adj = pick(ADJECTIVES), noun = pick(NOUNS), verb = pick(VERBS);
+    const adv = pick(ADVERBS), obj = pick(NOUNS), adj2 = pick(ADJECTIVES);
+    return `${cap(art(adj))} ${adj} ${noun} ${adv} ${verb} through the ${adj2} ${obj}.`;
+  }
+
+  function generate() {
+    const n = Math.max(1, Math.min(100, Number(countEl.value) || 5));
+    const list: string[] = [];
+    for (let i = 0; i < n; i++) list.push(sentence());
+    out.value = list.join('\n');
+  }
+
+  countEl.addEventListener('input', generate);
+  $('rs-gen').addEventListener('click', generate);
+  generate();
+</script>

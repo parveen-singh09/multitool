@@ -1,0 +1,128 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="salary-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Pay rate amount
+        <input id="sal-amount" type="number" min="0" step="0.01" class="field" value="25" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Pay basis
+        <select id="sal-basis" class="field">
+          <option value="hourly">Hourly</option>
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="biweekly">Bi-weekly</option>
+          <option value="monthly">Monthly</option>
+          <option value="annual">Annual</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Hours per week
+        <input id="sal-hpw" type="number" min="0" step="0.5" class="field" value="40" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Days per week
+        <input id="sal-dpw" type="number" min="1" step="0.5" class="field" value="5" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Weeks per year
+        <input id="sal-wpy" type="number" min="1" step="1" class="field" value="52" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Holidays per year
+        <input id="sal-holidays" type="number" min="0" step="1" class="field" value="0" inputmode="numeric" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Vacation days per year
+        <input id="sal-vacation" type="number" min="0" step="1" class="field" value="0" inputmode="numeric" />
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center"><div id="sal-annual" class="font-display text-4xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Annual (unadjusted)</div><div id="sal-annual-adj" class="mt-1 text-[13px] text-ink-tertiary"></div></div>
+
+    <div class="overflow-x-auto panel p-0">
+      <table class="w-full text-right text-sm">
+        <thead class="text-ink-subtle">
+          <tr class="border-b border-hairline">
+            <th class="px-4 py-2 text-left font-medium">Frequency</th>
+            <th class="px-4 py-2 font-medium">Unadjusted</th>
+            <th class="px-4 py-2 font-medium">Adjusted (holidays &amp; vacation)</th>
+          </tr>
+        </thead>
+        <tbody id="sal-table" class="font-mono text-ink-muted"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free salary calculator converts any pay rate between hourly, daily,
+      weekly, bi-weekly, monthly, and annual figures. Enter a rate on any basis
+      and adjust hours, days, and weeks worked to see the full breakdown of what
+      you earn.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const amount = document.getElementById('sal-amount') as HTMLInputElement;
+  const basis = document.getElementById('sal-basis') as unknown as HTMLSelectElement;
+  const hpw = document.getElementById('sal-hpw') as HTMLInputElement;
+  const dpw = document.getElementById('sal-dpw') as HTMLInputElement;
+  const wpy = document.getElementById('sal-wpy') as HTMLInputElement;
+  const holidaysEl = document.getElementById('sal-holidays') as HTMLInputElement;
+  const vacationEl = document.getElementById('sal-vacation') as HTMLInputElement;
+  const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+
+  function calc() {
+    const amt = Number(amount.value) || 0;
+    const hoursPerWeek = Number(hpw.value) || 0;
+    const daysPerWeek = Number(dpw.value) || 0;
+    const weeksPerYear = Number(wpy.value) || 0;
+    const holidays = Number(holidaysEl.value) || 0;
+    const vacation = Number(vacationEl.value) || 0;
+    const hoursPerDay = daysPerWeek > 0 ? hoursPerWeek / daysPerWeek : 0;
+
+    let hourly = 0;
+    switch (basis.value) {
+      case 'hourly': hourly = amt; break;
+      case 'daily': hourly = hoursPerDay > 0 ? amt / hoursPerDay : 0; break;
+      case 'weekly': hourly = hoursPerWeek > 0 ? amt / hoursPerWeek : 0; break;
+      case 'biweekly': hourly = hoursPerWeek > 0 ? amt / 2 / hoursPerWeek : 0; break;
+      case 'monthly': hourly = hoursPerWeek * weeksPerYear > 0 ? (amt * 12) / (hoursPerWeek * weeksPerYear) : 0; break;
+      case 'annual': hourly = hoursPerWeek * weeksPerYear > 0 ? amt / (hoursPerWeek * weeksPerYear) : 0; break;
+    }
+
+    const annual = hourly * hoursPerWeek * weeksPerYear;
+
+    const workDays = daysPerWeek * weeksPerYear;
+    const paidOff = holidays + vacation;
+    const adjFactor = workDays > 0 ? Math.max(0, workDays - paidOff) / workDays : 1;
+    const annualAdj = annual * adjFactor;
+
+    document.getElementById('sal-annual')!.textContent = money(annual);
+    const adjNote = document.getElementById('sal-annual-adj')!;
+    adjNote.textContent = paidOff > 0 ? `Adjusted for ${paidOff} days off: ${money(annualAdj)}` : '';
+
+    // Build the full frequency table (unadjusted / adjusted).
+    const workHoursYear = hoursPerWeek * weeksPerYear;
+    const rows: [string, number][] = [
+      ['Hourly', workHoursYear > 0 ? annual / workHoursYear : 0],
+      ['Daily', hourly * hoursPerDay],
+      ['Weekly', hourly * hoursPerWeek],
+      ['Bi-weekly', hourly * hoursPerWeek * 2],
+      ['Semi-monthly', annual / 24],
+      ['Monthly', annual / 12],
+      ['Quarterly', annual / 4],
+      ['Annual', annual],
+      ['Per minute', workHoursYear > 0 ? annual / (workHoursYear * 60) : 0],
+      ['Per second', workHoursYear > 0 ? annual / (workHoursYear * 3600) : 0],
+    ];
+    document.getElementById('sal-table')!.innerHTML = rows
+      .map(([label, unadj]) => `<tr class="border-b border-hairline/50"><td class="px-4 py-1.5 text-left text-ink-subtle">${label}</td><td class="px-4 py-1.5">${money(unadj)}</td><td class="px-4 py-1.5">${money(unadj * adjFactor)}</td></tr>`)
+      .join('');
+  }
+  [amount, hpw, dpw, wpy, holidaysEl, vacationEl].forEach((el) => el.addEventListener('input', calc));
+  basis.addEventListener('change', calc);
+  calc();
+</script>

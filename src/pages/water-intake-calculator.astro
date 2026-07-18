@@ -1,0 +1,83 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="water-intake-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Weight
+        <span class="flex gap-2">
+          <input id="wt-weight" type="number" min="0" class="field" value="70" inputmode="decimal" />
+          <select id="wt-unit" class="field w-24"><option value="kg">kg</option><option value="lb">lb</option></select>
+        </span>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Sex
+        <select id="wt-sex" class="field">
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Exercise (min/day)
+        <input id="wt-ex" type="number" min="0" class="field" value="30" inputmode="numeric" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Climate
+        <select id="wt-climate" class="field">
+          <option value="1">Temperate</option>
+          <option value="1.1">Warm</option>
+          <option value="1.2">Hot</option>
+        </select>
+      </label>
+      <label id="wt-preg-wrap" class="flex flex-col gap-1 text-sm text-ink-subtle">Pregnancy / lactation
+        <select id="wt-preg" class="field">
+          <option value="0">Not applicable</option>
+          <option value="0.3">Pregnant (+0.3 L)</option>
+          <option value="0.7">Breastfeeding (+0.7 L)</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div id="wt-litres" class="font-display text-4xl font-semibold text-primary-hover">—</div>
+      <div id="wt-cups" class="mt-2 text-sm text-ink-subtle"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free water intake calculator estimates how much water you should drink
+      each day based on your body weight, exercise time and climate. It is a
+      general guide — individual needs vary with health and diet.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const weight = document.getElementById('wt-weight') as HTMLInputElement;
+  const unit = document.getElementById('wt-unit') as HTMLSelectElement;
+  const sexEl = document.getElementById('wt-sex') as HTMLSelectElement;
+  const ex = document.getElementById('wt-ex') as HTMLInputElement;
+  const climate = document.getElementById('wt-climate') as HTMLSelectElement;
+  const pregEl = document.getElementById('wt-preg') as HTMLSelectElement;
+
+  function calc() {
+    let kg = Number(weight.value);
+    if (unit.value === 'lb') kg *= 0.45359237;
+    if (!(kg > 0)) { document.getElementById('wt-litres')!.textContent = '—'; document.getElementById('wt-cups')!.textContent = ''; return; }
+
+    const perKg = sexEl.value === 'female' ? 31 : 35;
+    let litres = (kg * perKg) / 1000;
+    litres += (Number(ex.value) / 30) * 0.35;
+    litres *= Number(climate.value);
+
+    if (sexEl.value === 'female') litres += Number(pregEl.value) || 0;
+
+    document.getElementById('wt-preg-wrap')!.classList.toggle('hidden', sexEl.value !== 'female');
+
+    const ozTotal = litres * 33.814;
+    document.getElementById('wt-litres')!.textContent = litres.toFixed(2) + ' L';
+    document.getElementById('wt-cups')!.textContent =
+      `about ${Math.round((litres * 1000) / 250)} cups (250 ml) · ${Math.round(ozTotal)} fl oz per day`;
+  }
+  [weight, unit, sexEl, ex, climate, pregEl].forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

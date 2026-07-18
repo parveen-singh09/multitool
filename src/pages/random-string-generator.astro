@@ -1,0 +1,128 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="random-string-generator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Length
+        <input id="rs-len" type="number" min="1" max="2048" value="16" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="rs-count" type="number" min="1" max="10000" value="10" class="field" />
+      </label>
+      <label class="flex items-center gap-2 pt-6 text-sm text-ink-subtle"><input id="rs-lower" type="checkbox" class="accent-primary" checked /> a-z</label>
+      <label class="flex items-center gap-2 pt-6 text-sm text-ink-subtle"><input id="rs-upper" type="checkbox" class="accent-primary" checked /> A-Z</label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="rs-num" type="checkbox" class="accent-primary" checked /> 0-9</label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="rs-sym" type="checkbox" class="accent-primary" /> Symbols</label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="rs-unique" type="checkbox" class="accent-primary" /> No duplicates</label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="rs-noamb" type="checkbox" class="accent-primary" /> No look-alikes</label>
+      <label class="col-span-2 flex flex-col gap-1 text-sm text-ink-subtle">Custom set (overrides)
+        <input id="rs-custom" class="field font-mono text-[13px]" placeholder="e.g. ABCDEF0123" spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Prefix
+        <input id="rs-prefix" class="field font-mono text-[13px]" placeholder="opt." spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Suffix
+        <input id="rs-suffix" class="field font-mono text-[13px]" placeholder="opt." spellcheck="false" />
+      </label>
+      <label class="col-span-2 flex flex-col gap-1 text-sm text-ink-subtle">Seed (reproducible — leave blank for secure random)
+        <input id="rs-seed" class="field font-mono text-[13px]" placeholder="blank = crypto random" spellcheck="false" />
+      </label>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="rs-gen" class="btn btn-primary">Generate</button>
+      <button id="rs-dl" class="btn btn-secondary">Download .txt</button>
+      <span id="rs-stat" class="text-sm text-ink-subtle"></span>
+    </div>
+    <div class="copy-wrap">
+      <textarea id="rs-out" class="field min-h-56 resize-y font-mono text-[13px]" readonly aria-label="Generated strings"></textarea>
+      <button type="button" class="copy-icon" data-copy-target="#rs-out" aria-label="Copy"></button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free random string generator creates random strings of any length from
+      the character types you choose — lowercase, uppercase, digits and symbols —
+      or your own custom character set. Generate up to 10,000 at once, force every
+      string to be unique, exclude look-alike characters (0/O, 1/l/I), or add a
+      fixed prefix and suffix.
+    </p>
+    <p>
+      By default it uses your browser's cryptographically secure random source, so
+      the output is genuinely unpredictable. Enter a
+      seed to make a run exactly reproducible — the same seed and settings always
+      produce the same strings, which is handy for tests and fixtures.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { randString, setSeed, ALPHA_LOWER, ALPHA_UPPER, DIGITS, SYMBOLS } from '../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const out = $('rs-out') as HTMLTextAreaElement;
+  const stat = $('rs-stat');
+  const AMBIGUOUS = /[0O1lI5S2Z8B]/g;
+
+  function alphabet(): string {
+    const custom = ($('rs-custom') as HTMLInputElement).value;
+    let a = custom;
+    if (!a) {
+      if (($('rs-lower') as HTMLInputElement).checked) a += ALPHA_LOWER;
+      if (($('rs-upper') as HTMLInputElement).checked) a += ALPHA_UPPER;
+      if (($('rs-num') as HTMLInputElement).checked) a += DIGITS;
+      if (($('rs-sym') as HTMLInputElement).checked) a += SYMBOLS;
+    }
+    if (($('rs-noamb') as HTMLInputElement).checked) a = a.replace(AMBIGUOUS, '');
+    return a;
+  }
+
+  function generate() {
+    const len = Math.max(1, Math.min(2048, Number(($('rs-len') as HTMLInputElement).value) || 16));
+    const n = Math.max(1, Math.min(10000, Number(($('rs-count') as HTMLInputElement).value) || 10));
+    const unique = ($('rs-unique') as HTMLInputElement).checked;
+    const prefix = ($('rs-prefix') as HTMLInputElement).value;
+    const suffix = ($('rs-suffix') as HTMLInputElement).value;
+    const ab = alphabet();
+    if (!ab) { out.value = 'Select at least one character type.'; stat.textContent = ''; return; }
+
+    setSeed(($('rs-seed') as HTMLInputElement).value || null);
+
+    const list: string[] = [];
+    if (unique) {
+      const seen = new Set<string>();
+
+      const cap = n * 50 + 1000;
+      for (let tries = 0; list.length < n && tries < cap; tries++) {
+        const s = randString(len, ab);
+        if (!seen.has(s)) { seen.add(s); list.push(s); }
+      }
+    } else {
+      for (let i = 0; i < n; i++) list.push(randString(len, ab));
+    }
+
+    const result = list.map((s) => prefix + s + suffix);
+    out.value = result.join('\n');
+    if (unique && result.length < n) {
+      stat.textContent = `Only ${result.length} unique strings possible at length ${len}.`;
+    } else {
+      stat.textContent = `${result.length} string${result.length === 1 ? '' : 's'}, ${result.length * (len + prefix.length + suffix.length)} chars.`;
+    }
+    setSeed(null); // don't leave the shared RNG seeded for other tools
+  }
+
+  ['rs-len','rs-count','rs-lower','rs-upper','rs-num','rs-sym','rs-unique','rs-noamb','rs-custom','rs-prefix','rs-suffix','rs-seed']
+    .forEach((id) => $(id).addEventListener('input', generate));
+  $('rs-gen').addEventListener('click', generate);
+  $('rs-dl').addEventListener('click', () => {
+    const blob = new Blob([out.value], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'random-strings.txt';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+  generate();
+</script>

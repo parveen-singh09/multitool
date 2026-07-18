@@ -5,6 +5,8 @@ import { RUNNERS_DOCS } from './toolRunners.docs';
 import { RUNNERS_FILES } from './toolRunners.files';
 import { RUNNERS_MISC } from './toolRunners.misc';
 import { RUNNERS_IMAGES } from './toolRunners.images';
+import { RUNNERS_DOCCONV } from './toolRunners.docconv';
+import { RUNNERS_CONVERT } from './toolRunners.convert';
 
 export type RunFile = { name: string; blob: Blob; kind: 'image' | 'file' };
 export type RunResult = { files?: RunFile[]; text?: string; note?: string };
@@ -359,7 +361,7 @@ RUNNERS['base64-file-downloader'] = RUNNERS['base64-to-image'];
 
 RUNNERS['ico-converter'] = RUNNERS['favicon-generator'];
 
-Object.assign(RUNNERS, RUNNERS_CODES, RUNNERS_CSS, RUNNERS_DOCS, RUNNERS_FILES, RUNNERS_MISC, RUNNERS_IMAGES);
+Object.assign(RUNNERS, RUNNERS_CODES, RUNNERS_CSS, RUNNERS_DOCS, RUNNERS_FILES, RUNNERS_MISC, RUNNERS_IMAGES, RUNNERS_DOCCONV, RUNNERS_CONVERT);
 
 export const getRunner = (slug: string): Runner | null => RUNNERS[slug] ?? null;
 

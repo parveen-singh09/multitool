@@ -1,0 +1,145 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+import { TEMPLATES } from '../lib/gitignore';
+
+const GROUPS = ['Languages', 'Frameworks', 'Tools', 'Editors', 'OS'] as const;
+const DEFAULTS = new Set(['node', 'macos', 'env']);
+const byGroup = GROUPS.map((g) => ({ g, items: TEMPLATES.filter((t) => t.group === g) }));
+---
+
+<ToolLayout slug="gitignore-generator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+
+    <div class="flex flex-col gap-3">
+      <input
+        id="gi-search"
+        type="search"
+        class="field"
+        placeholder={`Search ${TEMPLATES.length} templates — node, react, python…`}
+        aria-label="Search templates"
+        autocomplete="off"
+        spellcheck="false"
+      />
+
+      <div id="gi-chips" class="flex flex-wrap gap-1.5 empty:hidden"></div>
+
+      <div class="hl-block field max-h-[26rem] overflow-auto" style="padding:0.75rem">
+        {byGroup.map(({ g, items }) => (
+          <fieldset class="gi-group mb-3 last:mb-0" data-group={g}>
+            <legend class="w-full pb-1 text-xs uppercase tracking-wide text-ink-tertiary">{g}</legend>
+            <div class="grid grid-cols-1 gap-1 sm:grid-cols-2">
+              {items.map((t) => (
+                <label class="gi-item flex items-center gap-2 text-sm text-ink-subtle" data-name={t.name.toLowerCase()} data-id={t.id}>
+                  <input class="gi-r accent-primary" type="checkbox" value={t.id} checked={DEFAULTS.has(t.id)} />
+                  {t.name}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        ))}
+        <p id="gi-empty" class="hidden py-6 text-center text-sm text-ink-tertiary">No templates match.</p>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <label class="text-sm text-ink-subtle">.gitignore</label>
+        <span id="gi-stat" class="text-xs text-ink-tertiary"></span>
+      </div>
+      <div class="copy-wrap flex-1"><pre class="hl-block field min-h-72 h-full" style="resize:vertical;overflow:auto"><code id="gi-out" class="hljs" style="background:transparent;padding:0"></code></pre><button type="button" class="copy-icon" data-copy-target="#gi-out" aria-label="Copy"></button></div>
+      <div class="flex gap-2">
+        <button id="gi-dl" class="btn btn-secondary">Download</button>
+        <button id="gi-clear" class="btn btn-tertiary ml-auto">Clear all</button>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free .gitignore generator builds a combined
+      <code class="font-mono text-ink">.gitignore</code> from the languages,
+      frameworks, build tools, editors and operating systems you select. Search
+      across every template, tick the ones your project uses, and copy or
+      download the result.
+    </p>
+    <p>
+      Unlike most generators, overlapping stacks are de-duplicated: pick Node,
+      React and Next.js together and shared patterns like
+      <code class="font-mono text-ink">node_modules/</code> appear once, not three
+      times. The result stays clean no matter how many templates you combine.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { hl } from '../lib/highlight';
+  import { build } from '../lib/gitignore';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const out = $('gi-out') as HTMLElement;
+  const search = $('gi-search') as HTMLInputElement;
+  const chips = $('gi-chips') as HTMLElement;
+  const stat = $('gi-stat') as HTMLElement;
+  const empty = $('gi-empty') as HTMLElement;
+  const boxes = () => [...document.querySelectorAll<HTMLInputElement>('.gi-r')];
+  const labelFor = (id: string) =>
+    document.querySelector<HTMLElement>(`.gi-item[data-id="${id}"]`)?.textContent?.trim() ?? id;
+  let rawOutput = '';
+
+  function renderChips(ids: string[]) {
+    chips.innerHTML = '';
+    for (const id of ids) {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className =
+        'inline-flex items-center gap-1 rounded-full border border-hairline bg-surface-1 px-2.5 py-0.5 text-xs text-ink hover:border-hairline-strong';
+      chip.innerHTML = `${labelFor(id)}<span aria-hidden="true" class="text-ink-tertiary">×</span>`;
+      chip.setAttribute('aria-label', `Remove ${labelFor(id)}`);
+      chip.addEventListener('click', () => {
+        const box = boxes().find((b) => b.value === id);
+        if (box) { box.checked = false; build_(); }
+      });
+      chips.appendChild(chip);
+    }
+  }
+
+  function build_() {
+    const ids = boxes().filter((b) => b.checked).map((b) => b.value);
+    rawOutput = build(ids);
+    hl(out, rawOutput || '# Select templates to build a .gitignore', 'plaintext');
+    renderChips(ids);
+    const lines = rawOutput ? rawOutput.split('\n').filter((l) => l.trim() && !l.startsWith('#')).length : 0;
+    stat.textContent = ids.length ? `${ids.length} selected · ${lines} patterns` : '';
+  }
+
+  function filter() {
+    const q = search.value.trim().toLowerCase();
+    let anyVisible = false;
+    document.querySelectorAll<HTMLElement>('.gi-item').forEach((el) => {
+      const match = !q || (el.dataset.name ?? '').includes(q);
+      el.classList.toggle('hidden', !match);
+      if (match) anyVisible = true;
+    });
+    // Hide a group heading when all its items are filtered out.
+    document.querySelectorAll<HTMLElement>('.gi-group').forEach((g) => {
+      const visible = g.querySelector('.gi-item:not(.hidden)');
+      g.classList.toggle('hidden', !visible);
+    });
+    empty.classList.toggle('hidden', anyVisible);
+  }
+
+  boxes().forEach((b) => b.addEventListener('change', build_));
+  search.addEventListener('input', filter);
+  $('gi-dl').addEventListener('click', () => {
+    if (!rawOutput) return;
+    const url = URL.createObjectURL(new Blob([rawOutput], { type: 'text/plain' }));
+    const a = document.createElement('a'); a.href = url; a.download = '.gitignore'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  $('gi-clear').addEventListener('click', () => {
+    boxes().forEach((b) => (b.checked = false));
+    build_();
+  });
+
+  build_();
+</script>

@@ -1,0 +1,298 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="spectrogram-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap gap-2">
+      <label id="sp-drop" class="btn btn-secondary cursor-pointer">
+        Load audio file
+        <input id="sp-file" type="file" accept="audio/*" class="sr-only" />
+      </label>
+      <button id="sp-mic" class="btn btn-secondary">Use microphone</button>
+      <button id="sp-stop" class="btn btn-secondary">Stop</button>
+      <button id="sp-dl" class="btn btn-primary">Download PNG</button>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">FFT size
+        <select id="sp-fft" class="field">
+          <option value="256">256</option>
+          <option value="512">512</option>
+          <option value="1024" selected>1024</option>
+          <option value="2048">2048</option>
+          <option value="4096">4096</option>
+          <option value="8192">8192</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Color scheme
+        <select id="sp-scheme" class="field">
+          <option value="viridis" selected>Viridis</option>
+          <option value="magma">Magma</option>
+          <option value="inferno">Inferno</option>
+          <option value="heat">Heat</option>
+          <option value="grayscale">Grayscale</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Frequency scale
+        <select id="sp-freqscale" class="field"><option value="linear" selected>Linear</option><option value="log">Logarithmic</option></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Contrast (dB floor): <span id="sp-floorval" class="text-ink">-90</span>
+        <input id="sp-floor" type="range" min="-120" max="-30" step="5" value="-90" class="w-full accent-primary" />
+      </label>
+    </div>
+
+    <p id="sp-status" class="text-[13px] text-ink-subtle">Load an audio file for a full labeled spectrogram, or use your microphone for a live view.</p>
+    <div class="overflow-hidden rounded-lg border border-hairline">
+      <canvas id="sp-canvas" width="900" height="360" class="w-full bg-black"></canvas>
+    </div>
+    <p id="sp-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free spectrogram generator visualizes how the frequencies in a sound
+      change over time. Drop in an audio file and it renders a complete,
+      labeled spectrogram of the whole track — with a time axis, a frequency axis
+      (linear or logarithmic) and a dB color legend — or use your microphone for a
+      live scrolling view. Choose the FFT size for more time or frequency detail,
+      pick from scientific color maps (Viridis, Magma, Inferno, Heat, Grayscale),
+      and set the dB floor to bring out quiet detail. Download the result as a PNG.
+      All analysis uses the Web Audio API.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const canvas = $('sp-canvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+  const err = $('sp-error');
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  const PAD = { l: 56, b: 28, t: 8, r: 64 };
+  const plot = () => ({ x: PAD.l, y: PAD.t, w: canvas.width - PAD.l - PAD.r, h: canvas.height - PAD.t - PAD.b });
+
+  let ac: AudioContext | null = null;
+  let analyser: AnalyserNode | null = null;
+  let raf = 0;
+  let source: AudioNode | null = null;
+  let audioEl: HTMLAudioElement | null = null;
+  let micStream: MediaStream | null = null;
+
+  const fftSize = () => Number(($('sp-fft') as HTMLSelectElement).value);
+  const scheme = () => ($('sp-scheme') as HTMLSelectElement).value;
+  const freqScale = () => ($('sp-freqscale') as HTMLSelectElement).value;
+  const floorDb = () => Number(($('sp-floor') as HTMLInputElement).value);
+
+  const MAPS: Record<string, [number, number, number][]> = {
+    viridis: [[68,1,84],[59,82,139],[33,145,140],[94,201,98],[253,231,37]],
+    magma: [[0,0,4],[81,18,124],[183,55,121],[252,137,97],[252,253,191]],
+    inferno: [[0,0,4],[87,16,110],[188,55,84],[249,142,9],[252,255,164]],
+    heat: [[0,0,0],[128,0,0],[255,0,0],[255,255,0],[255,255,255]],
+    grayscale: [[0,0,0],[64,64,64],[128,128,128],[192,192,192],[255,255,255]],
+  };
+  function colorFor(t: number, name: string): [number, number, number] {
+    const stops = MAPS[name] || MAPS.viridis;
+    const x = Math.max(0, Math.min(1, t)) * (stops.length - 1);
+    const i = Math.floor(x), f = x - i;
+    const a = stops[i], b = stops[Math.min(stops.length - 1, i + 1)];
+    return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
+  }
+
+  function drawAxes(sr: number, totalTime: number) {
+    const p = plot();
+    ctx.fillStyle = '#8a8f98'; ctx.font = '11px ui-sans-serif, system-ui'; ctx.textBaseline = 'middle';
+    const nyquist = sr / 2;
+
+    ctx.textAlign = 'right';
+    const fTicks = freqScale() === 'log' ? [100, 500, 1000, 5000, 10000, 20000] : [0, 5000, 10000, 15000, 20000];
+    for (const f of fTicks) {
+      if (f > nyquist) continue;
+      let frac: number;
+      if (freqScale() === 'log') { const min = Math.log(20), max = Math.log(nyquist); frac = (Math.log(Math.max(20, f)) - min) / (max - min); }
+      else frac = f / nyquist;
+      const y = p.y + p.h - frac * p.h;
+      ctx.fillText(f >= 1000 ? `${f / 1000}k` : `${f}`, p.x - 6, y);
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.moveTo(p.x, y); ctx.lineTo(p.x + p.w, y); ctx.stroke();
+    }
+    ctx.save(); ctx.translate(12, p.y + p.h / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.fillText('Frequency (Hz)', 0, 0); ctx.restore();
+    // Time axis (bottom)
+    ctx.textAlign = 'center';
+    const steps = 6;
+    for (let i = 0; i <= steps; i++) {
+      const x = p.x + (i / steps) * p.w;
+      const t = (i / steps) * totalTime;
+      ctx.fillText(`${t.toFixed(totalTime < 10 ? 1 : 0)}s`, x, p.y + p.h + 14);
+    }
+    // dB legend (right)
+    const lx = canvas.width - PAD.r + 16, lw = 14;
+    for (let i = 0; i < p.h; i++) {
+      const t = 1 - i / p.h;
+      const [r, g, b] = colorFor(t, scheme());
+      ctx.fillStyle = `rgb(${r|0},${g|0},${b|0})`;
+      ctx.fillRect(lx, p.y + i, lw, 1);
+    }
+    ctx.fillStyle = '#8a8f98'; ctx.textAlign = 'left';
+    ctx.fillText('0 dB', lx + lw + 4, p.y + 4);
+    ctx.fillText(`${floorDb()}`, lx + lw + 4, p.y + p.h - 4);
+  }
+
+  // ---- Offline full-file render ----
+  async function renderFile(file: File) {
+    setErr(''); $('sp-status').textContent = 'Decoding audio…';
+    stop(false);
+    try {
+      const actx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const buf = await actx.decodeAudioData(await file.arrayBuffer());
+      $('sp-status').textContent = 'Analyzing…';
+      await new Promise((r) => setTimeout(r, 20));
+      const data = buf.getChannelData(0);
+      const sr = buf.sampleRate;
+      const N = fftSize();
+      const p = plot();
+      const cols = Math.max(1, Math.floor(p.w));
+      const hop = Math.max(1, Math.floor((data.length - N) / cols));
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const re = new Float32Array(N), im = new Float32Array(N);
+      const win = new Float32Array(N);
+      for (let i = 0; i < N; i++) win[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (N - 1)); // Hann
+      const bins = N / 2;
+      const floor = floorDb();
+      const scm = scheme();
+      const colData = ctx.createImageData(1, p.h);
+
+      for (let c = 0; c < cols; c++) {
+        const off = c * hop;
+        for (let i = 0; i < N; i++) { re[i] = (data[off + i] || 0) * win[i]; im[i] = 0; }
+        fft(re, im);
+        // Map each output row (pixel) to a frequency bin per the chosen scale.
+        for (let py = 0; py < p.h; py++) {
+          const frac = 1 - py / p.h; // 0 at bottom → 1 at top
+          let bin: number;
+          if (freqScale() === 'log') { const min = Math.log(20), max = Math.log(sr / 2); const f = Math.exp(min + frac * (max - min)); bin = Math.round((f / (sr / 2)) * bins); }
+          else bin = Math.round(frac * bins);
+          bin = Math.max(0, Math.min(bins - 1, bin));
+          const mag = Math.hypot(re[bin], im[bin]) / N;
+          const db = 20 * Math.log10(mag + 1e-9);
+          const t = Math.max(0, Math.min(1, (db - floor) / (0 - floor)));
+          const [r, g, b] = colorFor(t, scm);
+          const idx = py * 4;
+          colData.data[idx] = r; colData.data[idx + 1] = g; colData.data[idx + 2] = b; colData.data[idx + 3] = 255;
+        }
+        ctx.putImageData(colData, p.x + c, p.y);
+      }
+      drawAxes(sr, buf.duration);
+      actx.close();
+      $('sp-status').textContent = `${file.name} — full spectrogram (${buf.duration.toFixed(1)}s, FFT ${N}).`;
+    } catch {
+      setErr('Could not decode that audio file.');
+      $('sp-status').textContent = '';
+    }
+  }
+
+  // In-place iterative radix-2 FFT (N must be a power of two).
+  function fft(re: Float32Array, im: Float32Array) {
+    const n = re.length;
+    for (let i = 1, j = 0; i < n; i++) {
+      let bit = n >> 1;
+      for (; j & bit; bit >>= 1) j ^= bit;
+      j ^= bit;
+      if (i < j) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; }
+    }
+    for (let len = 2; len <= n; len <<= 1) {
+      const ang = (-2 * Math.PI) / len;
+      const wr = Math.cos(ang), wi = Math.sin(ang);
+      for (let i = 0; i < n; i += len) {
+        let cwr = 1, cwi = 0;
+        for (let k = 0; k < len / 2; k++) {
+          const ur = re[i + k], ui = im[i + k];
+          const vr = re[i + k + len / 2] * cwr - im[i + k + len / 2] * cwi;
+          const vi = re[i + k + len / 2] * cwi + im[i + k + len / 2] * cwr;
+          re[i + k] = ur + vr; im[i + k] = ui + vi;
+          re[i + k + len / 2] = ur - vr; im[i + k + len / 2] = ui - vi;
+          const ncwr = cwr * wr - cwi * wi; cwi = cwr * wi + cwi * wr; cwr = ncwr;
+        }
+      }
+    }
+  }
+
+  // ---- Live (microphone) render ----
+  function startLive(node: AudioNode) {
+    stop(false);
+    analyser = ac!.createAnalyser();
+    analyser.fftSize = fftSize();
+    node.connect(analyser);
+    source = node;
+    const bins = analyser.frequencyBinCount;
+    const data = new Uint8Array(bins);
+    const sr = ac!.sampleRate;
+    const p = plot();
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const draw = () => {
+      analyser!.getByteFrequencyData(data);
+      // Scroll the plot region left by 1px, keep axes intact.
+      const img = ctx.getImageData(p.x + 1, p.y, p.w - 1, p.h);
+      ctx.putImageData(img, p.x, p.y);
+      const x = p.x + p.w - 1;
+      const scm = scheme();
+      for (let py = 0; py < p.h; py++) {
+        const frac = 1 - py / p.h;
+        let bin: number;
+        if (freqScale() === 'log') { const min = Math.log(20), max = Math.log(sr / 2); const f = Math.exp(min + frac * (max - min)); bin = Math.round((f / (sr / 2)) * bins); }
+        else bin = Math.round(frac * bins);
+        bin = Math.max(0, Math.min(bins - 1, bin));
+        const [r, g, b] = colorFor((data[bin] || 0) / 255, scm);
+        ctx.fillStyle = `rgb(${r|0},${g|0},${b|0})`;
+        ctx.fillRect(x, p.y + py, 1, 1);
+      }
+      raf = requestAnimationFrame(draw);
+    };
+    // Clear the axis gutters then draw static axis labels once.
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, p.x, canvas.height); ctx.fillRect(0, p.y + p.h, canvas.width, PAD.b);
+    drawAxes(sr, 0);
+    draw();
+  }
+
+  function stop(clearStatus = true) {
+    if (raf) cancelAnimationFrame(raf), (raf = 0);
+    if (source) { try { source.disconnect(); } catch {} source = null; }
+    if (audioEl) { audioEl.pause(); audioEl = null; }
+    if (micStream) { micStream.getTracks().forEach((t) => t.stop()); micStream = null; }
+    if (clearStatus) $('sp-status').textContent = 'Stopped.';
+  }
+
+  async function fromMic() {
+    setErr('');
+    try {
+      ac = ac || new (window.AudioContext || (window as any).webkitAudioContext)();
+      await ac.resume();
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const src = ac.createMediaStreamSource(micStream);
+      startLive(src);
+      $('sp-status').textContent = 'Listening to microphone — live spectrogram (time flows left).';
+    } catch {
+      setErr('Could not access the microphone.');
+    }
+  }
+
+  let lastFile: File | null = null;
+  ($('sp-file') as HTMLInputElement).addEventListener('change', (e) => {
+    const f = (e.target as HTMLInputElement).files?.[0]; if (f) { lastFile = f; renderFile(f); }
+  });
+  $('sp-mic').addEventListener('click', fromMic);
+  $('sp-stop').addEventListener('click', () => stop());
+  // Re-render the loaded file when a setting changes (live view updates on its own).
+  ['sp-fft', 'sp-scheme', 'sp-freqscale', 'sp-floor'].forEach((id) => $(id).addEventListener('change', () => {
+    $('sp-floorval').textContent = String(floorDb());
+    if (lastFile && !raf) renderFile(lastFile);
+  }));
+  $('sp-floor').addEventListener('input', () => { $('sp-floorval').textContent = String(floorDb()); });
+  $('sp-dl').addEventListener('click', () => {
+    const a = document.createElement('a'); a.href = canvas.toDataURL('image/png'); a.download = 'spectrogram.png'; a.click();
+  });
+</script>

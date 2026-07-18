@@ -1,0 +1,101 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="name-combiner">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">First name
+        <input id="nc-a" class="field" value="Brad" spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Second name
+        <input id="nc-b" class="field" value="Angelina" spellcheck="false" />
+      </label>
+    </div>
+    <button id="nc-gen" class="btn btn-primary w-fit">Combine</button>
+    <div id="nc-out" class="grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free name combiner blends two names into portmanteau mashups — the
+      "ship name" trick fans use for couples, plus handy blends for brand mashups,
+      pet names and baby names. It splices the start of one name with the end of
+      the other in several ways so you get a range to pick from. Click any result
+      to copy it.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const out = $('nc-out')!;
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+  const clean = (s: string) => s.trim().toLowerCase().replace(/[^a-z]/g, '');
+
+  function heads(n: string): string[] {
+    const m = n.match(/^[^aeiou]*[aeiou]+/); 
+    const h = [];
+    if (m) h.push(m[0]);
+    const firstV = n.search(/[aeiou]/);
+    if (firstV > 0) h.push(n.slice(0, firstV + 1));
+    h.push(n.slice(0, Math.ceil(n.length / 2)));
+    h.push(n.slice(0, 2));
+    return h.filter((s) => s.length >= 1 && s.length < n.length + 1);
+  }
+
+  function tails(n: string): string[] {
+    const t = [];
+    const lastVGroup = n.search(/[aeiou]+[^aeiou]*$/);
+    if (lastVGroup >= 0) t.push(n.slice(lastVGroup));
+    const lastV = n.lastIndexOf(n.match(/[aeiou](?=[^aeiou]*$)/)?.[0] ?? '');
+    if (lastV > 0) t.push(n.slice(lastV));
+    t.push(n.slice(Math.floor(n.length / 2)));
+    t.push(n.slice(-3));
+    return t.filter((s) => s.length >= 1 && s.length < n.length + 1);
+  }
+
+  function score(w: string, a: string, b: string): number {
+    if (w === a || w === b) return -100;
+    let s = 0;
+    const lenPenalty = Math.abs(w.length - 7);
+    s -= lenPenalty;
+    if (w.startsWith(a.slice(0, 2)) && w.endsWith(b.slice(-2))) s += 3;
+    if (/[aeiou]/.test(w)) s += 2; 
+    if (/([a-z])\1\1/.test(w)) s -= 4; 
+    return s;
+  }
+
+  function combos(rawA: string, rawB: string): string[] {
+    const a = clean(rawA), b = clean(rawB);
+    if (!a || !b) return [];
+    const set = new Set<string>();
+
+    for (const [x, y] of [[a, b], [b, a]] as const) {
+      for (const h of heads(x))
+        for (const t of tails(y)) set.add(h + t);
+    }
+
+    if (a.at(-1) === b[0]) set.add(a + b.slice(1));
+    if (b.at(-1) === a[0]) set.add(b + a.slice(1));
+    return [...set]
+      .filter((s) => s.length >= 4 && s.length <= 14 && score(s, a, b) > -6)
+      .sort((x, y) => score(y, a, b) - score(x, a, b))
+      .slice(0, 24)
+      .map(cap);
+  }
+
+  function generate() {
+    const list = combos(($('nc-a') as HTMLInputElement).value, ($('nc-b') as HTMLInputElement).value);
+    out.innerHTML = list.map((n) => `<button class="panel px-3 py-2.5 text-center text-[15px] font-medium text-ink hover:border-hairline-strong" data-n="${n}">${n}</button>`).join('') || '<p class="text-ink-subtle">Enter two names.</p>';
+    out.querySelectorAll('button').forEach((b) => b.addEventListener('click', async () => {
+      await navigator.clipboard.writeText((b as HTMLElement).dataset.n!);
+      const orig = b.textContent; b.textContent = 'Copied!';
+      setTimeout(() => (b.textContent = orig), 1000);
+    }));
+  }
+
+  ['nc-a', 'nc-b'].forEach((id) => $(id).addEventListener('input', generate));
+  $('nc-gen').addEventListener('click', generate);
+  generate();
+</script>

@@ -1,0 +1,94 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="passphrase-generator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Words
+        <input id="pp-words" type="number" min="2" max="12" value="5" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Separator
+        <select id="pp-sep" class="field">
+          <option value="-">hyphen -</option>
+          <option value=".">dot .</option>
+          <option value="_">underscore _</option>
+          <option value=" ">space</option>
+          <option value="">(none)</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Casing
+        <select id="pp-case" class="field">
+          <option value="lower">lowercase</option>
+          <option value="title" selected>Capitalize</option>
+          <option value="upper">UPPERCASE</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="pp-count" type="number" min="1" max="100" value="5" class="field" />
+      </label>
+    </div>
+    <div class="flex flex-wrap items-center gap-4">
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="pp-num" type="checkbox" class="accent-primary" checked /> Append a number
+      </label>
+      <p id="pp-entropy" class="text-[13px] text-ink-tertiary"></p>
+      <button id="pp-gen" class="btn btn-primary ml-auto">Generate</button>
+    </div>
+    <div class="copy-wrap"><textarea id="pp-out" class="field min-h-56 resize-y font-mono text-[13px]" readonly aria-label="Generated passphrases"></textarea><button type="button" class="copy-icon" data-copy-target="#pp-out" aria-label="Copy"></button></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free passphrase generator builds strong yet memorable passphrases from
+      random common words — the Diceware approach recommended by security experts.
+      A handful of unrelated words is far easier to remember than a jumble of
+      symbols, and just as hard to crack. Adjust the word count, separator and
+      casing, and the tool shows the estimated entropy in bits. Words are chosen
+      with your browser's secure random source.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { pick } from '../lib/random';
+  import { randInt } from '../lib/random';
+  import { WORDS } from '../lib/wordlist';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const wordsEl = $('pp-words') as HTMLInputElement;
+  const sepEl = $('pp-sep') as HTMLSelectElement;
+  const caseEl = $('pp-case') as HTMLSelectElement;
+  const countEl = $('pp-count') as HTMLInputElement;
+  const numEl = $('pp-num') as HTMLInputElement;
+  const entropyEl = $('pp-entropy')!;
+  const out = $('pp-out') as HTMLTextAreaElement;
+
+  function transform(w: string): string {
+    if (caseEl.value === 'upper') return w.toUpperCase();
+    if (caseEl.value === 'title') return w[0].toUpperCase() + w.slice(1);
+    return w;
+  }
+
+  function phrase(nWords: number): string {
+    const parts: string[] = [];
+    for (let i = 0; i < nWords; i++) parts.push(transform(pick(WORDS)));
+    let p = parts.join(sepEl.value);
+    if (numEl.checked) p += (sepEl.value || '') + randInt(10, 99);
+    return p;
+  }
+
+  function generate() {
+    const nWords = Math.max(2, Math.min(12, Number(wordsEl.value) || 5));
+    const n = Math.max(1, Math.min(100, Number(countEl.value) || 1));
+    const list: string[] = [];
+    for (let i = 0; i < n; i++) list.push(phrase(nWords));
+    out.value = list.join('\n');
+    const bits = Math.floor(nWords * Math.log2(WORDS.length) + (numEl.checked ? 6.5 : 0));
+    entropyEl.textContent = `≈ ${bits} bits of entropy`;
+  }
+
+  ['pp-words', 'pp-sep', 'pp-case', 'pp-count', 'pp-num'].forEach((id) => $(id).addEventListener('input', generate));
+  $('pp-gen').addEventListener('click', generate);
+  generate();
+</script>

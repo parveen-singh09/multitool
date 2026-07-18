@@ -1,0 +1,762 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+
+const tests = [
+  { id: 'solid', name: 'Solid colors', desc: 'Dead & stuck pixels, backlight bleed.', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/>' },
+  { id: 'gradient', name: 'Gradients', desc: 'Banding & smooth tonal reproduction.', icon: '<defs><linearGradient id="g1" x1="0" x2="1"><stop offset="0" stop-color="currentColor" stop-opacity="0"/><stop offset="1" stop-color="currentColor"/></linearGradient></defs><rect x="3" y="6" width="18" height="12" rx="2" fill="url(#g1)" stroke="none"/>' },
+  { id: 'grayscale', name: 'Grayscale', desc: 'Black/white clipping & tonal steps.', icon: '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" stroke="none"/>' },
+  { id: 'contrast', name: 'Contrast', desc: 'Near-black & near-white detail wedges.', icon: '<circle cx="12" cy="12" r="9"/><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor" stroke="none"/>' },
+  { id: 'pluge', name: 'Black levels (PLUGE)', desc: 'Shadow detail & true black at the low end.', icon: '<rect x="3" y="6" width="18" height="12" rx="1"/><path d="M9 6v12M15 6v12"/>' },
+  { id: 'clipping', name: 'White levels', desc: 'Highlight detail before pure white clips.', icon: '<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>' },
+  { id: 'sharpness', name: 'Sharpness', desc: '1px checkerboard & moiré.', icon: '<rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 12h18M12 3v18" /><rect x="3" y="3" width="9" height="9" fill="currentColor" stroke="none"/><rect x="12" y="12" width="9" height="9" fill="currentColor" stroke="none"/>' },
+  { id: 'text', name: 'Text', desc: 'Font rendering, black-on-white / inverted.', icon: '<path d="M4 20 L9 5 L14 20M6 15h6M17 10v10M21 12a3 3 0 0 0-4 2.8"/>' },
+  { id: 'geometry', name: 'Geometry', desc: 'Grid, circles & convergence.', icon: '<rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/><circle cx="12" cy="12" r="5"/>' },
+  { id: 'uniformity', name: 'Uniformity', desc: 'Even brightness across zones.', icon: '<rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>' },
+  { id: 'response', name: 'Response time', desc: 'Motion blur & ghosting.', icon: '<rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor" stroke="none"/><path d="M20 12h-4M4 12h1M8 12h1M12 20v-4M12 4v1M12 8v1"/><path d="M17 12l3 0M20 9l0 6"/>' },
+  { id: 'ghosting', name: 'Ghosting', desc: 'Trailing images behind a moving block.', icon: '<rect x="12" y="7" width="9" height="10" rx="1"/><rect x="7" y="7" width="9" height="10" rx="1" opacity="0.6"/><rect x="3" y="7" width="9" height="10" rx="1" opacity="0.3"/>' },
+  { id: 'pwm', name: 'PWM flicker', desc: 'Backlight flicker from brightness dimming.', icon: '<path d="M3 12h3v-6h4v12h4v-6h4v3h3"/>' },
+  { id: 'inversion', name: 'Pixel inversion', desc: 'LCD inversion flicker on fine patterns.', icon: '<rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 6h18M3 9h18M3 12h18M3 15h18M3 18h18"/>' },
+  { id: 'chase', name: 'Chase squares', desc: 'Motion clarity & stutter in stepping blocks.', icon: '<rect x="3" y="9" width="5" height="5" rx="1" fill="currentColor" stroke="none"/><rect x="10" y="9" width="5" height="5" rx="1" opacity="0.6"/><rect x="17" y="9" width="5" height="5" rx="1" opacity="0.3"/>' },
+  { id: 'frame-skip', name: 'Frame skipping', desc: 'Dropped frames when overclocking a display.', icon: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/>' },
+  { id: 'angle', name: 'Viewing angle', desc: 'Color shift off-axis.', icon: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>' },
+  { id: 'gamma', name: 'Gamma', desc: 'Estimate display gamma.', icon: '<path d="M4 20 C 8 20 8 4 20 4"/><path d="M4 20h16"/>' },
+  { id: 'pixel-fixer', name: 'Stuck pixel fixer', desc: 'Rapid color cycling to un-stick subpixels.', icon: '<path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/><path d="M19 15l1 2 2 1-2 1-1 2-1-2-2-1 2-1z"/>' },
+  { id: 'display-info', name: 'Display info', desc: 'Refresh rate, resolution, scaling & HDR.', icon: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M12 8v4M12 6.5v.01"/>' },
+];
+---
+
+<ToolLayout slug="screen-tester">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="st-start" class="btn btn-primary">Start full test</button>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      {tests.map((t) => (
+        <button
+          type="button"
+          class="panel panel-lift flex flex-col gap-2 p-4 text-left transition-colors hover:bg-surface-2 hover:border-hairline-strong"
+          data-test={t.id}
+        >
+          <svg
+            class="h-6 w-6 text-primary"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            set:html={t.icon}
+          />
+          <span class="font-display text-[15px] font-medium text-ink">{t.name}</span>
+          <span class="text-[13px] leading-snug text-ink-subtle">{t.desc}</span>
+        </button>
+      ))}
+    </div>
+
+    <p class="text-[13px] text-ink-subtle">
+      Runs fullscreen. <b class="text-ink-muted">←/→</b> switch test ·
+      <b class="text-ink-muted">↑/↓</b> or <b class="text-ink-muted">click</b> cycle variant ·
+      <b class="text-ink-muted">+/−</b> adjust · <b class="text-ink-muted">H</b> hide controls ·
+      <b class="text-ink-muted">Esc</b> exit.
+    </p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free screen tester fills your display with a full suite of diagnostic
+      patterns so you can check a monitor, phone or laptop end to end. It matches
+      or beats the popular monitor test sites, in one place: solid colors for
+      dead and stuck pixels, gradients for banding, grayscale and contrast wedges
+      plus PLUGE black-level and white-clipping bars, a 1&nbsp;pixel checkerboard
+      for sharpness and moiré, uniformity zones for backlight bleed, a geometry
+      grid with circles for convergence, and a text-rendering page. Every test
+      tile names what it checks, and the fullscreen overlay tells you exactly
+      what to look for while it runs.
+    </p>
+    <p>
+      For motion and panel behaviour there's a response-time block, a ghosting
+      sweep, a PWM backlight-flicker line, a pixel-inversion pattern, chasing
+      squares for motion clarity, and a frame-skipping test for display
+      overclocking. A live display-info readout reports the measured refresh
+      rate, resolution, pixel scaling and HDR / wide-gamut support, and a
+      stuck-pixel fixer flashes rapid colors to jog stuck subpixels back to life.
+      A handful of pro tests that need external hardware — high-speed-camera
+      scan-out, oscilloscope flicker capture, true variable-refresh simulation —
+      are left out because a web browser can't drive them meaningfully.
+    </p>
+    <p>
+      Dead pixels stay black on every color; stuck pixels stay lit on one
+      channel. Use <b class="text-ink-muted">←/→</b> to move between tests,
+      <b class="text-ink-muted">↑/↓</b> or click to cycle variants,
+      <b class="text-ink-muted">+/−</b> to adjust the active option, and
+      <b class="text-ink-muted">Esc</b> to leave.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+
+  type Ctx = CanvasRenderingContext2D;
+  interface Test {
+    id: string;
+    name: string;
+
+    look: string;
+
+    variants: (s: State) => number;
+    variantLabel: (s: State) => string;
+
+    option?: { label: string; get: (s: State) => number; set: (s: State, v: number) => void };
+    draw: (ctx: Ctx, w: number, h: number, s: State) => void;
+    animated?: boolean;
+  }
+  interface State {
+    variant: number;
+    steps: number; 
+    speed: number; 
+    gray: number; 
+    fontPt: number; 
+    t: number; 
+  }
+
+  const COLORS: { css: string; name: string }[] = [
+    { css: '#000000', name: 'Black' },
+    { css: '#ffffff', name: 'White' },
+    { css: '#ff0000', name: 'Red' },
+    { css: '#00ff00', name: 'Green' },
+    { css: '#0000ff', name: 'Blue' },
+    { css: '#00ffff', name: 'Cyan' },
+    { css: '#ff00ff', name: 'Magenta' },
+    { css: '#ffff00', name: 'Yellow' },
+    { css: '#7f7f7f', name: 'Gray 50%' },
+    { css: '#404040', name: 'Gray 25%' },
+    { css: '#bfbfbf', name: 'Gray 75%' },
+  ];
+  const GRAD_EDGES: { css: string; name: string }[] = [
+    { css: '255,255,255', name: 'White' },
+    { css: '255,0,0', name: 'Red' },
+    { css: '0,255,0', name: 'Green' },
+    { css: '0,0,255', name: 'Blue' },
+    { css: '0,255,255', name: 'Cyan' },
+    { css: '255,0,255', name: 'Magenta' },
+    { css: '255,255,0', name: 'Yellow' },
+  ];
+
+  let fpsPrev = 0;
+  let fpsEst = 0;
+
+  let invFrame = 0;
+
+  const tests: Test[] = [
+    {
+      id: 'solid',
+      name: 'Solid colors',
+      look: 'Scan for dots that stay dark (dead) or wrong-colored (stuck) on each fill. Watch edges for lighter backlight bleed.',
+      variants: () => COLORS.length,
+      variantLabel: (s) => COLORS[s.variant].name,
+      draw: (ctx, w, h, s) => {
+        ctx.fillStyle = COLORS[s.variant].css;
+        ctx.fillRect(0, 0, w, h);
+      },
+    },
+    {
+      id: 'gradient',
+      name: 'Gradients',
+      look: 'The ramp should fade smoothly. Distinct vertical bands mean banding; a color tint means the channels are unbalanced.',
+      variants: () => GRAD_EDGES.length * 2, 
+      variantLabel: (s) =>
+        `${GRAD_EDGES[Math.floor(s.variant / 2)].name} · ${s.variant % 2 ? `stepped ×${s.steps}` : 'smooth'}`,
+      option: { label: 'Steps', get: (s) => s.steps, set: (s, v) => (s.steps = clamp(v, 2, 256)) },
+      draw: (ctx, w, h, s) => {
+        const rgb = GRAD_EDGES[Math.floor(s.variant / 2)].css;
+        const stepped = s.variant % 2 === 1;
+        if (!stepped) {
+          const g = ctx.createLinearGradient(0, 0, w, 0);
+          g.addColorStop(0, '#000');
+          g.addColorStop(1, `rgb(${rgb})`);
+          ctx.fillStyle = g;
+          ctx.fillRect(0, 0, w, h);
+        } else {
+          const [r, gr, b] = rgb.split(',').map(Number);
+          for (let i = 0; i < s.steps; i++) {
+            const k = i / (s.steps - 1);
+            ctx.fillStyle = `rgb(${r * k},${gr * k},${b * k})`;
+            ctx.fillRect((i * w) / s.steps, 0, w / s.steps + 1, h);
+          }
+        }
+      },
+    },
+    {
+      id: 'grayscale',
+      name: 'Grayscale',
+      look: 'Each step should be a distinct, neutral gray. Merged steps at the ends mean clipping; a color cast means poor gray tracking.',
+      variants: () => 2, // horizontal ramp / vertical bars
+      variantLabel: (s) => (s.variant ? '32 bars' : 'Smooth ramp'),
+      draw: (ctx, w, h, s) => {
+        if (s.variant === 0) {
+          const g = ctx.createLinearGradient(0, 0, w, 0);
+          g.addColorStop(0, '#000');
+          g.addColorStop(1, '#fff');
+          ctx.fillStyle = g;
+          ctx.fillRect(0, 0, w, h);
+        } else {
+          const n = 32;
+          for (let i = 0; i < n; i++) {
+            const v = Math.round((i / (n - 1)) * 255);
+            ctx.fillStyle = `rgb(${v},${v},${v})`;
+            ctx.fillRect((i * w) / n, 0, w / n + 1, h);
+          }
+        }
+      },
+    },
+    {
+      id: 'contrast',
+      name: 'Contrast',
+      look: 'Every block in the wedge should be separable from its background and neighbours. Blocks that vanish mean lost shadow or highlight detail.',
+      variants: () => 2,
+      variantLabel: (s) => (s.variant ? 'Near-white (highlight)' : 'Near-black (shadow)'),
+      draw: (ctx, w, h, s) => {
+        // 16 fine steps at the dark or bright end — each block should be distinct.
+        const base = s.variant ? 239 : 0;
+        const n = 16;
+        ctx.fillStyle = s.variant ? '#fff' : '#000';
+        ctx.fillRect(0, 0, w, h);
+        for (let i = 0; i < n; i++) {
+          const v = base + i;
+          ctx.fillStyle = `rgb(${v},${v},${v})`;
+          ctx.fillRect((i * w) / n, h * 0.25, w / n + 1, h * 0.5);
+        }
+      },
+    },
+    {
+      id: 'pluge',
+      name: 'Black levels (PLUGE)',
+      look: 'On a black field, the just-above-black bars should be faintly visible and the below-black bar should be invisible. If none show, blacks are crushed; if the below-black bar shows, black level is raised.',
+      variants: () => 1,
+      variantLabel: () => 'Bars at −2 · 0 · +2 · +4 · +6 · +8',
+      draw: (ctx, w, h) => {
+        // PLUGE: reference black plus bars a few codes above (and one "below").
+        // The negative bar is clamped to 0 — a correct display shows it merging
+        // into the background; a raised black level makes it stand out.
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, w, h);
+        const levels = [-2, 0, 2, 4, 6, 8];
+        const bw = w / levels.length;
+        levels.forEach((lv, i) => {
+          const v = clamp(lv, 0, 255);
+          ctx.fillStyle = `rgb(${v},${v},${v})`;
+          ctx.fillRect(i * bw, h * 0.2, bw + 1, h * 0.6);
+        });
+      },
+    },
+    {
+      id: 'clipping',
+      name: 'White levels',
+      look: 'On a white field, each near-white bar should be distinct from pure white. If the top bars merge into the background, bright highlights are clipping (blown out).',
+      variants: () => 1,
+      variantLabel: () => 'Bars at 247 → 255',
+      draw: (ctx, w, h) => {
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, w, h);
+        const levels = [247, 249, 251, 253, 254, 255];
+        const bw = w / levels.length;
+        levels.forEach((v, i) => {
+          ctx.fillStyle = `rgb(${v},${v},${v})`;
+          ctx.fillRect(i * bw, h * 0.2, bw + 1, h * 0.6);
+        });
+      },
+    },
+    {
+      id: 'sharpness',
+      name: 'Sharpness',
+      look: 'The pattern should read as crisp black-and-white pixels. A gray shimmer or scaling means the display is not running at native resolution or is over-sharpening.',
+      variants: () => 2,
+      variantLabel: (s) => (s.variant ? 'Horizontal lines' : 'Checkerboard'),
+      draw: (ctx, w, h, s) => {
+        // 1-device-pixel pattern — must look crisp, not gray/shimmering.
+        const img = ctx.createImageData(w, h);
+        const d = img.data;
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const on = s.variant ? y % 2 === 0 : (x + y) % 2 === 0;
+            const i = (y * w + x) * 4;
+            const v = on ? 255 : 0;
+            d[i] = d[i + 1] = d[i + 2] = v;
+            d[i + 3] = 255;
+          }
+        }
+        ctx.putImageData(img, 0, 0);
+      },
+    },
+    {
+      id: 'text',
+      name: 'Text',
+      look: 'Letters should be sharp with no colored fringing or shadow. Blurry or fringed edges mean scaling or sub-pixel rendering issues.',
+      variants: () => 2,
+      variantLabel: (s) => (s.variant ? 'White on black' : 'Black on white'),
+      option: { label: 'Size', get: (s) => s.fontPt, set: (s, v) => (s.fontPt = clamp(v, 8, 32)) },
+      draw: (ctx, w, h, s) => {
+        const inv = s.variant === 1;
+        ctx.fillStyle = inv ? '#000' : '#fff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = inv ? '#fff' : '#000';
+        const dpr = w / window.innerWidth;
+        const px = s.fontPt * dpr * 1.333;
+        ctx.font = `${px}px Inter, system-ui, sans-serif`;
+        ctx.textBaseline = 'top';
+        const sample =
+          'The quick brown fox jumps over the lazy dog — 0123456789 !?@#&';
+        const pad = 40 * dpr;
+        let y = pad;
+        for (let i = 0; i < 12 && y < h - px; i++) {
+          ctx.fillText(sample, pad, y);
+          y += px * 1.6;
+        }
+      },
+    },
+    {
+      id: 'geometry',
+      name: 'Geometry',
+      look: 'Grid lines should be straight and evenly spaced, circles perfectly round, edges square to the bezel. Bowing or color fringing means geometry or convergence errors.',
+      variants: () => 2,
+      variantLabel: (s) => (s.variant ? 'Grid + circles' : 'Convergence grid'),
+      draw: (ctx, w, h, s) => {
+        const dpr = w / window.innerWidth;
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = Math.max(1, dpr);
+        const gap = 50 * dpr;
+        ctx.beginPath();
+        for (let x = 0; x <= w; x += gap) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
+        for (let y = 0; y <= h; y += gap) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
+        ctx.stroke();
+        // Corner + center markers so edges/geometry are easy to eyeball.
+        ctx.strokeRect(ctx.lineWidth, ctx.lineWidth, w - ctx.lineWidth * 2, h - ctx.lineWidth * 2);
+        if (s.variant === 1) {
+          const r = Math.min(w, h) * 0.42;
+          const cx = w / 2, cy = h / 2;
+          [r, r * 0.66, r * 0.33].forEach((rad) => {
+            ctx.beginPath();
+            ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+            ctx.stroke();
+          });
+        }
+      },
+    },
+    {
+      id: 'uniformity',
+      name: 'Uniformity',
+      look: 'Brightness should be even across all nine zones. Darker corners, brighter edges, or a color tint in one area reveal backlight or panel unevenness.',
+      variants: () => 4, // white, 75, 50, 25 gray
+      variantLabel: (s) => ['White', 'Gray 75%', 'Gray 50%', 'Gray 25%'][s.variant],
+      draw: (ctx, w, h, s) => {
+        const v = [255, 191, 127, 64][s.variant];
+        ctx.fillStyle = `rgb(${v},${v},${v})`;
+        ctx.fillRect(0, 0, w, h);
+        // Faint 3×3 guides to compare zone brightness.
+        ctx.strokeStyle = 'rgba(128,128,128,0.35)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 1; i < 3; i++) {
+          ctx.moveTo((i * w) / 3, 0); ctx.lineTo((i * w) / 3, h);
+          ctx.moveTo(0, (i * h) / 3); ctx.lineTo(w, (i * h) / 3);
+        }
+        ctx.stroke();
+      },
+    },
+    {
+      id: 'response',
+      name: 'Response time',
+      look: 'Track the moving block with your eyes. A trailing smear or faint second image behind it is motion blur or ghosting from slow pixel response.',
+      animated: true,
+      variants: () => COLORS.length,
+      variantLabel: (s) => `${COLORS[s.variant].name} block`,
+      option: { label: 'Speed px/s', get: (s) => s.speed, set: (s, v) => (s.speed = clamp(v, 120, 4000)) },
+      draw: (ctx, w, h, s) => {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, w, h);
+        const dpr = w / window.innerWidth;
+        const size = 120 * dpr;
+        const range = w - size;
+        const period = (range / (s.speed * dpr)) * 1000; // ms for one sweep
+        const phase = (s.t % (period * 2)) / period;
+        const p = phase < 1 ? phase : 2 - phase; // ping-pong 0..1
+        ctx.fillStyle = COLORS[s.variant].css;
+        ctx.fillRect(p * range, (h - size) / 2, size, size);
+      },
+    },
+    {
+      id: 'ghosting',
+      name: 'Ghosting',
+      look: 'A white bar sweeps across black. Watch for a trailing ghost or inverse (dark) shadow following the bar — that is overshoot or slow pixel transitions.',
+      animated: true,
+      variants: () => 2,
+      variantLabel: (s) => (s.variant ? 'Vertical sweep' : 'Horizontal sweep'),
+      option: { label: 'Speed px/s', get: (s) => s.speed, set: (s, v) => (s.speed = clamp(v, 120, 4000)) },
+      draw: (ctx, w, h, s) => {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, w, h);
+        const dpr = w / window.innerWidth;
+        const vert = s.variant === 1;
+        const span = vert ? h : w;
+        const bar = 40 * dpr;
+        const range = span - bar;
+        const period = (range / (s.speed * dpr)) * 1000;
+        const phase = (s.t % (period * 2)) / period;
+        const p = phase < 1 ? phase : 2 - phase;
+        ctx.fillStyle = '#fff';
+        if (vert) ctx.fillRect(0, p * range, w, bar);
+        else ctx.fillRect(p * range, 0, bar, h);
+      },
+    },
+    {
+      id: 'pwm',
+      name: 'PWM flicker',
+      look: 'A thin line races across the screen. On a flicker-free display it stays solid; if the backlight uses PWM dimming it breaks into dashes or gaps. More gaps at lower brightness means more flicker.',
+      animated: true,
+      variants: () => 1,
+      variantLabel: () => 'Sweep a bright line on black',
+      option: { label: 'Speed px/s', get: (s) => s.speed, set: (s, v) => (s.speed = clamp(v, 500, 8000)) },
+      draw: (ctx, w, h, s) => {
+        // ponytail: canvas can't sample the backlight — this shows PWM only as
+        // aliasing of a fast line against the refresh. Real PWM measurement
+        // needs a photodiode/oscilloscope (the excluded instrument modes).
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, w, h);
+        const dpr = w / window.innerWidth;
+        const bar = 3 * dpr;
+        const range = w - bar;
+        const period = (range / (s.speed * dpr)) * 1000;
+        const p = (s.t % period) / period;
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(p * range, 0, bar, h);
+      },
+    },
+    {
+      id: 'inversion',
+      name: 'Pixel inversion',
+      look: 'A fine pattern that inverts every frame. It should look like a steady still image. Visible flickering, shimmering, or a horizontal band tearing through it reveals an LCD pixel-inversion defect.',
+      animated: true,
+      variants: () => 3,
+      variantLabel: (s) => ['Fine checkerboard', '1px H lines', '1px V lines'][s.variant],
+      draw: (ctx, w, h, s) => {
+        // Flip the pattern's parity every real frame; a healthy panel averages
+        // the two frames to flat gray, a bad one flickers.
+        invFrame ^= 1;
+        const img = ctx.createImageData(w, h);
+        const d = img.data;
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            let base: number;
+            if (s.variant === 1) base = y % 2;
+            else if (s.variant === 2) base = x % 2;
+            else base = (x + y) % 2;
+            const on = base ^ invFrame;
+            const i = (y * w + x) * 4;
+            const v = on ? 255 : 0;
+            d[i] = d[i + 1] = d[i + 2] = v;
+            d[i + 3] = 255;
+          }
+        }
+        ctx.putImageData(img, 0, 0);
+      },
+    },
+    {
+      id: 'chase',
+      name: 'Chase squares',
+      look: 'Squares step across the screen in sequence. Following them, the motion should look clean and evenly spaced. Stutter, uneven gaps, or blur points to dropped frames or slow response.',
+      animated: true,
+      variants: () => 1,
+      variantLabel: () => 'Follow the stepping squares',
+      option: { label: 'Speed px/s', get: (s) => s.speed, set: (s, v) => (s.speed = clamp(v, 120, 4000)) },
+      draw: (ctx, w, h, s) => {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, w, h);
+        const dpr = w / window.innerWidth;
+        const size = 80 * dpr;
+        const gap = size * 2;
+        const range = w + gap;
+        const period = (range / (s.speed * dpr)) * 1000;
+        const head = ((s.t % period) / period) * range;
+        ctx.fillStyle = '#fff';
+        for (let x = head % gap; x < w; x += gap) {
+          ctx.fillRect(x - size, (h - size) / 2, size, size);
+        }
+      },
+    },
+    {
+      id: 'frame-skip',
+      name: 'Frame skipping',
+      look: 'Bars scroll at a steady rate. With a phone camera in a dark room, photograph the screen — evenly spaced bars mean no skips, a doubled or missing bar means a dropped frame (common when overclocking refresh rate).',
+      animated: true,
+      variants: () => 1,
+      variantLabel: () => 'Photograph with a camera to inspect',
+      draw: (ctx, w, h, s) => {
+        // ponytail: browser can't force a true per-refresh cadence; this scrolls
+        // at ~one bar per frame so a camera capture reveals skips. Good enough
+        // for the camera-capture method, not a scanline-accurate signal.
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, w, h);
+        const dpr = w / window.innerWidth;
+        const barH = 8 * dpr;
+        const cycle = barH * 2;
+        const offset = (s.t / 16.67) * cycle; // ~one cycle per 60Hz frame
+        ctx.fillStyle = '#fff';
+        for (let y = -(offset % cycle); y < h; y += cycle) {
+          ctx.fillRect(0, y, w, barH);
+        }
+      },
+    },
+    {
+      id: 'angle',
+      name: 'Viewing angle',
+      look: 'Move your head left/right and up/down. The bars should hold their color and brightness. Big shifts to purple, washed-out gray, or dimming mean a narrow viewing angle (typical of TN panels).',
+      variants: () => 1,
+      variantLabel: () => 'Move your head off-axis',
+      draw: (ctx, w, h) => {
+        // Mid grays + primaries side by side — watch for tint/brightness shift.
+        const cols = ['#000', '#404040', '#7f7f7f', '#bfbfbf', '#fff', '#f00', '#0f0', '#00f'];
+        const bw = w / cols.length;
+        cols.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(i * bw, 0, bw + 1, h); });
+      },
+    },
+    {
+      id: 'gamma',
+      name: 'Gamma',
+      look: 'Step back and adjust ± until the solid patch blends into the striped half. The value it matches at is your display gamma — aim for ~2.2.',
+      variants: () => 1,
+      variantLabel: (s) => `Match at ~γ ${(s.gray / 100).toFixed(1)}`,
+      option: { label: 'γ ×10', get: (s) => s.gray, set: (s, v) => (s.gray = clamp(v, 10, 30)) },
+      draw: (ctx, w, h, s) => {
+        // 1px black/white lines average to 50% luminance; the solid patch that
+        // blends with them at viewing distance reveals the display gamma.
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, w, h);
+        const half = w / 2;
+        for (let y = 0; y < h; y += 2) {
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(0, y, half, 1);
+        }
+        const gamma = s.gray / 10;
+        const lin = 0.5; // 50% line average
+        const v = Math.round(Math.pow(lin, 1 / gamma) * 255);
+        ctx.fillStyle = `rgb(${v},${v},${v})`;
+        ctx.fillRect(half, 0, half, h);
+      },
+    },
+    {
+      id: 'pixel-fixer',
+      name: 'Stuck pixel fixer',
+      look: 'Position this over a stuck pixel and leave it running for 10–20 minutes. The rapid color flashing can jog a stuck subpixel back to life. It cannot fix a truly dead (always-black) pixel.',
+      animated: true,
+      variants: () => 1,
+      variantLabel: () => 'Rapid RGB cycling — leave running',
+      draw: (ctx, w, h, s) => {
+        // Cycle full-screen R/G/B/W/K fast to exercise a stuck subpixel.
+        const seq = ['#ff0000', '#00ff00', '#0000ff', '#ffffff', '#000000'];
+        const idx = Math.floor(s.t / 100) % seq.length; // ~10 flips/sec
+        ctx.fillStyle = seq[idx];
+        ctx.fillRect(0, 0, w, h);
+      },
+    },
+    {
+      id: 'display-info',
+      name: 'Display info',
+      look: 'Reads back what the browser reports about this display: measured refresh rate, resolution, pixel scaling, and HDR / wide-gamut support. Compare against your display’s rated specs.',
+      animated: true,
+      variants: () => 1,
+      variantLabel: () => 'Live display report',
+      draw: (ctx, w, h, s) => {
+        // Rolling refresh estimate from real frame deltas.
+        if (fpsPrev) {
+          const dt = s.t - fpsPrev;
+          if (dt > 0) fpsEst = fpsEst ? fpsEst * 0.9 + (1000 / dt) * 0.1 : 1000 / dt;
+        }
+        fpsPrev = s.t;
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, w, h);
+        const dpr = window.devicePixelRatio || 1;
+        const hdr = window.matchMedia?.('(dynamic-range: high)').matches;
+        const p3 = window.matchMedia?.('(color-gamut: p3)').matches;
+        const rec2020 = window.matchMedia?.('(color-gamut: rec2020)').matches;
+        const gamut = rec2020 ? 'Rec.2020' : p3 ? 'Display-P3' : 'sRGB';
+        const rows = [
+          ['Refresh rate', `${fpsEst ? fpsEst.toFixed(1) : '…'} Hz`],
+          ['Viewport (CSS px)', `${window.innerWidth} × ${window.innerHeight}`],
+          ['Render (device px)', `${Math.round(window.innerWidth * dpr)} × ${Math.round(window.innerHeight * dpr)}`],
+          ['Screen', `${window.screen.width} × ${window.screen.height}`],
+          ['Pixel ratio (DPR)', `${dpr}×`],
+          ['Color depth', `${window.screen.colorDepth}-bit`],
+          ['Color gamut', gamut],
+          ['Dynamic range', hdr ? 'HDR' : 'SDR'],
+        ];
+        const size = 22 * dpr;
+        ctx.font = `${size}px Inter, system-ui, sans-serif`;
+        ctx.textBaseline = 'top';
+        const pad = 60 * dpr;
+        let y = pad;
+        for (const [k, v] of rows) {
+          ctx.fillStyle = '#8a8f98';
+          ctx.fillText(k, pad, y);
+          ctx.fillStyle = '#f7f8f8';
+          ctx.fillText(v, pad + 340 * dpr, y);
+          y += size * 1.8;
+        }
+      },
+    },
+  ];
+
+  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+  // ---- Runner ---------------------------------------------------------------
+  let overlay: HTMLDivElement | null = null;
+  let canvas: HTMLCanvasElement;
+  let ctx: Ctx;
+  let raf = 0;
+  let hideTimer = 0;
+  let testIdx = 0;
+  const state: State = { variant: 0, steps: 32, speed: 960, gray: 20, fontPt: 14, t: 0 };
+  let panel: HTMLDivElement;
+
+  function open(startId?: string) {
+    testIdx = startId ? Math.max(0, tests.findIndex((t) => t.id === startId)) : 0;
+    state.variant = 0;
+    overlay = document.createElement('div');
+    overlay.style.cssText =
+      'position:fixed;inset:0;z-index:9999;background:#000;cursor:pointer;';
+    canvas = document.createElement('canvas');
+    canvas.style.cssText = 'display:block;width:100%;height:100%;';
+    ctx = canvas.getContext('2d')!;
+    panel = document.createElement('div');
+    panel.style.cssText =
+      'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);' +
+      'background:rgba(15,16,17,0.92);border:1px solid #34343a;border-radius:12px;' +
+      'padding:12px 16px;color:#f7f8f8;font:13px/1.4 Inter,system-ui,sans-serif;' +
+      'display:flex;flex-direction:column;gap:8px;align-items:flex-start;pointer-events:none;max-width:92vw;' +
+      'box-shadow:0 8px 40px rgba(0,0,0,0.6);transition:opacity .2s;';
+    overlay.append(canvas, panel);
+    document.body.append(overlay);
+    document.body.style.overflow = 'hidden';
+
+    overlay.addEventListener('click', () => cycleVariant(1));
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('resize', resize);
+    overlay.addEventListener('mousemove', showPanel);
+    overlay.requestFullscreen?.().catch(() => {});
+    document.addEventListener('fullscreenchange', onFsChange);
+
+    resize();
+    render();
+    showPanel();
+  }
+
+  function close() {
+    cancelAnimationFrame(raf);
+    window.removeEventListener('keydown', onKey);
+    window.removeEventListener('resize', resize);
+    document.removeEventListener('fullscreenchange', onFsChange);
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    overlay?.remove();
+    overlay = null;
+    document.body.style.overflow = '';
+  }
+
+  function onFsChange() {
+    // Leaving fullscreen (Esc / gesture) tears the whole thing down.
+    if (!document.fullscreenElement && overlay) close();
+  }
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(window.innerWidth * dpr);
+    canvas.height = Math.round(window.innerHeight * dpr);
+    render();
+  }
+
+  function render() {
+    cancelAnimationFrame(raf);
+    const test = tests[testIdx];
+    const w = canvas.width, h = canvas.height;
+    if (test.animated) {
+      const loop = (now: number) => {
+        state.t = now;
+        test.draw(ctx, w, h, state);
+        raf = requestAnimationFrame(loop);
+      };
+      raf = requestAnimationFrame(loop);
+    } else {
+      test.draw(ctx, w, h, state);
+    }
+    updatePanel();
+  }
+
+  function switchTest(dir: number) {
+    testIdx = (testIdx + dir + tests.length) % tests.length;
+    state.variant = 0;
+    render();
+    showPanel();
+  }
+
+  function cycleVariant(dir: number) {
+    const n = tests[testIdx].variants(state);
+    state.variant = (state.variant + dir + n) % n;
+    render();
+    showPanel();
+  }
+
+  function adjust(dir: number) {
+    const opt = tests[testIdx].option;
+    if (!opt) return;
+    const cur = opt.get(state);
+    // Step sizes tuned per option magnitude.
+    const step = cur >= 500 ? 120 : cur >= 32 ? 4 : cur >= 10 ? 1 : 2;
+    opt.set(state, cur + dir * step);
+    render();
+    showPanel();
+  }
+
+  function onKey(e: KeyboardEvent) {
+    switch (e.key) {
+      case 'Escape': close(); break;
+      case 'ArrowRight': switchTest(1); break;
+      case 'ArrowLeft': switchTest(-1); break;
+      case 'ArrowUp': cycleVariant(1); break;
+      case 'ArrowDown': cycleVariant(-1); break;
+      case ' ': e.preventDefault(); cycleVariant(1); break;
+      case '+': case '=': adjust(1); break;
+      case '-': case '_': adjust(-1); break;
+      case 'h': case 'H': panel.style.display = panel.style.display === 'none' ? 'flex' : 'none'; break;
+      default: return;
+    }
+    e.stopPropagation();
+  }
+
+  function updatePanel() {
+    const test = tests[testIdx];
+    const opt = test.option;
+    panel.innerHTML =
+      `<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">` +
+        `<span style="color:#828fff;font-weight:600">${test.name}</span>` +
+        `<span style="color:#8a8f98">${testIdx + 1}/${tests.length}</span>` +
+        `<span>${test.variantLabel(state)}</span>` +
+        (opt ? `<span style="color:#8a8f98">${opt.label}: <b style="color:#f7f8f8">${opt.get(state)}</b> (±)</span>` : '') +
+        `<span style="color:#62666d">←/→ test · ↑/↓ cycle · H hide · Esc exit</span>` +
+      `</div>` +
+      `<div style="color:#8a8f98;max-width:70ch;line-height:1.5">${test.look}</div>`;
+  }
+
+  function showPanel() {
+    if (!panel) return;
+    panel.style.opacity = '1';
+    clearTimeout(hideTimer);
+    hideTimer = window.setTimeout(() => (panel.style.opacity = '0'), 3000);
+  }
+
+  document.getElementById('st-start')?.addEventListener('click', () => open());
+  document.querySelectorAll<HTMLButtonElement>('[data-test]').forEach((b) =>
+    b.addEventListener('click', () => open(b.dataset.test))
+  );
+</script>

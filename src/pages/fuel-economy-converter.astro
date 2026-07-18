@@ -1,0 +1,227 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="fuel-economy-converter">
+  <div id="fe-root" class="flex flex-col gap-5">
+
+    <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="fe-from-val">From</label>
+        <input id="fe-from-val" type="number" min="0" step="any" class="field" value="30" inputmode="decimal" />
+        <select id="fe-from-unit" class="field mt-1"></select>
+      </div>
+      <button
+        id="fe-swap"
+        type="button"
+        class="btn btn-secondary mb-1 h-10 w-10 shrink-0 justify-self-center p-0"
+        aria-label="Swap units"
+        title="Swap units"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
+      </button>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="fe-to-val">To</label>
+        <div class="copy-wrap">
+          <input id="fe-to-val" type="text" class="field" readonly />
+          <button type="button" class="copy-icon" data-copy-target="#fe-to-val" aria-label="Copy"></button>
+        </div>
+        <select id="fe-to-unit" class="field mt-1"></select>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Decimals
+        <select id="fe-precision" class="field w-auto py-1">
+          <option value="auto" selected>Auto</option>
+          <option value="0">0</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="6">6</option>
+        </select>
+      </label>
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Quick values
+        <div id="fe-presets" class="flex flex-wrap gap-2"></div>
+      </div>
+    </div>
+
+    <p id="fe-formula" class="text-[13px] text-ink-tertiary"></p>
+    <p id="fe-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div>
+      <p class="mb-2 text-[13px] text-ink-subtle">All units <span id="fe-all-caption" class="text-ink-tertiary"></span></p>
+      <div id="fe-table" class="overflow-hidden rounded-md border border-hairline"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free fuel economy converter converts between US MPG, imperial MPG,
+      kilometres per litre, miles per litre, litres per 100&nbsp;km and gallons
+      per 100&nbsp;miles (US and imperial). Enter one value and every equivalent
+      updates instantly in the "All units" table, so you never need to convert
+      twice.
+    </p>
+    <p>
+      Fuel economy comes in two flavours. <strong>Efficiency</strong> units like
+      MPG and km/L measure distance travelled per unit of fuel — bigger is
+      better. <strong>Consumption</strong> units like L/100km and gal/100&nbsp;mi
+      measure fuel burned over a fixed distance — smaller is better. Because
+      these are reciprocals of each other, converting between them needs inverse
+      maths, not a simple multiply; this tool handles that correctly. Choose the
+      number of decimal places, swap the two units, or copy the result with one
+      click.
+    </p>
+    <p>
+      Note the US and imperial gallon differ: an imperial gallon is about 20%
+      larger (4.546&nbsp;L vs 3.785&nbsp;L), so 40&nbsp;MPG (imperial) is a lower
+      real economy than 40&nbsp;MPG (US). This converter uses the exact
+      1&nbsp;mile&nbsp;=&nbsp;1.609344&nbsp;km and precise gallon definitions.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+
+  type Kind = 'eff' | 'cons';
+  interface Unit { label: string; short: string; kind: Kind; k: number; }
+
+  const UNITS: Unit[] = [
+    { label: 'MPG (US)',        short: 'US MPG',       kind: 'eff',  k: 1.609344 / 3.785411784 },   
+    { label: 'MPG (Imperial)',  short: 'imp MPG',      kind: 'eff',  k: 1.609344 / 4.54609 },        
+    { label: 'km/L',            short: 'km/L',         kind: 'eff',  k: 1 },
+    { label: 'mi/L',            short: 'mi/L',         kind: 'eff',  k: 1.609344 },
+    { label: 'L/100km',         short: 'L/100km',      kind: 'cons', k: 100 },
+    { label: 'gal(US)/100mi',   short: 'US gal/100mi', kind: 'cons', k: 100 * 1.609344 / 3.785411784 },  
+    { label: 'gal(Imp)/100mi',  short: 'imp gal/100mi',kind: 'cons', k: 100 * 1.609344 / 4.54609 },       
+  ];
+  const byLabel = (l: string) => UNITS.find((u) => u.label === l)!;
+
+  function toKmPerL(value: number, u: Unit): number {
+    if (u.kind === 'eff') return value * u.k;
+    return value <= 0 ? Infinity : u.k / value; 
+  }
+  function fromKmPerL(kpl: number, u: Unit): number {
+    if (u.kind === 'eff') return kpl / u.k;
+    return kpl <= 0 ? Infinity : u.k / kpl; 
+  }
+  function convert(value: number, from: Unit, to: Unit): number {
+    return fromKmPerL(toKmPerL(value, from), to);
+  }
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const fromVal = $<HTMLInputElement>('fe-from-val');
+  const toVal = $<HTMLInputElement>('fe-to-val');
+  const fromUnit = $<HTMLSelectElement>('fe-from-unit');
+  const toUnit = $<HTMLSelectElement>('fe-to-unit');
+  const swap = $<HTMLButtonElement>('fe-swap');
+  const precision = $<HTMLSelectElement>('fe-precision');
+  const presets = $<HTMLElement>('fe-presets');
+  const formula = $<HTMLElement>('fe-formula');
+  const errEl = $<HTMLElement>('fe-error');
+  const table = $<HTMLElement>('fe-table');
+  const allCaption = $<HTMLElement>('fe-all-caption');
+
+  function fmt(n: number): string {
+    if (!isFinite(n)) return '∞';
+    if (n === 0) return '0';
+    const p = precision.value;
+    if (p !== 'auto') return n.toFixed(Number(p));
+    const abs = Math.abs(n);
+    if (abs >= 1e12 || abs < 1e-4) return n.toExponential(4);
+    return String(Math.round(n * 1e6) / 1e6);
+  }
+
+  function fillUnits() {
+    const opts = UNITS.map((u) => `<option value="${u.label}">${u.label}</option>`).join('');
+    fromUnit.innerHTML = opts;
+    toUnit.innerHTML = opts;
+    fromUnit.value = 'MPG (US)';
+    toUnit.value = 'L/100km';
+  }
+
+  function buildPresets() {
+
+    const chips: Array<[string, number, string]> = [
+      ['30 US MPG', 30, 'MPG (US)'],
+      ['40 US MPG', 40, 'MPG (US)'],
+      ['50 imp MPG', 50, 'MPG (Imperial)'],
+      ['6 L/100km', 6, 'L/100km'],
+      ['8 L/100km', 8, 'L/100km'],
+    ];
+    presets.innerHTML = chips
+      .map(([label, v, u], i) => `<button type="button" data-v="${v}" data-u="${u}" class="btn btn-tertiary px-2 py-1 text-[13px]" data-i="${i}">${label}</button>`)
+      .join('');
+    presets.querySelectorAll('button').forEach((b) => {
+      b.addEventListener('click', () => {
+        fromVal.value = b.dataset.v!;
+        fromUnit.value = b.dataset.u!;
+        run();
+      });
+    });
+  }
+
+  function showError(msg: string) {
+    errEl.textContent = msg;
+    errEl.classList.remove('hidden');
+    toVal.value = '';
+    formula.textContent = '';
+    table.innerHTML = '';
+    allCaption.textContent = '';
+  }
+  function clearError() { errEl.classList.add('hidden'); }
+
+  function run() {
+    const raw = fromVal.value.trim();
+    if (raw === '') { clearError(); toVal.value = ''; formula.textContent = ''; table.innerHTML = ''; allCaption.textContent = ''; return; }
+    const v = Number(raw);
+    if (isNaN(v)) { showError('Enter a valid number.'); return; }
+    if (v < 0) { showError("Fuel economy can't be negative."); return; }
+    clearError();
+
+    const from = byLabel(fromUnit.value);
+    const to = byLabel(toUnit.value);
+    const result = convert(v, from, to);
+    toVal.value = fmt(result);
+    formula.textContent = `${fmt(v)} ${from.short} = ${fmt(result)} ${to.short}`;
+    allCaption.textContent = `for ${fmt(v)} ${from.short}`;
+    renderTable(v, from);
+  }
+
+  // Live table: the entered value expressed in every other unit at once.
+  function renderTable(v: number, from: Unit) {
+    const rows = UNITS
+      .filter((u) => u.label !== from.label)
+      .map((u) => {
+        const r = convert(v, from, u);
+        return `<tr class="border-t border-hairline">
+          <td class="px-3 py-2 text-ink-subtle">${u.label}</td>
+          <td class="px-3 py-2 text-right font-mono text-ink">${fmt(r)} <span class="text-ink-tertiary">${u.short}</span></td>
+        </tr>`;
+      })
+      .join('');
+    table.innerHTML = `<table class="w-full text-[13px]">${rows}</table>`;
+  }
+
+  fromVal.addEventListener('input', run);
+  fromUnit.addEventListener('change', run);
+  toUnit.addEventListener('change', run);
+  precision.addEventListener('change', run);
+
+  swap.addEventListener('click', () => {
+    const a = fromUnit.value;
+    fromUnit.value = toUnit.value;
+    toUnit.value = a;
+    // Carry the current result back into the input for a natural round-trip.
+    if (toVal.value && isFinite(Number(toVal.value))) fromVal.value = toVal.value;
+    run();
+  });
+
+  fillUnits();
+  buildPresets();
+  run();
+</script>

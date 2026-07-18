@@ -1,0 +1,122 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="age-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Date of birth
+        <input id="ag-dob" type="date" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Age at date
+        <input id="ag-at" type="date" class="field" />
+      </label>
+    </div>
+
+    <p id="ag-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="panel panel-lift flex flex-col items-center gap-2 p-6 text-center">
+      <div class="copy-wrap w-full">
+        <div id="ag-main" class="font-display text-3xl font-semibold text-ink">—</div>
+        <button type="button" class="copy-icon" data-copy-target="#ag-main" aria-label="Copy"></button>
+      </div>
+      <div id="ag-sub" class="text-sm text-ink-subtle"></div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-3 text-center">
+      <div class="panel p-4"><div id="ag-months" class="font-mono text-xl text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Total months</div></div>
+      <div class="panel p-4"><div id="ag-weeks" class="font-mono text-xl text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Total weeks</div></div>
+      <div class="panel p-4"><div id="ag-days" class="font-mono text-xl text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Total days</div></div>
+      <div class="panel p-4"><div id="ag-hours" class="font-mono text-xl text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Total hours</div></div>
+      <div class="panel p-4"><div id="ag-minutes" class="font-mono text-xl text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Total minutes</div></div>
+      <div class="panel p-4"><div id="ag-seconds" class="font-mono text-xl text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Total seconds</div></div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="panel p-4 text-center"><div id="ag-born" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Day of the week born</div></div>
+      <div class="panel p-4 text-center"><div id="ag-bday" class="font-mono text-lg text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Next birthday</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free age calculator works out an exact age from a date of birth,
+      broken down into years, months and days, plus totals in months, weeks and
+      days. Set the second date to any point in the future or past to find an
+      age at that moment. Everything is calculated privately in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const dob = document.getElementById('ag-dob') as HTMLInputElement;
+  const at = document.getElementById('ag-at') as HTMLInputElement;
+  const err = document.getElementById('ag-error')!;
+  const main = document.getElementById('ag-main')!;
+  const sub = document.getElementById('ag-sub')!;
+  const monthsEl = document.getElementById('ag-months')!;
+  const weeksEl = document.getElementById('ag-weeks')!;
+  const daysEl = document.getElementById('ag-days')!;
+  const hoursEl = document.getElementById('ag-hours')!;
+  const minutesEl = document.getElementById('ag-minutes')!;
+  const secondsEl = document.getElementById('ag-seconds')!;
+  const bornEl = document.getElementById('ag-born')!;
+  const bdayEl = document.getElementById('ag-bday')!;
+
+  function calc() {
+    err.classList.add('hidden');
+    if (!dob.value || !at.value) return;
+    const start = new Date(dob.value + 'T00:00:00');
+    const end = new Date(at.value + 'T00:00:00');
+    if (end < start) {
+      err.textContent = 'The "age at" date is before the date of birth.';
+      err.classList.remove('hidden');
+      main.textContent = '—'; sub.textContent = '';
+      return;
+    }
+
+    const addMonthsClamped = (d: Date, m: number): Date => {
+      const idx = d.getMonth() + m;
+      const y = d.getFullYear() + Math.floor(idx / 12);
+      const mo = ((idx % 12) + 12) % 12;
+      const dim = new Date(y, mo + 1, 0).getDate();
+      return new Date(y, mo, Math.min(d.getDate(), dim));
+    };
+    let totalMonths = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+    if (addMonthsClamped(start, totalMonths) > end) totalMonths--;
+    const anchor = addMonthsClamped(start, totalMonths);
+    const years = Math.floor(totalMonths / 12);
+    const months = totalMonths % 12;
+    const days = Math.round((end.getTime() - anchor.getTime()) / 86400000);
+
+    const totalDays = Math.floor((end.getTime() - start.getTime()) / 86400000);
+
+    main.textContent = `${years} years, ${months} months, ${days} days`;
+    sub.textContent = `That's ${totalDays.toLocaleString()} days of life so far.`;
+    monthsEl.textContent = totalMonths.toLocaleString();
+    weeksEl.textContent = Math.floor(totalDays / 7).toLocaleString();
+    daysEl.textContent = totalDays.toLocaleString();
+    hoursEl.textContent = (totalDays * 24).toLocaleString();
+    minutesEl.textContent = (totalDays * 24 * 60).toLocaleString();
+    secondsEl.textContent = (totalDays * 86400).toLocaleString();
+
+    bornEl.textContent = start.toLocaleDateString(undefined, { weekday: 'long' });
+
+    let nextBday = new Date(end.getFullYear(), start.getMonth(), start.getDate());
+    if (nextBday < end) nextBday = new Date(end.getFullYear() + 1, start.getMonth(), start.getDate());
+    const daysToBday = Math.ceil((nextBday.getTime() - end.getTime()) / 86400000);
+    const turning = nextBday.getFullYear() - start.getFullYear();
+    bdayEl.textContent = daysToBday === 0
+      ? `Happy birthday! Turning ${turning}`
+      : `${daysToBday.toLocaleString()} days — turning ${turning}`;
+  }
+
+  [dob, at].forEach((el) => el.addEventListener('input', calc));
+
+  // Default "age at" to today.
+  const today = new Date();
+  today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+  at.value = today.toISOString().slice(0, 10);
+</script>

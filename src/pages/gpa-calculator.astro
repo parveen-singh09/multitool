@@ -1,0 +1,140 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="gpa-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="flex items-center gap-3 text-[13px] text-ink-subtle">
+      <span class="flex-1">Course</span>
+      <span class="w-28 text-center">Grade</span>
+      <span class="w-24 text-center">Credits</span>
+      <span class="w-9"></span>
+    </div>
+
+    <div id="gpa-rows" class="flex flex-col gap-2"></div>
+
+    <div class="flex gap-2">
+      <button id="gpa-add" class="btn btn-secondary">+ Add course</button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Prior GPA (optional)
+        <input id="gpa-prior" type="number" min="0" max="4.3" step="0.01" class="field" placeholder="e.g. 3.5" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Prior credit hours
+        <input id="gpa-prior-cr" type="number" min="0" step="0.5" class="field" placeholder="e.g. 60" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div id="gpa-value" class="font-display text-4xl font-semibold text-primary-hover">—</div>
+      <div id="gpa-sub" class="mt-2 text-[13px] text-ink-subtle"></div>
+      <div id="gpa-cumulative" class="mt-1 text-[13px] text-primary-hover"></div>
+    </div>
+
+    <div class="panel p-5">
+      <div class="mb-3 text-sm text-ink-muted">Plan: GPA needed on upcoming credits</div>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Target cumulative GPA
+          <input id="gpa-target" type="number" min="0" max="4.3" step="0.01" class="field" value="3.5" inputmode="decimal" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Additional credits planned
+          <input id="gpa-target-cr" type="number" min="0" step="0.5" class="field" value="15" inputmode="decimal" />
+        </label>
+      </div>
+      <div id="gpa-plan" class="mt-3 text-[13px] text-ink-subtle"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free GPA calculator computes your grade point average on a 4.0 scale,
+      weighted by the credit hours of each course. Add a row per class, choose
+      the letter grade and enter its credits, and your GPA updates instantly. Add
+      or remove courses as needed.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const GRADES: Record<string, number> = {
+    'A+': 4.0, 'A': 4.0, 'A-': 3.7,
+    'B+': 3.3, 'B': 3.0, 'B-': 2.7,
+    'C+': 2.3, 'C': 2.0, 'C-': 1.7,
+    'D+': 1.3, 'D': 1.0, 'F': 0.0,
+  };
+
+  const rowsEl = document.getElementById('gpa-rows')!;
+
+  function makeRow(name = '', grade = 'A', credits = '3') {
+    const row = document.createElement('div');
+    row.className = 'gpa-row flex items-center gap-3';
+    const options = Object.keys(GRADES).map((g) => `<option value="${g}"${g === grade ? ' selected' : ''}>${g}</option>`).join('');
+    row.innerHTML = `
+      <input type="text" class="field flex-1" placeholder="Course name (optional)" value="${name}" />
+      <select class="field w-28 gpa-grade">${options}</select>
+      <input type="number" min="0" step="0.5" class="field w-24 gpa-credit" value="${credits}" inputmode="decimal" />
+      <button type="button" class="btn btn-secondary w-9 gpa-del" aria-label="Remove course">×</button>
+    `;
+    rowsEl.appendChild(row);
+    row.querySelector('.gpa-del')!.addEventListener('click', () => { row.remove(); calc(); });
+    row.querySelectorAll('select, input').forEach((el) => el.addEventListener('input', calc));
+  }
+
+  function calc() {
+    let points = 0, credits = 0;
+    document.querySelectorAll('.gpa-row').forEach((row) => {
+      const grade = (row.querySelector('.gpa-grade') as HTMLSelectElement).value;
+      const cr = Number((row.querySelector('.gpa-credit') as HTMLInputElement).value) || 0;
+      points += GRADES[grade] * cr;
+      credits += cr;
+    });
+    const valEl = document.getElementById('gpa-value')!;
+    const subEl = document.getElementById('gpa-sub')!;
+    const cumEl = document.getElementById('gpa-cumulative')!;
+    if (credits === 0) { valEl.textContent = '—'; subEl.textContent = ''; cumEl.textContent = ''; planCalc(0, 0); return; }
+    const termGpa = points / credits;
+    valEl.textContent = termGpa.toFixed(2);
+    subEl.textContent = `${credits} credit hours across ${document.querySelectorAll('.gpa-row').length} courses`;
+
+    // Cumulative with prior GPA carryover.
+    const priorGpa = Number((document.getElementById('gpa-prior') as HTMLInputElement).value);
+    const priorCr = Number((document.getElementById('gpa-prior-cr') as HTMLInputElement).value) || 0;
+    let cumGpa = termGpa, cumCr = credits, cumPoints = points;
+    if (priorGpa > 0 && priorCr > 0) {
+      cumPoints = points + priorGpa * priorCr;
+      cumCr = credits + priorCr;
+      cumGpa = cumPoints / cumCr;
+      cumEl.textContent = `Cumulative GPA: ${cumGpa.toFixed(2)} over ${cumCr} credits`;
+    } else {
+      cumEl.textContent = '';
+    }
+    planCalc(cumGpa, cumCr);
+  }
+
+  // GPA needed on upcoming credits to hit a target cumulative GPA.
+  function planCalc(curGpa: number, curCr: number) {
+    const target = Number((document.getElementById('gpa-target') as HTMLInputElement).value) || 0;
+    const addCr = Number((document.getElementById('gpa-target-cr') as HTMLInputElement).value) || 0;
+    const out = document.getElementById('gpa-plan')!;
+    if (curCr === 0 || addCr <= 0 || target <= 0) { out.textContent = 'Enter your courses and a target to see the GPA you need.'; return; }
+    // (curGpa*curCr + needed*addCr) / (curCr+addCr) = target
+    const needed = (target * (curCr + addCr) - curGpa * curCr) / addCr;
+    if (needed <= 0) {
+      out.textContent = `You've already exceeded a ${target.toFixed(2)} cumulative GPA — even a 0.0 keeps you above target.`;
+    } else if (needed > 4.3) {
+      out.textContent = `A ${target.toFixed(2)} cumulative GPA isn't reachable with ${addCr} more credits (would need ${needed.toFixed(2)}, above the 4.0 scale).`;
+    } else {
+      out.textContent = `You need a ${needed.toFixed(2)} GPA across the next ${addCr} credits to reach a ${target.toFixed(2)} cumulative GPA.`;
+    }
+  }
+
+  document.getElementById('gpa-add')!.addEventListener('click', () => { makeRow(); calc(); });
+  ['gpa-prior', 'gpa-prior-cr', 'gpa-target', 'gpa-target-cr'].forEach((id) => document.getElementById(id)!.addEventListener('input', calc));
+
+  // Seed with three example rows.
+  makeRow('', 'A', '3');
+  makeRow('', 'B+', '4');
+  makeRow('', 'A-', '3');
+  calc();
+</script>

@@ -1,0 +1,153 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+import { COUNTRIES } from '../lib/faddr';
+---
+
+<ToolLayout slug="fake-address-generator">
+  <div class="flex flex-col gap-6">
+
+    <section class="flex flex-col gap-3">
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Country
+          <select id="fa-country" class="field w-56">
+            {COUNTRIES.map((c) => <option value={c.code} selected={c.code === 'US'}>{c.flag} {c.name}</option>)}
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Gender
+          <select id="fa-sex" class="field w-32">
+            <option value="any" selected>Any</option><option value="male">Male</option><option value="female">Female</option>
+          </select>
+        </label>
+        <button id="fa-new" class="btn btn-primary ml-auto">New identity</button>
+      </div>
+      <div id="fa-card" class="panel panel-lift grid grid-cols-1 gap-x-6 gap-y-2 p-5 sm:grid-cols-2"></div>
+      <p class="text-xs text-ink-tertiary">Click any field to copy it.</p>
+    </section>
+
+    <section class="flex flex-col gap-3 border-t border-hairline pt-5">
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+          <input id="fa-count" type="number" min="1" max="1000" value="10" class="field w-28" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Format
+          <select id="fa-fmt" class="field w-40">
+            <option value="multiline" selected>Multi-line</option>
+            <option value="oneline">Single line</option>
+            <option value="csv">CSV</option>
+            <option value="json">JSON</option>
+          </select>
+        </label>
+        <button id="fa-gen" class="btn btn-primary ml-auto">Generate</button>
+        <button id="fa-dl" class="btn btn-secondary">Download</button>
+      </div>
+      <div class="copy-wrap">
+        <textarea id="fa-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated addresses"></textarea>
+        <button type="button" class="copy-icon" data-copy-target="#fa-out" aria-label="Copy"></button>
+      </div>
+    </section>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free fake address generator creates random, realistic-looking addresses for
+      {COUNTRIES.length} countries — United States, United Kingdom, Canada, Australia,
+      Germany, France, Italy, Spain, Netherlands, Sweden, Japan, China, India, Brazil,
+      Mexico and Russia. Each record is a coherent persona: a name drawn from that
+      country's naming conventions, a street, real city and region, a correctly
+      formatted postal code and phone number, plus latitude, longitude, currency and
+      timezone. Pick a country and gender for a single identity with click-to-copy
+      fields, or generate up to a thousand at once as multi-line text, CSV or JSON and
+      download them.
+    </p>
+    <p>
+      Every address is fictional and does not correspond to a real person or location.
+      House numbers, postal codes and phone numbers are randomised — phones use each
+      country's reserved fictional range where one exists. Use it to test address and
+      checkout forms, seed sample databases, and build realistic demos. Need matching
+      names, emails or card data? Try the fake name, fake email and fake ID generators.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { generate, oneLine, multiLine, type FullAddress, type Sex } from '../lib/faddr';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const countryEl = $('fa-country') as HTMLSelectElement;
+  const sexEl = $('fa-sex') as HTMLSelectElement;
+  const card = $('fa-card');
+  const countEl = $('fa-count') as HTMLInputElement;
+  const fmtEl = $('fa-fmt') as HTMLSelectElement;
+  const out = $('fa-out') as HTMLTextAreaElement;
+
+  const build = (): FullAddress => generate(countryEl.value, sexEl.value as Sex);
+
+  const FIELDS: [keyof FullAddress, string][] = [
+    ['name', 'Full name'], ['gender', 'Gender'], ['street', 'Street'],
+    ['city', 'City'], ['region', 'State / Region'], ['postal', 'Postal code'],
+    ['country', 'Country'], ['phone', 'Phone'], ['latitude', 'Latitude'],
+    ['longitude', 'Longitude'], ['currency', 'Currency'], ['timezone', 'Timezone'],
+  ];
+
+  const attr = (s: string) => s.replace(/"/g, '&quot;');
+
+  function renderCard() {
+    const a = build();
+    card.innerHTML = FIELDS.map(([k, label]) => {
+      const v = k === 'region' ? (a.regionAbbr ? `${a.region} (${a.regionAbbr})` : a.region) : String(a[k] ?? '');
+      return `<button type="button" class="fa-field flex flex-col items-start gap-0.5 rounded-md p-1 text-left transition-colors hover:bg-surface-2" data-copy="${attr(v)}">
+           <span class="text-xs uppercase tracking-wide text-ink-tertiary">${label}</span>
+           <span class="font-mono text-sm text-ink">${attr(v)}</span>
+         </button>`;
+    }).join('');
+  }
+
+  card.addEventListener('click', async (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.fa-field');
+    if (!btn) return;
+    await navigator.clipboard.writeText(btn.dataset.copy || '');
+    const label = btn.querySelector('span:first-child')!;
+    const orig = label.textContent;
+    label.textContent = 'Copied!';
+    setTimeout(() => (label.textContent = orig), 1200);
+  });
+
+  // --- Bulk output ---
+  function csvCell(v: string): string {
+    return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  }
+
+  function format(list: FullAddress[]): string {
+    const fmt = fmtEl.value;
+    if (fmt === 'json') return JSON.stringify(list, null, 2);
+    if (fmt === 'csv') {
+      const head = FIELDS.map(([, label]) => label).join(',');
+      const rows = list.map((a) => FIELDS.map(([k]) => csvCell(String(a[k] ?? ''))).join(','));
+      return [head, ...rows].join('\n');
+    }
+    if (fmt === 'oneline') return list.map((a) => `${a.name} — ${oneLine(a)}`).join('\n');
+    return list.map((a) => `${a.name}\n${multiLine(a)}\n${a.phone}`).join('\n\n');
+  }
+
+  function generateBulk() {
+    const n = Math.max(1, Math.min(1000, Number(countEl.value) || 1));
+    out.value = format(Array.from({ length: n }, build));
+  }
+
+  const ext = () => (fmtEl.value === 'json' ? 'json' : fmtEl.value === 'csv' ? 'csv' : 'txt');
+
+  [countryEl, sexEl].forEach((el) => el.addEventListener('change', () => { renderCard(); generateBulk(); }));
+  $('fa-new').addEventListener('click', renderCard);
+  [countEl, fmtEl].forEach((el) => el.addEventListener('input', generateBulk));
+  $('fa-gen').addEventListener('click', generateBulk);
+  $('fa-dl').addEventListener('click', () => {
+    const type = fmtEl.value === 'json' ? 'application/json' : fmtEl.value === 'csv' ? 'text/csv' : 'text/plain';
+    const url = URL.createObjectURL(new Blob([out.value], { type }));
+    const a = document.createElement('a');
+    a.href = url; a.download = `fake-addresses.${ext()}`; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+
+  renderCard();
+  generateBulk();
+</script>

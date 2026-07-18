@@ -1,0 +1,247 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="weight-converter">
+  <div id="wc-root" class="flex flex-col gap-5">
+
+    <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="wc-from-val">From</label>
+        <input id="wc-from-val" type="number" class="field" value="1" inputmode="decimal" step="any" />
+        <select id="wc-from-unit" class="field mt-1" aria-label="Convert from unit"></select>
+      </div>
+      <button
+        id="wc-swap"
+        type="button"
+        class="btn btn-secondary mb-1 h-10 w-10 shrink-0 justify-self-center p-0"
+        aria-label="Swap units"
+        title="Swap units"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
+      </button>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="wc-to-val">To</label>
+        <div class="copy-wrap">
+          <input id="wc-to-val" type="text" class="field" readonly aria-live="polite" />
+          <button type="button" class="copy-icon" data-copy-target="#wc-to-val" aria-label="Copy"></button>
+        </div>
+        <select id="wc-to-unit" class="field mt-1" aria-label="Convert to unit"></select>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-end gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Decimal places
+        <select id="wc-decimals" class="field w-auto py-1">
+          <option value="auto" selected>Auto</option>
+          <option value="0">0</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="6">6</option>
+          <option value="8">8</option>
+          <option value="10">10</option>
+        </select>
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="wc-group" type="checkbox" checked class="h-4 w-4" />
+        Thousands separators
+      </label>
+    </div>
+
+    <p id="wc-formula" class="text-[13px] text-ink-tertiary"></p>
+    <p id="wc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div>
+      <p class="mb-2 flex items-center justify-between text-[13px] text-ink-subtle">
+        <span id="wc-alllabel">1 Kilogram in every unit</span>
+        <button id="wc-copyall" type="button" class="btn btn-tertiary px-2 py-0.5 text-[13px]">Copy all</button>
+      </p>
+      <div id="wc-all" class="overflow-hidden rounded-md border border-hairline"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free weight and mass converter converts between every common and scientific unit of
+      mass — microgram, milligram, carat, grain, gram, dram, ounce, troy ounce, pound, kilogram,
+      stone, hundredweight, short (US) ton, metric tonne, long (imperial) ton, slug and the atomic
+      mass unit (dalton). Type a value, pick your units, and the result, the exact formula and a
+      full "in every unit" table update instantly.
+    </p>
+    <p>
+      Unlike most converters, you can control precision directly: choose Auto for a clean
+      trimmed result or lock 0–10 decimal places, and toggle thousands separators for large
+      values. Copy any single result or the whole table with one click, and swap the two units
+      instantly. Conversions use exact SI-derived factors (1 lb = 453.592 37 g, 1 oz = 28.349 523 125 g,
+      1 stone = 6350.293 18 g), so kg to lbs, grams to ounces, stone to kg and pounds to kg all round-trip
+      accurately.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+
+  const UNITS: Record<string, number> = {
+    Microgram: 1e-6,
+    Milligram: 1e-3,
+    Carat: 0.2,
+    Grain: 0.06479891,
+    Gram: 1,
+    Dram: 1.7718451953125,
+    Ounce: 28.349523125,
+    'Troy ounce': 31.1034768,
+    Pound: 453.59237,
+    Kilogram: 1000,
+    Stone: 6350.29318,
+    'Hundredweight (US)': 45359.237,
+    'Short ton (US)': 907184.74,
+    'Tonne (metric)': 1e6,
+    'Long ton (imperial)': 1016046.9088,
+    Slug: 14593.9029372064,
+    'Atomic mass unit (Da)': 1.6605390666e-24,
+  };
+  const NAMES = Object.keys(UNITS);
+
+  const root = document.getElementById('wc-root') as HTMLElement;
+  const fromVal = document.getElementById('wc-from-val') as HTMLInputElement;
+  const toVal = document.getElementById('wc-to-val') as HTMLInputElement;
+  const fromUnit = document.getElementById('wc-from-unit') as HTMLSelectElement;
+  const toUnit = document.getElementById('wc-to-unit') as HTMLSelectElement;
+  const swap = document.getElementById('wc-swap') as HTMLButtonElement;
+  const decimals = document.getElementById('wc-decimals') as HTMLSelectElement;
+  const groupBox = document.getElementById('wc-group') as HTMLInputElement;
+  const formula = document.getElementById('wc-formula') as HTMLElement;
+  const err = document.getElementById('wc-error') as HTMLElement;
+  const allBox = document.getElementById('wc-all') as HTMLElement;
+  const allLabel = document.getElementById('wc-alllabel') as HTMLElement;
+  const copyAllBtn = document.getElementById('wc-copyall') as HTMLButtonElement;
+
+  function convertVal(value: number, from: string, to: string): number {
+    return (value * UNITS[from]) / UNITS[to];
+  }
+
+  function fmt(n: number): string {
+    if (!isFinite(n)) return '∞';
+    if (n === 0) return '0';
+    const abs = Math.abs(n);
+    const dp = decimals.value;
+
+    if (abs >= 1e15 || abs < 1e-6) return n.toExponential(dp === 'auto' ? 6 : Number(dp));
+    let num: number;
+    if (dp === 'auto') num = Math.round(n * 1e9) / 1e9; 
+    else num = Number(n.toFixed(Number(dp)));
+    if (!groupBox.checked) {
+      return dp === 'auto' ? String(num) : num.toFixed(Number(dp));
+    }
+    return num.toLocaleString('en-US', {
+      minimumFractionDigits: dp === 'auto' ? 0 : Number(dp),
+      maximumFractionDigits: dp === 'auto' ? 20 : Number(dp),
+    });
+  }
+
+  function fillUnits() {
+    const opts = NAMES.map((u) => `<option>${u}</option>`).join('');
+    fromUnit.innerHTML = opts;
+    toUnit.innerHTML = opts;
+    fromUnit.value = 'Kilogram';
+    toUnit.value = 'Pound';
+  }
+
+  function renderAll(v: number) {
+    allLabel.textContent = `${fmt(v)} ${fromUnit.value} in every unit`;
+    const rows = NAMES.filter((u) => u !== fromUnit.value)
+      .map((u) => {
+        const r = convertVal(v, fromUnit.value, u);
+        return `<tr class="border-t border-hairline">
+          <td class="px-3 py-2 text-ink-subtle">${u}</td>
+          <td class="px-3 py-2 text-right font-mono text-ink">${fmt(r)}</td>
+          <td class="w-10 px-2 py-2 text-right">
+            <button type="button" class="wc-rowcopy text-ink-tertiary hover:text-ink" data-v="${r}" title="Copy value" aria-label="Copy ${u} value">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+          </td>
+        </tr>`;
+      })
+      .join('');
+    allBox.innerHTML = `<table class="w-full text-[13px]">${rows}</table>`;
+  }
+
+  function convert() {
+    err.classList.add('hidden');
+    const rawStr = fromVal.value.trim();
+    const v = Number(rawStr);
+    if (rawStr === '' || isNaN(v)) {
+      toVal.value = '';
+      formula.textContent = '';
+      allBox.innerHTML = '';
+      allLabel.textContent = '';
+      if (rawStr !== '') {
+        err.textContent = `"${rawStr}" is not a valid number.`;
+        err.classList.remove('hidden');
+      }
+      return;
+    }
+    const result = convertVal(v, fromUnit.value, toUnit.value);
+    toVal.value = fmt(result);
+    formula.textContent = `${fmt(v)} ${fromUnit.value} = ${fmt(result)} ${toUnit.value}`;
+    renderAll(v);
+  }
+
+  async function copyText(text: string, btn: HTMLButtonElement, label: string) {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      const prev = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => (btn.textContent = prev ?? label), 1400);
+    } catch {
+      err.textContent = 'Clipboard copy was blocked by the browser.';
+      err.classList.remove('hidden');
+    }
+  }
+
+  fromVal.addEventListener('input', convert);
+  fromUnit.addEventListener('change', convert);
+  toUnit.addEventListener('change', convert);
+  decimals.addEventListener('change', convert);
+  groupBox.addEventListener('change', convert);
+
+  swap.addEventListener('click', () => {
+    const a = fromUnit.value;
+    const oldFrom = Number(fromVal.value);
+    fromUnit.value = toUnit.value; // now the old "to" unit
+    toUnit.value = a;
+    // Carry the converted value into the input so the swap reads naturally.
+    if (fromVal.value.trim() !== '' && !isNaN(oldFrom)) {
+      fromVal.value = String(convertVal(oldFrom, a, fromUnit.value));
+    }
+    convert();
+  });
+
+  copyAllBtn.addEventListener('click', () => {
+    const v = Number(fromVal.value);
+    if (fromVal.value.trim() === '' || isNaN(v)) return;
+    const lines = NAMES.map((u) => `${fmt(convertVal(v, fromUnit.value, u))} ${u}`).join('\n');
+    copyText(lines, copyAllBtn, 'Copy all');
+  });
+
+  // Per-row copy (delegated — rows are re-rendered on every change).
+  allBox.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.wc-rowcopy') as HTMLButtonElement | null;
+    if (!btn) return;
+    const raw = Number(btn.dataset.v);
+    void navigator.clipboard.writeText(fmt(raw));
+    const svg = btn.innerHTML;
+    btn.textContent = '✓';
+    setTimeout(() => (btn.innerHTML = svg), 1200);
+  });
+
+  // ponytail: one runnable check for the factor + rounding math.
+  console.assert(Math.abs(convertVal(1, 'Kilogram', 'Pound') - 2.2046226218) < 1e-6, 'kg→lb');
+  console.assert(Math.abs(convertVal(1, 'Stone', 'Kilogram') - 6.3502932) < 1e-6, 'stone→kg');
+
+  fillUnits();
+  convert();
+</script>

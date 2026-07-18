@@ -1,0 +1,339 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="px-to-rem">
+  <div class="flex flex-col gap-6">
+
+    <div class="flex flex-wrap items-end gap-x-6 gap-y-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Root font size (base)
+        <div class="flex items-center gap-2">
+          <input id="pr-base" type="number" class="field w-24" value="16" min="1" step="1" />
+          <span class="text-ink-tertiary">px = 1rem</span>
+        </div>
+      </label>
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Presets
+        <div class="flex gap-2">
+          <button type="button" class="btn btn-tertiary px-2 py-1 text-[13px] pr-preset" data-base="16">16px</button>
+          <button type="button" class="btn btn-tertiary px-2 py-1 text-[13px] pr-preset" data-base="10">10px (62.5%)</button>
+          <button type="button" class="btn btn-tertiary px-2 py-1 text-[13px] pr-preset" data-base="14">14px</button>
+          <button type="button" class="btn btn-tertiary px-2 py-1 text-[13px] pr-preset" data-base="18">18px</button>
+        </div>
+      </div>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Precision
+        <select id="pr-prec" class="field w-auto py-1">
+          <option value="auto" selected>Auto</option>
+          <option value="1">1 decimal</option>
+          <option value="2">2 decimals</option>
+          <option value="3">3 decimals</option>
+          <option value="4">4 decimals</option>
+          <option value="6">6 decimals</option>
+        </select>
+      </label>
+    </div>
+
+    <p id="pr-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Pixels (px)
+        <input id="pr-px" type="number" class="field font-mono" value="24" step="any" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        REM
+        <div class="flex gap-2">
+          <input id="pr-rem" type="number" class="field font-mono" step="any" />
+          <button class="btn btn-secondary px-2 pr-copy" data-t="pr-rem" data-u="rem" type="button" title="Copy rem">Copy</button>
+        </div>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        EM
+        <div class="flex gap-2">
+          <input id="pr-em" type="number" class="field font-mono" step="any" />
+          <button class="btn btn-secondary px-2 pr-copy" data-t="pr-em" data-u="em" type="button" title="Copy em">Copy</button>
+        </div>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Percent (%)
+        <div class="flex gap-2">
+          <input id="pr-pct" type="number" class="field font-mono" step="any" />
+          <button class="btn btn-secondary px-2 pr-copy" data-t="pr-pct" data-u="%" type="button" title="Copy %">Copy</button>
+        </div>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Points (pt)
+        <div class="flex gap-2">
+          <input id="pr-pt" type="number" class="field font-mono" step="any" />
+          <button class="btn btn-secondary px-2 pr-copy" data-t="pr-pt" data-u="pt" type="button" title="Copy pt">Copy</button>
+        </div>
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        CSS snippet
+        <div class="flex gap-2">
+          <select id="pr-prop" class="field w-auto py-1">
+            <option value="font-size" selected>font-size</option>
+            <option value="margin">margin</option>
+            <option value="padding">padding</option>
+            <option value="width">width</option>
+            <option value="height">height</option>
+            <option value="line-height">line-height</option>
+            <option value="border-radius">border-radius</option>
+            <option value="gap">gap</option>
+          </select>
+          <code id="pr-snippet" class="field flex-1 font-mono text-ink" style="line-height:2.2"></code>
+          <button id="pr-snippet-copy" class="btn btn-secondary px-2" type="button">Copy</button>
+        </div>
+      </label>
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Live preview
+        <div class="panel flex items-center overflow-hidden px-3" style="min-height:2.5rem">
+          <span id="pr-preview" class="text-ink" style="white-space:nowrap">The quick brown fox</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-3 border-t border-hairline pt-6">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <span class="text-[15px] font-medium text-ink">Batch convert</span>
+          <p class="text-[13px] text-ink-subtle">Paste any CSS or list of values — every <code>px</code> is converted at once.</p>
+        </div>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Convert px to
+          <select id="pr-batch-unit" class="field w-auto py-1">
+            <option value="rem" selected>rem</option>
+            <option value="em">em</option>
+            <option value="%">percent</option>
+            <option value="pt">pt</option>
+          </select>
+        </label>
+      </div>
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+          <span class="flex items-center justify-between">
+            <span>Input</span>
+            <button id="pr-batch-clear" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Clear</button>
+          </span>
+          <textarea id="pr-batch-in" class="field font-mono" spellcheck="false" autocapitalize="off"
+            autocomplete="off" autocorrect="off" style="height:14rem;resize:vertical"
+            aria-label="Batch input"></textarea>
+        </div>
+        <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+          <span class="flex items-center justify-between">
+            <span>Output</span>
+            <span class="flex gap-2">
+              <button id="pr-batch-download" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Download</button>
+            </span>
+          </span>
+          <div class="copy-wrap"><pre class="hl-block field" style="height:14rem;margin:0;overflow:auto;white-space:pre-wrap"><code id="pr-batch-out" class="hljs" style="background:transparent;padding:0"></code></pre><button type="button" class="copy-icon" data-copy-target="#pr-batch-out" aria-label="Copy"></button></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <span class="text-[13px] text-ink-subtle">Quick reference</span>
+      <div id="pr-table" class="mt-2 overflow-hidden rounded-md border border-hairline"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free PX to REM converter turns pixel values into <code>rem</code>,
+      <code>em</code>, <code>%</code> and <code>pt</code> for responsive CSS, and
+      back again — edit any field and the rest update live. Set your root font
+      size (16px by default) or tap a preset, including the popular
+      <code>62.5%</code> trick that makes <code>1rem = 10px</code> for easier math.
+      Using rem keeps your layout scalable and respects the reader's browser
+      font-size preference.
+    </p>
+    <p>
+      Control rounding precision from auto down to a fixed number of decimals,
+      copy a ready-to-paste CSS snippet for any property, and see a live text
+      preview at the converted size. The <strong>batch converter</strong> rewrites
+      an entire stylesheet at once: paste any CSS or a list of values and every
+      <code>px</code> is converted to your chosen unit, with the result
+      syntax-highlighted and ready to copy or download. A reference table of
+      common sizes is included.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { hl } from '../lib/highlight';
+
+  const baseEl = document.getElementById('pr-base') as HTMLInputElement;
+  const precSel = document.getElementById('pr-prec') as HTMLSelectElement;
+  const errEl = document.getElementById('pr-error')!;
+  const px = document.getElementById('pr-px') as HTMLInputElement;
+  const rem = document.getElementById('pr-rem') as HTMLInputElement;
+  const em = document.getElementById('pr-em') as HTMLInputElement;
+  const pct = document.getElementById('pr-pct') as HTMLInputElement;
+  const pt = document.getElementById('pr-pt') as HTMLInputElement;
+  const propSel = document.getElementById('pr-prop') as HTMLSelectElement;
+  const snippetEl = document.getElementById('pr-snippet')!;
+  const previewEl = document.getElementById('pr-preview')! as HTMLElement;
+  const table = document.getElementById('pr-table')!;
+  const batchIn = document.getElementById('pr-batch-in') as HTMLTextAreaElement;
+  const batchOut = document.getElementById('pr-batch-out')!;
+  const batchUnit = document.getElementById('pr-batch-unit') as HTMLSelectElement;
+
+  const PT_PER_PX = 0.75;
+
+  function base(): number {
+    const v = Number(baseEl.value);
+    return v > 0 && isFinite(v) ? v : 16;
+  }
+
+  function showError(msg: string) {
+    errEl.textContent = msg;
+    errEl.classList.remove('hidden');
+  }
+  function clearError() {
+    errEl.classList.add('hidden');
+  }
+
+  function fmt(n: number): string {
+    if (!isFinite(n)) return '';
+    const p = precSel.value;
+    if (p === 'auto') return String(Math.round(n * 1e5) / 1e5);
+    return n.toFixed(Number(p));
+  }
+
+  function setFromPx(v: number) {
+    const b = base();
+    rem.value = fmt(v / b);
+    em.value = fmt(v / b);
+    pct.value = fmt((v / b) * 100);
+    pt.value = fmt(v * PT_PER_PX);
+    updateExtras(v / b, v);
+  }
+
+  function updateExtras(remVal: number, pxVal: number) {
+    const remStr = fmt(remVal);
+    snippetEl.textContent = `${propSel.value}: ${remStr}rem;`;
+    // Cap the preview size so large values don't blow out the layout.
+    previewEl.style.fontSize = `${Math.min(Math.max(pxVal, 4), 80)}px`;
+    renderTable();
+  }
+
+  function recalc(source: 'px' | 'rem' | 'em' | 'pct' | 'pt') {
+    clearError();
+    const b = base();
+    let pxVal: number;
+    switch (source) {
+      case 'px': pxVal = Number(px.value); break;
+      case 'rem': pxVal = Number(rem.value) * b; break;
+      case 'em': pxVal = Number(em.value) * b; break;
+      case 'pct': pxVal = (Number(pct.value) / 100) * b; break;
+      case 'pt': pxVal = Number(pt.value) / PT_PER_PX; break;
+    }
+    if (!isFinite(pxVal)) { showError('Enter a valid number.'); return; }
+    // Write every field except the one being edited (keeps the caret steady).
+    if (source !== 'px') px.value = fmt(pxVal);
+    if (source !== 'rem') rem.value = fmt(pxVal / b);
+    if (source !== 'em') em.value = fmt(pxVal / b);
+    if (source !== 'pct') pct.value = fmt((pxVal / b) * 100);
+    if (source !== 'pt') pt.value = fmt(pxVal * PT_PER_PX);
+    updateExtras(pxVal / b, pxVal);
+  }
+
+  function renderTable() {
+    const b = base();
+    const sizes = [8, 12, 14, 16, 18, 20, 24, 32, 48, 64];
+    table.innerHTML = `<table class="w-full text-[13px]">
+      <tr class="bg-surface-2 text-ink-subtle">
+        <td class="px-3 py-2">px</td>
+        <td class="px-3 py-2 text-right">rem</td>
+        <td class="px-3 py-2 text-right">em</td>
+        <td class="px-3 py-2 text-right">%</td>
+        <td class="px-3 py-2 text-right">pt</td>
+      </tr>
+      ${sizes.map((s) => `<tr class="border-t border-hairline">
+        <td class="px-3 py-2 font-mono text-ink-subtle">${s}px</td>
+        <td class="px-3 py-2 text-right font-mono text-ink">${fmt(s / b)}</td>
+        <td class="px-3 py-2 text-right font-mono text-ink-subtle">${fmt(s / b)}</td>
+        <td class="px-3 py-2 text-right font-mono text-ink-subtle">${fmt((s / b) * 100)}</td>
+        <td class="px-3 py-2 text-right font-mono text-ink-subtle">${fmt(s * PT_PER_PX)}</td>
+      </tr>`).join('')}
+    </table>`;
+  }
+
+  const PX_RX = /(-?\d*\.?\d+)px\b/gi;
+  let batchResult = '';
+
+  function convertBatch() {
+    const b = base();
+    const unit = batchUnit.value;
+    batchResult = batchIn.value.replace(PX_RX, (_m, numStr) => {
+      const n = Number(numStr);
+      if (!isFinite(n)) return `${numStr}px`;
+      let out: number;
+      switch (unit) {
+        case 'rem': case 'em': out = n / b; break;
+        case '%': out = (n / b) * 100; break;
+        case 'pt': out = n * PT_PER_PX; break;
+        default: out = n / b;
+      }
+      return `${fmt(out)}${unit}`;
+    });
+    void hl(batchOut, batchResult, 'css');
+  }
+
+  // Wire single-value fields.
+  px.addEventListener('input', () => recalc('px'));
+  rem.addEventListener('input', () => recalc('rem'));
+  em.addEventListener('input', () => recalc('em'));
+  pct.addEventListener('input', () => recalc('pct'));
+  pt.addEventListener('input', () => recalc('pt'));
+
+  const recalcAll = () => { recalc('px'); convertBatch(); };
+  baseEl.addEventListener('input', recalcAll);
+  precSel.addEventListener('change', recalcAll);
+  propSel.addEventListener('change', () => recalc('px'));
+
+  document.querySelectorAll<HTMLButtonElement>('.pr-preset').forEach((btn) => {
+    btn.addEventListener('click', () => { baseEl.value = btn.dataset.base!; recalcAll(); });
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('.pr-copy').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const t = document.getElementById(btn.dataset.t!) as HTMLInputElement;
+      if (!t.value) return;
+      await navigator.clipboard.writeText(`${t.value}${btn.dataset.u}`);
+      btn.textContent = 'Copied!'; setTimeout(() => (btn.textContent = 'Copy'), 1400);
+    });
+  });
+
+  document.getElementById('pr-snippet-copy')!.addEventListener('click', async (e) => {
+    await navigator.clipboard.writeText(snippetEl.textContent ?? '');
+    const b = e.currentTarget as HTMLButtonElement;
+    b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
+  });
+
+  // Batch controls.
+  batchIn.addEventListener('input', convertBatch);
+  batchUnit.addEventListener('change', convertBatch);
+  document.getElementById('pr-batch-clear')!.addEventListener('click', () => {
+    batchIn.value = ''; batchResult = ''; batchOut.textContent = '';
+  });
+  document.getElementById('pr-batch-download')!.addEventListener('click', () => {
+    if (!batchResult) return;
+    const url = URL.createObjectURL(new Blob([batchResult], { type: 'text/css' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = 'converted.css';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // Seed the batch box with a realistic CSS block so the feature is discoverable.
+  batchIn.value = '.card {\n  font-size: 18px;\n  padding: 24px 32px;\n  border-radius: 8px;\n  gap: 12px;\n}';
+
+  recalc('px');
+  convertBatch();
+</script>

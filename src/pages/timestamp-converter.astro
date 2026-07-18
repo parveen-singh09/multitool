@@ -1,0 +1,627 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="timestamp-converter">
+  <div class="flex flex-col gap-6">
+
+    <div class="panel panel-lift flex flex-wrap items-center justify-between gap-4 p-5">
+      <div class="flex flex-col gap-2">
+        <span class="text-[13px] text-ink-subtle">Current Unix time</span>
+        <div class="flex flex-wrap items-baseline gap-3">
+          <span id="ts-now" class="font-mono text-2xl text-ink">0</span>
+          <span class="text-[13px] text-ink-tertiary">seconds since 1 Jan 1970 UTC</span>
+        </div>
+        <span id="ts-now-ms" class="font-mono text-[13px] text-ink-tertiary">0 ms</span>
+      </div>
+      <div class="flex gap-2">
+        <button id="ts-now-copy" type="button" class="btn btn-secondary">Copy</button>
+        <button id="ts-now-use" type="button" class="btn btn-secondary">Use now</button>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-3">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto]">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Enter a Unix timestamp or a date
+          <input
+            id="ts-in"
+            class="field font-mono"
+            placeholder="1700000000  ·  2026-07-04 14:30  ·  Jul 4 2026"
+            spellcheck="false"
+            autocomplete="off"
+          />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Timezone
+          <select id="ts-tz" class="field w-full sm:w-64"></select>
+        </label>
+        <div class="flex items-end">
+          <button id="ts-now-btn" type="button" class="btn btn-secondary w-full sm:w-auto">Now</button>
+        </div>
+      </div>
+      <p id="ts-parsed" class="text-[13px] text-ink-tertiary"></p>
+      <p id="ts-error" class="hidden text-[13px]" style="color:#e5484d" role="alert">
+        Could not understand that. Try a timestamp like 1700000000, or a date like
+        2026-07-04, Jul 4 2026, or 07/04/2026.
+      </p>
+    </div>
+
+    <div id="ts-out" class="overflow-hidden rounded-md border border-hairline"></div>
+
+    <div class="flex flex-col gap-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle" for="ts-fmt">
+        Custom format
+        <input id="ts-fmt" class="field font-mono" value="YYYY-MM-DD HH:mm:ss" spellcheck="false" autocomplete="off" />
+      </label>
+      <div
+        id="ts-fmt-out"
+        class="ts-copy panel flex cursor-pointer items-center justify-between gap-3 p-4 font-mono text-[13px] text-ink transition-colors hover:bg-surface-2"
+        role="button"
+        tabindex="0"
+      ></div>
+      <span class="text-[12px] text-ink-tertiary">
+        Tokens: YYYY YY · MM M MMMM MMM · DD D · dddd ddd · HH H · hh h · mm m · ss s · SSS · A a
+      </span>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <span class="text-sm text-ink-subtle">Around the world</span>
+      <div id="ts-world" class="grid grid-cols-1 gap-2 sm:grid-cols-2"></div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle" for="ts-lang">
+          Code snippet
+          <select id="ts-lang" class="field w-full sm:w-56">
+            <option value="javascript">JavaScript</option>
+            <option value="python">Python</option>
+            <option value="java">Java</option>
+            <option value="php">PHP</option>
+            <option value="go">Go</option>
+            <option value="ruby">Ruby</option>
+            <option value="csharp">C#</option>
+            <option value="sql">SQL (PostgreSQL)</option>
+            <option value="bash">Bash</option>
+            <option value="powershell">PowerShell</option>
+          </select>
+        </label>
+      </div>
+      <div class="copy-wrap"><pre class="hl-block field" style="margin:0;overflow:auto;white-space:pre"><code id="ts-code" class="hljs" style="background:transparent;padding:0"></code></pre><button type="button" class="copy-icon" data-copy-target="#ts-code" aria-label="Copy"></button></div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle" for="ts-batch-in">
+        Batch convert — one timestamp or date per line
+        <textarea
+          id="ts-batch-in"
+          class="field font-mono"
+          style="height:9rem;resize:vertical"
+          spellcheck="false"
+          autocomplete="off"
+          placeholder="1700000000&#10;1699999999000&#10;2026-07-04 14:30&#10;Jul 4 2026"
+        ></textarea>
+      </label>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <span id="ts-batch-stat" class="text-[12px] text-ink-tertiary"></span>
+        <div class="flex gap-2">
+          <button id="ts-batch-copy" type="button" class="btn btn-secondary">Copy TSV</button>
+          <button id="ts-batch-dl" type="button" class="btn btn-secondary">Download CSV</button>
+        </div>
+      </div>
+      <div id="ts-batch-out" class="overflow-auto rounded-md border border-hairline"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free Unix timestamp converter turns epoch timestamps into human-readable
+      dates and back again — in any timezone. Paste a timestamp in seconds,
+      milliseconds, microseconds or nanoseconds and it detects the unit
+      automatically, or type a date in almost any common format. Results are shown
+      in your selected timezone alongside UTC/GMT, ISO 8601, RFC 2822, relative
+      time, the raw Unix value, the ISO week, quarter and day of year, plus a
+      fully customisable format string. A live clock shows the current Unix time,
+      the same moment is displayed across major world timezones, and any converted
+      moment is linkable via the URL. Click any row to copy it.
+    </p>
+    <p>
+      Ready-to-paste code snippets show how to parse the same timestamp in
+      JavaScript, Python, Java, PHP, Go, Ruby, C#, SQL, Bash and PowerShell, each
+      syntax-highlighted. A batch converter turns a whole list of timestamps or
+      dates — one per line — into a table of Unix seconds, milliseconds, ISO 8601
+      and your chosen timezone, which you can copy as TSV or download as CSV.
+      Both ISO 8601 in UTC and ISO 8601 with the selected zone's offset (RFC 3339)
+      are included.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { hl } from '../lib/highlight';
+
+  const nowEl = document.getElementById('ts-now')!;
+  const nowMsEl = document.getElementById('ts-now-ms')!;
+  const input = document.getElementById('ts-in') as HTMLInputElement;
+  const tzSel = document.getElementById('ts-tz') as HTMLSelectElement;
+  const parsed = document.getElementById('ts-parsed')!;
+  const err = document.getElementById('ts-error')!;
+  const out = document.getElementById('ts-out')!;
+  const fmtIn = document.getElementById('ts-fmt') as HTMLInputElement;
+  const fmtOut = document.getElementById('ts-fmt-out')!;
+  const world = document.getElementById('ts-world')!;
+  const langSel = document.getElementById('ts-lang') as HTMLSelectElement;
+  const codeEl = document.getElementById('ts-code')!;
+  const batchIn = document.getElementById('ts-batch-in') as HTMLTextAreaElement;
+  const batchOut = document.getElementById('ts-batch-out')!;
+  const batchStat = document.getElementById('ts-batch-stat')!;
+  const batchCopy = document.getElementById('ts-batch-copy')!;
+  const batchDl = document.getElementById('ts-batch-dl')!;
+
+  const p2 = (n: number) => String(n).padStart(2, '0');
+  const p3 = (n: number) => String(n).padStart(3, '0');
+
+  function zoneList(): string[] {
+    try {
+      // @ts-ignore - supportedValuesOf is newer than some lib.dom versions
+      const all = Intl.supportedValuesOf?.('timeZone') as string[] | undefined;
+      if (all && all.length) return all;
+    } catch {  }
+    return [
+      'UTC', 'America/New_York', 'America/Chicago', 'America/Denver',
+      'America/Los_Angeles', 'America/Sao_Paulo', 'Europe/London', 'Europe/Paris',
+      'Europe/Berlin', 'Europe/Moscow', 'Asia/Dubai', 'Asia/Kolkata',
+      'Asia/Shanghai', 'Asia/Tokyo', 'Australia/Sydney', 'Pacific/Auckland',
+    ];
+  }
+
+  const localZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+  type Parse = { date: Date; source: string } | null;
+
+  function detectUnit(digits: string): { ms: number; unit: string } {
+    const len = digits.length;
+    const n = Number(digits);
+    if (len <= 11) return { ms: n * 1000, unit: 'Unix seconds' };
+    if (len <= 14) return { ms: n, unit: 'Unix milliseconds' };
+    if (len <= 17) return { ms: Math.floor(n / 1e3), unit: 'Unix microseconds' };
+    return { ms: Math.floor(n / 1e6), unit: 'Unix nanoseconds' };
+  }
+
+  function parseInput(raw: string): Parse {
+    const v = raw.trim();
+    if (!v) return null;
+
+    if (/^-?\d+$/.test(v)) {
+      const neg = v.startsWith('-');
+      const digits = v.replace('-', '');
+      const { ms, unit } = detectUnit(digits);
+      const signed = neg ? -ms : ms;
+      const d = new Date(signed);
+      if (isNaN(d.getTime())) return null;
+      return { date: d, source: `Parsed as ${unit}` };
+    }
+    // Otherwise a date string.
+    const d = new Date(v);
+    if (!isNaN(d.getTime())) return { date: d, source: 'Parsed as a date' };
+    // DD/MM/YYYY fallback (Date() assumes US MM/DD) — swap when day > 12.
+    const m = v.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})/);
+    if (m && Number(m[1]) > 12) {
+      const d2 = new Date(`${m[2]}/${m[1]}/${m[3]}`);
+      if (!isNaN(d2.getTime())) return { date: d2, source: 'Parsed as a date (DD/MM/YYYY)' };
+    }
+    return null;
+  }
+
+  // ---- Timezone-aware wall-clock parts ----
+  type Parts = {
+    year: number; month: number; day: number;
+    hour: number; minute: number; second: number;
+    ms: number; weekday: number; // 0=Sun
+    monthName: string; monthShort: string; weekdayName: string; weekdayShort: string;
+    offset: string;
+  };
+
+  const WDAY = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+  function partsInZone(date: Date, tz: string): Parts {
+    const dtf = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, hourCycle: 'h23',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      weekday: 'short', timeZoneName: 'shortOffset',
+    });
+    const map: Record<string, string> = {};
+    for (const part of dtf.formatToParts(date)) map[part.type] = part.value;
+    const year = Number(map.year);
+    const month = Number(map.month);
+    const day = Number(map.day);
+    // 'shortOffset' renders e.g. "GMT+5:30"; normalise to +HH:MM.
+    let offset = map.timeZoneName || 'UTC';
+    const om = offset.match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/);
+    if (om) offset = `${om[1]}${p2(Number(om[2]))}:${om[3] ?? '00'}`;
+    else if (/GMT/.test(offset)) offset = '+00:00';
+    const weekday = WDAY.findIndex((w) => w.startsWith(map.weekday));
+    return {
+      year, month, day,
+      hour: Number(map.hour) % 24, minute: Number(map.minute), second: Number(map.second),
+      ms: date.getMilliseconds(), weekday: weekday < 0 ? 0 : weekday,
+      monthName: MON[month - 1], monthShort: MON[month - 1].slice(0, 3),
+      weekdayName: WDAY[weekday < 0 ? 0 : weekday], weekdayShort: WDAY[weekday < 0 ? 0 : weekday].slice(0, 3),
+      offset,
+    };
+  }
+
+  // ---- Custom format tokens ----
+  function formatTokens(p: Parts, template: string): string {
+    const h12 = ((p.hour + 11) % 12) + 1;
+    const ap = p.hour < 12 ? 'AM' : 'PM';
+    // Longest tokens first so MMMM matches before MM, dddd before ddd, etc.
+    const table: [RegExp, string][] = [
+      [/YYYY/g, String(p.year)],
+      [/YY/g, p2(p.year % 100)],
+      [/MMMM/g, p.monthName],
+      [/MMM/g, p.monthShort],
+      [/MM/g, p2(p.month)],
+      [/dddd/g, p.weekdayName],
+      [/ddd/g, p.weekdayShort],
+      [/DD/g, p2(p.day)],
+      [/HH/g, p2(p.hour)],
+      [/hh/g, p2(h12)],
+      [/mm/g, p2(p.minute)],
+      [/ss/g, p2(p.second)],
+      [/SSS/g, p3(p.ms)],
+      [/\bA\b/g, ap],
+      [/\ba\b/g, ap.toLowerCase()],
+      // single-letter tokens last, and only when standalone to avoid clobbering words
+      [/\bM\b/g, String(p.month)],
+      [/\bD\b/g, String(p.day)],
+      [/\bH\b/g, String(p.hour)],
+      [/\bh\b/g, String(h12)],
+      [/\bm\b/g, String(p.minute)],
+      [/\bs\b/g, String(p.second)],
+    ];
+    let s = template;
+    for (const [re, val] of table) s = s.replace(re, val);
+    return s;
+  }
+
+  // ---- Derived date facts ----
+  function isoWeek(d: Date): { week: number; year: number } {
+    const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    const day = (t.getUTCDay() + 6) % 7; // Mon=0
+    t.setUTCDate(t.getUTCDate() - day + 3); // nearest Thursday
+    const firstThu = new Date(Date.UTC(t.getUTCFullYear(), 0, 4));
+    const firstDay = (firstThu.getUTCDay() + 6) % 7;
+    firstThu.setUTCDate(firstThu.getUTCDate() - firstDay + 3);
+    const week = 1 + Math.round((t.getTime() - firstThu.getTime()) / 604800000);
+    return { week, year: t.getUTCFullYear() };
+  }
+
+  function dayOfYear(p: Parts): number {
+    const start = Date.UTC(p.year, 0, 0);
+    const cur = Date.UTC(p.year, p.month - 1, p.day);
+    return Math.floor((cur - start) / 86400000);
+  }
+
+  function rfc2822(p: Parts): string {
+    return `${p.weekdayShort}, ${p2(p.day)} ${p.monthShort} ${p.year} ${p2(p.hour)}:${p2(p.minute)}:${p2(p.second)} ${p.offset.replace(':', '')}`;
+  }
+
+  // ISO 8601 / RFC 3339 in the selected zone's wall-clock time with its offset.
+  function rfc3339(p: Parts): string {
+    return `${p.year}-${p2(p.month)}-${p2(p.day)}T${p2(p.hour)}:${p2(p.minute)}:${p2(p.second)}${p.offset}`;
+  }
+
+  function relative(date: Date): string {
+    const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+    const diff = date.getTime() - Date.now();
+    const abs = Math.abs(diff);
+    const units: [Intl.RelativeTimeFormatUnit, number][] = [
+      ['year', 31536000000], ['month', 2592000000], ['week', 604800000],
+      ['day', 86400000], ['hour', 3600000], ['minute', 60000], ['second', 1000],
+    ];
+    for (const [unit, ms] of units) {
+      if (abs >= ms || unit === 'second') {
+        return rtf.format(Math.round(diff / ms), unit);
+      }
+    }
+    return 'now';
+  }
+
+  // ---- Code snippets ----
+  // Given a moment, emit an idiomatic "parse this Unix timestamp" snippet per language.
+  function codeSnippet(lang: string, secs: number): string {
+    const ms = secs * 1000;
+    switch (lang) {
+      case 'javascript':
+        return `const d = new Date(${ms});\nconsole.log(d.toISOString());`;
+      case 'python':
+        return `from datetime import datetime, timezone\n\nd = datetime.fromtimestamp(${secs}, tz=timezone.utc)\nprint(d.isoformat())`;
+      case 'java':
+        return `import java.time.Instant;\n\nInstant d = Instant.ofEpochSecond(${secs}L);\nSystem.out.println(d);`;
+      case 'php':
+        return `<?php\n$d = (new DateTime("@${secs}"))->setTimezone(new DateTimeZone("UTC"));\necho $d->format(DateTime::ATOM);`;
+      case 'go':
+        return `package main\n\nimport (\n\t"fmt"\n\t"time"\n)\n\nfunc main() {\n\td := time.Unix(${secs}, 0).UTC()\n\tfmt.Println(d.Format(time.RFC3339))\n}`;
+      case 'ruby':
+        return `require 'time'\n\nd = Time.at(${secs}).utc\nputs d.iso8601`;
+      case 'csharp':
+        return `using System;\n\nvar d = DateTimeOffset.FromUnixTimeSeconds(${secs}L).UtcDateTime;\nConsole.WriteLine(d.ToString("o"));`;
+      case 'sql':
+        return `-- PostgreSQL\nSELECT to_timestamp(${secs}) AT TIME ZONE 'UTC';`;
+      case 'bash':
+        return `date -u -d @${secs} +"%Y-%m-%dT%H:%M:%SZ"\n# macOS/BSD: date -u -r ${secs} +"%Y-%m-%dT%H:%M:%SZ"`;
+      case 'powershell':
+        return `$d = [DateTimeOffset]::FromUnixTimeSeconds(${secs}).UtcDateTime\n$d.ToString("o")`;
+      default:
+        return `new Date(${ms})`;
+    }
+  }
+
+  async function renderCode() {
+    if (!current) { codeEl.textContent = ''; return; }
+    const secs = Math.floor(current.getTime() / 1000);
+    const lang = langSel.value;
+    await hl(codeEl, codeSnippet(lang, secs), lang);
+  }
+
+  // ---- Batch conversion ----
+  function renderBatch() {
+    const lines = batchIn.value.split('\n');
+    const rows: { input: string; res: Parse }[] = [];
+    let ok = 0;
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      const res = parseInput(line);
+      if (res) ok++;
+      rows.push({ input: line.trim(), res });
+    }
+    if (!rows.length) {
+      batchOut.innerHTML = '';
+      batchStat.textContent = '';
+      return;
+    }
+    const tz = selectedZone();
+    const cell = (s: string) =>
+      `<td class="px-3 py-2 font-mono text-ink break-all">${s.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</td>`;
+    const body = rows.map(({ input, res }) => {
+      if (!res) {
+        return `<tr class="border-t border-hairline">${cell(input)}<td class="px-3 py-2 text-[13px]" style="color:#e5484d" colspan="4">Could not parse</td></tr>`;
+      }
+      const p = partsInZone(res.date, tz);
+      const secs = Math.floor(res.date.getTime() / 1000);
+      return `<tr class="border-t border-hairline">${cell(input)}${cell(String(secs))}${cell(String(res.date.getTime()))}${cell(res.date.toISOString())}${cell(`${p.weekdayShort}, ${p.monthName} ${p.day}, ${p.year} ${p2(p.hour)}:${p2(p.minute)}:${p2(p.second)}`)}</tr>`;
+    }).join('');
+    batchOut.innerHTML = `<table class="w-full text-[13px]">
+      <thead><tr class="text-left text-ink-subtle">
+        <th class="px-3 py-2 font-medium">Input</th>
+        <th class="px-3 py-2 font-medium">Unix s</th>
+        <th class="px-3 py-2 font-medium">Unix ms</th>
+        <th class="px-3 py-2 font-medium">ISO 8601</th>
+        <th class="px-3 py-2 font-medium">${tz}</th>
+      </tr></thead>
+      <tbody>${body}</tbody>
+    </table>`;
+    batchStat.textContent = `${ok} of ${rows.length} parsed`;
+  }
+
+  // Build batch export rows (used for both TSV copy and CSV download).
+  function batchRows(): string[][] {
+    const tz = selectedZone();
+    const out: string[][] = [['input', 'unix_seconds', 'unix_ms', 'iso8601', tz]];
+    for (const line of batchIn.value.split('\n')) {
+      if (!line.trim()) continue;
+      const res = parseInput(line);
+      if (!res) { out.push([line.trim(), '', '', '', 'PARSE_ERROR']); continue; }
+      const p = partsInZone(res.date, tz);
+      out.push([
+        line.trim(),
+        String(Math.floor(res.date.getTime() / 1000)),
+        String(res.date.getTime()),
+        res.date.toISOString(),
+        `${p.year}-${p2(p.month)}-${p2(p.day)} ${p2(p.hour)}:${p2(p.minute)}:${p2(p.second)}`,
+      ]);
+    }
+    return out;
+  }
+
+  // ---- State ----
+  let current: Date | null = null;
+
+  function selectedZone(): string {
+    return tzSel.value || localZone;
+  }
+
+  function row(label: string, value: string): string {
+    return `<tr class="ts-row cursor-pointer border-t border-hairline transition-colors hover:bg-surface-2" data-copy="${value.replace(/"/g, '&quot;')}">
+      <td class="px-3 py-2 text-ink-subtle whitespace-nowrap">${label}</td>
+      <td class="px-3 py-2 text-right font-mono text-ink break-all">${value}</td>
+    </tr>`;
+  }
+
+  function render() {
+    const res = parseInput(input.value);
+    if (!res) {
+      current = null;
+      out.innerHTML = '';
+      fmtOut.textContent = '';
+      world.innerHTML = '';
+      codeEl.textContent = '';
+      parsed.textContent = '';
+      err.classList.toggle('hidden', !input.value.trim());
+      syncUrl();
+      return;
+    }
+    err.classList.add('hidden');
+    current = res.date;
+    const tz = selectedZone();
+    const p = partsInZone(res.date, tz);
+    parsed.textContent = `${res.source} · ${tz} (UTC${p.offset})`;
+
+    const secs = Math.floor(res.date.getTime() / 1000);
+    const wk = isoWeek(res.date);
+    const q = Math.floor((p.month - 1) / 3) + 1;
+    const zoneLabel = `${tz} (UTC${p.offset})`;
+
+    out.innerHTML = `<table class="w-full text-[13px]">
+      ${row(zoneLabel, `${p.weekdayName}, ${p.monthName} ${p.day}, ${p.year} ${p2(p.hour)}:${p2(p.minute)}:${p2(p.second)}`)}
+      ${row('UTC / GMT', res.date.toUTCString())}
+      ${row('ISO 8601 (UTC)', res.date.toISOString())}
+      ${row('ISO 8601 (local offset)', rfc3339(p))}
+      ${row('RFC 2822', rfc2822(p))}
+      ${row('Relative', relative(res.date))}
+      ${row('Unix seconds', String(secs))}
+      ${row('Unix milliseconds', String(res.date.getTime()))}
+      ${row('Day of week', p.weekdayName)}
+      ${row('Day of year', String(dayOfYear(p)))}
+      ${row('ISO week', `${wk.year}-W${p2(wk.week)}`)}
+      ${row('Quarter', `Q${q} ${p.year}`)}
+    </table>`;
+    bindCopy(out);
+
+    renderFmt(p);
+    renderWorld(res.date);
+    void renderCode();
+    syncUrl();
+  }
+
+  function renderFmt(p: Parts) {
+    fmtOut.textContent = formatTokens(p, fmtIn.value);
+    (fmtOut as HTMLElement).dataset.copy = fmtOut.textContent || '';
+  }
+
+  function renderWorld(date: Date) {
+    const zones = Array.from(new Set(['UTC', 'America/New_York', 'Europe/London', 'Asia/Tokyo', localZone]));
+    world.innerHTML = zones.map((z) => {
+      const p = partsInZone(date, z);
+      const val = `${p.weekdayShort} ${p.monthShort} ${p.day}, ${p2(p.hour)}:${p2(p.minute)}`;
+      return `<div class="ts-row flex cursor-pointer items-center justify-between gap-3 rounded-md border border-hairline bg-surface-1 px-3 py-2 transition-colors hover:bg-surface-2" data-copy="${val}">
+        <span class="text-[13px] text-ink-subtle">${z} <span class="text-ink-tertiary">UTC${p.offset}</span></span>
+        <span class="font-mono text-[13px] text-ink">${val}</span>
+      </div>`;
+    }).join('');
+    bindCopy(world);
+  }
+
+  async function copyText(el: HTMLElement, text: string, feedbackTarget?: HTMLElement) {
+    try {
+      await navigator.clipboard.writeText(text);
+      const tgt = feedbackTarget ?? el;
+      const old = tgt.textContent;
+      tgt.textContent = 'Copied!';
+      setTimeout(() => { tgt.textContent = old; }, 1000);
+    } catch {}
+  }
+
+  function bindCopy(container: HTMLElement) {
+    container.querySelectorAll<HTMLElement>('.ts-row').forEach((el) => {
+      el.addEventListener('click', () => {
+        const val = el.dataset.copy!;
+        const valueCell = el.querySelector('td:last-child') as HTMLElement | null;
+        copyText(el, val, valueCell ?? undefined);
+      });
+    });
+  }
+
+  // ---- URL sync ----
+  function syncUrl() {
+    const url = new URL(window.location.href);
+    if (current) url.searchParams.set('t', String(current.getTime()));
+    else url.searchParams.delete('t');
+    url.searchParams.set('tz', selectedZone());
+    history.replaceState(null, '', url);
+  }
+
+  // ---- Live clock + relative refresh ----
+  function tickClock() {
+    const now = Date.now();
+    nowEl.textContent = Math.floor(now / 1000).toString();
+    nowMsEl.textContent = `${now} ms`;
+  }
+  setInterval(tickClock, 1000);
+  tickClock();
+
+  // Refresh the relative-time row every 30s without disturbing focus/typing.
+  setInterval(() => {
+    if (!current) return;
+    const rows = out.querySelectorAll<HTMLElement>('.ts-row');
+    rows.forEach((r) => {
+      const label = r.querySelector('td')?.textContent;
+      if (label === 'Relative') {
+        const v = relative(current!);
+        r.dataset.copy = v;
+        (r.querySelector('td:last-child') as HTMLElement).textContent = v;
+      }
+    });
+  }, 30000);
+
+  // ---- Populate timezone dropdown ----
+  const zones = zoneList();
+  if (!zones.includes(localZone)) zones.unshift(localZone); // ensure local is selectable
+  for (const z of zones) {
+    const opt = document.createElement('option');
+    opt.value = z;
+    opt.textContent = z;
+    tzSel.appendChild(opt);
+  }
+
+  // ---- Wire events ----
+  input.addEventListener('input', render);
+  tzSel.addEventListener('change', () => { render(); renderBatch(); });
+  langSel.addEventListener('change', () => { void renderCode(); });
+
+  batchIn.addEventListener('input', renderBatch);
+  batchCopy.addEventListener('click', (e) => {
+    const tsv = batchRows().map((r) => r.join('\t')).join('\n');
+    if (tsv) copyText(e.currentTarget as HTMLElement, tsv);
+  });
+  batchDl.addEventListener('click', () => {
+    const rows = batchRows();
+    if (rows.length <= 1) return;
+    // CSV-quote every field (values may contain commas/quotes from date formats).
+    const csv = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'timestamps.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+  fmtIn.addEventListener('input', () => {
+    if (current) renderFmt(partsInZone(current, selectedZone()));
+  });
+  fmtOut.addEventListener('click', () => {
+    if (fmtOut.textContent) copyText(fmtOut as HTMLElement, fmtOut.textContent);
+  });
+  fmtOut.addEventListener('keydown', (e) => {
+    if ((e as KeyboardEvent).key === 'Enter' || (e as KeyboardEvent).key === ' ') {
+      e.preventDefault();
+      if (fmtOut.textContent) copyText(fmtOut as HTMLElement, fmtOut.textContent);
+    }
+  });
+
+  function setNow() {
+    input.value = String(Math.floor(Date.now() / 1000));
+    render();
+  }
+  document.getElementById('ts-now-btn')!.addEventListener('click', setNow);
+  document.getElementById('ts-now-use')!.addEventListener('click', setNow);
+  document.getElementById('ts-now-copy')!.addEventListener('click', (e) => {
+    copyText(e.currentTarget as HTMLElement, nowEl.textContent!);
+  });
+
+  const params = new URLSearchParams(window.location.search);
+  const tzParam = params.get('tz');
+  tzSel.value = tzParam && zones.includes(tzParam) ? tzParam : localZone;
+
+  const tParam = params.get('t');
+  if (tParam && /^-?\d+$/.test(tParam)) {
+    input.value = tParam; 
+  } else {
+    input.value = String(Math.floor(Date.now() / 1000));
+  }
+  render();
+</script>

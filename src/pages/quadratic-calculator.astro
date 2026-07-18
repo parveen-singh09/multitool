@@ -1,0 +1,247 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="quadratic-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        a (x²)
+        <input id="q-a" type="number" inputmode="decimal" step="any" class="field font-mono" value="3" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        b (x)
+        <input id="q-b" type="number" inputmode="decimal" step="any" class="field font-mono" value="2" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        c
+        <input id="q-c" type="number" inputmode="decimal" step="any" class="field font-mono" value="-5" />
+      </label>
+    </div>
+
+    <div id="q-eq" class="text-center font-mono text-sm text-ink-muted">—</div>
+
+    <p id="q-note" class="hidden text-[13px] text-ink-subtle" role="status"></p>
+    <p id="q-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="panel panel-lift p-6 text-center"><div id="q-x1" class="font-mono text-2xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Root x₁</div></div>
+      <div class="panel panel-lift p-6 text-center"><div id="q-x2" class="font-mono text-2xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Root x₂</div></div>
+    </div>
+
+    <div class="panel p-5">
+      <div class="flex flex-col gap-2 text-sm">
+        <div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">Discriminant (b²−4ac)</span><span id="q-disc" class="font-mono text-ink-muted">—</span></div>
+        <div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">Nature of roots</span><span id="q-nature" class="font-mono text-ink-muted">—</span></div>
+        <div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">Vertex</span><span id="q-vertex" class="font-mono text-ink-muted">—</span></div>
+        <div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">Factored form</span><span id="q-factored" class="font-mono text-ink-muted">—</span></div>
+      </div>
+    </div>
+
+    <div class="panel p-5">
+      <div class="mb-3 text-sm text-ink-muted">Parabola y = ax² + bx + c</div>
+      <svg id="q-graph" viewBox="0 0 320 200" class="w-full" role="img" aria-label="Parabola plot"></svg>
+    </div>
+
+    <details class="panel p-0">
+      <summary class="cursor-pointer list-none px-5 py-4 text-sm font-medium text-ink hover:text-primary-hover">
+        <span class="inline-flex items-center gap-2">▸ Step-by-step working</span>
+      </summary>
+      <ol id="q-steps" class="flex flex-col gap-2 border-t border-hairline px-5 py-4 font-mono text-[13px] text-ink-subtle"></ol>
+    </details>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free quadratic equation calculator solves any equation of the form
+      ax² + bx + c = 0 using the quadratic formula. Enter the coefficients a, b
+      and c to get the real or complex roots, the discriminant, and the vertex of
+      the parabola. It handles repeated roots and linear cases as well.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const aEl = document.getElementById('q-a') as HTMLInputElement;
+  const bEl = document.getElementById('q-b') as HTMLInputElement;
+  const cEl = document.getElementById('q-c') as HTMLInputElement;
+  const eqEl = document.getElementById('q-eq')!;
+  const noteEl = document.getElementById('q-note')!;
+  const errEl = document.getElementById('q-error')!;
+  const x1El = document.getElementById('q-x1')!;
+  const x2El = document.getElementById('q-x2')!;
+  const discEl = document.getElementById('q-disc')!;
+  const natureEl = document.getElementById('q-nature')!;
+  const vertexEl = document.getElementById('q-vertex')!;
+  const factoredEl = document.getElementById('q-factored')!;
+  const stepsEl = document.getElementById('q-steps')!;
+  const SVGNS = 'http://www.w3.org/2000/svg';
+
+  const fmt = (n: number): string => {
+    if (!isFinite(n)) return '—';
+    const r = Math.round(n * 1e6) / 1e6;
+    return String(r);
+  };
+
+  function term(coef: number, suffix: string, first: boolean): string {
+    if (coef === 0) return '';
+    const sign = coef < 0 ? '−' : first ? '' : '+';
+    const abs = Math.abs(coef);
+    const shown = abs === 1 && suffix !== '' ? '' : fmt(abs);
+    const sep = first ? sign : ` ${sign} `;
+    return `${sep}${shown}${suffix}`;
+  }
+
+  function echoEq(a: number, b: number, c: number): string {
+    let out = term(a, 'x²', true);
+    out += term(b, 'x', out === '');
+    out += term(c, '', out === '');
+    if (out === '') out = '0';
+    return `${out} = 0`;
+  }
+
+  function setEmpty() {
+    x1El.textContent = x2El.textContent = '—';
+    discEl.textContent = natureEl.textContent = vertexEl.textContent = factoredEl.textContent = '—';
+    stepsEl.innerHTML = '';
+    document.getElementById('q-graph')!.innerHTML = '';
+  }
+
+  // Plot y = ax²+bx+c across a window centered on the vertex, marking roots + vertex.
+  function drawGraph(a: number, b: number, c: number, vx: number, realRoots: number[]) {
+    const svg = document.getElementById('q-graph')!;
+    svg.innerHTML = '';
+    const W = 320, H = 200;
+    // x-range: span around the vertex, wide enough to show any real roots.
+    let half = 5;
+    for (const r of realRoots) half = Math.max(half, Math.abs(r - vx) * 1.4 + 1);
+    const xMin = vx - half, xMax = vx + half;
+    const ys: number[] = [];
+    const N = 80;
+    for (let i = 0; i <= N; i++) {
+      const x = xMin + (i / N) * (xMax - xMin);
+      ys.push(a * x * x + b * x + c);
+    }
+    let yMin = Math.min(...ys), yMax = Math.max(...ys);
+    if (yMin === yMax) { yMin -= 1; yMax += 1; }
+    const pad = (yMax - yMin) * 0.1;
+    yMin -= pad; yMax += pad;
+    const sx = (x: number) => ((x - xMin) / (xMax - xMin)) * W;
+    const sy = (y: number) => H - ((y - yMin) / (yMax - yMin)) * H;
+
+    // axes
+    const axis = (x1: number, y1: number, x2: number, y2: number) => {
+      const l = document.createElementNS(SVGNS, 'line');
+      l.setAttribute('x1', String(x1)); l.setAttribute('y1', String(y1));
+      l.setAttribute('x2', String(x2)); l.setAttribute('y2', String(y2));
+      l.setAttribute('stroke', 'var(--color-hairline-strong)'); l.setAttribute('stroke-width', '1');
+      svg.appendChild(l);
+    };
+    if (0 >= yMin && 0 <= yMax) axis(0, sy(0), W, sy(0)); // x-axis
+    if (0 >= xMin && 0 <= xMax) axis(sx(0), 0, sx(0), H); // y-axis
+
+    const curve = document.createElementNS(SVGNS, 'polyline');
+    curve.setAttribute('points', ys.map((y, i) => `${sx(xMin + (i / N) * (xMax - xMin)).toFixed(1)},${sy(y).toFixed(1)}`).join(' '));
+    curve.setAttribute('fill', 'none');
+    curve.setAttribute('stroke', '#828fff');
+    curve.setAttribute('stroke-width', '2');
+    curve.setAttribute('vector-effect', 'non-scaling-stroke');
+    svg.appendChild(curve);
+
+    // root markers
+    for (const r of realRoots) {
+      if (r < xMin || r > xMax) continue;
+      const dot = document.createElementNS(SVGNS, 'circle');
+      dot.setAttribute('cx', sx(r).toFixed(1)); dot.setAttribute('cy', sy(0).toFixed(1));
+      dot.setAttribute('r', '3'); dot.setAttribute('fill', '#5e6ad2');
+      svg.appendChild(dot);
+    }
+  }
+
+  function calc() {
+    noteEl.classList.add('hidden');
+    errEl.classList.add('hidden');
+
+    const a = parseFloat(aEl.value);
+    const b = parseFloat(bEl.value);
+    const c = parseFloat(cEl.value);
+
+    if ([a, b, c].some((v) => isNaN(v))) {
+      eqEl.textContent = '—';
+      setEmpty();
+      return;
+    }
+
+    eqEl.textContent = echoEq(a, b, c);
+
+    // Linear / degenerate case.
+    if (a === 0) {
+      discEl.textContent = '—';
+      vertexEl.textContent = '—';
+      if (b === 0) {
+        natureEl.textContent = c === 0 ? 'infinite' : 'none';
+        x1El.textContent = x2El.textContent = '—';
+        noteEl.textContent = c === 0 ? 'a = b = c = 0: every value of x is a solution.' : 'a = b = 0: no solution.';
+        noteEl.classList.remove('hidden');
+        return;
+      }
+      const x = -c / b;
+      x1El.textContent = fmt(x);
+      x2El.textContent = '—';
+      natureEl.textContent = 'linear';
+      noteEl.textContent = 'a = 0, so this is a linear equation with a single root.';
+      noteEl.classList.remove('hidden');
+      return;
+    }
+
+    const D = b * b - 4 * a * c;
+    discEl.textContent = fmt(D);
+
+    const vx = -b / (2 * a);
+    const vy = a * vx * vx + b * vx + c;
+    vertexEl.textContent = `(${fmt(vx)}, ${fmt(vy)})`;
+
+    const steps: string[] = [
+      `Quadratic formula: x = (−b ± √(b² − 4ac)) / 2a`,
+      `Substitute: x = (−(${fmt(b)}) ± √((${fmt(b)})² − 4·${fmt(a)}·${fmt(c)})) / (2·${fmt(a)})`,
+      `Discriminant: b² − 4ac = ${fmt(b * b)} − ${fmt(4 * a * c)} = ${fmt(D)}`,
+    ];
+    let realRoots: number[] = [];
+
+    if (D > 0) {
+      const sq = Math.sqrt(D);
+      const r1 = (-b + sq) / (2 * a), r2 = (-b - sq) / (2 * a);
+      x1El.textContent = fmt(r1);
+      x2El.textContent = fmt(r2);
+      natureEl.textContent = 'two real roots';
+      factoredEl.textContent = `${fmt(a)}(x − ${fmt(r1)})(x − ${fmt(r2)})`;
+      steps.push(`√${fmt(D)} = ${fmt(sq)}`);
+      steps.push(`x₁ = (${fmt(-b)} + ${fmt(sq)}) / ${fmt(2 * a)} = ${fmt(r1)}`);
+      steps.push(`x₂ = (${fmt(-b)} − ${fmt(sq)}) / ${fmt(2 * a)} = ${fmt(r2)}`);
+      realRoots = [r1, r2];
+    } else if (D === 0) {
+      const r = -b / (2 * a);
+      x1El.textContent = fmt(r);
+      x2El.textContent = fmt(r);
+      natureEl.textContent = 'one repeated root';
+      factoredEl.textContent = `${fmt(a)}(x − ${fmt(r)})²`;
+      steps.push(`Discriminant is 0 → one repeated root x = −b / 2a = ${fmt(r)}`);
+      realRoots = [r];
+    } else {
+      const p = -b / (2 * a);
+      const q = Math.sqrt(-D) / (2 * a);
+      const qa = Math.abs(q);
+      x1El.textContent = `${fmt(p)} + ${fmt(qa)}i`;
+      x2El.textContent = `${fmt(p)} − ${fmt(qa)}i`;
+      natureEl.textContent = 'two complex roots';
+      factoredEl.textContent = 'no real factors';
+      steps.push(`Discriminant < 0 → complex roots x = ${fmt(p)} ± ${fmt(qa)}i`);
+    }
+
+    stepsEl.innerHTML = steps.map((s) => `<li>${s}</li>`).join('');
+    drawGraph(a, b, c, vx, realRoots);
+  }
+
+  [aEl, bEl, cEl].forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

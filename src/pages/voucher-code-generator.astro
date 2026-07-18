@@ -1,0 +1,196 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="voucher-code-generator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Prefix
+        <input id="vc-prefix" class="field font-mono" placeholder="GIFT" spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Suffix
+        <input id="vc-suffix" class="field font-mono" placeholder="" spellcheck="false" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Blocks
+        <input id="vc-blocks" type="number" min="1" max="8" value="3" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Block length
+        <input id="vc-blen" type="number" min="2" max="8" value="4" class="field" />
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Character set
+        <select id="vc-set" class="field">
+          <option value="unambig" selected>No ambiguous (A-Z 2-9)</option>
+          <option value="alnum">Letters + numbers</option>
+          <option value="upper">Uppercase + numbers</option>
+          <option value="lower">Lowercase + numbers</option>
+          <option value="alpha">Letters only</option>
+          <option value="num">Numbers only</option>
+          <option value="custom">Custom…</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Custom characters
+        <input id="vc-custom" class="field font-mono" placeholder="ABCDEFGHJKMNPQRSTUVWXYZ23456789" spellcheck="false" disabled />
+      </label>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="vc-count" type="number" min="1" max="100000" value="20" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Separator
+        <select id="vc-sep" class="field">
+          <option value="-" selected>-</option>
+          <option value=" ">space</option>
+          <option value=".">.</option>
+          <option value="">none</option>
+        </select>
+      </label>
+    </div>
+
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Pattern <span class="text-ink-faint">(optional — <code>#</code> = one random char, everything else is literal. Overrides blocks &amp; separator.)</span>
+      <input id="vc-pattern" class="field font-mono" placeholder="####-####-####" spellcheck="false" />
+    </label>
+
+    <div class="flex flex-wrap items-center gap-4">
+      <div class="ml-auto flex items-center gap-2 font-mono text-sm text-ink">
+        <span class="text-ink-faint">Preview:</span> <span id="vc-preview">—</span>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-4">
+      <button id="vc-gen" class="btn btn-primary">Generate</button>
+      <button id="vc-txt" class="btn btn-secondary">Export .txt</button>
+      <button id="vc-csv" class="btn btn-secondary">Export .csv</button>
+      <span id="vc-err" class="text-sm text-red-400" role="alert"></span>
+    </div>
+    <div class="copy-wrap"><textarea id="vc-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated voucher codes"></textarea><button type="button" class="copy-icon" data-copy-target="#vc-out" aria-label="Copy"></button></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free voucher code generator creates readable gift-card and voucher
+      codes in evenly-sized blocks — like <code class="font-mono text-ink">GIFT-XXXX-XXXX-XXXX</code> —
+      that are easy to print, read aloud and type. Add a prefix and optional
+      suffix, choose how many blocks and how long each one is, or drop in a
+      pattern like <code>####-####-####</code> where every <code>#</code> becomes
+      a random character and everything else stays literal. The default
+      no-ambiguous set drops easily-confused characters like O/0 and I/1, and you
+      can paste your own custom set instead. Generate up to 100,000 at once,
+      watch a live preview, then copy them or export as a .txt list or .csv
+      sheet. Codes use your browser's secure random source, are de-duplicated
+      within each batch, and the tool warns you when your settings can't produce
+      that many unique codes.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { randInt, randString, UNAMBIGUOUS, ALPHA_UPPER, ALPHA_LOWER, DIGITS } from '../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const prefix = $('vc-prefix') as HTMLInputElement;
+  const suffix = $('vc-suffix') as HTMLInputElement;
+  const blocksEl = $('vc-blocks') as HTMLInputElement;
+  const blenEl = $('vc-blen') as HTMLInputElement;
+  const countEl = $('vc-count') as HTMLInputElement;
+  const sepEl = $('vc-sep') as HTMLSelectElement;
+  const setEl = $('vc-set') as HTMLSelectElement;
+  const customEl = $('vc-custom') as HTMLInputElement;
+  const patternEl = $('vc-pattern') as HTMLInputElement;
+  const previewEl = $('vc-preview') as HTMLSpanElement;
+  const errEl = $('vc-err') as HTMLSpanElement;
+  const out = $('vc-out') as HTMLTextAreaElement;
+
+  function alphabet(): string {
+    switch (setEl.value) {
+      case 'alnum': return ALPHA_UPPER + ALPHA_LOWER + DIGITS;
+      case 'upper': return ALPHA_UPPER + DIGITS;
+      case 'lower': return ALPHA_LOWER + DIGITS;
+      case 'alpha': return ALPHA_UPPER + ALPHA_LOWER;
+      case 'num': return DIGITS;
+      case 'custom': return [...new Set(customEl.value.replace(/\s/g, ''))].join('');
+      default: return UNAMBIGUOUS;
+    }
+  }
+
+  const blocks = () => Math.max(1, Math.min(8, Number(blocksEl.value) || 3));
+  const blen = () => Math.max(2, Math.min(8, Number(blenEl.value) || 4));
+
+  function body(ab: string): string {
+    const pat = patternEl.value;
+    if (pat.includes('#')) return pat.replace(/#/g, () => ab[randInt(0, ab.length - 1)]);
+    const parts: string[] = [];
+    for (let b = 0; b < blocks(); b++) parts.push(randString(blen(), ab));
+    return parts.join(sepEl.value);
+  }
+
+  function slots(): number {
+    const pat = patternEl.value;
+    if (pat.includes('#')) return (pat.match(/#/g) || []).length;
+    return blocks() * blen();
+  }
+
+  const wrap = (s: string) => prefix.value + s + suffix.value;
+
+  function generate() {
+    errEl.textContent = '';
+    const n = Math.max(1, Math.min(100000, Number(countEl.value) || 1));
+    const ab = alphabet();
+    if (ab.length < 1) {
+      errEl.textContent = 'Add at least one character to the character set.';
+      out.value = '';
+      return;
+    }
+
+    const space = Math.pow(ab.length, Math.min(slots(), 40));
+    if (space < n) {
+      errEl.textContent = `Can't make ${n} unique codes — only ${Math.floor(space)} are possible with this length and character set.`;
+      out.value = '';
+      return;
+    }
+    const seen = new Set<string>();
+    let guard = 0;
+    while (seen.size < n && guard < n * 40 + 100) {
+      guard++;
+      seen.add(wrap(body(ab)));
+    }
+    out.value = [...seen].join('\n');
+  }
+
+  function updatePreview() {
+    const ab = alphabet();
+    previewEl.textContent = ab.length ? wrap(body(ab)) : '—';
+  }
+
+  function syncCustom() {
+    customEl.disabled = setEl.value !== 'custom';
+    // Blocks/separator are meaningless when a pattern drives the layout.
+    const patterned = patternEl.value.includes('#');
+    blocksEl.disabled = patterned;
+    blenEl.disabled = patterned;
+    sepEl.disabled = patterned;
+  }
+
+  const inputs = ['vc-prefix', 'vc-suffix', 'vc-blocks', 'vc-blen', 'vc-count', 'vc-sep', 'vc-set', 'vc-custom', 'vc-pattern'];
+  inputs.forEach((id) => $(id).addEventListener('input', () => { syncCustom(); updatePreview(); generate(); }));
+
+  function download(name: string, text: string) {
+    const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  $('vc-gen').addEventListener('click', () => { updatePreview(); generate(); });
+  $('vc-txt').addEventListener('click', () => out.value && download('voucher-codes.txt', out.value));
+  $('vc-csv').addEventListener('click', () => out.value && download('voucher-codes.csv', 'code\n' + out.value));
+
+  syncCustom();
+  updatePreview();
+  generate();
+</script>

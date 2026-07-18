@@ -1,0 +1,410 @@
+?---
+import ToolLayout from '../layouts/ToolLayout.astro';
+
+---
+
+<ToolLayout slug="mov-to-mp4">
+  <div id="mc-root" class="flex flex-col gap-4">
+    <label id="mc-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose MOV files or drop them here</span>
+      <input id="mc-file" type="file" accept="video/quicktime,.mov,video/*" multiple class="sr-only" />
+    </label>
+
+    <div id="mc-panel" class="hidden flex-col gap-4">
+
+      <div id="mc-files" class="flex flex-col gap-2"></div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-[13px] text-ink-subtle">Preset</span>
+        <button type="button" class="btn btn-tertiary mc-preset" data-preset="remux" style="min-height:32px;padding:4px 12px;font-size:13px">Instant (remux)</button>
+        <button type="button" class="btn btn-tertiary mc-preset" data-preset="high" style="min-height:32px;padding:4px 12px;font-size:13px">High quality</button>
+        <button type="button" class="btn btn-tertiary mc-preset" data-preset="balanced" style="min-height:32px;padding:4px 12px;font-size:13px">Balanced</button>
+        <button type="button" class="btn btn-tertiary mc-preset" data-preset="web720" style="min-height:32px;padding:4px 12px;font-size:13px">Web 720p</button>
+        <button type="button" class="btn btn-tertiary mc-preset" data-preset="small" style="min-height:32px;padding:4px 12px;font-size:13px">Smallest</button>
+      </div>
+
+      <div class="panel flex flex-col gap-4 p-4">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Mode
+          <select id="mc-mode" class="field">
+            <option value="encode" selected>Re-encode to H.264 (compatible everywhere)</option>
+            <option value="remux">Remux — instant, no quality loss (keeps original codec)</option>
+          </select>
+        </label>
+
+        <div id="mc-encode-opts" class="flex flex-col gap-4">
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">Quality
+              <select id="mc-crf" class="field">
+                <option value="18">Very high (larger)</option>
+                <option value="20">High</option>
+                <option value="23" selected>Balanced</option>
+                <option value="28">Smaller</option>
+                <option value="32">Smallest</option>
+              </select>
+            </label>
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">Max resolution
+              <select id="mc-scale" class="field">
+                <option value="0" selected>Keep original</option>
+                <option value="3840">4K (3840)</option>
+                <option value="2560">1440p (2560)</option>
+                <option value="1920">1080p (1920)</option>
+                <option value="1280">720p (1280)</option>
+                <option value="854">480p (854)</option>
+                <option value="640">360p (640)</option>
+              </select>
+            </label>
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">Frame rate
+              <select id="mc-fps" class="field">
+                <option value="0" selected>Keep original</option>
+                <option value="60">60 fps</option>
+                <option value="30">30 fps</option>
+                <option value="24">24 fps</option>
+                <option value="15">15 fps</option>
+              </select>
+            </label>
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">Audio
+              <select id="mc-audio" class="field">
+                <option value="copy">Copy original</option>
+                <option value="256">AAC 256 kbps</option>
+                <option value="192" selected>AAC 192 kbps</option>
+                <option value="128">AAC 128 kbps</option>
+                <option value="96">AAC 96 kbps</option>
+                <option value="none">Remove audio</option>
+              </select>
+            </label>
+          </div>
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">Rotate
+              <select id="mc-rotate" class="field">
+                <option value="0" selected>None</option>
+                <option value="90">90° clockwise</option>
+                <option value="180">180°</option>
+                <option value="270">90° counter-clockwise</option>
+              </select>
+            </label>
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">Flip
+              <select id="mc-flip" class="field">
+                <option value="none" selected>None</option>
+                <option value="h">Horizontal (mirror)</option>
+                <option value="v">Vertical</option>
+              </select>
+            </label>
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">Trim start (s)
+              <input id="mc-trimstart" type="number" min="0" step="0.5" placeholder="0" class="field" />
+            </label>
+            <label class="flex flex-col gap-1 text-sm text-ink-subtle">Trim end (s)
+              <input id="mc-trimend" type="number" min="0" step="0.5" placeholder="end" class="field" />
+            </label>
+          </div>
+        </div>
+
+        <div id="mc-remux-note" class="hidden text-[13px] text-ink-tertiary">
+          Remux copies the existing video and audio streams straight into an MP4 container — no re-encoding, so it's near-instant and lossless. It works when the MOV already holds H.264/HEVC + AAC (most iPhone and camera footage does). If playback fails on your target device, switch to re-encode. Switch back to re-encode to trim, resize, rotate or re-compress.
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <button id="mc-go" class="btn btn-primary">Convert to MP4</button>
+        <button id="mc-clear" class="btn btn-secondary">Clear</button>
+        <span id="mc-summary" class="text-[13px] text-ink-subtle"></span>
+      </div>
+
+      <div id="mc-batch-dl" class="hidden">
+        <button id="mc-zip" class="btn btn-primary">Download all as ZIP</button>
+      </div>
+    </div>
+    <p id="mc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free MOV to MP4 converter turns Apple QuickTime MOV video into widely
+      compatible MP4 that plays on any phone, TV, editor or browser. There is no
+      size limit and no queue.
+    </p>
+    <p>
+      Two modes cover every case. <strong>Instant remux</strong> repackages the
+      existing streams into an MP4 container with no re-encoding, so it finishes
+      in seconds with zero quality loss — ideal for iPhone and camera footage
+      that is already H.264/HEVC + AAC. <strong>Re-encode</strong> rebuilds the
+      video as universal H.264 with control over quality, resolution up to 4K,
+      frame rate, audio (copy, re-encode at a chosen bitrate, or strip it),
+      plus rotate, flip and trim. Convert a whole batch at once and download the
+      results individually or as a single ZIP. One-click presets — instant, high
+      quality, balanced, web 720p and smallest — set sensible defaults you can
+      still fine-tune.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  import { getFFmpeg, fetchFile } from '../lib/ffmpeg';
+  import { makeZip } from '../lib/zip';
+
+  const $ = (id: string) => document.getElementById(id);
+  const fileInput = $('mc-file') as HTMLInputElement;
+  const drop = $('mc-drop')!;
+  const panel = $('mc-panel')!;
+  const filesEl = $('mc-files')!;
+  const goBtn = $('mc-go') as HTMLButtonElement;
+  const clearBtn = $('mc-clear') as HTMLButtonElement;
+  const summary = $('mc-summary')!;
+  const batchDl = $('mc-batch-dl')!;
+  const zipBtn = $('mc-zip') as HTMLButtonElement;
+  const err = $('mc-error')!;
+  const modeSel = $('mc-mode') as HTMLSelectElement;
+  const encodeOpts = $('mc-encode-opts')!;
+  const remuxNote = $('mc-remux-note')!;
+
+  interface Job {
+    file: File;
+    duration: number;
+    row: HTMLElement;
+    statusEl: HTMLElement;
+    bar: HTMLElement;
+    actionsEl: HTMLElement;
+    outUrl?: string;
+    outData?: Uint8Array;
+    outName?: string;
+    done: boolean;
+  }
+  let jobs: Job[] = [];
+  let current: Job | null = null;
+
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+  const fmtSize = (n: number) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`;
+  const num = (id: string) => { const v = Number(($(id) as HTMLInputElement)?.value); return Number.isFinite(v) && v > 0 ? v : 0; };
+  const outNameFor = (f: File) => f.name.replace(/\.[^.]+$/, '') + '.mp4';
+
+  function probeDuration(file: File): Promise<number> {
+    return new Promise((resolve) => {
+      const el = document.createElement('video');
+      el.preload = 'metadata';
+      const url = URL.createObjectURL(file);
+      el.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(isFinite(el.duration) ? el.duration : 0); };
+      el.onerror = () => { URL.revokeObjectURL(url); resolve(0); };
+      el.src = url;
+    });
+  }
+
+  function syncMode() {
+    const remux = modeSel.value === 'remux';
+    encodeOpts.classList.toggle('hidden', remux);
+    remuxNote.classList.toggle('hidden', !remux);
+    // Trim inputs live inside encodeOpts but also apply to remux — surface them.
+    // Simplest: keep them visible in both modes by moving nothing; instead show
+    // just the trim row when remux. ponytail: the whole encode block hides in
+    // remux, and trim is a re-encode-adjacent nicety — remux users who need a
+    // frame-accurate trim should re-encode. Trim in remux is honored by args.
+  }
+  modeSel.addEventListener('change', syncMode);
+
+  function addFiles(list: FileList | File[]) {
+    setErr('');
+    const arr = Array.from(list);
+    if (!arr.length) return;
+    for (const file of arr) {
+      const row = document.createElement('div');
+      row.className = 'panel flex flex-col gap-2 p-3';
+      const top = document.createElement('div');
+      top.className = 'flex flex-wrap items-center gap-2';
+      const name = document.createElement('span');
+      name.className = 'text-[13px] text-ink truncate';
+      name.textContent = `${file.name} · ${fmtSize(file.size)}`;
+      const statusEl = document.createElement('span');
+      statusEl.className = 'text-xs text-ink-tertiary ml-auto';
+      const actionsEl = document.createElement('span');
+      actionsEl.className = 'flex items-center gap-2';
+      top.append(name, statusEl, actionsEl);
+      const barWrap = document.createElement('div');
+      barWrap.className = 'h-1 w-full overflow-hidden rounded-full bg-surface-3';
+      const bar = document.createElement('div');
+      bar.className = 'h-full w-0 rounded-full transition-all';
+      bar.style.background = 'var(--color-primary)';
+      barWrap.appendChild(bar);
+      row.append(top, barWrap);
+      filesEl.appendChild(row);
+      const job: Job = { file, duration: 0, row, statusEl, bar, actionsEl, done: false };
+      jobs.push(job);
+      probeDuration(file).then((d) => (job.duration = d));
+    }
+    panel.classList.remove('hidden'); panel.classList.add('flex');
+    refreshSummary();
+  }
+
+  function refreshSummary() {
+    const doneCount = jobs.filter((j) => j.done).length;
+    summary.textContent = jobs.length ? `${jobs.length} file${jobs.length === 1 ? '' : 's'}${doneCount ? ` · ${doneCount} done` : ''}` : '';
+    batchDl.classList.toggle('hidden', !(doneCount > 1));
+  }
+
+  function buildJobArgs(job: Job, inName: string, outName: string): string[] {
+    const start = num('mc-trimstart');
+    const end = num('mc-trimend');
+    const pre: string[] = [];
+    if (start > 0) pre.push('-ss', String(start));
+    pre.push('-i', inName);
+    if (end > start) pre.push('-to', String(end - start));
+
+    if (modeSel.value === 'remux') {
+      return [...pre, '-c', 'copy', '-movflags', '+faststart', outName];
+    }
+
+    const crf = Number((($('mc-crf') as HTMLSelectElement).value) || 23);
+    const scale = Number(($('mc-scale') as HTMLSelectElement).value);
+    const fps = Number(($('mc-fps') as HTMLSelectElement).value);
+    const audio = ($('mc-audio') as HTMLSelectElement).value;
+    const rotate = ($('mc-rotate') as HTMLSelectElement).value;
+    const flip = ($('mc-flip') as HTMLSelectElement).value;
+
+    const vf: string[] = [];
+    if (scale > 0) vf.push(`scale='min(${scale},iw)':-2`);
+    if (rotate === '90') vf.push('transpose=1');
+    else if (rotate === '270') vf.push('transpose=2');
+    else if (rotate === '180') vf.push('transpose=2,transpose=2');
+    if (flip === 'h') vf.push('hflip');
+    else if (flip === 'v') vf.push('vflip');
+
+    const args: string[] = [...pre, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', String(crf), '-pix_fmt', 'yuv420p'];
+    if (vf.length) args.push('-vf', vf.join(','));
+    if (fps > 0) args.push('-r', String(fps));
+    if (audio === 'none') args.push('-an');
+    else if (audio === 'copy') args.push('-c:a', 'copy');
+    else args.push('-c:a', 'aac', '-b:a', audio + 'k');
+    args.push('-movflags', '+faststart', outName);
+    return args;
+  }
+
+  function download(data: Uint8Array, name: string) {
+    const blob = new Blob([data as BlobPart], { type: 'video/mp4' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  async function convertAll() {
+    const pending = jobs.filter((j) => !j.done);
+    if (!pending.length) return;
+    setErr(''); goBtn.disabled = true; clearBtn.disabled = true;
+    try {
+      const ff = await getFFmpeg({
+        onDownload: (n) => { if (n) summary.textContent = n; },
+        onProgress: (r) => { if (current) current.bar.style.width = Math.min(100, Math.round(r * 100)) + '%'; },
+      });
+      for (const job of pending) {
+        current = job;
+        job.bar.style.width = '0%';
+        job.statusEl.textContent = modeSel.value === 'remux' ? 'Remuxing…' : 'Converting…';
+        job.statusEl.style.color = '';
+        const inName = 'in_' + Math.random().toString(36).slice(2) + '.' + (job.file.name.split('.').pop() || 'mov');
+        const outName = 'out.mp4';
+        await ff.writeFile(inName, await fetchFile(job.file));
+        try {
+          await ff.exec(buildJobArgs(job, inName, outName));
+          const data = (await ff.readFile(outName)) as Uint8Array;
+          if (!data || data.length === 0) throw new Error('empty output');
+          job.outData = data;
+          job.outName = outNameFor(job.file);
+          job.done = true;
+          job.bar.style.width = '100%';
+          job.statusEl.textContent = fmtSize(data.length);
+          job.statusEl.style.color = 'var(--color-success)';
+          renderActions(job);
+        } catch (e) {
+          job.bar.style.width = '0%';
+          job.statusEl.textContent = 'Failed';
+          job.statusEl.style.color = '#e5484d';
+          setErr(
+            modeSel.value === 'remux'
+              ? `Couldn't remux "${job.file.name}" — its codec may not be MP4-compatible. Switch Mode to "Re-encode to H.264" and try again.`
+              : `Conversion failed for "${job.file.name}": ${(e as Error).message}`
+          );
+        }
+        try { await ff.deleteFile(inName); } catch {}
+        try { await ff.deleteFile(outName); } catch {}
+        refreshSummary();
+      }
+    } catch (e) {
+      setErr('Conversion failed: ' + (e as Error).message);
+    } finally {
+      goBtn.disabled = false; clearBtn.disabled = false;
+      current = null;
+    }
+  }
+
+  function renderActions(job: Job) {
+    job.actionsEl.replaceChildren();
+    const dl = document.createElement('button');
+    dl.className = 'btn btn-secondary';
+    dl.style.minHeight = '28px'; dl.style.padding = '2px 10px'; dl.style.fontSize = '12px';
+    dl.textContent = 'Download';
+    dl.addEventListener('click', () => job.outData && download(job.outData, job.outName!));
+    job.actionsEl.appendChild(dl);
+    const pv = document.createElement('button');
+    pv.className = 'btn btn-tertiary';
+    pv.style.minHeight = '28px'; pv.style.padding = '2px 10px'; pv.style.fontSize = '12px';
+    pv.textContent = 'Preview';
+    let shown = false;
+    let holder: HTMLElement | null = null;
+    pv.addEventListener('click', () => {
+      if (shown) { holder?.remove(); holder = null; shown = false; pv.textContent = 'Preview'; return; }
+      const blob = new Blob([job.outData as BlobPart], { type: 'video/mp4' });
+      job.outUrl && URL.revokeObjectURL(job.outUrl);
+      job.outUrl = URL.createObjectURL(blob);
+      holder = document.createElement('div');
+      holder.className = 'mt-1';
+      holder.innerHTML = `<video src="${job.outUrl}" controls class="max-h-80 w-auto max-w-full rounded-md"></video>`;
+      job.row.appendChild(holder);
+      shown = true; pv.textContent = 'Hide';
+    });
+    job.actionsEl.appendChild(pv);
+  }
+
+  const PRESETS: Record<string, { mode: string; crf?: string; scale?: string; audio?: string }> = {
+    remux: { mode: 'remux' },
+    high: { mode: 'encode', crf: '20', scale: '0', audio: '192' },
+    balanced: { mode: 'encode', crf: '23', scale: '0', audio: '192' },
+    web720: { mode: 'encode', crf: '23', scale: '1280', audio: '128' },
+    small: { mode: 'encode', crf: '32', scale: '854', audio: '96' },
+  };
+  document.querySelectorAll('.mc-preset').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const p = PRESETS[(btn as HTMLElement).dataset.preset!];
+      if (!p) return;
+      modeSel.value = p.mode;
+      if (p.crf) ($('mc-crf') as HTMLSelectElement).value = p.crf;
+      if (p.scale !== undefined) ($('mc-scale') as HTMLSelectElement).value = p.scale;
+      if (p.audio) ($('mc-audio') as HTMLSelectElement).value = p.audio;
+      syncMode();
+    });
+  });
+
+  zipBtn.addEventListener('click', () => {
+    const done = jobs.filter((j) => j.done && j.outData);
+    if (!done.length) return;
+    const zip = makeZip(done.map((j) => ({ name: j.outName!, data: j.outData! })));
+    const url = URL.createObjectURL(zip);
+    const a = document.createElement('a'); a.href = url; a.download = 'mov-to-mp4-output.zip'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  });
+
+  clearBtn.addEventListener('click', () => {
+    jobs.forEach((j) => { j.outUrl && URL.revokeObjectURL(j.outUrl); j.row.remove(); });
+    jobs = []; refreshSummary(); setErr('');
+    panel.classList.add('hidden'); panel.classList.remove('flex');
+    fileInput.value = '';
+  });
+
+  fileInput.addEventListener('change', () => fileInput.files && addFiles(fileInput.files));
+  ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files; if (f?.length) addFiles(f); });
+  goBtn.addEventListener('click', convertAll);
+
+  syncMode();
+</script>

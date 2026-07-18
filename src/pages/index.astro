@@ -4,7 +4,16 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import { tools, categories, toolsByCategory } from '../data/tools';
 import { SITE } from '../data/site';
-import AiToolChat from '../components/AiToolChat.astro';
+import ArchiveConvert from '../components/ArchiveConvert.astro';
+
+const ANY_TARGETS = [
+  'pdf', 'docx', 'doc', 'odt', 'rtf', 'txt', 'html',
+  'jpg', 'png', 'webp', 'gif', 'bmp', 'tiff', 'svg', 'ico',
+  'mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a',
+  'mp4', 'webm', 'mkv', 'mov', 'avi',
+  'xlsx', 'csv', 'pptx',
+  'epub', 'mobi', 'zip', '7z',
+];
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -40,23 +49,65 @@ const catStyle: Record<string, { bg: string; ring: string; fg: string; icon: str
   <main>
     <section class="relative flex min-h-svh items-center overflow-hidden">
       <div class="container-page w-full py-12">
-        <div class="hero-copy mx-auto max-w-3xl text-center">
-          <span class="status-badge mx-auto">
-            <span class="h-1.5 w-1.5 rounded-full" style="background:#27a644"></span>
-            350+ free tools
-          </span>
+        <div class="grid items-center gap-10 lg:grid-cols-2 lg:gap-12">
+          <!-- Left: copy -->
+          <div class="text-center lg:text-left">
+            <span class="status-badge mx-auto lg:mx-0">
+              <span class="h-1.5 w-1.5 rounded-full" style="background:#27a644"></span>
+              500+ free tools
+            </span>
 
-          <h1 class="display-xl mt-6 text-balance text-ink sm:whitespace-nowrap">
-            Free online tools<br />
-            <span class="text-ink-subtle">for images, text &amp; more.</span>
-          </h1>
+            <h1 class="display-lg mt-6 text-balance text-ink">
+              Free online tools<br />
+              <span class="text-ink-subtle">for images, text &amp; more.</span>
+            </h1>
 
-          <p class="mx-auto mt-6 max-w-3xl text-lg leading-relaxed text-ink-muted md:whitespace-nowrap">
-            Convert, compress, edit and create — hundreds of free tools in one place.
-          </p>
+            <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-ink-muted lg:mx-0">
+              Convert, compress, edit and create — hundreds of free tools in one place.
+              Handles 200+ formats: images, audio, video, documents, archives and more.
+            </p>
 
-          <div class="mt-8">
-            <AiToolChat launcher />
+            <div class="mt-8 flex justify-center lg:justify-start">
+              <a href="/tools" class="btn btn-secondary inline-flex items-center gap-2">
+                Browse all tools
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              </a>
+            </div>
+          </div>
+
+          <!-- Right: animated format cards + real upload card -->
+          <div class="flex flex-col gap-6">
+            <div id="fmt-row" class="flex items-center justify-center gap-4">
+              <div class="fmt-slot">
+                <div class="fmt-card">
+                  <button id="fmt-from-btn" type="button" class="fmt-inner" aria-haspopup="listbox" aria-expanded="false" aria-label="Source format">
+                    <span id="fmt-from-icon" class="fmt-icon text-ink-subtle"></span>
+                    <span id="fmt-from" class="fmt-label">SVG</span>
+                    <svg class="fmt-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                  </button>
+                </div>
+                <div id="fmt-from-menu" class="fmt-menu hidden" role="listbox"></div>
+              </div>
+              <span class="fmt-line"></span>
+              <span class="flex h-9 w-9 flex-none items-center justify-center rounded-full border border-hairline bg-surface-2 text-primary-hover">
+                <svg class="fmt-spin-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+              </span>
+              <span class="fmt-line fmt-line-rev"></span>
+              <div class="fmt-slot">
+                <div class="fmt-card">
+                  <button id="fmt-to-btn" type="button" class="fmt-inner" aria-haspopup="listbox" aria-expanded="false" aria-label="Target format">
+                    <span id="fmt-to-icon" class="fmt-icon text-primary-hover"></span>
+                    <span id="fmt-to" class="fmt-label">PNG</span>
+                    <svg class="fmt-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                  </button>
+                </div>
+                <div id="fmt-to-menu" class="fmt-menu hidden" role="listbox"></div>
+              </div>
+            </div>
+
+            <div class="text-left">
+              <ArchiveConvert slug="file-converter" targets={ANY_TARGETS} noun="file" smart={true} syncTarget={true} />
+            </div>
           </div>
         </div>
       </div>
@@ -68,7 +119,7 @@ const catStyle: Record<string, { bg: string; ring: string; fg: string; icon: str
         <span class="eyebrow text-primary-hover">{categories.length} categories</span>
         <h2 class="display-md text-ink">Pick a category, start working</h2>
         <p class="mt-2 max-w-xl text-lg leading-relaxed text-ink-muted">
-          {tools.length}+ tools grouped so you land on the right one fast.
+          500+ tools grouped so you land on the right one fast.
         </p>
       </div>
 
@@ -79,7 +130,7 @@ const catStyle: Record<string, { bg: string; ring: string; fg: string; icon: str
           const sample = catTools.slice(0, 3).map((t) => t.name).join(' · ');
           return (
             <a
-              href={`/tools#${category.toLowerCase()}`}
+              href={`/${category.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`}
               class="panel panel-lift group flex items-start gap-4 p-5 transition-colors duration-150 hover:bg-surface-2 hover:border-hairline-strong"
             >
               <span class={`flex h-10 w-10 flex-none items-center justify-center rounded-lg ring-1 ${s.bg} ${s.ring} ${s.fg}`}>
@@ -126,7 +177,7 @@ const catStyle: Record<string, { bg: string; ring: string; fg: string; icon: str
 
     <!-- Closing -->
     <section class="container-page py-16">
-      <div class="mx-auto max-w-3xl">
+      <div class="max-w-3xl">
         <h2 class="display-md text-ink">Built for quick jobs and real work alike</h2>
         <div class="mt-6 flex flex-col gap-4 text-lg leading-relaxed text-ink-muted">
           <p>
@@ -144,4 +195,295 @@ const catStyle: Record<string, { bg: string; ring: string; fg: string; icon: str
   </main>
 
   <Footer full />
+
+  <style>
+    /* Card = gradient-border wrapper; a rotating conic beam runs along the edge. */
+    .fmt-card {
+      position: relative;
+      width: 6.5rem;
+      height: 6.5rem;
+      border-radius: 18px;
+      padding: 1.5px;
+      overflow: hidden;
+      isolation: isolate;
+      background: var(--color-hairline, #23252a);
+    }
+    .fmt-card::before {
+      content: "";
+      position: absolute;
+      inset: -60%;
+      z-index: -2;
+      background: conic-gradient(
+        from 0deg,
+        transparent 0deg,
+        transparent 200deg,
+        #5e6ad2 280deg,
+        #828fff 320deg,
+        transparent 360deg
+      );
+      animation: fmt-spin 3.5s linear infinite;
+    }
+    .fmt-card { cursor: pointer; }
+    .fmt-inner {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      height: 100%;
+      border-radius: 16.5px;
+      background: var(--color-surface-3, #18191a);
+    }
+    /* Card face is a button that opens a custom, styleable menu. */
+    button.fmt-inner {
+      cursor: pointer;
+      border: 0;
+      font: inherit;
+      color: inherit;
+    }
+    /* Slot wraps the (overflow-hidden) card so the menu can escape its clip. */
+    .fmt-slot { position: relative; }
+    /* Custom dropdown menu (native <select> panels can't be styled). */
+    .fmt-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 30;
+      width: 8.5rem;
+      max-height: 15rem;
+      overflow-y: auto;
+      padding: 0.3rem;
+      border-radius: 12px;
+      border: 1px solid var(--color-hairline, #23252a);
+      background: var(--color-surface-2, #141516);
+      box-shadow: 0 16px 40px -12px rgba(0,0,0,0.6);
+    }
+    /* :global — these buttons are created in JS, so they lack Astro's scope id. */
+    :global(.fmt-opt) {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.5rem 0.65rem;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      color: var(--color-ink, #f7f8f8);
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.12s ease;
+    }
+    :global(.fmt-opt:hover) { background: var(--color-surface-3, #18191a); }
+    :global(.fmt-opt[aria-selected="true"]) { background: var(--color-primary, #5e6ad2); color: #fff; }
+    :global(.fmt-opt svg) { flex: none; opacity: 0.7; }
+    .fmt-chevron {
+      position: absolute;
+      right: 0.6rem;
+      bottom: 0.5rem;
+      color: var(--color-ink-tertiary, #8a8f98);
+    }
+    .fmt-icon {
+      display: flex;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    .fmt-label {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: var(--color-ink, #f7f8f8);
+      transition: opacity 0.3s ease;
+    }
+    .fmt-swap { opacity: 0; transform: translateY(3px); }
+    @keyframes fmt-spin { to { transform: rotate(1turn); } }
+
+    /* Connector line: base hairline with a lavender pulse flowing across it. */
+    .fmt-line {
+      position: relative;
+      flex: 0 0 auto;
+      width: 3rem;
+      height: 2px;
+      border-radius: 2px;
+      background: var(--color-hairline, #23252a);
+      overflow: hidden;
+    }
+    .fmt-line::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 60%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, transparent, #e5484d, #ff6b6b, transparent);
+      animation: fmt-flow 1.8s linear infinite;
+    }
+    .fmt-line-rev::after { animation-direction: reverse; }
+    @keyframes fmt-flow {
+      from { transform: translateX(-100%); }
+      to { transform: translateX(200%); }
+    }
+
+    /* Converter icon: slow continuous spin. */
+    .fmt-spin-icon { animation: fmt-spin 6s linear infinite; }
+
+    /* Once the user picks a format: tighten the gap and stop the flowing lines. */
+    #fmt-row { transition: gap 0.4s ease; }
+    #fmt-row.fmt-picked { gap: 0.75rem; }
+    #fmt-row.fmt-picked .fmt-line::after { animation: none; opacity: 0; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .fmt-card::before,
+      .fmt-line::after,
+      .fmt-spin-icon { animation: none; }
+    }
+  </style>
+
+  <script>
+    import { CONVERT_MATRIX } from '../data/convertMatrix';
+    // Cycle the source→target format pair in the hero cards (decorative).
+    // Icon follows the format family so the glyph matches the label.
+    const FAMILY_ICON = {
+      document: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
+      image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="1.8"/><path d="M21 15l-5-5L5 21"/>',
+      audio: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+      video: '<rect x="2" y="5" width="14" height="14" rx="2"/><path d="m22 8-6 4 6 4V8z"/>',
+      archive: '<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/>',
+      ebook: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+      sheet: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>',
+      generic: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
+    };
+    const FAMILY_OF = {
+      pdf: 'document', docx: 'document', doc: 'document', odt: 'document', rtf: 'document', txt: 'document', html: 'document',
+      png: 'image', jpg: 'image', jpeg: 'image', webp: 'image', svg: 'image', tiff: 'image', gif: 'image', bmp: 'image', ico: 'image', heic: 'image', avif: 'image',
+      mp3: 'audio', wav: 'audio', flac: 'audio', ogg: 'audio', m4a: 'audio', aac: 'audio', opus: 'audio',
+      mp4: 'video', mov: 'video', webm: 'video', mkv: 'video', avi: 'video',
+      zip: 'archive', '7z': 'archive', tar: 'archive', rar: 'archive',
+      epub: 'ebook', mobi: 'ebook', azw3: 'ebook',
+      xlsx: 'sheet', xls: 'sheet', csv: 'sheet', ods: 'sheet',
+    };
+    const svg = (fmt) => {
+      const fam = FAMILY_OF[fmt.toLowerCase()] || 'generic';
+      return `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${FAMILY_ICON[fam]}</svg>`;
+    };
+
+    // Only show source formats the backend (ConvertAPI) can actually convert.
+    const up = (s) => s.toUpperCase();
+    const matrixTargets = (fmt) => (CONVERT_MATRIX[fmt.toLowerCase()] || []).map(up);
+
+    // Cycling pairs — curated, but every one is validated against the real matrix.
+    const CANDIDATE_PAIRS = [
+      ['SVG', 'PNG'], ['HEIC', 'JPG'], ['WEBP', 'PNG'], ['PNG', 'JPG'],
+      ['DOCX', 'PDF'], ['PNG', 'WEBP'], ['TIFF', 'JPG'], ['EPUB', 'PDF'],
+      ['XLSX', 'CSV'], ['PPTX', 'PDF'], ['PDF', 'DOCX'], ['JPG', 'PNG'],
+    ];
+    const PAIRS = CANDIDATE_PAIRS.filter(([a, b]) => matrixTargets(a).includes(b));
+    const row = document.getElementById('fmt-row');
+    const fromEl = document.getElementById('fmt-from');
+    const toEl = document.getElementById('fmt-to');
+    const fromIcon = document.getElementById('fmt-from-icon');
+    const toIcon = document.getElementById('fmt-to-icon');
+    const fromBtn = document.getElementById('fmt-from-btn');
+    const toBtn = document.getElementById('fmt-to-btn');
+    const fromMenu = document.getElementById('fmt-from-menu');
+    const toMenu = document.getElementById('fmt-to-menu');
+
+    // Common sources, kept only if the real matrix lists them with targets.
+    const FROM_OPTS = ['PNG','JPG','WEBP','GIF','BMP','TIFF','HEIC','SVG','PDF','DOCX','DOC','XLSX','PPTX','EPUB','MOBI','CSV','HTML']
+      .filter((f) => matrixTargets(f).length);
+
+    const setFrom = (fmt) => { if (fromEl) fromEl.textContent = fmt; if (fromIcon) fromIcon.innerHTML = svg(fmt); };
+    const setTo = (fmt) => { if (toEl) toEl.textContent = fmt; if (toIcon) toIcon.innerHTML = svg(fmt); };
+    function paint(idx) {
+      const [a, b] = PAIRS[idx];
+      setFrom(a); setTo(b);
+    }
+    paint(0);
+
+    let timer = null;
+    if (fromEl && toEl && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      let i = 0;
+      const els = [fromEl, toEl, fromIcon, toIcon].filter(Boolean);
+      timer = setInterval(() => {
+        i = (i + 1) % PAIRS.length;
+        els.forEach((el) => el.classList.add('fmt-swap'));
+        setTimeout(() => {
+          paint(i);
+          els.forEach((el) => el.classList.remove('fmt-swap'));
+        }, 300);
+      }, 2400);
+    }
+
+    function stopCycle() {
+      if (timer) { clearInterval(timer); timer = null; }
+      row?.classList.add('fmt-picked');
+    }
+    const closeMenus = () => {
+      [fromMenu, toMenu].forEach((m) => m?.classList.add('hidden'));
+      [fromBtn, toBtn].forEach((b) => b?.setAttribute('aria-expanded', 'false'));
+    };
+
+    // Render a custom menu of options; onPick fires with the chosen format.
+    function fillMenu(menu, opts, current, onPick) {
+      if (!menu) return;
+      menu.innerHTML = '';
+      for (const f of opts) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'fmt-opt';
+        b.setAttribute('role', 'option');
+        if (f === current) b.setAttribute('aria-selected', 'true');
+        b.innerHTML = svg(f).replace('width="26" height="26"', 'width="15" height="15"') + `<span>${f}</span>`;
+        b.addEventListener('click', (e) => { e.stopPropagation(); closeMenus(); onPick(f); });
+        menu.appendChild(b);
+      }
+    }
+
+    // Compatible target formats from the real ConvertAPI matrix.
+    function targetsFor(sourceFmt) {
+      return matrixTargets(sourceFmt).filter((f) => f !== sourceFmt.toUpperCase());
+    }
+    function refreshTargets(sourceFmt) {
+      const opts = targetsFor(sourceFmt);
+      const cur = toEl?.textContent || '';
+      setTo(opts.includes(cur) ? cur : (opts[0] || 'PDF'));
+      fillMenu(toMenu, opts, toEl?.textContent, (f) => { stopCycle(); setTo(f); });
+    }
+
+    fromBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = fromMenu.classList.contains('hidden');
+      closeMenus();
+      if (open) {
+        fillMenu(fromMenu, FROM_OPTS, fromEl?.textContent, (f) => { stopCycle(); setFrom(f); refreshTargets(f); });
+        fromMenu.classList.remove('hidden');
+        fromBtn.setAttribute('aria-expanded', 'true');
+      }
+    });
+    toBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = toMenu.classList.contains('hidden');
+      closeMenus();
+      if (open) {
+        fillMenu(toMenu, targetsFor(fromEl?.textContent || 'SVG'), toEl?.textContent, (f) => { stopCycle(); setTo(f); });
+        toMenu.classList.remove('hidden');
+        toBtn.setAttribute('aria-expanded', 'true');
+      }
+    });
+    document.addEventListener('click', closeMenus);
+
+    // Upload card reports the chosen file → lock the source card to its type.
+    document.addEventListener('fmt-lock', (e) => {
+      const ext = ((e as CustomEvent).detail?.from || '').toUpperCase();
+      if (!ext) return;
+      stopCycle();
+      setFrom(ext);
+      refreshTargets(ext);
+    });
+  </script>
 </Layout>

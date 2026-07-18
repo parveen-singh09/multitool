@@ -1,0 +1,214 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="company-name-generator">
+  <div class="flex flex-col gap-5">
+
+    <div class="flex flex-col gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Keywords
+        <input id="cn-kw" class="field" value="cloud, data" spellcheck="false"
+          placeholder="e.g. coffee, roast, morning" autocomplete="off" />
+        <span class="text-[13px] text-ink-tertiary">Comma-separated. The generator blends these into brandable names.</span>
+      </label>
+
+      <div class="flex flex-wrap items-end gap-4">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Style
+          <select id="cn-style" class="field w-44">
+            <option value="auto">Auto (mixed)</option>
+            <option value="brandable">Brandable</option>
+            <option value="compound">Compound</option>
+            <option value="evocative">Evocative</option>
+            <option value="short">Short</option>
+            <option value="alternate">Alternate spelling</option>
+            <option value="real">Real words</option>
+          </select>
+        </label>
+
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Randomness
+          <select id="cn-rand" class="field w-40">
+            <option value="0">Low — close to keyword</option>
+            <option value="1" selected>Medium</option>
+            <option value="2">High — inventive</option>
+          </select>
+        </label>
+
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+          <input id="cn-count" type="number" min="1" max="100" value="24" class="field w-28" />
+        </label>
+
+        <label class="flex items-center gap-2 text-sm text-ink-subtle">
+          <input id="cn-suffix" type="checkbox" class="accent-primary" /> Legal suffix (Inc, LLC…)
+        </label>
+
+        <button id="cn-gen" class="btn btn-primary ml-auto">Generate</button>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2 border-b border-hairline">
+      <button id="cn-tab-results" class="cn-tab -mb-px border-b-2 border-primary px-3 py-2 text-sm font-medium text-ink">Results</button>
+      <button id="cn-tab-saved" class="cn-tab -mb-px border-b-2 border-transparent px-3 py-2 text-sm font-medium text-ink-subtle">Saved <span id="cn-saved-count" class="text-ink-tertiary">(0)</span></button>
+      <button id="cn-copy" class="btn btn-secondary ml-auto">Copy all</button>
+    </div>
+
+    <div id="cn-out" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"></div>
+    <div id="cn-empty" class="hidden py-10 text-center text-sm text-ink-subtle"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free company name generator turns your keywords into brandable business and
+      startup name ideas — the same approach as tools like Namelix. Type a word or two that describe your
+      business and it blends them with prefixes, suffixes, evocative terms and alternate
+      spellings across several naming styles.
+    </p>
+    <p>
+      Pick a <strong>style</strong> to steer the results: <em>Brandable</em> coins new
+      words (Cloudify, Novadata), <em>Compound</em> fuses two real words (CloudForge),
+      <em>Evocative</em> pairs your keyword with descriptive terms, <em>Short</em> drops
+      vowels for a terse modern look, <em>Alternate spelling</em> swaps letters for a
+      distinctive mark, and <em>Real words</em> keeps things plain. The
+      <strong>randomness</strong> control decides how far names stray from your keyword.
+    </p>
+    <p>
+      Each result shows a quick wordmark and monogram preview so you can picture it as a
+      logo. Star the ones you like — they're saved in this browser so they survive a
+      refresh. Click any name to copy it, or use Copy all to grab the whole batch.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { generateNames, type NameIdea, type NameStyle, type Randomness } from '../lib/naming';
+  import { pick } from '../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const kwEl = $('cn-kw') as HTMLInputElement;
+  const styleEl = $('cn-style') as HTMLSelectElement;
+  const randEl = $('cn-rand') as HTMLSelectElement;
+  const countEl = $('cn-count') as HTMLInputElement;
+  const suffixEl = $('cn-suffix') as HTMLInputElement;
+  const out = $('cn-out');
+  const empty = $('cn-empty');
+  const tabResults = $('cn-tab-results');
+  const tabSaved = $('cn-tab-saved');
+  const savedCount = $('cn-saved-count');
+
+  const SUFFIXES = ['Inc', 'LLC', 'Ltd', 'Co', 'Corp', 'Group'];
+
+  const FONTS = ['var(--font-display)', "'Playfair Display', serif", "'Poppins', sans-serif", "'Bebas Neue', system-ui", "'Righteous', system-ui"];
+  const HUES = [212, 258, 160, 22, 340, 45]; 
+
+  const STORE = 'cn-saved-names';
+  let saved: string[] = load();
+  let current: NameIdea[] = [];
+  let view: 'results' | 'saved' = 'results';
+
+  function load(): string[] {
+    try { return JSON.parse(localStorage.getItem(STORE) || '[]'); } catch { return []; }
+  }
+  function persist() {
+    try { localStorage.setItem(STORE, JSON.stringify(saved)); } catch {  }
+    savedCount.textContent = `(${saved.length})`;
+  }
+
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+  function monogram(name: string): string {
+    const parts = name.replace(/[^a-zA-Z ]/g, '').split(/\s+/).filter(Boolean);
+    return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || (name[0] || '?').toUpperCase();
+  }
+
+  function card(idea: NameIdea): string {
+    const isSaved = saved.includes(idea.name);
+    const font = pick(FONTS);
+    const hue = pick(HUES);
+    return `<div class="panel group relative flex flex-col gap-3 p-4" data-name="${esc(idea.name)}">
+      <div class="flex items-center gap-3">
+        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-md text-sm font-bold text-white"
+          style="background:hsl(${hue} 55% 48%)">${esc(monogram(idea.name))}</span>
+        <button class="cn-name flex-1 truncate text-left text-lg font-semibold text-ink hover:text-primary-hover"
+          style="font-family:${font}" title="Click to copy">${esc(idea.name)}</button>
+        <button class="cn-star shrink-0 text-xl leading-none ${isSaved ? 'text-amber-400' : 'text-ink-tertiary hover:text-ink-subtle'}"
+          aria-label="${isSaved ? 'Remove from saved' : 'Save name'}" aria-pressed="${isSaved}">${isSaved ? '★' : '☆'}</button>
+      </div>
+      <span class="status-badge w-fit capitalize">${esc(idea.style)}</span>
+    </div>`;
+  }
+
+  function withSuffix(list: NameIdea[]): NameIdea[] {
+    if (!suffixEl.checked) return list;
+    return list.map((i) => ({ ...i, name: `${i.name} ${pick(SUFFIXES)}` }));
+  }
+
+  function render() {
+    const list: NameIdea[] = view === 'results'
+      ? current
+      : saved.map((name) => ({ name, style: 'saved' as NameStyle }));
+    tabResults.className = `cn-tab -mb-px border-b-2 px-3 py-2 text-sm font-medium ${view === 'results' ? 'border-primary text-ink' : 'border-transparent text-ink-subtle'}`;
+    tabSaved.className = `cn-tab -mb-px border-b-2 px-3 py-2 text-sm font-medium ${view === 'saved' ? 'border-primary text-ink' : 'border-transparent text-ink-subtle'}`;
+
+    if (!list.length) {
+      out.innerHTML = '';
+      out.classList.add('hidden');
+      empty.classList.remove('hidden');
+      empty.textContent = view === 'saved'
+        ? 'No saved names yet. Tap the ☆ on any result to save it.'
+        : 'No results — try different keywords.';
+      return;
+    }
+    empty.classList.add('hidden');
+    out.classList.remove('hidden');
+    out.innerHTML = list.map(card).join('');
+  }
+
+  function generate() {
+    const keywords = kwEl.value.split(',').map((s) => s.trim()).filter(Boolean);
+    const count = Math.max(1, Math.min(100, Number(countEl.value) || 24));
+    current = withSuffix(generateNames({
+      keywords,
+      style: styleEl.value as NameStyle,
+      randomness: Number(randEl.value) as Randomness,
+      count,
+    }));
+    view = 'results';
+    render();
+  }
+
+  // Event delegation for copy + star on the grid.
+  out.addEventListener('click', async (e) => {
+    const el = e.target as HTMLElement;
+    const cardEl = el.closest('[data-name]') as HTMLElement | null;
+    if (!cardEl) return;
+    const name = cardEl.dataset.name!;
+    if (el.closest('.cn-star')) {
+      const i = saved.indexOf(name);
+      if (i >= 0) saved.splice(i, 1); else saved.push(name);
+      persist();
+      render();
+    } else if (el.closest('.cn-name')) {
+      await navigator.clipboard.writeText(name);
+      const btn = el.closest('.cn-name') as HTMLElement;
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => (btn.textContent = orig), 1000);
+    }
+  });
+
+  tabResults.addEventListener('click', () => { view = 'results'; render(); });
+  tabSaved.addEventListener('click', () => { view = 'saved'; render(); });
+
+  $('cn-gen').addEventListener('click', generate);
+  [styleEl, randEl, suffixEl].forEach((el) => el.addEventListener('change', generate));
+  kwEl.addEventListener('keydown', (e) => { if ((e as KeyboardEvent).key === 'Enter') generate(); });
+
+  $('cn-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    const list = view === 'results' ? current.map((i) => i.name) : saved;
+    await navigator.clipboard.writeText(list.join('\n'));
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy all'), 1500);
+  });
+
+  persist();
+  generate();
+</script>

@@ -1,0 +1,409 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="silver-calculator">
+  <div class="flex flex-col gap-5">
+    <div class="panel p-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-col gap-0.5">
+          <span class="text-sm font-medium text-ink">Live prices</span>
+          <span id="silver-status" class="text-xs text-ink-subtle">Fetch the current silver spot and exchange rate.</span>
+        </div>
+        <button id="silver-fetch" type="button" class="btn btn-primary shrink-0">Fetch live prices</button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Currency
+        <select id="silver-cur" class="field">
+          <option value="USD">USD — US Dollar</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Spot price
+        <input id="silver-spot" type="number" min="0" step="0.01" class="field" value="30" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Price quoted per
+        <select id="silver-price-unit" class="field">
+          <option value="31.1034768">Troy ounce (ozt)</option>
+          <option value="1">Gram (g)</option>
+          <option value="10">10 grams</option>
+          <option value="11.6638038">Tola</option>
+          <option value="1000">Kilogram (kg)</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Coin preset (optional)
+        <select id="silver-coin" class="field"><option value="">— none (enter weight) —</option></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Weight (per item)
+        <input id="silver-weight" type="number" min="0" step="0.01" class="field" value="100" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Quantity
+        <input id="silver-qty" type="number" min="1" step="1" class="field" value="1" inputmode="numeric" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Weight unit
+        <select id="silver-unit" class="field">
+          <option value="1">Troy ounce (ozt)</option>
+          <option value="0.9114583">Ounce (oz)</option>
+          <option value="0.03215075" selected>Gram (g)</option>
+          <option value="0.05">Pennyweight (dwt)</option>
+          <option value="0.00003215075">Milligram (mg)</option>
+          <option value="32.150747">Kilogram (kg)</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Purity / Fineness
+        <select id="silver-purity" class="field">
+          <option value="0.999">Fine silver .999</option>
+          <option value="0.958">Britannia .958</option>
+          <option value="0.925" selected>Sterling .925</option>
+          <option value="0.900">Coin silver .900</option>
+          <option value="0.800">.800 silver</option>
+          <option value="0.400">40% silver (.400)</option>
+          <option value="0.350">War nickel (.350)</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Buyer pays (% of melt)
+        <input id="silver-pct" type="number" min="0" max="100" class="field" value="100" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-6">
+      <div class="flex items-baseline justify-between">
+        <span class="text-sm text-ink-subtle">Estimated value</span>
+        <span id="silver-value" class="font-display text-4xl font-semibold text-primary-hover">—</span>
+      </div>
+      <div id="silver-breakdown" class="mt-5 flex flex-col gap-2 text-sm"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free silver value calculator works out the melt value of silver from
+      its weight, fineness and the current spot price. Hit “Fetch live prices” to
+      pull the current silver spot price and convert it into any of the world’s
+      currencies on the spot. It quotes the price in each market’s conventional
+      unit — per troy ounce for the US and Europe, per gram in the Gulf, per 10
+      grams in India, per tola in Pakistan and Nepal — and you can switch the
+      quote unit yourself. Then pick your weight unit and fineness and it figures
+      the pure silver content and its value. You can also type a spot price by
+      hand. Use the “buyer pays” field to model a scrap or pawn offer that’s a
+      percentage of melt. It handles grams, ounces, troy ounces, pennyweight and
+      kilograms, and finenesses from .800 to fine .999.
+    </p>
+    <p>
+      Silver trades as one global commodity priced in US dollars, so the live
+      figure is the international spot converted at the current exchange rate.
+      Domestic retail prices sit higher because of import duty, local tax (like
+      India’s GST) and dealer margin. No free data source publishes these landed
+      retail prices, so the tool applies a built-in per-country premium
+      automatically when you pick a currency, giving a price close to your local
+      rate without you having to look anything up. These premiums are market
+      estimates and shift with duty and tax changes, so treat the figure as a
+      close guide rather than an exact quote.
+    </p>
+    <p>
+      Live silver prices come from gold-api.com and exchange rates from
+      exchangerate-api.com’s open endpoint. Rates update through the day, so
+      refetch for the latest figure.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const sel = (id: string) => document.getElementById(id) as unknown as HTMLSelectElement;
+
+  let silverUsdPerOzt: number | null = null; 
+  let rates: Record<string, number> = { USD: 1 }; 
+
+  const OZT_G = 31.1034768; 
+
+  const UNIT_SHORT: Record<string, string> = {
+    '31.1034768': 'ozt',
+    '1': 'g',
+    '10': '10g',
+    '11.6638038': 'tola',
+    '1000': 'kg',
+  };
+
+  const QUOTE_UNIT_BY_CCY: Record<string, number> = {
+    INR: 10, 
+    AED: 1, SAR: 1, QAR: 1, OMR: 1, KWD: 1, BHD: 1, JOD: 1, 
+    PKR: 11.6638038, NPR: 11.6638038, 
+    LKR: 1, BDT: 1, EGP: 1, TRY: 1, 
+  };
+
+  const DEFAULT_PREMIUM = 3; 
+  const PREMIUM_BY_CCY: Record<string, number> = {
+
+    INR: 15, PKR: 8, NPR: 13, BDT: 12, LKR: 11, BTN: 15, MVR: 5, AFN: 6,
+
+    AED: 1, SAR: 1, QAR: 1, OMR: 1, KWD: 1, BHD: 1, JOD: 2, YER: 4,
+    IQD: 5, IRR: 6, LBP: 6, ILS: 2,
+
+    USD: 0, EUR: 0, GBP: 0, CHF: 1, JPY: 1, HKD: 1, SGD: 1,
+
+    NOK: 2, SEK: 2, DKK: 2, PLN: 2, CZK: 2, HUF: 3, RON: 3, BGN: 3,
+    ISK: 3, TRY: 8, RUB: 6, UAH: 8, RSD: 4,
+
+    CNY: 3, TWD: 2, KRW: 3, MYR: 3, THB: 2, IDR: 6, PHP: 5, VND: 6, MMK: 8,
+    KHR: 6, LAK: 8, MNT: 6, MOP: 1, BND: 2,
+
+    AUD: 2, NZD: 2,
+
+    CAD: 1, MXN: 4, BRL: 6, ARS: 10, CLP: 4, COP: 5, PEN: 4, UYU: 4,
+    BOB: 5, PYG: 5, VES: 12, DOP: 5, JMD: 6, TTD: 4,
+
+    ZAR: 3, EGP: 8, NGN: 8, KES: 6, GHS: 7, MAD: 4, TND: 5, DZD: 7,
+    ETB: 8, TZS: 6, UGX: 6, ZMW: 6, XOF: 5, XAF: 5,
+  };
+
+  function premiumPctFor(code: string): number {
+    return PREMIUM_BY_CCY[code] ?? DEFAULT_PREMIUM;
+  }
+
+  const CURRENCIES =
+    'AED AFN ALL AMD ANG AOA ARS AUD AWG AZN BAM BBD BDT BGN BHD BIF BMD BND BOB BRL BSD BTN BWP BYN BZD CAD CDF CHF CLP CNY COP CRC CUP CVE CZK DJF DKK DOP DZD EGP ERN ETB EUR FJD FKP FOK GBP GEL GGP GHS GIP GMD GNF GTQ GYD HKD HNL HRK HTG HUF IDR ILS IMP INR IQD IRR ISK JMD JOD JPY KES KGS KHR KID KMF KRW KWD KYD KZT LAK LBP LKR LRD LSL LYD MAD MDL MGA MKD MMK MNT MOP MRU MUR MVR MWK MXN MYR MZN NAD NGN NIO NOK NPR NZD OMR PAB PEN PGK PHP PKR PLN PYG QAR RON RSD RUB RWF SAR SBD SCR SDG SEK SGD SHP SLE SLL SOS SRD SSP STN SYP SZL THB TJS TMT TND TOP TRY TTD TVD TWD TZS UAH UGX USD UYU UZS VES VND VUV WST XAF XCD XDR XOF XPF YER ZAR ZMW ZWL'.split(
+      ' '
+    );
+
+  const names =
+    typeof Intl !== 'undefined' && 'DisplayNames' in Intl
+      ? new Intl.DisplayNames(['en'], { type: 'currency' })
+      : null;
+
+  function currencySymbol(code: string): string {
+    try {
+      const parts = new Intl.NumberFormat('en', {
+        style: 'currency',
+        currency: code,
+        currencyDisplay: 'narrowSymbol',
+      }).formatToParts(0);
+      const sym = parts.find((p) => p.type === 'currency')?.value;
+      return sym && sym !== code ? sym : '';
+    } catch {
+      return '';
+    }
+  }
+
+  function currencyName(code: string): string {
+    let label = code;
+    try {
+      const n = names?.of(code);
+      if (n && n !== code) label = `${code} — ${n}`;
+    } catch {}
+    const sym = currencySymbol(code);
+    return sym ? `${label} (${sym})` : label;
+  }
+
+  function money(n: number, code: string): string {
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: code,
+        maximumFractionDigits: 2,
+      }).format(n);
+    } catch {
+      return `${code} ${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+  }
+
+  function populateCurrencies() {
+    const curSel = sel('silver-cur');
+    const prev = curSel.value || 'USD';
+    // Merge the static ISO list with anything the live feed returned, deduped.
+    const codes = Array.from(new Set([...CURRENCIES, ...Object.keys(rates)])).sort((a, b) =>
+      a.localeCompare(b)
+    );
+    curSel.innerHTML = codes
+      .map((c) => `<option value="${c}">${currencyName(c)}</option>`)
+      .join('');
+    curSel.value = codes.includes(prev) ? prev : 'USD';
+  }
+
+  let lastUpdated = '';
+
+  // Recompute the spot-price field from live USD silver price + selected currency
+  // rate, i.e. the local silver price in the chosen currency and market's unit.
+  function syncSpotFromLive(useMarketUnit = false) {
+    if (silverUsdPerOzt == null) return;
+    const code = sel('silver-cur').value || 'USD';
+    const rate = rates[code];
+
+    // The FX feed doesn't cover every listed currency (some pegged/rare codes).
+    // Don't fabricate a 1:1 rate — tell the user instead of showing a wrong price.
+    if (rate == null) {
+      const status = document.getElementById('silver-status')!;
+      status.classList.add('text-red-400');
+      status.textContent = `No live exchange rate available for ${code}. Pick another currency or enter the spot price manually.`;
+      return;
+    }
+
+    // When the currency changes, snap the quote unit to that market's convention.
+    if (useMarketUnit) {
+      const gramsPerUnit = QUOTE_UNIT_BY_CCY[code] ?? OZT_G;
+      sel('silver-price-unit').value = String(gramsPerUnit);
+    }
+
+    const priceUnitG = Number(sel('silver-price-unit').value) || OZT_G; // grams per quoted unit
+    const premiumPct = premiumPctFor(code); // auto per-currency, no user input
+    const premium = 1 + premiumPct / 100;
+    const pricePerGram = (silverUsdPerOzt * rate) / OZT_G;
+    const localSpot = pricePerGram * priceUnitG * premium;
+    $('silver-spot').value = localSpot.toFixed(2);
+    showLivePrice(code, localSpot, priceUnitG, premiumPct);
+  }
+
+  function showLivePrice(code: string, localSpot: number, priceUnitG: number, premiumPct: number) {
+    const status = document.getElementById('silver-status')!;
+    status.classList.remove('text-red-400');
+    const unit = UNIT_SHORT[String(priceUnitG)] ?? `${priceUnitG} g`;
+    const prem = premiumPct ? ` (incl. ~${premiumPct}% local duty & dealer premium)` : '';
+    const asOf = lastUpdated ? ` · rates as of ${lastUpdated}` : '';
+    status.textContent = `${code} silver price: ${money(localSpot, code)}/${unit}${prem}${asOf}.`;
+  }
+
+  async function fetchLive() {
+    const btn = $('silver-fetch');
+    const status = document.getElementById('silver-status')!;
+    btn.setAttribute('disabled', 'true');
+    btn.textContent = 'Fetching…';
+    status.textContent = 'Fetching silver price and exchange rates…';
+    status.classList.remove('text-red-400');
+
+    try {
+      const [metalRes, fxRes] = await Promise.all([
+        fetch('https://api.gold-api.com/price/XAG'),
+        fetch('https://open.er-api.com/v6/latest/USD'),
+      ]);
+      if (!metalRes.ok || !fxRes.ok) throw new Error('bad response');
+
+      const metal = await metalRes.json();
+      const fx = await fxRes.json();
+
+      if (typeof metal.price !== 'number' || !fx.rates) throw new Error('bad payload');
+
+      silverUsdPerOzt = metal.price;
+      rates = fx.rates;
+      if (!rates.USD) rates.USD = 1;
+
+      lastUpdated =
+        typeof fx.time_last_update_utc === 'string'
+          ? new Date(fx.time_last_update_utc).toLocaleString()
+          : '';
+
+      populateCurrencies();
+      syncSpotFromLive(true); // set spot + status to the selected currency's price in its market unit
+      calc();
+    } catch {
+      status.textContent = 'Could not fetch live prices. Enter the spot price manually.';
+      status.classList.add('text-red-400');
+    } finally {
+      btn.removeAttribute('disabled');
+      btn.textContent = 'Fetch live prices';
+    }
+  }
+
+  function calc() {
+    const spot = Number($('silver-spot').value) || 0; // price per quoted unit
+    const code = sel('silver-cur').value || 'USD';
+    const qty = Math.max(1, Number($('silver-qty').value) || 1);
+    const weight = (Number($('silver-weight').value) || 0) * qty;
+    const toOzt = Number(sel('silver-unit').value); // factor: weight unit → troy ounces
+    const priceUnitG = Number(sel('silver-price-unit').value) || OZT_G; // grams per quoted unit
+    const purity = Number(sel('silver-purity').value);
+    const pct = (Number($('silver-pct').value) || 0) / 100;
+
+    const valueEl = document.getElementById('silver-value')!;
+    const breakdownEl = document.getElementById('silver-breakdown')!;
+
+    if (!(spot > 0) || !(weight > 0)) {
+      valueEl.textContent = '—';
+      breakdownEl.innerHTML = '';
+      return;
+    }
+
+    const pricePerOzt = (spot / priceUnitG) * OZT_G; // normalise quote to per troy ounce
+    const totalOzt = weight * toOzt;
+    const pureOzt = totalOzt * purity;
+    const melt = pureOzt * pricePerOzt;
+    const payout = melt * pct;
+
+    valueEl.textContent = money(payout, code);
+
+    // Express weights in the same unit the price is quoted in.
+    const unitLabel = UNIT_SHORT[String(priceUnitG)] ?? `${priceUnitG} g`;
+    const inUnit = (ozt: number) => (ozt * OZT_G) / priceUnitG;
+
+    const rows: [string, string][] = [
+      ['Total weight', inUnit(totalOzt).toFixed(4) + ' ' + unitLabel],
+      ['Pure silver content', inUnit(pureOzt).toFixed(4) + ' ' + unitLabel],
+      ['Melt value (100%)', money(melt, code)],
+    ];
+    if (pct !== 1) rows.push([`Payout at ${(pct * 100).toFixed(0)}%`, money(payout, code)]);
+
+    breakdownEl.innerHTML = rows
+      .map(
+        ([label, val]) => `<div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0">
+          <span class="text-ink-subtle">${label}</span>
+          <span class="font-mono text-ink-muted">${val}</span>
+        </div>`
+      )
+      .join('');
+  }
+
+  // Currency change: reprice from the live USD base and snap to that market's quote unit.
+  sel('silver-cur').addEventListener('change', () => {
+    syncSpotFromLive(true);
+    calc();
+  });
+
+  // Quote-unit change: reprice the spot into the chosen unit (keeps the same currency).
+  let prevPriceUnitG = Number(sel('silver-price-unit').value) || OZT_G;
+  sel('silver-price-unit').addEventListener('change', () => {
+    const newUnitG = Number(sel('silver-price-unit').value) || OZT_G;
+    if (silverUsdPerOzt != null) {
+      // Live data present: recompute the price from the USD base.
+      syncSpotFromLive(false);
+    } else {
+      // Manual entry: rescale the typed price from the old unit to the new one
+      // so it keeps meaning the same per-gram price.
+      const cur = Number($('silver-spot').value) || 0;
+      if (cur > 0) $('silver-spot').value = ((cur / prevPriceUnitG) * newUnitG).toFixed(2);
+    }
+    prevPriceUnitG = newUnitG;
+    calc();
+  });
+
+  $('silver-fetch').addEventListener('click', fetchLive);
+
+  // Named silver coin presets: total coin weight in grams + fineness (standard US specs).
+  const COINS: { label: string; grams: number; purity: string }[] = [
+    { label: 'Mercury / Roosevelt dime (90%)', grams: 2.5, purity: '0.900' },
+    { label: 'Washington quarter (90%)', grams: 6.25, purity: '0.900' },
+    { label: 'Half dollar — Walking Liberty/Franklin/Kennedy (90%)', grams: 12.5, purity: '0.900' },
+    { label: 'Morgan / Peace dollar (90%)', grams: 26.73, purity: '0.900' },
+    { label: '40% Kennedy half (1965–70)', grams: 11.5, purity: '0.400' },
+    { label: 'War nickel (1942–45, 35%)', grams: 5.0, purity: '0.350' },
+    { label: '1 oz silver round/bar (.999)', grams: 31.1034768, purity: '0.999' },
+    { label: 'Sterling flatware — per gram (.925)', grams: 1, purity: '0.925' },
+  ];
+  const coinSel = sel('silver-coin');
+  coinSel.innerHTML = '<option value="">— none (enter weight) —</option>' +
+    COINS.map((c, i) => `<option value="${i}">${c.label}</option>`).join('');
+  coinSel.addEventListener('change', () => {
+    if (coinSel.value === '') return;
+    const c = COINS[Number(coinSel.value)];
+    sel('silver-unit').value = '0.03215075'; // grams
+    $('silver-weight').value = String(c.grams);
+    sel('silver-purity').value = c.purity;
+    calc();
+  });
+
+  document
+    .querySelectorAll('#silver-spot, #silver-weight, #silver-qty, #silver-unit, #silver-purity, #silver-pct')
+    .forEach((el) => el.addEventListener('input', calc));
+
+  populateCurrencies(); // fill the dropdown with all currencies on load
+  calc();
+</script>

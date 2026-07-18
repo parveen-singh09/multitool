@@ -1,0 +1,270 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="energy-converter">
+  <div id="ec-root" class="flex flex-col gap-6">
+
+    <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="ec-from-val">From</label>
+        <input id="ec-from-val" type="number" class="field" value="1" inputmode="decimal" step="any" />
+        <select id="ec-from-unit" class="field mt-1"></select>
+      </div>
+      <button
+        id="ec-swap"
+        type="button"
+        class="btn btn-secondary mb-1 h-10 w-10 shrink-0 justify-self-center p-0"
+        aria-label="Swap units"
+        title="Swap units"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
+      </button>
+      <div class="flex flex-col gap-1">
+        <span class="flex items-center justify-between">
+          <label class="text-sm text-ink-subtle" for="ec-to-val">To</label>
+        </span>
+        <div class="copy-wrap">
+          <input id="ec-to-val" type="text" class="field" readonly />
+          <button type="button" class="copy-icon" data-copy-target="#ec-to-val" aria-label="Copy"></button>
+        </div>
+        <select id="ec-to-unit" class="field mt-1"></select>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
+      <label class="flex items-center gap-2 text-[13px] text-ink-subtle">
+        Precision
+        <select id="ec-precision" class="field h-8 py-0 pr-7 text-[13px]">
+          <option value="auto" selected>Auto</option>
+          <option value="0">0 dp</option>
+          <option value="2">2 dp</option>
+          <option value="4">4 dp</option>
+          <option value="6">6 dp</option>
+          <option value="8">8 dp</option>
+          <option value="10">10 dp</option>
+        </select>
+      </label>
+      <label class="flex items-center gap-2 text-[13px] text-ink-subtle">
+        <input id="ec-thousands" type="checkbox" class="h-4 w-4 accent-primary" />
+        Group thousands
+      </label>
+    </div>
+
+    <p id="ec-error" class="hidden text-[13px]" style="color:#e5484d" role="alert" aria-live="polite"></p>
+    <p id="ec-formula" class="text-[13px] text-ink-tertiary"></p>
+
+    <div>
+      <p class="mb-2 text-[13px] text-ink-subtle">Common conversions</p>
+      <div id="ec-presets" class="flex flex-wrap gap-2"></div>
+    </div>
+
+    <div>
+      <div class="mb-2 flex items-center justify-between">
+        <p class="text-[13px] text-ink-subtle">Value in every unit</p>
+        <button id="ec-copy-all" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Copy all</button>
+      </div>
+      <div id="ec-table" class="overflow-hidden rounded-md border border-hairline"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free energy converter converts between joules, kilojoules, megajoules,
+      gigajoules, calories, kilocalories (food Calories), watt-hours, kilowatt-hours,
+      megawatt-hours, BTU, MMBTU, US therms, foot-pounds, ergs, electronvolts,
+      horsepower-hours and tonnes of TNT equivalent. Useful for nutrition, physics,
+      engineering and utility bills.
+    </p>
+    <p>
+      Type a value, pick your units and read the result instantly, or scan the
+      "value in every unit" table to see one figure expressed in every energy unit
+      at once. Choose a fixed number of decimal places or let precision adapt
+      automatically, optionally group thousands for readability, and copy any
+      single result or the whole table with one click.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+
+  const UNITS: Record<string, number> = {
+    Joule: 1,
+    Kilojoule: 1000,
+    Megajoule: 1e6,
+    Gigajoule: 1e9,
+    Calorie: 4.184,
+    Kilocalorie: 4184,
+    'Watt-hour': 3600,
+    'Kilowatt-hour': 3.6e6,
+    'Megawatt-hour': 3.6e9,
+    BTU: 1055.05585262,
+    'MMBTU (million BTU)': 1.05505585262e9,
+    'Therm (US)': 1.05480400e8,
+    'Foot-pound': 1.3558179483,
+    Erg: 1e-7,
+    Electronvolt: 1.602176634e-19,
+    'Horsepower-hour': 2.6845195377e6,
+    'Ton of TNT': 4.184e9,
+  };
+  const NAMES = Object.keys(UNITS);
+
+  const SYM: Record<string, string> = {
+    Joule: 'J', Kilojoule: 'kJ', Megajoule: 'MJ', Gigajoule: 'GJ',
+    Calorie: 'cal', Kilocalorie: 'kcal', 'Watt-hour': 'Wh', 'Kilowatt-hour': 'kWh',
+    'Megawatt-hour': 'MWh', BTU: 'BTU', 'MMBTU (million BTU)': 'MMBTU',
+    'Therm (US)': 'thm', 'Foot-pound': 'ft·lb', Erg: 'erg',
+    Electronvolt: 'eV', 'Horsepower-hour': 'hp·h', 'Ton of TNT': 't TNT',
+  };
+
+  const PRESETS: [string, string][] = [
+    ['Kilocalorie', 'Kilojoule'],
+    ['Kilowatt-hour', 'Megajoule'],
+    ['Joule', 'Calorie'],
+    ['BTU', 'Kilojoule'],
+    ['Kilowatt-hour', 'BTU'],
+    ['Foot-pound', 'Joule'],
+  ];
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const fromVal = $('ec-from-val') as HTMLInputElement;
+  const toVal = $('ec-to-val') as HTMLInputElement;
+  const fromUnit = $('ec-from-unit') as HTMLSelectElement;
+  const toUnit = $('ec-to-unit') as HTMLSelectElement;
+  const swap = $('ec-swap') as HTMLButtonElement;
+  const precision = $('ec-precision') as HTMLSelectElement;
+  const thousands = $('ec-thousands') as HTMLInputElement;
+  const errEl = $('ec-error') as HTMLElement;
+  const formula = $('ec-formula') as HTMLElement;
+  const presetsEl = $('ec-presets') as HTMLElement;
+  const table = $('ec-table') as HTMLElement;
+
+  function convert(value: number, from: string, to: string): number {
+    return (value * UNITS[from]) / UNITS[to];
+  }
+
+  function fmt(n: number): string {
+    if (!isFinite(n)) return n > 0 ? '∞' : '-∞';
+    if (n === 0) return '0';
+    const mode = precision.value;
+    const abs = Math.abs(n);
+    let out: string;
+    if (mode === 'auto') {
+
+      if (abs >= 1e15 || abs < 1e-6) return n.toExponential(6);
+      out = String(Math.round(n * 1e9) / 1e9);
+    } else {
+      const dp = Number(mode);
+      if (abs !== 0 && (abs >= 1e16 || abs < Math.pow(10, -dp) / 2)) return n.toExponential(Math.min(dp || 6, 20));
+      out = n.toFixed(dp);
+    }
+    if (thousands.checked) {
+      const [int, frac] = out.split('.');
+      const sign = int.startsWith('-') ? '-' : '';
+      const grouped = int.replace('-', '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      out = sign + grouped + (frac ? '.' + frac : '');
+    }
+    return out;
+  }
+
+  function fillUnits() {
+    const opts = NAMES.map((u) => `<option>${u}</option>`).join('');
+    fromUnit.innerHTML = opts;
+    toUnit.innerHTML = opts;
+    fromUnit.value = 'Kilocalorie';
+    toUnit.value = 'Kilojoule';
+  }
+
+  function showError(msg: string) {
+    errEl.textContent = msg;
+    errEl.classList.remove('hidden');
+    toVal.value = '';
+    formula.textContent = '';
+    table.innerHTML = '';
+  }
+  function clearError() {
+    errEl.classList.add('hidden');
+    errEl.textContent = '';
+  }
+
+  function run() {
+    const raw = fromVal.value.trim();
+    if (raw === '') { clearError(); toVal.value = ''; formula.textContent = ''; renderTable(1, true); return; }
+    const v = Number(raw);
+    if (isNaN(v)) { showError(`"${raw}" is not a valid number.`); return; }
+    clearError();
+    const result = convert(v, fromUnit.value, toUnit.value);
+    toVal.value = fmt(result);
+    formula.textContent =
+      `${fmt(v)} ${SYM[fromUnit.value]} = ${fmt(result)} ${SYM[toUnit.value]}`;
+    renderTable(v, false);
+  }
+
+  // Full table: the current input value expressed in every unit.
+  function renderTable(v: number, placeholder: boolean) {
+    const rows = NAMES.map((u) => {
+      const r = convert(v, fromUnit.value, u);
+      const active = u === fromUnit.value ? ' bg-surface-2' : '';
+      return `<tr class="border-t border-hairline${active}">
+        <td class="px-3 py-2 text-ink-subtle">${u} <span class="text-ink-tertiary">(${SYM[u]})</span></td>
+        <td class="px-3 py-2 text-right font-mono text-ink">${placeholder ? '—' : fmt(r)}</td>
+      </tr>`;
+    }).join('');
+    table.innerHTML = `<table class="w-full text-[13px]">${rows}</table>`;
+  }
+
+  function renderPresets() {
+    presetsEl.innerHTML = PRESETS.map(
+      ([f, t], i) =>
+        `<button type="button" data-i="${i}" class="btn btn-tertiary border border-hairline px-2.5 py-1 text-[13px]">${SYM[f]} → ${SYM[t]}</button>`
+    ).join('');
+    presetsEl.querySelectorAll('button').forEach((b) =>
+      b.addEventListener('click', () => {
+        const [f, t] = PRESETS[Number((b as HTMLButtonElement).dataset.i)];
+        fromUnit.value = f;
+        toUnit.value = t;
+        if (fromVal.value.trim() === '' || isNaN(Number(fromVal.value))) fromVal.value = '1';
+        run();
+      })
+    );
+  }
+
+  async function copyText(btn: HTMLButtonElement, text: string, ok = 'Copied!') {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      const orig = btn.textContent;
+      btn.textContent = ok;
+      setTimeout(() => (btn.textContent = orig), 1400);
+    } catch {
+      showError('Clipboard access was blocked by your browser.');
+    }
+  }
+
+  fromVal.addEventListener('input', run);
+  fromUnit.addEventListener('change', run);
+  toUnit.addEventListener('change', run);
+  precision.addEventListener('change', run);
+  thousands.addEventListener('change', run);
+  swap.addEventListener('click', () => {
+    const F = fromUnit.value, T = toUnit.value;
+    const x = Number(fromVal.value);
+    fromUnit.value = T;
+    toUnit.value = F;
+    // Carry the previous result into "from" so the swap round-trips cleanly.
+    if (fromVal.value.trim() !== '' && !isNaN(x)) fromVal.value = String(convert(x, F, T));
+    run();
+  });
+
+  $('ec-copy-all').addEventListener('click', (e) => {
+    const raw = fromVal.value.trim();
+    const v = raw === '' ? NaN : Number(raw);
+    if (isNaN(v)) return;
+    const lines = NAMES.map((u) => `${fmt(convert(v, fromUnit.value, u))} ${SYM[u]}`).join('\n');
+    copyText(e.currentTarget as HTMLButtonElement, lines);
+  });
+
+  fillUnits();
+  renderPresets();
+  run();
+</script>

@@ -1,0 +1,70 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import ToolCard from '../components/ToolCard.astro';
+import ToolSearch from '../components/ToolSearch.astro';
+import { categories, toolsByCategory, type ToolCategory } from '../data/tools';
+import { SITE } from '../data/site';
+
+const slugify = (c: string) => c.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+export function getStaticPaths() {
+  const slug = (c: string) => c.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return categories.map((category) => ({
+    params: { category: slug(category) },
+    props: { category },
+  }));
+}
+
+const { category } = Astro.props as { category: ToolCategory };
+const catTools = toolsByCategory(category);
+const pageUrl = `${SITE.url}/${slugify(category)}`;
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: `${category} tools — ${SITE.name}`,
+    url: pageUrl,
+    description: `Free online ${category} tools. ${catTools.length} tools to convert, create and edit.`,
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: `${category} tools`,
+    itemListElement: catTools.map((tool, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: tool.name,
+      description: tool.tagline,
+      url: `${SITE.url}/${tool.slug}`,
+    })),
+  },
+];
+---
+
+<Layout title={`${category} tools`} description={`Free online ${category} tools — ${catTools.length} tools to convert, create and edit, right in your browser.`} jsonLd={jsonLd}>
+  <Header />
+
+  <main>
+    <section class="container-page py-8">
+      <div class="mb-10 flex flex-col gap-2">
+        <a href="/tools" class="eyebrow text-primary-hover hover:underline">← All tools</a>
+        <div class="flex items-center gap-3">
+          <h1 class="display-md text-ink">{category}</h1>
+          <span class="status-badge">{catTools.length}</span>
+        </div>
+        <p class="mt-2 max-w-xl text-lg leading-relaxed text-ink-muted">
+          {catTools.length} free {category} tools — pick one and start working.
+        </p>
+        <div class="mt-4">
+          <ToolSearch variant="hero" class="mx-0 max-w-none!" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {catTools.map((tool) => <ToolCard tool={tool} />)}
+      </div>
+    </section>
+  </main>
+</Layout>

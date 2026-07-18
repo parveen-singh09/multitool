@@ -1,0 +1,650 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="gantt-chart-creator">
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,420px)_1fr]">
+
+    <div class="flex flex-col gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Project title
+        <input id="gcc-title" class="field" type="text" value="Launch Plan" />
+      </label>
+
+      <div class="flex flex-wrap gap-1 rounded-md bg-surface-1 p-1" role="tablist">
+        <button class="gcc-tab btn btn-tertiary" data-tab="tasks" aria-selected="true">Tasks</button>
+        <button class="gcc-tab btn btn-tertiary" data-tab="templates">Templates</button>
+        <button class="gcc-tab btn btn-tertiary" data-tab="style">Style</button>
+        <button class="gcc-tab btn btn-tertiary" data-tab="calendar">Calendar</button>
+      </div>
+
+      <section data-panel="tasks" class="flex flex-col gap-3">
+        <div id="gcc-rows" class="flex max-h-[62vh] flex-col gap-3 overflow-y-auto pr-1"></div>
+        <button id="gcc-add" class="btn btn-secondary self-start">Add task</button>
+        <p id="gcc-cycle" class="hidden text-[13px]" style="color:#e5a23d" role="alert"></p>
+      </section>
+
+      <section data-panel="templates" class="hidden flex-col gap-4">
+        <p class="text-sm text-ink-subtle">Pick a starting point. It replaces the current project.</p>
+        <div id="gcc-templates" class="flex flex-col gap-4"></div>
+      </section>
+
+      <section data-panel="style" class="hidden flex-col gap-4">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Zoom
+          <select id="gcc-zoom" class="field"></select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Theme
+          <select id="gcc-theme" class="field"></select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Size
+          <select id="gcc-size" class="field"></select>
+        </label>
+      </section>
+
+      <section data-panel="calendar" class="hidden flex-col gap-4">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Project start
+          <input id="gcc-start" class="field" type="date" />
+        </label>
+        <div class="flex flex-col gap-2">
+          <span class="text-sm text-ink-subtle">Working days</span>
+          <div id="gcc-workdays" class="flex flex-wrap gap-1"></div>
+        </div>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Holidays (one ISO date per line, e.g. 2026-12-25)
+          <textarea id="gcc-holidays" class="field" rows="4" placeholder="2026-12-25&#10;2026-01-01"></textarea>
+        </label>
+      </section>
+    </div>
+
+    <div class="flex flex-col gap-3">
+      <div class="flex flex-wrap gap-2">
+        <button id="gcc-png" class="btn btn-primary">PNG</button>
+        <button id="gcc-svg" class="btn btn-secondary">SVG</button>
+        <button id="gcc-pdf" class="btn btn-secondary">PDF</button>
+        <button id="gcc-copy" class="btn btn-secondary">Copy</button>
+        <button id="gcc-json" class="btn btn-secondary">JSON</button>
+        <button id="gcc-csv" class="btn btn-secondary">CSV</button>
+        <button id="gcc-mpp" class="btn btn-secondary">MS Project</button>
+        <button id="gcc-import" class="btn btn-tertiary">Import</button>
+        <input id="gcc-file" type="file" accept=".json,.csv,.xml,application/json,text/csv,application/xml,text/xml" class="hidden" />
+      </div>
+      <p class="text-[13px] text-ink-tertiary">
+        Drag a bar to move it, drag its edges to resize, or drag from a bar's right
+        edge onto another to link them. Dependents reschedule automatically.
+      </p>
+      <div class="panel overflow-auto p-3" style="max-height:80vh">
+        <div id="gcc-preview" class="touch-none select-none [&>svg]:h-auto [&>svg]:max-w-full [&>svg]:rounded-md" aria-label="Gantt chart preview"></div>
+      </div>
+      <p id="gcc-status" class="text-sm text-ink-subtle" role="status" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free Gantt chart maker turns a project plan into a scheduled timeline of
+      task bars, dependencies and milestones — then lets you download it. Add tasks
+      with a duration in <strong>working days</strong>, link them with
+      dependencies, and the built-in scheduler cascades the dates: move or resize
+      one task and everything downstream shifts to keep the plan valid. Weekends
+      (and holidays you list) are skipped automatically, and the
+      <strong>critical path</strong> is highlighted so you can see which tasks drive
+      the finish date.
+    </p>
+    <p>
+      Drag bars directly on the chart to reschedule, drag their edges to change
+      duration, or drag between bars to create links. Group work under summary
+      tasks, track percent-complete, mark milestones, and switch between day, week
+      and month zoom. Start from ready-made templates for software sprints, product
+      launches, construction, events and more. Import and export
+      <strong>MS Project XML</strong>, CSV and JSON for interoperability, or export
+      PNG, SVG and PDF. Your draft is saved in this browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import type { GanttProject, Task, DepType } from '../lib/gantt/types';
+  import { newId } from '../lib/gantt/types';
+  import { schedule } from '../lib/gantt/schedule';
+  import { renderSVG, type RenderResult } from '../lib/gantt/render';
+  import { GANTT_THEMES, getTheme, SIZE_PRESETS, getSize, ZOOM_LEVELS } from '../lib/gantt/presets';
+  import { DEFAULT_CALENDAR, fromIndex, finishOf } from '../lib/gantt/calendar';
+  import { templateGroups, templateToProject } from '../lib/gantt/templates';
+  import { toJSON, fromJSON, toCSV, fromCSV, toMSProjectXML, fromMSProjectXML } from '../lib/gantt/interop';
+  import { saveDraft, loadDraft } from '../lib/gantt/storage';
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  const titleEl = $<HTMLInputElement>('gcc-title');
+  const rowsEl = $<HTMLDivElement>('gcc-rows');
+  const preview = $<HTMLDivElement>('gcc-preview');
+  const statusEl = $<HTMLParagraphElement>('gcc-status');
+  const cycleEl = $<HTMLParagraphElement>('gcc-cycle');
+
+  function defaultProject(): GanttProject {
+    const t = (name: string, duration: number, over: Partial<Task> = {}): Task => ({
+      id: newId(), name, start: '2026-01-05', duration, progress: 0, deps: [], outline: 0, ...over,
+    });
+    const research = t('Research', 5, { progress: 100 });
+    const design = t('Design', 8, { progress: 40, deps: [{ pred: research.id, type: 'FS', lag: 0 }] });
+    const build = t('Build', 12, { deps: [{ pred: design.id, type: 'FS', lag: 0 }] });
+    const launch = t('Launch', 0, { deps: [{ pred: build.id, type: 'FS', lag: 0 }] });
+    return {
+      title: 'Launch Plan', start: '2026-01-05', zoom: 'week',
+      themeId: 'linear-dark', sizeId: 'landscape',
+      calendar: { workdays: [...DEFAULT_CALENDAR.workdays], holidays: [] },
+      tasks: [research, design, build, launch],
+    };
+  }
+
+  let state: GanttProject = loadDraft() ?? defaultProject();
+  let last: RenderResult | null = null;
+
+  let saveTimer = 0;
+  function render(): void {
+    state.title = titleEl.value;
+    const sched = schedule(state);
+    if (sched.cycleEdges.length) {
+      cycleEl.textContent = `${sched.cycleEdges.length} dependency ${sched.cycleEdges.length === 1 ? 'cycle was' : 'cycles were'} ignored to keep the schedule valid.`;
+      cycleEl.classList.remove('hidden');
+    } else {
+      cycleEl.classList.add('hidden');
+    }
+    last = renderSVG({ project: state, sched, theme: getTheme(state.themeId), size: getSize(state.sizeId) });
+    preview.innerHTML = last.svg;
+    clearTimeout(saveTimer);
+    saveTimer = window.setTimeout(() => saveDraft(state), 250);
+  }
+
+  // --- task editor rows -------------------------------------------------------
+  function renderRows(): void {
+    rowsEl.innerHTML = '';
+    state.tasks.forEach((task, i) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'panel flex flex-col gap-2 p-3';
+
+      // name + indent/outdent
+      const top = document.createElement('div');
+      top.className = 'flex items-center gap-2';
+      const indentBtn = iconBtn('⟨', 'Outdent', () => { task.outline = Math.max(0, task.outline - 1); renderRows(); render(); });
+      const outdentBtn = iconBtn('⟩', 'Indent', () => { if (i > 0) { task.outline = Math.min(task.outline + 1, state.tasks[i - 1].outline + 1); renderRows(); render(); } });
+      const nameInput = document.createElement('input');
+      nameInput.className = 'field';
+      nameInput.placeholder = 'Task name';
+      nameInput.value = task.name;
+      nameInput.style.marginLeft = `${task.outline * 12}px`;
+      nameInput.addEventListener('input', () => { task.name = nameInput.value; render(); });
+      top.append(indentBtn, outdentBtn, nameInput);
+
+      // start + duration + progress
+      const grid = document.createElement('div');
+      grid.className = 'grid grid-cols-3 gap-2';
+      grid.append(
+        field('Start', 'date', task.start, (v) => { if (v) { task.start = v; render(); } }),
+        numField('Duration (d)', task.duration, 0, (v) => { task.duration = Math.max(0, v); renderRows(); render(); }),
+        numField('% done', task.progress, 0, (v) => { task.progress = Math.max(0, Math.min(100, v)); render(); }, 100),
+      );
+
+      // assignee + group
+      const grid2 = document.createElement('div');
+      grid2.className = 'grid grid-cols-2 gap-2';
+      grid2.append(
+        field('Assignee', 'text', task.assignee ?? '', (v) => { task.assignee = v || undefined; render(); }),
+        field('Group', 'text', task.group ?? '', (v) => { task.group = v || undefined; render(); }),
+      );
+
+      // dependencies
+      const depWrap = document.createElement('div');
+      depWrap.className = 'flex flex-col gap-2';
+      const depLabel = document.createElement('span');
+      depLabel.className = 'text-xs text-ink-subtle';
+      depLabel.textContent = task.duration === 0 ? 'Milestone • Dependencies' : 'Dependencies';
+      depWrap.appendChild(depLabel);
+      task.deps.forEach((dep, di) => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-1';
+        const predSel = document.createElement('select');
+        predSel.className = 'field flex-1';
+        state.tasks.forEach((o, oi) => {
+          if (oi === i) return;
+          const opt = new Option(o.name || `Task ${oi + 1}`, o.id, false, o.id === dep.pred);
+          predSel.add(opt);
+        });
+        predSel.value = dep.pred;
+        predSel.addEventListener('change', () => { dep.pred = predSel.value; render(); });
+        const typeSel = document.createElement('select');
+        typeSel.className = 'field w-20';
+        (['FS', 'SS', 'FF', 'SF'] as DepType[]).forEach((ty) => typeSel.add(new Option(ty, ty, false, ty === dep.type)));
+        typeSel.value = dep.type;
+        typeSel.addEventListener('change', () => { dep.type = typeSel.value as DepType; render(); });
+        const lagInput = document.createElement('input');
+        lagInput.className = 'field w-16';
+        lagInput.type = 'number';
+        lagInput.value = String(dep.lag);
+        lagInput.title = 'Lag (working days)';
+        lagInput.addEventListener('input', () => { dep.lag = parseInt(lagInput.value, 10) || 0; render(); });
+        const del = iconBtn('×', 'Remove dependency', () => { task.deps.splice(di, 1); renderRows(); render(); });
+        row.append(predSel, typeSel, lagInput, del);
+        depWrap.appendChild(row);
+      });
+      if (state.tasks.length > 1) {
+        const addDep = document.createElement('button');
+        addDep.className = 'btn btn-tertiary self-start text-xs';
+        addDep.textContent = '+ predecessor';
+        addDep.addEventListener('click', () => {
+          const firstOther = state.tasks.find((o) => o.id !== task.id);
+          if (firstOther) { task.deps.push({ pred: firstOther.id, type: 'FS', lag: 0 }); renderRows(); render(); }
+        });
+        depWrap.appendChild(addDep);
+      }
+
+      // color + actions
+      const actions = document.createElement('div');
+      actions.className = 'flex items-center gap-2';
+      const color = document.createElement('input');
+      color.type = 'color';
+      color.className = 'field h-9 w-12 p-1';
+      color.value = task.color || '#5e6ad2';
+      color.title = 'Bar color';
+      color.addEventListener('input', () => { task.color = color.value; render(); });
+      const dup = document.createElement('button');
+      dup.className = 'btn btn-tertiary';
+      dup.textContent = 'Duplicate';
+      dup.addEventListener('click', () => {
+        state.tasks.splice(i + 1, 0, { ...task, id: newId(), deps: task.deps.map((d) => ({ ...d })) });
+        renderRows(); render();
+      });
+      const rm = document.createElement('button');
+      rm.className = 'btn btn-tertiary';
+      rm.textContent = 'Remove';
+      rm.addEventListener('click', () => {
+        const goneId = task.id;
+        state.tasks.splice(i, 1);
+        // drop dangling dependency references
+        for (const o of state.tasks) o.deps = o.deps.filter((d) => d.pred !== goneId);
+        renderRows(); render();
+      });
+      actions.append(color, dup, rm);
+
+      wrap.append(top, grid, grid2, depWrap, actions);
+      rowsEl.appendChild(wrap);
+    });
+  }
+
+  function field(label: string, type: string, value: string, on: (v: string) => void): HTMLLabelElement {
+    const l = document.createElement('label');
+    l.className = 'flex flex-col gap-1 text-xs text-ink-subtle';
+    l.textContent = label;
+    const input = document.createElement('input');
+    input.className = 'field';
+    input.type = type;
+    input.value = value;
+    input.addEventListener('input', () => on(input.value));
+    l.appendChild(input);
+    return l;
+  }
+
+  function numField(label: string, value: number, min: number, on: (v: number) => void, max?: number): HTMLLabelElement {
+    const l = document.createElement('label');
+    l.className = 'flex flex-col gap-1 text-xs text-ink-subtle';
+    l.textContent = label;
+    const input = document.createElement('input');
+    input.className = 'field';
+    input.type = 'number';
+    input.min = String(min);
+    if (max !== undefined) input.max = String(max);
+    input.value = String(value);
+    input.addEventListener('input', () => on(parseInt(input.value, 10) || 0));
+    l.appendChild(input);
+    return l;
+  }
+
+  function iconBtn(glyph: string, title: string, on: () => void): HTMLButtonElement {
+    const b = document.createElement('button');
+    b.className = 'btn btn-tertiary px-2';
+    b.textContent = glyph;
+    b.title = title;
+    b.setAttribute('aria-label', title);
+    b.addEventListener('click', on);
+    return b;
+  }
+
+  // --- drag on the SVG preview -----------------------------------------------
+  type DragMode = 'move' | 'resize-l' | 'resize-r' | 'link';
+  interface Drag { id: string; mode: DragMode; downIdx: number; startIdx0: number; dur0: number; }
+  let drag: Drag | null = null;
+  const EDGE = 6;
+
+  // Client coords -> SVG user-space coords (the SVG scales to fit the panel).
+  function toUser(e: PointerEvent): { x: number; y: number } | null {
+    const svg = preview.querySelector('svg');
+    if (!svg || !last) return null;
+    const r = svg.getBoundingClientRect();
+    return {
+      x: ((e.clientX - r.left) / r.width) * last.width,
+      y: ((e.clientY - r.top) / r.height) * last.height,
+    };
+  }
+  function indexAtX(ux: number): number {
+    if (!last) return 0;
+    return Math.round((ux - last.chartX) / last.pxPerDay) + last.minIndex;
+  }
+  function taskById(id: string): Task | undefined { return state.tasks.find((t) => t.id === id); }
+
+  preview.addEventListener('pointerdown', (e) => {
+    const u = toUser(e);
+    if (!u || !last) return;
+    const bar = last.bars.find((b) => u.y >= b.y - 4 && u.y <= b.y + b.h + 4 && u.x >= b.x - EDGE && u.x <= b.x + b.w + EDGE);
+    if (!bar) return;
+    const task = taskById(bar.id);
+    if (!task) return;
+    let mode: DragMode = 'move';
+    if (bar.type === 'task') {
+      if (u.x >= bar.x + bar.w - EDGE) mode = e.shiftKey ? 'link' : 'resize-r';
+      else if (u.x <= bar.x + EDGE) mode = 'resize-l';
+    }
+    // milestones/summaries: only move (summaries are derived, but moving is a no-op reschedule)
+    if (bar.type !== 'task' && mode !== 'move') mode = 'move';
+    drag = { id: bar.id, mode, downIdx: indexAtX(u.x), startIdx0: indexAtX(bar.x), dur0: task.duration };
+    preview.setPointerCapture(e.pointerId);
+    setStatus(mode === 'link' ? 'Drag onto another task to link…' : '');
+    e.preventDefault();
+  });
+
+  preview.addEventListener('pointermove', (e) => {
+    if (!drag || !last) return;
+    const u = toUser(e);
+    if (!u) return;
+    const task = taskById(drag.id);
+    if (!task) return;
+    const curIdx = indexAtX(u.x);
+    const delta = curIdx - drag.downIdx;
+
+    if (drag.mode === 'link') {
+      // live rubber-band from the source bar's right edge to the pointer
+      renderWithOverlay(drag.id, u);
+      return;
+    }
+    if (drag.mode === 'move') {
+      task.start = fromIndex(Math.max(last.minIndex, drag.startIdx0 + delta), state.start, state.calendar);
+    } else if (drag.mode === 'resize-r') {
+      task.duration = Math.max(1, drag.dur0 + delta);
+    } else if (drag.mode === 'resize-l') {
+      const newStart = drag.startIdx0 + delta;
+      const endIdx = drag.startIdx0 + drag.dur0 - 1;
+      task.duration = Math.max(1, endIdx - newStart + 1);
+      task.start = fromIndex(Math.min(newStart, endIdx), state.start, state.calendar);
+    }
+    render();
+  });
+
+  preview.addEventListener('pointerup', (e) => {
+    if (!drag || !last) { drag = null; return; }
+    if (drag.mode === 'link') {
+      const u = toUser(e);
+      if (u) {
+        const target = last.bars.find((b) => u.y >= b.y - 4 && u.y <= b.y + b.h + 4 && u.x >= b.x - EDGE && u.x <= b.x + b.w + EDGE);
+        if (target && target.id !== drag.id) {
+          const t = taskById(target.id);
+          if (t && !t.deps.some((d) => d.pred === drag!.id)) {
+            t.deps.push({ pred: drag.id, type: 'FS', lag: 0 });
+            renderRows();
+          }
+        }
+      }
+    }
+    drag = null;
+    setStatus('');
+    render();
+  });
+  preview.addEventListener('pointercancel', () => { drag = null; render(); });
+
+  // Re-render then append a temporary rubber-band line for link drags.
+  function renderWithOverlay(fromId: string, u: { x: number; y: number }): void {
+    render();
+    if (!last) return;
+    const bar = last.bars.find((b) => b.id === fromId);
+    const svg = preview.querySelector('svg');
+    if (!bar || !svg) return;
+    const ns = 'http://www.w3.org/2000/svg';
+    const line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1', String(bar.x + bar.w));
+    line.setAttribute('y1', String(bar.y + bar.h / 2));
+    line.setAttribute('x2', String(u.x));
+    line.setAttribute('y2', String(u.y));
+    line.setAttribute('stroke', '#5e6ad2');
+    line.setAttribute('stroke-width', '1.5');
+    line.setAttribute('stroke-dasharray', '4 3');
+    svg.appendChild(line);
+  }
+
+  // --- tabs -------------------------------------------------------------------
+  const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('.gcc-tab'));
+  const panels = Array.from(document.querySelectorAll<HTMLElement>('[data-panel]'));
+  function showTab(name: string): void {
+    tabs.forEach((t) => {
+      const on = t.dataset.tab === name;
+      t.setAttribute('aria-selected', String(on));
+      t.classList.toggle('btn-secondary', on);
+      t.classList.toggle('btn-tertiary', !on);
+    });
+    panels.forEach((p) => {
+      const on = p.dataset.panel === name;
+      p.classList.toggle('hidden', !on);
+      p.classList.toggle('flex', on);
+    });
+  }
+  tabs.forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab!)));
+
+  // --- templates gallery ------------------------------------------------------
+  function renderTemplates(): void {
+    const host = $<HTMLDivElement>('gcc-templates');
+    host.innerHTML = '';
+    for (const group of templateGroups()) {
+      const section = document.createElement('div');
+      section.className = 'flex flex-col gap-2';
+      const h = document.createElement('span');
+      h.className = 'text-xs font-medium uppercase tracking-wide text-ink-subtle';
+      h.textContent = group.label;
+      const gridw = document.createElement('div');
+      gridw.className = 'grid grid-cols-2 gap-2';
+      for (const tpl of group.items) {
+        const card = document.createElement('button');
+        card.className = 'panel flex items-center gap-2 p-3 text-left text-sm text-ink hover:border-hairline-strong';
+        const ic = document.createElement('span');
+        ic.className = 'text-lg leading-none';
+        ic.textContent = tpl.icon;
+        const lbl = document.createElement('span');
+        lbl.textContent = tpl.label;
+        card.append(ic, lbl);
+        card.addEventListener('click', () => {
+          state = templateToProject(tpl);
+          titleEl.value = state.title;
+          syncStyleControls();
+          syncCalendarControls();
+          renderRows();
+          render();
+        });
+        gridw.appendChild(card);
+      }
+      section.append(h, gridw);
+      host.appendChild(section);
+    }
+  }
+
+  // --- style controls ---------------------------------------------------------
+  const zoomSel = $<HTMLSelectElement>('gcc-zoom');
+  const themeSel = $<HTMLSelectElement>('gcc-theme');
+  const sizeSel = $<HTMLSelectElement>('gcc-size');
+  ZOOM_LEVELS.forEach((z) => zoomSel.add(new Option(z.label, z.id)));
+  GANTT_THEMES.forEach((t) => themeSel.add(new Option(t.label, t.id)));
+  SIZE_PRESETS.forEach((s) => sizeSel.add(new Option(s.label, s.id)));
+
+  function syncStyleControls(): void {
+    zoomSel.value = state.zoom;
+    themeSel.value = state.themeId;
+    sizeSel.value = state.sizeId;
+  }
+  zoomSel.addEventListener('change', () => { state.zoom = zoomSel.value as GanttProject['zoom']; render(); });
+  themeSel.addEventListener('change', () => { state.themeId = themeSel.value; render(); });
+  sizeSel.addEventListener('change', () => { state.sizeId = sizeSel.value; render(); });
+
+  // --- calendar controls ------------------------------------------------------
+  const startEl = $<HTMLInputElement>('gcc-start');
+  const holidaysEl = $<HTMLTextAreaElement>('gcc-holidays');
+  const workdaysHost = $<HTMLDivElement>('gcc-workdays');
+  const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  DOW.forEach((d, i) => {
+    const b = document.createElement('button');
+    b.className = 'btn btn-tertiary px-3';
+    b.textContent = d;
+    b.dataset.dow = String(i);
+    b.addEventListener('click', () => {
+      state.calendar.workdays[i] = !state.calendar.workdays[i];
+      syncCalendarControls();
+      render();
+    });
+    workdaysHost.appendChild(b);
+  });
+  function syncCalendarControls(): void {
+    startEl.value = state.start;
+    holidaysEl.value = state.calendar.holidays.join('\n');
+    Array.from(workdaysHost.children).forEach((c, i) => {
+      const on = state.calendar.workdays[i];
+      c.classList.toggle('btn-secondary', on);
+      c.classList.toggle('btn-tertiary', !on);
+    });
+  }
+  startEl.addEventListener('input', () => { if (startEl.value) { state.start = startEl.value; render(); } });
+  holidaysEl.addEventListener('input', () => {
+    state.calendar.holidays = holidaysEl.value.split(/\s+/).map((s) => s.trim()).filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s));
+    render();
+  });
+
+  // --- exports (rasterize/download/PDF mirror the timeline tool) --------------
+  function setStatus(msg: string): void { statusEl.textContent = msg; }
+  function download(blob: Blob, name: string): void {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  function rasterize(scale = 2): Promise<HTMLCanvasElement> {
+    return new Promise((resolve, reject) => {
+      if (!last) return reject(new Error('nothing to render'));
+      const svgBlob = new Blob([last.svg], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        resolve(canvas);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('SVG rasterization failed')); };
+      img.src = url;
+    });
+  }
+
+  $<HTMLButtonElement>('gcc-svg').addEventListener('click', () => {
+    if (last) download(new Blob([last.svg], { type: 'image/svg+xml' }), 'toolsilk-gantt.svg');
+  });
+  $<HTMLButtonElement>('gcc-png').addEventListener('click', async () => {
+    const canvas = await rasterize();
+    canvas.toBlob((b) => b && download(b, 'toolsilk-gantt.png'), 'image/png');
+  });
+  $<HTMLButtonElement>('gcc-copy').addEventListener('click', async () => {
+    try {
+      const canvas = await rasterize();
+      canvas.toBlob(async (b) => {
+        if (!b) return;
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': b })]);
+        setStatus('Copied to clipboard.');
+      }, 'image/png');
+    } catch {
+      setStatus('Clipboard copy not supported in this browser.');
+    }
+  });
+  $<HTMLButtonElement>('gcc-pdf').addEventListener('click', async () => {
+    setStatus('Building PDF…');
+    try {
+      const canvas = await rasterize();
+      const pngBytes = await new Promise<Uint8Array>((res) =>
+        canvas.toBlob(async (b) => res(new Uint8Array(await b!.arrayBuffer())), 'image/png'));
+      const { PDFDocument } = await import('pdf-lib');
+      const pdf = await PDFDocument.create();
+      const png = await pdf.embedPng(pngBytes);
+      const page = pdf.addPage([png.width / 2, png.height / 2]);
+      page.drawImage(png, { x: 0, y: 0, width: png.width / 2, height: png.height / 2 });
+      const bytes = await pdf.save();
+      download(new Blob([bytes.slice()], { type: 'application/pdf' }), 'toolsilk-gantt.pdf');
+      setStatus('');
+    } catch {
+      setStatus('PDF export failed.');
+    }
+  });
+  $<HTMLButtonElement>('gcc-json').addEventListener('click', () => {
+    download(new Blob([toJSON(state)], { type: 'application/json' }), 'toolsilk-gantt.json');
+  });
+  $<HTMLButtonElement>('gcc-csv').addEventListener('click', () => {
+    download(new Blob([toCSV(state)], { type: 'text/csv' }), 'toolsilk-gantt.csv');
+  });
+  $<HTMLButtonElement>('gcc-mpp').addEventListener('click', () => {
+    download(new Blob([toMSProjectXML(state)], { type: 'application/xml' }), 'toolsilk-gantt.xml');
+  });
+
+  // --- import (JSON / CSV / MS Project XML) -----------------------------------
+  const fileInput = $<HTMLInputElement>('gcc-file');
+  $<HTMLButtonElement>('gcc-import').addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    try {
+      const trimmed = text.trimStart();
+      if (file.name.endsWith('.xml') || trimmed.startsWith('<?xml') || trimmed.startsWith('<Project')) {
+        state = fromMSProjectXML(text);
+      } else if (file.name.endsWith('.csv') || (!trimmed.startsWith('{') && /,/.test(trimmed.split('\n')[0]))) {
+        state = fromCSV(text);
+      } else {
+        state = fromJSON(text);
+      }
+      titleEl.value = state.title;
+      syncStyleControls();
+      syncCalendarControls();
+      renderRows();
+      render();
+      setStatus('Imported project.');
+      showTab('tasks');
+    } catch (err) {
+      setStatus('That file could not be read as JSON, CSV or MS Project XML.');
+    }
+    fileInput.value = '';
+  });
+
+  // --- init -------------------------------------------------------------------
+  $<HTMLButtonElement>('gcc-add').addEventListener('click', () => {
+    const prev = state.tasks[state.tasks.length - 1];
+    state.tasks.push({
+      id: newId(), name: 'New task',
+      start: prev ? finishOf(prev.start, prev.duration, state.calendar) : state.start,
+      duration: 3, progress: 0, deps: [], outline: 0,
+    });
+    renderRows(); render();
+  });
+  titleEl.addEventListener('input', render);
+
+  titleEl.value = state.title;
+  syncStyleControls();
+  syncCalendarControls();
+  renderTemplates();
+  renderRows();
+  render();
+  showTab('tasks');
+</script>

@@ -1,0 +1,190 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="savings-goal-simulator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Starting balance ($)
+        <input id="sgs-start" type="number" min="0" value="1000" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Monthly contribution ($)
+        <input id="sgs-monthly" type="number" min="0" value="300" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Annual interest rate (%)
+        <input id="sgs-rate" type="number" min="0" step="0.1" value="4" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Goal amount ($)
+        <input id="sgs-goal" type="number" min="1" value="20000" class="field" />
+      </label>
+    </div>
+
+    <p id="sgs-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
+      <div class="panel panel-lift p-4"><div id="sgs-months" class="font-display text-xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Time to goal</div></div>
+      <div class="panel p-4"><div id="sgs-contrib" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">You contribute</div></div>
+      <div class="panel p-4"><div id="sgs-interest" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Interest earned</div></div>
+      <div class="panel p-4"><div id="sgs-final" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Final balance</div></div>
+    </div>
+
+    <div class="panel panel-lift p-4">
+      <div class="mb-3 text-[13px] text-ink-subtle">Balance growth by year</div>
+      <div id="sgs-chart" class="flex flex-col gap-2 text-[13px]"></div>
+    </div>
+
+    <div class="panel panel-lift p-4">
+      <div class="mb-2 text-[13px] text-ink-subtle">Yearly milestones</div>
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse text-[13px]">
+          <thead>
+            <tr class="text-left text-ink-subtle">
+              <th class="py-2 pr-4 font-medium">Year</th>
+              <th class="py-2 pr-4 font-medium">Contributed</th>
+              <th class="py-2 pr-4 font-medium">Interest</th>
+              <th class="py-2 font-medium">Balance</th>
+            </tr>
+          </thead>
+          <tbody id="sgs-tbody" class="font-mono text-ink-muted"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free savings goal simulator projects how long it will take to reach a
+      target amount from a starting balance, a regular monthly contribution and an
+      annual interest rate compounded monthly. It shows the months to reach your
+      goal, how much came from your own contributions versus interest, and a
+      year-by-year growth chart and milestone table so you can see compounding at
+      work. Adjust any input to compare scenarios instantly.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const err = $('sgs-error')!;
+
+  const money = (n: number) =>
+    '$' + n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+
+  const MAX_MONTHS = 100 * 12; 
+
+  interface YearRow { year: number; contributed: number; interest: number; balance: number; }
+
+  function calc() {
+    err.classList.add('hidden');
+    const start = Math.max(0, Number(($('sgs-start') as HTMLInputElement).value) || 0);
+    const monthly = Math.max(0, Number(($('sgs-monthly') as HTMLInputElement).value) || 0);
+    const ratePct = Math.max(0, Number(($('sgs-rate') as HTMLInputElement).value) || 0);
+    const goal = Number(($('sgs-goal') as HTMLInputElement).value) || 0;
+
+    const ids = ['sgs-months', 'sgs-contrib', 'sgs-interest', 'sgs-final'];
+    if (goal <= 0) {
+      err.textContent = 'Enter a goal amount greater than zero.';
+      err.classList.remove('hidden');
+      ids.forEach((id) => ($(id).textContent = '—'));
+      $('sgs-chart').innerHTML = '';
+      $('sgs-tbody').innerHTML = '';
+      return;
+    }
+
+    const monthlyRate = ratePct / 100 / 12;
+    let balance = start;
+    let contributed = start;
+    let months = 0;
+    let reached = balance >= goal;
+
+    const yearRows: YearRow[] = [];
+
+    while (balance < goal && months < MAX_MONTHS) {
+      const interest = balance * monthlyRate;
+      balance += interest + monthly;
+      contributed += monthly;
+      months++;
+
+      if (months % 12 === 0) {
+        yearRows.push({
+          year: months / 12,
+          contributed: contributed - start,
+          interest: balance - contributed,
+          balance,
+        });
+      }
+      if (balance >= goal) { reached = true; break; }
+    }
+
+    if (reached && months % 12 !== 0) {
+      yearRows.push({
+        year: Math.ceil(months / 12),
+        contributed: contributed - start,
+        interest: balance - contributed,
+        balance,
+      });
+    }
+
+    const totalInterest = balance - contributed;
+
+    if (!reached) {
+      $('sgs-months').textContent = '100+ yrs';
+      err.textContent = 'Goal not reached within 100 years — try a larger contribution or rate.';
+      err.classList.remove('hidden');
+    } else {
+      const yrs = Math.floor(months / 12);
+      const mos = months % 12;
+      const parts: string[] = [];
+      if (yrs) parts.push(`${yrs} yr${yrs > 1 ? 's' : ''}`);
+      parts.push(`${mos} mo`);
+      $('sgs-months').textContent = months === 0 ? 'Already there' : parts.join(' ');
+    }
+
+    $('sgs-contrib').textContent = money(contributed);
+    $('sgs-interest').textContent = money(totalInterest);
+    $('sgs-final').textContent = money(balance);
+
+    renderChart(yearRows, start);
+    renderTable(yearRows);
+  }
+
+  function renderChart(rows: YearRow[], start: number) {
+    const chart = $('sgs-chart');
+    if (!rows.length) { chart.innerHTML = '<span class="text-ink-tertiary">Reaches the goal within the first year.</span>'; return; }
+    const max = Math.max(...rows.map((r) => r.balance)) || 1;
+    chart.innerHTML = rows
+      .map((r) => {
+        const contribBase = start + r.contributed;
+        const contribW = (contribBase / max) * 100;
+        const interestW = (r.interest / max) * 100;
+        return `<div class="flex flex-col gap-1">
+          <div class="flex justify-between text-ink-subtle"><span class="text-ink">Year ${r.year}</span><span class="font-mono">${money(r.balance)}</span></div>
+          <div class="flex h-3 w-full overflow-hidden rounded-xs bg-surface-2">
+            <div class="h-full" style="width:${contribW}%;background:#8a8f98" title="Contributions + start"></div>
+            <div class="h-full" style="width:${interestW}%;background:#5e6ad2" title="Interest"></div>
+          </div>
+        </div>`;
+      })
+      .join('');
+  }
+
+  function renderTable(rows: YearRow[]) {
+    const tbody = $('sgs-tbody');
+    if (!rows.length) { tbody.innerHTML = '<tr><td class="py-2 text-ink-tertiary" colspan="4">—</td></tr>'; return; }
+    tbody.innerHTML = rows
+      .map(
+        (r) => `<tr class="border-t border-hairline">
+          <td class="py-2 pr-4">${r.year}</td>
+          <td class="py-2 pr-4">${money(r.contributed)}</td>
+          <td class="py-2 pr-4">${money(r.interest)}</td>
+          <td class="py-2">${money(r.balance)}</td>
+        </tr>`
+      )
+      .join('');
+  }
+
+  ['sgs-start', 'sgs-monthly', 'sgs-rate', 'sgs-goal'].forEach((id) =>
+    $(id).addEventListener('input', calc)
+  );
+  calc();
+</script>

@@ -1,0 +1,178 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+import { SERVICES } from '../lib/privacypolicy';
+---
+
+<ToolLayout slug="privacy-policy-generator">
+  <div class="flex flex-col gap-4">
+    <div class="panel flex items-start gap-3 p-4">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0 text-ink-subtle" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM12 8v5M12 16h.01"/></svg>
+      <p class="text-[13px] leading-relaxed text-ink-subtle">This produces a <strong class="text-ink">starting-point template</strong>, not legal advice. Have a qualified professional review your policy, especially for GDPR/CCPA compliance.</p>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+
+      <form id="pp-form" class="flex flex-col gap-4">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle">Company / your name
+            <input id="pp-entityName" class="field" placeholder="Acme Inc." value="Acme Inc." />
+          </label>
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle">Website name
+            <input id="pp-siteName" class="field" placeholder="Acme" value="Acme" />
+          </label>
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle">Website URL
+            <input id="pp-siteUrl" class="field" placeholder="https://acme.com" value="https://acme.com" />
+          </label>
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle">Contact email
+            <input id="pp-contactEmail" type="email" class="field" placeholder="hello@acme.com" value="privacy@acme.com" />
+          </label>
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle">Country / jurisdiction
+            <input id="pp-country" class="field" placeholder="United States" />
+          </label>
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle">Effective date
+            <input id="pp-effectiveDate" type="date" class="field" />
+          </label>
+          <label class="flex flex-col gap-1 text-sm text-ink-subtle">Owned by
+            <select id="pp-entityType" class="field">
+              <option value="company">A company / organization</option>
+              <option value="person">An individual</option>
+            </select>
+          </label>
+        </div>
+
+        <fieldset class="flex flex-col gap-2">
+          <legend class="mb-1 text-xs uppercase tracking-wide text-ink-tertiary">Sections to include</legend>
+          <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="pp-collectsPII" type="checkbox" checked class="accent-primary" /> Collects personal data (names, emails, etc.)</label>
+          <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="pp-usesCookies" type="checkbox" checked class="accent-primary" /> Uses cookies or tracking technologies</label>
+          <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="pp-gdpr" type="checkbox" checked class="accent-primary" /> GDPR section (EU / EEA users)</label>
+          <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="pp-ccpa" type="checkbox" checked class="accent-primary" /> CCPA section (California users)</label>
+          <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="pp-children" type="checkbox" class="accent-primary" /> Children's privacy (COPPA) section</label>
+        </fieldset>
+
+        <fieldset class="flex flex-col gap-2">
+          <legend class="mb-1 text-xs uppercase tracking-wide text-ink-tertiary">Third-party services you use</legend>
+          <div class="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+            {SERVICES.map((s) => (
+              <label class="flex items-center gap-2 text-sm text-ink-subtle">
+                <input type="checkbox" class="pp-svc accent-primary" value={s.id} /> {s.name}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      </form>
+
+      <div class="flex flex-col gap-3">
+        <div class="flex flex-wrap gap-2">
+          <button id="pp-copy-html" class="btn btn-secondary">Copy HTML</button>
+          <button id="pp-dl-md" class="btn btn-secondary">Download .md</button>
+          <button id="pp-dl-html" class="btn btn-secondary">Download .html</button>
+        </div>
+        <div class="copy-wrap">
+          <div id="pp-preview" class="md-preview panel p-5 text-[15px] leading-relaxed text-ink" style="max-height:70vh;overflow:auto"></div>
+          <button type="button" class="copy-icon" id="pp-copy-icon" aria-label="Copy"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free privacy policy generator builds a ready-to-use privacy policy for
+      your website or app in seconds. Fill in your details, tick the sections and
+      third-party services that apply, and the policy updates live. Copy
+      the result as Markdown or HTML, or download a file, then paste it into your site.
+    </p>
+    <p>
+      It covers the common building blocks: what data you collect, cookies and
+      tracking, how information is used, disclosures for services like Google
+      Analytics, AdSense, Stripe and Mailchimp, plus optional GDPR, CCPA and
+      children's-privacy (COPPA) sections. This tool is a starting template and
+      does not constitute legal advice — review the result and consult a lawyer to
+      make sure it fits your specific situation and jurisdiction.
+    </p>
+  </div>
+</ToolLayout>
+
+<style is:global>
+  .md-preview h1 { font-size: 1.6em; font-weight: 700; margin: 0 0 0.4em; }
+  .md-preview h2 { font-size: 1.2em; font-weight: 600; margin: 1.1em 0 0.4em; }
+  .md-preview p { margin: 0.6em 0; }
+  .md-preview ul { margin: 0.6em 0; padding-left: 1.4em; list-style: disc; }
+  .md-preview li { margin: 0.25em 0; }
+  .md-preview em { color: var(--color-ink-muted); }
+  .md-preview strong { color: var(--color-ink); }
+  .md-preview a { color: var(--color-primary); text-decoration: underline; }
+</style>
+
+<script>
+  import { marked } from 'marked';
+  import DOMPurify from 'dompurify';
+  import { generatePolicy, type PolicyData } from '../lib/privacypolicy';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const preview = $('pp-preview');
+  let md = '';
+
+  function collect(): PolicyData {
+    const val = (id: string) => ($(id) as HTMLInputElement).value;
+    const chk = (id: string) => ($(id) as HTMLInputElement).checked;
+    return {
+      entityName: val('pp-entityName'),
+      siteName: val('pp-siteName'),
+      siteUrl: val('pp-siteUrl'),
+      contactEmail: val('pp-contactEmail'),
+      country: val('pp-country'),
+      effectiveDate: val('pp-effectiveDate'),
+      entityType: ($('pp-entityType') as HTMLSelectElement).value as PolicyData['entityType'],
+      collectsPII: chk('pp-collectsPII'),
+      usesCookies: chk('pp-usesCookies'),
+      gdpr: chk('pp-gdpr'),
+      ccpa: chk('pp-ccpa'),
+      children: chk('pp-children'),
+      serviceIds: Array.from(document.querySelectorAll<HTMLInputElement>('.pp-svc:checked')).map((el) => el.value),
+    };
+  }
+
+  const toHtml = () => DOMPurify.sanitize(marked.parse(md) as string);
+
+  function render() {
+    md = generatePolicy(collect());
+    preview.innerHTML = toHtml();
+  }
+
+  function download(name: string, content: string, type: string) {
+    const url = URL.createObjectURL(new Blob([content], { type }));
+    const a = document.createElement('a');
+    a.href = url; a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function copy(btn: HTMLButtonElement, text: string) {
+    await navigator.clipboard.writeText(text);
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = orig), 1500);
+  }
+
+  $('pp-form').addEventListener('input', render);
+  // Icon copies the Markdown source (lives only in the `md` variable, not in the
+  // rendered preview), so it needs a local handler rather than the global one.
+  $('pp-copy-icon').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(md);
+    btn.classList.add('copied');
+    btn.setAttribute('aria-label', 'Copied');
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.setAttribute('aria-label', 'Copy');
+    }, 1500);
+  });
+  $('pp-copy-html').addEventListener('click', (e) => copy(e.currentTarget as HTMLButtonElement, toHtml()));
+  $('pp-dl-md').addEventListener('click', () => download('privacy-policy.md', md, 'text/markdown'));
+  $('pp-dl-html').addEventListener('click', () =>
+    download('privacy-policy.html',
+      `<!doctype html><meta charset="utf-8"><title>Privacy Policy</title>${toHtml()}`,
+      'text/html'));
+
+  render();
+</script>

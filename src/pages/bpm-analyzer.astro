@@ -1,0 +1,214 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="bpm-analyzer">
+  <div class="flex flex-col gap-6">
+
+    <div class="flex flex-col gap-3">
+      <div class="eyebrow">Tap tempo</div>
+      <div class="copy-wrap">
+        <button id="bp-tap" class="panel panel-lift flex h-40 w-full items-center justify-center text-center transition-colors hover:bg-surface-2 active:bg-surface-3">
+          <span class="flex flex-col gap-1">
+            <span id="bp-bpm" class="font-display text-5xl font-semibold text-primary-hover">—</span>
+            <span class="text-sm text-ink-subtle">Tap here (or press Space) to the beat</span>
+          </span>
+        </button>
+        <button type="button" id="bp-copy" class="copy-icon" aria-label="Copy BPM"></button>
+      </div>
+      <div class="flex flex-wrap items-center gap-3 text-[13px] text-ink-subtle">
+        <span id="bp-taps">0 taps</span>
+        <span id="bp-conf"></span>
+        <span id="bp-label" class="text-ink-muted"></span>
+        <div class="ml-auto flex flex-wrap items-center gap-2">
+          <button id="bp-half" class="btn btn-tertiary" title="Halve the BPM">½×</button>
+          <button id="bp-double" class="btn btn-tertiary" title="Double the BPM">2×</button>
+          <label class="flex items-center gap-1">Round<input id="bp-round" type="checkbox" checked class="accent-primary" /></label>
+          <button id="bp-reset" class="btn btn-secondary">Reset</button>
+        </div>
+      </div>
+      <div id="bp-history" class="flex h-8 items-end gap-0.5"></div>
+    </div>
+
+    <div class="border-t border-hairline"></div>
+
+    <div class="flex flex-col gap-3">
+      <div class="eyebrow">Detect from audio file</div>
+      <div id="bp-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-6 text-center transition-colors hover:bg-surface-2">
+        <span class="text-sm text-ink">Drop an audio file or click to choose</span>
+        <span class="text-xs text-ink-tertiary">MP3, WAV, M4A · analyzed locally</span>
+        <input id="bp-file" type="file" accept="audio/*" class="hidden" />
+      </div>
+      <div id="bp-audio-out" class="hidden grid grid-cols-2 gap-3 sm:grid-cols-4"></div>
+      <div id="bp-progress" class="hidden text-[13px] text-ink-subtle">Analyzing…</div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free BPM analyzer finds the tempo of any track two ways. Tap along to
+      the beat and it averages your taps into a live beats-per-minute reading with
+      a confidence estimate and a tempo name (Adagio, Andante, Allegro…). Halve or
+      double the reading in one click to fix octave errors, toggle rounding to a
+      whole number, and copy the result. Or drop an audio file and it decodes the
+      waveform, runs energy-based beat detection across a range of candidate
+      tempos, and reports the most likely BPM with its alternate. Great for DJing,
+      running playlists and music production.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+
+  function tempoName(bpm: number): string {
+    if (bpm < 60) return 'Largo';
+    if (bpm < 76) return 'Adagio';
+    if (bpm < 108) return 'Andante';
+    if (bpm < 120) return 'Moderato';
+    if (bpm < 168) return 'Allegro';
+    if (bpm < 200) return 'Presto';
+    return 'Prestissimo';
+  }
+
+  const tapBtn = $('bp-tap');
+  const bpmEl = $('bp-bpm');
+  const tapsEl = $('bp-taps');
+  const confEl = $('bp-conf');
+  const labelEl = $('bp-label');
+  const historyEl = $('bp-history');
+  const roundEl = $('bp-round') as HTMLInputElement;
+  let taps: number[] = [];
+  let currentBpm = 0;
+
+  function display(bpm: number) {
+    currentBpm = bpm;
+    bpmEl.textContent = roundEl.checked ? String(Math.round(bpm)) : bpm.toFixed(1);
+    labelEl.textContent = bpm > 0 ? tempoName(bpm) : '';
+  }
+
+  function drawHistory(intervals: number[]) {
+    historyEl.replaceChildren();
+    if (!intervals.length) return;
+    const max = Math.max(...intervals);
+    intervals.slice(-40).forEach((iv) => {
+      const bar = document.createElement('div');
+      bar.style.cssText = `width:4px;height:${Math.max(10, (iv / max) * 100)}%;background:var(--color-primary);border-radius:2px;opacity:.7`;
+      historyEl.appendChild(bar);
+    });
+  }
+
+  function tap() {
+    const now = performance.now();
+    if (taps.length && now - taps[taps.length - 1] > 2000) taps = [];
+    taps.push(now);
+    if (taps.length >= 2) {
+      const intervals: number[] = [];
+      for (let i = 1; i < taps.length; i++) intervals.push(taps[i] - taps[i - 1]);
+      const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+      display(60000 / avg);
+      const variance = intervals.reduce((a, b) => a + (b - avg) ** 2, 0) / intervals.length;
+      const cv = Math.sqrt(variance) / avg;
+      confEl.textContent = `${Math.max(0, Math.min(100, 100 - cv * 200)).toFixed(0)}% steady`;
+      drawHistory(intervals);
+    }
+    tapsEl.textContent = `${taps.length} tap${taps.length === 1 ? '' : 's'}`;
+  }
+
+  tapBtn.addEventListener('click', tap);
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && document.activeElement !== $('bp-file')) { e.preventDefault(); tap(); }
+  });
+  $('bp-reset').addEventListener('click', () => {
+    taps = []; currentBpm = 0; bpmEl.textContent = '—'; tapsEl.textContent = '0 taps'; confEl.textContent = ''; labelEl.textContent = ''; historyEl.replaceChildren();
+  });
+  $('bp-half').addEventListener('click', () => currentBpm && display(currentBpm / 2));
+  $('bp-double').addEventListener('click', () => currentBpm && display(currentBpm * 2));
+  roundEl.addEventListener('change', () => currentBpm && display(currentBpm));
+  $('bp-copy').addEventListener('click', async () => {
+    if (!currentBpm) return;
+    const text = roundEl.checked ? String(Math.round(currentBpm)) : currentBpm.toFixed(1);
+    try { const b = $('bp-copy'); await navigator.clipboard.writeText(text); b.classList.add('copied'); setTimeout(() => b.classList.remove('copied'), 1200); } catch {}
+  });
+
+  // ---- Audio file BPM detection ----
+  const drop = $('bp-drop');
+  const fileInput = $('bp-file') as HTMLInputElement;
+  const audioOut = $('bp-audio-out');
+  const progress = $('bp-progress');
+
+  function tile(label: string, value: string, extra = ''): string {
+    return `<div class="panel panel-lift flex flex-col gap-1 p-4">
+      <span class="text-xs text-ink-tertiary">${label}</span>
+      <span class="font-display text-2xl font-semibold text-ink">${value}</span>
+      ${extra ? `<span class="text-xs text-ink-subtle">${extra}</span>` : ''}
+    </div>`;
+  }
+
+  function detectBPM(buffer: AudioBuffer): { bpm: number; alt: number } {
+    const sr = buffer.sampleRate;
+    const data = buffer.getChannelData(0);
+    const frameSize = Math.floor(sr / 200);
+    const frames = Math.floor(data.length / frameSize);
+    const env = new Float32Array(frames);
+    for (let i = 0; i < frames; i++) {
+      let sum = 0;
+      for (let j = 0; j < frameSize; j++) { const s = data[i * frameSize + j]; sum += s * s; }
+      env[i] = Math.sqrt(sum / frameSize);
+    }
+    const nov = new Float32Array(frames);
+    for (let i = 1; i < frames; i++) nov[i] = Math.max(0, env[i] - env[i - 1]);
+    const frameRate = sr / frameSize;
+    let best = 0, bestScore = -1;
+    const scores: { bpm: number; score: number }[] = [];
+    for (let bpm = 60; bpm <= 200; bpm += 0.5) {
+      const lag = Math.round((60 / bpm) * frameRate);
+      if (lag < 1 || lag >= frames) continue;
+      let score = 0;
+      for (let i = lag; i < frames; i++) score += nov[i] * nov[i - lag];
+      scores.push({ bpm, score });
+      if (score > bestScore) { bestScore = score; best = bpm; }
+    }
+    const half = best / 2, dbl = best * 2;
+    const near = (t: number) => scores.filter((s) => Math.abs(s.bpm - t) < 2).sort((a, b) => b.score - a.score)[0]?.score ?? 0;
+    const alt = near(dbl) > near(half) ? dbl : half;
+    return { bpm: best, alt: Math.round(alt) };
+  }
+
+  async function analyze(file: File) {
+    audioOut.classList.add('hidden');
+    progress.classList.remove('hidden');
+    progress.textContent = 'Decoding audio…';
+    try {
+      const arrayBuf = await file.arrayBuffer();
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const ctx = new AudioCtx();
+      const buffer = await ctx.decodeAudioData(arrayBuf);
+      progress.textContent = 'Detecting tempo…';
+      await new Promise((r) => setTimeout(r, 20));
+      const { bpm, alt } = detectBPM(buffer);
+      ctx.close();
+      audioOut.innerHTML =
+        tile('Estimated BPM', bpm.toFixed(1), tempoName(bpm)) +
+        tile('Alternate', String(alt), 'half / double') +
+        tile('Nearest whole', String(Math.round(bpm)), '') +
+        tile('Duration', `${Math.floor(buffer.duration / 60)}:${String(Math.round(buffer.duration % 60)).padStart(2, '0')}`, '');
+      audioOut.classList.remove('hidden');
+      // Feed the tap display so half/double/copy work on the detected value too.
+      display(bpm);
+    } catch {
+      progress.textContent = 'Could not decode this audio file.';
+      return;
+    }
+    progress.classList.add('hidden');
+  }
+
+  drop.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) analyze(fileInput.files[0]); });
+  drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('bg-surface-2'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('bg-surface-2'));
+  drop.addEventListener('drop', (e) => {
+    e.preventDefault(); drop.classList.remove('bg-surface-2');
+    const f = (e as DragEvent).dataTransfer?.files?.[0]; if (f) analyze(f);
+  });
+</script>

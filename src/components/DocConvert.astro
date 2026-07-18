@@ -1,0 +1,149 @@
+---
+// Universal document/data converter UI, driven by docConvertDispatch.
+// Text-input tools show a textarea; file-input tools show a drop zone.
+// Output is either a downloadable file or copyable text.
+import { getConversion } from '../lib/docConvertDispatch';
+export interface Props {
+  slug: string;
+  outLabel?: string;   // e.g. "PDF", "DOCX", "JSON"
+}
+const { slug, outLabel = 'file' } = Astro.props;
+const spec = getConversion(slug);
+if (!spec) throw new Error(`No conversion registered for slug: ${slug}`);
+const inputKind = spec.inputKind;
+const accept = spec.accept ?? '';
+const placeholder = spec.placeholder ?? 'Paste your text…';
+---
+
+<div id="dc-root" data-slug={slug} data-kind={inputKind} class="flex flex-col gap-4">
+  {inputKind === 'text' ? (
+    <textarea id="dc-input" class="field font-mono" rows="10" placeholder={placeholder} style="resize:vertical"></textarea>
+  ) : (
+    <label id="dc-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span id="dc-drop-label" class="text-sm text-ink">Choose a file or drop it here</span>
+      <input id="dc-file" type="file" accept={accept} class="sr-only" />
+    </label>
+  )}
+
+  <div class="flex flex-wrap items-center gap-3">
+    <button id="dc-run" class="btn btn-primary">Convert</button>
+    <button id="dc-download" class="btn btn-secondary hidden">Download {outLabel}</button>
+    <button id="dc-copy" class="btn btn-secondary hidden">Copy</button>
+    <span id="dc-summary" class="text-[13px] text-ink-subtle" aria-live="polite"></span>
+  </div>
+
+  <p id="dc-note" class="hidden text-[13px] text-ink-tertiary"></p>
+
+  <div id="dc-out-wrap" class="hidden">
+    <pre id="dc-out" class="field m-0 max-h-[28rem] overflow-auto p-3 text-[13px]" style="white-space:pre-wrap;word-break:break-word;font-family:var(--font-mono,ui-monospace,monospace)"></pre>
+  </div>
+  <div id="dc-img-wrap" class="hidden panel flex justify-center overflow-hidden p-4">
+    <img id="dc-img" class="max-h-96 w-auto max-w-full rounded-md" alt="Converted output preview" />
+  </div>
+
+  <p id="dc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+</div>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  import { getConversion } from '../lib/docConvertDispatch';
+
+  const root = document.getElementById('dc-root') as HTMLElement;
+  const slug = root.dataset.slug!;
+  const kind = root.dataset.kind as 'text' | 'file';
+  const spec = getConversion(slug);
+
+  const $ = (id: string) => document.getElementById(id);
+  const input = $('dc-input') as HTMLTextAreaElement | null;
+  const fileInput = $('dc-file') as HTMLInputElement | null;
+  const drop = $('dc-drop');
+  const dropLabel = $('dc-drop-label');
+  const runBtn = $('dc-run') as HTMLButtonElement;
+  const dlBtn = $('dc-download') as HTMLButtonElement;
+  const copyBtn = $('dc-copy') as HTMLButtonElement;
+  const summary = $('dc-summary')!;
+  const note = $('dc-note')!;
+  const outWrap = $('dc-out-wrap')!;
+  const out = $('dc-out')!;
+  const imgWrap = $('dc-img-wrap')!;
+  const img = $('dc-img') as HTMLImageElement;
+  const err = $('dc-error')!;
+
+  let pickedFile: File | null = null;
+  let outBlob: Blob | null = null;
+  let outName = 'output';
+  let outUrl: string | null = null;
+
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+  const fmtSize = (n: number) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`;
+
+  function resetOut() {
+    outWrap.classList.add('hidden'); imgWrap.classList.add('hidden');
+    dlBtn.classList.add('hidden'); copyBtn.classList.add('hidden');
+    note.classList.add('hidden'); note.textContent = '';
+    if (outUrl) { URL.revokeObjectURL(outUrl); outUrl = null; }
+    outBlob = null;
+  }
+
+  if (kind === 'file' && fileInput && drop) {
+    fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) { pickedFile = fileInput.files[0]; if (dropLabel) dropLabel.textContent = pickedFile.name; } });
+    ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
+    ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
+    drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) { pickedFile = f; if (dropLabel) dropLabel.textContent = f.name; } });
+  }
+
+  runBtn.addEventListener('click', async () => {
+    setErr(''); resetOut();
+    if (!spec) { setErr('This converter is not available.'); return; }
+    const baseName = kind === 'file' ? (pickedFile?.name.replace(/\.[^.]+$/, '') || 'output') : 'output';
+    if (kind === 'file' && !pickedFile) { setErr('Choose a file to convert.'); return; }
+    if (kind === 'text' && !input?.value.trim()) { setErr('Enter some text to convert.'); return; }
+
+    runBtn.disabled = true; const label = runBtn.textContent; runBtn.textContent = 'Converting…';
+    try {
+      const res = await spec.run({ text: input?.value, file: pickedFile || undefined }, baseName);
+      if (res.note) { note.textContent = res.note; note.classList.remove('hidden'); }
+
+      if (res.text != null) {
+        out.textContent = res.text;
+        outWrap.classList.remove('hidden');
+        copyBtn.classList.remove('hidden');
+        summary.textContent = `${res.text.length.toLocaleString()} characters`;
+        // Offer text download too.
+        outBlob = new Blob([res.text], { type: 'text/plain' });
+        outName = `${baseName}.${res.ext || 'txt'}`;
+      } else if (res.blob) {
+        outBlob = res.blob;
+        outName = res.filename || `${baseName}.${res.ext || 'bin'}`;
+        summary.textContent = fmtSize(res.blob.size);
+        // preview images inline
+        if (res.blob.type.startsWith('image/')) {
+          outUrl = URL.createObjectURL(res.blob);
+          img.src = outUrl; imgWrap.classList.remove('hidden');
+        }
+      }
+      if (outBlob) dlBtn.classList.remove('hidden');
+    } catch (e) {
+      setErr((e as Error).message || 'Conversion failed.');
+    } finally {
+      runBtn.disabled = false; runBtn.textContent = label;
+    }
+  });
+
+  dlBtn.addEventListener('click', () => {
+    if (!outBlob) return;
+    const url = URL.createObjectURL(outBlob);
+    const a = document.createElement('a'); a.href = url; a.download = outName; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  });
+
+  copyBtn.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(out.textContent || ''); copyBtn.textContent = 'Copied'; }
+    catch { copyBtn.textContent = 'Copy failed'; }
+    setTimeout(() => (copyBtn.textContent = 'Copy'), 1500);
+  });
+</script>

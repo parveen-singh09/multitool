@@ -1,0 +1,116 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="paint-estimator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Units
+        <select id="pe-unit" class="field">
+          <option value="metric">Metric (metres / litres)</option>
+          <option value="imperial">Imperial (feet / gallons)</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Number of coats
+        <input id="pe-coats" type="number" min="1" step="1" class="field" value="2" inputmode="numeric" />
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Room length (<span class="pe-len">m</span>)
+        <input id="pe-length" type="number" min="0" step="any" class="field" value="4" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Room width (<span class="pe-len">m</span>)
+        <input id="pe-width" type="number" min="0" step="any" class="field" value="3" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Wall height (<span class="pe-len">m</span>)
+        <input id="pe-height" type="number" min="0" step="any" class="field" value="2.4" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Doors
+        <input id="pe-doors" type="number" min="0" step="1" class="field" value="1" inputmode="numeric" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Windows
+        <input id="pe-windows" type="number" min="0" step="1" class="field" value="2" inputmode="numeric" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Coverage per <span class="pe-vol">litre</span> (<span class="pe-area">m²</span>)
+        <input id="pe-coverage" type="number" min="0" step="any" class="field" value="10" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-3">
+      <div class="panel p-4"><div id="pe-wall" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total wall area</div></div>
+      <div class="panel p-4"><div id="pe-paintable" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Paintable area</div></div>
+      <div class="panel panel-lift p-4"><div class="copy-wrap"><div id="pe-paint" class="font-display text-xl font-semibold text-primary-hover">—</div><button type="button" class="copy-icon" data-copy-target="#pe-paint" aria-label="Copy"></button></div><div class="mt-1 text-[13px] text-ink-subtle">Paint needed</div></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free paint estimator works out how much paint your walls need. Enter
+      the room length, width and wall height, then subtract doors and windows to
+      get the paintable area. Multiply by the number of coats and divide by your
+      paint's coverage rate to see the total litres or gallons required. A
+      standard door is treated as roughly 1.8 m² and a window as 1.5 m² (scaled
+      for imperial units). Everything is calculated in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const unit = document.getElementById('pe-unit') as HTMLSelectElement;
+  const coats = document.getElementById('pe-coats') as HTMLInputElement;
+  const length = document.getElementById('pe-length') as HTMLInputElement;
+  const width = document.getElementById('pe-width') as HTMLInputElement;
+  const height = document.getElementById('pe-height') as HTMLInputElement;
+  const doors = document.getElementById('pe-doors') as HTMLInputElement;
+  const windows = document.getElementById('pe-windows') as HTMLInputElement;
+  const coverage = document.getElementById('pe-coverage') as HTMLInputElement;
+
+  function setLabels() {
+    const metric = unit.value === 'metric';
+    const len = metric ? 'm' : 'ft';
+    const area = metric ? 'm²' : 'ft²';
+    const vol = metric ? 'litre' : 'gallon';
+    document.querySelectorAll('.pe-len').forEach((el) => (el.textContent = len));
+    document.querySelectorAll('.pe-area').forEach((el) => (el.textContent = area));
+    document.querySelectorAll('.pe-vol').forEach((el) => (el.textContent = vol));
+  }
+
+  function calc() {
+    const metric = unit.value === 'metric';
+    const area = metric ? 'm²' : 'ft²';
+    const vol = metric ? 'L' : 'gal';
+
+    const doorArea = metric ? 1.8 : 19.4;   
+    const winArea = metric ? 1.5 : 16.1;    
+
+    const l = Number(length.value) || 0;
+    const w = Number(width.value) || 0;
+    const h = Number(height.value) || 0;
+    const nCoats = Math.max(1, Math.floor(Number(coats.value) || 1));
+    const cover = Number(coverage.value) || 0;
+
+    const perimeter = 2 * (l + w);
+    const wallArea = perimeter * h;
+    const openings = (Math.max(0, Number(doors.value) || 0)) * doorArea
+      + (Math.max(0, Number(windows.value) || 0)) * winArea;
+    const paintable = Math.max(0, wallArea - openings);
+    const totalArea = paintable * nCoats;
+    const paint = cover > 0 ? totalArea / cover : 0;
+
+    const fmtArea = (n: number) => `${n.toLocaleString(undefined, { maximumFractionDigits: 1 })} ${area}`;
+    document.getElementById('pe-wall')!.textContent = fmtArea(wallArea);
+    document.getElementById('pe-paintable')!.textContent = fmtArea(paintable);
+    document.getElementById('pe-paint')!.textContent =
+      `${paint.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${vol}`;
+  }
+
+  [unit, coats, length, width, height, doors, windows, coverage].forEach((el) =>
+    el.addEventListener('input', calc));
+  unit.addEventListener('change', () => { setLabels(); calc(); });
+  setLabels();
+  calc();
+</script>

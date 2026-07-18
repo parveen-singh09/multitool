@@ -1,0 +1,257 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="email-validator">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Email address(es) — one per line
+      <div class="copy-wrap">
+        <textarea id="ev-in" class="field min-h-32 resize-y font-mono text-[13px]" placeholder="name@example.com&#10;another@domain.org" spellcheck="false">name@example.com</textarea>
+        <button type="button" class="copy-icon" data-copy-target="#ev-in" aria-label="Copy"></button>
+      </div>
+    </label>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <button id="ev-run" class="btn btn-primary">Validate</button>
+      <label class="flex items-center gap-2 text-[13px] text-ink-subtle">
+        <input id="ev-mx" type="checkbox" checked class="accent-primary" />
+        Check live MX / DNS records
+      </label>
+      <span id="ev-status" class="text-[13px] text-ink-tertiary"></span>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
+      <div class="panel panel-lift p-4"><div id="ev-total" class="font-display text-xl font-semibold text-primary-hover">0</div><div class="mt-1 text-[13px] text-ink-subtle">Total</div></div>
+      <div class="panel p-4"><div id="ev-valid" class="font-mono text-lg text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Valid</div></div>
+      <div class="panel p-4"><div id="ev-risky" class="font-mono text-lg text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Risky</div></div>
+      <div class="panel p-4"><div id="ev-invalid" class="font-mono text-lg text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Invalid</div></div>
+    </div>
+
+    <div id="ev-results" class="flex flex-col gap-3"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free email validator goes beyond a format check. For each address it
+      verifies the syntax against RFC-style rules, then looks up the domain's
+      live <strong>MX and DNS records</strong> to confirm the domain is actually
+      configured to receive mail. It flags <strong>disposable</strong>
+      (throwaway) domains, <strong>role-based</strong> mailboxes like info@ or
+      admin@, identifies the mail provider, and suggests fixes for common typos
+      such as gmial.com. Paste a whole list to validate in bulk.
+    </p>
+    <p>
+      MX and DNS lookups run over secure DNS-over-HTTPS. A full
+      SMTP mailbox handshake can't be performed from a browser for security
+      reasons, so a live MX record is the strongest deliverability signal
+      available client-side: it confirms the domain accepts mail.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('ev-in') as HTMLTextAreaElement;
+  const runBtn = document.getElementById('ev-run') as HTMLButtonElement;
+  const mxToggle = document.getElementById('ev-mx') as HTMLInputElement;
+  const statusEl = document.getElementById('ev-status')!;
+  const results = document.getElementById('ev-results')!;
+  const totalEl = document.getElementById('ev-total')!;
+  const validEl = document.getElementById('ev-valid')!;
+  const riskyEl = document.getElementById('ev-risky')!;
+  const invalidEl = document.getElementById('ev-invalid')!;
+
+  const EMAIL_RE =
+    /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+
+  const TYPO_MAP: Record<string, string> = {
+    'gmial.com': 'gmail.com', 'gmal.com': 'gmail.com', 'gmai.com': 'gmail.com',
+    'gmaill.com': 'gmail.com', 'gnail.com': 'gmail.com', 'gmail.co': 'gmail.com',
+    'gmail.cm': 'gmail.com', 'gmail.con': 'gmail.com', 'hotmial.com': 'hotmail.com',
+    'hotmai.com': 'hotmail.com', 'hotmal.com': 'hotmail.com', 'yaho.com': 'yahoo.com',
+    'yahooo.com': 'yahoo.com', 'yahoo.co': 'yahoo.com', 'outlok.com': 'outlook.com',
+    'outllok.com': 'outlook.com', 'iclod.com': 'icloud.com', 'iclould.com': 'icloud.com',
+  };
+
+  const DISPOSABLE = new Set([
+    'mailinator.com', 'guerrillamail.com', '10minutemail.com', 'tempmail.com',
+    'temp-mail.org', 'throwawaymail.com', 'yopmail.com', 'trashmail.com',
+    'getnada.com', 'maildrop.cc', 'dispostable.com', 'fakeinbox.com',
+    'sharklasers.com', 'guerrillamailblock.com', 'mailnesia.com', 'mohmal.com',
+    'emailondeck.com', 'moakt.com', 'tempinbox.com', 'spamgourmet.com',
+  ]);
+
+  const FREE_PROVIDERS = new Set([
+    'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com',
+    'aol.com', 'proton.me', 'protonmail.com', 'gmx.com', 'zoho.com',
+    'mail.com', 'yandex.com', 'live.com', 'msn.com',
+  ]);
+
+  const ROLE_PREFIXES = new Set([
+    'admin', 'administrator', 'info', 'support', 'sales', 'contact', 'help',
+    'billing', 'office', 'noreply', 'no-reply', 'postmaster', 'webmaster',
+    'hostmaster', 'abuse', 'marketing', 'team', 'hello', 'enquiries', 'careers',
+    'jobs', 'hr', 'accounts', 'service',
+  ]);
+
+  function suggest(email: string): string | null {
+    const at = email.lastIndexOf('@');
+    if (at < 0) return null;
+    const domain = email.slice(at + 1).toLowerCase();
+    const fix = TYPO_MAP[domain];
+    return fix ? email.slice(0, at + 1) + fix : null;
+  }
+
+  const mxCache = new Map<string, Promise<{ mx: boolean; a: boolean }>>();
+  async function lookupDomain(domain: string): Promise<{ mx: boolean; a: boolean }> {
+    if (mxCache.has(domain)) return mxCache.get(domain)!;
+    const p = (async () => {
+      try {
+        const [mxRes, aRes] = await Promise.all([
+          fetch(`https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=MX`),
+          fetch(`https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=A`),
+        ]);
+        const mxJson = await mxRes.json();
+        const aJson = await aRes.json();
+        const mx = Array.isArray(mxJson.Answer) && mxJson.Answer.some((r: any) => r.type === 15);
+        const a = Array.isArray(aJson.Answer) && aJson.Answer.some((r: any) => r.type === 1 || r.type === 5);
+        return { mx, a };
+      } catch {
+        return { mx: false, a: false };
+      }
+    })();
+    mxCache.set(domain, p);
+    return p;
+  }
+
+  type Check = { label: string; state: 'ok' | 'bad' | 'warn' | 'wait'; note?: string };
+
+  function chip(c: Check): HTMLSpanElement {
+    const el = document.createElement('span');
+    el.className = 'inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] font-mono';
+    const color = c.state === 'ok' ? '#27a644' : c.state === 'bad' ? '#e5484d' : c.state === 'warn' ? '#d99e3a' : '#62666d';
+    const mark = c.state === 'ok' ? '✓' : c.state === 'bad' ? '✕' : c.state === 'warn' ? '!' : '…';
+    el.style.color = color;
+    el.style.border = `1px solid ${color}44`;
+    el.textContent = `${mark} ${c.label}${c.note ? ': ' + c.note : ''}`;
+    return el;
+  }
+
+  interface Row {
+    card: HTMLDivElement;
+    checksEl: HTMLDivElement;
+    verdict: 'valid' | 'risky' | 'invalid';
+  }
+
+  function buildRow(email: string): Row {
+    const card = document.createElement('div');
+    card.className = 'panel p-4 flex flex-col gap-3';
+
+    const head = document.createElement('div');
+    head.className = 'flex flex-wrap items-center gap-2';
+
+    const syntaxOk = EMAIL_RE.test(email) && email.length <= 254;
+    const hint = suggest(email);
+    const at = email.lastIndexOf('@');
+    const local = at > 0 ? email.slice(0, at).toLowerCase() : '';
+    const domain = at > 0 ? email.slice(at + 1).toLowerCase() : '';
+
+    const disposable = DISPOSABLE.has(domain);
+    const role = ROLE_PREFIXES.has(local);
+    const free = FREE_PROVIDERS.has(domain);
+
+    // Verdict: invalid syntax → invalid. Disposable → risky. Role/typo → risky. Else valid (MX may downgrade).
+    let verdict: Row['verdict'] = 'valid';
+    if (!syntaxOk) verdict = 'invalid';
+    else if (disposable) verdict = 'risky';
+    else if (role || hint) verdict = 'risky';
+
+    const badge = document.createElement('span');
+    badge.className = 'font-mono text-[13px] font-semibold';
+    const badgeColor = verdict === 'valid' ? '#27a644' : verdict === 'risky' ? '#d99e3a' : '#e5484d';
+    badge.style.color = badgeColor;
+    badge.textContent = verdict === 'valid' ? '✓ valid' : verdict === 'risky' ? '! risky' : '✕ invalid';
+
+    const addr = document.createElement('span');
+    addr.className = 'font-mono text-[13px] text-ink break-all';
+    addr.textContent = email;
+
+    head.appendChild(badge);
+    head.appendChild(addr);
+
+    if (hint) {
+      const s = document.createElement('span');
+      s.className = 'ml-auto text-[13px] text-ink-muted';
+      s.textContent = `Did you mean ${hint}?`;
+      head.appendChild(s);
+    }
+
+    const checksEl = document.createElement('div');
+    checksEl.className = 'flex flex-wrap gap-2';
+
+    const checks: Check[] = [
+      { label: 'Syntax', state: syntaxOk ? 'ok' : 'bad' },
+    ];
+    if (syntaxOk) {
+      checks.push({ label: 'Disposable', state: disposable ? 'bad' : 'ok', note: disposable ? 'throwaway domain' : undefined });
+      checks.push({ label: role ? 'Role-based' : 'Personal', state: role ? 'warn' : 'ok' });
+      checks.push({ label: 'Provider', state: 'ok', note: free ? 'free mail' : 'custom domain' });
+      checks.push({ label: 'MX / DNS', state: 'wait' });
+    }
+    checks.forEach((c) => checksEl.appendChild(chip(c)));
+
+    card.appendChild(head);
+    card.appendChild(checksEl);
+
+    const row: Row = { card, checksEl, verdict };
+
+    // Async MX/DNS resolution updates the last chip and may downgrade the verdict.
+    if (syntaxOk && mxToggle.checked && domain) {
+      lookupDomain(domain).then(({ mx, a }) => {
+        const mxChip = checksEl.lastElementChild as HTMLSpanElement;
+        if (mx) {
+          mxChip.replaceWith(chip({ label: 'MX / DNS', state: 'ok', note: 'accepts mail' }));
+        } else if (a) {
+          mxChip.replaceWith(chip({ label: 'MX / DNS', state: 'warn', note: 'no MX, has A record' }));
+          if (row.verdict === 'valid') { row.verdict = 'risky'; badge.textContent = '! risky'; badge.style.color = '#d99e3a'; }
+        } else {
+          mxChip.replaceWith(chip({ label: 'MX / DNS', state: 'bad', note: 'domain not found' }));
+          row.verdict = 'invalid'; badge.textContent = '✕ invalid'; badge.style.color = '#e5484d';
+        }
+        recount();
+      });
+    }
+
+    return row;
+  }
+
+  let rows: Row[] = [];
+
+  function recount() {
+    totalEl.textContent = String(rows.length);
+    validEl.textContent = String(rows.filter((r) => r.verdict === 'valid').length);
+    riskyEl.textContent = String(rows.filter((r) => r.verdict === 'risky').length);
+    invalidEl.textContent = String(rows.filter((r) => r.verdict === 'invalid').length);
+  }
+
+  async function validate() {
+    const lines = input.value.split('\n').map((l) => l.trim()).filter((l) => l !== '');
+    results.replaceChildren();
+    rows = lines.map(buildRow);
+    rows.forEach((r) => results.appendChild(r.card));
+    recount();
+
+    if (mxToggle.checked && rows.length) {
+      statusEl.textContent = 'Looking up MX / DNS records…';
+      // Wait for all in-flight lookups (cached promises) then clear status.
+      await Promise.allSettled(Array.from(mxCache.values()));
+      statusEl.textContent = '';
+    }
+  }
+
+  runBtn.addEventListener('click', validate);
+  input.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') validate();
+  });
+  validate();
+</script>

@@ -1,0 +1,98 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="gcd-lcm-calculator">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Numbers (separated by commas or spaces)
+      <input id="gl-in" type="text" class="field font-mono" value="12, 18, 24" spellcheck="false" autocomplete="off" />
+    </label>
+
+    <p id="gl-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="panel panel-lift p-6 text-center"><div id="gl-gcd" class="font-display text-3xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">GCD (HCF)</div></div>
+      <div class="panel panel-lift p-6 text-center"><div id="gl-lcm" class="font-display text-3xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">LCM</div></div>
+    </div>
+
+    <div id="gl-steps-wrap" class="panel p-5">
+      <div class="mb-3 text-sm text-ink-muted">Prime factorization</div>
+      <div id="gl-steps" class="flex flex-col gap-2 font-mono text-[13px] text-ink-subtle"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free GCD and LCM calculator finds the greatest common divisor (also
+      called the highest common factor) and the least common multiple of two or
+      more whole numbers. Enter any list of integers separated by commas or
+      spaces. It is handy for simplifying fractions and solving number problems.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('gl-in') as HTMLInputElement;
+  const err = document.getElementById('gl-error')!;
+  const gcd = (a: number, b: number): number => (b === 0 ? Math.abs(a) : gcd(b, a % b));
+  const lcm = (a: number, b: number): number => (a === 0 || b === 0 ? 0 : Math.abs(a / gcd(a, b) * b));
+
+  function factorize(n: number): Map<number, number> {
+    const f = new Map<number, number>();
+    n = Math.abs(n);
+    for (let d = 2; d * d <= n; d++) {
+      while (n % d === 0) { f.set(d, (f.get(d) || 0) + 1); n /= d; }
+    }
+    if (n > 1) f.set(n, (f.get(n) || 0) + 1);
+    return f;
+  }
+  const fmtFactors = (f: Map<number, number>) =>
+    f.size === 0 ? '1 (no prime factors)' : [...f.entries()].map(([p, e]) => (e > 1 ? `${p}^${e}` : `${p}`)).join(' × ');
+
+  function calc() {
+    err.classList.add('hidden');
+    const nums = input.value.split(/[\s,]+/).filter((s) => s !== '').map(Number);
+    const gEl = document.getElementById('gl-gcd')!;
+    const lEl = document.getElementById('gl-lcm')!;
+    const stepsEl = document.getElementById('gl-steps')!;
+    if (nums.length < 2) { gEl.textContent = lEl.textContent = '—'; stepsEl.innerHTML = ''; return; }
+    if (nums.some((n) => isNaN(n) || !Number.isInteger(n))) { err.textContent = 'Please enter whole numbers only.'; err.classList.remove('hidden'); return; }
+
+    const g = nums.reduce((a, b) => gcd(a, b));
+    const l = nums.reduce((a, b) => lcm(a, b));
+    gEl.textContent = String(g);
+    lEl.textContent = String(l);
+
+    // Steps: prime factorization of each number, then how GCD/LCM combine primes.
+    const lines: string[] = [];
+    const hasZero = nums.some((n) => n === 0);
+    for (const n of nums) {
+      lines.push(n === 0 ? `${n} = 0 (special case)` : `${n} = ${fmtFactors(factorize(n))}`);
+    }
+    if (hasZero) {
+      lines.push('—');
+      lines.push('GCD with 0 equals the other number; LCM with 0 is 0 by convention.');
+    } else {
+      // shared primes (min exponent) → GCD; union primes (max exponent) → LCM
+      const factsList = nums.map((n) => factorize(n));
+      const allPrimes = new Set<number>();
+      factsList.forEach((f) => f.forEach((_, p) => allPrimes.add(p)));
+      const shared: string[] = [];
+      const union: string[] = [];
+      [...allPrimes].sort((a, b) => a - b).forEach((p) => {
+        const exps = factsList.map((f) => f.get(p) || 0);
+        const min = Math.min(...exps), max = Math.max(...exps);
+        if (min > 0) shared.push(min > 1 ? `${p}^${min}` : `${p}`);
+        union.push(max > 1 ? `${p}^${max}` : `${p}`);
+      });
+      lines.push('—');
+      lines.push(`GCD = product of shared primes (lowest powers) = ${shared.length ? shared.join(' × ') : '1'} = ${g}`);
+      lines.push(`LCM = product of all primes (highest powers) = ${union.join(' × ')} = ${l}`);
+    }
+    stepsEl.innerHTML = lines.map((s) => (s === '—' ? '<div class="border-t border-hairline"></div>' : `<div>${s}</div>`)).join('');
+  }
+
+  input.addEventListener('input', calc);
+  calc();
+</script>

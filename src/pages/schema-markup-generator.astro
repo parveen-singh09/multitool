@@ -1,0 +1,240 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+import { SCHEMA_TYPES } from '../lib/schema-markup';
+---
+
+<ToolLayout slug="schema-markup-generator">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Schema type
+      <select id="sm-type" class="field">
+        {SCHEMA_TYPES.map((t) => <option value={t.id}>{t.name}</option>)}
+      </select>
+    </label>
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+
+      <div id="sm-form" class="flex flex-col gap-4"></div>
+
+      <div class="flex flex-col gap-3">
+        <div class="panel panel-lift flex flex-col gap-2 p-4">
+          <div class="flex items-center justify-between gap-3">
+            <span class="eyebrow text-primary-hover">JSON-LD output</span>
+            <div class="flex gap-2">
+              <button id="sm-download" class="btn btn-secondary">Download</button>
+            </div>
+          </div>
+          <div class="copy-wrap">
+            <pre class="hl-block" style="max-height:60vh;overflow:auto;margin:0"><code id="sm-out" class="hljs language-html" style="background:transparent;padding:0"></code></pre>
+            <button type="button" class="copy-icon" data-copy-target="#sm-out" aria-label="Copy"></button>
+          </div>
+        </div>
+
+        <div id="sm-hints" class="panel p-4 text-[13px] text-ink-subtle"></div>
+
+        <p class="text-[13px] text-ink-tertiary">
+          Paste the code inside a
+          <code>&lt;script type="application/ld+json"&gt;</code> tag in your page
+          <code>&lt;head&gt;</code>, then
+          <a href="https://search.google.com/test/rich-results" target="_blank" rel="noopener" class="text-primary-hover underline">test it with Google’s Rich Results Test</a>.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free schema markup generator builds valid
+      <a href="https://schema.org" target="_blank" rel="noopener" class="text-primary-hover underline">Schema.org</a>
+      structured data as JSON-LD — the format Google recommends for rich results.
+      Pick one of 13 types (Article, Breadcrumb, Event, FAQ Page, How To, Job
+      Posting, Local Business, Organization, Person, Product, Recipe, Video and
+      Website), fill in the fields, and copy the generated markup straight into
+      your page. Repeatable sections let you add multiple FAQ questions, recipe
+      ingredients, HowTo steps, event tickets, product reviews and more. Empty
+      fields are dropped automatically so the output stays clean, and recommended
+      fields are flagged so your markup is more likely to qualify for rich
+      snippets.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { hl } from '../lib/highlight';
+  import { SCHEMA_TYPES, buildJsonLd, missingRecommended, type SchemaType, type FieldDef } from '../lib/schema-markup';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const typeSel = $('sm-type') as HTMLSelectElement;
+  const formEl = $('sm-form');
+  const outEl = $('sm-out') as HTMLElement;
+  const hintsEl = $('sm-hints');
+  let raw = '';
+
+  function fieldControl(f: FieldDef, id: string): HTMLElement {
+    if (f.type === 'textarea') {
+      const t = document.createElement('textarea');
+      t.className = 'field';
+      t.rows = 3;
+      t.id = id;
+      if (f.placeholder) t.placeholder = f.placeholder;
+      return t;
+    }
+    if (f.type === 'select') {
+      const s = document.createElement('select');
+      s.className = 'field';
+      s.id = id;
+      for (const opt of f.options || []) {
+        const o = document.createElement('option');
+        o.value = opt;
+
+        o.textContent = opt.startsWith('https://schema.org/') ? opt.slice('https://schema.org/'.length) : opt;
+        s.append(o);
+      }
+      return s;
+    }
+    const i = document.createElement('input');
+    i.className = 'field';
+    i.type = f.type === 'url' ? 'text' : f.type;
+    i.id = id;
+    if (f.placeholder) i.placeholder = f.placeholder;
+    if (f.type === 'url' || f.type === 'text') i.spellcheck = false;
+    return i;
+  }
+
+  function labelWrap(f: FieldDef, control: HTMLElement): HTMLElement {
+    const l = document.createElement('label');
+    l.className = 'flex flex-col gap-1 text-[13px] text-ink-subtle' + (f.half ? '' : ' sm:col-span-2');
+    const span = document.createElement('span');
+    span.textContent = f.label;
+    if (f.recommended) {
+      const badge = document.createElement('span');
+      badge.textContent = ' · recommended';
+      badge.className = 'text-ink-tertiary';
+      span.append(badge);
+    }
+    l.append(span, control);
+    return l;
+  }
+
+  function fieldGrid(fields: FieldDef[], prefix: string): HTMLElement {
+    const grid = document.createElement('div');
+    grid.className = 'grid grid-cols-1 gap-3 sm:grid-cols-2';
+    for (const f of fields) {
+      const ctrl = fieldControl(f, prefix + f.id);
+      ctrl.addEventListener('input', render);
+      grid.append(labelWrap(f, ctrl));
+    }
+    return grid;
+  }
+
+  function renderForm(t: SchemaType) {
+    formEl.textContent = '';
+
+    if (t.fields.length) formEl.append(fieldGrid(t.fields, `f_${t.id}_`));
+
+    for (const grp of t.groups || []) {
+      const section = document.createElement('div');
+      section.className = 'flex flex-col gap-2';
+      section.dataset.group = grp.id;
+
+      const head = document.createElement('div');
+      head.className = 'flex items-center justify-between';
+      const h = document.createElement('span');
+      h.className = 'eyebrow text-primary-hover';
+      h.textContent = grp.label;
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'btn btn-secondary text-[13px]';
+      add.textContent = '+ ' + grp.addLabel;
+      head.append(h, add);
+
+      const rows = document.createElement('div');
+      rows.className = 'flex flex-col gap-3';
+      rows.dataset.rows = grp.id;
+      section.append(head, rows);
+
+      const addRow = () => {
+        const row = document.createElement('div');
+        row.className = 'sm-row panel p-3 flex flex-col gap-2';
+        row.append(fieldGrid(grp.fields, `g_${t.id}_${grp.id}_${rows.children.length}_`));
+        const rm = document.createElement('button');
+        rm.type = 'button';
+        rm.className = 'btn btn-ghost self-end text-[12px] text-ink-tertiary';
+        rm.textContent = 'Remove';
+        rm.addEventListener('click', () => { row.remove(); render(); });
+        row.append(rm);
+        rows.append(row);
+      };
+      add.addEventListener('click', () => { addRow(); render(); });
+
+      const initial = grp.initial ?? 1;
+      for (let i = 0; i < initial; i++) addRow();
+
+      formEl.append(section);
+    }
+  }
+
+  /** Collect current values, including repeatable groups, for the active type. */
+  function collect(t: SchemaType) {
+    const vals: Record<string, any> = {};
+    for (const f of t.fields) {
+      const el = document.getElementById(`f_${t.id}_${f.id}`) as HTMLInputElement | null;
+      if (el) vals[f.id] = el.value.trim();
+    }
+    for (const grp of t.groups || []) {
+      const rowsWrap = formEl.querySelector(`[data-rows="${grp.id}"]`);
+      const arr: any[] = [];
+      rowsWrap?.querySelectorAll(':scope > .sm-row').forEach((row) => {
+        const obj: Record<string, string> = {};
+        for (const f of grp.fields) {
+          const el = Array.from(row.querySelectorAll<HTMLInputElement>('input, textarea, select'))
+            .find((e) => e.id.endsWith(`_${f.id}`) && e.id.includes(`_${grp.id}_`));
+          if (el) obj[f.id] = el.value.trim();
+        }
+        arr.push(obj);
+      });
+      vals[grp.id] = arr;
+    }
+    return vals;
+  }
+
+  async function render() {
+    const t = SCHEMA_TYPES.find((x) => x.id === typeSel.value)!;
+    const vals = collect(t);
+    const json = buildJsonLd(t.id, vals);
+    raw = `<script type="application/ld+json">\n${JSON.stringify(json, null, 2)}\n<\/script>`;
+    await hl(outEl, raw, 'html');
+
+    const missing = missingRecommended(t.id, vals);
+    hintsEl.textContent = '';
+    if (missing.length) {
+      const p = document.createElement('p');
+      const label = document.createElement('span');
+      label.className = 'text-ink';
+      label.textContent = missing.join(', ');
+      p.append(document.createTextNode('For richer results, consider adding: '), label, document.createTextNode('.'));
+      hintsEl.append(p);
+    } else {
+      hintsEl.textContent = 'All recommended fields are filled. ✓';
+    }
+  }
+
+  function switchType() {
+    const t = SCHEMA_TYPES.find((x) => x.id === typeSel.value)!;
+    renderForm(t);
+    render();
+  }
+
+  typeSel.addEventListener('change', switchType);
+
+  $('sm-download').addEventListener('click', () => {
+    const blob = new Blob([raw], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${typeSel.value.toLowerCase()}-schema.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  switchType();
+</script>

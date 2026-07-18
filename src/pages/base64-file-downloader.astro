@@ -1,0 +1,157 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="base64-file-downloader">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Base64 string or data URI
+      <div class="copy-wrap">
+        <textarea id="b64d-input" class="field min-h-72 resize-y font-mono text-[13px]" placeholder="Paste a base64 string, or a full data URI like data:image/png;base64,iVBORw0KGgo…" spellcheck="false"></textarea>
+        <button type="button" class="copy-icon" data-copy-target="#b64d-input" aria-label="Copy"></button>
+      </div>
+    </label>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        MIME type (optional)
+        <input id="b64d-mime" type="text" class="field" placeholder="e.g. image/png" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        File name (optional)
+        <input id="b64d-name" type="text" class="field" placeholder="e.g. download.png" />
+      </label>
+    </div>
+
+    <p id="b64d-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="panel p-4">
+      <div class="grid grid-cols-2 gap-3 text-center">
+        <div><div id="b64d-size" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Decoded size</div></div>
+        <div><div id="b64d-type" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Detected type</div></div>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <button id="b64d-dl" class="btn btn-primary">Download file</button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free base64 file downloader turns a base64 string or a full data URI back
+      into a real file you can save. It decodes the data, auto-detects the MIME type
+      from the data URI prefix (or uses the type and file name you supply), and
+      reports the decoded size. Useful for extracting inline images, PDFs or other
+      assets embedded in code. Decoding happens entirely in your browser, so nothing
+      you paste ever leaves your device.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('b64d-input') as HTMLTextAreaElement;
+  const mimeEl = document.getElementById('b64d-mime') as HTMLInputElement;
+  const nameEl = document.getElementById('b64d-name') as HTMLInputElement;
+  const sizeEl = document.getElementById('b64d-size') as HTMLDivElement;
+  const typeEl = document.getElementById('b64d-type') as HTMLDivElement;
+  const err = document.getElementById('b64d-error') as HTMLParagraphElement;
+
+  interface Decoded {
+    bytes: Uint8Array;
+    mime: string;
+  }
+
+  function showError(msg: string): void {
+    err.textContent = msg;
+    err.classList.remove('hidden');
+  }
+
+  function clearError(): void {
+    err.classList.add('hidden');
+  }
+
+  function formatBytes(n: number): string {
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / (1024 * 1024)).toFixed(2)} MB`;
+  }
+
+  function decode(): Decoded | null {
+    const raw = input.value.trim();
+    if (!raw) {
+      clearError();
+      return null;
+    }
+
+    let base64 = raw;
+    let mime = mimeEl.value.trim();
+
+    const dataUri = raw.match(/^data:([^;,]*)(;base64)?,(.*)$/s);
+    if (dataUri) {
+      if (!dataUri[2]) {
+        showError('Only base64-encoded data URIs are supported.');
+        return null;
+      }
+      if (!mime && dataUri[1]) mime = dataUri[1];
+      base64 = dataUri[3];
+    }
+
+    base64 = base64.replace(/\s+/g, '');
+
+    try {
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      clearError();
+      return { bytes, mime: mime || 'application/octet-stream' };
+    } catch {
+      showError('That is not valid base64 data.');
+      return null;
+    }
+  }
+
+  function update(): void {
+    const result = decode();
+    if (!result) {
+      sizeEl.textContent = '—';
+      typeEl.textContent = '—';
+      return;
+    }
+    sizeEl.textContent = formatBytes(result.bytes.length);
+    typeEl.textContent = result.mime;
+  }
+
+  function extFromMime(mime: string): string {
+    const map: Record<string, string> = {
+      'image/png': 'png',
+      'image/jpeg': 'jpg',
+      'image/gif': 'gif',
+      'image/svg+xml': 'svg',
+      'image/webp': 'webp',
+      'application/pdf': 'pdf',
+      'application/json': 'json',
+      'text/plain': 'txt',
+      'text/html': 'html',
+      'text/csv': 'csv',
+    };
+    return map[mime] ?? 'bin';
+  }
+
+  function download(): void {
+    const result = decode();
+    if (!result) return;
+    const name = nameEl.value.trim() || `download.${extFromMime(result.mime)}`;
+    const blob = new Blob([result.bytes.buffer as ArrayBuffer], { type: result.mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.download = name;
+    a.href = url;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  input.addEventListener('input', update);
+  mimeEl.addEventListener('input', update);
+  document.getElementById('b64d-dl')!.addEventListener('click', download);
+</script>

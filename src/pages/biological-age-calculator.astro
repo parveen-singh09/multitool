@@ -1,0 +1,208 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="biological-age-calculator">
+  <div class="flex flex-col gap-5">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Chronological age (years)
+      <input id="ba-age" type="number" min="10" max="120" class="field" value="35" inputmode="numeric" />
+    </label>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Exercise per week
+        <select id="ba-exercise" class="field">
+          <option value="-3">5+ hours (very active)</option>
+          <option value="-1.5" selected>2–4 hours (active)</option>
+          <option value="0">About 1 hour</option>
+          <option value="2.5">Little to none</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Sleep per night
+        <select id="ba-sleep" class="field">
+          <option value="0">7–9 hours</option>
+          <option value="1.5">6–7 hours</option>
+          <option value="3">Under 6 hours</option>
+          <option value="1">Over 9 hours</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Diet quality
+        <select id="ba-diet" class="field">
+          <option value="-2">Whole foods, lots of veg</option>
+          <option value="0" selected>Balanced / mixed</option>
+          <option value="2.5">Mostly processed / fast food</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Smoking
+        <select id="ba-smoke" class="field">
+          <option value="0">Never smoked</option>
+          <option value="1.5">Former smoker</option>
+          <option value="6">Current smoker</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Alcohol
+        <select id="ba-alcohol" class="field">
+          <option value="-0.5">None / rare</option>
+          <option value="0" selected>Moderate (weekly)</option>
+          <option value="3">Heavy (most days)</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Stress level
+        <select id="ba-stress" class="field">
+          <option value="-1">Low / relaxed</option>
+          <option value="0.5" selected>Moderate</option>
+          <option value="2.5">High / chronic</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">BMI
+        <select id="ba-bmi" class="field">
+          <option value="0.5">Under 18.5 (under)</option>
+          <option value="0" selected>18.5–24.9 (normal)</option>
+          <option value="1.5">25–29.9 (over)</option>
+          <option value="3.5">30+ (obese)</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Social & mental wellbeing
+        <select id="ba-social" class="field">
+          <option value="-1">Strong connections</option>
+          <option value="0" selected>Average</option>
+          <option value="2">Isolated / low mood</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Resting heart rate
+        <select id="ba-rhr" class="field">
+          <option value="-1.5">Under 60 bpm (athletic)</option>
+          <option value="0" selected>60–70 bpm (healthy)</option>
+          <option value="1">71–80 bpm (average)</option>
+          <option value="2.5">Over 80 bpm (elevated)</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Family longevity
+        <select id="ba-family" class="field">
+          <option value="-2">Parents/grandparents lived 85+</option>
+          <option value="0" selected>Typical (70s–80s)</option>
+          <option value="2">History of early illness/death</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div class="text-sm text-ink-subtle">Estimated biological age</div>
+      <div class="copy-wrap">
+        <div id="ba-value" class="mt-1 font-display text-5xl font-semibold text-primary-hover">—</div>
+        <button type="button" class="copy-icon" data-copy-target="#ba-value" aria-label="Copy"></button>
+      </div>
+      <div id="ba-delta" class="mt-2 text-sm text-ink-muted"></div>
+    </div>
+
+    <div class="panel p-5">
+      <div class="mb-3 text-sm text-ink-muted">What's moving your number</div>
+      <div id="ba-breakdown" class="flex flex-col gap-2 text-sm"></div>
+    </div>
+
+    <div id="ba-tips-wrap" class="hidden panel p-5">
+      <div class="mb-3 text-sm text-ink-muted">Where you'd gain the most</div>
+      <ul id="ba-tips" class="flex flex-col gap-2 text-sm text-ink-subtle"></ul>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free biological age calculator estimates how old your body acts
+      compared to your actual age, based on lifestyle factors that research links
+      to healthy aging — physical activity, sleep, diet, smoking, alcohol, stress,
+      body weight, social wellbeing, resting heart rate and family longevity. Each answer nudges your estimate up or
+      down from your chronological age. This is an educational estimate, not a
+      medical test like an epigenetic clock or blood biomarker panel, and it can’t
+      diagnose anything. For real health concerns, talk to a doctor.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id) as unknown as HTMLSelectElement;
+  const IDS = ['ba-exercise', 'ba-sleep', 'ba-diet', 'ba-smoke', 'ba-alcohol', 'ba-stress', 'ba-bmi', 'ba-social', 'ba-rhr', 'ba-family'];
+  const LABELS: Record<string, string> = {
+    'ba-exercise': 'Exercise', 'ba-sleep': 'Sleep', 'ba-diet': 'Diet', 'ba-smoke': 'Smoking',
+    'ba-alcohol': 'Alcohol', 'ba-stress': 'Stress', 'ba-bmi': 'Body weight (BMI)',
+    'ba-social': 'Social wellbeing', 'ba-rhr': 'Resting heart rate', 'ba-family': 'Family longevity',
+  };
+
+  const TIPS: Record<string, string> = {
+    'ba-exercise': 'Aim for at least 150 minutes of moderate activity a week.',
+    'ba-sleep': 'Target 7–9 hours of sleep on a consistent schedule.',
+    'ba-diet': 'Shift toward whole foods and more vegetables; cut processed meals.',
+    'ba-smoke': 'Quitting smoking is the single biggest change you can make here.',
+    'ba-alcohol': 'Reducing heavy drinking lowers long-term health risk.',
+    'ba-stress': 'Build in recovery — mindfulness, breaks, or exercise reduce chronic stress.',
+    'ba-bmi': 'Moving toward a healthy BMI range reduces metabolic strain.',
+    'ba-social': 'Strengthen social ties; connection is linked to longer, healthier life.',
+    'ba-rhr': 'Regular cardio lowers resting heart rate over time.',
+    'ba-family': 'Family history is fixed, but healthy habits offset much of the risk.',
+  };
+
+  function calc() {
+    const age = Number((document.getElementById('ba-age') as HTMLInputElement).value);
+    const valueEl = document.getElementById('ba-value')!;
+    const deltaEl = document.getElementById('ba-delta')!;
+    const breakdownEl = document.getElementById('ba-breakdown')!;
+    const tipsWrap = document.getElementById('ba-tips-wrap')!;
+    const tipsEl = document.getElementById('ba-tips')!;
+
+    if (!(age > 0)) {
+      valueEl.textContent = '—';
+      deltaEl.textContent = '';
+      breakdownEl.innerHTML = '';
+      tipsWrap.classList.add('hidden');
+      return;
+    }
+
+    let delta = 0;
+    const factors: { id: string; value: number }[] = [];
+    for (const id of IDS) {
+      const v = Number($(id).value);
+      delta += v;
+      factors.push({ id, value: v });
+    }
+
+    delta = Math.max(-15, Math.min(18, delta));
+    const bio = Math.max(1, Math.round((age + delta) * 10) / 10);
+
+    const nonZero = factors.filter((f) => f.value !== 0).sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+    breakdownEl.innerHTML = nonZero.length
+      ? nonZero
+          .map((f) => {
+            const up = f.value > 0;
+            const color = up ? '#d2a05e' : '#27a644';
+            return `<div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">${LABELS[f.id]}</span><span class="font-mono" style="color:${color}">${up ? '+' : ''}${f.value} yr</span></div>`;
+          })
+          .join('')
+      : '<span class="text-ink-tertiary">All factors are neutral.</span>';
+
+    // Tips from the worst (age-adding) factors.
+    const worst = nonZero.filter((f) => f.value >= 1.5).slice(0, 3);
+    if (worst.length) {
+      tipsWrap.classList.remove('hidden');
+      tipsEl.innerHTML = worst.map((f) => `<li class="flex gap-2"><span class="text-primary-hover">→</span><span>${TIPS[f.id]}</span></li>`).join('');
+    } else {
+      tipsWrap.classList.add('hidden');
+    }
+
+    valueEl.textContent = String(bio);
+    const diff = Math.round((bio - age) * 10) / 10;
+    if (Math.abs(diff) < 0.5) {
+      deltaEl.textContent = 'About the same as your actual age';
+      deltaEl.style.color = 'var(--color-ink-muted)';
+    } else if (diff < 0) {
+      deltaEl.textContent = `${Math.abs(diff)} years younger than your actual age`;
+      deltaEl.style.color = '#27a644';
+    } else {
+      deltaEl.textContent = `${diff} years older than your actual age`;
+      deltaEl.style.color = '#d2a05e';
+    }
+  }
+
+  document
+    .querySelectorAll('#ba-age, #ba-exercise, #ba-sleep, #ba-diet, #ba-smoke, #ba-alcohol, #ba-stress, #ba-bmi, #ba-social, #ba-rhr, #ba-family')
+    .forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

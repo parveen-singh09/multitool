@@ -1,0 +1,192 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="workout-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Focus
+        <select id="wo-focus" class="field w-40"><option value="full">Full body</option><option value="upper">Upper body</option><option value="lower">Lower body</option><option value="core">Core</option><option value="cardio">Cardio</option></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Level
+        <select id="wo-level" class="field w-36"><option value="beginner">Beginner</option><option value="intermediate" selected>Intermediate</option><option value="advanced">Advanced</option></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Intensity
+        <select id="wo-intensity" class="field w-36"><option value="low">Low</option><option value="moderate" selected>Moderate</option><option value="high">High</option></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Days
+        <input id="wo-days" type="number" min="1" max="7" value="3" class="field w-20" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Exercises
+        <input id="wo-count" type="number" min="3" max="10" value="6" class="field w-24" />
+      </label>
+      <div class="ml-auto flex flex-wrap items-center gap-2.5">
+        <button id="wo-gen" class="btn btn-primary">Generate</button>
+        <button id="wo-ai-gen" type="button" class="btn btn-primary bg-linear-to-r from-primary via-[#7c5cff] to-[#a855f7] hover:opacity-90">✦ AI generate</button>
+      </div>
+    </div>
+
+    <div class="panel flex flex-col gap-3 p-5">
+      <h2 class="text-lg font-semibold text-ink">Ask the coach</h2>
+      <div id="wo-chat" class="flex max-h-80 flex-col gap-3 overflow-y-auto"></div>
+      <form id="wo-chat-form" class="flex gap-2">
+        <input id="wo-chat-input" class="field flex-1" placeholder="Swap out the burpees, or make day 3 easier…" autocomplete="off" />
+        <button type="submit" class="btn btn-primary">Send</button>
+      </form>
+    </div>
+
+    <div id="wo-out" class="panel panel-lift flex flex-col gap-2 p-5"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This workout generator builds a multi-day routine by focus area — full
+      body, upper, lower, core or cardio — with sets and reps scaled to your
+      level, intensity and number of training days. Plans are generated in your
+      browser and you can chat with the coach to tweak them. Most moves are bodyweight or
+      lightly-equipped so you can do them at home or the gym. Always warm up
+      first and stop if something hurts; this is general inspiration, not
+      medical or fitness advice.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { sample } from '../lib/random';
+  import { aiChat as aiChatLib } from '../lib/ai';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const out = $('wo-out')!;
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+
+  const MOVES: Record<string, string[]> = {
+    upper: ['Push-ups', 'Pike push-ups', 'Dips', 'Pull-ups', 'Bicep curls', 'Shoulder press', 'Tricep extensions', 'Bent-over rows'],
+    lower: ['Squats', 'Lunges', 'Glute bridges', 'Calf raises', 'Wall sit', 'Step-ups', 'Bulgarian split squats', 'Deadlifts'],
+    core: ['Plank', 'Bicycle crunches', 'Russian twists', 'Leg raises', 'Mountain climbers', 'Dead bug', 'Hollow hold', 'Side plank'],
+    cardio: ['Jumping jacks', 'High knees', 'Burpees', 'Butt kicks', 'Skater hops', 'Jump rope', 'Sprint intervals', 'Mountain climbers'],
+  };
+  const REPS: Record<string, [number, number]> = { beginner: [2, 10], intermediate: [3, 12], advanced: [4, 15] };
+
+  type Ex = { name: string; sets: string | number; reps: string | number };
+  type Day = { day: string; exercises: Ex[] };
+  type Plan = { title: string; days: Day[]; notes?: string };
+
+  const settings = () => ({
+    focus: ($('wo-focus') as HTMLSelectElement).value,
+    level: ($('wo-level') as HTMLSelectElement).value,
+    intensity: ($('wo-intensity') as HTMLSelectElement).value,
+    days: Math.max(1, Math.min(7, Number(($('wo-days') as HTMLInputElement).value) || 3)),
+    count: Math.max(3, Math.min(10, Number(($('wo-count') as HTMLInputElement).value) || 6)),
+  });
+
+  function pool(focus: string): string[] {
+    if (focus === 'full') return [...MOVES.upper, ...MOVES.lower, ...MOVES.core];
+    return MOVES[focus];
+  }
+
+  function localPlan(): Plan {
+    const s = settings();
+    const [sets, baseReps] = REPS[s.level];
+    const isCardio = s.focus === 'cardio';
+    const days: Day[] = Array.from({ length: s.days }, (_, d) => ({
+      day: `Day ${d + 1}`,
+      exercises: sample(pool(s.focus), Math.min(s.count, pool(s.focus).length)).map((name, i) => ({
+        name,
+        sets,
+        reps: isCardio ? `${30 + (s.intensity === 'high' ? 15 : 0)}s` : `${baseReps + (i % 3)}`,
+      })),
+    }));
+    return { title: `${s.focus === 'full' ? 'Full body' : s.focus[0].toUpperCase() + s.focus.slice(1)} • ${s.level}`, days, notes: 'Rest 45–90s between sets. Warm up before and stretch after.' };
+  }
+
+  let currentPlan: Plan | null = null;
+
+  function render(plan: Plan) {
+    currentPlan = plan;
+    out.innerHTML = `
+      <h2 class="mb-2 text-lg font-semibold text-ink">${plan.title}</h2>
+      ${plan.days.map((day) => `
+        <h3 class="mt-3 text-[15px] font-semibold text-ink">${day.day}</h3>
+        <ol class="flex flex-col gap-2">${day.exercises.map((e, i) =>
+          `<li class="flex items-center justify-between border-b border-hairline pb-2"><span class="text-[15px] text-ink">${i + 1}. ${e.name}</span><span class="font-mono text-[13px] text-ink-subtle">${e.sets} × ${e.reps}</span></li>`
+        ).join('')}</ol>`).join('')}
+      ${plan.notes ? `<p class="mt-2 text-[13px] text-ink-tertiary">${plan.notes}</p>` : ''}`;
+  }
+
+  const parsePlan = (text: string): Plan => JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, '').trim());
+
+  type ChatMsg = { role: 'system' | 'user' | 'assistant'; content: string };
+  const aiChat = (messages: ChatMsg[]): Promise<string> => aiChatLib(messages);
+
+  function ctx() {
+    const s = settings();
+    return `Current settings — focus: ${s.focus === 'full' ? 'full body' : s.focus}, level: ${s.level}, intensity: ${s.intensity}, days: ${s.days}, exercises/day: ${s.count}.`;
+  }
+
+  // Normal path: build the plan locally, no request.
+  function generate() {
+    render(localPlan());
+  }
+
+  async function aiGenerate() {
+    const btn = $('wo-ai-gen') as HTMLButtonElement;
+    const s = settings();
+    btn.disabled = true;
+    out.innerHTML = `<p class="text-[15px] text-ink-subtle">Generating…</p>`;
+    try {
+      const content = await aiChat([
+        { role: 'system', content: 'You are a fitness coach. Output valid JSON only, no prose.' },
+        { role: 'user', content: `Build a ${s.days}-day workout plan.
+Focus: ${s.focus === 'full' ? 'full body' : s.focus}. Level: ${s.level}. Intensity: ${s.intensity}.
+About ${s.count} exercises per training day. Mostly bodyweight/lightly-equipped for home or gym.
+Respond ONLY with JSON of this exact shape:
+{"title":"...","days":[{"day":"Day 1 — ...","exercises":[{"name":"...","sets":"3","reps":"12"}]}],"notes":"warmup/rest advice"}` },
+      ]);
+      const plan = parsePlan(content);
+      if (!Array.isArray(plan.days) || !plan.days.length) throw new Error('shape');
+      render(plan);
+    } catch {
+      render(localPlan()); // remote unavailable / bad output — use local generator
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  $('wo-gen').addEventListener('click', generate);
+  $('wo-ai-gen').addEventListener('click', aiGenerate);
+  render(localPlan());
+
+  // --- Chat ---
+  const chatBox = $('wo-chat');
+  const chatInput = $('wo-chat-input') as HTMLInputElement;
+  const history: { role: 'user' | 'assistant'; content: string }[] = [];
+
+  function bubble(role: 'user' | 'assistant', text: string) {
+    const mine = role === 'user';
+    chatBox.insertAdjacentHTML('beforeend',
+      `<div class="w-fit max-w-md whitespace-pre-line rounded-lg px-3 py-2 text-[14px] ${mine ? 'ml-auto bg-primary/15 text-ink' : 'bg-surface-2 text-ink-subtle'}">${esc(text)}</div>`);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  $('wo-chat-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = chatInput.value.trim();
+    if (!msg) return;
+    chatInput.value = '';
+    bubble('user', msg);
+    bubble('assistant', 'Thinking…');
+    const pending = chatBox.lastElementChild!;
+    try {
+      const plan = currentPlan ? `\nTheir current plan:\n${JSON.stringify(currentPlan)}` : '';
+      const reply = await aiChat([
+        { role: 'system', content: `You are a friendly fitness coach. Give concise, practical advice. Always answer in short bullet points. ${ctx()}${plan}` },
+        ...history,
+        { role: 'user', content: msg },
+      ]);
+      pending.textContent = reply || '(no reply)';
+      history.push({ role: 'user', content: msg }, { role: 'assistant', content: reply });
+    } catch {
+      pending.textContent = 'Coach is unavailable right now. Try again in a moment.';
+    }
+  });
+</script>

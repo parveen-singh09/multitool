@@ -1,0 +1,267 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="uuid-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Version
+        <select id="uu-ver" class="field w-56">
+          <option value="4">v4 — random (default)</option>
+          <option value="7">v7 — time-ordered (recommended)</option>
+          <option value="1">v1 — time-based</option>
+          <option value="6">v6 — reordered time</option>
+          <option value="3">v3 — namespace (MD5)</option>
+          <option value="5">v5 — namespace (SHA-1)</option>
+          <option value="nil">Nil — all zeros</option>
+          <option value="max">Max — all ones</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        How many
+        <input id="uu-count" type="number" min="1" max="10000" value="5" class="field w-28" />
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input type="checkbox" id="uu-upper" class="accent-primary" /> Uppercase
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input type="checkbox" id="uu-braces" class="accent-primary" /> Wrap in { }
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input type="checkbox" id="uu-nohyphen" class="accent-primary" /> No hyphens
+      </label>
+      <button id="uu-gen" class="btn btn-primary ml-auto">Generate</button>
+      <button id="uu-download" class="btn btn-secondary">Download</button>
+    </div>
+
+    <div id="uu-ns-row" class="hidden flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Namespace
+        <select id="uu-ns" class="field w-56">
+          <option value="6ba7b810-9dad-11d1-80b4-00c04fd430c8">DNS</option>
+          <option value="6ba7b811-9dad-11d1-80b4-00c04fd430c8">URL</option>
+          <option value="6ba7b812-9dad-11d1-80b4-00c04fd430c8">OID</option>
+          <option value="6ba7b814-9dad-11d1-80b4-00c04fd430c8">X.500</option>
+          <option value="custom">Custom…</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Name
+        <input id="uu-name" type="text" value="www.example.com" class="field w-64" placeholder="value to hash" />
+      </label>
+      <label id="uu-ns-custom-wrap" class="hidden flex-col gap-1 text-sm text-ink-subtle">
+        Custom namespace UUID
+        <input id="uu-ns-custom" type="text" class="field w-72 font-mono text-[13px]" placeholder="xxxxxxxx-xxxx-..." />
+      </label>
+    </div>
+
+    <div class="copy-wrap"><textarea id="uu-out" class="field min-h-64 resize-y font-mono text-[13px]" readonly aria-label="Generated UUIDs"></textarea><button type="button" class="copy-icon" data-copy-target="#uu-out" aria-label="Copy"></button></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free UUID generator creates unique identifiers (also called GUIDs)
+      following the RFC 4122 / RFC 9562 standards. Pick a version, generate one
+      or up to ten thousand at once, and apply uppercase, curly-brace or
+      hyphen-free formatting. UUIDs are created with your browser's secure
+      <code class="font-mono text-ink">crypto</code> API — nothing is sent to a server.
+    </p>
+    <p>
+      <strong class="text-ink">Which version?</strong>
+      <strong class="text-ink">v4</strong> is fully random and the common default.
+      <strong class="text-ink">v7</strong> embeds a Unix timestamp so IDs sort
+      by creation time — ideal for database keys.
+      <strong class="text-ink">v1/v6</strong> are time-based (v6 reorders v1 to be sortable).
+      <strong class="text-ink">v3/v5</strong> are deterministic: the same
+      namespace and name always produce the same UUID (v3 uses MD5, v5 uses SHA-1).
+      <strong class="text-ink">Nil</strong> and <strong class="text-ink">Max</strong>
+      are the reserved all-zero and all-one values.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const verEl = $<HTMLSelectElement>('uu-ver');
+  const countEl = $<HTMLInputElement>('uu-count');
+  const upper = $<HTMLInputElement>('uu-upper');
+  const braces = $<HTMLInputElement>('uu-braces');
+  const noHyphen = $<HTMLInputElement>('uu-nohyphen');
+  const out = $<HTMLTextAreaElement>('uu-out');
+  const nsRow = $<HTMLDivElement>('uu-ns-row');
+  const nsEl = $<HTMLSelectElement>('uu-ns');
+  const nsCustomWrap = $<HTMLLabelElement>('uu-ns-custom-wrap');
+  const nsCustomEl = $<HTMLInputElement>('uu-ns-custom');
+  const nameEl = $<HTMLInputElement>('uu-name');
+
+  const hex = (b: Uint8Array) => [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
+  const format = (b: Uint8Array) => {
+    const h = hex(b);
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+  };
+  const parseUuid = (s: string) => {
+    const h = s.replace(/[^0-9a-f]/gi, '');
+    if (h.length !== 32) throw new Error('bad namespace UUID');
+    const b = new Uint8Array(16);
+    for (let i = 0; i < 16; i++) b[i] = parseInt(h.slice(i * 2, i * 2 + 2), 16);
+    return b;
+  };
+  const putBE = (b: Uint8Array, off: number, val: bigint, bytes: number) => {
+    for (let i = 0; i < bytes; i++) b[off + bytes - 1 - i] = Number((val >> BigInt(i * 8)) & 0xffn);
+  };
+  const rand = (n: number) => crypto.getRandomValues(new Uint8Array(n));
+
+  function v4(): Uint8Array {
+    const b = rand(16);
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    return b;
+  }
+  function v7(): Uint8Array {
+    const b = rand(16);
+    putBE(b, 0, BigInt(Date.now()), 6); // 48-bit unix-ms timestamp
+    b[6] = (b[6] & 0x0f) | 0x70;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    return b;
+  }
+  // 100-ns intervals since 1582-10-15 (Gregorian epoch)
+  const gregTs = () => BigInt(Date.now()) * 10000n + 122192928000000000n;
+  function v1(): Uint8Array {
+    const ts = gregTs();
+    const b = rand(16); // node (10-15) + clock seq (8-9) start random
+    putBE(b, 0, ts & 0xffffffffn, 4); // time_low
+    putBE(b, 4, (ts >> 32n) & 0xffffn, 2); // time_mid
+    putBE(b, 6, ((ts >> 48n) & 0x0fffn) | 0x1000n, 2); // time_hi + version 1
+    b[8] = (b[8] & 0x3f) | 0x80; // variant
+    b[10] |= 0x01; // random node → set multicast bit
+    return b;
+  }
+  function v6(): Uint8Array {
+    const ts = gregTs();
+    const b = rand(16);
+    putBE(b, 0, (ts >> 28n) & 0xffffffffn, 4); // time_high
+    putBE(b, 4, (ts >> 12n) & 0xffffn, 2); // time_mid
+    putBE(b, 6, 0x6000n | (ts & 0x0fffn), 2); // version 6 + time_low
+    b[8] = (b[8] & 0x3f) | 0x80;
+    b[10] |= 0x01;
+    return b;
+  }
+  async function namespaced(ver: 3 | 5): Promise<Uint8Array> {
+    const nsHex = nsEl.value === 'custom' ? nsCustomEl.value : nsEl.value;
+    const ns = parseUuid(nsHex);
+    const name = new TextEncoder().encode(nameEl.value);
+    const msg = new Uint8Array(16 + name.length);
+    msg.set(ns, 0);
+    msg.set(name, 16);
+    const digest = ver === 5 ? new Uint8Array(await crypto.subtle.digest('SHA-1', msg)) : md5(msg);
+    const b = digest.slice(0, 16);
+    b[6] = (b[6] & 0x0f) | (ver === 5 ? 0x50 : 0x30);
+    b[8] = (b[8] & 0x3f) | 0x80;
+    return b;
+  }
+
+  async function one(): Promise<string> {
+    const v = verEl.value;
+    if (v === 'nil') return '00000000-0000-0000-0000-000000000000';
+    if (v === 'max') return 'ffffffff-ffff-ffff-ffff-ffffffffffff';
+    if (v === '1') return format(v1());
+    if (v === '6') return format(v6());
+    if (v === '7') return format(v7());
+    if (v === '3') return format(await namespaced(3));
+    if (v === '5') return format(await namespaced(5));
+    return format(v4());
+  }
+
+  async function generate() {
+    const n = Math.max(1, Math.min(10000, Number(countEl.value) || 1));
+    const list: string[] = [];
+    try {
+      for (let i = 0; i < n; i++) {
+        let id = await one();
+        if (noHyphen.checked) id = id.replace(/-/g, '');
+        if (upper.checked) id = id.toUpperCase();
+        if (braces.checked) id = `{${id}}`;
+        list.push(id);
+      }
+      out.value = list.join('\n');
+    } catch (err) {
+      out.value = `Error: ${(err as Error).message}`;
+    }
+  }
+
+  function syncNsUi() {
+    const namespaced = verEl.value === '3' || verEl.value === '5';
+    nsRow.classList.toggle('hidden', !namespaced);
+    nsRow.classList.toggle('flex', namespaced);
+    const custom = nsEl.value === 'custom';
+    nsCustomWrap.classList.toggle('hidden', !custom);
+    nsCustomWrap.classList.toggle('flex', custom);
+  }
+
+  $('uu-gen').addEventListener('click', generate);
+  verEl.addEventListener('change', () => { syncNsUi(); generate(); });
+  nsEl.addEventListener('change', () => { syncNsUi(); generate(); });
+  [upper, braces, noHyphen].forEach((el) => el.addEventListener('change', generate));
+  [nameEl, nsCustomEl].forEach((el) => el.addEventListener('input', generate));
+
+  $('uu-download').addEventListener('click', () => {
+    const blob = new Blob([out.value], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'uuids.txt';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  // Compact MD5 (RFC 1321) — needed for v3; crypto.subtle has no MD5.
+  function md5(bytes: Uint8Array): Uint8Array {
+    const rol = (x: number, c: number) => (x << c) | (x >>> (32 - c));
+    const S = [7, 12, 17, 22, 5, 9, 14, 20, 4, 11, 16, 23, 6, 10, 15, 21];
+    const K: number[] = [];
+    for (let i = 0; i < 64; i++) K[i] = Math.floor(Math.abs(Math.sin(i + 1)) * 4294967296) | 0;
+    const ml = bytes.length * 8;
+    const withPad = new Uint8Array((((bytes.length + 8) >> 6) + 1) * 64);
+    withPad.set(bytes);
+    withPad[bytes.length] = 0x80;
+    const dv = new DataView(withPad.buffer);
+    dv.setUint32(withPad.length - 8, ml >>> 0, true);
+    dv.setUint32(withPad.length - 4, Math.floor(ml / 4294967296), true);
+    let a0 = 0x67452301, b0 = 0xefcdab89, c0 = 0x98badcfe, d0 = 0x10325476;
+    for (let off = 0; off < withPad.length; off += 64) {
+      const M: number[] = [];
+      for (let j = 0; j < 16; j++) M[j] = dv.getUint32(off + j * 4, true);
+      let [A, B, C, D] = [a0, b0, c0, d0];
+      for (let i = 0; i < 64; i++) {
+        let f: number, g: number;
+        if (i < 16) { f = (B & C) | (~B & D); g = i; }
+        else if (i < 32) { f = (D & B) | (~D & C); g = (5 * i + 1) % 16; }
+        else if (i < 48) { f = B ^ C ^ D; g = (3 * i + 5) % 16; }
+        else { f = C ^ (B | ~D); g = (7 * i) % 16; }
+        const tmp = D; D = C; C = B;
+        B = (B + rol((A + f + K[i] + M[g]) | 0, S[(i >> 4) * 4 + (i % 4)])) | 0;
+        A = tmp;
+      }
+      a0 = (a0 + A) | 0; b0 = (b0 + B) | 0; c0 = (c0 + C) | 0; d0 = (d0 + D) | 0;
+    }
+    const res = new Uint8Array(16);
+    const rv = new DataView(res.buffer);
+    rv.setUint32(0, a0 >>> 0, true); rv.setUint32(4, b0 >>> 0, true);
+    rv.setUint32(8, c0 >>> 0, true); rv.setUint32(12, d0 >>> 0, true);
+    return res;
+  }
+
+  // Self-test against RFC known vectors: append ?selftest to the URL.
+  if (location.search.includes('selftest')) {
+    (async () => {
+      console.assert(hex(md5(new Uint8Array())) === 'd41d8cd98f00b204e9800998ecf8427e', 'md5("")');
+      nsEl.value = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'; nameEl.value = 'www.example.com';
+      console.assert(format(await namespaced(5)) === '2ed6657d-e927-568b-95e1-2665a8aea6a2', 'v5 DNS');
+      console.assert(format(await namespaced(3)) === '5df41881-3aed-3515-88a7-2f4a814cf09e', 'v3 DNS');
+      console.log('uuid self-test done');
+    })();
+  }
+
+  syncNsUi();
+  generate();
+</script>

@@ -1,0 +1,159 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="tarot-card-generator">
+  <div class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-end gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Spread
+        <select id="tc-spread" class="field w-56">
+          <option value="1">Single card</option>
+          <option value="yesno">Yes or No</option>
+          <option value="3">Past · Present · Future</option>
+          <option value="5">Five-card cross</option>
+          <option value="10">Celtic Cross</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Deck
+        <select id="tc-deck" class="field w-44">
+          <option value="all">Full 78-card deck</option>
+          <option value="major">Major Arcana only</option>
+          <option value="Wands">Wands only</option>
+          <option value="Cups">Cups only</option>
+          <option value="Swords">Swords only</option>
+          <option value="Pentacles">Pentacles only</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Focus
+        <select id="tc-focus" class="field w-40">
+          <option value="general">General</option>
+          <option value="love">Love</option>
+        </select>
+      </label>
+      <label class="flex items-center gap-2 self-end pb-2.5 text-sm text-ink-subtle">
+        <input id="tc-rev" type="checkbox" class="accent-primary" checked /> Allow reversals
+      </label>
+      <button id="tc-draw" class="btn btn-primary ml-auto">Shuffle &amp; draw</button>
+    </div>
+
+    <div id="tc-verdict" class="hidden"></div>
+    <div id="tc-out" class="grid grid-cols-1 gap-4 sm:grid-cols-3"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free tarot card generator shuffles the full 78-card Rider–Waite deck and
+      draws random cards for you. Pull a single card for a daily reading, ask a
+      Yes or No question, or lay a Past-Present-Future, five-card cross or full
+      ten-card Celtic Cross spread. Every card shows its arcana, element,
+      astrological ruler, a yes/no verdict, keywords and a full upright or reversed
+      meaning — plus a dedicated love reading when you switch Focus to Love. You can
+      draw from the whole deck, the Major Arcana, or a single suit (Wands, Cups,
+      Swords or Pentacles). The shuffle uses your browser's secure randomness —
+      it's for entertainment and journaling.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { TAROT_DECK, type TarotCard } from '../lib/gendata';
+  import { sample, randFloat } from '../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const spreadEl = $('tc-spread') as HTMLSelectElement;
+  const deckEl = $('tc-deck') as HTMLSelectElement;
+  const focusEl = $('tc-focus') as HTMLSelectElement;
+  const revEl = $('tc-rev') as HTMLInputElement;
+  const out = $('tc-out')!;
+  const verdictEl = $('tc-verdict')!;
+
+  const POSITIONS: Record<string, string[]> = {
+    '1': ['Your card'],
+    yesno: ['The answer'],
+    '3': ['Past', 'Present', 'Future'],
+    '5': ['Situation', 'Challenge', 'Past', 'Future', 'Outcome'],
+    '10': [
+      'Present', 'Challenge', 'Foundation', 'Recent past', 'Crown / goal',
+      'Near future', 'Yourself', 'Environment', 'Hopes & fears', 'Outcome',
+    ],
+  };
+
+  const FLIP: Record<string, string> = { Yes: 'No', No: 'Yes', Maybe: 'Maybe' };
+  const verdictOf = (c: TarotCard, reversed: boolean) => (reversed ? FLIP[c.yesNo] : c.yesNo);
+  const VERDICT_CLASS: Record<string, string> = {
+    Yes: 'text-semantic-success border-semantic-success/40',
+    No: 'text-primary-hover border-hairline-strong',
+    Maybe: 'text-ink-subtle border-hairline-strong',
+  };
+
+  function esc(s: string): string {
+    return s.replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]!));
+  }
+
+  function draw() {
+    const spread = spreadEl.value;
+    const n = spread === 'yesno' ? 1 : Number(spread);
+    const filter = deckEl.value;
+    const deck =
+      filter === 'major'
+        ? TAROT_DECK.filter((c) => c.arcana === 'Major')
+        : filter === 'all'
+          ? TAROT_DECK
+          : TAROT_DECK.filter((c) => c.suit === filter);
+
+    const cards = sample(deck, n);
+    const labels = POSITIONS[spread];
+    const allowRev = revEl.checked;
+    const love = focusEl.value === 'love';
+    const reversals = cards.map(() => allowRev && randFloat() < 0.5);
+
+    if (spread === 'yesno') {
+      const v = verdictOf(cards[0], reversals[0]);
+      verdictEl.className = `panel flex items-center gap-4 p-5 border ${VERDICT_CLASS[v]}`;
+      verdictEl.innerHTML =
+        `<span class="text-3xl font-semibold">${v}</span>` +
+        `<span class="text-sm text-ink-subtle">${esc(cards[0].name)}${reversals[0] ? ' (reversed)' : ''} — ` +
+        `${esc(reversals[0] ? cards[0].reversed : cards[0].upright)}</span>`;
+    } else {
+      verdictEl.className = 'hidden';
+      verdictEl.innerHTML = '';
+    }
+
+    out.className =
+      n === 1 ? 'flex' : 'grid grid-cols-1 gap-4 lg:grid-cols-2';
+
+    out.innerHTML = cards
+      .map((c, i) => {
+        const reversed = reversals[i];
+        const meaning = love ? c.love : reversed ? c.reversed : c.upright;
+        const v = verdictOf(c, reversed);
+        const arcanaLine =
+          c.arcana === 'Major' ? 'Major Arcana' : `${c.suit} · Minor Arcana`;
+        return `<div class="panel flex flex-col gap-3 p-5">
+          <span class="text-xs font-medium uppercase tracking-wide text-primary-hover">${esc(labels[i])}</span>
+          <div class="flex gap-5">
+            <div class="shrink-0 overflow-hidden rounded-lg border border-hairline-strong bg-surface-2 self-start">
+              <img src="${c.img}" alt="${esc(c.name)} tarot card" loading="lazy" width="800" height="1367"
+                class="h-auto w-72 sm:w-80 ${reversed ? 'rotate-180' : ''}" />
+            </div>
+            <div class="flex min-w-0 flex-col gap-2">
+              <span class="text-lg font-semibold text-ink">${esc(c.name)}</span>
+              <span class="text-xs text-ink-tertiary">${arcanaLine} · ${reversed ? 'Reversed' : 'Upright'}</span>
+              <div class="flex flex-wrap gap-2 text-xs">
+                <span class="rounded border border-hairline-strong px-2 py-0.5 text-ink-subtle">${esc(c.element)}</span>
+                <span class="rounded border border-hairline-strong px-2 py-0.5 text-ink-subtle">${esc(c.astrology)}</span>
+                <span class="rounded border px-2 py-0.5 ${VERDICT_CLASS[v]}">${v}</span>
+              </div>
+              <p class="text-sm leading-relaxed text-ink-subtle">${esc(meaning)}</p>
+              <p class="text-xs leading-relaxed text-ink-tertiary">${c.keywords.map(esc).join(' · ')}</p>
+            </div>
+          </div>
+        </div>`;
+      })
+      .join('');
+  }
+
+  [spreadEl, deckEl, focusEl, revEl].forEach((el) => el.addEventListener('input', draw));
+  $('tc-draw').addEventListener('click', draw);
+  draw();
+</script>

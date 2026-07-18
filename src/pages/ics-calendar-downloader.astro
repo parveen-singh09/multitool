@@ -1,0 +1,547 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="ics-calendar-downloader">
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <div class="flex flex-col gap-4">
+      <div id="icsd-saved" class="hidden flex-col gap-2">
+        <span class="text-sm text-ink-subtle">Events in this calendar</span>
+        <ul id="icsd-saved-list" class="flex flex-col gap-2"></ul>
+      </div>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Event title
+        <input id="icsd-title" type="text" class="field" placeholder="Team sync" value="Team sync" />
+      </label>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Location
+        <input id="icsd-location" type="text" class="field" placeholder="Meeting room A" />
+      </label>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        URL
+        <input id="icsd-url" type="url" class="field" placeholder="https://meet.example.com/abc" />
+      </label>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Description
+        <textarea id="icsd-desc" class="field min-h-24 resize-y" placeholder="Optional notes"></textarea>
+      </label>
+
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="icsd-allday" type="checkbox" class="h-4 w-4" />
+        All-day event
+      </label>
+
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Start
+          <input id="icsd-start" type="datetime-local" class="field" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          End
+          <input id="icsd-end" type="datetime-local" class="field" />
+        </label>
+      </div>
+
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label id="icsd-start-day-wrap" class="hidden flex-col gap-1 text-sm text-ink-subtle">
+          Start date
+          <input id="icsd-start-day" type="date" class="field" />
+        </label>
+        <label id="icsd-end-day-wrap" class="hidden flex-col gap-1 text-sm text-ink-subtle">
+          End date
+          <input id="icsd-end-day" type="date" class="field" />
+        </label>
+      </div>
+
+      <label id="icsd-tz-wrap" class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Time zone
+        <select id="icsd-tz" class="field"></select>
+      </label>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Reminder
+        <select id="icsd-alarm" class="field">
+          <option value="">None</option>
+          <option value="0">At time of event</option>
+          <option value="5">5 minutes before</option>
+          <option value="15">15 minutes before</option>
+          <option value="30">30 minutes before</option>
+          <option value="60">1 hour before</option>
+          <option value="1440">1 day before</option>
+        </select>
+      </label>
+
+      <fieldset class="flex flex-col gap-3 rounded-lg border border-line p-3">
+        <legend class="px-1 text-sm text-ink-subtle">Repeat</legend>
+        <select id="icsd-freq" class="field">
+          <option value="">Does not repeat</option>
+          <option value="DAILY">Daily</option>
+          <option value="WEEKLY">Weekly</option>
+          <option value="MONTHLY">Monthly</option>
+          <option value="YEARLY">Yearly</option>
+        </select>
+
+        <label id="icsd-interval-wrap" class="hidden items-center gap-2 text-sm text-ink-subtle">
+          Repeat every
+          <input id="icsd-interval" type="number" min="1" value="1" class="field w-20" />
+          <span id="icsd-interval-unit">day(s)</span>
+        </label>
+
+        <div id="icsd-byday-wrap" class="hidden flex-wrap gap-1" role="group" aria-label="Repeats on">
+        </div>
+
+        <div id="icsd-end-wrap" class="hidden flex-col gap-2">
+          <label class="flex items-center gap-2 text-sm text-ink-subtle">
+            <input type="radio" name="icsd-end" value="never" checked class="h-4 w-4" />
+            Repeat indefinitely
+          </label>
+          <label class="flex items-center gap-2 text-sm text-ink-subtle">
+            <input type="radio" name="icsd-end" value="count" class="h-4 w-4" />
+            End after
+            <input id="icsd-count" type="number" min="1" value="10" class="field w-20" />
+            occurrences
+          </label>
+          <label class="flex items-center gap-2 text-sm text-ink-subtle">
+            <input type="radio" name="icsd-end" value="until" class="h-4 w-4" />
+            End on
+            <input id="icsd-until" type="date" class="field" />
+          </label>
+        </div>
+      </fieldset>
+
+      <p id="icsd-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+      <div class="flex flex-wrap gap-2">
+        <button id="icsd-add" class="btn">Add another event</button>
+        <button id="icsd-dl" class="btn btn-primary">Download .ics</button>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <span class="text-sm text-ink-subtle">Preview</span>
+      <div class="copy-wrap panel p-4">
+        <pre id="icsd-preview" class="font-mono text-[13px] whitespace-pre-wrap text-ink-subtle"></pre>
+        <button type="button" class="copy-icon" data-copy-target="#icsd-preview" aria-label="Copy"></button>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free ICS calendar downloader builds a valid <code>.ics</code> file from an
+      event’s title, description, location, URL and start and end times. It goes beyond
+      the basics with real IANA time zones, recurring events (daily, weekly, monthly or
+      yearly with intervals, weekday selection and an end condition), pop-up reminders,
+      and support for multiple events in one calendar. Toggle all-day events, preview the
+      generated VEVENT, then download a file you can import into Google Calendar, Apple
+      Calendar, Outlook or any other calendar app. Text is escaped and lines are folded
+      per RFC 5545.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  type EventData = {
+    title: string;
+    location: string;
+    url: string;
+    desc: string;
+    allDay: boolean;
+    start: string;
+    end: string;
+    startDay: string;
+    endDay: string;
+    tz: string;
+    alarm: string;
+    freq: string;
+    interval: number;
+    byday: string[];
+    endMode: string;
+    count: number;
+    until: string;
+  };
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  const titleEl = $<HTMLInputElement>('icsd-title');
+  const locEl = $<HTMLInputElement>('icsd-location');
+  const urlEl = $<HTMLInputElement>('icsd-url');
+  const descEl = $<HTMLTextAreaElement>('icsd-desc');
+  const allDayEl = $<HTMLInputElement>('icsd-allday');
+  const startEl = $<HTMLInputElement>('icsd-start');
+  const endEl = $<HTMLInputElement>('icsd-end');
+  const startDayEl = $<HTMLInputElement>('icsd-start-day');
+  const endDayEl = $<HTMLInputElement>('icsd-end-day');
+  const tzEl = $<HTMLSelectElement>('icsd-tz');
+  const alarmEl = $<HTMLSelectElement>('icsd-alarm');
+  const freqEl = $<HTMLSelectElement>('icsd-freq');
+  const intervalEl = $<HTMLInputElement>('icsd-interval');
+  const intervalUnit = $<HTMLSpanElement>('icsd-interval-unit');
+  const bydayWrap = $<HTMLDivElement>('icsd-byday-wrap');
+  const countEl = $<HTMLInputElement>('icsd-count');
+  const untilEl = $<HTMLInputElement>('icsd-until');
+  const preview = $<HTMLPreElement>('icsd-preview');
+  const err = $<HTMLParagraphElement>('icsd-error');
+  const savedWrap = $<HTMLDivElement>('icsd-saved');
+  const savedList = $<HTMLUListElement>('icsd-saved-list');
+
+  const timedWrap = [startEl.parentElement!, endEl.parentElement!];
+  const startDayWrap = $<HTMLLabelElement>('icsd-start-day-wrap');
+  const endDayWrap = $<HTMLLabelElement>('icsd-end-day-wrap');
+  const intervalWrap = $<HTMLLabelElement>('icsd-interval-wrap');
+  const endWrap = $<HTMLDivElement>('icsd-end-wrap');
+
+  const DAYS = [
+    { code: 'MO', label: 'M' },
+    { code: 'TU', label: 'T' },
+    { code: 'WE', label: 'W' },
+    { code: 'TH', label: 'T' },
+    { code: 'FR', label: 'F' },
+    { code: 'SA', label: 'S' },
+    { code: 'SU', label: 'S' },
+  ];
+  const UNITS: Record<string, string> = {
+    DAILY: 'day(s)',
+    WEEKLY: 'week(s)',
+    MONTHLY: 'month(s)',
+    YEARLY: 'year(s)',
+  };
+
+  const saved: EventData[] = [];
+
+  const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  const zones: string[] =
+    typeof (Intl as any).supportedValuesOf === 'function'
+      ? (Intl as any).supportedValuesOf('timeZone')
+      : [localTz];
+  tzEl.innerHTML =
+    '<option value="floating">Floating (no time zone)</option>' +
+    '<option value="UTC">UTC</option>' +
+    zones.map((z) => `<option value="${z}">${z}</option>`).join('');
+  tzEl.value = zones.includes(localTz) ? localTz : 'floating';
+
+  bydayWrap.innerHTML = DAYS.map(
+    (d, i) =>
+      `<label class="flex h-8 w-8 cursor-pointer items-center justify-center rounded border border-line text-sm text-ink-subtle has-[:checked]:border-accent has-[:checked]:text-accent" title="${d.code}">` +
+      `<input type="checkbox" class="sr-only icsd-byday" value="${d.code}" data-idx="${i}" />${d.label}</label>`
+  ).join('');
+
+  function pad(n: number): string {
+    return String(n).padStart(2, '0');
+  }
+
+  function escapeText(value: string): string {
+    return value
+      .replace(/\\/g, '\\\\')
+      .replace(/;/g, '\\;')
+      .replace(/,/g, '\\,')
+      .replace(/\r\n|\n|\r/g, '\\n');
+  }
+
+  function utcStamp(d: Date): string {
+    return (
+      `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}` +
+      `T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`
+    );
+  }
+
+  // Wall-clock digits exactly as entered (used for floating and TZID times).
+  function wallStamp(value: string): string {
+    return value.replace(/[-:]/g, '').replace('T', 'T') + '00';
+  }
+
+  function dayStamp(value: string): string {
+    return value.replace(/-/g, '');
+  }
+
+  function addDay(value: string): string {
+    const d = new Date(`${value}T00:00:00`);
+    d.setDate(d.getDate() + 1);
+    return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+  }
+
+  function fold(line: string): string {
+    if (line.length <= 75) return line;
+    const parts: string[] = [];
+    let rest = line;
+    parts.push(rest.slice(0, 75));
+    rest = rest.slice(75);
+    while (rest.length > 74) {
+      parts.push(` ${rest.slice(0, 74)}`);
+      rest = rest.slice(74);
+    }
+    if (rest.length) parts.push(` ${rest}`);
+    return parts.join('\r\n');
+  }
+
+  function showError(msg: string): void {
+    err.textContent = msg;
+    err.classList.remove('hidden');
+  }
+  function clearError(): void {
+    err.classList.add('hidden');
+  }
+
+  function readForm(): EventData {
+    return {
+      title: titleEl.value.trim(),
+      location: locEl.value.trim(),
+      url: urlEl.value.trim(),
+      desc: descEl.value.trim(),
+      allDay: allDayEl.checked,
+      start: startEl.value,
+      end: endEl.value,
+      startDay: startDayEl.value,
+      endDay: endDayEl.value,
+      tz: tzEl.value,
+      alarm: alarmEl.value,
+      freq: freqEl.value,
+      interval: Math.max(1, parseInt(intervalEl.value, 10) || 1),
+      byday: Array.from(document.querySelectorAll<HTMLInputElement>('.icsd-byday:checked')).map(
+        (c) => c.value
+      ),
+      endMode:
+        (document.querySelector<HTMLInputElement>('input[name="icsd-end"]:checked')?.value) ||
+        'never',
+      count: Math.max(1, parseInt(countEl.value, 10) || 1),
+      until: untilEl.value,
+    };
+  }
+
+  // Returns null (and sets error) when the event is not valid enough to emit.
+  function buildRule(ev: EventData): string | null {
+    if (!ev.freq) return '';
+    let rule = `RRULE:FREQ=${ev.freq}`;
+    if (ev.interval > 1) rule += `;INTERVAL=${ev.interval}`;
+    if (ev.freq === 'WEEKLY' && ev.byday.length) rule += `;BYDAY=${ev.byday.join(',')}`;
+    if (ev.endMode === 'count') rule += `;COUNT=${ev.count}`;
+    else if (ev.endMode === 'until') {
+      if (!ev.until) {
+        showError('Please choose the date the repeat ends on.');
+        return null;
+      }
+      // UNTIL is exclusive-safe as end of the chosen day in UTC.
+      rule += `;UNTIL=${dayStamp(ev.until)}T235959Z`;
+    }
+    return rule;
+  }
+
+  function buildEvent(ev: EventData, index: number): string[] | null {
+    if (!ev.title) {
+      showError('Please enter an event title.');
+      return null;
+    }
+    const lines: string[] = [
+      'BEGIN:VEVENT',
+      `UID:${index}-${Date.now()}-${Math.random().toString(36).slice(2)}@toolsilk`,
+      `DTSTAMP:${utcStamp(new Date())}`,
+      `SUMMARY:${escapeText(ev.title)}`,
+    ];
+
+    if (ev.allDay) {
+      if (!ev.startDay) {
+        showError('Please choose a start date.');
+        return null;
+      }
+      lines.push(`DTSTART;VALUE=DATE:${dayStamp(ev.startDay)}`);
+      // DTEND for all-day events is exclusive: default to the day after start.
+      lines.push(`DTEND;VALUE=DATE:${ev.endDay ? addDay(ev.endDay) : addDay(ev.startDay)}`);
+    } else {
+      if (!ev.start || !ev.end) {
+        showError('Please choose a start and end time.');
+        return null;
+      }
+      const s = new Date(ev.start);
+      const e = new Date(ev.end);
+      if (isNaN(s.getTime()) || isNaN(e.getTime())) {
+        showError('The start or end time is invalid.');
+        return null;
+      }
+      if (e < s) {
+        showError('The end time is before the start time.');
+        return null;
+      }
+      if (ev.tz === 'UTC') {
+        lines.push(`DTSTART:${utcStamp(s)}`);
+        lines.push(`DTEND:${utcStamp(e)}`);
+      } else if (ev.tz === 'floating') {
+        lines.push(`DTSTART:${wallStamp(ev.start)}`);
+        lines.push(`DTEND:${wallStamp(ev.end)}`);
+      } else {
+        // Named IANA zone: emit the wall time tagged with TZID. Calendar apps
+        // resolve well-known IANA names, so no VTIMEZONE block is emitted.
+        // ponytail: skip VTIMEZONE; add DST rule block only if an importer rejects bare TZID.
+        lines.push(`DTSTART;TZID=${ev.tz}:${wallStamp(ev.start)}`);
+        lines.push(`DTEND;TZID=${ev.tz}:${wallStamp(ev.end)}`);
+      }
+    }
+
+    const rule = buildRule(ev);
+    if (rule === null) return null;
+    if (rule) lines.push(rule);
+
+    if (ev.location) lines.push(`LOCATION:${escapeText(ev.location)}`);
+    if (ev.url) lines.push(`URL:${escapeText(ev.url)}`);
+    if (ev.desc) lines.push(`DESCRIPTION:${escapeText(ev.desc)}`);
+
+    if (ev.alarm !== '') {
+      const mins = parseInt(ev.alarm, 10) || 0;
+      const trigger = mins === 0 ? 'PT0M' : `-PT${mins % 60 === 0 && mins >= 60 ? `${mins / 60}H` : `${mins}M`}`;
+      lines.push('BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${escapeText(ev.title)}`, `TRIGGER:${trigger}`, 'END:VALARM');
+    }
+
+    lines.push('END:VEVENT');
+    return lines;
+  }
+
+  function build(): string | null {
+    clearError();
+    const events = [...saved];
+    const current = readForm();
+    // Include the in-progress form as an event when it has a title, so a single
+    // event works without clicking "Add another event".
+    if (current.title) events.push(current);
+
+    if (!events.length) {
+      showError('Please enter an event title.');
+      return null;
+    }
+
+    const body: string[] = [];
+    for (let i = 0; i < events.length; i++) {
+      const block = buildEvent(events[i], i);
+      if (!block) return null;
+      body.push(...block);
+    }
+
+    const lines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//ToolSilk//ICS Calendar Downloader//EN',
+      'CALSCALE:GREGORIAN',
+      ...body,
+      'END:VCALENDAR',
+    ];
+    return lines.map(fold).join('\r\n');
+  }
+
+  function renderSaved(): void {
+    savedWrap.classList.toggle('hidden', saved.length === 0);
+    savedWrap.classList.toggle('flex', saved.length > 0);
+    savedList.innerHTML = saved
+      .map(
+        (ev, i) =>
+          `<li class="flex items-center justify-between gap-2 rounded border border-line px-3 py-2 text-sm">` +
+          `<span class="truncate text-ink">${escapeHtml(ev.title || 'Untitled')}</span>` +
+          `<button type="button" class="btn btn-sm icsd-remove" data-i="${i}" aria-label="Remove event">Remove</button></li>`
+      )
+      .join('');
+  }
+
+  function escapeHtml(s: string): string {
+    return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+  }
+
+  function syncMode(): void {
+    const allDay = allDayEl.checked;
+    timedWrap.forEach((w) => w.classList.toggle('hidden', allDay));
+    startDayWrap.classList.toggle('hidden', !allDay);
+    startDayWrap.classList.toggle('flex', allDay);
+    endDayWrap.classList.toggle('hidden', !allDay);
+    endDayWrap.classList.toggle('flex', allDay);
+    $<HTMLLabelElement>('icsd-tz-wrap').classList.toggle('hidden', allDay);
+
+    const freq = freqEl.value;
+    intervalWrap.classList.toggle('hidden', !freq);
+    intervalWrap.classList.toggle('flex', !!freq);
+    endWrap.classList.toggle('hidden', !freq);
+    endWrap.classList.toggle('flex', !!freq);
+    bydayWrap.classList.toggle('hidden', freq !== 'WEEKLY');
+    bydayWrap.classList.toggle('flex', freq === 'WEEKLY');
+    if (freq) intervalUnit.textContent = UNITS[freq];
+  }
+
+  function render(): void {
+    preview.textContent = build() ?? '';
+  }
+
+  function download(): void {
+    const ics = build();
+    if (!ics) return;
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.download = 'calendar.ics';
+    a.href = url;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function resetForm(): void {
+    titleEl.value = '';
+    locEl.value = '';
+    urlEl.value = '';
+    descEl.value = '';
+    allDayEl.checked = false;
+    startEl.value = '';
+    endEl.value = '';
+    startDayEl.value = '';
+    endDayEl.value = '';
+    alarmEl.value = '';
+    freqEl.value = '';
+    intervalEl.value = '1';
+    countEl.value = '10';
+    untilEl.value = '';
+    document.querySelectorAll<HTMLInputElement>('.icsd-byday').forEach((c) => (c.checked = false));
+    (document.querySelector('input[name="icsd-end"][value="never"]') as HTMLInputElement).checked = true;
+    syncMode();
+  }
+
+  document.getElementById('icsd-add')!.addEventListener('click', () => {
+    const ev = readForm();
+    if (!ev.title) {
+      showError('Please enter an event title before adding another.');
+      return;
+    }
+    // Validate it builds before saving.
+    if (!buildEvent(ev, saved.length)) return;
+    saved.push(ev);
+    renderSaved();
+    resetForm();
+    titleEl.focus();
+    render();
+  });
+
+  savedList.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.icsd-remove') as HTMLElement | null;
+    if (!btn) return;
+    saved.splice(parseInt(btn.dataset.i!, 10), 1);
+    renderSaved();
+    render();
+  });
+
+  const inputs = [
+    titleEl, locEl, urlEl, descEl, startEl, endEl, startDayEl, endDayEl,
+    intervalEl, countEl, untilEl,
+  ];
+  inputs.forEach((el) => el.addEventListener('input', render));
+  [tzEl, alarmEl].forEach((el) => el.addEventListener('change', render));
+  bydayWrap.addEventListener('change', render);
+  document.querySelectorAll('input[name="icsd-end"]').forEach((el) => el.addEventListener('change', render));
+  allDayEl.addEventListener('change', () => {
+    syncMode();
+    render();
+  });
+  freqEl.addEventListener('change', () => {
+    syncMode();
+    render();
+  });
+  document.getElementById('icsd-dl')!.addEventListener('click', download);
+
+  syncMode();
+  render();
+</script>

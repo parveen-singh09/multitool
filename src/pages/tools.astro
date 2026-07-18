@@ -1,0 +1,78 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import ToolCard from '../components/ToolCard.astro';
+import ToolSearch from '../components/ToolSearch.astro';
+import { tools, categories, toolsByCategory } from '../data/tools';
+import { SITE } from '../data/site';
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: SITE.name,
+    url: SITE.url,
+    description: SITE.description,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: `${SITE.url}/tools?q={search_term_string}`,
+      'query-input': 'required name=search_term_string',
+    },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'ToolSilk free online tools',
+    itemListElement: tools.map((tool, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: tool.name,
+      description: tool.tagline,
+      url: `${SITE.url}/${tool.slug}`,
+    })),
+  },
+];
+---
+
+<Layout title="All tools" jsonLd={jsonLd}>
+  <Header />
+
+  <main>
+    <section id="tools" class="container-page scroll-mt-20 py-8">
+      <div class="mb-10 flex flex-col gap-2">
+        <span class="eyebrow text-primary-hover">The collection</span>
+        <h2 class="display-md text-ink">Explore every tool</h2>
+        <div class="mt-4">
+          <ToolSearch variant="hero" class="mx-0 max-w-none!" />
+        </div>
+        <p id="search-count" class="text-sm text-primary-hover" role="status" aria-live="polite"></p>
+      </div>
+
+      <div
+        id="search-results"
+        class="mb-14 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        style="display: none"
+      />
+
+      {categories.map((category) => (
+        <div id={category.toLowerCase()} data-category-section class="mb-14 scroll-mt-20">
+          <div class="mb-5 flex items-center gap-3">
+            <h3 class="font-display text-xl font-semibold tracking-[-0.01em] text-ink">{category}</h3>
+            <span class="h-px flex-1 bg-hairline"></span>
+            <span class="status-badge">{toolsByCategory(category).length}</span>
+          </div>
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {toolsByCategory(category).map((tool) => (
+              <ToolCard tool={tool} />
+            ))}
+          </div>
+        </div>
+      ))}
+
+      <div id="search-empty" class="hidden py-16 text-center">
+        <p class="text-lg text-ink">No tools match your search.</p>
+        <p class="mt-2 text-sm text-ink-subtle">Try a different keyword like “json”, “image” or “password”.</p>
+      </div>
+    </section>
+  </main>
+</Layout>

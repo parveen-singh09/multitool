@@ -1,0 +1,93 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="acronym-generator">
+  <div class="flex flex-col gap-6">
+    <div class="flex flex-col gap-3">
+      <h2 class="font-display text-lg font-semibold text-ink">Phrase → acronym</h2>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Enter a phrase
+        <input id="ac-phrase" class="field" value="As Soon As Possible" spellcheck="false" />
+      </label>
+      <div class="flex items-center gap-3">
+        <span class="text-sm text-ink-subtle">Acronym:</span>
+        <div class="copy-wrap">
+          <code id="ac-result" class="font-mono text-2xl text-ink"></code>
+          <button type="button" class="copy-icon" data-copy-target="#ac-result" aria-label="Copy"></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-3 border-t border-hairline pt-6">
+      <h2 class="font-display text-lg font-semibold text-ink">Word → backronym</h2>
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Enter a word
+          <input id="ac-word" class="field w-48" value="TEAM" spellcheck="false" maxlength="12" />
+        </label>
+        <button id="ac-gen" class="btn btn-primary">Build backronym</button>
+      </div>
+      <div class="copy-wrap">
+        <div id="ac-backronym" class="flex flex-col gap-1"></div>
+        <button id="ac-copy2" type="button" class="copy-icon" aria-label="Copy"></button>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free acronym generator works two ways. Type a phrase and it pulls the
+      first letter of each word into an acronym. Or type a word and it builds a
+      backronym — an inventive phrase where each letter starts a real word — great
+      for team names, project titles and mnemonics. Everything runs in your
+      browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { pick } from '../lib/random';
+  import { ADJECTIVES, NOUNS, VERBS } from '../lib/fakedata';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const phraseEl = $('ac-phrase') as HTMLInputElement;
+  const resultEl = $('ac-result')!;
+  const wordEl = $('ac-word') as HTMLInputElement;
+  const backEl = $('ac-backronym')!;
+
+  const POOL = [...ADJECTIVES, ...NOUNS, ...VERBS];
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  function toAcronym() {
+    const letters = phraseEl.value.split(/\s+/).filter(Boolean).map((w) => w[0].toUpperCase());
+    resultEl.textContent = letters.join('');
+  }
+
+  let lastBackronym = '';
+  function backronym() {
+    const word = wordEl.value.trim().toUpperCase().replace(/[^A-Z]/g, '');
+    const rows: string[] = [];
+    for (const letter of word) {
+      const candidates = POOL.filter((w) => w[0].toUpperCase() === letter);
+      const chosen = candidates.length ? cap(pick(candidates)) : letter + '—';
+      rows.push(`<div class="flex items-baseline gap-2"><span class="font-mono text-xl text-primary-hover">${letter}</span><span class="text-[15px] text-ink">${chosen}</span></div>`);
+    }
+    backEl.innerHTML = rows.join('');
+    lastBackronym = [...word].map((l) => {
+      const c = POOL.filter((w) => w[0].toUpperCase() === l);
+      return c.length ? cap(pick(c)) : l;
+    }).join(' ');
+  }
+
+  phraseEl.addEventListener('input', toAcronym);
+  $('ac-gen').addEventListener('click', backronym);
+  wordEl.addEventListener('input', backronym);
+  // Local copy: the backronym's clean phrase lives in lastBackronym, not in
+  // the element's textContent (which mashes each letter to its word).
+  $('ac-copy2').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    await navigator.clipboard.writeText(lastBackronym);
+    btn.classList.add('copied');
+    setTimeout(() => btn.classList.remove('copied'), 1500);
+  });
+  toAcronym(); backronym();
+</script>

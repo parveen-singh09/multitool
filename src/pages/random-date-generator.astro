@@ -1,0 +1,155 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="random-date-generator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">From
+        <input id="rd-from" type="date" value="2000-01-01" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">To
+        <input id="rd-to" type="date" value="2030-12-31" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="rd-count" type="number" min="1" max="1000" value="10" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Format
+        <select id="rd-fmt" class="field">
+          <option value="iso">ISO (2024-05-31)</option>
+          <option value="us">US (05/31/2024)</option>
+          <option value="eu">EU (31/05/2024)</option>
+          <option value="long">Long (Fri, May 31, 2024)</option>
+        </select>
+      </label>
+    </div>
+
+    <fieldset class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-ink-subtle">
+      <span class="text-ink-muted">Weekdays</span>
+      <label class="flex items-center gap-1.5"><input type="checkbox" class="rd-dow accent-primary" value="1" checked /> Mon</label>
+      <label class="flex items-center gap-1.5"><input type="checkbox" class="rd-dow accent-primary" value="2" checked /> Tue</label>
+      <label class="flex items-center gap-1.5"><input type="checkbox" class="rd-dow accent-primary" value="3" checked /> Wed</label>
+      <label class="flex items-center gap-1.5"><input type="checkbox" class="rd-dow accent-primary" value="4" checked /> Thu</label>
+      <label class="flex items-center gap-1.5"><input type="checkbox" class="rd-dow accent-primary" value="5" checked /> Fri</label>
+      <label class="flex items-center gap-1.5"><input type="checkbox" class="rd-dow accent-primary" value="6" checked /> Sat</label>
+      <label class="flex items-center gap-1.5"><input type="checkbox" class="rd-dow accent-primary" value="0" checked /> Sun</label>
+    </fieldset>
+
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-ink-subtle">
+      <label class="flex items-center gap-2"><input id="rd-unique" type="checkbox" class="accent-primary" checked /> Unique (no repeats)</label>
+      <label class="flex items-center gap-2"><input id="rd-sort" type="checkbox" class="accent-primary" /> Sort ascending</label>
+      <label class="flex items-center gap-2"><input id="rd-time" type="checkbox" class="accent-primary" /> Include time</label>
+      <label class="flex items-center gap-2">Seed
+        <input id="rd-seed" type="text" placeholder="blank = random" class="field w-40" />
+      </label>
+    </div>
+
+    <div class="flex gap-2">
+      <button id="rd-gen" class="btn btn-primary">Generate</button>
+    </div>
+    <p id="rd-note" class="text-[13px] text-ink-muted" role="status"></p>
+    <div class="copy-wrap">
+      <textarea id="rd-out" class="field min-h-56 resize-y font-mono text-[13px]" readonly aria-label="Generated dates"></textarea>
+      <button type="button" class="copy-icon" data-copy-target="#rd-out" aria-label="Copy"></button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free random date generator produces random calendar dates within any
+      range you set, in bulk. Restrict draws to specific weekdays, get unique
+      dates with no repeats, add a random time of day, sort the results, and pick
+      from ISO, US, EU or long formats. It's handy for seeding test data,
+      sampling, scheduling experiments, raffles and games.
+    </p>
+    <p>
+      Dates are drawn with your browser's secure random source
+      (<code>crypto.getRandomValues</code>) and never touch a server. Enter a seed
+      to make a run exactly reproducible: the same seed and settings always
+      produce the same dates, which is useful for shareable, repeatable samples —
+      something typical online date pickers can't do.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { randInt, sample, setSeed } from '../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const out = $('rd-out') as HTMLTextAreaElement;
+  const note = $('rd-note');
+  const DAY = 86400000;
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const p2 = (n: number) => String(n).padStart(2, '0');
+
+  function fmt(d: Date, mode: string, withTime: boolean): string {
+    const y = d.getUTCFullYear(), mo = d.getUTCMonth() + 1, day = d.getUTCDate();
+    let s: string;
+    if (mode === 'us') s = `${p2(mo)}/${p2(day)}/${y}`;
+    else if (mode === 'eu') s = `${p2(day)}/${p2(mo)}/${y}`;
+    else if (mode === 'long') s = `${WD[d.getUTCDay()]}, ${MONTHS[d.getUTCMonth()]} ${day}, ${y}`;
+    else s = `${y}-${p2(mo)}-${p2(day)}`;
+    if (withTime) s += ` ${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}:${p2(d.getUTCSeconds())}`;
+    return s;
+  }
+
+  function generate() {
+    const from = Date.parse(($('rd-from') as HTMLInputElement).value || '2000-01-01');
+    const to = Date.parse(($('rd-to') as HTMLInputElement).value || '2030-12-31');
+    const n = Math.max(1, Math.min(1000, Number(($('rd-count') as HTMLInputElement).value) || 10));
+    const withTime = ($('rd-time') as HTMLInputElement).checked;
+    const unique = ($('rd-unique') as HTMLInputElement).checked;
+    const doSort = ($('rd-sort') as HTMLInputElement).checked;
+    const mode = ($('rd-fmt') as HTMLSelectElement).value;
+    const dows = new Set(
+      [...document.querySelectorAll<HTMLInputElement>('.rd-dow:checked')].map((c) => Number(c.value)),
+    );
+
+    setSeed(($('rd-seed') as HTMLInputElement).value.trim());
+
+    const lo = Math.min(from, to), hi = Math.max(from, to);
+    const loDay = Math.floor(lo / DAY), hiDay = Math.floor(hi / DAY);
+
+    // Candidate day offsets that match the chosen weekdays. Empty selection = any day.
+    const anyDow = dows.size === 0 || dows.size === 7;
+    const days: number[] = [];
+    for (let d = loDay; d <= hiDay; d++) {
+      if (anyDow || dows.has(new Date(d * DAY).getUTCDay())) days.push(d);
+    }
+
+    if (days.length === 0) {
+      out.value = '';
+      note!.textContent = 'No dates match — check the range and weekday filter.';
+      return;
+    }
+
+    // Pick day offsets: without replacement (sample) when unique, else with replacement.
+    let picks: number[];
+    if (unique) {
+      picks = sample(days, n);
+      if (picks.length < n) {
+        note!.textContent = `Only ${picks.length} unique matching date(s) available in this range.`;
+      } else {
+        note!.textContent = '';
+      }
+    } else {
+      picks = Array.from({ length: n }, () => days[randInt(0, days.length - 1)]);
+      note!.textContent = '';
+    }
+    if (doSort) picks.sort((a, b) => a - b);
+
+    out.value = picks
+      .map((d) => {
+        const ms = d * DAY + (withTime ? randInt(0, 86399) * 1000 : 0);
+        return fmt(new Date(ms), mode, withTime);
+      })
+      .join('\n');
+  }
+
+  document
+    .querySelectorAll('#rd-from,#rd-to,#rd-count,#rd-fmt,#rd-unique,#rd-sort,#rd-time,#rd-seed,.rd-dow')
+    .forEach((el) => el.addEventListener('input', generate));
+  $('rd-gen').addEventListener('click', generate);
+  generate();
+</script>

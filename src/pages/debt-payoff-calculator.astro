@@ -1,0 +1,359 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="debt-payoff-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="flex gap-2" data-method="avalanche">
+      <button id="dp-avalanche" type="button" class="btn btn-primary">Avalanche</button>
+      <button id="dp-snowball" type="button" class="btn btn-secondary">Snowball</button>
+    </div>
+
+    <p id="dp-method-note" class="text-[13px] text-ink-subtle">Avalanche targets the highest APR first to minimize interest.</p>
+
+    <div class="hidden sm:grid sm:grid-cols-[1.4fr_1fr_1fr_1fr_auto] gap-2 px-1 text-xs font-medium text-ink-subtle">
+      <span>Debt name</span>
+      <span>Balance</span>
+      <span>APR %</span>
+      <span>Min payment</span>
+      <span></span>
+    </div>
+
+    <div id="dp-rows" class="flex flex-col gap-3"></div>
+
+    <div>
+      <button id="dp-add" type="button" class="btn btn-secondary">Add debt</button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Extra monthly payment
+        <input id="dp-extra" type="number" min="0" step="10" class="field" value="200" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">One-time lump sum
+        <input id="dp-lump" type="number" min="0" step="100" class="field" value="0" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Applied in month #
+        <input id="dp-lump-month" type="number" min="1" step="1" class="field" value="1" inputmode="numeric" />
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div class="copy-wrap">
+        <div id="dp-months" class="font-display text-4xl font-semibold text-primary-hover">—</div>
+        <button type="button" class="copy-icon" data-copy-target="#dp-months" aria-label="Copy"></button>
+      </div>
+      <div id="dp-sub" class="mt-2 text-sm text-ink-muted"></div>
+      <div id="dp-date" class="mt-1 text-[13px] text-ink-subtle"></div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="panel p-5 text-center"><div id="dp-interest" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total interest paid</div></div>
+      <div class="panel p-5 text-center"><div id="dp-total" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Total paid</div></div>
+    </div>
+
+    <div class="panel p-5">
+      <div class="mb-3 text-sm text-ink-muted">Snowball vs avalanche (with your current inputs)</div>
+      <div class="grid grid-cols-2 gap-4 text-center text-sm">
+        <div>
+          <div class="text-[13px] text-ink-subtle">Avalanche</div>
+          <div id="dp-cmp-av" class="mt-1 font-mono text-ink">—</div>
+        </div>
+        <div>
+          <div class="text-[13px] text-ink-subtle">Snowball</div>
+          <div id="dp-cmp-sn" class="mt-1 font-mono text-ink">—</div>
+        </div>
+      </div>
+      <div id="dp-cmp-note" class="mt-3 text-center text-[13px] text-ink-tertiary"></div>
+    </div>
+
+    <div class="panel p-5">
+      <div class="mb-3 text-sm text-ink-muted">Total balance over time</div>
+      <svg id="dp-chart" viewBox="0 0 320 120" class="w-full" preserveAspectRatio="none" role="img" aria-label="Total debt balance over time"></svg>
+      <div id="dp-axis" class="mt-1 flex justify-between font-mono text-[11px] text-ink-tertiary"></div>
+    </div>
+
+    <details class="panel p-0">
+      <summary class="cursor-pointer list-none px-5 py-4 text-sm font-medium text-ink hover:text-primary-hover">
+        <span class="inline-flex items-center gap-2">▸ Payoff schedule (by year)</span>
+      </summary>
+      <div class="overflow-x-auto border-t border-hairline">
+        <table class="w-full text-right text-[13px]">
+          <thead class="text-ink-subtle">
+            <tr class="border-b border-hairline">
+              <th class="px-4 py-2 text-left font-medium">Year</th>
+              <th class="px-4 py-2 font-medium">Paid</th>
+              <th class="px-4 py-2 font-medium">Interest</th>
+              <th class="px-4 py-2 font-medium">Balance</th>
+            </tr>
+          </thead>
+          <tbody id="dp-sched" class="font-mono text-ink-muted"></tbody>
+        </table>
+      </div>
+    </details>
+
+    <div id="dp-warn" class="hidden panel p-4 text-center text-sm" style="color:#e5484d;">
+      Your total payment (minimums plus extra) is not enough to cover the combined interest, so the debt cannot be paid off. Increase your minimum payments or extra amount.
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free debt payoff calculator compares the snowball and avalanche
+      strategies to show how fast you can become debt-free. Add each of your debts
+      with its balance, APR, and minimum payment, then set an extra monthly amount.
+      The avalanche method attacks the highest APR first to save the most interest,
+      while the snowball method clears the smallest balance first for quick wins.
+      Freed-up minimums roll into the next target automatically. Runs entirely in
+      your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const rowsEl = document.getElementById('dp-rows')!;
+  const addEl = document.getElementById('dp-add') as HTMLButtonElement;
+  const extraEl = document.getElementById('dp-extra') as HTMLInputElement;
+  const avalancheBtn = document.getElementById('dp-avalanche') as HTMLButtonElement;
+  const tabsEl = avalancheBtn.parentElement as HTMLElement;
+  const snowballBtn = document.getElementById('dp-snowball') as HTMLButtonElement;
+  const noteEl = document.getElementById('dp-method-note')!;
+
+  const lumpEl = document.getElementById('dp-lump') as HTMLInputElement;
+  const lumpMonthEl = document.getElementById('dp-lump-month') as HTMLInputElement;
+
+  const monthsEl = document.getElementById('dp-months')!;
+  const subEl = document.getElementById('dp-sub')!;
+  const interestEl = document.getElementById('dp-interest')!;
+  const totalEl = document.getElementById('dp-total')!;
+  const warnEl = document.getElementById('dp-warn')!;
+
+  const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+  const money0 = (n: number) => Math.round(n).toLocaleString();
+  const SVGNS = 'http://www.w3.org/2000/svg';
+
+  function addRow(name: string, balance: number, apr: number, min: number) {
+    const row = document.createElement('div');
+    row.className = 'dp-row grid grid-cols-1 gap-2 sm:grid-cols-[1.4fr_1fr_1fr_1fr_auto]';
+    row.innerHTML = `
+      <input class="dp-name field" type="text" placeholder="Debt name" value="${name}" />
+      <input class="dp-balance field" type="number" min="0" step="100" inputmode="decimal" placeholder="Balance" value="${balance}" />
+      <input class="dp-apr field" type="number" min="0" step="0.01" inputmode="decimal" placeholder="APR %" value="${apr}" />
+      <input class="dp-min field" type="number" min="0" step="10" inputmode="decimal" placeholder="Min pmt" value="${min}" />
+      <button type="button" class="dp-remove btn btn-secondary" aria-label="Remove debt">Remove</button>
+    `;
+    rowsEl.appendChild(row);
+    row.querySelectorAll('input').forEach((inp) => inp.addEventListener('input', calc));
+    const remove = row.querySelector('.dp-remove') as HTMLButtonElement;
+    remove.addEventListener('click', () => { row.remove(); calc(); });
+  }
+
+  function getMethod(): string {
+    return tabsEl.getAttribute('data-method') || 'avalanche';
+  }
+
+  function setMethod(method: string) {
+    tabsEl.setAttribute('data-method', method);
+    if (method === 'avalanche') {
+      avalancheBtn.className = 'btn btn-primary';
+      snowballBtn.className = 'btn btn-secondary';
+      noteEl.textContent = 'Avalanche targets the highest APR first to minimize interest.';
+    } else {
+      snowballBtn.className = 'btn btn-primary';
+      avalancheBtn.className = 'btn btn-secondary';
+      noteEl.textContent = 'Snowball targets the smallest balance first for quick wins.';
+    }
+    calc();
+  }
+
+  function reset() {
+    monthsEl.textContent = '—';
+    subEl.textContent = '';
+    document.getElementById('dp-date')!.textContent = '';
+    interestEl.textContent = totalEl.textContent = '—';
+    document.getElementById('dp-cmp-av')!.textContent = '—';
+    document.getElementById('dp-cmp-sn')!.textContent = '—';
+    document.getElementById('dp-cmp-note')!.textContent = '';
+    document.getElementById('dp-sched')!.innerHTML = '';
+    document.getElementById('dp-chart')!.innerHTML = '';
+    document.getElementById('dp-axis')!.innerHTML = '';
+  }
+
+  interface Debt { balance: number; apr: number; min: number; }
+
+  function readDebts(): Debt[] {
+    const rows = Array.from(rowsEl.querySelectorAll('.dp-row')) as HTMLElement[];
+    const debts: Debt[] = [];
+    for (const row of rows) {
+      const balance = Number((row.querySelector('.dp-balance') as HTMLInputElement).value);
+      const apr = Number((row.querySelector('.dp-apr') as HTMLInputElement).value);
+      const min = Number((row.querySelector('.dp-min') as HTMLInputElement).value);
+      if (balance > 0) debts.push({ balance, apr, min: Math.max(min, 0) });
+    }
+    return debts;
+  }
+
+  interface SimResult {
+    months: number;
+    totalInterest: number;
+    totalStart: number;
+    paidOff: boolean;
+    monthly: { balance: number; interest: number; paid: number }[];
+  }
+
+  // Run the full payoff simulation for one method. Pure — no DOM writes — so it
+  // can be run several times (primary + snowball/avalanche comparison).
+  function simulate(debts: Debt[], method: string, extra: number, lump: number, lumpMonth: number): SimResult {
+    const bals = debts.map((d) => d.balance);
+    const rates = debts.map((d) => d.apr / 12 / 100);
+    const mins = debts.map((d) => d.min);
+    const totalStart = bals.reduce((a, b) => a + b, 0);
+    let months = 0, totalInterest = 0;
+    const cap = 12000;
+    const monthly: { balance: number; interest: number; paid: number }[] = [];
+
+    while (bals.some((b) => b > 0) && months < cap) {
+      let monthInterest = 0, monthPaid = 0;
+      for (let i = 0; i < bals.length; i++) {
+        if (bals[i] > 0) {
+          const interest = bals[i] * rates[i];
+          totalInterest += interest; monthInterest += interest;
+          bals[i] += interest;
+        }
+      }
+
+      const freed = mins.reduce((sum, m, i) => sum + (bals[i] <= 0 ? m : 0), 0);
+      let budget = extra + freed;
+      // one-time lump sum in the chosen month
+      if (months + 1 === lumpMonth) budget += lump;
+
+      for (let i = 0; i < bals.length; i++) {
+        if (bals[i] > 0) {
+          const pay = Math.min(mins[i], bals[i]);
+          bals[i] -= pay; monthPaid += pay;
+          budget += mins[i] - pay;
+        }
+      }
+
+      const active = bals.map((b, i) => i).filter((i) => bals[i] > 0);
+      if (active.length > 0) {
+        active.sort((a, b) => (method === 'snowball' ? bals[a] - bals[b] : rates[b] - rates[a]));
+        for (const i of active) {
+          if (budget <= 0) break;
+          const pay = Math.min(budget, bals[i]);
+          bals[i] -= pay; budget -= pay; monthPaid += pay;
+        }
+      }
+
+      const remaining = bals.reduce((a, b) => a + (b > 0 ? b : 0), 0);
+      months++;
+      monthly.push({ balance: remaining, interest: monthInterest, paid: monthPaid });
+      if (remaining >= totalStart && months > 1 && extra + mins.reduce((a, b) => a + b, 0) <= 0) break;
+    }
+
+    return { months, totalInterest, totalStart, paidOff: months < cap && !bals.some((b) => b > 0.01), monthly };
+  }
+
+  const humanDuration = (months: number) => {
+    const y = Math.floor(months / 12), m = months % 12;
+    let s = '';
+    if (y > 0) s += `${y} year${y !== 1 ? 's' : ''}`;
+    if (m > 0) s += `${y > 0 ? ' ' : ''}${m} month${m !== 1 ? 's' : ''}`;
+    return s || '0 months';
+  };
+
+  function calc() {
+    warnEl.classList.add('hidden');
+    const debts = readDebts();
+    const extra = Number(extraEl.value) || 0;
+    const lump = Number(lumpEl.value) || 0;
+    const lumpMonth = Math.max(1, Number(lumpMonthEl.value) || 1);
+    if (debts.length === 0) { reset(); return; }
+
+    const method = getMethod();
+    const res = simulate(debts, method, extra, lump, lumpMonth);
+
+    if (!res.paidOff) { warnEl.classList.remove('hidden'); reset(); return; }
+
+    monthsEl.textContent = `${res.months} mo`;
+    subEl.textContent = `${humanDuration(res.months)} · ${method === 'snowball' ? 'Snowball' : 'Avalanche'} method`;
+    interestEl.textContent = money(res.totalInterest);
+    totalEl.textContent = money(res.totalStart + res.totalInterest);
+
+    // debt-free date
+    const now = new Date();
+    const dfDate = new Date(now.getFullYear(), now.getMonth() + res.months, 1);
+    document.getElementById('dp-date')!.textContent =
+      'Debt-free by ' + dfDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+
+    // side-by-side comparison
+    const av = simulate(debts, 'avalanche', extra, lump, lumpMonth);
+    const sn = simulate(debts, 'snowball', extra, lump, lumpMonth);
+    const cmp = (r: SimResult) => (r.paidOff ? `${r.months} mo · ${money0(r.totalInterest)} interest` : 'never');
+    document.getElementById('dp-cmp-av')!.textContent = cmp(av);
+    document.getElementById('dp-cmp-sn')!.textContent = cmp(sn);
+    const note = document.getElementById('dp-cmp-note')!;
+    if (av.paidOff && sn.paidOff) {
+      const saveInt = sn.totalInterest - av.totalInterest;
+      note.textContent = Math.abs(saveInt) < 1
+        ? 'Both methods cost about the same here.'
+        : `Avalanche saves ${money0(Math.abs(saveInt))} in interest vs snowball.`;
+    } else {
+      note.textContent = '';
+    }
+
+    // chart + yearly schedule from the primary run
+    drawChart(res.monthly, res.totalStart);
+    const sched = document.getElementById('dp-sched')!;
+    sched.innerHTML = '';
+    let yr = 1, yP = 0, yI = 0;
+    res.monthly.forEach((m, i) => {
+      yP += m.paid; yI += m.interest;
+      if ((i + 1) % 12 === 0 || i === res.monthly.length - 1) {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b border-hairline/50';
+        tr.innerHTML = `<td class="px-4 py-1.5 text-left text-ink-subtle">${yr}</td><td class="px-4 py-1.5">${money0(yP)}</td><td class="px-4 py-1.5">${money0(yI)}</td><td class="px-4 py-1.5">${money0(m.balance)}</td>`;
+        sched.appendChild(tr);
+        yr++; yP = 0; yI = 0;
+      }
+    });
+  }
+
+  function drawChart(monthly: { balance: number }[], start: number) {
+    const svg = document.getElementById('dp-chart')!;
+    svg.innerHTML = '';
+    const W = 320, H = 120;
+    const pts = [{ balance: start }, ...monthly];
+    const maxV = Math.max(start, 1);
+    const n = pts.length - 1;
+    const x = (i: number) => (n === 0 ? 0 : (i / n) * W);
+    const y = (v: number) => H - (v / maxV) * H;
+    const line = pts.map((p, i) => `${x(i).toFixed(1)},${y(p.balance).toFixed(1)}`);
+
+    const area = document.createElementNS(SVGNS, 'polygon');
+    area.setAttribute('points', [`0,${H}`, ...line, `${W},${H}`].join(' '));
+    area.setAttribute('fill', '#5e6ad2');
+    area.setAttribute('opacity', '0.3');
+    svg.appendChild(area);
+
+    const poly = document.createElementNS(SVGNS, 'polyline');
+    poly.setAttribute('points', line.join(' '));
+    poly.setAttribute('fill', 'none');
+    poly.setAttribute('stroke', '#828fff');
+    poly.setAttribute('stroke-width', '2');
+    poly.setAttribute('vector-effect', 'non-scaling-stroke');
+    svg.appendChild(poly);
+
+    document.getElementById('dp-axis')!.innerHTML = `<span>Now</span><span>${Math.round(n / 2)} mo</span><span>${n} mo</span>`;
+  }
+
+  addEl.addEventListener('click', () => { addRow('', 0, 20, 50); });
+  avalancheBtn.addEventListener('click', () => setMethod('avalanche'));
+  snowballBtn.addEventListener('click', () => setMethod('snowball'));
+  [extraEl, lumpEl, lumpMonthEl].forEach((el) => el.addEventListener('input', calc));
+
+  // Seed starting rows
+  addRow('Credit card', 5000, 22, 100);
+  addRow('Car loan', 12000, 6, 250);
+  addRow('Personal loan', 3000, 12, 80);
+  calc();
+</script>

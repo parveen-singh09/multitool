@@ -1,0 +1,235 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="power-converter">
+  <div id="pc-root" class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="pc-from-val">From</label>
+        <input id="pc-from-val" type="number" class="field" value="1" inputmode="decimal" step="any" />
+        <select id="pc-from-unit" class="field mt-1"></select>
+      </div>
+      <button
+        id="pc-swap"
+        type="button"
+        class="btn btn-secondary mb-1 h-10 w-10 shrink-0 justify-self-center p-0"
+        aria-label="Swap units"
+        title="Swap units"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
+      </button>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm text-ink-subtle" for="pc-to-val">To</label>
+        <div class="copy-wrap">
+          <input id="pc-to-val" type="text" class="field" readonly />
+          <button type="button" class="copy-icon" data-copy-target="#pc-to-val" aria-label="Copy"></button>
+        </div>
+        <select id="pc-to-unit" class="field mt-1"></select>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-ink-subtle">
+      <label class="flex items-center gap-2">
+        Precision
+        <select id="pc-precision" class="field w-auto py-1">
+          <option value="auto" selected>Auto</option>
+          <option value="0">0 decimals</option>
+          <option value="2">2 decimals</option>
+          <option value="4">4 decimals</option>
+          <option value="6">6 decimals</option>
+          <option value="8">8 decimals</option>
+          <option value="10">10 decimals</option>
+        </select>
+      </label>
+    </div>
+
+    <p id="pc-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <p id="pc-formula" class="text-[13px] text-ink-tertiary" aria-live="polite"></p>
+
+    <div>
+      <p class="mb-2 text-[13px] text-ink-subtle">Common conversions</p>
+      <div id="pc-table" class="overflow-hidden rounded-md border border-hairline"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free power converter converts power between watts, kilowatts,
+      megawatts, gigawatts and milliwatts, mechanical, metric, electrical and
+      boiler horsepower, BTU per hour / minute / second, kilocalories per hour,
+      calories per second, foot-pounds per second, tons of refrigeration and the
+      logarithmic units dBm and dBW. Handy for engines, appliances, HVAC, RF and
+      electronics. Pick a source and target unit, type a value, and the result
+      updates live — then copy it or read every other unit off the reference
+      table.
+    </p>
+    <p>
+      Choose Auto precision for clean significant-figure output, or lock a fixed
+      number of decimals. The logarithmic scales are handled correctly: dBm is
+      referenced to one milliwatt (0&nbsp;dBm&nbsp;=&nbsp;1&nbsp;mW,
+      30&nbsp;dBm&nbsp;=&nbsp;1&nbsp;W) and dBW to one watt
+      (0&nbsp;dBW&nbsp;=&nbsp;1&nbsp;W), so RF power figures convert straight to
+      watts and back. Note that VA and kVA are apparent power and are treated as
+      equal to watts here (unity power factor). Use the swap button to reverse the
+      direction instantly.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+
+  type Unit = { name: string; group: string; factor?: number; log?: 'dBm' | 'dBW' };
+
+  const UNITS: Unit[] = [
+    { name: 'Milliwatt (mW)', group: 'SI', factor: 0.001 },
+    { name: 'Watt (W)', group: 'SI', factor: 1 },
+    { name: 'Kilowatt (kW)', group: 'SI', factor: 1000 },
+    { name: 'Megawatt (MW)', group: 'SI', factor: 1e6 },
+    { name: 'Gigawatt (GW)', group: 'SI', factor: 1e9 },
+    { name: 'Volt-ampere (VA)', group: 'SI', factor: 1 },
+    { name: 'Kilovolt-ampere (kVA)', group: 'SI', factor: 1000 },
+    { name: 'Mechanical horsepower (hp)', group: 'Horsepower', factor: 745.6998715823 },
+    { name: 'Metric horsepower (PS)', group: 'Horsepower', factor: 735.49875 },
+    { name: 'Electrical horsepower', group: 'Horsepower', factor: 746 },
+    { name: 'Boiler horsepower', group: 'Horsepower', factor: 9809.5 },
+    { name: 'BTU / hour', group: 'Thermal', factor: 0.2930710702 },
+    { name: 'BTU / minute', group: 'Thermal', factor: 17.5842642117 },
+    { name: 'BTU / second', group: 'Thermal', factor: 1055.05585262 },
+    { name: 'Kilocalorie / hour', group: 'Thermal', factor: 1.163 },
+    { name: 'Calorie / second', group: 'Thermal', factor: 4.1868 },
+    { name: 'Ton of refrigeration (RT)', group: 'Thermal', factor: 3516.8528421 },
+    { name: 'Foot-pound / second', group: 'Mechanical', factor: 1.3558179483 },
+    { name: 'Foot-pound / minute', group: 'Mechanical', factor: 0.0225969658 },
+    { name: 'Erg / second', group: 'Mechanical', factor: 1e-7 },
+    { name: 'dBm', group: 'Logarithmic', log: 'dBm' },
+    { name: 'dBW', group: 'Logarithmic', log: 'dBW' },
+  ];
+  const BY_NAME = new Map(UNITS.map((u) => [u.name, u]));
+
+  const root = document.getElementById('pc-root') as HTMLElement;
+  const fromVal = document.getElementById('pc-from-val') as HTMLInputElement;
+  const toVal = document.getElementById('pc-to-val') as HTMLInputElement;
+  const fromUnit = document.getElementById('pc-from-unit') as HTMLSelectElement;
+  const toUnit = document.getElementById('pc-to-unit') as HTMLSelectElement;
+  const precision = document.getElementById('pc-precision') as HTMLSelectElement;
+  const swap = document.getElementById('pc-swap') as HTMLButtonElement;
+  const formula = document.getElementById('pc-formula') as HTMLElement;
+  const table = document.getElementById('pc-table') as HTMLElement;
+  const err = document.getElementById('pc-error') as HTMLElement;
+
+  function toBase(v: number, u: Unit): number {
+    if (u.log === 'dBm') return Math.pow(10, v / 10) / 1000;
+    if (u.log === 'dBW') return Math.pow(10, v / 10);
+    return v * (u.factor as number);
+  }
+  function fromBase(w: number, u: Unit): number {
+    if (u.log === 'dBm') return w > 0 ? 10 * Math.log10(w * 1000) : -Infinity;
+    if (u.log === 'dBW') return w > 0 ? 10 * Math.log10(w) : -Infinity;
+    return w / (u.factor as number);
+  }
+  function directConvert(v: number, from: Unit, to: Unit): number {
+    return fromBase(toBase(v, from), to);
+  }
+
+  function fmt(n: number): string {
+    if (Number.isNaN(n)) return 'NaN';
+    if (!isFinite(n)) return n > 0 ? '∞' : '-∞';
+    const p = precision.value;
+    if (p !== 'auto') return n.toFixed(Number(p));
+
+    if (n === 0) return '0';
+    const abs = Math.abs(n);
+    if (abs >= 1e15 || abs < 1e-6) return n.toExponential(6);
+    return String(Math.round(n * 1e9) / 1e9);
+  }
+
+  function fillUnits() {
+    const groups = [...new Set(UNITS.map((u) => u.group))];
+    const html = groups
+      .map(
+        (g) =>
+          `<optgroup label="${g}">` +
+          UNITS.filter((u) => u.group === g).map((u) => `<option>${u.name}</option>`).join('') +
+          `</optgroup>`,
+      )
+      .join('');
+    fromUnit.innerHTML = html;
+    toUnit.innerHTML = html;
+    fromUnit.value = 'Mechanical horsepower (hp)';
+    toUnit.value = 'Kilowatt (kW)';
+  }
+
+  function convert() {
+    err.classList.add('hidden');
+    const raw = fromVal.value.trim();
+    const from = BY_NAME.get(fromUnit.value)!;
+    const to = BY_NAME.get(toUnit.value)!;
+    const v = Number(raw);
+    if (raw === '' || Number.isNaN(v)) {
+      toVal.value = '';
+      formula.textContent = '';
+      if (raw !== '') {
+        err.textContent = 'Enter a valid number.';
+        err.classList.remove('hidden');
+      }
+      renderTable();
+      return;
+    }
+    const result = directConvert(v, from, to);
+    toVal.value = fmt(result);
+    formula.textContent = `${fmt(v)} ${short(from)} = ${fmt(result)} ${short(to)}`;
+    renderTable();
+  }
+
+  // Short label = the parenthetical symbol if present, else the full name.
+  function short(u: Unit): string {
+    const m = u.name.match(/\(([^)]+)\)/);
+    return m ? m[1] : u.name;
+  }
+
+  // Reference table: 1 of the "from" unit expressed in up to 10 other units.
+  function renderTable() {
+    const from = BY_NAME.get(fromUnit.value)!;
+    const rows = UNITS.filter((u) => u.name !== from.name)
+      .slice(0, 10)
+      .map((u) => {
+        const r = directConvert(1, from, u);
+        return `<tr class="border-t border-hairline">
+          <td class="px-3 py-2 text-ink-subtle">1 ${short(from)}</td>
+          <td class="px-3 py-2 text-right font-mono text-ink">${fmt(r)} <span class="text-ink-tertiary">${short(u)}</span></td>
+        </tr>`;
+      })
+      .join('');
+    table.innerHTML = `<table class="w-full text-[13px]">${rows}</table>`;
+  }
+
+  fromVal.addEventListener('input', convert);
+  fromUnit.addEventListener('change', convert);
+  toUnit.addEventListener('change', convert);
+  precision.addEventListener('change', convert);
+  swap.addEventListener('click', () => {
+    const a = fromUnit.value;
+    fromUnit.value = toUnit.value;
+    toUnit.value = a;
+    if (toVal.value !== '' && toVal.value !== '∞' && toVal.value !== '-∞' && toVal.value !== 'NaN') {
+      fromVal.value = toVal.value;
+    }
+    convert();
+  });
+
+  fillUnits();
+  convert();
+
+  // ponytail: one runnable check for the non-trivial log + factor math.
+  if (import.meta.env.DEV) {
+    const W = BY_NAME.get('Watt (W)')!;
+    const dBW = BY_NAME.get('dBW')!;
+    const dBm = BY_NAME.get('dBm')!;
+    const hp = BY_NAME.get('Mechanical horsepower (hp)')!;
+    console.assert(Math.abs(directConvert(0, dBW, W) - 1) < 1e-9, '0 dBW = 1 W');
+    console.assert(Math.abs(directConvert(30, dBm, W) - 1) < 1e-9, '30 dBm = 1 W');
+    console.assert(Math.abs(directConvert(1, hp, W) - 745.6998715823) < 1e-6, '1 hp = 745.7 W');
+    console.assert(Math.abs(directConvert(10, dBW, dBm) - 40) < 1e-9, '10 dBW = 40 dBm');
+  }
+</script>

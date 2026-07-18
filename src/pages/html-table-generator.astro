@@ -1,0 +1,420 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="html-table-generator">
+  <div class="flex flex-col gap-5">
+
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Rows
+        <input id="ht-rows" type="number" min="1" max="50" value="3" class="field w-20" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Columns
+        <input id="ht-cols" type="number" min="1" max="20" value="3" class="field w-20" />
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="ht-header" type="checkbox" class="accent-primary" checked /> Header row</label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="ht-striped" type="checkbox" class="accent-primary" /> Striped rows</label>
+      <div class="ml-auto flex items-end gap-2">
+        <button id="ht-merge" class="btn btn-secondary" disabled>Merge cells</button>
+        <button id="ht-split" class="btn btn-secondary" disabled>Split</button>
+      </div>
+    </div>
+
+    <details class="rounded-md border border-hairline">
+      <summary class="cursor-pointer select-none px-3 py-2 text-sm text-ink-subtle">Import data (paste from Excel / Sheets, or a CSV file)</summary>
+      <div class="flex flex-col gap-2 border-t border-hairline p-3">
+        <textarea id="ht-import" rows="4" class="field font-mono text-xs" placeholder="Paste tab- or comma-separated rows here…"></textarea>
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="ht-import-btn" class="btn btn-secondary">Load pasted data</button>
+          <label class="btn btn-secondary cursor-pointer">Upload CSV<input id="ht-file" type="file" accept=".csv,text/csv" class="hidden" /></label>
+        </div>
+      </div>
+    </details>
+
+    <div>
+      <div class="mb-1 text-xs text-ink-subtle">Click a cell and Shift-click another to select a range for merging. Type to edit.</div>
+      <div class="overflow-auto rounded-md border border-hairline p-3">
+        <table id="ht-grid" class="border-collapse text-sm"></table>
+      </div>
+    </div>
+
+    <details class="rounded-md border border-hairline" open>
+      <summary class="cursor-pointer select-none px-3 py-2 text-sm text-ink-subtle">Styling</summary>
+      <div class="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-hairline p-3 text-sm text-ink-subtle sm:grid-cols-3 lg:grid-cols-4">
+        <label class="flex flex-col gap-1">Class name<input id="s-class" type="text" value="styled-table" class="field" /></label>
+        <label class="flex flex-col gap-1">Table layout
+          <select id="s-layout" class="field"><option value="auto">auto</option><option value="fixed">fixed</option></select>
+        </label>
+        <div class="flex flex-col gap-1">Width
+          <div class="flex gap-1"><input id="s-w" type="text" placeholder="100" class="field w-full" /><select id="s-wu" class="field w-20"></select></div>
+        </div>
+        <div class="flex flex-col gap-1">Height
+          <div class="flex gap-1"><input id="s-h" type="text" placeholder="auto" class="field w-full" /><select id="s-hu" class="field w-20"></select></div>
+        </div>
+
+        <label class="flex flex-col gap-1">Header bg<input id="s-hbg" type="color" value="#5e6ad2" class="field h-9 p-1" /></label>
+        <label class="flex flex-col gap-1">Header text<input id="s-hcolor" type="color" value="#ffffff" class="field h-9 p-1" /></label>
+        <label class="flex flex-col gap-1">Body bg<input id="s-bbg" type="color" value="#ffffff" class="field h-9 p-1" /></label>
+        <label class="flex flex-col gap-1">Body text<input id="s-bcolor" type="color" value="#111111" class="field h-9 p-1" /></label>
+
+        <label class="flex flex-col gap-1">Stripe bg<input id="s-sbg" type="color" value="#f3f4f6" class="field h-9 p-1" /></label>
+        <label class="flex flex-col gap-1">Border color<input id="s-bc" type="color" value="#d1d5db" class="field h-9 p-1" /></label>
+        <label class="flex flex-col gap-1">Border style
+          <select id="s-bstyle" class="field">
+            <option>solid</option><option>dotted</option><option>dashed</option><option>double</option>
+            <option>groove</option><option>ridge</option><option>inset</option><option>outset</option><option value="none">none</option>
+          </select>
+        </label>
+        <div class="flex flex-col gap-1">Border width
+          <div class="flex gap-1"><input id="s-bw" type="text" value="1" class="field w-full" /><select id="s-bwu" class="field w-20"></select></div>
+        </div>
+
+        <label class="flex flex-col gap-1">Borders
+          <select id="s-collapse" class="field"><option value="collapse">collapse</option><option value="separate">separate</option></select>
+        </label>
+        <div class="flex flex-col gap-1">Cell padding
+          <div class="flex gap-1"><input id="s-pad" type="text" value="8" class="field w-full" /><select id="s-padu" class="field w-20"></select></div>
+        </div>
+        <label class="flex flex-col gap-1">Cell align
+          <select id="s-align" class="field"><option value="left">left</option><option value="center">center</option><option value="right">right</option></select>
+        </label>
+
+        <label class="flex flex-col gap-1 col-span-2">Caption<input id="s-caption" type="text" placeholder="(none)" class="field" /></label>
+        <label class="flex flex-col gap-1">Caption side
+          <select id="s-capside" class="field"><option value="top">top</option><option value="bottom">bottom</option></select>
+        </label>
+        <label class="flex flex-col gap-1">Caption align
+          <select id="s-capalign" class="field"><option value="center">center</option><option value="left">left</option><option value="right">right</option></select>
+        </label>
+      </div>
+    </details>
+
+    <div class="flex flex-col gap-2">
+      <label class="text-sm text-ink-subtle">Live preview</label>
+      <div id="ht-preview" class="overflow-auto rounded-md border border-hairline bg-white p-4"></div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="mr-auto inline-flex overflow-hidden rounded-md border border-hairline text-sm">
+          <button data-fmt="html" class="ht-tab px-3 py-1.5 text-ink">HTML</button>
+          <button data-fmt="markdown" class="ht-tab px-3 py-1.5 text-ink-subtle">Markdown</button>
+          <button data-fmt="csv" class="ht-tab px-3 py-1.5 text-ink-subtle">CSV</button>
+        </div>
+        <label id="ht-cssopt" class="flex items-center gap-2 text-sm text-ink-subtle"><input id="ht-css" type="checkbox" class="accent-primary" checked /> Generate CSS</label>
+        <label id="ht-minopt" class="flex items-center gap-2 text-sm text-ink-subtle"><input id="ht-min" type="checkbox" class="accent-primary" /> Minify</label>
+        <span id="ht-count" class="text-xs text-ink-subtle"></span>
+      </div>
+      <div class="copy-wrap"><pre class="hl-block field min-h-40" style="resize:vertical;overflow:auto"><code id="ht-out" class="hljs" style="background:transparent;padding:0"></code></pre><button type="button" class="copy-icon" data-copy-target="#ht-out" aria-label="Copy"></button></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free HTML table generator lets you build a table in a live editable grid,
+      paste rows straight from Excel or Google Sheets, or upload a CSV — and style
+      every part of it: header and body colors, striped rows, borders, padding,
+      alignment, sizing, and a caption. Unlike most generators you can also
+      <strong class="text-ink">merge cells</strong> (colspan / rowspan) by selecting a range.
+    </p>
+    <p>
+      Copy the result as clean semantic <code class="font-mono text-ink">&lt;table&gt;</code>
+      markup with optional scoped CSS, or export it as <strong class="text-ink">Markdown</strong>
+      or <strong class="text-ink">CSV</strong>. No sign-up.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { hl } from '../lib/highlight';
+
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  const val = (id: string) => ($(id) as HTMLInputElement).value;
+  const checked = (id: string) => ($(id) as HTMLInputElement).checked;
+
+  const grid = $('ht-grid') as HTMLTableElement;
+  const out = $('ht-out');
+  const preview = $('ht-preview');
+  let rawOutput = '';
+  let fmt: 'html' | 'markdown' | 'csv' = 'html';
+
+  let data: string[][] = [];
+
+  const spans = new Map<string, { rs: number; cs: number }>();
+  let sel: { r1: number; c1: number; r2: number; c2: number } | null = null;
+
+  const key = (r: number, c: number) => `${r},${c}`;
+
+  // Populate the length-unit dropdowns.
+  const UNITS = ['px', '%', 'em', 'rem', 'ch', 'vh', 'vw'];
+  ['s-wu', 's-hu', 's-bwu', 's-padu'].forEach((id) => {
+    (id === 's-bwu' || id === 's-padu' ? ['px', 'em', 'rem', 'ch'] : UNITS).forEach((u) => {
+      const o = document.createElement('option');
+      o.value = o.textContent = u;
+      $(id).appendChild(o);
+    });
+  });
+
+  function ensureData(rows: number, cols: number) {
+    const next: string[][] = [];
+    for (let r = 0; r < rows; r++) {
+      next[r] = [];
+      for (let c = 0; c < cols; c++) {
+        next[r][c] = data[r]?.[c] ?? (r === 0 ? `Header ${c + 1}` : `Cell ${r},${c + 1}`);
+      }
+    }
+    data = next;
+    // Drop or clip any span that no longer fits the grid.
+    for (const [k, sp] of [...spans]) {
+      const [r, c] = k.split(',').map(Number);
+      if (r >= rows || c >= cols) { spans.delete(k); continue; }
+      sp.rs = Math.min(sp.rs, rows - r);
+      sp.cs = Math.min(sp.cs, cols - c);
+      if (sp.rs <= 1 && sp.cs <= 1) spans.delete(k);
+    }
+  }
+
+  // Cells hidden because a merge above/left covers them.
+  function coveredSet(): Set<string> {
+    const cov = new Set<string>();
+    for (const [k, sp] of spans) {
+      const [r, c] = k.split(',').map(Number);
+      for (let dr = 0; dr < sp.rs; dr++)
+        for (let dc = 0; dc < sp.cs; dc++)
+          if (dr || dc) cov.add(key(r + dr, c + dc));
+    }
+    return cov;
+  }
+
+  function inSel(r: number, c: number) {
+    if (!sel) return false;
+    return r >= Math.min(sel.r1, sel.r2) && r <= Math.max(sel.r1, sel.r2) &&
+           c >= Math.min(sel.c1, sel.c2) && c <= Math.max(sel.c1, sel.c2);
+  }
+
+  function renderGrid() {
+    const rows = data.length, cols = data[0]?.length ?? 0;
+    const cov = coveredSet();
+    grid.innerHTML = '';
+    for (let r = 0; r < rows; r++) {
+      const tr = document.createElement('tr');
+      for (let c = 0; c < cols; c++) {
+        if (cov.has(key(r, c))) continue;
+        const sp = spans.get(key(r, c));
+        const cell = document.createElement('td');
+        if (sp) { if (sp.rs > 1) cell.rowSpan = sp.rs; if (sp.cs > 1) cell.colSpan = sp.cs; }
+        cell.contentEditable = 'true';
+        cell.className = 'border border-hairline px-2 py-1 text-ink outline-none focus:bg-surface-2 min-w-16' +
+          (inSel(r, c) ? ' ring-2 ring-primary ring-inset bg-surface-2' : '');
+        cell.textContent = data[r][c];
+        cell.addEventListener('input', () => { data[r][c] = cell.textContent || ''; buildOut(); });
+        cell.addEventListener('click', (e) => {
+          if ((e as MouseEvent).shiftKey && sel) { sel = { ...sel, r2: r, c2: c }; }
+          else sel = { r1: r, c1: c, r2: r, c2: c };
+          updateMergeButtons();
+          renderGrid();
+        });
+        tr.appendChild(cell);
+      }
+      grid.appendChild(tr);
+    }
+  }
+
+  function updateMergeButtons() {
+    const multi = !!sel && (sel.r1 !== sel.r2 || sel.c1 !== sel.c2);
+    (($('ht-merge') as HTMLButtonElement)).disabled = !multi;
+    (($('ht-split') as HTMLButtonElement)).disabled = !sel;
+  }
+
+  function mergeSelection() {
+    if (!sel) return;
+    const r1 = Math.min(sel.r1, sel.r2), r2 = Math.max(sel.r1, sel.r2);
+    const c1 = Math.min(sel.c1, sel.c2), c2 = Math.max(sel.c1, sel.c2);
+    // Clear any spans intersecting the region, then set the new anchor.
+    for (const k of [...spans.keys()]) {
+      const [r, c] = k.split(',').map(Number);
+      if (r >= r1 && r <= r2 && c >= c1 && c <= c2) spans.delete(k);
+    }
+    if (r2 > r1 || c2 > c1) spans.set(key(r1, c1), { rs: r2 - r1 + 1, cs: c2 - c1 + 1 });
+    sel = { r1, c1, r2: r1, c2: c1 };
+    updateMergeButtons();
+    renderGrid();
+    buildOut();
+  }
+
+  function splitSelection() {
+    if (!sel) return;
+    const r1 = Math.min(sel.r1, sel.r2), r2 = Math.max(sel.r1, sel.r2);
+    const c1 = Math.min(sel.c1, sel.c2), c2 = Math.max(sel.c1, sel.c2);
+    for (const k of [...spans.keys()]) {
+      const [r, c] = k.split(',').map(Number);
+      if (r >= r1 && r <= r2 && c >= c1 && c <= c2) spans.delete(k);
+    }
+    renderGrid();
+    buildOut();
+  }
+
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const lenOf = (v: string, u: string) => (v.trim() ? `${v.trim()}${u}` : '');
+
+  function buildCss(cls: string) {
+    const sel = `.${cls}`;
+    const w = lenOf(val('s-w'), val('s-wu')), h = lenOf(val('s-h'), val('s-hu'));
+    const border = val('s-bstyle') === 'none' ? 'none' : `${lenOf(val('s-bw'), val('s-bwu')) || '1px'} ${val('s-bstyle')} ${val('s-bc')}`;
+    const pad = lenOf(val('s-pad'), val('s-padu')) || '0';
+    const rules: string[] = [];
+    rules.push(`${sel}{border-collapse:${val('s-collapse')};table-layout:${val('s-layout')};${w ? `width:${w};` : ''}${h ? `height:${h};` : ''}}`);
+    rules.push(`${sel} caption{caption-side:${val('s-capside')};text-align:${val('s-capalign')};}`);
+    rules.push(`${sel} th,${sel} td{border:${border};padding:${pad};text-align:${val('s-align')};}`);
+    rules.push(`${sel} th{background:${val('s-hbg')};color:${val('s-hcolor')};}`);
+    rules.push(`${sel} tbody tr{background:${val('s-bbg')};color:${val('s-bcolor')};}`);
+    if (checked('ht-striped')) rules.push(`${sel} tbody tr:nth-child(even){background:${val('s-sbg')};}`);
+    return rules.join('\n');
+  }
+
+  function buildTableHtml(cls: string, indent: boolean) {
+    const header = checked('ht-header');
+    const cov = coveredSet();
+    const cap = val('s-caption').trim();
+    const nl = indent ? '\n' : '';
+    const pad = (n: number) => (indent ? '  '.repeat(n) : '');
+    const cell = (tag: string, r: number, c: number) => {
+      const sp = spans.get(key(r, c));
+      const attrs = sp ? `${sp.cs > 1 ? ` colspan="${sp.cs}"` : ''}${sp.rs > 1 ? ` rowspan="${sp.rs}"` : ''}` : '';
+      return `${pad(3)}<${tag}${attrs}>${esc(data[r][c])}</${tag}>`;
+    };
+    const rowHtml = (r: number, tag: string) => {
+      const cells: string[] = [];
+      for (let c = 0; c < data[r].length; c++) if (!cov.has(key(r, c))) cells.push(cell(tag, r, c));
+      return `${pad(2)}<tr>${nl}${cells.join(nl)}${nl}${pad(2)}</tr>`;
+    };
+    let html = `<table${cls ? ` class="${cls}"` : ''}>${nl}`;
+    if (cap) html += `${pad(1)}<caption>${esc(cap)}</caption>${nl}`;
+    let start = 0;
+    if (header) {
+      html += `${pad(1)}<thead>${nl}${rowHtml(0, 'th')}${nl}${pad(1)}</thead>${nl}`;
+      start = 1;
+    }
+    html += `${pad(1)}<tbody>${nl}`;
+    const body: string[] = [];
+    for (let r = start; r < data.length; r++) body.push(rowHtml(r, 'td'));
+    html += body.join(nl) + `${nl}${pad(1)}</tbody>${nl}</table>`;
+    return html;
+  }
+
+  function buildMarkdown() {
+    // Markdown tables can't express merges or styling — flatten to raw cells.
+    const rows = data.map((row) => `| ${row.map((c) => c.replace(/\|/g, '\\|')).join(' | ')} |`);
+    if (rows.length) rows.splice(1, 0, `| ${data[0].map(() => '---').join(' | ')} |`);
+    return rows.join('\n');
+  }
+
+  function buildCsv() {
+    const q = (s: string) => (/[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
+    return data.map((row) => row.map(q).join(',')).join('\n');
+  }
+
+  function buildOut() {
+    if (fmt === 'markdown') { rawOutput = buildMarkdown(); }
+    else if (fmt === 'csv') { rawOutput = buildCsv(); }
+    else {
+      const cls = val('s-class').trim();
+      const minify = checked('ht-min');
+      const table = buildTableHtml(cls, !minify);
+      if (checked('ht-css') && cls) {
+        let css = buildCss(cls);
+        if (minify) css = css.replace(/\n/g, '').replace(/\s*([{};:,])\s*/g, '$1');
+        rawOutput = `<style>${minify ? '' : '\n'}${css}${minify ? '' : '\n'}</style>${minify ? '' : '\n'}${table}`;
+      } else {
+        rawOutput = table;
+      }
+    }
+    hl(out, rawOutput, fmt === 'markdown' ? 'markdown' : fmt);
+    ($('ht-count')).textContent = `${rawOutput.length} chars`;
+    renderPreview();
+  }
+
+  function renderPreview() {
+    const cls = val('s-class').trim() || 'styled-table';
+    preview.innerHTML = `<style>${buildCss(cls)}</style>${buildTableHtml(cls, false)}`;
+  }
+
+  function rebuild() {
+    const rows = Math.max(1, Math.min(50, Number(val('ht-rows')) || 3));
+    const cols = Math.max(1, Math.min(20, Number(val('ht-cols')) || 3));
+    ensureData(rows, cols);
+    renderGrid();
+    buildOut();
+  }
+
+  // --- Import: split rows on newlines, cols on tab (Excel/Sheets) or comma. ---
+  function parseDelimited(text: string): string[][] {
+    const lines = text.replace(/\r/g, '').split('\n').filter((l) => l.length);
+    if (!lines.length) return [];
+    const delim = lines[0].includes('\t') ? '\t' : ',';
+    // Comma path honors basic RFC-4180 quoting; tab path is a plain split.
+    return lines.map((line) => {
+      if (delim === '\t') return line.split('\t');
+      const cells: string[] = []; let cur = '', q = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (q) {
+          if (ch === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else q = false; }
+          else cur += ch;
+        } else if (ch === '"') q = true;
+        else if (ch === ',') { cells.push(cur); cur = ''; }
+        else cur += ch;
+      }
+      cells.push(cur);
+      return cells;
+    });
+  }
+
+  function loadGrid(rows: string[][]) {
+    if (!rows.length) return;
+    const cols = Math.max(...rows.map((r) => r.length));
+    data = rows.map((r) => { const row = r.slice(); while (row.length < cols) row.push(''); return row; });
+    spans.clear();
+    sel = null;
+    ($('ht-rows') as HTMLInputElement).value = String(Math.min(50, data.length));
+    ($('ht-cols') as HTMLInputElement).value = String(Math.min(20, cols));
+    renderGrid();
+    buildOut();
+  }
+
+  // Wiring.
+  ['ht-rows', 'ht-cols'].forEach((id) => $(id).addEventListener('input', rebuild));
+  ['ht-header', 'ht-striped'].forEach((id) => $(id).addEventListener('change', () => { renderGrid(); buildOut(); }));
+  ['s-class', 's-layout', 's-w', 's-wu', 's-h', 's-hu', 's-hbg', 's-hcolor', 's-bbg', 's-bcolor',
+   's-sbg', 's-bc', 's-bstyle', 's-bw', 's-bwu', 's-collapse', 's-pad', 's-padu', 's-align',
+   's-caption', 's-capside', 's-capalign', 'ht-css', 'ht-min']
+    .forEach((id) => $(id).addEventListener('input', buildOut));
+
+  $('ht-merge').addEventListener('click', mergeSelection);
+  $('ht-split').addEventListener('click', splitSelection);
+
+  $('ht-import-btn').addEventListener('click', () => loadGrid(parseDelimited(val('ht-import'))));
+  $('ht-file').addEventListener('change', (e) => {
+    const f = (e.target as HTMLInputElement).files?.[0];
+    if (!f) return;
+    const cap = $('s-caption') as HTMLInputElement;
+    if (!cap.value.trim()) cap.value = f.name.replace(/\.csv$/i, '');
+    f.text().then((t) => loadGrid(parseDelimited(t)));
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('.ht-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      fmt = tab.dataset.fmt as typeof fmt;
+      document.querySelectorAll<HTMLButtonElement>('.ht-tab').forEach((t) => {
+        t.classList.toggle('text-ink', t === tab);
+        t.classList.toggle('bg-surface-2', t === tab);
+        t.classList.toggle('text-ink-subtle', t !== tab);
+      });
+      $('ht-cssopt').style.display = fmt === 'html' ? '' : 'none';
+      $('ht-minopt').style.display = fmt === 'html' ? '' : 'none';
+      buildOut();
+    });
+  });
+
+  rebuild();
+</script>

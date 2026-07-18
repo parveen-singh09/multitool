@@ -1,0 +1,65 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pin-generator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Length
+        <input id="pn-len" type="number" min="3" max="12" value="4" class="field w-28" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="pn-count" type="number" min="1" max="1000" value="10" class="field w-28" />
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="pn-nostart0" type="checkbox" class="accent-primary" /> No leading zero
+      </label>
+      <button id="pn-gen" class="btn btn-primary ml-auto">Generate</button>
+    </div>
+    <div class="copy-wrap">
+      <textarea id="pn-out" class="field min-h-64 resize-y font-mono text-[15px]" readonly aria-label="Generated PINs"></textarea>
+      <button type="button" class="copy-icon" data-copy-target="#pn-out" aria-label="Copy"></button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free PIN generator creates random numeric personal identification
+      numbers of any length — 4 and 6 digits are the most common. Generate one or
+      a whole batch at once, with an option to avoid a leading zero. PINs are
+      created with your browser's cryptographically secure random source, so they
+      are genuinely unpredictable.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { randInt } from '../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const lenEl = $('pn-len') as HTMLInputElement;
+  const countEl = $('pn-count') as HTMLInputElement;
+  const noZeroEl = $('pn-nostart0') as HTMLInputElement;
+  const out = $('pn-out') as HTMLTextAreaElement;
+
+  function pin(len: number): string {
+    let s = '';
+    for (let i = 0; i < len; i++) {
+      const lo = i === 0 && noZeroEl.checked ? 1 : 0;
+      s += randInt(lo, 9);
+    }
+    return s;
+  }
+
+  function generate() {
+    const len = Math.max(3, Math.min(12, Number(lenEl.value) || 4));
+    const n = Math.max(1, Math.min(1000, Number(countEl.value) || 1));
+    const list: string[] = [];
+    for (let i = 0; i < n; i++) list.push(pin(len));
+    out.value = list.join('\n');
+  }
+
+  ['pn-len', 'pn-count', 'pn-nostart0'].forEach((id) => $(id).addEventListener('input', generate));
+  $('pn-gen').addEventListener('click', generate);
+  generate();
+</script>

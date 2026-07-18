@@ -1,0 +1,219 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="isbn-generator">
+  <div class="grid gap-6 lg:grid-cols-[1fr_320px]">
+
+    <div class="flex flex-col gap-4">
+      <p class="text-[13px] text-ink-tertiary">
+        ISBN-13: <span id="ib-13" class="font-mono text-ink"></span>
+        <span id="ib-10-wrap" class="ml-3">ISBN-10: <span id="ib-10" class="font-mono text-ink"></span></span>
+      </p>
+      <div class="flex min-h-55 items-center justify-center rounded-md border border-hairline bg-white p-6">
+        <canvas id="ib-canvas" class="max-w-full"></canvas>
+      </div>
+      <p id="ib-status" class="text-[13px]" role="status"></p>
+      <div class="flex flex-wrap gap-2">
+        <button id="ib-png" type="button" class="btn btn-primary">Download PNG</button>
+        <button id="ib-svg" type="button" class="btn btn-secondary">Download SVG</button>
+        <button id="ib-copy" type="button" class="btn btn-tertiary">Copy PNG</button>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        ISBN (10 or 13 digits)
+        <input id="ib-input" class="field font-mono text-[13px]" spellcheck="false" autocomplete="off"
+               placeholder="978-0-306-40615-7" />
+      </label>
+
+      <div class="flex flex-wrap gap-2">
+        <button id="ib-rand" type="button" class="btn btn-secondary">Random ISBN</button>
+        <select id="ib-prefix" class="field w-24" title="Random prefix">
+          <option value="978">978</option><option value="979">979</option>
+        </select>
+      </div>
+
+      <div class="grid grid-cols-[1fr_auto] items-end gap-2">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Add-on (price / issue)
+          <input id="ib-addon" class="field font-mono text-[13px]" spellcheck="false" autocomplete="off"
+                 inputmode="numeric" maxlength="5" placeholder="52250" />
+        </label>
+        <span class="pb-2 text-[12px] text-ink-tertiary">EAN-2 or EAN-5</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Scale <span id="ib-scale-v" class="text-ink-tertiary">3</span>
+          <input id="ib-scale" type="range" min="1" max="8" value="3" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Bar height <span id="ib-height-v" class="text-ink-tertiary">18</span>
+          <input id="ib-height" type="range" min="6" max="40" value="18" />
+        </label>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Bars
+          <input id="ib-bar" type="color" value="#000000" class="h-9 w-full cursor-pointer rounded-md border border-hairline bg-transparent" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Background
+          <input id="ib-bg" type="color" value="#ffffff" class="h-9 w-full cursor-pointer rounded-md border border-hairline bg-transparent" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Text
+          <input id="ib-textcolor" type="color" value="#000000" class="h-9 w-full cursor-pointer rounded-md border border-hairline bg-transparent" />
+        </label>
+      </div>
+
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="ib-label" type="checkbox" class="accent-primary" checked /> Show human-readable digits
+      </label>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free ISBN barcode generator turns any ISBN-10 or ISBN-13 into a
+      Bookland EAN-13 barcode. Type an ISBN and it validates the check digit,
+      auto-corrects it if it's wrong, and shows both the ISBN-13 and ISBN-10
+      forms. Add an optional EAN-2 or EAN-5 supplement for the issue number or
+      list price, tune the size and colors, then download a crisp PNG or a
+      scalable SVG — or copy it straight to your clipboard.
+    </p>
+    <p>
+      Need placeholder numbers? The Random ISBN button mints a valid ISBN-13
+      with a correct check digit for cover mock-ups and catalog testing. These
+      are randomly generated for testing only — a real ISBN must be registered
+      with an official agency. No accounts, no watermarks.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { toCanvas, toSVG, type RenderOpts } from '../lib/barcode';
+  import { parseIsbn } from '../lib/isbn';
+  import { gtinCheckDigit, randInt } from '../lib/random';
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const inputEl = $<HTMLInputElement>('ib-input');
+  const addonEl = $<HTMLInputElement>('ib-addon');
+  const prefixEl = $<HTMLSelectElement>('ib-prefix');
+  const scaleEl = $<HTMLInputElement>('ib-scale');
+  const heightEl = $<HTMLInputElement>('ib-height');
+  const barEl = $<HTMLInputElement>('ib-bar');
+  const bgEl = $<HTMLInputElement>('ib-bg');
+  const textColorEl = $<HTMLInputElement>('ib-textcolor');
+  const labelEl = $<HTMLInputElement>('ib-label');
+  const canvas = $<HTMLCanvasElement>('ib-canvas');
+  const status = $<HTMLElement>('ib-status');
+  const out13 = $('ib-13');
+  const out10 = $('ib-10');
+  const out10wrap = $('ib-10-wrap');
+
+  const noHash = (c: string) => c.replace('#', '');
+  const setStatus = (m: string, color = '') => { status.textContent = m; status.style.color = color; };
+
+  function opts(): RenderOpts | null {
+    const parsed = parseIsbn(inputEl.value);
+    if (!parsed) return null;
+
+    const addon = addonEl.value.replace(/\D/g, '');
+    const text = (addon.length === 2 || addon.length === 5)
+      ? `${parsed.isbn13} ${addon}` : parsed.isbn13;
+    return {
+      bcid: 'ean13',
+      text,
+      guardwhitespace: true,
+      addongap: 12,
+      includetext: labelEl.checked,
+      scale: Number(scaleEl.value),
+      height: Number(heightEl.value),
+      barcolor: noHash(barEl.value),
+      backgroundcolor: noHash(bgEl.value),
+      textcolor: noHash(textColorEl.value),
+      paddingwidth: 6,
+      paddingheight: 4,
+    } as RenderOpts;
+  }
+
+  async function draw() {
+    const parsed = parseIsbn(inputEl.value);
+    if (!parsed) {
+      out13.textContent = out10.textContent = '';
+      out10wrap.style.display = 'none';
+      setStatus('Enter a 10- or 13-digit ISBN.', '#8a8f98');
+      return;
+    }
+    out13.textContent = parsed.grouped;
+    out10.textContent = parsed.isbn10 ?? '';
+    out10wrap.style.display = parsed.isbn10 ? '' : 'none';
+
+    const addon = addonEl.value.replace(/\D/g, '');
+    if (addon.length && addon.length !== 2 && addon.length !== 5) {
+      setStatus('Add-on must be exactly 2 or 5 digits (ignored).', '#f5a623');
+    } else if (!parsed.inputValid) {
+      setStatus('Check digit was wrong — corrected automatically.', '#f5a623');
+    } else {
+      setStatus('Valid ISBN.', '#30a46c');
+    }
+
+    try {
+      await toCanvas(canvas, opts()!);
+    } catch {
+      setStatus('Could not render this barcode.', '#e5484d');
+    }
+  }
+
+  function randomIsbn() {
+    let p = prefixEl.value;
+    for (let i = 0; i < 9; i++) p += randInt(0, 9);
+    inputEl.value = p + gtinCheckDigit(p);
+    draw();
+  }
+
+  function download(href: string, name: string) {
+    const a = document.createElement('a'); a.href = href; a.download = name; a.click();
+  }
+
+  let t: number;
+  inputEl.addEventListener('input', () => { clearTimeout(t); t = window.setTimeout(draw, 180); });
+  addonEl.addEventListener('input', () => { clearTimeout(t); t = window.setTimeout(draw, 180); });
+  [scaleEl, heightEl].forEach((el) => el.addEventListener('input', () => {
+    $('ib-scale-v').textContent = scaleEl.value;
+    $('ib-height-v').textContent = heightEl.value;
+    draw();
+  }));
+  [barEl, bgEl, textColorEl, labelEl].forEach((el) => el.addEventListener('input', draw));
+  $('ib-rand').addEventListener('click', randomIsbn);
+
+  $('ib-png').addEventListener('click', () => {
+    if (opts()) download(canvas.toDataURL('image/png'), 'isbn.png');
+  });
+  $('ib-svg').addEventListener('click', async () => {
+    const o = opts(); if (!o) return;
+    try {
+      const url = URL.createObjectURL(new Blob([await toSVG(o)], { type: 'image/svg+xml' }));
+      download(url, 'isbn.svg');
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch { setStatus('Could not export SVG.', '#e5484d'); }
+  });
+  $('ib-copy').addEventListener('click', () => {
+    if (!opts()) return;
+    canvas.toBlob(async (blob) => {
+      if (!blob || !navigator.clipboard?.write) return;
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        setStatus('Copied PNG to clipboard.', '#30a46c');
+      } catch {}
+    });
+  });
+
+  // Init with a well-known sample ISBN.
+  inputEl.value = '978-0-306-40615-7';
+  draw();
+</script>

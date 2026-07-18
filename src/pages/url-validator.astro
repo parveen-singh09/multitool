@@ -1,0 +1,356 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="url-validator">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      URL(s) — one per line
+      <div class="copy-wrap">
+        <textarea id="uv-in" class="field min-h-32 resize-y font-mono text-[13px]" placeholder="https://example.com/path?q=1#top&#10;example.org" spellcheck="false">https://user@example.com:8080/path/page?q=1&sort=asc#section</textarea>
+        <button type="button" class="copy-icon" data-copy-target="#uv-in" aria-label="Copy"></button>
+      </div>
+    </label>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <button id="uv-run" class="btn btn-primary">Validate</button>
+      <label class="flex items-center gap-2 text-[13px] text-ink-subtle">
+        <input id="uv-dns" type="checkbox" checked class="accent-primary" />
+        Check live DNS (host resolves)
+      </label>
+      <span id="uv-status" class="text-[13px] text-ink-tertiary"></span>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
+      <div class="panel panel-lift p-4"><div id="uv-total" class="font-display text-xl font-semibold text-primary-hover">0</div><div class="mt-1 text-[13px] text-ink-subtle">Total</div></div>
+      <div class="panel p-4"><div id="uv-valid" class="font-mono text-lg text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Valid</div></div>
+      <div class="panel p-4"><div id="uv-risky" class="font-mono text-lg text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Risky</div></div>
+      <div class="panel p-4"><div id="uv-invalid" class="font-mono text-lg text-ink">0</div><div class="mt-1 text-[13px] text-ink-subtle">Invalid</div></div>
+    </div>
+
+    <div id="uv-results" class="flex flex-col gap-3"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free URL validator goes beyond a format check. For each address it
+      parses the URL with the browser's own engine, breaks it into protocol,
+      host, port, path, query and fragment, then runs a series of safety and
+      quality checks: it flags <strong>insecure http</strong>, non-web schemes,
+      embedded <strong>credentials</strong>, non-standard ports,
+      <strong>IP-address</strong> and localhost hosts, internationalised
+      (punycode) domains and known URL shorteners. A bare domain like
+      <code>example.org</code> is auto-normalised to <code>https://</code>.
+    </p>
+    <p>
+      With DNS checking on, both the <strong>TLD</strong> (is
+      <code>.com</code> / <code>.dev</code> a real top-level domain?) and the
+      <strong>full host</strong> are looked up live over secure DNS-over-HTTPS
+      A made-up TLD or a host that doesn't resolve is marked invalid.
+      Known <strong>URL shorteners</strong> (bit.ly, t.co…) are expanded to show
+      their real destination. Paste a whole list to validate in bulk.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const input = document.getElementById('uv-in') as HTMLTextAreaElement;
+  const runBtn = document.getElementById('uv-run') as HTMLButtonElement;
+  const dnsToggle = document.getElementById('uv-dns') as HTMLInputElement;
+  const statusEl = document.getElementById('uv-status')!;
+  const results = document.getElementById('uv-results')!;
+  const totalEl = document.getElementById('uv-total')!;
+  const validEl = document.getElementById('uv-valid')!;
+  const riskyEl = document.getElementById('uv-risky')!;
+  const invalidEl = document.getElementById('uv-invalid')!;
+
+  const WEB_SCHEMES = new Set(['http:', 'https:']);
+  const SHORTENERS = new Set([
+    'bit.ly', 'tinyurl.com', 't.co', 'goo.gl', 'ow.ly', 'is.gd', 'buff.ly',
+    'rebrand.ly', 'cutt.ly', 'shorturl.at', 'rb.gy', 'lnkd.in',
+  ]);
+
+  const IPV4_RE = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+
+  function parse(line: string): { url: URL | null; normalized: boolean } {
+    try {
+      return { url: new URL(line), normalized: false };
+    } catch {}
+    if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(line)) {
+      try {
+        return { url: new URL('https://' + line), normalized: true };
+      } catch {}
+    }
+    return { url: null, normalized: false };
+  }
+
+  function hostType(host: string): 'ip' | 'ipv6' | 'localhost' | 'domain' {
+    if (host === 'localhost') return 'localhost';
+    if (host.startsWith('[')) return 'ipv6';
+    if (IPV4_RE.test(host)) return 'ip';
+    return 'domain';
+  }
+
+  function isPrivateIp(host: string): boolean {
+    const m = IPV4_RE.exec(host);
+    if (!m) return false;
+    const [a, b] = [Number(m[1]), Number(m[2])];
+    return a === 10 || a === 127 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31) || a === 0;
+  }
+
+  const dnsCache = new Map<string, Promise<boolean>>();
+  async function resolves(host: string): Promise<boolean> {
+    if (dnsCache.has(host)) return dnsCache.get(host)!;
+    const p = (async () => {
+      try {
+        const [a, aaaa] = await Promise.all([
+          fetch(`https://dns.google/resolve?name=${encodeURIComponent(host)}&type=A`),
+          fetch(`https://dns.google/resolve?name=${encodeURIComponent(host)}&type=AAAA`),
+        ]);
+        const aj = await a.json();
+        const aaj = await aaaa.json();
+        const has = (j: any) => Array.isArray(j.Answer) && j.Answer.some((r: any) => r.type === 1 || r.type === 5 || r.type === 28);
+        return has(aj) || has(aaj);
+      } catch {
+        return false;
+      }
+    })();
+    dnsCache.set(host, p);
+    return p;
+  }
+
+  const unshortenCache = new Map<string, Promise<string | null>>();
+  async function unshorten(url: string): Promise<string | null> {
+    if (unshortenCache.has(url)) return unshortenCache.get(url)!;
+    const p = (async () => {
+      try {
+        const r = await fetch(`https://unshorten.me/json/${encodeURIComponent(url)}`);
+        const j = await r.json();
+        return j && j.success && typeof j.resolved_url === 'string' ? j.resolved_url : null;
+      } catch {
+        return null;
+      }
+    })();
+    unshortenCache.set(url, p);
+    return p;
+  }
+
+  // Validate the TLD by asking the DNS root whether it has nameservers.
+  // A real TLD (com, uk, dev…) has NS records at the root; a made-up one
+  // (.invalidtld) does not. Reuses DoH — no bundled TLD list to maintain.
+  // Cache per TLD; only a handful of unique TLDs in any list.
+  const tldCache = new Map<string, Promise<boolean>>();
+  async function tldExists(tld: string): Promise<boolean> {
+    if (tldCache.has(tld)) return tldCache.get(tld)!;
+    const p = (async () => {
+      try {
+        const r = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(tld)}&type=NS`);
+        const j = await r.json();
+        return Array.isArray(j.Answer) && j.Answer.some((rec: any) => rec.type === 2);
+      } catch {
+        return false;
+      }
+    })();
+    tldCache.set(tld, p);
+    return p;
+  }
+
+  type Check = { label: string; state: 'ok' | 'bad' | 'warn' | 'wait'; note?: string };
+
+  function chip(c: Check): HTMLSpanElement {
+    const el = document.createElement('span');
+    el.className = 'inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] font-mono';
+    const color = c.state === 'ok' ? '#27a644' : c.state === 'bad' ? '#e5484d' : c.state === 'warn' ? '#d99e3a' : '#62666d';
+    const mark = c.state === 'ok' ? '✓' : c.state === 'bad' ? '✕' : c.state === 'warn' ? '!' : '…';
+    el.style.color = color;
+    el.style.border = `1px solid ${color}44`;
+    el.textContent = `${mark} ${c.label}${c.note ? ': ' + c.note : ''}`;
+    return el;
+  }
+
+  function part(label: string, value: string): HTMLDivElement {
+    const row = document.createElement('div');
+    row.className = 'flex gap-2 text-[13px]';
+    const k = document.createElement('span');
+    k.className = 'text-ink-muted w-20 shrink-0';
+    k.textContent = label;
+    const v = document.createElement('span');
+    v.className = 'font-mono text-ink break-all';
+    v.textContent = value || '—';
+    row.appendChild(k);
+    row.appendChild(v);
+    return row;
+  }
+
+  interface Row {
+    card: HTMLDivElement;
+    verdict: 'valid' | 'risky' | 'invalid';
+  }
+
+  function buildRow(line: string): Row {
+    const card = document.createElement('div');
+    card.className = 'panel p-4 flex flex-col gap-3';
+
+    const head = document.createElement('div');
+    head.className = 'flex flex-wrap items-center gap-2';
+
+    const badge = document.createElement('span');
+    badge.className = 'font-mono text-[13px] font-semibold';
+
+    const addr = document.createElement('span');
+    addr.className = 'font-mono text-[13px] text-ink break-all';
+    addr.textContent = line;
+
+    head.appendChild(badge);
+    head.appendChild(addr);
+    card.appendChild(head);
+
+    const { url, normalized } = parse(line);
+
+    if (!url) {
+      badge.textContent = '✕ invalid';
+      badge.style.color = '#e5484d';
+      const checksEl = document.createElement('div');
+      checksEl.className = 'flex flex-wrap gap-2';
+      checksEl.appendChild(chip({ label: 'Syntax', state: 'bad', note: 'not a URL' }));
+      card.appendChild(checksEl);
+      return { card, verdict: 'invalid' };
+    }
+
+    const host = url.hostname.toLowerCase();
+    const ht = hostType(host);
+    const web = WEB_SCHEMES.has(url.protocol);
+    const insecure = url.protocol === 'http:';
+    const creds = !!(url.username || url.password);
+    const punycode = host.includes('xn--');
+    const shortener = SHORTENERS.has(host);
+    const oddPort = url.port !== '' && !((url.protocol === 'http:' && url.port === '80') || (url.protocol === 'https:' && url.port === '443'));
+
+    // Verdict: parseable but non-web / insecure / creds / shortener → risky.
+    let verdict: Row['verdict'] = 'valid';
+    if (!web || insecure || creds || shortener) verdict = 'risky';
+
+    const setBadge = (v: Row['verdict']) => {
+      verdict = v;
+      const color = v === 'valid' ? '#27a644' : v === 'risky' ? '#d99e3a' : '#e5484d';
+      badge.style.color = color;
+      badge.textContent = v === 'valid' ? '✓ valid' : v === 'risky' ? '! risky' : '✕ invalid';
+    };
+    setBadge(verdict);
+
+    if (normalized) {
+      const s = document.createElement('span');
+      s.className = 'ml-auto text-[13px] text-ink-muted';
+      s.textContent = `Read as ${url.href}`;
+      head.appendChild(s);
+    }
+
+    const checksEl = document.createElement('div');
+    checksEl.className = 'flex flex-wrap gap-2';
+
+    const checks: Check[] = [
+      { label: 'Syntax', state: 'ok' },
+      { label: 'Scheme', state: web ? (insecure ? 'warn' : 'ok') : 'warn', note: insecure ? 'insecure http' : url.protocol.replace(':', '') },
+      { label: 'Host', state: ht === 'domain' ? 'ok' : 'warn', note: ht === 'domain' ? undefined : ht },
+    ];
+    if (creds) checks.push({ label: 'Credentials', state: 'warn', note: 'embedded in URL' });
+    if (oddPort) checks.push({ label: 'Port', state: 'warn', note: url.port });
+    if (punycode) checks.push({ label: 'IDN', state: 'warn', note: 'punycode' });
+
+    const netCheckable = dnsToggle.checked && ht === 'domain' && !isPrivateIp(host);
+    let tldChip: HTMLSpanElement | null = null;
+    let dnsChip: HTMLSpanElement | null = null;
+    let shortChip: HTMLSpanElement | null = null;
+
+    checks.forEach((c) => checksEl.appendChild(chip(c)));
+    if (shortener) {
+      shortChip = chip({ label: 'Shortener', state: 'warn', note: netCheckable ? 'resolving…' : 'redirects' });
+      checksEl.appendChild(shortChip);
+    }
+    if (netCheckable) {
+      tldChip = chip({ label: 'TLD', state: 'wait' });
+      dnsChip = chip({ label: 'DNS', state: 'wait' });
+      checksEl.appendChild(tldChip);
+      checksEl.appendChild(dnsChip);
+    }
+    card.appendChild(checksEl);
+
+    const parts = document.createElement('div');
+    parts.className = 'flex flex-col gap-1 border-t border-white/5 pt-2';
+    parts.appendChild(part('Protocol', url.protocol));
+    parts.appendChild(part('Host', url.hostname));
+    parts.appendChild(part('Port', url.port));
+    parts.appendChild(part('Path', url.pathname));
+    parts.appendChild(part('Query', url.search));
+    parts.appendChild(part('Fragment', url.hash));
+    card.appendChild(parts);
+
+    const row: Row = { card, verdict };
+
+    // Async network checks update their chips and may downgrade the verdict.
+    // A bad TLD is fatal (invalid); DNS not resolving is fatal too.
+    if (netCheckable) {
+      const tld = host.slice(host.lastIndexOf('.') + 1);
+      tldExists(tld).then((ok) => {
+        tldChip!.replaceWith(tldChip = chip(ok
+          ? { label: 'TLD', state: 'ok', note: `.${tld}` }
+          : { label: 'TLD', state: 'bad', note: `.${tld} not a real TLD` }));
+        if (!ok) { setBadge('invalid'); row.verdict = 'invalid'; }
+        recount();
+      });
+      resolves(host).then((ok) => {
+        dnsChip!.replaceWith(dnsChip = chip(ok
+          ? { label: 'DNS', state: 'ok', note: 'resolves' }
+          : { label: 'DNS', state: 'bad', note: 'host not found' }));
+        if (!ok) { setBadge('invalid'); row.verdict = 'invalid'; }
+        recount();
+      });
+    }
+
+    // Async shortener resolution: reveal the real destination, or fall back
+    // to the plain "redirects" flag if the service is down / rate-limited.
+    if (shortener && netCheckable) {
+      unshorten(url.href).then((dest) => {
+        if (dest) {
+          shortChip!.replaceWith(shortChip = chip({ label: 'Shortener', state: 'warn', note: 'expanded ↓' }));
+          const d = part('→ Destination', dest);
+          (d.lastChild as HTMLElement).classList.add('text-primary-hover');
+          parts.prepend(d);
+        } else {
+          shortChip!.replaceWith(shortChip = chip({ label: 'Shortener', state: 'warn', note: 'redirects' }));
+        }
+      });
+    }
+
+    return row;
+  }
+
+  let rows: Row[] = [];
+
+  function recount() {
+    totalEl.textContent = String(rows.length);
+    validEl.textContent = String(rows.filter((r) => r.verdict === 'valid').length);
+    riskyEl.textContent = String(rows.filter((r) => r.verdict === 'risky').length);
+    invalidEl.textContent = String(rows.filter((r) => r.verdict === 'invalid').length);
+  }
+
+  async function validate() {
+    const lines = input.value.split('\n').map((l) => l.trim()).filter((l) => l !== '');
+    results.replaceChildren();
+    rows = lines.map(buildRow);
+    rows.forEach((r) => results.appendChild(r.card));
+    recount();
+
+    if (dnsToggle.checked && (dnsCache.size || tldCache.size || unshortenCache.size)) {
+      statusEl.textContent = 'Looking up TLD / DNS / redirects…';
+      await Promise.allSettled([...dnsCache.values(), ...tldCache.values(), ...unshortenCache.values()]);
+      statusEl.textContent = '';
+    }
+  }
+
+  runBtn.addEventListener('click', validate);
+  input.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') validate();
+  });
+  validate();
+</script>

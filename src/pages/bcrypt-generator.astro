@@ -1,0 +1,94 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="bcrypt-generator">
+  <div class="flex flex-col gap-6">
+    <div class="flex flex-col gap-4">
+      <h2 class="font-display text-lg font-semibold text-ink">Hash a password</h2>
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-1 flex-col gap-1 text-sm text-ink-subtle">Password
+          <input id="bc-pass" class="field font-mono text-[13px]" value="correct horse battery staple" spellcheck="false" autocomplete="off" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Cost (rounds)
+          <input id="bc-cost" type="number" min="4" max="15" value="10" class="field w-24" />
+        </label>
+        <button id="bc-hash" type="button" class="btn btn-primary">Hash</button>
+      </div>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Bcrypt hash
+        <div class="copy-wrap">
+          <input id="bc-out" class="field font-mono text-[13px]" readonly aria-label="Bcrypt hash" />
+          <button type="button" class="copy-icon" data-copy-target="#bc-out" aria-label="Copy"></button>
+        </div>
+      </label>
+    </div>
+
+    <div class="flex flex-col gap-4 border-t border-hairline pt-6">
+      <h2 class="font-display text-lg font-semibold text-ink">Verify a password</h2>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Password
+          <input id="bc-vpass" class="field font-mono text-[13px]" spellcheck="false" autocomplete="off" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Hash to check against
+          <input id="bc-vhash" class="field font-mono text-[13px]" spellcheck="false" autocomplete="off" />
+        </label>
+      </div>
+      <div class="flex items-center gap-3">
+        <button id="bc-verify" type="button" class="btn btn-secondary">Verify</button>
+        <span id="bc-result" class="text-sm"></span>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free bcrypt generator hashes passwords with the bcrypt algorithm and
+      verifies a password against an existing bcrypt hash. Bcrypt is deliberately
+      slow and salts every hash automatically, which is exactly what you want for
+      storing passwords. A higher cost factor means more rounds and stronger
+      resistance to brute force, at the price of speed.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const passEl = $('bc-pass') as HTMLInputElement;
+  const costEl = $('bc-cost') as HTMLInputElement;
+  const outEl = $('bc-out') as HTMLInputElement;
+  const vpassEl = $('bc-vpass') as HTMLInputElement;
+  const vhashEl = $('bc-vhash') as HTMLInputElement;
+  const resultEl = $('bc-result')!;
+
+  async function bc() {
+    const mod = await import('bcryptjs');
+    return (mod.default ?? mod) as typeof import('bcryptjs');
+  }
+
+  $('bc-hash').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    btn.disabled = true; btn.textContent = 'Hashing…';
+    try {
+      const bcrypt = await bc();
+      const cost = Math.max(4, Math.min(15, Number(costEl.value) || 10));
+      const salt = bcrypt.genSaltSync(cost);
+      outEl.value = bcrypt.hashSync(passEl.value, salt);
+      vhashEl.value = outEl.value;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Hash';
+    }
+  });
+
+  $('bc-verify').addEventListener('click', async () => {
+    resultEl.textContent = 'Checking…'; resultEl.style.color = '';
+    try {
+      const bcrypt = await bc();
+      const ok = bcrypt.compareSync(vpassEl.value, vhashEl.value.trim());
+      resultEl.textContent = ok ? '✓ Match — the password is correct.' : '✗ No match.';
+      resultEl.style.color = ok ? '#27a644' : '#e5484d';
+    } catch {
+      resultEl.textContent = 'That does not look like a valid bcrypt hash.';
+      resultEl.style.color = '#e5484d';
+    }
+  });
+</script>

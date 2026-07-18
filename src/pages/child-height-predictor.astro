@@ -1,0 +1,125 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="child-height-predictor">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Units
+      <select id="chp-units" class="field">
+        <option value="cm">Centimetres (cm)</option>
+        <option value="in">Inches (in)</option>
+      </select>
+    </label>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Mother's height (<span class="chp-unit">cm</span>)
+        <input id="chp-mother" type="number" min="1" step="0.1" value="165" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Father's height (<span class="chp-unit">cm</span>)
+        <input id="chp-father" type="number" min="1" step="0.1" value="178" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Child's sex
+        <select id="chp-sex" class="field">
+          <option value="m">Boy</option>
+          <option value="f">Girl</option>
+        </select>
+      </label>
+    </div>
+
+    <button id="chp-go" type="button" class="btn btn-primary self-start">Predict height</button>
+
+    <p id="chp-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="panel panel-lift p-4 text-center">
+      <div class="copy-wrap">
+        <div id="chp-result" class="font-display text-2xl font-semibold text-primary-hover">—</div>
+        <button type="button" class="copy-icon" data-copy-target="#chp-result" aria-label="Copy"></button>
+      </div>
+      <div class="mt-1 text-[13px] text-ink-subtle">Predicted adult height</div>
+    </div>
+
+    <div class="panel p-4 text-center">
+      <div id="chp-range" class="font-mono text-lg text-ink">—</div>
+      <div class="mt-1 text-[13px] text-ink-subtle">Likely range (± 8.5 cm)</div>
+    </div>
+
+    <div class="panel p-4 text-[13px] text-ink-muted">
+      Uses the mid-parental (Tanner) method. Actual adult height depends on
+      genetics, nutrition and health, so treat this as a rough guide only.
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free child height predictor estimates a child's likely adult height
+      from the parents' heights using the mid-parental method. It averages the
+      two parents' heights, adjusts for the child's sex, and shows a predicted
+      height with a typical range. Switch between centimetres and inches with the
+      unit toggle.
+    </p>
+    <p>
+      For entertainment only — this is a novelty tool and not medical, scientific
+      or professional advice.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const unitsEl = document.getElementById('chp-units') as HTMLSelectElement;
+  const motherEl = document.getElementById('chp-mother') as HTMLInputElement;
+  const fatherEl = document.getElementById('chp-father') as HTMLInputElement;
+  const sexEl = document.getElementById('chp-sex') as HTMLSelectElement;
+  const go = document.getElementById('chp-go') as HTMLButtonElement;
+  const err = document.getElementById('chp-error')!;
+  const result = document.getElementById('chp-result')!;
+  const rangeEl = document.getElementById('chp-range')!;
+  const unitLabels = Array.from(document.querySelectorAll('.chp-unit'));
+
+  function refreshUnitLabels() {
+    unitLabels.forEach((el) => (el.textContent = unitsEl.value));
+  }
+
+  function fmt(cm: number): string {
+    if (unitsEl.value === 'in') {
+      return `${(cm / 2.54).toFixed(1)} in`;
+    }
+    return `${cm.toFixed(1)} cm`;
+  }
+
+  function predict() {
+    err.classList.add('hidden');
+    const rawMother = parseFloat(motherEl.value);
+    const rawFather = parseFloat(fatherEl.value);
+
+    if (isNaN(rawMother) || isNaN(rawFather) || rawMother <= 0 || rawFather <= 0) {
+      err.textContent = 'Enter both parents’ heights as positive numbers.';
+      err.classList.remove('hidden');
+      result.textContent = '—';
+      rangeEl.textContent = '—';
+      return;
+    }
+
+    // Normalise to centimetres for the calculation.
+    const motherCm = unitsEl.value === 'in' ? rawMother * 2.54 : rawMother;
+    const fatherCm = unitsEl.value === 'in' ? rawFather * 2.54 : rawFather;
+
+    // Mid-parental method.
+    const midParental = (motherCm + fatherCm) / 2;
+    const predicted = sexEl.value === 'm' ? midParental + 6.5 : midParental - 6.5;
+
+    result.textContent = fmt(predicted);
+    rangeEl.textContent = `${fmt(predicted - 8.5)} – ${fmt(predicted + 8.5)}`;
+  }
+
+  unitsEl.addEventListener('change', () => {
+    refreshUnitLabels();
+    result.textContent = '—';
+    rangeEl.textContent = '—';
+  });
+  go.addEventListener('click', predict);
+  refreshUnitLabels();
+</script>

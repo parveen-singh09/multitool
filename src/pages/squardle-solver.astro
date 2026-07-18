@@ -1,0 +1,129 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="squardle-solver">
+  <div class="flex flex-col gap-5">
+    <div class="flex flex-col gap-2">
+      <div class="eyebrow">Green — correct letter in this position</div>
+      <div id="sq-green" class="flex gap-2"></div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Yellow — letters in the word, wrong spot
+        <input id="sq-yellow" class="field font-mono uppercase tracking-widest" placeholder="e.g. ART" spellcheck="false" autocomplete="off" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Gray — letters NOT in the word
+        <input id="sq-gray" class="field font-mono uppercase tracking-widest" placeholder="e.g. SLND" spellcheck="false" autocomplete="off" />
+      </label>
+    </div>
+
+    <details class="panel p-4 text-[13px] text-ink-subtle">
+      <summary class="cursor-pointer text-ink">Yellow position exclusions (optional, advanced)</summary>
+      <p class="mt-2">Mark which slots a yellow letter is <em>not</em> in. Type letters under each position.</p>
+      <div id="sq-noposgrid" class="mt-3 flex gap-2"></div>
+    </details>
+
+    <div class="flex items-center gap-2">
+      <span id="sq-count" class="status-badge">0 matches</span>
+      <span class="text-[13px] text-ink-tertiary">Ranked by letter commonness</span>
+      <button id="sq-reset" class="btn btn-tertiary ml-auto">Reset</button>
+    </div>
+
+    <div id="sq-results" class="flex flex-wrap gap-1.5"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free Squardle solver finds every valid 5-letter word that fits your
+      clues, using the same green/yellow/gray logic as Squardle and Wordle. Lock
+      in the green letters you know by position, list the yellow letters that are
+      in the word but misplaced, and the gray letters that are ruled out — the
+      matching words appear instantly, ranked so the strongest guesses (with the
+      most common, most-informative letters) come first. Advanced mode lets you
+      exclude specific positions for yellow letters. Everything runs in your
+      browser against a built-in word list.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { WORDS5 } from '../lib/words5.ts';
+
+  const greenWrap = document.getElementById('sq-green')!;
+  const noposWrap = document.getElementById('sq-noposgrid')!;
+  const yellowEl = document.getElementById('sq-yellow') as HTMLInputElement;
+  const grayEl = document.getElementById('sq-gray') as HTMLInputElement;
+  const results = document.getElementById('sq-results')!;
+  const countEl = document.getElementById('sq-count')!;
+
+  const green = ['', '', '', '', ''];
+  const nopos: string[] = ['', '', '', '', ''];
+
+  function buildInputs() {
+    greenWrap.innerHTML = green
+      .map((v, i) => `<input data-i="${i}" maxlength="1" value="${v}" class="h-12 w-12 rounded-md border border-hairline bg-surface-2 text-center font-mono text-xl uppercase text-ink focus:border-primary focus:outline-none" />`)
+      .join('');
+    greenWrap.querySelectorAll<HTMLInputElement>('input[data-i]').forEach((el) => {
+      el.addEventListener('input', () => {
+        green[Number(el.dataset.i)] = el.value.toLowerCase().replace(/[^a-z]/g, '');
+        el.value = green[Number(el.dataset.i)].toUpperCase();
+        if (el.value) { const next = greenWrap.querySelector<HTMLInputElement>(`input[data-i="${Number(el.dataset.i) + 1}"]`); next?.focus(); }
+        solve();
+      });
+    });
+
+    noposWrap.innerHTML = nopos
+      .map((v, i) => `<input data-np="${i}" value="${v.toUpperCase()}" class="h-10 w-full rounded-sm border border-hairline bg-surface-1 text-center font-mono text-[13px] uppercase text-ink-subtle focus:border-hairline-strong focus:outline-none" placeholder="${i + 1}" />`)
+      .join('');
+    noposWrap.querySelectorAll<HTMLInputElement>('input[data-np]').forEach((el) => {
+      el.addEventListener('input', () => { nopos[Number(el.dataset.np)] = el.value.toLowerCase().replace(/[^a-z]/g, ''); solve(); });
+    });
+  }
+
+  function solve() {
+    const yellow = yellowEl.value.toLowerCase().replace(/[^a-z]/g, '');
+    const gray = new Set(grayEl.value.toLowerCase().replace(/[^a-z]/g, '').split(''));
+    const yellowLetters = [...new Set(yellow.split(''))];
+
+    const required = new Set([...green.filter(Boolean), ...yellowLetters]);
+
+    const matches = WORDS5.filter((w) => {
+
+      for (let i = 0; i < 5; i++) if (green[i] && w[i] !== green[i]) return false;
+
+      for (const y of yellowLetters) {
+        if (!w.includes(y)) return false;
+      }
+
+      for (let i = 0; i < 5; i++) {
+        if (nopos[i] && nopos[i].includes(w[i])) return false;
+      }
+
+      for (const ch of w) {
+        if (gray.has(ch) && !required.has(ch)) return false;
+      }
+      return true;
+    });
+
+    const freq: Record<string, number> = {};
+    for (const w of matches) for (const ch of new Set(w.split(''))) freq[ch] = (freq[ch] || 0) + 1;
+    const score = (w: string) => [...new Set(w.split(''))].reduce((a, ch) => a + (freq[ch] || 0), 0);
+    matches.sort((a, b) => score(b) - score(a));
+
+    countEl.textContent = `${matches.length} match${matches.length === 1 ? '' : 'es'}`;
+    results.innerHTML = matches.length
+      ? matches.slice(0, 200).map((w) => `<span class="rounded-sm border border-hairline bg-surface-2 px-2.5 py-1 font-mono text-sm uppercase tracking-wide text-ink">${w}</span>`).join('')
+      : '<span class="text-[13px] text-ink-tertiary">No words match these clues. Double-check your gray letters.</span>';
+  }
+
+  yellowEl.addEventListener('input', solve);
+  grayEl.addEventListener('input', solve);
+  document.getElementById('sq-reset')!.addEventListener('click', () => {
+    green.fill(''); nopos.fill(''); yellowEl.value = ''; grayEl.value = '';
+    buildInputs(); solve();
+  });
+
+  buildInputs();
+  solve();
+</script>

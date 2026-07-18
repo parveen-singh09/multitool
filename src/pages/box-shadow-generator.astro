@@ -1,0 +1,87 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="box-shadow-generator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Horizontal offset: <span id="bs-xv" class="text-ink">0px</span>
+        <input id="bs-x" type="range" min="-50" max="50" value="0" class="w-full accent-primary" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Vertical offset: <span id="bs-yv" class="text-ink">10px</span>
+        <input id="bs-y" type="range" min="-50" max="50" value="10" class="w-full accent-primary" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Blur radius: <span id="bs-bv" class="text-ink">30px</span>
+        <input id="bs-blur" type="range" min="0" max="100" value="30" class="w-full accent-primary" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Spread: <span id="bs-sv" class="text-ink">0px</span>
+        <input id="bs-spread" type="range" min="-50" max="50" value="0" class="w-full accent-primary" />
+      </label>
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Shadow color
+          <input id="bs-color" type="color" value="#5e6ad2" class="field h-10 w-16 cursor-pointer p-1" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Box color
+          <input id="bs-boxcolor" type="color" value="#ffffff" class="field h-10 w-16 cursor-pointer p-1" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Opacity: <span id="bs-ov" class="text-ink">30%</span>
+          <input id="bs-opacity" type="range" min="0" max="100" value="30" class="w-32 accent-primary" />
+        </label>
+        <label class="flex items-center gap-2 text-sm text-ink-subtle"><input id="bs-inset" type="checkbox" class="accent-primary" /> Inset</label>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-4">
+      <div class="flex min-h-56 items-center justify-center rounded-lg border border-hairline bg-surface-2 p-8">
+        <div id="bs-box" class="h-28 w-28 rounded-lg bg-white"></div>
+      </div>
+      <div class="copy-wrap"><code id="bs-css" class="field font-mono text-[13px] hl-block hljs"></code><button type="button" class="copy-icon" data-copy-target="#bs-css" aria-label="Copy"></button></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free CSS box-shadow generator lets you dial in horizontal and vertical
+      offset, blur, spread, color and opacity — with an optional inset shadow —
+      and see the result live on a sample box. When it looks right, copy the exact
+      <code class="font-mono text-ink">box-shadow</code> declaration. It's the
+      fastest way to design elevation and depth for cards, buttons and modals.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { hl } from '../lib/highlight';
+  const $ = (id: string) => document.getElementById(id)!;
+  const box = $('bs-box') as HTMLElement;
+  const cssEl = $('bs-css')!;
+  let rawOutput = '';
+  const ids = ['bs-x', 'bs-y', 'bs-blur', 'bs-spread', 'bs-opacity', 'bs-color', 'bs-boxcolor', 'bs-inset'];
+
+  function hexToRgba(hex: string, a: number): string {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+  }
+
+  function update() {
+    const x = ($('bs-x') as HTMLInputElement).value;
+    const y = ($('bs-y') as HTMLInputElement).value;
+    const blur = ($('bs-blur') as HTMLInputElement).value;
+    const spread = ($('bs-spread') as HTMLInputElement).value;
+    const opacity = Number(($('bs-opacity') as HTMLInputElement).value);
+    const color = ($('bs-color') as HTMLInputElement).value;
+    const boxColor = ($('bs-boxcolor') as HTMLInputElement).value;
+    const inset = ($('bs-inset') as HTMLInputElement).checked;
+    box.style.background = boxColor;
+    $('bs-xv').textContent = `${x}px`; $('bs-yv').textContent = `${y}px`;
+    $('bs-bv').textContent = `${blur}px`; $('bs-sv').textContent = `${spread}px`;
+    $('bs-ov').textContent = `${opacity}%`;
+    const value = `${inset ? 'inset ' : ''}${x}px ${y}px ${blur}px ${spread}px ${hexToRgba(color, opacity / 100)}`;
+    box.style.boxShadow = value;
+    rawOutput = `box-shadow: ${value};`;
+    hl(cssEl, rawOutput, 'css');
+  }
+
+  ids.forEach((id) => $(id).addEventListener('input', update));
+  update();
+</script>

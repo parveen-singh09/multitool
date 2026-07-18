@@ -1,0 +1,162 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="bmr-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap gap-2" role="tablist" aria-label="Units">
+      <button type="button" data-unit="metric" class="bmr-tab btn btn-primary" aria-selected="true">Metric</button>
+      <button type="button" data-unit="imperial" class="bmr-tab btn btn-secondary" aria-selected="false">Imperial</button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Sex
+        <select id="bmr-sex" class="field">
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Age (years)
+        <input id="bmr-age" type="number" min="1" class="field" value="30" inputmode="numeric" />
+      </label>
+    </div>
+
+    <div id="bmr-metric" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Height (cm)
+        <input id="bmr-cm" type="number" min="0" class="field" value="175" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Weight (kg)
+        <input id="bmr-kg" type="number" min="0" class="field" value="70" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div id="bmr-imperial" class="hidden grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Height (ft)
+        <input id="bmr-ft" type="number" min="0" class="field" value="5" inputmode="numeric" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Height (in)
+        <input id="bmr-in" type="number" min="0" class="field" value="9" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Weight (lb)
+        <input id="bmr-lb" type="number" min="0" class="field" value="154" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Equation
+        <select id="bmr-eq" class="field">
+          <option value="mifflin">Mifflin-St Jeor</option>
+          <option value="harris">Revised Harris-Benedict</option>
+          <option value="katch">Katch-McArdle (needs body fat)</option>
+        </select>
+      </label>
+      <label id="bmr-bf-wrap" class="hidden flex-col gap-1 text-sm text-ink-subtle">Body fat %
+        <input id="bmr-bf" type="number" min="0" max="70" step="0.1" class="field" value="20" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center">
+      <div class="copy-wrap">
+        <div id="bmr-value" class="font-display text-4xl font-semibold text-primary-hover">—</div>
+        <button type="button" class="copy-icon" data-copy-target="#bmr-value" aria-label="Copy"></button>
+      </div>
+      <div class="mt-2 text-sm text-ink-subtle">calories/day at complete rest (BMR)</div>
+    </div>
+
+    <div class="panel p-5">
+      <div class="mb-3 text-sm text-ink-muted">Estimated daily calories by activity level (TDEE)</div>
+      <div id="bmr-tdee" class="flex flex-col gap-2 text-sm"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free BMR calculator estimates your basal metabolic rate — the number
+      of calories your body burns at rest to keep basic functions running. Choose
+      between the Mifflin-St Jeor, Revised Harris-Benedict or Katch-McArdle
+      equations, in metric or imperial units, and see your estimated total daily
+      energy expenditure (TDEE) across common activity levels.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const sel = (id: string) => document.getElementById(id) as unknown as HTMLSelectElement;
+  let unit: 'metric' | 'imperial' = 'metric';
+
+  const ACTIVITY: [string, number][] = [
+    ['Sedentary (little/no exercise)', 1.2],
+    ['Light (1-3 days/week)', 1.375],
+    ['Moderate (3-5 days/week)', 1.55],
+    ['Active (6-7 days/week)', 1.725],
+    ['Very active (hard exercise/job)', 1.9],
+  ];
+
+  function calc() {
+    const sex = sel('bmr-sex').value;
+    const age = Number($('bmr-age').value);
+    let cm: number, kg: number;
+    if (unit === 'metric') {
+      cm = Number($('bmr-cm').value);
+      kg = Number($('bmr-kg').value);
+    } else {
+      cm = (Number($('bmr-ft').value) * 12 + Number($('bmr-in').value)) * 2.54;
+      kg = Number($('bmr-lb').value) * 0.45359237;
+    }
+    const eq = sel('bmr-eq').value;
+    const valueEl = document.getElementById('bmr-value')!;
+    const tdeeEl = document.getElementById('bmr-tdee')!;
+
+    const invalid = () => { valueEl.textContent = '—'; tdeeEl.innerHTML = ''; };
+    if (!(age > 0) || !(cm > 0) || !(kg > 0)) { invalid(); return; }
+
+    let bmr: number;
+    if (eq === 'harris') {
+      bmr = sex === 'male'
+        ? 13.397 * kg + 4.799 * cm - 5.677 * age + 88.362
+        : 9.247 * kg + 3.098 * cm - 4.330 * age + 447.593;
+    } else if (eq === 'katch') {
+      const bf = Number($('bmr-bf').value);
+      if (!(bf > 0 && bf < 70)) { invalid(); return; }
+      bmr = 370 + 21.6 * (kg * (1 - bf / 100));
+    } else {
+      bmr = 10 * kg + 6.25 * cm - 5 * age + (sex === 'male' ? 5 : -161);
+    }
+
+    valueEl.textContent = Math.round(bmr).toLocaleString();
+    tdeeEl.innerHTML = ACTIVITY.map(
+      ([label, mult]) =>
+        `<div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0"><span class="text-ink-subtle">${label}</span><span class="font-mono text-ink-muted">${Math.round(bmr * mult).toLocaleString()} cal</span></div>`,
+    ).join('');
+  }
+
+  // equation → toggle body-fat field
+  sel('bmr-eq').addEventListener('change', () => {
+    document.getElementById('bmr-bf-wrap')!.classList.toggle('hidden', sel('bmr-eq').value !== 'katch');
+    document.getElementById('bmr-bf-wrap')!.classList.toggle('flex', sel('bmr-eq').value === 'katch');
+    calc();
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('.bmr-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      unit = tab.dataset.unit as 'metric' | 'imperial';
+      document.querySelectorAll('.bmr-tab').forEach((t) => {
+        const active = t === tab;
+        t.setAttribute('aria-selected', String(active));
+        t.classList.toggle('btn-primary', active);
+        t.classList.toggle('btn-secondary', !active);
+      });
+      document.getElementById('bmr-metric')!.classList.toggle('hidden', unit !== 'metric');
+      document.getElementById('bmr-metric')!.classList.toggle('grid', unit === 'metric');
+      document.getElementById('bmr-imperial')!.classList.toggle('hidden', unit !== 'imperial');
+      document.getElementById('bmr-imperial')!.classList.toggle('grid', unit === 'imperial');
+      calc();
+    });
+  });
+
+  document
+    .querySelectorAll('#bmr-sex, #bmr-age, #bmr-cm, #bmr-kg, #bmr-ft, #bmr-in, #bmr-lb, #bmr-bf')
+    .forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

@@ -1,0 +1,155 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="random-number">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Min
+        <input id="rn-min" type="number" value="1" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Max
+        <input id="rn-max" type="number" value="100" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        How many
+        <input id="rn-count" type="number" min="1" max="10000" value="1" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Type
+        <select id="rn-type" class="field">
+          <option value="int">Integer</option>
+          <option value="dec">Decimal</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label id="rn-prec-wrap" class="hidden flex-col gap-1 text-sm text-ink-subtle">
+        Decimal places
+        <input id="rn-prec" type="number" min="0" max="10" value="2" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Sort
+        <select id="rn-sort" class="field">
+          <option value="none">None</option>
+          <option value="asc">Ascending</option>
+          <option value="desc">Descending</option>
+        </select>
+      </label>
+      <label class="flex flex-col justify-end gap-2 text-sm text-ink-subtle">
+        <span class="flex items-center gap-2">
+          <input type="checkbox" id="rn-unique" class="accent-primary" /> Unique
+        </span>
+      </label>
+    </div>
+
+    <div class="flex gap-2">
+      <button id="rn-gen" class="btn btn-primary">Generate</button>
+    </div>
+
+    <p id="rn-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <div class="copy-wrap">
+      <div id="rn-out" class="panel panel-lift min-h-24 p-5 font-mono text-lg text-ink" aria-live="polite"></div>
+      <button type="button" class="copy-icon" data-copy-target="#rn-out" aria-label="Copy"></button>
+    </div>
+    <div id="rn-stats" class="hidden grid grid-cols-2 gap-3 sm:grid-cols-4 text-sm"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free random number generator produces random integers or decimals
+      between any minimum and maximum you choose. Generate a single number for a
+      quick draw, or a whole batch — keep every value unique (great for raffles
+      and lotteries), sort ascending or descending, and see a summary of the
+      count, sum, mean and range. Numbers are generated in your browser using a
+      cryptographically strong, bias-free random source.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { randInt, randFloat } from '../lib/random';
+
+  const minEl = document.getElementById('rn-min') as HTMLInputElement;
+  const maxEl = document.getElementById('rn-max') as HTMLInputElement;
+  const countEl = document.getElementById('rn-count') as HTMLInputElement;
+  const typeEl = document.getElementById('rn-type') as HTMLSelectElement;
+  const precEl = document.getElementById('rn-prec') as HTMLInputElement;
+  const precWrap = document.getElementById('rn-prec-wrap')!;
+  const uniqueEl = document.getElementById('rn-unique') as HTMLInputElement;
+  const sortEl = document.getElementById('rn-sort') as HTMLSelectElement;
+  const out = document.getElementById('rn-out')!;
+  const err = document.getElementById('rn-error')!;
+  const stats = document.getElementById('rn-stats')!;
+
+  const randDec = (min: number, max: number, prec: number) => {
+    const v = min + randFloat() * (max - min);
+    const f = 10 ** prec;
+    return Math.round(v * f) / f;
+  };
+
+  function showError(msg: string) {
+    err.textContent = msg;
+    err.classList.remove('hidden');
+    out.textContent = '';
+    stats.classList.add('hidden');
+  }
+
+  function generate() {
+    err.classList.add('hidden');
+    const isDec = typeEl.value === 'dec';
+    precWrap.classList.toggle('hidden', !isDec);
+    precWrap.classList.toggle('flex', isDec);
+
+    let min = Number(minEl.value);
+    let max = Number(maxEl.value);
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return showError('Min and max must be numbers.');
+    if (!isDec) { min = Math.ceil(min); max = Math.floor(max); }
+    if (min > max) [min, max] = [max, min];
+
+    const count = Math.max(1, Math.min(10000, Number(countEl.value) || 1));
+    const prec = Math.max(0, Math.min(10, Number(precEl.value) || 0));
+
+    const span = isDec ? Math.round((max - min) * 10 ** prec) + 1 : max - min + 1;
+    if (uniqueEl.checked && count > span) {
+      return showError(`Can't produce ${count} unique numbers in a range that holds only ${span}.`);
+    }
+
+    let nums: number[] = [];
+    if (uniqueEl.checked) {
+      const pool = new Set<number>();
+      while (pool.size < count) pool.add(isDec ? randDec(min, max, prec) : randInt(min, max));
+      nums = [...pool];
+    } else {
+      for (let i = 0; i < count; i++) nums.push(isDec ? randDec(min, max, prec) : randInt(min, max));
+    }
+
+    if (sortEl.value === 'asc') nums.sort((a, b) => a - b);
+    else if (sortEl.value === 'desc') nums.sort((a, b) => b - a);
+
+    const fmt = (n: number) => (isDec ? n.toFixed(prec) : String(n));
+    out.textContent = nums.map(fmt).join(', ');
+
+    const sum = nums.reduce((s, n) => s + n, 0);
+    const mean = sum / nums.length;
+    stats.innerHTML = [
+      ['Count', String(nums.length)],
+      ['Sum', fmt(sum)],
+      ['Mean', mean.toFixed(isDec ? Math.max(2, prec) : 2)],
+      ['Range', `${fmt(Math.min(...nums))} – ${fmt(Math.max(...nums))}`],
+    ]
+      .map(
+        ([k, v]) =>
+          `<div class="panel p-3"><div class="text-ink-subtle">${k}</div><div class="font-mono text-ink">${v}</div></div>`,
+      )
+      .join('');
+    stats.classList.remove('hidden');
+  }
+
+  typeEl.addEventListener('change', generate);
+  document.getElementById('rn-gen')!.addEventListener('click', generate);
+  generate();
+</script>

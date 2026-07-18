@@ -1,0 +1,163 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="zodiac-generator">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Birth date
+      <input id="zo-date" type="date" value="1995-07-15" class="field w-56" />
+    </label>
+    <div id="zo-cusp" class="hidden panel p-3 text-[13px] text-ink-muted"></div>
+    <div id="zo-out" class="flex flex-col gap-4"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free zodiac sign finder takes a birth date and reveals your Western
+      (tropical) sun sign in full: its symbol, element, quality (modality),
+      polarity, ruling planet and exact date range, along with signature
+      strengths, weaknesses, and lucky number, color and day. It also lists the
+      signs you're most compatible with, flags cusp births near a sign boundary,
+      and gives your Chinese zodiac animal together with its five-element phase.
+    </p>
+    <p>
+      Zodiac readings are for entertainment and self-reflection, not prediction.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const out = $('zo-out');
+  const cusp = $('zo-cusp');
+
+  type Sign = {
+    name: string; sym: string; el: string; mode: string; pol: string;
+    planet: string; range: string; endM: number; endD: number;
+    traits: string; strengths: string; weaknesses: string;
+    color: string; day: string; nums: string; match: string;
+  };
+
+  const SIGNS: Sign[] = [
+    { name: 'Capricorn', sym: '♑', el: 'Earth', mode: 'Cardinal', pol: 'Negative', planet: 'Saturn', range: 'Dec 22 – Jan 19', endM: 1, endD: 19, traits: 'Disciplined, responsible, ambitious', strengths: 'Patient, driven, practical, loyal', weaknesses: 'Rigid, pessimistic, work-obsessed', color: 'Brown', day: 'Saturday', nums: '4, 8, 13, 22', match: 'Taurus, Virgo, Pisces, Scorpio' },
+    { name: 'Aquarius', sym: '♒', el: 'Air', mode: 'Fixed', pol: 'Positive', planet: 'Uranus', range: 'Jan 20 – Feb 18', endM: 2, endD: 18, traits: 'Independent, original, humanitarian', strengths: 'Inventive, open-minded, idealistic', weaknesses: 'Aloof, stubborn, unpredictable', color: 'Electric blue', day: 'Saturday', nums: '4, 7, 11, 22', match: 'Gemini, Libra, Aries, Sagittarius' },
+    { name: 'Pisces', sym: '♓', el: 'Water', mode: 'Mutable', pol: 'Negative', planet: 'Neptune', range: 'Feb 19 – Mar 20', endM: 3, endD: 20, traits: 'Intuitive, compassionate, artistic', strengths: 'Empathetic, gentle, imaginative', weaknesses: 'Escapist, overly trusting, moody', color: 'Sea green', day: 'Thursday', nums: '3, 9, 12, 15', match: 'Cancer, Scorpio, Taurus, Capricorn' },
+    { name: 'Aries', sym: '♈', el: 'Fire', mode: 'Cardinal', pol: 'Positive', planet: 'Mars', range: 'Mar 21 – Apr 19', endM: 4, endD: 19, traits: 'Bold, energetic, competitive', strengths: 'Courageous, confident, enthusiastic', weaknesses: 'Impatient, impulsive, short-tempered', color: 'Red', day: 'Tuesday', nums: '1, 8, 17', match: 'Leo, Sagittarius, Gemini, Aquarius' },
+    { name: 'Taurus', sym: '♉', el: 'Earth', mode: 'Fixed', pol: 'Negative', planet: 'Venus', range: 'Apr 20 – May 20', endM: 5, endD: 20, traits: 'Reliable, patient, devoted', strengths: 'Grounded, loyal, sensual, steady', weaknesses: 'Stubborn, possessive, resistant to change', color: 'Green', day: 'Friday', nums: '2, 6, 9, 12', match: 'Virgo, Capricorn, Cancer, Pisces' },
+    { name: 'Gemini', sym: '♊', el: 'Air', mode: 'Mutable', pol: 'Positive', planet: 'Mercury', range: 'May 21 – Jun 20', endM: 6, endD: 20, traits: 'Curious, adaptable, expressive', strengths: 'Witty, versatile, sociable, quick', weaknesses: 'Restless, indecisive, inconsistent', color: 'Yellow', day: 'Wednesday', nums: '5, 7, 14, 23', match: 'Libra, Aquarius, Aries, Leo' },
+    { name: 'Cancer', sym: '♋', el: 'Water', mode: 'Cardinal', pol: 'Negative', planet: 'Moon', range: 'Jun 21 – Jul 22', endM: 7, endD: 22, traits: 'Loyal, emotional, nurturing', strengths: 'Caring, intuitive, protective, tenacious', weaknesses: 'Moody, clingy, overly sensitive', color: 'Silver', day: 'Monday', nums: '2, 3, 15, 20', match: 'Scorpio, Pisces, Taurus, Virgo' },
+    { name: 'Leo', sym: '♌', el: 'Fire', mode: 'Fixed', pol: 'Positive', planet: 'Sun', range: 'Jul 23 – Aug 22', endM: 8, endD: 22, traits: 'Confident, generous, warm', strengths: 'Charismatic, loyal, creative, bold', weaknesses: 'Proud, domineering, attention-seeking', color: 'Gold', day: 'Sunday', nums: '1, 4, 10, 19', match: 'Aries, Sagittarius, Gemini, Libra' },
+    { name: 'Virgo', sym: '♍', el: 'Earth', mode: 'Mutable', pol: 'Negative', planet: 'Mercury', range: 'Aug 23 – Sep 22', endM: 9, endD: 22, traits: 'Analytical, kind, hardworking', strengths: 'Meticulous, reliable, practical, modest', weaknesses: 'Critical, worrying, perfectionist', color: 'Navy blue', day: 'Wednesday', nums: '5, 14, 15, 23', match: 'Taurus, Capricorn, Cancer, Scorpio' },
+    { name: 'Libra', sym: '♎', el: 'Air', mode: 'Cardinal', pol: 'Positive', planet: 'Venus', range: 'Sep 23 – Oct 22', endM: 10, endD: 22, traits: 'Diplomatic, fair, social', strengths: 'Charming, balanced, cooperative, gracious', weaknesses: 'Indecisive, avoids conflict, self-pitying', color: 'Pink', day: 'Friday', nums: '4, 6, 13, 15', match: 'Gemini, Aquarius, Leo, Sagittarius' },
+    { name: 'Scorpio', sym: '♏', el: 'Water', mode: 'Fixed', pol: 'Negative', planet: 'Pluto', range: 'Oct 23 – Nov 21', endM: 11, endD: 21, traits: 'Passionate, resourceful, brave', strengths: 'Determined, magnetic, loyal, intuitive', weaknesses: 'Jealous, secretive, resentful', color: 'Deep red', day: 'Tuesday', nums: '8, 11, 18, 22', match: 'Cancer, Pisces, Virgo, Capricorn' },
+    { name: 'Sagittarius', sym: '♐', el: 'Fire', mode: 'Mutable', pol: 'Positive', planet: 'Jupiter', range: 'Nov 22 – Dec 21', endM: 12, endD: 21, traits: 'Optimistic, adventurous, honest', strengths: 'Generous, curious, enthusiastic, frank', weaknesses: 'Tactless, restless, over-promises', color: 'Purple', day: 'Thursday', nums: '3, 7, 9, 12', match: 'Aries, Leo, Libra, Aquarius' },
+    { name: 'Capricorn', sym: '♑', el: 'Earth', mode: 'Cardinal', pol: 'Negative', planet: 'Saturn', range: 'Dec 22 – Jan 19', endM: 12, endD: 31, traits: 'Disciplined, responsible, ambitious', strengths: 'Patient, driven, practical, loyal', weaknesses: 'Rigid, pessimistic, work-obsessed', color: 'Brown', day: 'Saturday', nums: '4, 8, 13, 22', match: 'Taurus, Virgo, Pisces, Scorpio' },
+  ];
+
+  const ANIMALS = ['Monkey', 'Rooster', 'Dog', 'Pig', 'Rat', 'Ox', 'Tiger', 'Rabbit', 'Dragon', 'Snake', 'Horse', 'Goat'];
+  const ANIMAL_TRAITS: Record<string, string> = {
+    Rat: 'Quick-witted, resourceful, versatile', Ox: 'Diligent, dependable, strong',
+    Tiger: 'Brave, confident, competitive', Rabbit: 'Gentle, elegant, kind',
+    Dragon: 'Confident, ambitious, charismatic', Snake: 'Wise, intuitive, graceful',
+    Horse: 'Energetic, independent, warm-hearted', Goat: 'Calm, gentle, creative',
+    Monkey: 'Clever, curious, playful', Rooster: 'Observant, hardworking, honest',
+    Dog: 'Loyal, honest, protective', Pig: 'Generous, diligent, compassionate',
+  };
+
+  const ELEMENTS = ['Metal', 'Metal', 'Water', 'Water', 'Wood', 'Wood', 'Fire', 'Fire', 'Earth', 'Earth'];
+
+  const ELEMENT_META: Record<string, { emoji: string; note: string }> = {
+    Fire: { emoji: '🔥', note: 'passionate, dynamic, temperamental' },
+    Earth: { emoji: '🪨', note: 'grounded, practical, dependable' },
+    Air: { emoji: '💨', note: 'intellectual, social, communicative' },
+    Water: { emoji: '💧', note: 'emotional, intuitive, deep' },
+  };
+
+  const esc = (s: string) =>
+    s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
+
+  function find(m: number, d: number): Sign {
+    for (const s of SIGNS) {
+      if (m < s.endM || (m === s.endM && d <= s.endD)) return s;
+    }
+    return SIGNS[0];
+  }
+
+  function daysToEnd(m: number, d: number, s: Sign) {
+    const cum = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+    const doy = (mm: number, dd: number) => cum[mm - 1] + dd;
+    let diff = doy(s.endM, s.endD) - doy(m, d);
+    if (diff < 0) diff += 365; 
+    return diff;
+  }
+
+  function stat(label: string, value: string) {
+    return `<div><div class="text-[11px] uppercase tracking-wide text-ink-tertiary">${label}</div><div class="text-[15px] text-ink">${esc(value)}</div></div>`;
+  }
+
+  function render() {
+    const val = ($('zo-date') as HTMLInputElement).value;
+    if (!val) { out.innerHTML = ''; cusp.classList.add('hidden'); return; }
+    const [y, m, d] = val.split('-').map(Number);
+    const s = find(m, d);
+    const em = ELEMENT_META[s.el];
+    const animal = ANIMALS[y % 12];
+    const cnElement = ELEMENTS[y % 10];
+
+    // Cusp: within 2 days of a sign boundary, on either side.
+    const i = SIGNS.indexOf(s);
+    const prev = SIGNS[(i - 1 + SIGNS.length) % SIGNS.length];
+    const next = SIGNS[(i + 1) % SIGNS.length];
+    const toEnd = daysToEnd(m, d, s);                 // days until this sign ends
+    const sinceStart = 365 - daysToEnd(m, d, prev);   // days since previous sign ended
+    let msg = '';
+    // Skip when the neighbour is the artificial Dec/Jan Capricorn split, not a real boundary.
+    if (toEnd <= 2 && next.name !== s.name) msg = `${s.name}</strong> and <strong class="text-ink">${next.name}`;
+    else if (sinceStart <= 2 && prev.name !== s.name) msg = `${prev.name}</strong> and <strong class="text-ink">${s.name}`;
+    if (msg) {
+      cusp.innerHTML = `✧ You were born on the cusp of <strong class="text-ink">${msg}</strong> — you may share traits of both.`;
+      cusp.classList.remove('hidden');
+    } else cusp.classList.add('hidden');
+
+    out.innerHTML = `
+      <div class="panel panel-lift flex items-center gap-4 p-5">
+        <span class="text-5xl">${s.sym}</span>
+        <div>
+          <div class="text-2xl font-semibold text-ink">${s.name}</div>
+          <div class="text-[13px] text-ink-subtle">${s.range} · ${em.emoji} ${s.el} sign — ${em.note}</div>
+          <p class="mt-1 text-[15px] text-ink-subtle">${esc(s.traits)}.</p>
+        </div>
+      </div>
+
+      <div class="panel panel-lift grid grid-cols-2 gap-4 p-5 sm:grid-cols-4">
+        ${stat('Element', s.el)}
+        ${stat('Quality', s.mode)}
+        ${stat('Polarity', s.pol)}
+        ${stat('Ruling planet', s.planet)}
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div class="panel panel-lift flex flex-col gap-2 p-5">
+          <div class="text-[11px] uppercase tracking-wide text-ink-tertiary">Strengths</div>
+          <p class="text-[15px] text-ink">${esc(s.strengths)}</p>
+          <div class="mt-2 text-[11px] uppercase tracking-wide text-ink-tertiary">Weaknesses</div>
+          <p class="text-[15px] text-ink-subtle">${esc(s.weaknesses)}</p>
+        </div>
+        <div class="panel panel-lift grid grid-cols-2 gap-4 p-5">
+          ${stat('Lucky color', s.color)}
+          ${stat('Lucky day', s.day)}
+          ${stat('Lucky numbers', s.nums)}
+          ${stat('Best matches', s.match)}
+        </div>
+      </div>
+
+      <div class="panel panel-lift flex flex-col gap-2 p-5">
+        <div class="text-[11px] uppercase tracking-wide text-ink-tertiary">Chinese zodiac</div>
+        <div class="text-xl font-semibold text-ink">${cnElement} ${animal}</div>
+        <p class="text-[15px] text-ink-subtle">${ANIMAL_TRAITS[animal]}. Based on birth year ${y}.</p>
+      </div>`;
+  }
+
+  $('zo-date').addEventListener('input', render);
+  render();
+</script>

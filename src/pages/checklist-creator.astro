@@ -1,0 +1,417 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+
+const TEMPLATES: Record<string, string> = {
+  'Travel packing': `# Documents
+Passport and tickets
+Travel insurance
+Booking confirmations
+# Tech
+Phone charger
+Chargers and adapters
+Power bank
+# Essentials
+Toiletries
+Reusable water bottle
+Medication`,
+  'New hire onboarding': `# Before day one
+Send offer letter
+Set up email account
+Order laptop
+# First day
+Office / tools tour
+Intro to the team
+Assign a buddy
+# First week
+Grant system access
+Book 1:1 with manager
+Review team docs`,
+  'Weekly cleaning': `# Kitchen
+Wipe counters
+Clean sink
+Take out trash
+# Bathroom
+Scrub toilet
+Wipe mirror
+Mop floor
+# Living areas
+Vacuum
+Dust surfaces
+Change bed sheets`,
+  'Event planning': `# 4 weeks out
+Set budget
+Pick venue
+Send invites
+# 1 week out
+Confirm headcount
+Order food
+Prepare playlist
+# Day of
+Set up space
+Test AV
+Welcome guests`,
+};
+---
+
+<ToolLayout slug="checklist-creator">
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="flex flex-col gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Checklist title
+        <input id="clc-title" class="field" type="text" value="Packing List" />
+      </label>
+
+      <div class="grid grid-cols-2 gap-2">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Start from a template
+          <select id="clc-template" class="field" data-templates={JSON.stringify(TEMPLATES)}>
+            <option value="">Choose a template…</option>
+            {Object.keys(TEMPLATES).map((name) => <option value={name}>{name}</option>)}
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+          Saved checklists
+          <select id="clc-saved" class="field">
+            <option value="">— none saved —</option>
+          </select>
+        </label>
+      </div>
+
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Tasks — one per line, use <code class="text-ink">#</code> for a section
+        <div class="copy-wrap">
+          <textarea id="clc-input" class="field min-h-72 resize-y font-mono text-[13px]" spellcheck="false"># To pack
+Passport and tickets
+Phone charger
+Toiletries
+Chargers and adapters
+Reusable water bottle</textarea>
+          <button type="button" class="copy-icon" data-copy-target="#clc-input" aria-label="Copy"></button>
+        </div>
+      </label>
+
+      <div class="flex flex-wrap gap-2">
+        <button id="clc-save" class="btn btn-primary">Save</button>
+        <button id="clc-delete" class="btn btn-secondary">Delete saved</button>
+        <button id="clc-reset" class="btn btn-secondary">Uncheck all</button>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button id="clc-print" class="btn btn-secondary">Print</button>
+        <button id="clc-copy" class="btn btn-secondary">Copy as text</button>
+        <button id="clc-download" class="btn btn-secondary">Download .md</button>
+        <button id="clc-share" class="btn btn-secondary">Copy share link</button>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-3">
+      <div class="flex items-center justify-between">
+        <span class="text-sm text-ink-subtle">Checklist</span>
+        <span id="clc-progress-label" class="text-[13px] text-ink-subtle"></span>
+      </div>
+      <div class="h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
+        <div id="clc-progress-bar" class="h-full rounded-full bg-primary transition-all" style="width:0%"></div>
+      </div>
+      <div class="panel p-4">
+        <h2 id="clc-heading" class="font-display text-lg font-semibold text-ink"></h2>
+        <div id="clc-list" class="mt-3 flex flex-col gap-4"></div>
+        <p id="clc-empty" class="text-sm text-ink-subtle">Type some tasks to build your checklist.</p>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free checklist creator turns a plain list of tasks into an
+      interactive, tickable checklist — with sections, a live progress bar, and
+      reusable saved lists. Type one task per line, start a new section with a
+      line beginning <code class="text-ink">#</code>, and tick items off as you
+      go. Your checked state and saved checklists stay in your browser, so
+      no account is needed.
+    </p>
+    <p>
+      Start from a built-in template, save any number of your own checklists
+      locally, and switch between them. Paste an existing markdown checklist
+      (lines like <code class="text-ink">- [x] task</code>) and it imports the
+      ticked state automatically. When you want to hand a list to someone else,
+      Copy share link encodes the whole checklist into a URL — no sign-up, no
+      server. You can also print a clean copy, copy the list as plain text, or
+      download it as a Markdown file.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const STORE = 'toolsilk:checklist-creator';
+
+  const titleEl = document.getElementById('clc-title') as HTMLInputElement;
+  const input = document.getElementById('clc-input') as HTMLTextAreaElement;
+  const templateSel = document.getElementById('clc-template') as HTMLSelectElement;
+  const savedSel = document.getElementById('clc-saved') as HTMLSelectElement;
+  const list = document.getElementById('clc-list') as HTMLDivElement;
+  const heading = document.getElementById('clc-heading') as HTMLHeadingElement;
+  const empty = document.getElementById('clc-empty') as HTMLParagraphElement;
+  const bar = document.getElementById('clc-progress-bar') as HTMLDivElement;
+  const progressLabel = document.getElementById('clc-progress-label') as HTMLSpanElement;
+
+  const TEMPLATES: Record<string, string> = JSON.parse(
+    document.getElementById('clc-template')!.dataset.templates ||
+
+      '{}',
+  );
+
+  const done = new Set<string>();
+
+  type Item = { section: string; text: string; key: string };
+
+  function parse(): { sections: { name: string; items: Item[] }[]; total: number } {
+    const sections: { name: string; items: Item[] }[] = [];
+    let current: { name: string; items: Item[] } | null = null;
+    let total = 0;
+
+    for (const raw of input.value.split('\n')) {
+      const line = raw.trim();
+      if (line === '') continue;
+      if (line.startsWith('#')) {
+        current = { name: line.replace(/^#+/, '').trim() || 'Section', items: [] };
+        sections.push(current);
+        continue;
+      }
+      if (!current) {
+        current = { name: '', items: [] };
+        sections.push(current);
+      }
+
+      const m = line.match(/^[-*]?\s*(\[( |x|X)\]\s*)?(.*)$/);
+      const preChecked = !!m && (m[2] === 'x' || m[2] === 'X');
+      const text = ((m && m[3]) || line).trim();
+      if (text === '') continue;
+      const key = `${sections.length - 1}\u0000${current.items.length}\u0000${text}`;
+      if (preChecked) done.add(key);
+      current.items.push({ section: current.name, text, key });
+      total++;
+    }
+    return { sections, total };
+  }
+
+  function render(): void {
+    heading.textContent = titleEl.value || 'Checklist';
+    const { sections, total } = parse();
+    list.innerHTML = '';
+    empty.classList.toggle('hidden', total > 0);
+
+    let checkedCount = 0;
+
+    for (const section of sections) {
+      const wrap = document.createElement('div');
+      wrap.className = 'flex flex-col gap-2';
+
+      if (section.name) {
+        const h = document.createElement('h3');
+        h.className = 'text-[13px] font-semibold uppercase tracking-wide text-ink-subtle';
+        h.textContent = section.name;
+        wrap.appendChild(h);
+      }
+
+      for (const item of section.items) {
+        const isDone = done.has(item.key);
+        if (isDone) checkedCount++;
+
+        const li = document.createElement('label');
+        li.className = 'flex cursor-pointer items-start gap-2';
+
+        const box = document.createElement('input');
+        box.type = 'checkbox';
+        box.className = 'mt-1 h-4 w-4 cursor-pointer accent-primary';
+        box.checked = isDone;
+
+        const label = document.createElement('span');
+        label.className = 'text-[15px] leading-relaxed';
+        label.textContent = item.text;
+        label.classList.add(isDone ? 'text-ink-subtle' : 'text-ink');
+        if (isDone) label.classList.add('line-through');
+
+        box.addEventListener('change', () => {
+          if (box.checked) done.add(item.key);
+          else done.delete(item.key);
+          label.classList.toggle('line-through', box.checked);
+          label.classList.toggle('text-ink-subtle', box.checked);
+          label.classList.toggle('text-ink', !box.checked);
+          updateProgress();
+          persist();
+        });
+
+        li.append(box, label);
+        wrap.appendChild(li);
+      }
+      list.appendChild(wrap);
+    }
+
+    updateProgress(checkedCount, total);
+  }
+
+  function updateProgress(checkedCount?: number, total?: number): void {
+    if (checkedCount === undefined || total === undefined) {
+      const boxes = list.querySelectorAll<HTMLInputElement>('input[type=checkbox]');
+      total = boxes.length;
+      checkedCount = [...boxes].filter((b) => b.checked).length;
+    }
+    const pct = total ? Math.round((checkedCount / total) * 100) : 0;
+    bar.style.width = `${pct}%`;
+    progressLabel.textContent = total ? `${checkedCount} / ${total} done · ${pct}%` : '';
+  }
+
+  // ---- plain-text / markdown export -------------------------------------
+  function toMarkdown(): string {
+    const { sections } = parse();
+    const lines = [`# ${titleEl.value || 'Checklist'}`, ''];
+    for (const s of sections) {
+      if (s.name) lines.push(`## ${s.name}`);
+      for (const item of s.items) lines.push(`- [${done.has(item.key) ? 'x' : ' '}] ${item.text}`);
+      lines.push('');
+    }
+    return lines.join('\n').trim() + '\n';
+  }
+
+  // ---- persistence (multiple named lists) -------------------------------
+  type Store = { active: string; lists: Record<string, { body: string; done: string[] }> };
+
+  function load(): Store {
+    try {
+      return JSON.parse(localStorage.getItem(STORE) || '') as Store;
+    } catch {
+      return { active: '', lists: {} };
+    }
+  }
+
+  function persist(): void {
+    const store = load();
+    const name = (titleEl.value || 'Checklist').trim();
+    store.active = name;
+    store.lists[name] = { body: input.value, done: [...done] };
+    localStorage.setItem(STORE, JSON.stringify(store));
+    refreshSavedOptions(name);
+  }
+
+  function refreshSavedOptions(selected: string): void {
+    const store = load();
+    const names = Object.keys(store.lists).sort();
+    savedSel.innerHTML =
+      '<option value="">— saved checklists —</option>' +
+      names.map((n) => `<option value="${n.replace(/"/g, '&quot;')}">${n}</option>`).join('');
+    savedSel.value = names.includes(selected) ? selected : '';
+  }
+
+  const b64 = {
+    enc: (s: string) => btoa(String.fromCharCode(...new TextEncoder().encode(s))),
+    dec: (s: string) => new TextDecoder().decode(Uint8Array.from(atob(s), (c) => c.charCodeAt(0))),
+  };
+
+  function loadFromHash(): boolean {
+    const h = location.hash.replace(/^#/, '');
+    if (!h) return false;
+    try {
+      const { t, b } = JSON.parse(b64.dec(decodeURIComponent(h)));
+      titleEl.value = t || 'Checklist';
+      input.value = b || '';
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function reparseFromScratch(): void {
+    done.clear(); 
+    render();
+  }
+
+  templateSel.addEventListener('change', () => {
+    const t = TEMPLATES[templateSel.value];
+    if (!t) return;
+    titleEl.value = templateSel.value;
+    input.value = t;
+    templateSel.value = '';
+    reparseFromScratch();
+    persist();
+  });
+
+  savedSel.addEventListener('change', () => {
+    const store = load();
+    const entry = store.lists[savedSel.value];
+    if (!entry) return;
+    titleEl.value = savedSel.value;
+    input.value = entry.body;
+    render(); 
+    done.clear();
+    entry.done.forEach((k) => done.add(k));
+    render();
+  });
+
+  document.getElementById('clc-save')!.addEventListener('click', (e) => {
+    persist();
+    const btn = e.currentTarget as HTMLButtonElement;
+    btn.textContent = 'Saved!';
+    setTimeout(() => (btn.textContent = 'Save'), 1500);
+  });
+
+  document.getElementById('clc-delete')!.addEventListener('click', () => {
+    const store = load();
+    const name = (titleEl.value || 'Checklist').trim();
+    delete store.lists[name];
+    localStorage.setItem(STORE, JSON.stringify(store));
+    refreshSavedOptions('');
+  });
+
+  document.getElementById('clc-reset')!.addEventListener('click', () => {
+    done.clear();
+    render();
+    persist();
+  });
+
+  document.getElementById('clc-print')!.addEventListener('click', () => window.print());
+
+  document.getElementById('clc-copy')!.addEventListener('click', async (e) => {
+    await navigator.clipboard.writeText(toMarkdown());
+    const btn = e.currentTarget as HTMLButtonElement;
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = 'Copy as text'), 1500);
+  });
+
+  document.getElementById('clc-download')!.addEventListener('click', () => {
+    const blob = new Blob([toMarkdown()], { type: 'text/markdown' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${(titleEl.value || 'checklist').replace(/[^\w-]+/g, '-').toLowerCase()}.md`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  document.getElementById('clc-share')!.addEventListener('click', async (e) => {
+    const hash = encodeURIComponent(b64.enc(JSON.stringify({ t: titleEl.value, b: input.value })));
+    const url = `${location.origin}${location.pathname}#${hash}`;
+    await navigator.clipboard.writeText(url);
+    const btn = e.currentTarget as HTMLButtonElement;
+    btn.textContent = 'Link copied!';
+    setTimeout(() => (btn.textContent = 'Copy share link'), 1500);
+  });
+
+  titleEl.addEventListener('input', () => {
+    heading.textContent = titleEl.value || 'Checklist';
+  });
+  input.addEventListener('input', reparseFromScratch);
+
+  // init: prefer share-hash, else last active saved list, else default markup
+  const store = load();
+  if (loadFromHash()) {
+    render();
+  } else if (store.active && store.lists[store.active]) {
+    titleEl.value = store.active;
+    input.value = store.lists[store.active].body;
+    render();
+    done.clear();
+    store.lists[store.active].done.forEach((k) => done.add(k));
+    render();
+  } else {
+    render();
+  }
+  refreshSavedOptions(titleEl.value.trim());
+</script>

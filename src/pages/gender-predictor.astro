@@ -1,0 +1,117 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="gender-predictor">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Mother's age at conception
+        <input id="gp-age" type="number" min="18" max="45" step="1" value="27" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Month of conception
+        <select id="gp-month" class="field">
+          <option value="1">January</option>
+          <option value="2">February</option>
+          <option value="3">March</option>
+          <option value="4">April</option>
+          <option value="5">May</option>
+          <option value="6">June</option>
+          <option value="7">July</option>
+          <option value="8">August</option>
+          <option value="9">September</option>
+          <option value="10">October</option>
+          <option value="11">November</option>
+          <option value="12">December</option>
+        </select>
+      </label>
+    </div>
+
+    <button id="gp-go" type="button" class="btn btn-primary self-start">Predict gender</button>
+
+    <p id="gp-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="panel panel-lift p-4 text-center">
+      <div id="gp-result" class="font-display text-2xl font-semibold text-primary-hover">—</div>
+      <div class="mt-1 text-[13px] text-ink-subtle">Traditional Chinese lunar-calendar guess</div>
+    </div>
+
+    <div class="panel p-4 text-[13px] text-ink-muted">
+      This uses the classic Chinese gender chart, which cross-references the
+      mother's age with the conception month. It has no scientific basis.
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free gender predictor guesses whether a baby will be a boy or a girl
+      using the traditional Chinese lunar calendar method. Enter the mother's age
+      at conception and the month the baby was conceived, and the tool reads the
+      answer from the classic Chinese gender chart. Everything runs in your
+      browser and nothing is stored.
+    </p>
+    <p>
+      For entertainment only — this is a novelty tool and not medical, scientific
+      or professional advice.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const ageEl = document.getElementById('gp-age') as HTMLInputElement;
+  const monthEl = document.getElementById('gp-month') as HTMLSelectElement;
+  const go = document.getElementById('gp-go') as HTMLButtonElement;
+  const err = document.getElementById('gp-error')!;
+  const result = document.getElementById('gp-result')!;
+
+  const chart: Record<number, string> = {
+    18: 'BGBGGGGGGGGG',
+    19: 'GBBGBGGBGGGB',
+    20: 'BGGBBGGBGGGG',
+    21: 'BGGGGGGGGGGG',
+    22: 'GBGBBGBGBGGG',
+    23: 'BBGBGBBGBBBB',
+    24: 'BGBGGBBGGGGB',
+    25: 'GBGBGGBGBGGG',
+    26: 'BGBGGGBGGGGG',
+    27: 'GBGBGGBBGGBB',
+    28: 'BGBGGBGGGGBB',
+    29: 'GBBGGGGGBBBB',
+    30: 'BGGGGGGGGGGG',
+    31: 'BGBGGGGGGGBG',
+    32: 'BGBGGGGGGGBG',
+    33: 'GBGBGGGGGBGB',
+    34: 'BGBGGGGGBBBB',
+    35: 'BGBGBGGGBGBG',
+    36: 'GBGBGBGGGBGB',
+    37: 'BGBGBGBGBGBG',
+    38: 'GBGBGBGGBGGB',
+    39: 'BGBGGGBGBGBB',
+    40: 'GBGBGBGBGBGB',
+    41: 'BGBGBGBGBGGG',
+    42: 'GBGBGBGBGBGB',
+    43: 'BGBGBGBGBGBG',
+    44: 'BBGBGBGBGBGB',
+    45: 'GBGBGBGBGBGB',
+  };
+
+  function predict() {
+    err.classList.add('hidden');
+    const age = parseInt(ageEl.value, 10);
+    const month = parseInt(monthEl.value, 10);
+
+    if (isNaN(age) || age < 18 || age > 45) {
+      err.textContent = 'Enter a mother’s age between 18 and 45.';
+      err.classList.remove('hidden');
+      result.textContent = '—';
+      return;
+    }
+
+    const row = chart[age];
+    const code = row.charAt(month - 1);
+    result.textContent = code === 'B' ? "It's a boy!" : "It's a girl!";
+  }
+
+  go.addEventListener('click', predict);
+</script>

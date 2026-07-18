@@ -1,0 +1,107 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="lorem-ipsum">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Amount
+        <input id="li-count" type="number" min="1" max="100" value="3" class="field w-24" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Type
+        <select id="li-type" class="field w-40">
+          <option value="paragraphs">Paragraphs</option>
+          <option value="sentences">Sentences</option>
+          <option value="words">Words</option>
+        </select>
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input type="checkbox" id="li-classic" checked class="accent-primary" />
+        Start with "Lorem ipsum…"
+      </label>
+      <button id="li-generate" class="btn btn-primary ml-auto">Generate</button>
+    </div>
+
+    <div class="copy-wrap">
+      <div id="li-output" class="panel panel-lift flex min-h-52 flex-col gap-4 p-6 text-[15px] leading-relaxed text-ink-muted"></div>
+      <button type="button" id="li-copy-icon" class="copy-icon" aria-label="Copy"></button>
+    </div>
+  </div>
+</ToolLayout>
+
+<script>
+  const WORDS = 'lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua enim ad minim veniam quis nostrud exercitation ullamco laboris nisi aliquip ex ea commodo consequat duis aute irure in reprehenderit voluptate velit esse cillum fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt culpa qui officia deserunt mollit anim id est laborum'.split(' ');
+
+  const CLASSIC = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.';
+
+  const countEl = document.getElementById('li-count') as HTMLInputElement;
+  const typeEl = document.getElementById('li-type') as HTMLSelectElement;
+  const classicEl = document.getElementById('li-classic') as HTMLInputElement;
+  const output = document.getElementById('li-output')!;
+
+  const rand = (n: number) => Math.floor(Math.random() * n);
+  const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
+
+  function makeSentence(): string {
+    const len = 6 + rand(10);
+    const words: string[] = [];
+    for (let i = 0; i < len; i++) words.push(WORDS[rand(WORDS.length)]);
+    let s = words.join(' ');
+
+    if (len > 8) {
+      const pos = 3 + rand(len - 5);
+      words[pos] += ',';
+      s = words.join(' ');
+    }
+    return cap(s) + '.';
+  }
+
+  function makeParagraph(): string {
+    const count = 3 + rand(4);
+    const sentences: string[] = [];
+    for (let i = 0; i < count; i++) sentences.push(makeSentence());
+    return sentences.join(' ');
+  }
+
+  function generate() {
+    const n = Math.max(1, Math.min(100, Number(countEl.value) || 1));
+    const type = typeEl.value;
+    output.innerHTML = '';
+
+    if (type === 'words') {
+      const words: string[] = [];
+      for (let i = 0; i < n; i++) words.push(WORDS[rand(WORDS.length)]);
+      let text = cap(words.join(' ')) + '.';
+      if (classicEl.checked) text = CLASSIC;
+      const p = document.createElement('p');
+      p.textContent = text;
+      output.appendChild(p);
+      return;
+    }
+
+    for (let i = 0; i < n; i++) {
+      const p = document.createElement('p');
+      let text = type === 'paragraphs' ? makeParagraph() : makeSentence();
+      if (i === 0 && classicEl.checked) {
+        text = CLASSIC + (type === 'paragraphs' ? ' ' + text : '');
+      }
+      p.textContent = text;
+      output.appendChild(p);
+    }
+  }
+
+  document.getElementById('li-generate')!.addEventListener('click', generate);
+  // ponytail: local handler — output is multi-paragraph, so copy innerText (keeps
+  // blank lines between paragraphs); the global handler's textContent would flatten them.
+  document.getElementById('li-copy-icon')!.addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLElement;
+    await navigator.clipboard.writeText(output.innerText);
+    btn.classList.add('copied');
+    btn.setAttribute('aria-label', 'Copied');
+    setTimeout(() => { btn.classList.remove('copied'); btn.setAttribute('aria-label', 'Copy'); }, 1500);
+  });
+
+  generate();
+</script>

@@ -1,0 +1,167 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="peptide-calculator">
+  <div class="flex flex-col gap-5">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Peptide in vial (mg)
+        <input id="pep-amount" type="number" min="0" step="0.1" class="field" value="5" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Bacteriostatic water added (mL)
+        <input id="pep-water" type="number" min="0" step="0.1" class="field" value="2" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Desired dose
+        <input id="pep-dose" type="number" min="0" step="1" class="field" value="250" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Dose unit
+        <select id="pep-dose-unit" class="field">
+          <option value="mcg" selected>micrograms (mcg)</option>
+          <option value="mg">milligrams (mg)</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle sm:col-span-2">Syringe type
+        <select id="pep-syringe" class="field">
+          <option value="100" data-cap="100" selected>1 mL insulin (U-100, 100 units)</option>
+          <option value="100" data-cap="50">0.5 mL insulin (U-100, 50 units)</option>
+          <option value="100" data-cap="30">0.3 mL insulin (U-100, 30 units)</option>
+          <option value="40" data-cap="40">U-40 insulin (40 units / mL)</option>
+        </select>
+      </label>
+    </div>
+
+    <p id="pep-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div class="panel panel-lift p-5 text-center">
+        <div class="text-[13px] text-ink-subtle">Draw to</div>
+        <div class="copy-wrap">
+          <div id="pep-units" class="mt-1 font-display text-3xl font-semibold text-primary-hover">—</div>
+          <button type="button" class="copy-icon" data-copy-target="#pep-units" aria-label="Copy"></button>
+        </div>
+        <div class="text-xs text-ink-tertiary">syringe units</div>
+      </div>
+      <div class="panel panel-lift p-5 text-center">
+        <div class="text-[13px] text-ink-subtle">Volume</div>
+        <div class="copy-wrap">
+          <div id="pep-volume" class="mt-1 font-display text-3xl font-semibold text-ink">—</div>
+          <button type="button" class="copy-icon" data-copy-target="#pep-volume" aria-label="Copy"></button>
+        </div>
+        <div class="text-xs text-ink-tertiary">mL per dose</div>
+      </div>
+      <div class="panel panel-lift p-5 text-center">
+        <div class="text-[13px] text-ink-subtle">Concentration</div>
+        <div class="copy-wrap">
+          <div id="pep-conc" class="mt-1 font-display text-3xl font-semibold text-ink">—</div>
+          <button type="button" class="copy-icon" data-copy-target="#pep-conc" aria-label="Copy"></button>
+        </div>
+        <div class="text-xs text-ink-tertiary">mcg / unit</div>
+      </div>
+    </div>
+
+    <div id="pep-doses" class="text-center text-sm text-ink-muted"></div>
+
+    <div class="panel p-5">
+      <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
+        At <input id="pep-perweek" type="number" min="0" step="1" class="field w-20" value="7" inputmode="numeric" /> doses per week,
+        <span id="pep-weekly" class="text-ink-muted">—</span>
+      </div>
+    </div>
+
+    <div class="panel p-5">
+      <div class="mb-3 text-sm text-ink-muted">Reverse: how much water for a target draw?</div>
+      <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
+        To make the dose above sit at
+        <input id="pep-target-units" type="number" min="0" step="1" class="field w-24" value="25" inputmode="decimal" /> units, add
+        <span id="pep-target-water" class="font-mono text-lg text-primary-hover">—</span>
+        <span class="text-[13px] text-ink-tertiary">of bacteriostatic water</span>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free peptide reconstitution calculator tells you exactly how far to
+      draw on an insulin syringe for a target dose. Enter how many milligrams of
+      peptide are in the vial, how much bacteriostatic water you added, and your
+      desired dose — it computes the concentration, the volume per dose and the
+      syringe units to draw (for U-100, U-50 or U-40 syringes). It also shows how
+      many doses the vial holds. This is a math tool for reference only; it is not
+      medical advice and does not endorse any use. Follow your healthcare
+      provider’s guidance.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const sel = (id: string) => document.getElementById(id) as unknown as HTMLSelectElement;
+  const err = document.getElementById('pep-error')!;
+
+  function setDash() {
+    document.getElementById('pep-units')!.textContent = '—';
+    document.getElementById('pep-volume')!.textContent = '—';
+    document.getElementById('pep-conc')!.textContent = '—';
+    document.getElementById('pep-doses')!.textContent = '';
+  }
+
+  function calc() {
+    err.classList.add('hidden');
+    const amountMg = Number($('pep-amount').value) || 0;
+    const waterMl = Number($('pep-water').value) || 0;
+    let dose = Number($('pep-dose').value) || 0;
+    const doseUnit = sel('pep-dose-unit').value;
+    const syringeEl = sel('pep-syringe');
+    const unitsPerMl = Number(syringeEl.value); 
+    const opt = syringeEl.options[syringeEl.selectedIndex];
+    const barrelUnits = Number(opt.getAttribute('data-cap')) || unitsPerMl; 
+
+    if (!(amountMg > 0) || !(waterMl > 0) || !(dose > 0)) {
+      setDash();
+      return;
+    }
+
+    const doseMcg = doseUnit === 'mg' ? dose * 1000 : dose;
+    const totalMcg = amountMg * 1000;
+    const concMcgPerMl = totalMcg / waterMl; 
+    const volumeMl = doseMcg / concMcgPerMl; 
+    const drawUnits = volumeMl * unitsPerMl; 
+    const mcgPerUnit = concMcgPerMl / unitsPerMl;
+
+    document.getElementById('pep-units')!.textContent = drawUnits.toFixed(1);
+    document.getElementById('pep-volume')!.textContent = volumeMl.toFixed(3);
+    document.getElementById('pep-conc')!.textContent = mcgPerUnit.toFixed(1);
+
+    if (drawUnits > barrelUnits) {
+      const label = opt.textContent?.trim() || 'this';
+      err.textContent = `That dose needs ${drawUnits.toFixed(1)} units — more than one ${label} syringe holds (${barrelUnits} units). Use less water or split the dose.`;
+      err.classList.remove('hidden');
+    }
+
+    const doses = totalMcg / doseMcg;
+    document.getElementById('pep-doses')!.textContent =
+      `This vial holds about ${doses.toFixed(1)} doses of ${dose} ${doseUnit}.`;
+
+    // Weekly schedule helper.
+    const perWeek = Number($('pep-perweek').value) || 0;
+    const weeklyEl = document.getElementById('pep-weekly')!;
+    if (perWeek > 0) {
+      const weeklyMcg = perWeek * doseMcg;
+      const daysSupply = (doses / perWeek) * 7;
+      const weeklyDisplay = weeklyMcg >= 1000 ? `${(weeklyMcg / 1000).toFixed(2)} mg` : `${Math.round(weeklyMcg)} mcg`;
+      weeklyEl.textContent = `that's ${weeklyDisplay}/week and the vial lasts about ${Math.round(daysSupply)} days (${(daysSupply / 7).toFixed(1)} weeks).`;
+    } else {
+      weeklyEl.textContent = '—';
+    }
+
+    const targetUnits = Number($('pep-target-units').value) || 0;
+    const twEl = document.getElementById('pep-target-water')!;
+
+    twEl.textContent = targetUnits > 0 ? `${((targetUnits * totalMcg) / (doseMcg * unitsPerMl)).toFixed(2)} mL` : '—';
+  }
+
+  document
+    .querySelectorAll('#pep-amount, #pep-water, #pep-dose, #pep-dose-unit, #pep-syringe, #pep-perweek, #pep-target-units')
+    .forEach((el) => el.addEventListener('input', calc));
+  calc();
+</script>

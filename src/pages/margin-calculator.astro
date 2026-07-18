@@ -1,0 +1,76 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="margin-calculator">
+  <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Cost
+        <input id="mg-cost" type="number" min="0" step="0.01" class="field" value="40" inputmode="decimal" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Sale price
+        <input id="mg-price" type="number" min="0" step="0.01" class="field" value="100" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="panel panel-lift p-6 text-center"><div class="copy-wrap"><div id="mg-profit" class="font-display text-4xl font-semibold text-primary-hover">—</div><button type="button" class="copy-icon" data-copy-target="#mg-profit" aria-label="Copy"></button></div><div class="mt-1 text-[13px] text-ink-subtle">Profit</div></div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="panel p-5 text-center"><div id="mg-margin" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Gross margin</div></div>
+      <div class="panel p-5 text-center"><div id="mg-markup" class="font-mono text-xl text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Markup</div></div>
+    </div>
+
+    <div class="panel p-5 flex flex-col gap-3">
+      <div class="text-sm text-ink-muted">Find the sale price for a target margin</div>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Cost
+          <input id="mg-cost2" type="number" min="0" step="0.01" class="field" value="40" inputmode="decimal" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Desired margin (%)
+          <input id="mg-target" type="number" min="0" max="99.99" step="0.1" class="field" value="30" inputmode="decimal" />
+        </label>
+      </div>
+      <div class="flex items-center justify-between border-t border-hairline pt-2"><span class="text-ink-subtle">Required sale price</span><span id="mg-reqprice" class="font-mono text-ink-muted">—</span></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free profit margin calculator turns a cost and sale price into profit,
+      gross margin percentage, and markup percentage. A second panel works
+      backwards to find the sale price you need to hit a target margin.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const cost = document.getElementById('mg-cost') as HTMLInputElement;
+  const price = document.getElementById('mg-price') as HTMLInputElement;
+  const cost2 = document.getElementById('mg-cost2') as HTMLInputElement;
+  const target = document.getElementById('mg-target') as HTMLInputElement;
+  const money = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+  const pct = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 }) + '%';
+
+  function calc() {
+    const c = Number(cost.value) || 0;
+    const p = Number(price.value) || 0;
+    const profit = p - c;
+    const margin = p > 0 ? (profit / p) * 100 : 0;
+    const markup = c > 0 ? (profit / c) * 100 : 0;
+    document.getElementById('mg-profit')!.textContent = money(profit);
+    document.getElementById('mg-margin')!.textContent = pct(margin);
+    document.getElementById('mg-markup')!.textContent = pct(markup);
+  }
+
+  function calcTarget() {
+    const c = Number(cost2.value) || 0;
+    const m = (Number(target.value) || 0) / 100;
+    const reqPrice = m < 1 ? c / (1 - m) : 0;
+    document.getElementById('mg-reqprice')!.textContent = m < 1 ? money(reqPrice) : '—';
+  }
+
+  [cost, price].forEach((el) => el.addEventListener('input', calc));
+  [cost2, target].forEach((el) => el.addEventListener('input', calcTarget));
+  calc();
+  calcTarget();
+</script>

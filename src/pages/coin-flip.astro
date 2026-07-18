@@ -1,0 +1,277 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="coin-flip">
+  <div class="flex flex-col items-center gap-7">
+
+    <div id="cf-stage" class="cf-stage" role="button" tabindex="0" aria-label="Flip the coin">
+      <div id="cf-coin" class="cf-coin">
+        <div class="cf-face cf-heads"><span id="cf-heads-label">Heads</span></div>
+        <div class="cf-face cf-tails"><span id="cf-tails-label">Tails</span></div>
+      </div>
+    </div>
+
+    <div id="cf-grid" class="cf-grid hidden" role="button" tabindex="0" aria-label="Flip all coins"></div>
+
+    <p id="cf-result" class="h-6 text-center text-lg font-semibold text-ink" aria-live="polite"></p>
+
+    <div class="flex flex-wrap items-end justify-center gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Coins per flip
+        <input id="cf-count" type="number" min="1" max="100" value="1" class="field w-28" />
+      </label>
+      <button id="cf-flip" class="btn btn-primary">Flip</button>
+      <button id="cf-reset" class="btn btn-secondary">Reset stats</button>
+      <button id="cf-sound" class="btn btn-secondary" aria-pressed="true" title="Toggle sound">🔊 Sound</button>
+    </div>
+
+    <div class="flex flex-wrap items-end justify-center gap-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Heads =
+        <input id="cf-heads-name" type="text" maxlength="24" value="Heads" class="field w-40" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Tails =
+        <input id="cf-tails-name" type="text" maxlength="24" value="Tails" class="field w-40" />
+      </label>
+    </div>
+
+    <div class="flex gap-8 text-center">
+      <div><div id="cf-heads" class="font-mono text-2xl text-ink">0</div><div id="cf-heads-cap" class="text-[13px] text-ink-subtle">Heads</div><div id="cf-heads-pct" class="text-[12px] text-ink-tertiary">0%</div></div>
+      <div><div id="cf-tails" class="font-mono text-2xl text-ink">0</div><div id="cf-tails-cap" class="text-[13px] text-ink-subtle">Tails</div><div id="cf-tails-pct" class="text-[12px] text-ink-tertiary">0%</div></div>
+      <div><div id="cf-total" class="font-mono text-2xl text-ink">0</div><div class="text-[13px] text-ink-subtle">Total</div></div>
+    </div>
+
+    <p id="cf-log" class="max-w-md break-words text-center font-mono text-[13px] text-ink-tertiary"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free coin flip tool tosses a fair virtual coin for heads or tails — a
+      quick, unbiased way to settle a decision or start a game. Click the coin,
+      press the spacebar, or hit Flip. Rename the two sides to whatever you're
+      deciding (Yes/No, Pizza/Tacos, You/Me) and the coin and tally update to match.
+      Flip one coin or up to 100 at once and watch the running heads/tails count and
+      percentages build — handy for tracking best-of-3 or best-of-5. Each flip uses
+      your browser's secure random source (<code>crypto.getRandomValues</code>), so
+      it's genuinely 50/50.
+    </p>
+  </div>
+</ToolLayout>
+
+<style is:global>
+
+  .cf-stage {
+    perspective: 800px;
+    cursor: pointer;
+    outline: none;
+    border-radius: 9999px;
+  }
+  .cf-stage:focus-visible { box-shadow: 0 0 0 3px rgba(94, 106, 210, 0.5); }
+  .cf-coin {
+    position: relative;
+    width: 10rem;
+    height: 10rem;
+    transform-style: preserve-3d;
+    transition: transform 1s cubic-bezier(0.33, 0, 0.2, 1);
+  }
+  .cf-coin.cf-spinning { transition-timing-function: cubic-bezier(0.15, 0.6, 0.25, 1); }
+  .cf-face {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    border: 4px solid #5e6ad2;
+    background: var(--color-surface-2, #16161c);
+    color: var(--color-ink, #f4f4f6);
+    font-weight: 600;
+    font-size: 1.25rem;
+    text-align: center;
+    padding: 0.5rem;
+    word-break: break-word;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+  .cf-tails { transform: rotateY(180deg); }
+
+  .cf-stage.hidden, .cf-grid.hidden { display: none; }
+  .cf-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    width: 100%;
+    perspective: 800px;
+    cursor: pointer;
+    outline: none;
+  }
+  .cf-grid:focus-visible { box-shadow: 0 0 0 3px rgba(94, 106, 210, 0.5); border-radius: 0.5rem; }
+  .cf-mini {
+    position: relative;
+    width: 10rem;
+    height: 10rem;
+    transform-style: preserve-3d;
+    transition: transform 0.9s cubic-bezier(0.15, 0.6, 0.25, 1);
+  }
+</style>
+
+<script>
+  import { randInt } from '../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const coin = $('cf-coin');
+  const stage = $('cf-stage');
+  const grid = $('cf-grid');
+  const countEl = $('cf-count') as HTMLInputElement;
+  const headsName = $('cf-heads-name') as HTMLInputElement;
+  const tailsName = $('cf-tails-name') as HTMLInputElement;
+
+  let heads = 0, tails = 0;
+  let turns = 0; 
+  let soundOn = true;
+  let busy = false;
+  const recent: string[] = [];
+
+  let audioCtx: AudioContext | null = null;
+  function ding() {
+    if (!soundOn) return;
+    try {
+      audioCtx ??= new (window.AudioContext || (window as any).webkitAudioContext)();
+      const t = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.frequency.setValueAtTime(880, t);
+      osc.frequency.exponentialRampToValueAtTime(1320, t + 0.08);
+      gain.gain.setValueAtTime(0.14, t);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.2);
+    } catch {  }
+  }
+
+  function labels() {
+    const h = headsName.value.trim() || 'Heads';
+    const t = tailsName.value.trim() || 'Tails';
+    $('cf-heads-label').textContent = h;
+    $('cf-tails-label').textContent = t;
+    $('cf-heads-cap').textContent = h;
+    $('cf-tails-cap').textContent = t;
+
+    grid.querySelectorAll<HTMLElement>('.cf-heads span').forEach((s) => (s.textContent = h));
+    grid.querySelectorAll<HTMLElement>('.cf-tails span').forEach((s) => (s.textContent = t));
+    return { h, t };
+  }
+
+  function pct(part: number, total: number) {
+    return total ? `${Math.round((part / total) * 100)}%` : '0%';
+  }
+
+  // Rotation that lands on `isHeads` while always spinning forward from `from`.
+  function landing(from: number, isHeads: boolean) {
+    let deg = from + randInt(4, 6) * 360 + (isHeads ? 0 : 180);
+    if ((Math.round(deg / 180) % 2 === 0) !== isHeads) deg += 180;
+    return deg;
+  }
+
+  function flip() {
+    if (busy) return;
+    const n = Math.max(1, Math.min(100, Number(countEl.value) || 1));
+    const { h, t } = labels();
+
+    const results: boolean[] = [];
+    for (let i = 0; i < n; i++) {
+      const isHeads = randInt(0, 1) === 0;
+      results.push(isHeads);
+      if (isHeads) heads++; else tails++;
+      recent.unshift(isHeads ? 'H' : 'T');
+    }
+    recent.splice(60);
+
+    busy = true;
+    ding();
+    let settleMs = 1000;
+
+    if (n === 1) {
+      grid.classList.add('hidden');
+      stage.classList.remove('hidden');
+      turns = landing(turns, results[0]);
+      coin.classList.add('cf-spinning');
+      coin.style.transform = `rotateY(${turns}deg)`;
+    } else {
+      // Grid of individual coins, each landing on its own result with a cascade.
+      stage.classList.add('hidden');
+      grid.classList.remove('hidden');
+      grid.innerHTML = results
+        .map(
+          () =>
+            `<div class="cf-mini"><div class="cf-face cf-heads"><span>${h}</span></div><div class="cf-face cf-tails"><span>${t}</span></div></div>`,
+        )
+        .join('');
+      const minis = grid.querySelectorAll<HTMLElement>('.cf-mini');
+      const step = Math.min(30, 600 / n); // total stagger capped ~600ms
+      settleMs = 900 + Math.round(step * (n - 1)) + 60;
+      requestAnimationFrame(() => {
+        minis.forEach((m, i) => {
+          m.style.transitionDelay = `${Math.round(step * i)}ms`;
+          m.style.transform = `rotateY(${landing(0, results[i])}deg)`;
+        });
+      });
+    }
+
+    const total = heads + tails;
+    $('cf-heads').textContent = String(heads);
+    $('cf-tails').textContent = String(tails);
+    $('cf-total').textContent = String(total);
+    $('cf-heads-pct').textContent = pct(heads, total);
+    $('cf-tails-pct').textContent = pct(tails, total);
+    $('cf-log').textContent = recent.join(' ');
+    if (n === 1) {
+      $('cf-result').textContent = `${results[0] ? h : t}!`;
+    } else {
+      const nh = results.filter(Boolean).length;
+      $('cf-result').textContent = `${nh} ${h} · ${n - nh} ${t}`;
+    }
+
+    window.setTimeout(() => { busy = false; }, settleMs);
+  }
+
+  $('cf-flip').addEventListener('click', flip);
+  const activate = (e: KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); }
+  };
+  stage.addEventListener('click', flip);
+  stage.addEventListener('keydown', activate);
+  grid.addEventListener('click', flip);
+  grid.addEventListener('keydown', activate);
+  // Global spacebar flips too, unless typing in a field.
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== ' ') return;
+    const el = document.activeElement;
+    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) return;
+    e.preventDefault();
+    flip();
+  });
+
+  headsName.addEventListener('input', labels);
+  tailsName.addEventListener('input', labels);
+
+  $('cf-sound').addEventListener('click', () => {
+    soundOn = !soundOn;
+    const btn = $('cf-sound');
+    btn.setAttribute('aria-pressed', String(soundOn));
+    btn.textContent = soundOn ? '🔊 Sound' : '🔇 Muted';
+  });
+
+  $('cf-reset').addEventListener('click', () => {
+    heads = 0; tails = 0; recent.length = 0;
+    ['cf-heads', 'cf-tails', 'cf-total'].forEach((id) => ($(id).textContent = '0'));
+    $('cf-heads-pct').textContent = '0%';
+    $('cf-tails-pct').textContent = '0%';
+    $('cf-log').textContent = '';
+    $('cf-result').textContent = '';
+    grid.classList.add('hidden');
+    grid.innerHTML = '';
+    stage.classList.remove('hidden');
+  });
+</script>

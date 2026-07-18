@@ -1,0 +1,129 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="ratio-calculator">
+  <div class="flex flex-col gap-6">
+
+    <div class="panel panel-lift flex flex-col gap-3 p-5">
+      <p class="text-sm text-ink">Simplify a ratio (leave the third box blank for a 2-part ratio)</p>
+      <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
+        <input id="rs-a" type="number" class="field w-20 font-mono" value="16" inputmode="numeric" aria-label="Ratio A" /> :
+        <input id="rs-b" type="number" class="field w-20 font-mono" value="9" inputmode="numeric" aria-label="Ratio B" /> :
+        <input id="rs-c" type="number" class="field w-20 font-mono" placeholder="—" inputmode="numeric" aria-label="Ratio C" /> =
+        <span id="rs-out" class="font-mono text-lg text-primary-hover">—</span>
+      </div>
+      <div class="flex flex-wrap gap-x-5 gap-y-1 text-[13px] text-ink-subtle">
+        <span>1:n form <span id="rs-1n" class="font-mono text-ink-muted">—</span></span>
+        <span>n:1 form <span id="rs-n1" class="font-mono text-ink-muted">—</span></span>
+        <span>As fraction <span id="rs-frac" class="font-mono text-ink-muted">—</span></span>
+        <span>As percent <span id="rs-pct" class="font-mono text-ink-muted">—</span></span>
+      </div>
+    </div>
+
+    <div class="panel panel-lift flex flex-col gap-3 p-5">
+      <p class="text-sm text-ink">Scale a ratio</p>
+      <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
+        <input id="rc-a" type="number" class="field w-20 font-mono" value="3" inputmode="decimal" aria-label="Scale A" /> :
+        <input id="rc-b" type="number" class="field w-20 font-mono" value="4" inputmode="decimal" aria-label="Scale B" />
+        <select id="rc-op" class="field w-28"><option value="mul">multiply by</option><option value="div">divide by</option></select>
+        <input id="rc-f" type="number" class="field w-20 font-mono" value="2" inputmode="decimal" aria-label="Factor" /> =
+        <span id="rc-out" class="font-mono text-lg text-primary-hover">—</span>
+      </div>
+    </div>
+
+    <div class="panel panel-lift flex flex-col gap-3 p-5">
+      <p class="text-sm text-ink">Solve equivalent ratios (A : B = C : D — leave one box blank)</p>
+      <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
+        <input id="rp-a" type="number" class="field w-20 font-mono" value="3" inputmode="decimal" aria-label="A" /> :
+        <input id="rp-b" type="number" class="field w-20 font-mono" value="4" inputmode="decimal" aria-label="B" /> =
+        <input id="rp-c" type="number" class="field w-20 font-mono" value="9" inputmode="decimal" aria-label="C" /> :
+        <input id="rp-d" type="number" class="field w-20 font-mono" placeholder="?" inputmode="decimal" aria-label="D" />
+      </div>
+      <p id="rp-out" class="text-sm text-ink-muted"></p>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free ratio calculator simplifies 2-part and 3-part ratios to their
+      lowest whole-number terms, shows the 1:n and n:1 forms plus the fraction and
+      percent equivalents, scales a ratio up or down by any factor, and solves
+      equivalent ratios for whichever value you leave blank (A : B = C : D). It's
+      handy for recipes, mixes, gearing and aspect ratios. All calculations run in
+      your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const gcd = (a: number, b: number): number => (b === 0 ? Math.abs(a) : gcd(b, a % b));
+  const round = (n: number) => Math.round(n * 1e6) / 1e6;
+
+  function simplify() {
+    const a = Math.trunc(Number($('rs-a').value));
+    const b = Math.trunc(Number($('rs-b').value));
+    const cRaw = $('rs-c').value.trim();
+    const hasC = cRaw !== '';
+    const c = Math.trunc(Number(cRaw));
+    const out = document.getElementById('rs-out')!;
+
+    const parts = hasC ? [a, b, c] : [a, b];
+    if (parts.every((n) => n === 0)) { out.textContent = '—'; return; }
+    const g = parts.reduce((acc, n) => gcd(acc, n)) || 1;
+    const simplified = parts.map((n) => n / g);
+    out.textContent = simplified.join(' : ');
+
+    const el = (id: string) => document.getElementById(id)!;
+    if (!hasC && a !== 0 && b !== 0) {
+      el('rs-1n').textContent = `1 : ${round(b / a)}`;
+      el('rs-n1').textContent = `${round(a / b)} : 1`;
+      el('rs-frac').textContent = `${simplified[0]}/${simplified[1]}`;
+      el('rs-pct').textContent = round((a / b) * 100) + '%';
+    } else {
+      ['rs-1n', 'rs-n1', 'rs-frac', 'rs-pct'].forEach((id) => (el(id).textContent = '—'));
+    }
+  }
+
+  function scale() {
+    const a = Number($('rc-a').value);
+    const b = Number($('rc-b').value);
+    const f = Number($('rc-f').value);
+    const div = ($('rc-op') as unknown as HTMLSelectElement).value === 'div';
+    const out = document.getElementById('rc-out')!;
+    if (div && f === 0) { out.textContent = '—'; return; }
+    const factor = div ? 1 / f : f;
+    out.textContent = `${round(a * factor)} : ${round(b * factor)}`;
+  }
+
+  // Solve A:B = C:D for whichever single field is blank.
+  function solve() {
+    const fields = ['rp-a', 'rp-b', 'rp-c', 'rp-d'];
+    const vals = fields.map((id) => ({ id, raw: $(id).value.trim() }));
+    const blanks = vals.filter((v) => v.raw === '');
+    const out = document.getElementById('rp-out')!;
+    if (blanks.length !== 1) {
+      out.textContent = 'Leave exactly one box blank to solve for it.';
+      return;
+    }
+    const [a, b, c, d] = vals.map((v) => Number(v.raw));
+    const blank = blanks[0].id;
+    let result: number, label: string;
+    // a/b = c/d  →  a*d = b*c
+    if (blank === 'rp-a') { if (d === 0) return err(); result = (b * c) / d; label = 'A'; }
+    else if (blank === 'rp-b') { if (c === 0) return err(); result = (a * d) / c; label = 'B'; }
+    else if (blank === 'rp-c') { if (b === 0) return err(); result = (a * d) / b; label = 'C'; }
+    else { if (a === 0) return err(); result = (b * c) / a; label = 'D'; }
+    out.textContent = `${label} = ${round(result)}`;
+    function err() { out.textContent = 'Cannot solve — a needed value is zero.'; }
+  }
+
+  document.querySelectorAll('#rs-a, #rs-b, #rs-c').forEach((el) => el.addEventListener('input', simplify));
+  document.querySelectorAll('#rc-a, #rc-b, #rc-f').forEach((el) => el.addEventListener('input', scale));
+  document.getElementById('rc-op')!.addEventListener('change', scale);
+  document.querySelectorAll('#rp-a, #rp-b, #rp-c, #rp-d').forEach((el) => el.addEventListener('input', solve));
+  simplify();
+  scale();
+  solve();
+</script>

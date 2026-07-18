@@ -1,0 +1,138 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+import { PET_NAME_BANK } from '../lib/gendata';
+
+const groups = ['By pet', 'By vibe'] as const;
+const optionsByGroup = groups.map((g) => ({
+  group: g,
+  items: Object.entries(PET_NAME_BANK).filter(([, c]) => c.group === g),
+}));
+---
+
+<ToolLayout slug="pet-name-generator">
+  <div class="flex flex-col gap-5">
+    <div class="flex flex-wrap items-end gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Category
+        <select id="pn-cat" class="field w-52">
+          {optionsByGroup.map(({ group, items }) => (
+            <optgroup label={group}>
+              {items.map(([key, c]) => <option value={key}>{c.label}</option>)}
+            </optgroup>
+          ))}
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Gender
+        <select id="pn-gender" class="field w-32">
+          <option value="any">Any</option>
+          <option value="boy">Boy</option>
+          <option value="girl">Girl</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="pn-count" type="number" min="4" max="40" value="16" class="field w-24" />
+      </label>
+      <label class="flex items-center gap-2 self-end pb-2.5 text-sm text-ink-subtle">
+        <input id="pn-trait" type="checkbox" class="accent-primary" /> Add a personality trait
+      </label>
+      <button id="pn-gen" class="btn btn-primary ml-auto">Generate</button>
+    </div>
+
+    <div class="copy-wrap">
+      <div id="pn-out" class="grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
+      <button type="button" class="copy-icon" data-copy-target="#pn-out" aria-label="Copy"></button>
+    </div>
+
+    <div id="pn-fav-wrap" class="hidden flex-col gap-2">
+      <h2 class="text-sm font-medium text-ink">Favorites</h2>
+      <div class="copy-wrap">
+        <div id="pn-fav" class="grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
+        <button id="pn-copy-fav" type="button" class="copy-icon" aria-label="Copy"></button>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free pet name generator serves up ideas for dogs, cats, rabbits, birds,
+      reptiles, fish and any small companion. Pick a category — by pet or by vibe
+      (cute, tough, foodie, mythic) — set a gender lean, and generate a batch to
+      shortlist. Turn on "Add a personality trait" for playful combos like
+      "Sleepy Biscuit".
+    </p>
+    <p>
+      Tap any name to save it to Favorites, then hit "Copy all" to grab your
+      shortlist at once.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { PET_TRAITS, petNamePool } from '../lib/gendata';
+  import { sample, pick } from '../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const catEl = $('pn-cat') as HTMLSelectElement;
+  const genderEl = $('pn-gender') as HTMLSelectElement;
+  const countEl = $('pn-count') as HTMLInputElement;
+  const traitEl = $('pn-trait') as HTMLInputElement;
+  const out = $('pn-out');
+  const favWrap = $('pn-fav-wrap');
+  const favBox = $('pn-fav');
+
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  const favorites = new Set<string>();
+
+  const card = (name: string, faved: boolean) =>
+    `<button class="panel px-3 py-2.5 text-center text-[15px] font-medium text-ink transition-colors hover:border-hairline-strong hover:bg-surface-2${
+      faved ? ' border-primary' : ''
+    }" data-n="${name}">${name}</button>`;
+
+  function renderFavorites() {
+    const has = favorites.size > 0;
+    favWrap.classList.toggle('hidden', !has);
+    favWrap.classList.toggle('flex', has);
+    if (!has) return;
+    favBox.innerHTML = [...favorites].map((n) => card(n, true)).join('');
+    favBox.querySelectorAll<HTMLButtonElement>('button').forEach((b) =>
+      b.addEventListener('click', () => {
+        favorites.delete(b.dataset.n!);
+        renderFavorites();
+        generate(); 
+      })
+    );
+  }
+
+  function generate() {
+    const gender = genderEl.value as 'any' | 'boy' | 'girl';
+    const pool = petNamePool(catEl.value, gender);
+    const n = Math.max(4, Math.min(40, Number(countEl.value) || 16));
+    const names = sample(pool, Math.min(n, pool.length)).map((name) =>
+      traitEl.checked ? `${cap(pick(PET_TRAITS))} ${name}` : name
+    );
+    out.innerHTML = names.map((name) => card(name, favorites.has(name))).join('');
+    out.querySelectorAll<HTMLButtonElement>('button').forEach((b) =>
+      b.addEventListener('click', () => {
+        const name = b.dataset.n!;
+        if (favorites.has(name)) favorites.delete(name);
+        else favorites.add(name);
+        b.classList.toggle('border-primary');
+        renderFavorites();
+      })
+    );
+  }
+
+  $('pn-copy-fav').addEventListener('click', async (e) => {
+    await navigator.clipboard.writeText([...favorites].join('\n'));
+    const btn = e.currentTarget as HTMLButtonElement;
+    btn.classList.add('copied');
+    btn.setAttribute('aria-label', 'Copied');
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.setAttribute('aria-label', 'Copy');
+    }, 1500);
+  });
+
+  [catEl, genderEl, countEl, traitEl].forEach((el) => el.addEventListener('input', generate));
+  $('pn-gen').addEventListener('click', generate);
+  generate();
+</script>

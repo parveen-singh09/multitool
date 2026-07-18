@@ -1,0 +1,76 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="brand-name-generator">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Keyword
+      <input id="bn-word" class="field" value="cloud" spellcheck="false" />
+    </label>
+    <div class="flex flex-wrap items-center gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">How many
+        <input id="bn-count" type="number" min="6" max="60" value="24" class="field w-28" />
+      </label>
+      <button id="bn-gen" class="btn btn-primary ml-auto">Generate</button>
+    </div>
+    <div class="copy-wrap">
+      <div id="bn-out" class="grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
+      <button type="button" id="bn-copy" class="copy-icon" aria-label="Copy all names"></button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free brand name generator turns a keyword into inventive brand and
+      startup name ideas. It blends your word with prefixes and suffixes, drops
+      vowels for a modern look, and pairs it with evocative terms — the same
+      techniques behind many tech brand names. Generate a batch and shortlist the
+      ones you can picture as a logo.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { shuffle, pick, randInt } from '../lib/random';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const wordEl = $('bn-word') as HTMLInputElement;
+  const countEl = $('bn-count') as HTMLInputElement;
+  const out = $('bn-out')!;
+
+  const PREFIX = ['Get', 'Go', 'Try', 'Neo', 'Meta', 'Hyper', 'Up', 'Sky', 'Nova', 'Zen', 'Pro', 'Peak'];
+  const SUFFIX = ['ly', 'ify', 'io', 'labs', 'hub', 'kit', 'base', 'flow', 'wave', 'ora', 'ify', 'r', 'zen', 'ade'];
+  const PAIR = ['Forge', 'Spark', 'Loop', 'Grid', 'Pulse', 'Nest', 'Craft', 'Mint', 'Drift', 'Bloom'];
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  function generate() {
+    const w = (wordEl.value.trim().toLowerCase().replace(/[^a-z]/g, '') || 'brand');
+    const n = Math.max(6, Math.min(60, Number(countEl.value) || 24));
+    const ideas = new Set<string>();
+    ideas.add(cap(w));
+    for (const p of PREFIX) ideas.add(p + cap(w));
+    for (const s of SUFFIX) ideas.add(cap(w) + s);
+    for (const p of PAIR) { ideas.add(cap(w) + p); ideas.add(p + cap(w)); }
+
+    const noVowel = w.replace(/[aeiou]/g, (m, i) => (i === 0 ? m : ''));
+    if (noVowel.length >= 3) { ideas.add(cap(noVowel)); ideas.add(cap(noVowel) + 'r'); }
+    const list = shuffle([...ideas]).slice(0, n);
+    out.innerHTML = list.map((name) => `<button class="panel px-3 py-2.5 text-center text-[15px] font-medium text-ink hover:border-hairline-strong" data-n="${name}">${name}</button>`).join('');
+    out.querySelectorAll('button').forEach((b) => b.addEventListener('click', async () => {
+      await navigator.clipboard.writeText((b as HTMLElement).dataset.n!);
+      const orig = b.textContent; b.textContent = 'Copied!';
+      setTimeout(() => (b.textContent = orig), 1000);
+    }));
+  }
+
+  [wordEl, countEl].forEach((el) => el.addEventListener('input', generate));
+  $('bn-gen').addEventListener('click', generate);
+  $('bn-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    const text = [...out.querySelectorAll('button')].map((b) => (b as HTMLElement).dataset.n).join('\n');
+    await navigator.clipboard.writeText(text);
+    btn.classList.add('copied');
+    setTimeout(() => btn.classList.remove('copied'), 1500);
+  });
+  generate();
+</script>

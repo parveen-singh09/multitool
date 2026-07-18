@@ -1,0 +1,597 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="image-metadata-analyzer">
+  <div class="flex flex-col gap-4">
+    <div id="ima-drop" class="panel panel-lift flex min-h-32 cursor-pointer flex-col items-center justify-center gap-2 p-6 text-center text-ink-subtle transition-colors hover:bg-surface-2">
+      <div class="text-sm">Drop any file here or click to choose one</div>
+      <div class="text-[13px] text-ink-muted">Images get full EXIF/GPS; any file shows type, size &amp; embedded metadata</div>
+      <input id="ima-file" type="file" class="hidden" />
+    </div>
+
+    <div class="flex gap-2">
+      <input id="ima-url" type="url" placeholder="…or paste a file URL" class="panel flex-1 bg-surface-2 px-3 py-2 text-sm text-ink placeholder:text-ink-muted outline-none focus:border-hairline-strong" />
+      <button id="ima-url-btn" class="btn btn-primary" type="button">Load</button>
+    </div>
+
+    <p id="ima-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div id="ima-result" class="hidden flex-col gap-4">
+      <div id="ima-preview-wrap" class="panel overflow-hidden p-4">
+        <img id="ima-preview" alt="Selected image preview" class="mx-auto max-h-64 rounded" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-3">
+        <div class="ima-img-only panel panel-lift p-4"><div id="ima-dims" class="font-display text-xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Dimensions</div></div>
+        <div class="panel p-4"><div id="ima-type" class="font-mono text-lg text-ink wrap-break-word">—</div><div class="mt-1 text-[13px] text-ink-subtle">Type</div></div>
+        <div class="panel p-4"><div id="ima-size" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">File size</div></div>
+        <div class="ima-img-only panel p-4"><div id="ima-ratio" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Aspect ratio</div></div>
+        <div class="ima-img-only panel p-4"><div id="ima-mp" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Megapixels</div></div>
+        <div class="panel p-4"><div id="ima-name" class="truncate font-mono text-lg text-ink" title="">—</div><div class="mt-1 text-[13px] text-ink-subtle">File name</div></div>
+      </div>
+
+      <div id="ima-camera" class="hidden">
+        <h2 class="mb-2 font-display text-sm font-semibold text-ink">Camera</h2>
+        <div id="ima-camera-grid" class="grid grid-cols-2 gap-3 sm:grid-cols-4"></div>
+      </div>
+
+      <div id="ima-copyright" class="hidden">
+        <h2 class="mb-2 font-display text-sm font-semibold text-ink">Copyright &amp; authorship</h2>
+        <div id="ima-copyright-grid" class="grid grid-cols-1 gap-3 sm:grid-cols-2"></div>
+      </div>
+
+      <div id="ima-gps" class="hidden">
+        <h2 class="mb-2 font-display text-sm font-semibold text-ink">Location</h2>
+        <div class="panel flex flex-col gap-3 p-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div id="ima-gps-coords" class="font-mono text-[13px] text-ink"></div>
+            <a id="ima-gps-map" href="#" target="_blank" rel="noopener noreferrer" class="text-[13px] text-primary-hover hover:underline">Open in OpenStreetMap →</a>
+          </div>
+          <div id="ima-gps-extra" class="grid grid-cols-3 gap-3 text-center"></div>
+          <iframe id="ima-gps-frame" title="Map of capture location" class="h-64 w-full rounded border border-hairline" loading="lazy" referrerpolicy="no-referrer"></iframe>
+        </div>
+      </div>
+
+      <div id="ima-meta" class="hidden">
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <h2 class="font-display text-sm font-semibold text-ink">All metadata (<span id="ima-meta-count">0</span>)</h2>
+          <input id="ima-search" type="text" placeholder="Filter tags…" class="panel bg-surface-2 px-3 py-1 text-[13px] text-ink placeholder:text-ink-muted outline-none focus:border-hairline-strong" />
+        </div>
+        <div class="panel overflow-hidden">
+          <div class="max-h-96 overflow-auto">
+            <table class="w-full text-left text-[13px]">
+              <tbody id="ima-meta-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="ima-nometa" class="hidden panel p-4 text-[13px] text-ink-subtle">
+        No embedded EXIF, GPS, IPTC or XMP metadata found in this file.
+      </div>
+
+      <div class="ima-img-only panel panel-lift flex flex-col gap-3 p-4">
+        <div>
+          <h2 class="font-display text-sm font-semibold text-ink">Remove metadata</h2>
+          <p class="mt-1 text-[13px] text-ink-subtle">
+            Strip EXIF, GPS, IPTC and XMP before sharing. JPEG is cleaned losslessly
+            (no re-compression); other formats are re-encoded via canvas.
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <button id="ima-strip" class="btn btn-primary" type="button">Download clean copy</button>
+          <span id="ima-strip-note" class="text-[13px] text-ink-muted"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free metadata analyzer reads any file entirely in your browser. Drop an
+      image to reveal everything hidden inside it: pixel dimensions, format, file
+      size, aspect ratio and megapixels, plus the full set of embedded metadata —
+      EXIF camera settings (make, model, lens, exposure, aperture, ISO, focal
+      length, flash), the original capture date, GPS coordinates with a map link,
+      and any IPTC or XMP fields. Drop any other file and you still get its exact
+      type, size and any embedded metadata it carries.
+    </p>
+    <p>
+      You can also <strong>remove all metadata</strong> and download a clean copy,
+      which is useful before posting photos online since EXIF often contains the
+      exact GPS location where a picture was taken. JPEG files are cleaned
+      losslessly by stripping their metadata segments without re-compressing the
+      image; other formats are re-drawn through a canvas.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const drop = document.getElementById('ima-drop') as HTMLElement;
+  const file = document.getElementById('ima-file') as HTMLInputElement;
+  const err = document.getElementById('ima-error')!;
+  const result = document.getElementById('ima-result') as HTMLElement;
+  const preview = document.getElementById('ima-preview') as HTMLImageElement;
+  const set = (id: string, val: string) => { document.getElementById(id)!.textContent = val; };
+
+  let currentFile: File | null = null;
+
+  function sniffType(buf: ArrayBuffer): string {
+    const b = new Uint8Array(buf.slice(0, 16));
+    const ascii = (n: number) => String.fromCharCode(...b.slice(0, n));
+    if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';
+    if (ascii(8) === '\x89PNG\r\n\x1a\n') return 'image/png';
+    if (ascii(3) === 'GIF') return 'image/gif';
+    if (ascii(2) === 'BM') return 'image/bmp';
+    if (ascii(4) === 'RIFF' && ascii(12).slice(8) === 'WEBP') return 'image/webp';
+    if ((b[0] === 0x49 && b[1] === 0x49 && b[2] === 0x2a) || (b[0] === 0x4d && b[1] === 0x4d && b[3] === 0x2a)) return 'image/tiff';
+    if (ascii(12).slice(4) === 'ftyp') {
+      const brand = ascii(12).slice(8);
+      if (brand.startsWith('hei') || brand.startsWith('mif')) return 'image/heic';
+      if (brand.startsWith('avif') || brand.startsWith('avis')) return 'image/avif';
+    }
+    if (ascii(5) === '%PDF-') return 'application/pdf';
+    if (ascii(6) === '<x:xmp') return 'application/rdf+xml';
+    if (ascii(9) === '<?xpacket') return 'application/rdf+xml';
+    if (ascii(5) === '<?xml') return 'application/xml';
+    return '';
+  }
+
+  function parseXmp(xml: string): Record<string, any> | null {
+    let doc: Document;
+    try { doc = new DOMParser().parseFromString(xml, 'application/xml'); } catch { return null; }
+    if (!doc || doc.getElementsByTagName('parsererror').length) return null;
+    const out: Record<string, any> = {};
+    const tk = doc.documentElement?.getAttribute('x:xmptk');
+    if (tk) out.XMPToolkit = tk;
+
+    const value = (el: Element): string | null => {
+
+      const container = Array.from(el.children).find((c) => /^(Seq|Bag|Alt)$/.test(c.localName || ''));
+      if (container) return Array.from(container.children).map((li) => (li.textContent || '').trim()).join(' | ');
+
+      const desc = Array.from(el.children).find((c) => c.localName === 'Description');
+      if (desc) {
+        return Array.from(desc.attributes)
+          .filter((a) => a.prefix !== 'xmlns' && a.name !== 'xmlns')
+          .map((a) => `${a.localName}=${a.value}`).join(', ');
+      }
+      const t = (el.textContent || '').trim();
+      return t || null;
+    };
+
+    for (const el of Array.from(doc.getElementsByTagName('*'))) {
+      if (el.localName !== 'Description') continue;
+      for (const a of Array.from(el.attributes)) {
+        if (a.prefix === 'xmlns' || a.name === 'xmlns' || a.localName === 'about') continue;
+        out[a.localName] = a.value;
+      }
+      for (const child of Array.from(el.children)) {
+        const v = value(child);
+        if (v != null && v !== '') out[child.localName] = v;
+      }
+    }
+    return Object.keys(out).length ? out : null;
+  }
+
+  const hex = (bytes: Uint8Array) =>
+    Array.from(bytes).map((b) => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+
+  async function sha256(f: File): Promise<string> {
+    const h = await crypto.subtle.digest('SHA-256', await f.arrayBuffer());
+    return Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  function gcd(a: number, b: number): number { return b === 0 ? a : gcd(b, a % b); }
+  function fmtSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  }
+
+  const ORIENTATIONS: Record<number, string> = {
+    1: 'Normal', 2: 'Flip horizontal', 3: 'Rotate 180°', 4: 'Flip vertical',
+    5: 'Transpose', 6: 'Rotate 90° CW', 7: 'Transverse', 8: 'Rotate 90° CCW',
+  };
+
+  // Human-friendly formatting for common EXIF values
+  function fmtValue(key: string, v: any): string {
+    if (v == null) return '';
+    if (v instanceof Date) return isNaN(v.getTime()) ? '' : v.toLocaleString();
+    if (Array.isArray(v)) return v.map((x) => fmtValue(key, x)).join(', ');
+    if (typeof v === 'object') {
+      if ('description' in v) return String((v as any).description);
+      return Object.values(v).join(', ');
+    }
+    if (key === 'Orientation' && typeof v === 'number') return ORIENTATIONS[v] || String(v);
+    if (key === 'ExposureTime' && typeof v === 'number' && v > 0 && v < 1) return `1/${Math.round(1 / v)} s`;
+    if (key === 'FNumber' && typeof v === 'number') return `ƒ/${v}`;
+    if (key === 'FocalLength' && typeof v === 'number') return `${v} mm`;
+    if (key === 'ISO') return `ISO ${v}`;
+    if (typeof v === 'number' && !Number.isInteger(v)) return v.toFixed(4).replace(/\.?0+$/, '');
+    return String(v);
+  }
+
+  const CAMERA_KEYS: Array<[string, string]> = [
+    ['Make', 'Make'], ['Model', 'Model'], ['LensModel', 'Lens'],
+    ['FNumber', 'Aperture'], ['ExposureTime', 'Shutter'], ['ISO', 'ISO'],
+    ['FocalLength', 'Focal length'], ['DateTimeOriginal', 'Taken'],
+  ];
+
+  function renderCamera(meta: Record<string, any>) {
+    const grid = document.getElementById('ima-camera-grid')!;
+    const box = document.getElementById('ima-camera')!;
+    grid.innerHTML = '';
+    let any = false;
+    for (const [key, label] of CAMERA_KEYS) {
+      if (meta[key] == null) continue;
+      const val = fmtValue(key, meta[key]);
+      if (!val) continue;
+      any = true;
+      const cell = document.createElement('div');
+      cell.className = 'panel p-3';
+      cell.innerHTML = `<div class="font-mono text-[13px] text-ink break-words"></div><div class="mt-1 text-[13px] text-ink-subtle"></div>`;
+      (cell.firstChild as HTMLElement).textContent = val;
+      (cell.lastChild as HTMLElement).textContent = label;
+      grid.appendChild(cell);
+    }
+    box.classList.toggle('hidden', !any);
+  }
+
+  function renderGps(lat: number | undefined, lon: number | undefined, meta: Record<string, any>) {
+    const box = document.getElementById('ima-gps')!;
+    if (typeof lat !== 'number' || typeof lon !== 'number' || isNaN(lat) || isNaN(lon)) {
+      box.classList.add('hidden');
+      return;
+    }
+    box.classList.remove('hidden');
+    set('ima-gps-coords', `${lat.toFixed(6)}, ${lon.toFixed(6)}`);
+    const link = document.getElementById('ima-gps-map') as HTMLAnchorElement;
+    link.href = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}`;
+
+    const d = 0.008;
+    const frame = document.getElementById('ima-gps-frame') as HTMLIFrameElement;
+    frame.src = `https://www.openstreetmap.org/export/embed.html?bbox=${lon - d}%2C${lat - d}%2C${lon + d}%2C${lat + d}&layer=mapnik&marker=${lat}%2C${lon}`;
+
+    // Altitude / direction / speed when present
+    const extra = document.getElementById('ima-gps-extra')!;
+    extra.innerHTML = '';
+    const alt = meta.GPSAltitude ?? meta.altitude;
+    const dir = meta.GPSImgDirection ?? meta.GPSDestBearing;
+    const speed = meta.GPSSpeed;
+    const cells: Array<[string, string]> = [];
+    if (typeof alt === 'number') cells.push(['Altitude', `${alt.toFixed(1)} m`]);
+    if (typeof dir === 'number') cells.push(['Direction', `${dir.toFixed(0)}°`]);
+    if (typeof speed === 'number') cells.push(['Speed', `${speed.toFixed(1)} ${meta.GPSSpeedRef === 'K' ? 'km/h' : meta.GPSSpeedRef === 'N' ? 'kn' : 'mph'}`]);
+    for (const [label, val] of cells) {
+      const c = document.createElement('div');
+      c.className = 'panel p-2';
+      c.innerHTML = `<div class="font-mono text-[13px] text-ink"></div><div class="mt-0.5 text-[13px] text-ink-subtle"></div>`;
+      (c.firstChild as HTMLElement).textContent = val;
+      (c.lastChild as HTMLElement).textContent = label;
+      extra.appendChild(c);
+    }
+    extra.classList.toggle('hidden', cells.length === 0);
+  }
+
+  const COPYRIGHT_KEYS: Array<[string, string]> = [
+    ['Artist', 'Creator'], ['Copyright', 'Copyright'], ['Rights', 'Right holder'],
+    ['creator', 'Creator'], ['rights', 'Copyright'], ['UsageTerms', 'Usage terms'],
+    ['CopyrightNotice', 'Notice'], ['By-line', 'Creator'], ['Credit', 'Credit'],
+    ['ImageDescription', 'Description'], ['description', 'Description'],
+  ];
+
+  function renderCopyright(meta: Record<string, any>) {
+    const grid = document.getElementById('ima-copyright-grid')!;
+    const box = document.getElementById('ima-copyright')!;
+    grid.innerHTML = '';
+    const seen = new Set<string>();
+    let any = false;
+    for (const [key, label] of COPYRIGHT_KEYS) {
+      if (meta[key] == null || seen.has(label)) continue;
+      const val = fmtValue(key, meta[key]);
+      if (!val) continue;
+      seen.add(label);
+      any = true;
+      const cell = document.createElement('div');
+      cell.className = 'panel p-3';
+      cell.innerHTML = `<div class="text-[13px] text-ink-subtle"></div><div class="mt-1 font-mono text-[13px] text-ink break-words"></div>`;
+      (cell.firstChild as HTMLElement).textContent = label;
+      (cell.lastChild as HTMLElement).textContent = val;
+      grid.appendChild(cell);
+    }
+    box.classList.toggle('hidden', !any);
+  }
+
+  // ExifTool-style group labels for exifr's mergeOutput:false segment blocks
+  const GROUP_LABELS: Record<string, string> = {
+    file: 'File', ifd0: 'Image (IFD0)', ifd1: 'Thumbnail (IFD1)', exif: 'EXIF', gps: 'GPS',
+    interop: 'Interoperability', iptc: 'IPTC', xmp: 'XMP', icc: 'ICC Profile',
+    jfif: 'JFIF', ihdr: 'PNG', makerNote: 'Maker Note', userComment: 'User Comment',
+  };
+
+  // MakerNote/UserComment come back as raw bytes for unknown makers — a few
+  // thousand numbers would flood the table, so summarise binary blobs instead.
+  function isBinary(v: any): boolean {
+    if (v instanceof Uint8Array || v instanceof ArrayBuffer) return true;
+    return Array.isArray(v) && v.length > 64 && v.every((x) => typeof x === 'number');
+  }
+
+  // grouped: { exif: {...}, gps: {...}, ... } from exifr mergeOutput:false
+  function renderTable(grouped: Record<string, any>) {
+    const body = document.getElementById('ima-meta-body')!;
+    const box = document.getElementById('ima-meta')!;
+    body.innerHTML = '';
+    let total = 0;
+
+    // Stable, meaningful group order; unknown groups fall to the end
+    const order = ['file', 'ifd0', 'exif', 'gps', 'interop', 'iptc', 'xmp', 'jfif', 'ihdr', 'icc', 'makerNote', 'userComment', 'ifd1'];
+    const groups = Object.keys(grouped).sort((a, b) => {
+      const ia = order.indexOf(a), ib = order.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    });
+
+    for (const group of groups) {
+      const block = grouped[group];
+      if (!block || typeof block !== 'object' || block instanceof Uint8Array) continue;
+      const rows: Array<[string, string]> = [];
+      for (const key of Object.keys(block).sort()) {
+        const raw = block[key];
+        const val = isBinary(raw) ? `[binary, ${raw.length ?? raw.byteLength} bytes]` : fmtValue(key, raw);
+        if (val === '' || val == null) continue;
+        rows.push([key, val]);
+      }
+      if (rows.length === 0) continue;
+
+      const head = document.createElement('tr');
+      head.className = 'ima-row border-t border-hairline bg-surface-2';
+      const hc = document.createElement('td');
+      hc.colSpan = 2;
+      hc.className = 'px-3 py-1.5 font-display text-[13px] font-semibold text-ink';
+      hc.textContent = GROUP_LABELS[group] || group;
+      head.appendChild(hc);
+      body.appendChild(head);
+
+      for (const [key, val] of rows) {
+        const tr = document.createElement('tr');
+        tr.className = 'ima-row border-t border-hairline align-top';
+        const th = document.createElement('td');
+        th.className = 'w-1/3 px-3 py-1.5 font-mono text-ink-subtle';
+        th.textContent = key;
+        const td = document.createElement('td');
+        td.className = 'px-3 py-1.5 font-mono text-ink break-words';
+        td.textContent = val;
+        tr.append(th, td);
+        body.appendChild(tr);
+        total++;
+      }
+    }
+    set('ima-meta-count', String(total));
+    box.classList.toggle('hidden', total === 0);
+    return total;
+  }
+
+  document.getElementById('ima-search')!.addEventListener('input', (e) => {
+    const q = (e.target as HTMLInputElement).value.toLowerCase();
+    for (const row of document.querySelectorAll<HTMLElement>('.ima-row')) {
+      row.style.display = row.textContent!.toLowerCase().includes(q) ? '' : 'none';
+    }
+  });
+
+  async function readMetadata(f: File) {
+    const camBox = document.getElementById('ima-camera')!;
+    const metaBox = document.getElementById('ima-meta')!;
+    const noMeta = document.getElementById('ima-nometa')!;
+    camBox.classList.add('hidden');
+    metaBox.classList.add('hidden');
+    document.getElementById('ima-gps')!.classList.add('hidden');
+    noMeta.classList.add('hidden');
+    set('ima-meta-count', '…');
+
+    try {
+      const head = new Uint8Array(await f.slice(0, 64).arrayBuffer());
+      const sniffed = sniffType(head.buffer);
+      const dot = f.name.lastIndexOf('.');
+      const ext = dot === -1 ? '' : f.name.slice(dot + 1).toLowerCase();
+
+      // File group — checksum, type, size, raw header (the metadata2go top block)
+      const fileGroup: Record<string, any> = {
+        FileName: f.name,
+        FileSize: fmtSize(f.size),
+        FileType: (sniffed || f.type || ext).replace(/^.*\//, '').toUpperCase() || 'unknown',
+        FileTypeExtension: ext,
+        MIMEType: sniffed || f.type || 'unknown',
+        Checksum_SHA256: await sha256(f),
+        RawHeader: hex(head),
+      };
+
+      const exifr = (await import('exifr')).default;
+      // Parse every segment and keep them grouped (EXIF/GPS/IPTC/XMP/ICC/MakerNote…).
+      // exifr throws on non-container files (bare .xmp/.rdf sidecars) — swallow so
+      // the parseXmp fallback below still runs instead of skipping to "no metadata".
+      let grouped: Record<string, any> = {};
+      try {
+        grouped = await exifr.parse(f, {
+          tiff: true, ifd0: true, ifd1: true, exif: true, gps: true, interop: true,
+          iptc: true, xmp: true, icc: true, jfif: true, ihdr: true,
+          makerNote: true, userComment: true,
+          mergeOutput: false, translateKeys: true, translateValues: true, reviveValues: true,
+        } as any) || {};
+      } catch {}
+
+      // exifr can't read a standalone .xmp/.rdf sidecar — parse the RDF/XML ourselves
+      const looksXmp = /rdf\+xml|xml/.test(sniffed) || /\.(xmp|rdf)$/i.test(f.name);
+      if (looksXmp && !grouped.xmp) {
+        const xmp = parseXmp(await f.text());
+        if (xmp) grouped.xmp = xmp;
+      }
+
+      grouped = { file: fileGroup, ...grouped };
+
+      // Flat merged view for the summary cards (camera/copyright/GPS)
+      const merged: Record<string, any> = {};
+      for (const g of Object.values(grouped)) if (g && typeof g === 'object') Object.assign(merged, g);
+      renderCamera(merged);
+      renderCopyright(merged);
+      const gps = (grouped as any).gps || merged;
+      renderGps(merged.latitude ?? gps.latitude, merged.longitude ?? gps.longitude, merged);
+      renderTable(grouped);
+    } catch {
+      noMeta.classList.remove('hidden');
+    }
+  }
+
+  async function handle(f: File) {
+    err.classList.add('hidden');
+
+    // Prefer a byte-sniffed type over the browser's guess (often empty on URL loads)
+    const sniffed = sniffType(await f.slice(0, 16).arrayBuffer());
+    const type = sniffed || f.type || 'unknown';
+    const isImage = type.startsWith('image/') || /\.(heic|heif|tif|tiff)$/i.test(f.name);
+
+    currentFile = f;
+    result.classList.remove('hidden');
+    result.classList.add('flex');
+
+    // Image-only UI (preview, dimensions, ratio, megapixels, metadata removal)
+    document.getElementById('ima-preview-wrap')!.classList.toggle('hidden', !isImage);
+    for (const el of document.querySelectorAll<HTMLElement>('.ima-img-only')) {
+      el.classList.toggle('hidden', !isImage);
+    }
+
+    set('ima-type', type);
+    set('ima-size', fmtSize(f.size));
+    set('ima-name', f.name);
+    document.getElementById('ima-name')!.setAttribute('title', f.name);
+    set('ima-strip-note', '');
+
+    if (isImage) {
+      const url = URL.createObjectURL(f);
+      preview.src = url;
+      const img = new Image();
+      img.onload = () => {
+        const w = img.naturalWidth, h = img.naturalHeight;
+        set('ima-dims', `${w} × ${h}`);
+        if (w && h) {
+          const g = gcd(w, h);
+          set('ima-ratio', `${w / g}:${h / g}`);
+          set('ima-mp', `${((w * h) / 1e6).toFixed(2)} MP`);
+        } else {
+          set('ima-ratio', '—'); set('ima-mp', '—');
+        }
+      };
+      img.onerror = () => { set('ima-dims', 'unknown'); set('ima-ratio', '—'); set('ima-mp', '—'); };
+      img.src = url;
+    }
+
+    readMetadata(f);
+  }
+
+  // --- Metadata removal ---------------------------------------------------
+
+  // Lossless JPEG strip: drop APP1 (EXIF/XMP), APP13 (IPTC/Photoshop) and COM
+  // segments, keep image data + APP0/JFIF + APP2/ICC (color) untouched.
+  function stripJpeg(buf: ArrayBuffer): Uint8Array | null {
+    const src = new Uint8Array(buf);
+    if (src[0] !== 0xff || src[1] !== 0xd8) return null; // not JPEG
+    const out: number[] = [0xff, 0xd8];
+    let i = 2;
+    while (i < src.length) {
+      if (src[i] !== 0xff) { out.push(src[i++]); continue; }
+      const marker = src[i + 1];
+      // Start of scan: copy the rest verbatim (compressed image data)
+      if (marker === 0xda) { for (; i < src.length; i++) out.push(src[i]); break; }
+      // Standalone markers (no length): RSTn, TEM
+      if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) { out.push(0xff, marker); i += 2; continue; }
+      const len = (src[i + 2] << 8) | src[i + 3];
+      const strip = marker === 0xe1 || marker === 0xed || marker === 0xfe; // APP1, APP13, COM
+      if (!strip) for (let j = 0; j < len + 2; j++) out.push(src[i + j]);
+      i += len + 2;
+    }
+    return new Uint8Array(out);
+  }
+
+  function download(blob: Blob, name: string) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  function cleanName(name: string): string {
+    const dot = name.lastIndexOf('.');
+    return dot === -1 ? `${name}-clean` : `${name.slice(0, dot)}-clean${name.slice(dot)}`;
+  }
+
+  document.getElementById('ima-strip')!.addEventListener('click', async () => {
+    if (!currentFile) return;
+    const note = document.getElementById('ima-strip-note')!;
+    note.textContent = 'Cleaning…';
+    const f = currentFile;
+
+    try {
+      if (f.type === 'image/jpeg' || /\.jpe?g$/i.test(f.name)) {
+        const buf = await f.arrayBuffer();
+        const stripped = stripJpeg(buf);
+        if (stripped) {
+          download(new Blob([stripped as BlobPart], { type: 'image/jpeg' }), cleanName(f.name));
+          note.textContent = `Removed metadata losslessly (${fmtSize(buf.byteLength)} → ${fmtSize(stripped.byteLength)}).`;
+          return;
+        }
+      }
+      // Canvas fallback for PNG/WebP/etc — re-encodes and drops all metadata
+      const bmp = await createImageBitmap(f);
+      const canvas = document.createElement('canvas');
+      canvas.width = bmp.width; canvas.height = bmp.height;
+      canvas.getContext('2d')!.drawImage(bmp, 0, 0);
+      const outType = f.type === 'image/png' ? 'image/png' : 'image/png';
+      const blob: Blob = await new Promise((res, rej) =>
+        canvas.toBlob((b) => (b ? res(b) : rej(new Error('encode failed'))), outType));
+      const outName = cleanName(f.name.replace(/\.[^.]+$/, '.png'));
+      download(blob, outName);
+      note.textContent = 'Removed metadata (re-encoded as PNG).';
+    } catch {
+      note.textContent = 'Could not process this format.';
+    }
+  });
+
+  // --- File input wiring --------------------------------------------------
+
+  async function loadUrl(raw: string) {
+    const url = raw.trim();
+    if (!url) return;
+    err.classList.add('hidden');
+    const btn = document.getElementById('ima-url-btn') as HTMLButtonElement;
+    btn.disabled = true;
+    const label = btn.textContent;
+    btn.textContent = 'Loading…';
+    try {
+      const res = await fetch(url, { mode: 'cors' });
+      if (!res.ok) throw new Error(String(res.status));
+      const blob = await res.blob();
+      const name = url.split('/').pop()?.split('?')[0] || 'file';
+      handle(new File([blob], name, { type: blob.type }));
+    } catch {
+      err.textContent = "Couldn't load that file. The host may block cross-origin requests (CORS), or the URL isn't a direct link. Try downloading it and uploading the file instead.";
+      err.classList.remove('hidden');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = label;
+    }
+  }
+  const urlInput = document.getElementById('ima-url') as HTMLInputElement;
+  document.getElementById('ima-url-btn')!.addEventListener('click', () => loadUrl(urlInput.value));
+  urlInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') loadUrl(urlInput.value); });
+
+  drop.addEventListener('click', () => file.click());
+  file.addEventListener('change', () => { if (file.files && file.files[0]) handle(file.files[0]); });
+  drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('bg-surface-2'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('bg-surface-2'));
+  drop.addEventListener('drop', (e) => {
+    e.preventDefault();
+    drop.classList.remove('bg-surface-2');
+    if (e.dataTransfer && e.dataTransfer.files[0]) handle(e.dataTransfer.files[0]);
+  });
+</script>

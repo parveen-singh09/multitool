@@ -1,0 +1,261 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="sku-generator">
+  <div class="flex flex-col gap-5">
+
+    <div class="flex flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <span class="text-sm font-medium text-ink">Pattern segments</span>
+        <button id="sk-add-seg" class="btn btn-secondary text-xs">+ Add segment</button>
+      </div>
+      <p class="text-xs text-ink-subtle">
+        Enter one value per segment, or several separated by commas to generate every
+        combination at once (e.g. <span class="font-mono">RED, BLK, WHT</span>). Reorder to change the SKU layout.
+      </p>
+      <div id="sk-segs" class="flex flex-col gap-2"></div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-4 border-t border-[var(--border)] pt-4">
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">Separator
+        <select id="sk-sep" class="field w-24">
+          <option value="-">- dash</option>
+          <option value="_">_ underscore</option>
+          <option value=".">. dot</option>
+          <option value="/">/ slash</option>
+          <option value="">(none)</option>
+        </select>
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">
+        <input id="sk-seq" type="checkbox" class="accent-primary" /> Sequence suffix
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">Start at
+        <input id="sk-seq-start" type="number" min="0" value="1" class="field w-20" />
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">Pad to
+        <input id="sk-seq-pad" type="number" min="1" max="8" value="3" class="field w-20" />
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle">Case
+        <select id="sk-case" class="field w-32">
+          <option value="upper">UPPERCASE</option>
+          <option value="lower">lowercase</option>
+          <option value="keep">Keep as typed</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="flex items-center gap-2 rounded-[var(--radius)] bg-surface-1 px-3 py-2 text-sm">
+      <span class="text-ink-subtle">Pattern</span>
+      <code id="sk-pattern" class="font-mono text-ink"></code>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <button id="sk-gen" class="btn btn-primary">Generate</button>
+      <button id="sk-add" class="btn btn-secondary">Add to list</button>
+      <span id="sk-count-note" class="text-xs text-ink-subtle"></span>
+      <div class="ml-auto flex gap-2">
+        <button id="sk-copy" class="btn btn-secondary">Copy all</button>
+        <button id="sk-csv" class="btn btn-secondary">Export CSV</button>
+        <button id="sk-clear" class="btn btn-secondary">Clear</button>
+      </div>
+    </div>
+
+    <div id="sk-results" class="overflow-hidden rounded-[var(--radius)] border border-[var(--border)]"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free SKU generator builds structured stock-keeping unit codes from a pattern
+      you control. Add, remove and reorder segments — brand, category, color, size or
+      anything else — pick a separator, and cap each segment's length for tidy, uniform
+      codes. Enter several comma-separated values in a segment and the tool generates
+      every combination automatically, so a full variant matrix is one click instead of
+      dozens of manual entries.
+    </p>
+    <p>
+      Turn on the sequence suffix to guarantee uniqueness across a batch, edit any code
+      inline, then copy the list or export it as CSV for your inventory system.
+      Consistent, readable SKUs make stocktaking, picking and reporting far easier.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  type Seg = { label: string; value: string; max: number };
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const segsWrap = $('sk-segs');
+  const patternEl = $('sk-pattern');
+  const resultsEl = $('sk-results');
+  const countNote = $('sk-count-note');
+
+  const sepEl = $('sk-sep') as HTMLSelectElement;
+  const seqEl = $('sk-seq') as HTMLInputElement;
+  const seqStartEl = $('sk-seq-start') as HTMLInputElement;
+  const seqPadEl = $('sk-seq-pad') as HTMLInputElement;
+  const caseEl = $('sk-case') as HTMLSelectElement;
+
+  let segs: Seg[] = [
+    { label: 'Brand', value: 'ACME', max: 4 },
+    { label: 'Category', value: 'SHIRT', max: 5 },
+    { label: 'Color', value: 'RED, BLK, WHT', max: 3 },
+    { label: 'Size', value: 'S, M, L', max: 2 },
+  ];
+  let list: string[] = [];
+
+  const applyCase = (s: string) =>
+    caseEl.value === 'upper' ? s.toUpperCase() : caseEl.value === 'lower' ? s.toLowerCase() : s;
+
+  const clean = (s: string, max: number) => {
+    let t = applyCase(s.trim()).replace(/[^A-Za-z0-9]/g, '');
+    if (max > 0) t = t.slice(0, max);
+    return t;
+  };
+
+  const tokens = (seg: Seg) =>
+    seg.value.split(',').map((v) => clean(v, seg.max)).filter(Boolean);
+
+  function combos(): string[] {
+    const sep = sepEl.value;
+    let acc: string[][] = [[]];
+    for (const seg of segs) {
+      const toks = tokens(seg);
+      if (toks.length === 0) continue; 
+      const next: string[][] = [];
+      for (const a of acc) for (const t of toks) next.push([...a, t]);
+      acc = next;
+    }
+    return acc.map((parts) => parts.join(sep));
+  }
+
+  function build(): string[] {
+    let out = combos();
+    if (seqEl.checked) {
+      const start = Number(seqStartEl.value) || 0;
+      const pad = Math.max(1, Math.min(8, Number(seqPadEl.value) || 1));
+      const sep = sepEl.value;
+      out = out.map((sku, i) => sku + sep + String(start + i).padStart(pad, '0'));
+    }
+    return out;
+  }
+
+  function renderPattern() {
+    const sep = sepEl.value || '';
+    const parts = segs.map((s) => (s.label || 'SEG').toUpperCase().replace(/[^A-Z0-9]/g, '') || 'SEG');
+    if (seqEl.checked) parts.push('#'.repeat(Math.max(1, Number(seqPadEl.value) || 1)));
+    patternEl.textContent = parts.join(sep) || '(empty)';
+  }
+
+  function renderSegs() {
+    segsWrap.innerHTML = '';
+    segs.forEach((seg, i) => {
+      const row = document.createElement('div');
+      row.className = 'grid grid-cols-[1fr_2fr_auto_auto] gap-2 items-center';
+      row.innerHTML = `
+        <input class="field font-mono text-sm" data-k="label" placeholder="Label" value="${seg.label.replace(/"/g, '&quot;')}" />
+        <input class="field font-mono text-sm" data-k="value" placeholder="Value(s), comma-separated" value="${seg.value.replace(/"/g, '&quot;')}" spellcheck="false" />
+        <input class="field w-16 text-sm" type="number" min="0" max="12" data-k="max" title="Max chars (0 = no limit)" value="${seg.max}" />
+        <div class="flex gap-1">
+          <button class="btn btn-secondary px-2 py-1 text-xs" data-act="up" title="Move up" ${i === 0 ? 'disabled' : ''}>↑</button>
+          <button class="btn btn-secondary px-2 py-1 text-xs" data-act="down" title="Move down" ${i === segs.length - 1 ? 'disabled' : ''}>↓</button>
+          <button class="btn btn-secondary px-2 py-1 text-xs" data-act="del" title="Remove">✕</button>
+        </div>`;
+
+      row.querySelectorAll('input').forEach((inp) => {
+        inp.addEventListener('input', () => {
+          const k = (inp as HTMLInputElement).dataset.k as keyof Seg;
+          if (k === 'max') seg.max = Math.max(0, Math.min(12, Number((inp as HTMLInputElement).value) || 0));
+          else (seg[k] as string) = (inp as HTMLInputElement).value;
+          renderPattern();
+        });
+      });
+      row.querySelector('[data-act="up"]')!.addEventListener('click', () => {
+        [segs[i - 1], segs[i]] = [segs[i], segs[i - 1]];
+        renderSegs(); renderPattern();
+      });
+      row.querySelector('[data-act="down"]')!.addEventListener('click', () => {
+        [segs[i + 1], segs[i]] = [segs[i], segs[i + 1]];
+        renderSegs(); renderPattern();
+      });
+      row.querySelector('[data-act="del"]')!.addEventListener('click', () => {
+        segs.splice(i, 1);
+        renderSegs(); renderPattern();
+      });
+      segsWrap.appendChild(row);
+    });
+  }
+
+  function renderResults() {
+    if (list.length === 0) {
+      resultsEl.innerHTML = '<p class="px-4 py-8 text-center text-sm text-ink-subtle">No SKUs yet. Click Generate.</p>';
+      return;
+    }
+    const rows = list
+      .map(
+        (sku, i) => `
+        <div class="flex items-center gap-2 border-t border-[var(--border)] px-3 py-1.5 first:border-t-0">
+          <span class="w-10 shrink-0 text-xs text-ink-subtle">${i + 1}</span>
+          <input class="field flex-1 font-mono text-sm" data-i="${i}" value="${sku.replace(/"/g, '&quot;')}" spellcheck="false" />
+          <button class="btn btn-secondary px-2 py-1 text-xs" data-del="${i}" title="Remove">✕</button>
+        </div>`,
+      )
+      .join('');
+    resultsEl.innerHTML = rows;
+    resultsEl.querySelectorAll('input[data-i]').forEach((inp) =>
+      inp.addEventListener('input', () => {
+        list[Number((inp as HTMLInputElement).dataset.i)] = (inp as HTMLInputElement).value;
+      }),
+    );
+    resultsEl.querySelectorAll('button[data-del]').forEach((btn) =>
+      btn.addEventListener('click', () => {
+        list.splice(Number((btn as HTMLButtonElement).dataset.del), 1);
+        renderResults();
+      }),
+    );
+  }
+
+  function generate(append: boolean) {
+    const built = build();
+    list = append ? [...list, ...built] : built;
+    countNote.textContent = `${built.length} generated · ${list.length} in list`;
+    renderResults();
+  }
+
+  function flash(btn: HTMLButtonElement, msg: string) {
+    const orig = btn.textContent;
+    btn.textContent = msg;
+    setTimeout(() => (btn.textContent = orig), 1500);
+  }
+
+  $('sk-add-seg').addEventListener('click', () => {
+    segs.push({ label: 'Segment', value: '', max: 0 });
+    renderSegs(); renderPattern();
+  });
+  $('sk-gen').addEventListener('click', () => generate(false));
+  $('sk-add').addEventListener('click', () => generate(true));
+  $('sk-clear').addEventListener('click', () => { list = []; countNote.textContent = ''; renderResults(); });
+
+  $('sk-copy').addEventListener('click', async (e) => {
+    await navigator.clipboard.writeText(list.join('\n'));
+    flash(e.currentTarget as HTMLButtonElement, 'Copied!');
+  });
+
+  $('sk-csv').addEventListener('click', () => {
+    const csv = 'SKU\n' + list.map((s) => `"${s.replace(/"/g, '""')}"`).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'skus.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  [sepEl, seqEl, seqStartEl, seqPadEl, caseEl].forEach((el) =>
+    el.addEventListener('input', renderPattern),
+  );
+
+  renderSegs();
+  renderPattern();
+  generate(false);
+</script>

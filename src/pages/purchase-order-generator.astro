@@ -1,0 +1,201 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="purchase-order-generator">
+  <div class="flex flex-col gap-5">
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <div class="flex flex-col gap-2 text-sm text-ink-subtle">Buyer (your company)
+        <div id="po-from"></div>
+      </div>
+      <div class="flex flex-col gap-2 text-sm text-ink-subtle">Vendor / supplier
+        <div id="po-to"></div>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">PO #
+        <input id="po-number" class="field" value="PO-2001" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Date
+        <input id="po-date" type="date" class="field" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Currency
+        <select id="po-currency" class="field"></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Tax %
+        <input id="po-tax" type="number" min="0" max="100" step="0.1" value="0" class="field" />
+      </label>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <span class="text-sm text-ink-subtle">Ordered items</span>
+        <button id="po-add" class="btn btn-secondary py-1 text-[13px]">+ Add item</button>
+      </div>
+      <div id="po-items" class="flex flex-col gap-2"></div>
+    </div>
+
+    <div class="flex items-center justify-between border-t border-hairline pt-4">
+      <span class="text-sm text-ink-subtle">Total</span>
+      <span id="po-total" class="font-mono text-xl text-ink"></span>
+    </div>
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">Notes / terms
+      <input id="po-notes" class="field" value="Please confirm delivery date. Net 30 payment terms." />
+    </label>
+
+    <button id="po-dl" class="btn btn-primary w-fit">Download PDF</button>
+
+    <div class="flex flex-col gap-2">
+      <span class="text-sm text-ink-subtle">Preview</span>
+      <div id="po-preview" class="rounded-lg border border-hairline bg-white p-8 text-[13px] text-[#08090a] shadow-lg"></div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free purchase order generator creates professional POs to send to your
+      suppliers. Enter buyer and vendor details, add the items you're ordering with
+      quantities and unit prices, and download a clean PDF with automatic totals.
+      It's ideal for procurement and small-business ordering.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { buildDocPdf, downloadPdf, computeTotals, money, type LineItem, type DocData } from '../lib/pdfdoc';
+  import { CURRENCIES, symbolOf, pdfPrefixOf } from '../lib/currencies';
+  import { renderParty, wireParty, collectParty } from '../lib/partyblock';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const itemsWrap = $('po-items')!;
+  let items: LineItem[] = [
+    { description: 'Widget A', qty: 100, price: 2.5 },
+    { description: 'Widget B', qty: 50, price: 4.0 },
+  ];
+  ($('po-date') as HTMLInputElement).value = new Date().toISOString().slice(0, 10);
+
+  ($('po-currency') as HTMLSelectElement).innerHTML = CURRENCIES
+    .map((c) => `<option value="${c.code}"${c.code === 'USD' ? ' selected' : ''}>${c.code} — ${c.name} (${c.symbol})</option>`)
+    .join('');
+
+  renderParty($('po-from'), {
+    prefix: 'po-from',
+    companyPlaceholder: 'Company Name',
+    taxLabel: 'GSTIN',
+    addressLabel: 'Company Address',
+    addressPlaceholder: 'Company Address',
+    contact: true,
+    contactPlaceholder: 'Contact Person',
+    defaultCompany: 'Acme Corp',
+    defaultAddress: '123 Main St',
+  });
+  renderParty($('po-to'), {
+    prefix: 'po-to',
+    companyPlaceholder: 'Vendor Company',
+    taxLabel: 'Vendor GSTIN',
+    addressLabel: 'Vendor Address',
+    addressPlaceholder: 'Vendor Address',
+    defaultCompany: 'Supplier Ltd',
+    defaultAddress: '456 Industrial Rd',
+  });
+  wireParty('po-from', update);
+  wireParty('po-to', update);
+
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+
+  function renderItems() {
+    itemsWrap.innerHTML = items.map((it, i) => `
+      <div class="flex gap-2" data-i="${i}">
+        <input class="po-desc field flex-1 text-[13px]" placeholder="Item" value="${it.description.replace(/"/g, '&quot;')}" />
+        <input class="po-qty field w-20 text-[13px]" type="number" min="0" value="${it.qty}" />
+        <input class="po-price field w-24 text-[13px]" type="number" min="0" step="0.01" value="${it.price}" />
+        <button class="po-del btn btn-secondary px-3">×</button>
+      </div>`).join('');
+    itemsWrap.querySelectorAll<HTMLElement>('[data-i]').forEach((row) => {
+      const i = Number(row.dataset.i);
+      row.querySelector('.po-desc')!.addEventListener('input', (e) => { items[i].description = (e.target as HTMLInputElement).value; update(); });
+      row.querySelector('.po-qty')!.addEventListener('input', (e) => { items[i].qty = Number((e.target as HTMLInputElement).value) || 0; update(); });
+      row.querySelector('.po-price')!.addEventListener('input', (e) => { items[i].price = Number((e.target as HTMLInputElement).value) || 0; update(); });
+      row.querySelector('.po-del')!.addEventListener('click', () => { items.splice(i, 1); renderItems(); update(); });
+    });
+  }
+
+  // Build DocData from the form. `forPdf` picks the WinAnsi-safe currency prefix
+  // for the PDF vs the pretty Unicode symbol for the on-screen preview.
+  function getData(forPdf: boolean): DocData {
+    const code = ($('po-currency') as HTMLSelectElement).value;
+    return {
+      docType: 'PURCHASE ORDER',
+      number: ($('po-number') as HTMLInputElement).value,
+      date: ($('po-date') as HTMLInputElement).value,
+      fromLabel: 'Buyer', from: collectParty('po-from'),
+      toLabel: 'Vendor', to: collectParty('po-to'),
+      items,
+      currency: forPdf ? pdfPrefixOf(code) : symbolOf(code),
+      taxRate: Number(($('po-tax') as HTMLInputElement).value) || 0,
+      notes: ($('po-notes') as HTMLInputElement).value,
+    };
+  }
+
+  function renderPreview(d: DocData) {
+    const t = computeTotals(d);
+    const cur = d.currency;
+    const meta = [
+      `<div style="font-weight:600">#${esc(d.number)}</div>`,
+      `<div>Date: ${esc(d.date)}</div>`,
+    ].join('');
+    const rows = d.items.map((it) => `
+      <tr>
+        <td style="padding:4px 0">${esc(it.description)}</td>
+        <td style="padding:4px 0;text-align:right">${it.qty}</td>
+        <td style="padding:4px 0;text-align:right">${esc(money(it.price, cur))}</td>
+        <td style="padding:4px 0;text-align:right">${esc(money(it.qty * it.price, cur))}</td>
+      </tr>`).join('');
+    const totalLine = (label: string, val: string, strong = false) =>
+      `<div style="display:flex;justify-content:space-between;gap:24px;${strong ? 'font-weight:700;color:#5e6ad2' : ''}"><span>${label}</span><span>${esc(val)}</span></div>`;
+    const totals = [
+      totalLine('Subtotal', money(t.subtotal, cur)),
+      t.tax ? totalLine(`Tax (${d.taxRate}%)`, money(t.tax, cur)) : '',
+      totalLine('Total', money(t.total, cur), true),
+    ].join('');
+
+    $('po-preview').innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">
+        <div style="font-size:24px;font-weight:700;color:#5e6ad2;letter-spacing:-0.5px">PURCHASE ORDER</div>
+        <div style="text-align:right;color:#4a4d55;font-size:12px">${meta}</div>
+      </div>
+      <div style="display:flex;gap:32px;margin-top:24px">
+        <div style="flex:1"><div style="font-size:11px;font-weight:700;color:#8a8f98;letter-spacing:0.4px">BUYER</div>${d.from.filter(Boolean).map((l) => `<div>${esc(l)}</div>`).join('')}</div>
+        <div style="flex:1"><div style="font-size:11px;font-weight:700;color:#8a8f98;letter-spacing:0.4px">VENDOR</div>${d.to.filter(Boolean).map((l) => `<div>${esc(l)}</div>`).join('')}</div>
+      </div>
+      <table style="width:100%;margin-top:24px;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#f2f2f4;color:#8a8f98;font-size:10px;letter-spacing:0.4px">
+          <th style="padding:6px 8px;text-align:left">DESCRIPTION</th><th style="padding:6px 8px;text-align:right">QTY</th><th style="padding:6px 8px;text-align:right">PRICE</th><th style="padding:6px 8px;text-align:right">AMOUNT</th>
+        </tr></thead><tbody>${rows}</tbody>
+      </table>
+      <div style="margin-top:16px;margin-left:auto;width:240px;display:flex;flex-direction:column;gap:4px;border-top:1px solid #ddd;padding-top:12px">${totals}</div>
+      ${d.notes ? `<div style="margin-top:24px"><div style="font-size:11px;font-weight:700;color:#8a8f98;letter-spacing:0.4px">NOTES / TERMS</div><div style="color:#4a4d55">${esc(d.notes)}</div></div>` : ''}
+    `;
+  }
+
+  function update() {
+    const d = getData(false);
+    const t = computeTotals(d);
+    $('po-total').textContent = money(t.total, d.currency);
+    renderPreview(d);
+  }
+
+  $('po-add').addEventListener('click', () => { items.push({ description: '', qty: 1, price: 0 }); renderItems(); update(); });
+  ['po-currency', 'po-tax', 'po-number', 'po-date', 'po-notes'].forEach((id) => $(id).addEventListener('input', update));
+
+  $('po-dl').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    btn.disabled = true; btn.textContent = 'Generating…';
+    try {
+      const bytes = await buildDocPdf(getData(true));
+      downloadPdf(bytes, `${($('po-number') as HTMLInputElement).value || 'purchase-order'}.pdf`);
+    } finally { btn.disabled = false; btn.textContent = 'Download PDF'; }
+  });
+
+  renderItems(); update();
+</script>

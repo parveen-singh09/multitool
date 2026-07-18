@@ -1,0 +1,234 @@
+﻿---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="image-color-picker">
+  <div class="flex flex-col gap-4">
+    <label id="cp-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose an image or drop it here</span>
+      <input id="cp-file" type="file" accept="image/*" class="sr-only" />
+    </label>
+
+    <div id="cp-panel" class="hidden flex-col gap-4">
+      <p class="text-[13px] text-ink-subtle">Move over the image to zoom in on the pixels, then click to lock a color.</p>
+      <div class="panel flex justify-center overflow-auto p-4">
+        <canvas id="cp-canvas" class="max-w-full cursor-crosshair rounded-md"></canvas>
+      </div>
+
+      <div id="cp-loupe" class="pointer-events-none fixed z-50 hidden overflow-hidden rounded-[14px] border border-hairline bg-surface-1 shadow-[0_8px_28px_rgba(0,0,0,0.45)]">
+        <canvas id="cp-zoom" class="block"></canvas>
+        <div id="cp-loupe-hex" class="border-t border-hairline px-2 py-1 text-center font-mono text-[11px] text-ink"></div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-4">
+        <div id="cp-swatch" class="h-16 w-16 shrink-0 rounded-md border border-hairline" aria-hidden="true"></div>
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <label class="flex items-center gap-2 text-sm text-ink-subtle">HEX
+            <div class="copy-wrap">
+              <input id="cp-hex" class="field w-60 font-mono" readonly />
+              <button type="button" class="copy-icon" data-copy-target="#cp-hex" aria-label="Copy"></button>
+            </div>
+          </label>
+          <label class="flex items-center gap-2 text-sm text-ink-subtle">RGB
+            <div class="copy-wrap">
+              <input id="cp-rgb" class="field w-60 font-mono" readonly />
+              <button type="button" class="copy-icon" data-copy-target="#cp-rgb" aria-label="Copy"></button>
+            </div>
+          </label>
+          <label class="flex items-center gap-2 text-sm text-ink-subtle">HSL
+            <div class="copy-wrap">
+              <input id="cp-hsl" class="field w-60 font-mono" readonly />
+              <button type="button" class="copy-icon" data-copy-target="#cp-hsl" aria-label="Copy"></button>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div id="cp-saved-wrap" class="hidden flex-col gap-2">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-medium text-ink">Picked colors</h2>
+          <button id="cp-clear" class="btn btn-secondary text-[13px]">Clear all</button>
+        </div>
+        <ul id="cp-saved" class="flex flex-col gap-2"></ul>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free image color picker lets you grab the exact color of any pixel in
+      a photo. Load an image, then hover or click to read the HEX and RGB values
+      and copy them for your designs. It is perfect for matching colors from
+      screenshots or artwork. The image is read locally in your browser and never
+      uploaded.
+    </p>
+  </div>
+</ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  const fileInput = document.getElementById('cp-file') as HTMLInputElement;
+  const drop = document.getElementById('cp-drop')!;
+  const panel = document.getElementById('cp-panel')!;
+  const canvas = document.getElementById('cp-canvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+  const swatch = document.getElementById('cp-swatch')!;
+  const hexEl = document.getElementById('cp-hex') as HTMLInputElement;
+  const rgbEl = document.getElementById('cp-rgb') as HTMLInputElement;
+  const hslEl = document.getElementById('cp-hsl') as HTMLInputElement;
+  const savedWrap = document.getElementById('cp-saved-wrap')!;
+  const savedList = document.getElementById('cp-saved')!;
+  const clearBtn = document.getElementById('cp-clear')!;
+  const loupe = document.getElementById('cp-loupe')!;
+  const loupeHex = document.getElementById('cp-loupe-hex')!;
+  const zoom = document.getElementById('cp-zoom') as HTMLCanvasElement;
+  const zctx = zoom.getContext('2d')!;
+  let locked = false;
+
+  const GRID = 11;            
+  const CELL = 14;            
+  const SIZE = GRID * CELL;   
+  zoom.width = SIZE;
+  zoom.height = SIZE;
+  zctx.imageSmoothingEnabled = false;
+
+  function loadFile(file: File) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+
+        const maxW = 900;
+        const scale = img.naturalWidth > maxW ? maxW / img.naturalWidth : 1;
+        canvas.width = Math.round(img.naturalWidth * scale);
+        canvas.height = Math.round(img.naturalHeight * scale);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        panel.classList.remove('hidden');
+        panel.classList.add('flex');
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  const toHex = (n: number) => n.toString(16).padStart(2, '0');
+
+  function rgbToHsl(r: number, g: number, b: number) {
+    const rn = r / 255, gn = g / 255, bn = b / 255;
+    const max = Math.max(rn, gn, bn), min = Math.min(rn, gn, bn);
+    const l = (max + min) / 2;
+    let h = 0, s = 0;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      if (max === rn) h = (gn - bn) / d + (gn < bn ? 6 : 0);
+      else if (max === gn) h = (bn - rn) / d + 2;
+      else h = (rn - gn) / d + 4;
+      h /= 6;
+    }
+    return `hsl(${Math.round(h * 360)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`;
+  }
+
+  function drawLoupe(e: MouseEvent, cx: number, cy: number, hex: string) {
+    const half = (GRID - 1) / 2;
+    // Pull the GRID×GRID block centered on the cursor, then blow it up with no smoothing.
+    const src = ctx.getImageData(cx - half, cy - half, GRID, GRID);
+    const tmp = document.createElement('canvas');
+    tmp.width = GRID;
+    tmp.height = GRID;
+    tmp.getContext('2d')!.putImageData(src, 0, 0);
+
+    zctx.clearRect(0, 0, SIZE, SIZE);
+    zctx.drawImage(tmp, 0, 0, GRID, GRID, 0, 0, SIZE, SIZE);
+
+    // Highlight the exact center pixel.
+    const c = half * CELL;
+    zctx.strokeStyle = '#ff3b30';
+    zctx.lineWidth = 2;
+    zctx.strokeRect(c + 1, c + 1, CELL - 2, CELL - 2);
+
+    loupeHex.textContent = hex;
+    loupe.classList.remove('hidden');
+    // Offset from the cursor so the pointer doesn't cover the target; flip near edges.
+    const pad = 18;
+    const w = loupe.offsetWidth || SIZE;
+    const h = loupe.offsetHeight || SIZE + 24;
+    let lx = e.clientX + pad;
+    let ly = e.clientY + pad;
+    if (lx + w > window.innerWidth) lx = e.clientX - pad - w;
+    if (ly + h > window.innerHeight) ly = e.clientY - pad - h;
+    loupe.style.left = `${lx}px`;
+    loupe.style.top = `${ly}px`;
+  }
+
+  function sample(e: MouseEvent) {
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) * (canvas.width / rect.width));
+    const y = Math.floor((e.clientY - rect.top) * (canvas.height / rect.height));
+    if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) return;
+    const [r, g, b] = ctx.getImageData(x, y, 1, 1).data;
+    const hex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    if (!locked) {
+      hexEl.value = hex;
+      rgbEl.value = `rgb(${r}, ${g}, ${b})`;
+      hslEl.value = rgbToHsl(r, g, b);
+      swatch.style.background = hex;
+    }
+    drawLoupe(e, x, y, hex);
+    return { hex, rgb: `rgb(${r}, ${g}, ${b})`, hsl: rgbToHsl(r, g, b) };
+  }
+
+  async function copyText(btn: HTMLButtonElement, text: string) {
+    if (!text) return;
+    await navigator.clipboard.writeText(text);
+    const prev = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => (btn.textContent = prev), 1200);
+  }
+
+  function addSwatch(hex: string, rgb: string, hsl: string) {
+    savedWrap.classList.remove('hidden');
+    savedWrap.classList.add('flex');
+    const li = document.createElement('li');
+    li.className = 'panel flex items-center gap-3 p-2';
+    li.innerHTML = `
+      <span class="h-9 w-9 shrink-0 rounded-sm border border-hairline" style="background:${hex}"></span>
+      <div class="flex flex-1 flex-wrap gap-x-4 gap-y-0.5 font-mono text-[13px] text-ink-subtle">
+        <button class="cp-chip hover:text-ink" data-val="${hex}" title="Copy HEX">${hex}</button>
+        <button class="cp-chip hover:text-ink" data-val="${rgb}" title="Copy RGB">${rgb}</button>
+        <button class="cp-chip hover:text-ink" data-val="${hsl}" title="Copy HSL">${hsl}</button>
+      </div>
+      <button class="cp-remove btn btn-secondary text-[13px]" title="Remove">Remove</button>`;
+    li.querySelectorAll<HTMLButtonElement>('.cp-chip').forEach((chip) =>
+      chip.addEventListener('click', () => copyText(chip, chip.dataset.val!)));
+    li.querySelector('.cp-remove')!.addEventListener('click', () => {
+      li.remove();
+      if (!savedList.children.length) { savedWrap.classList.add('hidden'); savedWrap.classList.remove('flex'); }
+    });
+    savedList.prepend(li);
+  }
+
+  canvas.addEventListener('mousemove', sample);
+  canvas.addEventListener('mouseleave', () => loupe.classList.add('hidden'));
+  canvas.addEventListener('click', (e) => {
+    locked = false;
+    const c = sample(e);
+    locked = true;
+    if (c) addSwatch(c.hex, c.rgb, c.hsl);
+  });
+
+  clearBtn.addEventListener('click', () => {
+    savedList.innerHTML = '';
+    savedWrap.classList.add('hidden');
+    savedWrap.classList.remove('flex');
+  });
+
+  fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) loadFile(fileInput.files[0]); });
+  ['dragover', 'dragenter'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('bg-surface-2'); }));
+  ['dragleave', 'drop'].forEach((ev) => drop.addEventListener(ev, () => drop.classList.remove('bg-surface-2')));
+  drop.addEventListener('drop', (e) => { e.preventDefault(); const f = (e as DragEvent).dataTransfer?.files?.[0]; if (f) loadFile(f); });
+</script>

@@ -1,0 +1,96 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+import { TONES } from '../lib/compliments';
+---
+
+<ToolLayout slug="insult-compliment-generator">
+  <div class="flex flex-col gap-5">
+    <div class="flex gap-2">
+      <button id="ic-tab-comp" class="btn btn-primary">Compliment</button>
+      <button id="ic-tab-insult" class="btn btn-secondary">Playful insult</button>
+    </div>
+
+    <div class="flex flex-wrap items-end gap-4">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Recipient <span class="text-ink-faint">(optional)</span>
+        <input id="ic-name" class="field w-56" placeholder="e.g. Alex" maxlength="40" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Tone
+        <select id="ic-tone" class="field w-56">
+          {TONES.map((t) => <option value={t.id}>{t.label}</option>)}
+        </select>
+      </label>
+    </div>
+    <p id="ic-hint" class="-mt-2 text-[13px] text-ink-faint"></p>
+
+    <div class="copy-wrap panel panel-lift flex min-h-24 items-center p-5">
+      <p id="ic-out" class="text-lg leading-relaxed text-ink"></p>
+      <button type="button" class="copy-icon" data-copy-target="#ic-out" aria-label="Copy"></button>
+    </div>
+
+    <div class="flex gap-2">
+      <button id="ic-gen" class="btn btn-primary">Generate</button>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free compliment and insult generator serves up warm, genuine
+      compliments to brighten someone's day, or lighthearted, playful insults
+      for friendly banter. Pick a <strong>tone</strong> — casual, formal,
+      poetic, Shakespearean or savage — add a name if you like, then generate
+      and copy. Each tone has fifty hand-written lines per mode, so you can keep
+      generating without running dry. Everything is kept good-natured and runs
+      entirely in your browser.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  import { pick } from '../lib/random';
+  import { TONES, COMPLIMENTS, INSULTS } from '../lib/compliments';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const out = $('ic-out')!;
+  const nameEl = $('ic-name') as HTMLInputElement;
+  const toneEl = $('ic-tone') as HTMLSelectElement;
+  const hintEl = $('ic-hint')!;
+  let mode: 'comp' | 'insult' = 'comp';
+  let last = '';
+
+  function withName(line: string): string {
+    const name = nameEl.value.trim();
+    if (!name) return line;
+    const lead = line.startsWith('You ') ? 'you ' + line.slice(4)
+      : line.startsWith('Thou ') ? line
+      : line.charAt(0).toLowerCase() + line.slice(1);
+    return `${name}, ${lead}`;
+  }
+
+  function generate() {
+    const pool = (mode === 'comp' ? COMPLIMENTS : INSULTS)[toneEl.value] || [];
+    let line = pick(pool);
+    for (let i = 0; line === last && i < 5; i++) line = pick(pool); // avoid back-to-back repeat
+    last = line;
+    out.textContent = withName(line);
+  }
+
+  function updateHint() {
+    hintEl.textContent = TONES.find((t) => t.id === toneEl.value)?.hint || '';
+  }
+
+  function setMode(m: 'comp' | 'insult') {
+    mode = m;
+    ($('ic-tab-comp') as HTMLElement).className = `btn ${m === 'comp' ? 'btn-primary' : 'btn-secondary'}`;
+    ($('ic-tab-insult') as HTMLElement).className = `btn ${m === 'insult' ? 'btn-primary' : 'btn-secondary'}`;
+    generate();
+  }
+
+  $('ic-tab-comp').addEventListener('click', () => setMode('comp'));
+  $('ic-tab-insult').addEventListener('click', () => setMode('insult'));
+  $('ic-gen').addEventListener('click', generate);
+  toneEl.addEventListener('change', () => { updateHint(); generate(); });
+  nameEl.addEventListener('input', () => { if (last) out.textContent = withName(last); });
+
+  updateHint();
+  generate();
+</script>

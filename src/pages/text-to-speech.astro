@@ -1,0 +1,383 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="text-to-speech">
+  <div class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+      <span class="flex items-center justify-between">
+        <span>Text to speak</span>
+        <span id="tts-count" class="text-[13px] text-ink-tertiary"></span>
+      </span>
+      <div class="copy-wrap">
+        <textarea id="tts-text" class="field" rows="6" placeholder="Type or paste text to hear it read aloud…" spellcheck="false"></textarea>
+        <button type="button" class="copy-icon" data-copy-target="#tts-text" aria-label="Copy"></button>
+      </div>
+    </label>
+
+    <div class="flex flex-wrap gap-2">
+      <button id="tts-sample" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Sample text</button>
+      <button id="tts-clear" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Clear</button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Language
+        <select id="tts-lang" class="field"></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Voice
+        <select id="tts-voice" class="field"></select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Volume: <span id="tts-vol-val">100</span>%
+        <input id="tts-vol" type="range" min="0" max="1" step="0.05" value="1" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Rate: <span id="tts-rate-val">1.0</span>×
+        <input id="tts-rate" type="range" min="0.5" max="2" step="0.1" value="1" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Pitch: <span id="tts-pitch-val">1.0</span>
+        <input id="tts-pitch" type="range" min="0" max="2" step="0.1" value="1" />
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle sm:self-end sm:pb-2">
+        <input id="tts-hl" type="checkbox" checked class="h-4 w-4" />
+        Highlight words while reading
+      </label>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="tts-play" type="button" class="btn btn-primary">▶ Speak</button>
+      <button id="tts-pause" type="button" class="btn btn-secondary" disabled>Pause</button>
+      <button id="tts-stop" type="button" class="btn btn-secondary" disabled>Stop</button>
+      <button id="tts-reset" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]" title="Reset voice, rate, pitch and volume">Reset settings</button>
+      <span id="tts-status" class="ml-auto text-[13px] text-ink-subtle" role="status"></span>
+    </div>
+
+    <div id="tts-reading" class="field hidden" style="max-height:16rem;overflow:auto;white-space:pre-wrap;line-height:1.6" aria-live="off"></div>
+
+    <p id="tts-unsupported" class="hidden text-[13px]" style="color:#e5484d" role="alert">
+      Your browser does not support speech synthesis. Try a recent version of Chrome, Edge or Safari.
+    </p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free text to speech tool reads any text aloud using the voices built
+      into your device, with adjustable speed, pitch and volume. Pick from every
+      language your device can speak — the language menu lists each one your
+      installed voices support and filters the voices to match. As it reads, each
+      word is highlighted in sync so you can follow along, which makes it handy for
+      proofreading, accessibility, learning pronunciation or just resting your
+      eyes. Play, pause and resume mid-sentence, and see a live character, word and
+      estimated-duration count as you type.
+    </p>
+    <p>
+      Long passages are automatically split into sentence-sized chunks and queued,
+      which sidesteps the roughly-15-second cutoff some browsers impose on a single
+      utterance — so a full article reads to the end instead of stopping partway.
+      Your chosen voice, rate, pitch and volume are remembered on this device for
+      next time. This uses your browser's built-in speech synthesis, with no account needed.
+      Note that the browser speech engine can play audio but cannot export it to a
+      file, so there is no MP3 download; use your operating system's screen or audio
+      recorder if you need to capture the output.
+    </p>
+  </div>
+
+  <style>
+    #tts-reading .tts-mark {
+      background-color: var(--color-primary);
+      color: var(--color-on-primary);
+      border-radius: var(--radius-xs, 4px);
+      padding: 0 1px;
+    }
+  </style>
+</ToolLayout>
+
+<script>
+  const synth = window.speechSynthesis;
+  const textEl = document.getElementById('tts-text') as HTMLTextAreaElement;
+  const langSel = document.getElementById('tts-lang') as HTMLSelectElement;
+  const voiceSel = document.getElementById('tts-voice') as HTMLSelectElement;
+  const rate = document.getElementById('tts-rate') as HTMLInputElement;
+  const pitch = document.getElementById('tts-pitch') as HTMLInputElement;
+  const vol = document.getElementById('tts-vol') as HTMLInputElement;
+  const rateVal = document.getElementById('tts-rate-val')!;
+  const pitchVal = document.getElementById('tts-pitch-val')!;
+  const volVal = document.getElementById('tts-vol-val')!;
+  const hlBox = document.getElementById('tts-hl') as HTMLInputElement;
+  const countEl = document.getElementById('tts-count')!;
+  const statusEl = document.getElementById('tts-status')!;
+  const readingEl = document.getElementById('tts-reading')!;
+  const unsupported = document.getElementById('tts-unsupported')!;
+  const playBtn = document.getElementById('tts-play') as HTMLButtonElement;
+  const pauseBtn = document.getElementById('tts-pause') as HTMLButtonElement;
+  const stopBtn = document.getElementById('tts-stop') as HTMLButtonElement;
+
+  const SAMPLE = 'Hello! This text is being read aloud by your browser. Notice how each word lights up as it is spoken — that makes it easy to follow along while proofreading or learning pronunciation.';
+
+  if (!synth) {
+    unsupported.classList.remove('hidden');
+
+    const tick = () => {
+      const t = textEl.value, w = t.trim() ? t.trim().split(/\s+/).length : 0;
+      countEl.textContent = `${t.length} char${t.length === 1 ? '' : 's'} · ${w} word${w === 1 ? '' : 's'}`;
+    };
+    tick();
+    textEl.addEventListener('input', tick);
+  } else {
+    let voices: SpeechSynthesisVoice[] = [];
+    let langNames: Intl.DisplayNames | null = null;
+    try {
+      langNames = new Intl.DisplayNames(['en'], { type: 'language' });
+    } catch {
+      langNames = null;
+    }
+
+    function displayLang(code: string) {
+      const tag = code.replace('_', '-');
+      let label = tag;
+      if (langNames) {
+        try {
+          label = langNames.of(tag) || tag;
+        } catch {
+          label = tag;
+        }
+      }
+      return label === tag ? tag : `${label} (${tag})`;
+    }
+
+    // ── Settings persistence ──────────────────────────────────────────────
+    const KEY = 'tts-settings';
+    let savedVoiceName = '';
+    function loadSettings() {
+      try {
+        const s = JSON.parse(localStorage.getItem(KEY) || '{}');
+        if (typeof s.rate === 'number') rate.value = String(s.rate);
+        if (typeof s.pitch === 'number') pitch.value = String(s.pitch);
+        if (typeof s.volume === 'number') vol.value = String(s.volume);
+        if (typeof s.lang === 'string') langSel.dataset.want = s.lang;
+        if (typeof s.voice === 'string') savedVoiceName = s.voice;
+        if (typeof s.highlight === 'boolean') hlBox.checked = s.highlight;
+      } catch {}
+      syncLabels();
+    }
+    function saveSettings() {
+      const v = voices[Number(voiceSel.value)];
+      try {
+        localStorage.setItem(KEY, JSON.stringify({
+          rate: Number(rate.value), pitch: Number(pitch.value), volume: Number(vol.value),
+          lang: langSel.value, voice: v?.name || '', highlight: hlBox.checked,
+        }));
+      } catch {}
+    }
+
+    function loadVoices() {
+      voices = synth.getVoices();
+      const prevLang = langSel.value || langSel.dataset.want || '';
+      const langs = [...new Set(voices.map((v) => v.lang))].sort((a, b) =>
+        displayLang(a).localeCompare(displayLang(b))
+      );
+      langSel.innerHTML =
+        '<option value="">All languages</option>' +
+        langs.map((l) => `<option value="${l}">${displayLang(l)}</option>`).join('');
+      if (prevLang && langs.includes(prevLang)) langSel.value = prevLang;
+      loadVoiceOptions();
+    }
+
+    function loadVoiceOptions() {
+      const lang = langSel.value;
+      const prev = voiceSel.value;
+      const matches = voices
+        .map((v, i) => ({ v, i }))
+        .filter(({ v }) => !lang || v.lang === lang);
+      voiceSel.innerHTML = matches
+        .map(
+          ({ v, i }) =>
+            `<option value="${i}">${v.name} (${v.lang})${v.default ? ' — default' : ''}</option>`
+        )
+        .join('');
+      // Restore selection: previous choice → saved voice name → first match.
+      if (prev && matches.some(({ i }) => String(i) === prev)) {
+        voiceSel.value = prev;
+      } else if (savedVoiceName) {
+        const hit = matches.find(({ v }) => v.name === savedVoiceName);
+        if (hit) voiceSel.value = String(hit.i);
+      }
+    }
+
+    // ── Counters ──────────────────────────────────────────────────────────
+    function updateCount() {
+      const t = textEl.value;
+      const chars = t.length;
+      const words = t.trim() ? t.trim().split(/\s+/).length : 0;
+      // Rough estimate: ~180 words per minute, scaled by rate.
+      const secs = words ? Math.round((words / (180 * Number(rate.value))) * 60) : 0;
+      const mm = Math.floor(secs / 60), ss = secs % 60;
+      const dur = words ? ` · ~${mm}:${String(ss).padStart(2, '0')}` : '';
+      countEl.textContent = `${chars} char${chars === 1 ? '' : 's'} · ${words} word${words === 1 ? '' : 's'}${dur}`;
+    }
+
+    function syncLabels() {
+      rateVal.textContent = Number(rate.value).toFixed(1);
+      pitchVal.textContent = Number(pitch.value).toFixed(1);
+      volVal.textContent = String(Math.round(Number(vol.value) * 100));
+    }
+
+    // ── Reading highlight ────────────────────────────────────────────────
+    function esc(s: string) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    function showReading(text: string) {
+      if (!hlBox.checked) { readingEl.classList.add('hidden'); return; }
+      readingEl.textContent = text;
+      readingEl.classList.remove('hidden');
+    }
+    function highlightWord(globalIndex: number, len: number) {
+      if (!hlBox.checked) return;
+      const t = textEl.value;
+      if (!len || len < 1) {
+        const m = /\S+/.exec(t.slice(globalIndex));
+        len = m ? m[0].length : 0;
+      }
+      readingEl.innerHTML =
+        esc(t.slice(0, globalIndex)) +
+        '<mark class="tts-mark">' + esc(t.slice(globalIndex, globalIndex + len)) + '</mark>' +
+        esc(t.slice(globalIndex + len));
+      readingEl.querySelector('.tts-mark')?.scrollIntoView({ block: 'nearest' });
+    }
+    function clearHighlight() {
+      readingEl.classList.add('hidden');
+      readingEl.textContent = '';
+    }
+
+    // ── Chunking (avoids the ~15s single-utterance cutoff in some browsers) ─
+    const MAX = 200;
+    function splitChunks(text: string): { text: string; offset: number }[] {
+      const out: { text: string; offset: number }[] = [];
+      // Partition into sentence-ish pieces; matches concatenate back to `text`
+      // exactly, so a running offset stays accurate.
+      const raw = text.match(/[\s\S]*?(?:[.!?。！？]+|\n+|$)/g) || [text];
+      let offset = 0;
+      for (const piece of raw) {
+        if (piece.length) pushChunk(piece, offset, out);
+        offset += piece.length;
+      }
+      return out.filter((c) => c.text.trim());
+    }
+    function pushChunk(s: string, base: number, out: { text: string; offset: number }[]) {
+      if (s.length <= MAX) { out.push({ text: s, offset: base }); return; }
+      // Split an over-long sentence on word boundaries, keeping separators.
+      const words = s.split(/(\s+)/);
+      let buf = '', consumed = 0, start = 0;
+      for (const w of words) {
+        if (buf && buf.length + w.length > MAX) {
+          out.push({ text: buf, offset: base + start });
+          consumed += buf.length; start = consumed; buf = '';
+        }
+        buf += w;
+      }
+      if (buf) out.push({ text: buf, offset: base + start });
+    }
+
+    // ── Playback ───────────────────────────────────────────────────────────
+    let queue: { text: string; offset: number }[] = [];
+    let qIndex = 0;
+    let speaking = false;
+
+    function setStatus(msg: string) { statusEl.textContent = msg; }
+    function setButtons(active: boolean, paused = false) {
+      playBtn.disabled = active && !paused;
+      pauseBtn.disabled = !active;
+      stopBtn.disabled = !active;
+      pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+    }
+
+    function speakNext() {
+      if (qIndex >= queue.length) { finish(); return; }
+      const chunk = queue[qIndex];
+      const u = new SpeechSynthesisUtterance(chunk.text);
+      const v = voices[Number(voiceSel.value)];
+      if (v) { u.voice = v; u.lang = v.lang; }
+      u.rate = Number(rate.value);
+      u.pitch = Number(pitch.value);
+      u.volume = Number(vol.value);
+      u.onboundary = (e) => highlightWord(chunk.offset + e.charIndex, e.charLength || 0);
+      u.onend = () => { qIndex++; if (speaking) speakNext(); };
+      u.onerror = () => {
+        setStatus('Playback error — try a different voice.');
+        finish();
+      };
+      if (queue.length > 1) setStatus(`Speaking… sentence ${qIndex + 1} of ${queue.length}`);
+      else setStatus('Speaking…');
+      synth.speak(u);
+    }
+
+    function finish() {
+      speaking = false;
+      synth.cancel();
+      setButtons(false);
+      clearHighlight();
+      if (statusEl.textContent?.startsWith('Speaking')) setStatus('Done ✓');
+    }
+
+    function play() {
+      if (!textEl.value.trim()) { setStatus('Enter some text first.'); return; }
+      synth.cancel();
+      queue = splitChunks(textEl.value);
+      qIndex = 0;
+      speaking = true;
+      setButtons(true);
+      showReading(textEl.value);
+      speakNext();
+    }
+
+    // ── Wiring ──────────────────────────────────────────────────────────────
+    loadSettings();
+    loadVoices();
+    synth.onvoiceschanged = loadVoices;
+    langSel.addEventListener('change', () => { loadVoiceOptions(); saveSettings(); });
+    voiceSel.addEventListener('change', saveSettings);
+    hlBox.addEventListener('change', () => {
+      saveSettings();
+      if (!hlBox.checked) clearHighlight();
+      else if (speaking) showReading(textEl.value);
+    });
+
+    rate.addEventListener('input', () => { syncLabels(); updateCount(); });
+    pitch.addEventListener('input', syncLabels);
+    vol.addEventListener('input', syncLabels);
+    rate.addEventListener('change', saveSettings);
+    pitch.addEventListener('change', saveSettings);
+    vol.addEventListener('change', saveSettings);
+    textEl.addEventListener('input', updateCount);
+
+    playBtn.addEventListener('click', play);
+    pauseBtn.addEventListener('click', () => {
+      if (!speaking) return;
+      if (synth.paused) { synth.resume(); setButtons(true, false); setStatus('Speaking…'); }
+      else { synth.pause(); setButtons(true, true); setStatus('Paused'); }
+    });
+    stopBtn.addEventListener('click', () => { setStatus('Stopped'); finish(); });
+
+    document.getElementById('tts-sample')!.addEventListener('click', () => {
+      textEl.value = SAMPLE; updateCount();
+    });
+    document.getElementById('tts-clear')!.addEventListener('click', () => {
+      textEl.value = ''; updateCount(); clearHighlight();
+      if (speaking) finish();
+      textEl.focus();
+    });
+    document.getElementById('tts-reset')!.addEventListener('click', () => {
+      rate.value = '1'; pitch.value = '1'; vol.value = '1'; hlBox.checked = true;
+      syncLabels(); updateCount(); saveSettings();
+    });
+
+    // Stop speech if the user leaves the page (avoids audio outliving the tab).
+    window.addEventListener('beforeunload', () => synth.cancel());
+
+    textEl.value = SAMPLE;
+    updateCount();
+  }
+</script>

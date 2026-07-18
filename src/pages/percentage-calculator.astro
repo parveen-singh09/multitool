@@ -1,0 +1,116 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="percentage-calculator">
+  <div class="flex flex-col gap-5">
+
+    <div class="panel panel-lift flex flex-col gap-3 p-5">
+      <p class="text-sm text-ink">What is <span class="text-ink-subtle">X%</span> of <span class="text-ink-subtle">Y</span>?</p>
+      <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
+        <input id="p1-x" type="number" class="field w-24" value="15" /> % of
+        <input id="p1-y" type="number" class="field w-28" value="200" /> =
+        <span id="p1-out" class="font-mono text-lg text-ink">30</span>
+      </div>
+    </div>
+
+    <div class="panel panel-lift flex flex-col gap-3 p-5">
+      <p class="text-sm text-ink"><span class="text-ink-subtle">X</span> is what percent of <span class="text-ink-subtle">Y</span>?</p>
+      <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
+        <input id="p2-x" type="number" class="field w-24" value="30" /> is
+        <span id="p2-out" class="font-mono text-lg text-ink">15%</span> of
+        <input id="p2-y" type="number" class="field w-28" value="200" />
+      </div>
+    </div>
+
+    <div class="panel panel-lift flex flex-col gap-3 p-5">
+      <p class="text-sm text-ink">Percentage change from <span class="text-ink-subtle">A</span> to <span class="text-ink-subtle">B</span></p>
+      <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
+        from <input id="p3-a" type="number" class="field w-28" value="200" />
+        to <input id="p3-b" type="number" class="field w-28" value="250" /> =
+        <span id="p3-out" class="font-mono text-lg text-ink">+25%</span>
+      </div>
+    </div>
+
+    <div class="panel panel-lift flex flex-col gap-3 p-5">
+      <p class="text-sm text-ink"><span class="text-ink-subtle">X</span> is <span class="text-ink-subtle">Y%</span> of what?</p>
+      <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
+        <input id="p4-x" type="number" class="field w-24" value="30" /> is
+        <input id="p4-y" type="number" class="field w-20" value="15" /> % of
+        <span id="p4-out" class="font-mono text-lg text-ink">200</span>
+      </div>
+    </div>
+
+    <div class="panel panel-lift flex flex-col gap-3 p-5">
+      <p class="text-sm text-ink">Increase or decrease a number by a percent</p>
+      <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
+        <input id="p5-n" type="number" class="field w-28" value="250" />
+        <select id="p5-op" class="field w-32"><option value="inc">increased by</option><option value="dec">decreased by</option></select>
+        <input id="p5-p" type="number" class="field w-20" value="15" /> % =
+        <span id="p5-out" class="font-mono text-lg text-ink">287.5</span>
+      </div>
+    </div>
+
+    <div class="panel panel-lift flex flex-col gap-3 p-5">
+      <p class="text-sm text-ink">Percentage difference between <span class="text-ink-subtle">A</span> and <span class="text-ink-subtle">B</span></p>
+      <div class="flex flex-wrap items-center gap-2 text-sm text-ink-subtle">
+        <input id="p6-a" type="number" class="field w-28" value="40" /> and
+        <input id="p6-b" type="number" class="field w-28" value="60" /> =
+        <span id="p6-out" class="font-mono text-lg text-ink">40%</span>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free percentage calculator covers the three questions people ask most:
+      what is X percent of a number, what percent one number is of another, and
+      the percentage increase or decrease between two values. Enter your numbers
+      and each answer updates instantly.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const round = (n: number) => Math.round(n * 100) / 100;
+
+  function calc() {
+
+    document.getElementById('p1-out')!.textContent =
+      String(round((Number($('p1-x').value) / 100) * Number($('p1-y').value)));
+
+    const y2 = Number($('p2-y').value);
+    document.getElementById('p2-out')!.textContent =
+      (y2 === 0 ? '—' : round((Number($('p2-x').value) / y2) * 100) + '%');
+
+    const a = Number($('p3-a').value);
+    const b = Number($('p3-b').value);
+    const outEl = document.getElementById('p3-out')!;
+    if (a === 0) { outEl.textContent = '—'; outEl.style.color = ''; }
+    else {
+      const change = round(((b - a) / Math.abs(a)) * 100);
+      outEl.textContent = (change >= 0 ? '+' : '') + change + '%';
+      outEl.style.color = change >= 0 ? 'var(--color-success)' : '#e5484d';
+    }
+
+    const y4 = Number($('p4-y').value);
+    document.getElementById('p4-out')!.textContent =
+      y4 === 0 ? '—' : String(round(Number($('p4-x').value) / (y4 / 100)));
+
+    const n5 = Number($('p5-n').value);
+    const p5 = Number($('p5-p').value);
+    const sign = ($('p5-op') as unknown as HTMLSelectElement).value === 'dec' ? -1 : 1;
+    document.getElementById('p5-out')!.textContent = String(round(n5 * (1 + (sign * p5) / 100)));
+
+    const a6 = Number($('p6-a').value);
+    const b6 = Number($('p6-b').value);
+    const avg = (a6 + b6) / 2;
+    document.getElementById('p6-out')!.textContent =
+      avg === 0 ? '—' : round((Math.abs(a6 - b6) / Math.abs(avg)) * 100) + '%';
+  }
+
+  document.querySelectorAll('input[type=number]').forEach((el) => el.addEventListener('input', calc));
+  document.getElementById('p5-op')!.addEventListener('change', calc);
+  calc();
+</script>

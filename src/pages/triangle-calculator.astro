@@ -1,0 +1,280 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="triangle-calculator">
+  <div class="flex flex-col gap-4">
+    <p class="text-[13px] text-ink-subtle">
+      Enter any three values including at least one side (sides a, b, c; angles A, B, C
+      where A is opposite a). Works for SSS, SAS, ASA, AAS and SSA. Leave the rest blank.
+    </p>
+
+    <div class="flex flex-wrap gap-2" role="tablist" aria-label="Angle unit">
+      <button type="button" data-unit="deg" class="t-unit btn btn-primary" aria-selected="true">Degrees</button>
+      <button type="button" data-unit="rad" class="t-unit btn btn-secondary" aria-selected="false">Radians</button>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Side a
+        <input id="t-a" type="number" inputmode="decimal" step="any" min="0" class="field font-mono" value="3" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Side b
+        <input id="t-b" type="number" inputmode="decimal" step="any" min="0" class="field font-mono" value="4" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Side c
+        <input id="t-c" type="number" inputmode="decimal" step="any" min="0" class="field font-mono" placeholder="blank" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Angle A <span id="t-ua" class="text-ink-tertiary">(°)</span>
+        <input id="t-A" type="number" inputmode="decimal" step="any" min="0" class="field font-mono" placeholder="blank" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Angle B <span id="t-ub" class="text-ink-tertiary">(°)</span>
+        <input id="t-B" type="number" inputmode="decimal" step="any" min="0" class="field font-mono" placeholder="blank" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Angle C <span id="t-uc" class="text-ink-tertiary">(°)</span>
+        <input id="t-C" type="number" inputmode="decimal" step="any" min="0" class="field font-mono" value="90" />
+      </label>
+    </div>
+
+    <p id="t-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+
+      <div class="flex flex-col gap-3">
+        <div class="grid grid-cols-3 gap-2 text-center text-[13px]">
+          <div class="panel p-3"><div id="o-a" class="font-mono text-ink">—</div><div class="mt-1 text-ink-subtle">a</div></div>
+          <div class="panel p-3"><div id="o-b" class="font-mono text-ink">—</div><div class="mt-1 text-ink-subtle">b</div></div>
+          <div class="panel p-3"><div id="o-c" class="font-mono text-ink">—</div><div class="mt-1 text-ink-subtle">c</div></div>
+          <div class="panel p-3"><div id="o-A" class="font-mono text-ink">—</div><div class="mt-1 text-ink-subtle">A</div></div>
+          <div class="panel p-3"><div id="o-B" class="font-mono text-ink">—</div><div class="mt-1 text-ink-subtle">B</div></div>
+          <div class="panel p-3"><div id="o-C" class="font-mono text-ink">—</div><div class="mt-1 text-ink-subtle">C</div></div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-center text-[13px]">
+          <div class="panel p-3"><div id="o-area" class="font-mono text-primary-hover">—</div><div class="mt-1 text-ink-subtle">Area</div></div>
+          <div class="panel p-3"><div id="o-perim" class="font-mono text-ink">—</div><div class="mt-1 text-ink-subtle">Perimeter</div></div>
+          <div class="panel p-3"><div id="o-inradius" class="font-mono text-ink">—</div><div class="mt-1 text-ink-subtle">Inradius</div></div>
+          <div class="panel p-3"><div id="o-circum" class="font-mono text-ink">—</div><div class="mt-1 text-ink-subtle">Circumradius</div></div>
+        </div>
+        <p id="t-ambig" class="hidden text-[12px] text-ink-tertiary"></p>
+      </div>
+
+      <div class="panel p-4">
+        <svg id="t-diagram" viewBox="0 0 300 240" class="w-full" role="img" aria-label="Triangle diagram"></svg>
+      </div>
+    </div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>
+      This free triangle calculator solves any triangle — not just right triangles —
+      from any three values that include at least one side. It handles all the
+      standard cases (SSS, SAS, ASA, AAS and the ambiguous SSA) using the law of
+      sines and law of cosines, and returns all three sides, all three angles, the
+      area, perimeter, inradius and circumradius, along with a scaled diagram.
+      Switch between degrees and radians for angle input and output.
+    </p>
+  </div>
+</ToolLayout>
+
+<script>
+  const ids = ['t-a', 't-b', 't-c', 't-A', 't-B', 't-C'];
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const errEl = document.getElementById('t-error')!;
+  const round = (n: number) => Math.round(n * 1e6) / 1e6;
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const DEG = 180 / Math.PI;
+  let unit: 'deg' | 'rad' = 'deg';
+
+  function val(id: string): number | null {
+    const t = $(id).value.trim();
+    if (t === '') return null;
+    const n = parseFloat(t);
+    return isNaN(n) ? NaN : n;
+  }
+
+  const toDeg = (a: number) => (unit === 'rad' ? a * DEG : a);
+  const fromDeg = (a: number) => (unit === 'rad' ? a / DEG : a);
+  const angleLabel = (deg: number) => (unit === 'rad' ? round(deg / DEG) + ' rad' : round(deg) + '°');
+
+  const outIds = ['o-a', 'o-b', 'o-c', 'o-A', 'o-B', 'o-C', 'o-area', 'o-perim', 'o-inradius', 'o-circum'];
+  function clearOut() {
+    outIds.forEach((id) => (document.getElementById(id)!.textContent = '—'));
+    document.getElementById('t-diagram')!.innerHTML = '';
+    document.getElementById('t-ambig')!.classList.add('hidden');
+  }
+  function showError(msg: string) { errEl.textContent = msg; errEl.classList.remove('hidden'); clearOut(); }
+
+  function calc() {
+    errEl.classList.add('hidden');
+    document.getElementById('t-ambig')!.classList.add('hidden');
+
+    let a = val('t-a'), b = val('t-b'), c = val('t-c');
+    let A = val('t-A'), B = val('t-B'), C = val('t-C');
+
+    if (A !== null && !isNaN(A)) A = toDeg(A);
+    if (B !== null && !isNaN(B)) B = toDeg(B);
+    if (C !== null && !isNaN(C)) C = toDeg(C);
+
+    const vals = [a, b, c, A, B, C];
+    if (vals.every((v) => v === null)) { clearOut(); return; }
+    if (vals.some((v) => v !== null && (isNaN(v as number) || (v as number) < 0))) { showError('Values must be non-negative numbers.'); return; }
+
+    const sides = [a, b, c].filter((v) => v !== null && (v as number) > 0).length;
+    const angles = [A, B, C].filter((v) => v !== null && (v as number) > 0).length;
+    if (sides + angles < 3) { showError('Enter at least three values.'); return; }
+    if (sides === 0) { showError('At least one side is required (angles alone can\'t set the size).'); return; }
+
+    let ambig = '';
+
+    if (angles >= 2) {
+      const sum = (A || 0) + (B || 0) + (C || 0);
+      if (A === null) A = 180 - (B! + C!);
+      else if (B === null) B = 180 - (A! + C!);
+      else if (C === null) C = 180 - (A! + B!);
+      if (A! <= 0 || B! <= 0 || C! <= 0 || Math.abs(A! + B! + C! - 180) > 1e-6 && angles === 3) {
+        if (angles === 3 && Math.abs(sum - 180) > 1e-6) { showError('Angles must add up to 180°.'); return; }
+        if (A! <= 0 || B! <= 0 || C! <= 0) { showError('Those angles can\'t form a triangle.'); return; }
+      }
+    }
+
+    const rad = (d: number) => d / DEG;
+
+    if (sides === 3) {
+
+      const [x, y, z] = [a!, b!, c!];
+      if (x + y <= z || x + z <= y || y + z <= x) { showError('These sides violate the triangle inequality.'); return; }
+      A = Math.acos((y * y + z * z - x * x) / (2 * y * z)) * DEG;
+      B = Math.acos((x * x + z * z - y * y) / (2 * x * z)) * DEG;
+      C = 180 - A - B;
+    } else if (angles >= 2) {
+
+      const known = a !== null && a > 0 ? { s: a, ang: A! } : b !== null && b > 0 ? { s: b, ang: B! } : { s: c!, ang: C! };
+      const k = known.s / Math.sin(rad(known.ang));
+      if (a === null || a === 0) a = k * Math.sin(rad(A!));
+      if (b === null || b === 0) b = k * Math.sin(rad(B!));
+      if (c === null || c === 0) c = k * Math.sin(rad(C!));
+    } else {
+
+      const missingSide = a === null || a === 0 ? 'a' : b === null || b === 0 ? 'b' : 'c';
+      const knownAngle = A !== null && A > 0 ? 'A' : B !== null && B > 0 ? 'B' : 'C';
+
+      if (knownAngle.toLowerCase() === missingSide) {
+
+        if (missingSide === 'a') { a = Math.sqrt(b! * b! + c! * c! - 2 * b! * c! * Math.cos(rad(A!))); }
+        else if (missingSide === 'b') { b = Math.sqrt(a! * a! + c! * c! - 2 * a! * c! * Math.cos(rad(B!))); }
+        else { c = Math.sqrt(a! * a! + b! * b! - 2 * a! * b! * Math.cos(rad(C!))); }
+
+        A = Math.acos((b! * b! + c! * c! - a! * a!) / (2 * b! * c!)) * DEG;
+        B = Math.acos((a! * a! + c! * c! - b! * b!) / (2 * a! * c!)) * DEG;
+        C = 180 - A - B;
+      } else {
+
+        const pair = A !== null && A > 0 && a !== null && a > 0 ? { ang: A, opp: a, other: b! > 0 ? b! : c!, otherName: b! > 0 ? 'B' : 'C' }
+          : B !== null && B > 0 && b !== null && b > 0 ? { ang: B, opp: b, other: a! > 0 ? a! : c!, otherName: a! > 0 ? 'A' : 'C' }
+          : { ang: C!, opp: c!, other: a! > 0 ? a! : b!, otherName: a! > 0 ? 'A' : 'B' };
+        const sinOther = (pair.other * Math.sin(rad(pair.ang))) / pair.opp;
+        if (sinOther > 1) { showError('No triangle exists with these values (SSA).'); return; }
+        const otherAngle = Math.asin(sinOther) * DEG;
+        if (sinOther < 1 && otherAngle + pair.ang < 180) ambig = `Ambiguous case: a second triangle exists with the obtuse angle ${round(180 - otherAngle)}°.`;
+        // assign the computed other angle
+        if (pair.otherName === 'A') A = otherAngle; else if (pair.otherName === 'B') B = otherAngle; else C = otherAngle;
+        // fill remaining angle and side
+        const filledAngles = [A, B, C].filter((v) => v !== null && v > 0).length;
+        if (filledAngles === 2) {
+          if (A === null || A === 0) A = 180 - B! - C!;
+          else if (B === null || B === 0) B = 180 - A! - C!;
+          else if (C === null || C === 0) C = 180 - A! - B!;
+        }
+        const kk = pair.opp / Math.sin(rad(pair.ang));
+        if (a === null || a === 0) a = kk * Math.sin(rad(A!));
+        if (b === null || b === 0) b = kk * Math.sin(rad(B!));
+        if (c === null || c === 0) c = kk * Math.sin(rad(C!));
+      }
+    }
+
+    // Final sanity check.
+    if ([a, b, c].some((v) => !v || !isFinite(v) || v <= 0) || [A, B, C].some((v) => !v || !isFinite(v) || v <= 0)) {
+      showError('Those values don\'t form a valid triangle.');
+      return;
+    }
+
+    const perim = a! + b! + c!;
+    const s = perim / 2;
+    const area = Math.sqrt(Math.max(0, s * (s - a!) * (s - b!) * (s - c!)));
+    const inradius = area / s;
+    const circum = (a! * b! * c!) / (4 * area);
+
+    document.getElementById('o-a')!.textContent = String(round(a!));
+    document.getElementById('o-b')!.textContent = String(round(b!));
+    document.getElementById('o-c')!.textContent = String(round(c!));
+    document.getElementById('o-A')!.textContent = angleLabel(A!);
+    document.getElementById('o-B')!.textContent = angleLabel(B!);
+    document.getElementById('o-C')!.textContent = angleLabel(C!);
+    document.getElementById('o-area')!.textContent = String(round(area));
+    document.getElementById('o-perim')!.textContent = String(round(perim));
+    document.getElementById('o-inradius')!.textContent = String(round(inradius));
+    document.getElementById('o-circum')!.textContent = String(round(circum));
+
+    if (ambig) {
+      const el = document.getElementById('t-ambig')!;
+      el.textContent = ambig;
+      el.classList.remove('hidden');
+    }
+
+    drawTriangle(a!, b!, c!, A!);
+  }
+
+  // Place vertices: A=(0,0), B=(c,0), C=(b·cosA, b·sinA); scale to the viewBox.
+  function drawTriangle(a: number, b: number, c: number, Adeg: number) {
+    const svg = document.getElementById('t-diagram')!;
+    svg.innerHTML = '';
+    const Ar = Adeg / DEG;
+    const pts = [
+      { x: 0, y: 0, label: 'A' },
+      { x: c, y: 0, label: 'B' },
+      { x: b * Math.cos(Ar), y: b * Math.sin(Ar), label: 'C' },
+    ];
+    const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
+    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+    const W = 300, H = 240, pad = 40;
+    const scale = Math.min((W - 2 * pad) / (maxX - minX || 1), (H - 2 * pad) / (maxY - minY || 1));
+    // flip Y so the triangle points up; center it
+    const sx = (x: number) => pad + (x - minX) * scale;
+    const sy = (y: number) => H - pad - (y - minY) * scale;
+
+    const poly = document.createElementNS(SVGNS, 'polygon');
+    poly.setAttribute('points', pts.map((p) => `${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(' '));
+    poly.setAttribute('fill', 'color-mix(in srgb, #5e6ad2 15%, transparent)');
+    poly.setAttribute('stroke', '#828fff');
+    poly.setAttribute('stroke-width', '2');
+    poly.setAttribute('vector-effect', 'non-scaling-stroke');
+    svg.appendChild(poly);
+
+    // vertex labels
+    for (const p of pts) {
+      const t = document.createElementNS(SVGNS, 'text');
+      t.setAttribute('x', String(sx(p.x))); t.setAttribute('y', String(sy(p.y)));
+      t.setAttribute('dx', p.x === minX ? '-8' : '4'); t.setAttribute('dy', p.y === maxY ? '-4' : '12');
+      t.setAttribute('class', 'fill-ink font-mono'); t.setAttribute('style', 'font-size:12px');
+      t.textContent = p.label;
+      svg.appendChild(t);
+    }
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.t-unit').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      unit = tab.dataset.unit as 'deg' | 'rad';
+      document.querySelectorAll('.t-unit').forEach((t) => {
+        const active = t === tab;
+        t.setAttribute('aria-selected', String(active));
+        t.classList.toggle('btn-primary', active);
+        t.classList.toggle('btn-secondary', !active);
+      });
+      const u = unit === 'rad' ? '(rad)' : '(°)';
+      ['t-ua', 't-ub', 't-uc'].forEach((id) => (document.getElementById(id)!.textContent = u));
+      calc();
+    });
+  });
+
+  ids.forEach((id) => $(id).addEventListener('input', calc));
+  calc();
+</script>

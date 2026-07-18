@@ -33,6 +33,1292 @@ export interface Tool {
 
 export const tools: Tool[] = [
   {
+    slug: 'file-converter',
+    name: 'File Converter',
+    tagline: 'Convert almost any file — documents, images, audio, video & more.',
+    description:
+      'Free online file converter. Convert almost any file to another format — documents, images, audio, video, spreadsheets, presentations, ebooks and archives.',
+    category: 'Converters',
+    keywords: ['file converter', 'convert any file', 'online file converter', 'universal converter', 'convert file online'],
+    icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M9 15l2 2 4-4',
+  },
+  {
+    slug: 'video-converter',
+    name: 'Video Converter',
+    tagline: 'Convert between MP4, WebM, MKV, MOV, AVI, FLV & OGV.',
+    description:
+      'Free online video converter. Convert between MP4, WebM, MKV, MOV, AVI, FLV and OGV — entirely in your browser, nothing uploaded.',
+    category: 'Audio & Video',
+    keywords: ['video converter', 'convert video online', 'mp4 converter', 'webm converter', 'mkv converter'],
+    icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
+  },
+  {
+    slug: 'webm-to-mp4',
+    name: 'WebM to MP4',
+    tagline: 'Convert WebM to compatible MP4.',
+    description:
+      'Free online WebM to MP4 converter. Convert WebM videos to widely-compatible MP4 (H.264 + AAC) — entirely in your browser.',
+    category: 'Audio & Video',
+    keywords: ['webm to mp4', 'convert webm to mp4', 'webm to mp4 online', 'webm to mp4 browser', 'mp4 converter'],
+    icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
+  },
+  {
+    slug: 'mp4-to-webm',
+    name: 'MP4 to WebM',
+    tagline: 'Convert MP4 to open WebM.',
+    description:
+      'Free online MP4 to WebM converter. Convert MP4 videos to the open WebM format (VP8 + Vorbis) for the web — entirely in your browser.',
+    category: 'Audio & Video',
+    keywords: ['mp4 to webm', 'convert mp4 to webm', 'mp4 to webm online', 'mp4 to vp8', 'webm converter'],
+    icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
+  },
+  {
+    slug: 'avi-to-mp4',
+    name: 'AVI to MP4',
+    tagline: 'Convert older AVI to modern MP4.',
+    description:
+      'Free online AVI to MP4 converter. Convert older AVI videos to modern MP4 that plays on any device — entirely in your browser.',
+    category: 'Audio & Video',
+    keywords: ['avi to mp4', 'convert avi to mp4', 'avi to mp4 online', 'avi to mp4 browser', 'mp4 converter'],
+    icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
+  },
+  {
+    slug: 'flv-to-mp4',
+    name: 'FLV to MP4',
+    tagline: 'Convert legacy Flash FLV to MP4.',
+    description:
+      'Free online FLV to MP4 converter. Convert legacy Flash FLV videos to modern MP4 — entirely in your browser.',
+    category: 'Audio & Video',
+    keywords: ['flv to mp4', 'convert flv to mp4', 'flv to mp4 online', 'flash video to mp4', 'mp4 converter'],
+    icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
+  },
+  {
+    slug: 'mp4-to-mkv',
+    name: 'MP4 to MKV',
+    tagline: 'Repackage MP4 into Matroska MKV.',
+    description:
+      'Free online MP4 to MKV converter. Repackage MP4 videos into the flexible Matroska MKV container — entirely in your browser.',
+    category: 'Audio & Video',
+    keywords: ['mp4 to mkv', 'convert mp4 to mkv', 'mp4 to mkv online', 'mp4 to matroska', 'mkv converter'],
+    icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
+  },
+  {
+    slug: 'mkv-to-webm',
+    name: 'MKV to WebM',
+    tagline: 'Convert Matroska MKV to open WebM.',
+    description:
+      'Free online MKV to WebM converter. Convert Matroska MKV videos to the open WebM format for the web — entirely in your browser.',
+    category: 'Audio & Video',
+    keywords: ['mkv to webm', 'convert mkv to webm', 'mkv to webm online', 'matroska to webm', 'webm converter'],
+    icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
+  },
+  {
+    slug: 'mov-to-webm',
+    name: 'MOV to WebM',
+    tagline: 'Convert QuickTime MOV to open WebM.',
+    description:
+      'Free online MOV to WebM converter. Convert Apple QuickTime MOV videos to the open WebM format — entirely in your browser.',
+    category: 'Audio & Video',
+    keywords: ['mov to webm', 'convert mov to webm', 'mov to webm online', 'quicktime to webm', 'webm converter'],
+    icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
+  },
+  {
+    slug: 'mp4-to-mov',
+    name: 'MP4 to MOV',
+    tagline: 'Convert MP4 to QuickTime MOV.',
+    description:
+      'Free online MP4 to MOV converter. Convert MP4 videos to Apple QuickTime MOV — entirely in your browser.',
+    category: 'Audio & Video',
+    keywords: ['mp4 to mov', 'convert mp4 to mov', 'mp4 to mov online', 'mp4 to quicktime', 'mov converter'],
+    icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
+  },
+  {
+    slug: 'mp4-to-avi',
+    name: 'MP4 to AVI',
+    tagline: 'Convert MP4 to legacy AVI.',
+    description:
+      'Free online MP4 to AVI converter. Convert MP4 videos to the older AVI container for legacy players — entirely in your browser.',
+    category: 'Audio & Video',
+    keywords: ['mp4 to avi', 'convert mp4 to avi', 'mp4 to avi online', 'mp4 to avi browser', 'avi converter'],
+    icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
+  },
+  {
+    slug: '3gp-to-mp4',
+    name: '3GP to MP4',
+    tagline: 'Convert mobile 3GP to MP4.',
+    description:
+      'Free online 3GP to MP4 converter. Convert mobile 3GP videos to widely-compatible MP4 — entirely in your browser.',
+    category: 'Audio & Video',
+    keywords: ['3gp to mp4', 'convert 3gp to mp4', '3gp to mp4 online', 'mobile video to mp4', 'mp4 converter'],
+    icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
+  },
+  {
+    slug: 'ts-to-mp4',
+    name: 'TS to MP4',
+    tagline: 'Convert MPEG transport stream TS to MP4.',
+    description:
+      'Free online TS to MP4 converter. Convert MPEG transport stream TS videos to widely-compatible MP4.',
+    category: 'Audio & Video',
+    keywords: ['ts to mp4', 'convert ts to mp4', 'ts to mp4 online', 'transport stream to mp4', 'mp4 converter'],
+    icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
+  },
+  {
+    slug: 'vob-to-mp4',
+    name: 'VOB to MP4',
+    tagline: 'Convert DVD VOB to MP4.',
+    description:
+      'Free online VOB to MP4 converter. Convert DVD VOB videos to modern MP4.',
+    category: 'Audio & Video',
+    keywords: ['vob to mp4', 'convert vob to mp4', 'vob to mp4 online', 'dvd to mp4', 'mp4 converter'],
+    icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
+  },
+  {
+    slug: 'mpeg-to-mp4',
+    name: 'MPEG to MP4',
+    tagline: 'Convert legacy MPEG to MP4.',
+    description:
+      'Free online MPEG to MP4 converter. Convert legacy MPEG videos to modern MP4.',
+    category: 'Audio & Video',
+    keywords: ['mpeg to mp4', 'convert mpeg to mp4', 'mpeg to mp4 online', 'mpg to mp4', 'mp4 converter'],
+    icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
+  },
+  {
+    slug: 'rmvb-to-mp4',
+    name: 'RMVB to MP4',
+    tagline: 'Convert RealMedia RMVB to MP4.',
+    description:
+      'Free online RMVB to MP4 converter. Convert RealMedia RMVB videos to widely-compatible MP4.',
+    category: 'Audio & Video',
+    keywords: ['rmvb to mp4', 'convert rmvb to mp4', 'rmvb to mp4 online', 'realmedia to mp4', 'mp4 converter'],
+    icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
+  },
+  {
+    slug: 'm2ts-to-mp4',
+    name: 'M2TS to MP4',
+    tagline: 'Convert AVCHD M2TS to MP4.',
+    description:
+      'Free online M2TS to MP4 converter. Convert AVCHD M2TS camcorder videos to modern MP4.',
+    category: 'Audio & Video',
+    keywords: ['m2ts to mp4', 'convert m2ts to mp4', 'm2ts to mp4 online', 'avchd to mp4', 'mp4 converter'],
+    icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
+  },
+  {
+    slug: 'mxf-to-mp4',
+    name: 'MXF to MP4',
+    tagline: 'Convert broadcast MXF to MP4.',
+    description:
+      'Free online MXF to MP4 converter. Convert broadcast MXF videos to widely-compatible MP4.',
+    category: 'Audio & Video',
+    keywords: ['mxf to mp4', 'convert mxf to mp4', 'mxf to mp4 online', 'broadcast video to mp4', 'mp4 converter'],
+    icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
+  },
+  {
+    slug: 'swf-to-mp4',
+    name: 'SWF to MP4',
+    tagline: 'Convert Flash SWF to MP4 video.',
+    description:
+      'Free online SWF to MP4 converter. Convert legacy Flash SWF animations to modern MP4 video.',
+    category: 'Audio & Video',
+    keywords: ['swf to mp4', 'convert swf to mp4', 'swf to mp4 online', 'flash to mp4', 'mp4 converter'],
+    icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
+  },
+  {
+    slug: 'wtv-to-mp4',
+    name: 'WTV to MP4',
+    tagline: 'Convert Windows Media Center WTV to MP4.',
+    description:
+      'Free online WTV to MP4 converter. Convert Windows Media Center WTV recordings to modern MP4.',
+    category: 'Audio & Video',
+    keywords: ['wtv to mp4', 'convert wtv to mp4', 'wtv to mp4 online', 'media center to mp4', 'mp4 converter'],
+    icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
+  },
+  {
+    slug: 'vector-converter',
+    name: 'Vector Converter',
+    tagline: 'Convert AI, CDR, VSD, EMF, WMF, SVG & EPS.',
+    description:
+      'Free online vector converter. Convert between Adobe Illustrator AI, CorelDRAW CDR, Visio VSD, EMF, WMF, SVG and EPS, or export to PDF and PNG.',
+    category: 'Converters',
+    keywords: ['vector converter', 'ai converter', 'cdr converter', 'svg converter', 'convert vector online'],
+    icon: 'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+  },
+  {
+    slug: 'ai-to-svg',
+    name: 'AI to SVG',
+    tagline: 'Convert Adobe Illustrator AI to SVG.',
+    description:
+      'Free online AI to SVG converter. Convert Adobe Illustrator AI artwork to scalable SVG for the web.',
+    category: 'Converters',
+    keywords: ['ai to svg', 'convert ai to svg', 'illustrator to svg', 'ai to svg online', 'svg converter'],
+    icon: 'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+  },
+  {
+    slug: 'ai-to-png',
+    name: 'AI to PNG',
+    tagline: 'Convert Adobe Illustrator AI to PNG.',
+    description:
+      'Free online AI to PNG converter. Convert Adobe Illustrator AI artwork to raster PNG images.',
+    category: 'Converters',
+    keywords: ['ai to png', 'convert ai to png', 'illustrator to png', 'ai to png online', 'png converter'],
+    icon: 'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+  },
+  {
+    slug: 'ai-to-pdf',
+    name: 'AI to PDF',
+    tagline: 'Convert Adobe Illustrator AI to PDF.',
+    description:
+      'Free online AI to PDF converter. Convert Adobe Illustrator AI artwork to shareable PDF.',
+    category: 'Converters',
+    keywords: ['ai to pdf', 'convert ai to pdf', 'illustrator to pdf', 'ai to pdf online', 'vector to pdf'],
+    icon: 'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+  },
+  {
+    slug: 'cdr-to-svg',
+    name: 'CDR to SVG',
+    tagline: 'Convert CorelDRAW CDR to SVG.',
+    description:
+      'Free online CDR to SVG converter. Convert CorelDRAW CDR files to scalable SVG for the web.',
+    category: 'Converters',
+    keywords: ['cdr to svg', 'convert cdr to svg', 'coreldraw to svg', 'cdr to svg online', 'svg converter'],
+    icon: 'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+  },
+  {
+    slug: 'cdr-to-png',
+    name: 'CDR to PNG',
+    tagline: 'Convert CorelDRAW CDR to PNG.',
+    description:
+      'Free online CDR to PNG converter. Convert CorelDRAW CDR files to raster PNG images.',
+    category: 'Converters',
+    keywords: ['cdr to png', 'convert cdr to png', 'coreldraw to png', 'cdr to png online', 'png converter'],
+    icon: 'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+  },
+  {
+    slug: 'svg-to-pdf',
+    name: 'SVG to PDF',
+    tagline: 'Convert scalable SVG to PDF.',
+    description:
+      'Free online SVG to PDF converter. Convert scalable SVG vectors to shareable, printable PDF.',
+    category: 'Converters',
+    keywords: ['svg to pdf', 'convert svg to pdf', 'svg to pdf online', 'vector to pdf', 'svg converter'],
+    icon: 'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+  },
+  {
+    slug: 'svg-to-eps',
+    name: 'SVG to EPS',
+    tagline: 'Convert scalable SVG to EPS.',
+    description:
+      'Free online SVG to EPS converter. Convert scalable SVG vectors to Encapsulated PostScript EPS for print workflows.',
+    category: 'Converters',
+    keywords: ['svg to eps', 'convert svg to eps', 'svg to eps online', 'svg to postscript', 'eps converter'],
+    icon: 'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+  },
+  {
+    slug: 'wmf-to-svg',
+    name: 'WMF to SVG',
+    tagline: 'Convert Windows Metafile WMF to SVG.',
+    description:
+      'Free online WMF to SVG converter. Convert Windows Metafile WMF graphics to scalable SVG.',
+    category: 'Converters',
+    keywords: ['wmf to svg', 'convert wmf to svg', 'wmf to svg online', 'windows metafile to svg', 'svg converter'],
+    icon: 'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+  },
+  {
+    slug: 'emf-to-svg',
+    name: 'EMF to SVG',
+    tagline: 'Convert Enhanced Metafile EMF to SVG.',
+    description:
+      'Free online EMF to SVG converter. Convert Enhanced Metafile EMF graphics to scalable SVG.',
+    category: 'Converters',
+    keywords: ['emf to svg', 'convert emf to svg', 'emf to svg online', 'enhanced metafile to svg', 'svg converter'],
+    icon: 'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+  },
+  {
+    slug: 'vsd-to-pdf',
+    name: 'VSD to PDF',
+    tagline: 'Convert Microsoft Visio VSD to PDF.',
+    description:
+      'Free online VSD to PDF converter. Convert Microsoft Visio VSD diagrams to shareable PDF.',
+    category: 'Converters',
+    keywords: ['vsd to pdf', 'convert vsd to pdf', 'visio to pdf', 'vsd to pdf online', 'diagram to pdf'],
+    icon: 'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+  },
+  {
+    slug: 'spreadsheet-converter',
+    name: 'Spreadsheet Converter',
+    tagline: 'Convert XLS, XLSX, ODS, Numbers & CSV.',
+    description:
+      'Free online spreadsheet converter. Convert between Excel XLS/XLSX, OpenDocument ODS, Apple Numbers and CSV, or export to PDF.',
+    category: 'Converters',
+    keywords: ['spreadsheet converter', 'excel converter', 'xls converter', 'xlsx converter', 'ods converter'],
+    icon: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18',
+  },
+  {
+    slug: 'xls-to-xlsx',
+    name: 'XLS to XLSX',
+    tagline: 'Convert legacy Excel XLS to modern XLSX.',
+    description:
+      'Free online XLS to XLSX converter. Convert legacy Excel XLS files to the modern XLSX format.',
+    category: 'Converters',
+    keywords: ['xls to xlsx', 'convert xls to xlsx', 'xls to xlsx online', 'old excel to xlsx', 'xlsx converter'],
+    icon: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18',
+  },
+  {
+    slug: 'xlsx-to-xls',
+    name: 'XLSX to XLS',
+    tagline: 'Convert modern XLSX to legacy XLS.',
+    description:
+      'Free online XLSX to XLS converter. Convert modern Excel XLSX files to the legacy XLS format.',
+    category: 'Converters',
+    keywords: ['xlsx to xls', 'convert xlsx to xls', 'xlsx to xls online', 'excel to old xls', 'xls converter'],
+    icon: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18',
+  },
+  {
+    slug: 'ods-to-xlsx',
+    name: 'ODS to XLSX',
+    tagline: 'Convert OpenDocument ODS to Excel XLSX.',
+    description:
+      'Free online ODS to XLSX converter. Convert OpenDocument ODS spreadsheets to Excel XLSX.',
+    category: 'Converters',
+    keywords: ['ods to xlsx', 'convert ods to xlsx', 'ods to xlsx online', 'libreoffice to excel', 'xlsx converter'],
+    icon: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18',
+  },
+  {
+    slug: 'xlsx-to-ods',
+    name: 'XLSX to ODS',
+    tagline: 'Convert Excel XLSX to OpenDocument ODS.',
+    description:
+      'Free online XLSX to ODS converter. Convert Excel XLSX spreadsheets to OpenDocument ODS used by LibreOffice.',
+    category: 'Converters',
+    keywords: ['xlsx to ods', 'convert xlsx to ods', 'xlsx to ods online', 'excel to libreoffice', 'ods converter'],
+    icon: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18',
+  },
+  {
+    slug: 'numbers-to-xlsx',
+    name: 'Numbers to XLSX',
+    tagline: 'Convert Apple Numbers to Excel XLSX.',
+    description:
+      'Free online Numbers to XLSX converter. Convert Apple Numbers spreadsheets to Excel XLSX for use on any platform.',
+    category: 'Converters',
+    keywords: ['numbers to xlsx', 'convert numbers to excel', 'apple numbers to xlsx', 'numbers to excel', 'xlsx converter'],
+    icon: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18',
+  },
+  {
+    slug: 'numbers-to-csv',
+    name: 'Numbers to CSV',
+    tagline: 'Convert Apple Numbers to CSV.',
+    description:
+      'Free online Numbers to CSV converter. Convert Apple Numbers spreadsheets to plain CSV data.',
+    category: 'Converters',
+    keywords: ['numbers to csv', 'convert numbers to csv', 'apple numbers to csv', 'numbers to csv online', 'csv converter'],
+    icon: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18',
+  },
+  {
+    slug: 'xls-to-ods',
+    name: 'XLS to ODS',
+    tagline: 'Convert legacy Excel XLS to OpenDocument ODS.',
+    description:
+      'Free online XLS to ODS converter. Convert legacy Excel XLS files to OpenDocument ODS.',
+    category: 'Converters',
+    keywords: ['xls to ods', 'convert xls to ods', 'xls to ods online', 'excel to libreoffice', 'ods converter'],
+    icon: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18',
+  },
+  {
+    slug: 'xlsx-to-csv',
+    name: 'XLSX to CSV',
+    tagline: 'Convert Excel XLSX to plain CSV.',
+    description:
+      'Free online XLSX to CSV converter. Convert Excel XLSX spreadsheets to plain CSV data.',
+    category: 'Converters',
+    keywords: ['xlsx to csv', 'convert xlsx to csv', 'xlsx to csv online', 'excel to csv', 'csv converter'],
+    icon: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18',
+  },
+  {
+    slug: 'ods-to-csv',
+    name: 'ODS to CSV',
+    tagline: 'Convert OpenDocument ODS to plain CSV.',
+    description:
+      'Free online ODS to CSV converter. Convert OpenDocument ODS spreadsheets to plain CSV data.',
+    category: 'Converters',
+    keywords: ['ods to csv', 'convert ods to csv', 'ods to csv online', 'libreoffice to csv', 'csv converter'],
+    icon: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18',
+  },
+  {
+    slug: 'xlsx-to-pdf',
+    name: 'XLSX to PDF',
+    tagline: 'Convert Excel XLSX to PDF.',
+    description:
+      'Free online XLSX to PDF converter. Convert Excel XLSX spreadsheets to PDF for sharing and printing.',
+    category: 'Converters',
+    keywords: ['xlsx to pdf', 'convert xlsx to pdf', 'xlsx to pdf online', 'excel to pdf', 'spreadsheet to pdf'],
+    icon: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18',
+  },
+  {
+    slug: 'presentation-converter',
+    name: 'Presentation Converter',
+    tagline: 'Convert PPT, PPTX, Keynote, ODP & more.',
+    description:
+      'Free online presentation converter. Convert between PowerPoint PPT/PPTX, Apple Keynote, OpenDocument ODP and other slideshow formats, or export to PDF.',
+    category: 'Converters',
+    keywords: ['presentation converter', 'ppt converter', 'pptx converter', 'keynote converter', 'convert slides online'],
+    icon: 'M2 3h20v14H2zM8 21h8M12 17v4',
+  },
+  {
+    slug: 'ppt-to-pptx',
+    name: 'PPT to PPTX',
+    tagline: 'Convert legacy PPT to modern PPTX.',
+    description:
+      'Free online PPT to PPTX converter. Convert legacy PowerPoint PPT files to the modern PPTX format.',
+    category: 'Converters',
+    keywords: ['ppt to pptx', 'convert ppt to pptx', 'ppt to pptx online', 'old powerpoint to pptx', 'pptx converter'],
+    icon: 'M2 3h20v14H2zM8 21h8M12 17v4',
+  },
+  {
+    slug: 'pptx-to-ppt',
+    name: 'PPTX to PPT',
+    tagline: 'Convert modern PPTX to legacy PPT.',
+    description:
+      'Free online PPTX to PPT converter. Convert modern PowerPoint PPTX files to the legacy PPT format.',
+    category: 'Converters',
+    keywords: ['pptx to ppt', 'convert pptx to ppt', 'pptx to ppt online', 'powerpoint to old ppt', 'ppt converter'],
+    icon: 'M2 3h20v14H2zM8 21h8M12 17v4',
+  },
+  {
+    slug: 'key-to-pptx',
+    name: 'Keynote to PPTX',
+    tagline: 'Convert Apple Keynote to PowerPoint PPTX.',
+    description:
+      'Free online Keynote to PPTX converter. Convert Apple Keynote presentations to PowerPoint PPTX for use on any platform.',
+    category: 'Converters',
+    keywords: ['keynote to pptx', 'key to pptx', 'convert keynote to powerpoint', 'keynote to ppt', 'pptx converter'],
+    icon: 'M2 3h20v14H2zM8 21h8M12 17v4',
+  },
+  {
+    slug: 'key-to-pdf',
+    name: 'Keynote to PDF',
+    tagline: 'Convert Apple Keynote to PDF.',
+    description:
+      'Free online Keynote to PDF converter. Convert Apple Keynote presentations to PDF for sharing with anyone.',
+    category: 'Converters',
+    keywords: ['keynote to pdf', 'key to pdf', 'convert keynote to pdf', 'apple keynote to pdf', 'slides to pdf'],
+    icon: 'M2 3h20v14H2zM8 21h8M12 17v4',
+  },
+  {
+    slug: 'odp-to-pptx',
+    name: 'ODP to PPTX',
+    tagline: 'Convert OpenDocument ODP to PowerPoint PPTX.',
+    description:
+      'Free online ODP to PPTX converter. Convert OpenDocument ODP presentations to PowerPoint PPTX.',
+    category: 'Converters',
+    keywords: ['odp to pptx', 'convert odp to pptx', 'odp to pptx online', 'libreoffice to powerpoint', 'pptx converter'],
+    icon: 'M2 3h20v14H2zM8 21h8M12 17v4',
+  },
+  {
+    slug: 'pptx-to-odp',
+    name: 'PPTX to ODP',
+    tagline: 'Convert PowerPoint PPTX to OpenDocument ODP.',
+    description:
+      'Free online PPTX to ODP converter. Convert PowerPoint PPTX presentations to OpenDocument ODP used by LibreOffice.',
+    category: 'Converters',
+    keywords: ['pptx to odp', 'convert pptx to odp', 'pptx to odp online', 'powerpoint to libreoffice', 'odp converter'],
+    icon: 'M2 3h20v14H2zM8 21h8M12 17v4',
+  },
+  {
+    slug: 'pps-to-pptx',
+    name: 'PPS to PPTX',
+    tagline: 'Convert PowerPoint slideshow PPS to PPTX.',
+    description:
+      'Free online PPS to PPTX converter. Convert PowerPoint slideshow PPS files to editable PPTX presentations.',
+    category: 'Converters',
+    keywords: ['pps to pptx', 'convert pps to pptx', 'pps to pptx online', 'powerpoint show to pptx', 'pptx converter'],
+    icon: 'M2 3h20v14H2zM8 21h8M12 17v4',
+  },
+  {
+    slug: 'potx-to-pptx',
+    name: 'POTX to PPTX',
+    tagline: 'Convert PowerPoint POTX template to PPTX.',
+    description:
+      'Free online POTX to PPTX converter. Convert PowerPoint POTX templates to standard PPTX presentations.',
+    category: 'Converters',
+    keywords: ['potx to pptx', 'convert potx to pptx', 'potx to pptx online', 'powerpoint template to pptx', 'pptx converter'],
+    icon: 'M2 3h20v14H2zM8 21h8M12 17v4',
+  },
+  {
+    slug: 'odp-to-pdf',
+    name: 'ODP to PDF',
+    tagline: 'Convert OpenDocument ODP to PDF.',
+    description:
+      'Free online ODP to PDF converter. Convert OpenDocument ODP presentations to PDF for sharing and printing.',
+    category: 'Converters',
+    keywords: ['odp to pdf', 'convert odp to pdf', 'odp to pdf online', 'libreoffice slides to pdf', 'slides to pdf'],
+    icon: 'M2 3h20v14H2zM8 21h8M12 17v4',
+  },
+  {
+    slug: 'ppt-to-odp',
+    name: 'PPT to ODP',
+    tagline: 'Convert legacy PPT to OpenDocument ODP.',
+    description:
+      'Free online PPT to ODP converter. Convert legacy PowerPoint PPT files to OpenDocument ODP.',
+    category: 'Converters',
+    keywords: ['ppt to odp', 'convert ppt to odp', 'ppt to odp online', 'powerpoint to libreoffice', 'odp converter'],
+    icon: 'M2 3h20v14H2zM8 21h8M12 17v4',
+  },
+  {
+    slug: 'image-converter',
+    name: 'Image Converter',
+    tagline: 'Convert between JPG, PNG, WebP, AVIF, BMP, TIFF, GIF & ICO.',
+    description:
+      'Free online image converter. Convert between JPG, PNG, WebP, AVIF, BMP, TIFF, GIF and ICO — entirely in your browser, nothing uploaded.',
+    category: 'Image',
+    keywords: ['image converter', 'convert image online', 'photo converter', 'jpg converter', 'png converter'],
+    icon: 'M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 15l-5-5L5 21',
+  },
+  {
+    slug: 'raw-converter',
+    name: 'RAW Photo Converter',
+    tagline: 'Convert camera RAW (NEF, CR2, ARW, DNG) to JPG or PNG.',
+    description:
+      'Free online RAW converter. Convert camera RAW photos — Nikon NEF, Canon CR2/CR3, Sony ARW, Adobe DNG and more — to JPG, PNG, TIFF or WebP.',
+    category: 'Image',
+    keywords: ['raw converter', 'convert raw to jpg', 'camera raw converter', 'nef converter', 'cr2 converter'],
+    icon: 'M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 15l-5-5L5 21',
+  },
+  {
+    slug: 'nef-to-jpg',
+    name: 'NEF to JPG',
+    tagline: 'Convert Nikon NEF RAW to JPG.',
+    description:
+      'Free online NEF to JPG converter. Convert Nikon NEF RAW photos to standard JPG images.',
+    category: 'Image',
+    keywords: ['nef to jpg', 'convert nef to jpg', 'nikon raw to jpg', 'nef to jpeg', 'raw converter'],
+    icon: 'M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 15l-5-5L5 21',
+  },
+  {
+    slug: 'cr2-to-jpg',
+    name: 'CR2 to JPG',
+    tagline: 'Convert Canon CR2 RAW to JPG.',
+    description:
+      'Free online CR2 to JPG converter. Convert Canon CR2 RAW photos to standard JPG images.',
+    category: 'Image',
+    keywords: ['cr2 to jpg', 'convert cr2 to jpg', 'canon raw to jpg', 'cr2 to jpeg', 'raw converter'],
+    icon: 'M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 15l-5-5L5 21',
+  },
+  {
+    slug: 'cr3-to-jpg',
+    name: 'CR3 to JPG',
+    tagline: 'Convert Canon CR3 RAW to JPG.',
+    description:
+      'Free online CR3 to JPG converter. Convert Canon CR3 RAW photos to standard JPG images.',
+    category: 'Image',
+    keywords: ['cr3 to jpg', 'convert cr3 to jpg', 'canon cr3 to jpg', 'cr3 to jpeg', 'raw converter'],
+    icon: 'M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 15l-5-5L5 21',
+  },
+  {
+    slug: 'arw-to-jpg',
+    name: 'ARW to JPG',
+    tagline: 'Convert Sony ARW RAW to JPG.',
+    description:
+      'Free online ARW to JPG converter. Convert Sony ARW RAW photos to standard JPG images.',
+    category: 'Image',
+    keywords: ['arw to jpg', 'convert arw to jpg', 'sony raw to jpg', 'arw to jpeg', 'raw converter'],
+    icon: 'M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 15l-5-5L5 21',
+  },
+  {
+    slug: 'dng-to-jpg',
+    name: 'DNG to JPG',
+    tagline: 'Convert Adobe DNG RAW to JPG.',
+    description:
+      'Free online DNG to JPG converter. Convert Adobe DNG RAW photos to standard JPG images.',
+    category: 'Image',
+    keywords: ['dng to jpg', 'convert dng to jpg', 'adobe dng to jpg', 'dng to jpeg', 'raw converter'],
+    icon: 'M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 15l-5-5L5 21',
+  },
+  {
+    slug: 'crw-to-jpg',
+    name: 'CRW to JPG',
+    tagline: 'Convert legacy Canon CRW RAW to JPG.',
+    description:
+      'Free online CRW to JPG converter. Convert legacy Canon CRW RAW photos to standard JPG images.',
+    category: 'Image',
+    keywords: ['crw to jpg', 'convert crw to jpg', 'canon crw to jpg', 'crw to jpeg', 'raw converter'],
+    icon: 'M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 15l-5-5L5 21',
+  },
+  {
+    slug: 'nef-to-png',
+    name: 'NEF to PNG',
+    tagline: 'Convert Nikon NEF RAW to PNG.',
+    description:
+      'Free online NEF to PNG converter. Convert Nikon NEF RAW photos to lossless PNG images.',
+    category: 'Image',
+    keywords: ['nef to png', 'convert nef to png', 'nikon raw to png', 'nef to png online', 'raw converter'],
+    icon: 'M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 15l-5-5L5 21',
+  },
+  {
+    slug: 'cr2-to-png',
+    name: 'CR2 to PNG',
+    tagline: 'Convert Canon CR2 RAW to PNG.',
+    description:
+      'Free online CR2 to PNG converter. Convert Canon CR2 RAW photos to lossless PNG images.',
+    category: 'Image',
+    keywords: ['cr2 to png', 'convert cr2 to png', 'canon raw to png', 'cr2 to png online', 'raw converter'],
+    icon: 'M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 15l-5-5L5 21',
+  },
+  {
+    slug: 'eps-to-png',
+    name: 'EPS to PNG',
+    tagline: 'Convert EPS artwork to raster PNG.',
+    description:
+      'Free online EPS to PNG converter. Convert Encapsulated PostScript EPS artwork to raster PNG images.',
+    category: 'Image',
+    keywords: ['eps to png', 'convert eps to png', 'eps to png online', 'postscript to png', 'eps converter'],
+    icon: 'M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 15l-5-5L5 21',
+  },
+  {
+    slug: 'eps-to-svg',
+    name: 'EPS to SVG',
+    tagline: 'Convert EPS artwork to scalable SVG.',
+    description:
+      'Free online EPS to SVG converter. Convert Encapsulated PostScript EPS artwork to scalable SVG vectors.',
+    category: 'Image',
+    keywords: ['eps to svg', 'convert eps to svg', 'eps to svg online', 'postscript to svg', 'svg converter'],
+    icon: 'M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 15l-5-5L5 21',
+  },
+  {
+    slug: 'font-converter',
+    name: 'Font Converter',
+    tagline: 'Convert between TTF, OTF, WOFF, WOFF2 & EOT.',
+    description:
+      'Free online font converter. Convert between TTF, OTF, WOFF, WOFF2 and EOT font formats — entirely in your browser, nothing uploaded.',
+    category: 'Converters',
+    keywords: ['font converter', 'convert font online', 'ttf converter', 'woff converter', 'webfont converter'],
+    icon: 'M4 7V4h16v3M9 20h6M12 4v16',
+  },
+  {
+    slug: 'ttf-to-woff',
+    name: 'TTF to WOFF',
+    tagline: 'Convert TrueType TTF to web WOFF.',
+    description:
+      'Free online TTF to WOFF converter. Convert desktop TrueType TTF fonts to web-ready WOFF for @font-face CSS — entirely in your browser.',
+    category: 'Converters',
+    keywords: ['ttf to woff', 'convert ttf to woff', 'ttf to woff online', 'truetype to webfont', 'woff converter'],
+    icon: 'M4 7V4h16v3M9 20h6M12 4v16',
+  },
+  {
+    slug: 'ttf-to-woff2',
+    name: 'TTF to WOFF2',
+    tagline: 'Convert TrueType TTF to compact WOFF2.',
+    description:
+      'Free online TTF to WOFF2 converter. Convert TrueType TTF fonts to WOFF2, the smallest, most modern web font format — entirely in your browser.',
+    category: 'Converters',
+    keywords: ['ttf to woff2', 'convert ttf to woff2', 'ttf to woff2 online', 'truetype to woff2', 'woff2 converter'],
+    icon: 'M4 7V4h16v3M9 20h6M12 4v16',
+  },
+  {
+    slug: 'otf-to-ttf',
+    name: 'OTF to TTF',
+    tagline: 'Convert OpenType OTF to TrueType TTF.',
+    description:
+      'Free online OTF to TTF converter. Convert OpenType OTF fonts to TrueType TTF for wider software compatibility — entirely in your browser.',
+    category: 'Converters',
+    keywords: ['otf to ttf', 'convert otf to ttf', 'otf to ttf online', 'opentype to truetype', 'ttf converter'],
+    icon: 'M4 7V4h16v3M9 20h6M12 4v16',
+  },
+  {
+    slug: 'otf-to-woff',
+    name: 'OTF to WOFF',
+    tagline: 'Convert OpenType OTF to web WOFF.',
+    description:
+      'Free online OTF to WOFF converter. Convert OpenType OTF fonts to web-ready WOFF for @font-face embedding — entirely in your browser.',
+    category: 'Converters',
+    keywords: ['otf to woff', 'convert otf to woff', 'otf to woff online', 'opentype to webfont', 'woff converter'],
+    icon: 'M4 7V4h16v3M9 20h6M12 4v16',
+  },
+  {
+    slug: 'otf-to-woff2',
+    name: 'OTF to WOFF2',
+    tagline: 'Convert OpenType OTF to compact WOFF2.',
+    description:
+      'Free online OTF to WOFF2 converter. Convert OpenType OTF fonts to compact WOFF2 web fonts — entirely in your browser.',
+    category: 'Converters',
+    keywords: ['otf to woff2', 'convert otf to woff2', 'otf to woff2 online', 'opentype to woff2', 'woff2 converter'],
+    icon: 'M4 7V4h16v3M9 20h6M12 4v16',
+  },
+  {
+    slug: 'woff-to-ttf',
+    name: 'WOFF to TTF',
+    tagline: 'Convert web WOFF back to TrueType TTF.',
+    description:
+      'Free online WOFF to TTF converter. Convert web WOFF fonts back to desktop-installable TrueType TTF — entirely in your browser.',
+    category: 'Converters',
+    keywords: ['woff to ttf', 'convert woff to ttf', 'woff to ttf online', 'webfont to truetype', 'ttf converter'],
+    icon: 'M4 7V4h16v3M9 20h6M12 4v16',
+  },
+  {
+    slug: 'woff2-to-ttf',
+    name: 'WOFF2 to TTF',
+    tagline: 'Convert modern WOFF2 back to TrueType TTF.',
+    description:
+      'Free online WOFF2 to TTF converter. Convert modern WOFF2 web fonts back to desktop TrueType TTF — entirely in your browser.',
+    category: 'Converters',
+    keywords: ['woff2 to ttf', 'convert woff2 to ttf', 'woff2 to ttf online', 'woff2 to truetype', 'ttf converter'],
+    icon: 'M4 7V4h16v3M9 20h6M12 4v16',
+  },
+  {
+    slug: 'ttf-to-eot',
+    name: 'TTF to EOT',
+    tagline: 'Convert TrueType TTF to legacy EOT.',
+    description:
+      'Free online TTF to EOT converter. Convert TrueType TTF fonts to EOT for embedding in legacy Internet Explorer — entirely in your browser.',
+    category: 'Converters',
+    keywords: ['ttf to eot', 'convert ttf to eot', 'ttf to eot online', 'truetype to eot', 'eot converter'],
+    icon: 'M4 7V4h16v3M9 20h6M12 4v16',
+  },
+  {
+    slug: 'ebook-format-converter',
+    name: 'Ebook Format Converter',
+    tagline: 'Convert EPUB, MOBI, AZW3, FB2, CBR & more.',
+    description:
+      'Free online ebook converter. Convert between EPUB, MOBI, AZW, AZW3, FB2, LIT, PDB, CBR and CBZ ebook formats, or export to PDF and TXT.',
+    category: 'Converters',
+    keywords: ['ebook converter', 'convert ebook online', 'mobi converter', 'azw3 converter', 'kindle converter'],
+    icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z',
+  },
+  {
+    slug: 'mobi-to-epub',
+    name: 'MOBI to EPUB',
+    tagline: 'Convert Kindle MOBI to open EPUB.',
+    description:
+      'Free online MOBI to EPUB converter. Convert Kindle MOBI ebooks to the open EPUB format read by most e-readers and apps.',
+    category: 'Converters',
+    keywords: ['mobi to epub', 'convert mobi to epub', 'mobi to epub online', 'kindle to epub', 'epub converter'],
+    icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z',
+  },
+  {
+    slug: 'epub-to-mobi',
+    name: 'EPUB to MOBI',
+    tagline: 'Convert EPUB to Kindle MOBI.',
+    description:
+      'Free online EPUB to MOBI converter. Convert EPUB ebooks to Kindle-compatible MOBI format.',
+    category: 'Converters',
+    keywords: ['epub to mobi', 'convert epub to mobi', 'epub to mobi online', 'epub to kindle', 'mobi converter'],
+    icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z',
+  },
+  {
+    slug: 'azw3-to-epub',
+    name: 'AZW3 to EPUB',
+    tagline: 'Convert Kindle AZW3 to open EPUB.',
+    description:
+      'Free online AZW3 to EPUB converter. Convert Kindle AZW3 ebooks to the open EPUB format.',
+    category: 'Converters',
+    keywords: ['azw3 to epub', 'convert azw3 to epub', 'azw3 to epub online', 'kindle azw3 to epub', 'epub converter'],
+    icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z',
+  },
+  {
+    slug: 'epub-to-azw3',
+    name: 'EPUB to AZW3',
+    tagline: 'Convert EPUB to Kindle AZW3.',
+    description:
+      'Free online EPUB to AZW3 converter. Convert EPUB ebooks to Kindle AZW3 format for modern Kindle devices.',
+    category: 'Converters',
+    keywords: ['epub to azw3', 'convert epub to azw3', 'epub to azw3 online', 'epub to kindle azw3', 'azw3 converter'],
+    icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z',
+  },
+  {
+    slug: 'azw-to-epub',
+    name: 'AZW to EPUB',
+    tagline: 'Convert legacy Kindle AZW to EPUB.',
+    description:
+      'Free online AZW to EPUB converter. Convert legacy Kindle AZW ebooks to the open EPUB format.',
+    category: 'Converters',
+    keywords: ['azw to epub', 'convert azw to epub', 'azw to epub online', 'kindle azw to epub', 'epub converter'],
+    icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z',
+  },
+  {
+    slug: 'mobi-to-pdf',
+    name: 'MOBI to PDF',
+    tagline: 'Convert Kindle MOBI to PDF.',
+    description:
+      'Free online MOBI to PDF converter. Convert Kindle MOBI ebooks to PDF for printing and universal viewing.',
+    category: 'Converters',
+    keywords: ['mobi to pdf', 'convert mobi to pdf', 'mobi to pdf online', 'kindle to pdf', 'ebook to pdf'],
+    icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z',
+  },
+  {
+    slug: 'fb2-to-epub',
+    name: 'FB2 to EPUB',
+    tagline: 'Convert FictionBook FB2 to EPUB.',
+    description:
+      'Free online FB2 to EPUB converter. Convert FictionBook FB2 ebooks to the widely-supported EPUB format.',
+    category: 'Converters',
+    keywords: ['fb2 to epub', 'convert fb2 to epub', 'fb2 to epub online', 'fictionbook to epub', 'epub converter'],
+    icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z',
+  },
+  {
+    slug: 'lit-to-epub',
+    name: 'LIT to EPUB',
+    tagline: 'Convert Microsoft Reader LIT to EPUB.',
+    description:
+      'Free online LIT to EPUB converter. Convert legacy Microsoft Reader LIT ebooks to the open EPUB format.',
+    category: 'Converters',
+    keywords: ['lit to epub', 'convert lit to epub', 'lit to epub online', 'ms reader to epub', 'epub converter'],
+    icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z',
+  },
+  {
+    slug: 'pdb-to-epub',
+    name: 'PDB to EPUB',
+    tagline: 'Convert Palm PDB to EPUB.',
+    description:
+      'Free online PDB to EPUB converter. Convert Palm PDB ebooks to the modern EPUB format.',
+    category: 'Converters',
+    keywords: ['pdb to epub', 'convert pdb to epub', 'pdb to epub online', 'palm pdb to epub', 'epub converter'],
+    icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z',
+  },
+  {
+    slug: 'cbr-to-cbz',
+    name: 'CBR to CBZ',
+    tagline: 'Convert comic CBR to CBZ.',
+    description:
+      'Free online CBR to CBZ converter. Convert RAR-based comic-book CBR archives to the more widely-supported ZIP-based CBZ.',
+    category: 'Converters',
+    keywords: ['cbr to cbz', 'convert cbr to cbz', 'cbr to cbz online', 'comic book converter', 'cbz converter'],
+    icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z',
+  },
+  {
+    slug: 'mobi-to-azw3',
+    name: 'MOBI to AZW3',
+    tagline: 'Convert older MOBI to Kindle AZW3.',
+    description:
+      'Free online MOBI to AZW3 converter. Convert older Kindle MOBI ebooks to the newer AZW3 format.',
+    category: 'Converters',
+    keywords: ['mobi to azw3', 'convert mobi to azw3', 'mobi to azw3 online', 'kindle mobi to azw3', 'azw3 converter'],
+    icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z',
+  },
+  {
+    slug: 'document-converter',
+    name: 'Document Converter',
+    tagline: 'Convert DOC, ODT, RTF, Pages, WPD & more.',
+    description:
+      'Free online document converter. Convert between DOC, DOCX, ODT, RTF, Apple Pages, WordPerfect, DjVu and other document formats, or export to PDF.',
+    category: 'Converters',
+    keywords: ['document converter', 'convert document online', 'doc converter', 'odt converter', 'pages converter'],
+    icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8',
+  },
+  {
+    slug: 'doc-to-docx',
+    name: 'DOC to DOCX',
+    tagline: 'Convert legacy DOC to modern DOCX.',
+    description:
+      'Free online DOC to DOCX converter. Convert legacy Microsoft Word DOC files to the modern DOCX format.',
+    category: 'Converters',
+    keywords: ['doc to docx', 'convert doc to docx', 'doc to docx online', 'old word to docx', 'docx converter'],
+    icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8',
+  },
+  {
+    slug: 'doc-to-pdf',
+    name: 'DOC to PDF',
+    tagline: 'Convert legacy Word DOC to PDF.',
+    description:
+      'Free online DOC to PDF converter. Convert legacy Microsoft Word DOC files to PDF for sharing and printing.',
+    category: 'Converters',
+    keywords: ['doc to pdf', 'convert doc to pdf', 'doc to pdf online', 'word doc to pdf', 'cad to pdf'],
+    icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8',
+  },
+  {
+    slug: 'docx-to-odt',
+    name: 'DOCX to ODT',
+    tagline: 'Convert Word DOCX to OpenDocument ODT.',
+    description:
+      'Free online DOCX to ODT converter. Convert Microsoft Word DOCX documents to OpenDocument ODT used by LibreOffice.',
+    category: 'Converters',
+    keywords: ['docx to odt', 'convert docx to odt', 'docx to odt online', 'word to libreoffice', 'odt converter'],
+    icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8',
+  },
+  {
+    slug: 'odt-to-docx',
+    name: 'ODT to DOCX',
+    tagline: 'Convert OpenDocument ODT to Word DOCX.',
+    description:
+      'Free online ODT to DOCX converter. Convert OpenDocument ODT files to Microsoft Word DOCX.',
+    category: 'Converters',
+    keywords: ['odt to docx', 'convert odt to docx', 'odt to docx online', 'libreoffice to word', 'docx converter'],
+    icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8',
+  },
+  {
+    slug: 'odt-to-pdf',
+    name: 'ODT to PDF',
+    tagline: 'Convert OpenDocument ODT to PDF.',
+    description:
+      'Free online ODT to PDF converter. Convert OpenDocument ODT files to PDF for sharing and printing.',
+    category: 'Converters',
+    keywords: ['odt to pdf', 'convert odt to pdf', 'odt to pdf online', 'libreoffice to pdf', 'cad to pdf'],
+    icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8',
+  },
+  {
+    slug: 'rtf-to-docx',
+    name: 'RTF to DOCX',
+    tagline: 'Convert Rich Text Format to Word DOCX.',
+    description:
+      'Free online RTF to DOCX converter. Convert Rich Text Format RTF documents to Microsoft Word DOCX.',
+    category: 'Converters',
+    keywords: ['rtf to docx', 'convert rtf to docx', 'rtf to docx online', 'rich text to word', 'docx converter'],
+    icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8',
+  },
+  {
+    slug: 'pages-to-docx',
+    name: 'Pages to DOCX',
+    tagline: 'Convert Apple Pages to Word DOCX.',
+    description:
+      'Free online Pages to DOCX converter. Convert Apple Pages documents to Microsoft Word DOCX for use on any platform.',
+    category: 'Converters',
+    keywords: ['pages to docx', 'convert pages to docx', 'apple pages to word', 'pages to word', 'docx converter'],
+    icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8',
+  },
+  {
+    slug: 'pages-to-pdf',
+    name: 'Pages to PDF',
+    tagline: 'Convert Apple Pages to PDF.',
+    description:
+      'Free online Pages to PDF converter. Convert Apple Pages documents to PDF for sharing with anyone.',
+    category: 'Converters',
+    keywords: ['pages to pdf', 'convert pages to pdf', 'apple pages to pdf', 'pages to pdf online', 'cad to pdf'],
+    icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8',
+  },
+  {
+    slug: 'djvu-to-pdf',
+    name: 'DjVu to PDF',
+    tagline: 'Convert scanned DjVu to PDF.',
+    description:
+      'Free online DjVu to PDF converter. Convert scanned DjVu documents to widely-supported PDF.',
+    category: 'Converters',
+    keywords: ['djvu to pdf', 'convert djvu to pdf', 'djvu to pdf online', 'scanned djvu to pdf', 'cad to pdf'],
+    icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8',
+  },
+  {
+    slug: 'wpd-to-docx',
+    name: 'WPD to DOCX',
+    tagline: 'Convert WordPerfect WPD to Word DOCX.',
+    description:
+      'Free online WPD to DOCX converter. Convert legacy WordPerfect WPD documents to Microsoft Word DOCX.',
+    category: 'Converters',
+    keywords: ['wpd to docx', 'convert wpd to docx', 'wordperfect to word', 'wpd to word', 'docx converter'],
+    icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8',
+  },
+  {
+    slug: 'cad-converter',
+    name: 'CAD Converter',
+    tagline: 'Convert between DWG, DXF, DWF, PDF & SVG.',
+    description:
+      'Free online CAD converter. Convert between AutoCAD DWG, DXF and DWF drawings, or export them to PDF or SVG.',
+    category: 'Converters',
+    keywords: ['cad converter', 'dwg converter', 'dxf converter', 'autocad converter', 'convert cad online'],
+    icon: 'M3 3h18v18H3zM3 9h18M9 21V9M15 9v12',
+  },
+  {
+    slug: 'dwg-to-dxf',
+    name: 'DWG to DXF',
+    tagline: 'Convert AutoCAD DWG to interchange DXF.',
+    description:
+      'Free online DWG to DXF converter. Convert AutoCAD DWG drawings to the interchange DXF format that more CAD programs can open.',
+    category: 'Converters',
+    keywords: ['dwg to dxf', 'convert dwg to dxf', 'dwg to dxf online', 'autocad dwg to dxf', 'dxf converter'],
+    icon: 'M3 3h18v18H3zM3 9h18M9 21V9M15 9v12',
+  },
+  {
+    slug: 'dxf-to-dwg',
+    name: 'DXF to DWG',
+    tagline: 'Convert DXF back to native DWG.',
+    description:
+      'Free online DXF to DWG converter. Convert DXF interchange files back to native AutoCAD DWG drawings.',
+    category: 'Converters',
+    keywords: ['dxf to dwg', 'convert dxf to dwg', 'dxf to dwg online', 'dxf to autocad', 'dwg converter'],
+    icon: 'M3 3h18v18H3zM3 9h18M9 21V9M15 9v12',
+  },
+  {
+    slug: 'dwg-to-pdf',
+    name: 'DWG to PDF',
+    tagline: 'Export AutoCAD DWG drawings to PDF.',
+    description:
+      'Free online DWG to PDF converter. Export AutoCAD DWG drawings to PDF for easy sharing, printing and viewing without CAD software.',
+    category: 'Converters',
+    keywords: ['dwg to pdf', 'convert dwg to pdf', 'dwg to pdf online', 'autocad to pdf', 'cad to pdf'],
+    icon: 'M3 3h18v18H3zM3 9h18M9 21V9M15 9v12',
+  },
+  {
+    slug: 'dxf-to-pdf',
+    name: 'DXF to PDF',
+    tagline: 'Export DXF drawings to PDF.',
+    description:
+      'Free online DXF to PDF converter. Export DXF drawings to PDF for sharing and printing without CAD software.',
+    category: 'Converters',
+    keywords: ['dxf to pdf', 'convert dxf to pdf', 'dxf to pdf online', 'dxf drawing to pdf', 'cad to pdf'],
+    icon: 'M3 3h18v18H3zM3 9h18M9 21V9M15 9v12',
+  },
+  {
+    slug: 'dwg-to-svg',
+    name: 'DWG to SVG',
+    tagline: 'Convert AutoCAD DWG to scalable SVG.',
+    description:
+      'Free online DWG to SVG converter. Convert AutoCAD DWG drawings to scalable SVG vector graphics for the web.',
+    category: 'Converters',
+    keywords: ['dwg to svg', 'convert dwg to svg', 'dwg to svg online', 'autocad to svg', 'svg converter'],
+    icon: 'M3 3h18v18H3zM3 9h18M9 21V9M15 9v12',
+  },
+  {
+    slug: 'dwf-to-dwg',
+    name: 'DWF to DWG',
+    tagline: 'Convert Autodesk DWF to editable DWG.',
+    description:
+      'Free online DWF to DWG converter. Convert Autodesk DWF design web files to editable AutoCAD DWG drawings.',
+    category: 'Converters',
+    keywords: ['dwf to dwg', 'convert dwf to dwg', 'dwf to dwg online', 'autodesk dwf to dwg', 'dwg converter'],
+    icon: 'M3 3h18v18H3zM3 9h18M9 21V9M15 9v12',
+  },
+  {
+    slug: 'audio-converter',
+    name: 'Audio Converter',
+    tagline: 'Convert between MP3, WAV, FLAC, AAC, OGG, Opus & more.',
+    description:
+      'Free online audio converter. Convert between MP3, WAV, FLAC, AAC (M4A), OGG, Opus, AIFF and AC3 — entirely in your browser, nothing uploaded.',
+    category: 'Audio & Video',
+    keywords: ['audio converter', 'convert audio online', 'mp3 converter', 'flac converter', 'opus converter'],
+    icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
+  },
+  {
+    slug: 'mp3-to-ogg',
+    name: 'MP3 to OGG',
+    tagline: 'Convert MP3 to open OGG Vorbis.',
+    description:
+      'Free online MP3 to OGG converter. Convert MP3 files to the free, open OGG Vorbis format — entirely in your browser, nothing uploaded.',
+    category: 'Audio & Video',
+    keywords: ['mp3 to ogg', 'convert mp3 to ogg', 'mp3 to ogg vorbis', 'mp3 to ogg online', 'ogg converter'],
+    icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
+  },
+  {
+    slug: 'mp3-to-flac',
+    name: 'MP3 to FLAC',
+    tagline: 'Convert MP3 to lossless FLAC container.',
+    description:
+      'Free online MP3 to FLAC converter. Convert MP3 files into the lossless FLAC format — entirely in your browser, nothing uploaded.',
+    category: 'Audio & Video',
+    keywords: ['mp3 to flac', 'convert mp3 to flac', 'mp3 to flac online', 'mp3 to lossless', 'flac converter'],
+    icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
+  },
+  {
+    slug: 'mp3-to-aac',
+    name: 'MP3 to AAC',
+    tagline: 'Convert MP3 to efficient AAC (M4A).',
+    description:
+      'Free online MP3 to AAC converter. Convert MP3 files to AAC (.m4a) audio used by Apple Music and streaming — entirely in your browser.',
+    category: 'Audio & Video',
+    keywords: ['mp3 to aac', 'convert mp3 to aac', 'mp3 to m4a', 'mp3 to aac online', 'aac converter'],
+    icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
+  },
+  {
+    slug: 'mp3-to-opus',
+    name: 'MP3 to Opus',
+    tagline: 'Convert MP3 to modern Opus codec.',
+    description:
+      'Free online MP3 to Opus converter. Convert MP3 files to Opus, the modern low-bitrate codec for voice and streaming — entirely in your browser.',
+    category: 'Audio & Video',
+    keywords: ['mp3 to opus', 'convert mp3 to opus', 'mp3 to opus online', 'mp3 to opus codec', 'opus converter'],
+    icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
+  },
+  {
+    slug: 'wav-to-flac',
+    name: 'WAV to FLAC',
+    tagline: 'Losslessly compress WAV to FLAC.',
+    description:
+      'Free online WAV to FLAC converter. Losslessly compress uncompressed WAV audio into FLAC, cutting file size with no quality loss — in your browser.',
+    category: 'Audio & Video',
+    keywords: ['wav to flac', 'convert wav to flac', 'wav to flac lossless', 'compress wav', 'flac converter'],
+    icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
+  },
+  {
+    slug: 'flac-to-wav',
+    name: 'FLAC to WAV',
+    tagline: 'Decode FLAC to uncompressed WAV.',
+    description:
+      'Free online FLAC to WAV converter. Decode lossless FLAC into uncompressed WAV (PCM) for audio editing — entirely in your browser.',
+    category: 'Audio & Video',
+    keywords: ['flac to wav', 'convert flac to wav', 'flac to wav online', 'flac to pcm', 'wav converter'],
+    icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
+  },
+  {
+    slug: 'm4a-to-wav',
+    name: 'M4A to WAV',
+    tagline: 'Decode M4A/AAC to uncompressed WAV.',
+    description:
+      'Free online M4A to WAV converter. Decode Apple M4A/AAC audio into uncompressed WAV for editing and mastering — entirely in your browser.',
+    category: 'Audio & Video',
+    keywords: ['m4a to wav', 'convert m4a to wav', 'm4a to wav online', 'aac to wav', 'wav converter'],
+    icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
+  },
+  {
+    slug: 'aac-to-mp3',
+    name: 'AAC to MP3',
+    tagline: 'Convert AAC audio to universal MP3.',
+    description:
+      'Free online AAC to MP3 converter. Convert AAC audio into universally-supported MP3 files that play on any device — entirely in your browser.',
+    category: 'Audio & Video',
+    keywords: ['aac to mp3', 'convert aac to mp3', 'aac to mp3 online', 'm4a to mp3', 'mp3 converter'],
+    icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
+  },
+  {
+    slug: 'opus-to-mp3',
+    name: 'Opus to MP3',
+    tagline: 'Convert Opus audio to MP3.',
+    description:
+      'Free online Opus to MP3 converter. Convert Opus audio into MP3 for players and devices that don’t support Opus — entirely in your browser.',
+    category: 'Audio & Video',
+    keywords: ['opus to mp3', 'convert opus to mp3', 'opus to mp3 online', 'ogg opus to mp3', 'mp3 converter'],
+    icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
+  },
+  {
+    slug: 'wav-to-ogg',
+    name: 'WAV to OGG',
+    tagline: 'Compress WAV audio to OGG Vorbis.',
+    description:
+      'Free online WAV to OGG converter. Compress uncompressed WAV audio into small OGG Vorbis files — entirely in your browser, nothing uploaded.',
+    category: 'Audio & Video',
+    keywords: ['wav to ogg', 'convert wav to ogg', 'wav to ogg online', 'wav to ogg vorbis', 'ogg converter'],
+    icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
+  },
+  {
+    slug: 'archive-converter',
+    name: 'Archive Converter',
+    tagline: 'Convert RAR, 7Z, TAR, ISO & more to ZIP, 7Z or TAR.',
+    description:
+      'Free online archive converter. Convert RAR, 7Z, TAR, GZ, ISO, CAB, DEB, BZ2 and other archive formats to ZIP, 7Z, TAR, TAR.GZ or TAR.BZ2.',
+    category: 'Converters',
+    keywords: [
+      'archive converter',
+      'convert archive online',
+      'rar converter',
+      '7z converter',
+      'iso converter',
+    ],
+    icon: 'M21 8v13H3V8M1 3h22v5H1zM10 12h4',
+  },
+  {
+    slug: 'rar-to-zip',
+    name: 'RAR to ZIP',
+    tagline: 'Convert RAR archives to universal ZIP files.',
+    description:
+      'Free online RAR to ZIP converter. Convert RAR archives to ZIP files that open on any operating system without extra software.',
+    category: 'Converters',
+    keywords: ['rar to zip', 'convert rar to zip', 'rar to zip online', 'extract rar', 'rar converter'],
+    icon: 'M21 8v13H3V8M1 3h22v5H1zM10 12h4',
+  },
+  {
+    slug: '7z-to-zip',
+    name: '7Z to ZIP',
+    tagline: 'Convert 7-Zip archives to ZIP.',
+    description:
+      'Free online 7Z to ZIP converter. Convert 7-Zip (.7z) archives to ZIP files for broad compatibility — no 7-Zip install needed.',
+    category: 'Converters',
+    keywords: ['7z to zip', 'convert 7z to zip', '7zip to zip', 'open 7z', '7z converter'],
+    icon: 'M21 8v13H3V8M1 3h22v5H1zM10 12h4',
+  },
+  {
+    slug: 'tar-to-zip',
+    name: 'TAR to ZIP',
+    tagline: 'Convert Unix TAR archives to ZIP.',
+    description:
+      'Free online TAR to ZIP converter. Convert Unix TAR archives to ZIP so Windows and macOS can open them natively.',
+    category: 'Converters',
+    keywords: ['tar to zip', 'convert tar to zip', 'tar to zip online', 'open tar', 'tar converter'],
+    icon: 'M21 8v13H3V8M1 3h22v5H1zM10 12h4',
+  },
+  {
+    slug: 'gz-to-zip',
+    name: 'GZ to ZIP',
+    tagline: 'Convert Gzip files to ZIP.',
+    description:
+      'Free online GZ to ZIP converter. Convert Gzip (.gz) files to ZIP archives that any operating system can extract.',
+    category: 'Converters',
+    keywords: ['gz to zip', 'convert gz to zip', 'gzip to zip', 'open gz', 'gz converter'],
+    icon: 'M21 8v13H3V8M1 3h22v5H1zM10 12h4',
+  },
+  {
+    slug: 'tar-gz-to-zip',
+    name: 'TAR.GZ to ZIP',
+    tagline: 'Convert compressed tarballs to ZIP.',
+    description:
+      'Free online TAR.GZ to ZIP converter. Convert compressed TAR.GZ (tarball) archives to ZIP for easy extraction on Windows and Mac.',
+    category: 'Converters',
+    keywords: ['tar.gz to zip', 'tgz to zip', 'convert tar gz to zip', 'tarball to zip', 'open tar.gz'],
+    icon: 'M21 8v13H3V8M1 3h22v5H1zM10 12h4',
+  },
+  {
+    slug: 'iso-to-zip',
+    name: 'ISO to ZIP',
+    tagline: 'Convert ISO disk images to ZIP.',
+    description:
+      'Free online ISO to ZIP converter. Convert ISO disk images to ZIP archives to browse and extract their contents without mounting.',
+    category: 'Converters',
+    keywords: ['iso to zip', 'convert iso to zip', 'extract iso', 'open iso file', 'iso converter'],
+    icon: 'M21 8v13H3V8M1 3h22v5H1zM10 12h4',
+  },
+  {
+    slug: 'cab-to-zip',
+    name: 'CAB to ZIP',
+    tagline: 'Convert Windows Cabinet files to ZIP.',
+    description:
+      'Free online CAB to ZIP converter. Convert Windows Cabinet (.cab) files to ZIP for extraction on any platform.',
+    category: 'Converters',
+    keywords: ['cab to zip', 'convert cab to zip', 'extract cab', 'open cab file', 'cab converter'],
+    icon: 'M21 8v13H3V8M1 3h22v5H1zM10 12h4',
+  },
+  {
+    slug: 'deb-to-zip',
+    name: 'DEB to ZIP',
+    tagline: 'Convert Debian packages to ZIP.',
+    description:
+      'Free online DEB to ZIP converter. Convert Debian (.deb) package files to ZIP to inspect their contents without a package manager.',
+    category: 'Converters',
+    keywords: ['deb to zip', 'convert deb to zip', 'extract deb', 'open deb file', 'deb converter'],
+    icon: 'M21 8v13H3V8M1 3h22v5H1zM10 12h4',
+  },
+  {
+    slug: 'bz2-to-zip',
+    name: 'BZ2 to ZIP',
+    tagline: 'Convert Bzip2 files to ZIP.',
+    description:
+      'Free online BZ2 to ZIP converter. Convert Bzip2 (.bz2) files to ZIP archives that open everywhere.',
+    category: 'Converters',
+    keywords: ['bz2 to zip', 'convert bz2 to zip', 'bzip2 to zip', 'open bz2', 'bz2 converter'],
+    icon: 'M21 8v13H3V8M1 3h22v5H1zM10 12h4',
+  },
+  {
+    slug: 'zip-to-7z',
+    name: 'ZIP to 7Z',
+    tagline: 'Convert ZIP archives to 7Z.',
+    description:
+      'Free online ZIP to 7Z converter. Convert ZIP archives to 7Z for stronger compression and smaller archive sizes.',
+    category: 'Converters',
+    keywords: ['zip to 7z', 'convert zip to 7z', 'zip to 7zip', 'compress zip to 7z', '7z converter'],
+    icon: 'M21 8v13H3V8M1 3h22v5H1zM10 12h4',
+  },
+  {
+    slug: 'zip-to-tar',
+    name: 'ZIP to TAR',
+    tagline: 'Convert ZIP archives to Unix TAR.',
+    description:
+      'Free online ZIP to TAR converter. Convert ZIP archives to Unix TAR format for Linux and macOS workflows.',
+    category: 'Converters',
+    keywords: ['zip to tar', 'convert zip to tar', 'zip to tarball', 'zip to tar online', 'tar converter'],
+    icon: 'M21 8v13H3V8M1 3h22v5H1zM10 12h4',
+  },
+  {
+    slug: 'rar-to-7z',
+    name: 'RAR to 7Z',
+    tagline: 'Convert RAR archives to open 7Z.',
+    description:
+      'Free online RAR to 7Z converter. Convert RAR archives to the open 7Z format with high-ratio compression.',
+    category: 'Converters',
+    keywords: ['rar to 7z', 'convert rar to 7z', 'rar to 7zip', 'extract rar to 7z', '7z converter'],
+    icon: 'M21 8v13H3V8M1 3h22v5H1zM10 12h4',
+  },
+  {
     slug: 'word-counter',
     name: 'Word Counter',
     tagline: 'Count words, characters, sentences & reading time.',
@@ -3946,6 +5232,926 @@ export const tools: Tool[] = [
       'recipes from ingredients I have',
     ],
     icon: 'M6 3h12M8 3v5a4 4 0 008 0V3M12 12v9M9 21h6',
+  },
+  {
+    slug: 'jpg-to-word',
+    name: 'JPG to Word Converter',
+    tagline: 'Embed JPG images into a Word .docx.',
+    description:
+      'Free online JPG to Word converter. Insert one or many JPG photos into an editable Microsoft Word (.docx) document, right in your browser.',
+    category: 'Image',
+    keywords: ['jpg to word', 'jpeg to word', 'jpg to docx', 'insert jpg in word', 'convert jpg to word document'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'jpg-to-excel',
+    name: 'JPG to Excel Converter',
+    tagline: 'Embed JPG images into an Excel .xlsx.',
+    description:
+      'Free online JPG to Excel converter. Place JPG images onto a Microsoft Excel (.xlsx) worksheet in your browser, no upload required.',
+    category: 'Image',
+    keywords: ['jpg to excel', 'jpeg to excel', 'jpg to xlsx', 'insert jpg in excel', 'jpg to spreadsheet'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'jpg-to-powerpoint',
+    name: 'JPG to PowerPoint Converter',
+    tagline: 'Turn JPG images into PowerPoint slides.',
+    description:
+      'Free online JPG to PowerPoint converter. Turn each JPG image into its own centred slide in a Microsoft PowerPoint (.pptx) deck.',
+    category: 'Image',
+    keywords: ['jpg to powerpoint', 'jpeg to powerpoint', 'jpg to pptx', 'jpg to slides', 'jpg to ppt'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'jpg-to-svg',
+    name: 'JPG to SVG Converter',
+    tagline: 'Wrap JPG images as scalable SVG.',
+    description:
+      'Free online JPG to SVG converter. Wrap JPG photos in an SVG container so they scale cleanly and drop into vector workflows.',
+    category: 'Image',
+    keywords: ['jpg to svg', 'jpeg to svg', 'convert jpg to svg', 'jpg to vector', 'jpg to scalable'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'jpg-to-bmp',
+    name: 'JPG to BMP Converter',
+    tagline: 'Convert JPG photos to uncompressed BMP.',
+    description:
+      'Free online JPG to BMP converter. Turn JPG photos into uncompressed 24-bit Windows Bitmap (.bmp) files for legacy and imaging software.',
+    category: 'Image',
+    keywords: ['jpg to bmp', 'jpeg to bmp', 'convert jpg to bmp', 'jpg to bitmap', 'jpg to bmp online'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'jpg-to-tiff',
+    name: 'JPG to TIFF Converter',
+    tagline: 'Convert JPG photos to lossless TIFF.',
+    description:
+      'Free online JPG to TIFF converter. Turn JPG images into uncompressed TIFF files for print, archival and imaging workflows.',
+    category: 'Image',
+    keywords: ['jpg to tiff', 'jpeg to tiff', 'convert jpg to tiff', 'jpg to tif', 'jpg to tiff online'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'jpg-to-ico',
+    name: 'JPG to ICO Converter',
+    tagline: 'Turn a JPG into a multi-size .ico icon.',
+    description:
+      'Free online JPG to ICO converter. Turn a JPG image into a Windows icon / favicon (.ico) packed with every standard size.',
+    category: 'Image',
+    keywords: ['jpg to ico', 'jpeg to ico', 'jpg to icon', 'jpg to favicon', 'convert jpg to ico'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'jpg-to-psd',
+    name: 'JPG to PSD Converter',
+    tagline: 'Convert JPG images to Photoshop PSD.',
+    description:
+      'Free online JPG to PSD converter. Turn JPG photos into Adobe Photoshop (.psd) files you can open and edit as a flattened layer.',
+    category: 'Image',
+    keywords: ['jpg to psd', 'jpeg to psd', 'convert jpg to psd', 'jpg to photoshop', 'jpg to psd online'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'jpg-to-html',
+    name: 'JPG to HTML Converter',
+    tagline: 'Embed JPG as a base64 HTML img tag.',
+    description:
+      'Free online JPG to HTML converter. Turn a JPG into a self-contained HTML <img> tag with a base64 data URI you can paste anywhere.',
+    category: 'Image',
+    keywords: ['jpg to html', 'jpeg to html', 'jpg to img tag', 'jpg base64 html', 'embed jpg in html'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'bmp-to-jpg',
+    name: 'BMP to JPG Converter',
+    tagline: 'Compress BMP bitmaps into small JPGs.',
+    description:
+      'Free online BMP to JPG converter. Shrink large uncompressed BMP bitmaps into compact JPEG files with adjustable quality.',
+    category: 'Image',
+    keywords: ['bmp to jpg', 'bmp to jpeg', 'convert bmp to jpg', 'bitmap to jpg', 'bmp to jpg online'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'bmp-to-png',
+    name: 'BMP to PNG Converter',
+    tagline: 'Convert BMP bitmaps to lossless PNG.',
+    description:
+      'Free online BMP to PNG converter. Turn uncompressed BMP bitmaps into smaller lossless PNG files that keep every pixel.',
+    category: 'Image',
+    keywords: ['bmp to png', 'convert bmp to png', 'bitmap to png', 'bmp to png online', 'bmp to lossless png'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'bmp-to-webp',
+    name: 'BMP to WebP Converter',
+    tagline: 'Shrink BMP bitmaps to modern WebP.',
+    description:
+      'Free online BMP to WebP converter. Turn uncompressed BMP bitmaps into tiny modern WebP images with adjustable quality.',
+    category: 'Image',
+    keywords: ['bmp to webp', 'convert bmp to webp', 'bitmap to webp', 'bmp to webp online', 'compress bmp'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'bmp-to-gif',
+    name: 'BMP to GIF Converter',
+    tagline: 'Convert BMP bitmaps to indexed GIF.',
+    description:
+      'Free online BMP to GIF converter. Turn BMP bitmaps into compact 256-colour GIF images in your browser.',
+    category: 'Image',
+    keywords: ['bmp to gif', 'convert bmp to gif', 'bitmap to gif', 'bmp to gif online', 'bmp to animated gif'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'bmp-to-pdf',
+    name: 'BMP to PDF Converter',
+    tagline: 'Combine BMP bitmaps into a PDF.',
+    description:
+      'Free online BMP to PDF converter. Combine one or many BMP bitmaps into a single PDF document, one image per page.',
+    category: 'Image',
+    keywords: ['bmp to pdf', 'convert bmp to pdf', 'bitmap to pdf', 'bmp to pdf online', 'combine bmp pdf'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'bmp-to-ico',
+    name: 'BMP to ICO Converter',
+    tagline: 'Turn a BMP into a multi-size .ico icon.',
+    description:
+      'Free online BMP to ICO converter. Turn a BMP bitmap into a Windows icon / favicon (.ico) packed with every standard size.',
+    category: 'Image',
+    keywords: ['bmp to ico', 'convert bmp to ico', 'bitmap to ico', 'bmp to icon', 'bmp to favicon'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'bmp-to-svg',
+    name: 'BMP to SVG Converter',
+    tagline: 'Wrap BMP bitmaps as scalable SVG.',
+    description:
+      'Free online BMP to SVG converter. Wrap BMP bitmaps in an SVG container so they scale cleanly and drop into vector workflows.',
+    category: 'Image',
+    keywords: ['bmp to svg', 'convert bmp to svg', 'bitmap to svg', 'bmp to vector', 'bmp to svg online'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'bmp-to-tiff',
+    name: 'BMP to TIFF Converter',
+    tagline: 'Convert BMP bitmaps to lossless TIFF.',
+    description:
+      'Free online BMP to TIFF converter. Turn BMP bitmaps into uncompressed TIFF files for print and archival workflows.',
+    category: 'Image',
+    keywords: ['bmp to tiff', 'convert bmp to tiff', 'bitmap to tiff', 'bmp to tif', 'bmp to tiff online'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'bmp-to-base64',
+    name: 'BMP to Base64 Converter',
+    tagline: 'Encode BMP bitmaps as base64 data URIs.',
+    description:
+      'Free online BMP to Base64 converter. Turn BMP bitmaps into base64 data URIs you can embed directly in HTML or CSS.',
+    category: 'Image',
+    keywords: ['bmp to base64', 'convert bmp to base64', 'bitmap to base64', 'bmp data uri', 'bmp base64 encode'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'bmp-batch',
+    name: 'BMP Batch Converter (PNG/JPG)',
+    tagline: 'Batch-convert many BMPs to PNG or JPG.',
+    description:
+      'Free online BMP batch converter. Convert a whole folder of BMP bitmaps to PNG or JPG at once and download them as a ZIP.',
+    category: 'Image',
+    keywords: ['bmp batch converter', 'batch convert bmp', 'bmp to png batch', 'bmp to jpg batch', 'bulk bmp converter'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'jfif-to-jpg',
+    name: 'JFIF to JPG Converter',
+    tagline: 'Rename/re-encode JFIF to standard JPG.',
+    description:
+      'Free online JFIF to JPG converter. Turn awkward .jfif files into standard .jpg images that open everywhere.',
+    category: 'Image',
+    keywords: ['jfif to jpg', 'jfif to jpeg', 'convert jfif to jpg', 'change jfif to jpg', 'jfif to jpg online'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'jfif-to-png',
+    name: 'JFIF to PNG Converter',
+    tagline: 'Convert JFIF images to lossless PNG.',
+    description:
+      'Free online JFIF to PNG converter. Turn .jfif files into lossless PNG images for editing and universal compatibility.',
+    category: 'Image',
+    keywords: ['jfif to png', 'convert jfif to png', 'change jfif to png', 'jfif to png online', 'jfif to transparent png'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'jfif-to-webp',
+    name: 'JFIF to WebP Converter',
+    tagline: 'Shrink JFIF images to modern WebP.',
+    description:
+      'Free online JFIF to WebP converter. Turn .jfif files into small modern WebP images with adjustable quality.',
+    category: 'Image',
+    keywords: ['jfif to webp', 'convert jfif to webp', 'change jfif to webp', 'jfif to webp online', 'compress jfif'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'jfif-to-gif',
+    name: 'JFIF to GIF Converter',
+    tagline: 'Convert JFIF images to indexed GIF.',
+    description:
+      'Free online JFIF to GIF converter. Turn .jfif files into compact 256-colour GIF images in your browser.',
+    category: 'Image',
+    keywords: ['jfif to gif', 'convert jfif to gif', 'change jfif to gif', 'jfif to gif online', 'jfif to animated gif'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'jfif-to-bmp',
+    name: 'JFIF to BMP Converter',
+    tagline: 'Convert JFIF images to uncompressed BMP.',
+    description:
+      'Free online JFIF to BMP converter. Turn .jfif files into uncompressed 24-bit Windows Bitmap (.bmp) images.',
+    category: 'Image',
+    keywords: ['jfif to bmp', 'convert jfif to bmp', 'change jfif to bmp', 'jfif to bitmap', 'jfif to bmp online'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'jfif-to-ico',
+    name: 'JFIF to ICO Converter',
+    tagline: 'Turn a JFIF into a multi-size .ico icon.',
+    description:
+      'Free online JFIF to ICO converter. Turn a .jfif file into a Windows icon / favicon (.ico) packed with every standard size.',
+    category: 'Image',
+    keywords: ['jfif to ico', 'convert jfif to ico', 'jfif to icon', 'jfif to favicon', 'change jfif to ico'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'jfif-to-pdf',
+    name: 'JFIF to PDF Converter',
+    tagline: 'Combine JFIF images into a PDF.',
+    description:
+      'Free online JFIF to PDF converter. Combine one or many .jfif files into a single PDF document, one image per page.',
+    category: 'Image',
+    keywords: ['jfif to pdf', 'convert jfif to pdf', 'change jfif to pdf', 'jfif to pdf online', 'combine jfif pdf'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'jfif-to-svg',
+    name: 'JFIF to SVG Converter',
+    tagline: 'Wrap JFIF images as scalable SVG.',
+    description:
+      'Free online JFIF to SVG converter. Wrap .jfif files in an SVG container so they scale cleanly and drop into vector workflows.',
+    category: 'Image',
+    keywords: ['jfif to svg', 'convert jfif to svg', 'change jfif to svg', 'jfif to vector', 'jfif to svg online'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'jfif-to-tiff',
+    name: 'JFIF to TIFF Converter',
+    tagline: 'Convert JFIF images to lossless TIFF.',
+    description:
+      'Free online JFIF to TIFF converter. Turn .jfif files into uncompressed TIFF files for print and archival workflows.',
+    category: 'Image',
+    keywords: ['jfif to tiff', 'convert jfif to tiff', 'change jfif to tiff', 'jfif to tif', 'jfif to tiff online'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'jfif-to-psd',
+    name: 'JFIF to PSD Converter',
+    tagline: 'Convert JFIF images to Photoshop PSD.',
+    description:
+      'Free online JFIF to PSD converter. Turn .jfif files into Adobe Photoshop (.psd) files you can open and edit.',
+    category: 'Image',
+    keywords: ['jfif to psd', 'convert jfif to psd', 'change jfif to psd', 'jfif to photoshop', 'jfif to psd online'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'jfif-to-avif',
+    name: 'JFIF to AVIF Converter',
+    tagline: 'Shrink JFIF images to next-gen AVIF.',
+    description:
+      'Free online JFIF to AVIF converter. Turn .jfif files into tiny next-generation AVIF images with adjustable quality.',
+    category: 'Image',
+    keywords: ['jfif to avif', 'convert jfif to avif', 'change jfif to avif', 'jfif to avif online', 'compress jfif avif'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'jfif-to-base64',
+    name: 'JFIF to Base64 Converter',
+    tagline: 'Encode JFIF images as base64 data URIs.',
+    description:
+      'Free online JFIF to Base64 converter. Turn .jfif files into base64 data URIs you can embed directly in HTML or CSS.',
+    category: 'Image',
+    keywords: ['jfif to base64', 'convert jfif to base64', 'jfif data uri', 'jfif base64 encode', 'change jfif to base64'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'txt-to-word',
+    name: 'TXT to Word Converter',
+    tagline: 'Convert TXT to Word.',
+    description:
+      'Free online TXT to Word converter. Convert plain text into an editable Microsoft Word (.docx) document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['txt to word', 'convert txt to word', 'txt to word converter', 'txt to word online', 'txt to word'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'txt-to-docx',
+    name: 'TXT to DOCX Converter',
+    tagline: 'Convert TXT to DOCX.',
+    description:
+      'Free online TXT to DOCX converter. Convert plain text into a Microsoft Word (.docx) document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['txt to docx', 'convert txt to docx', 'txt to docx converter', 'txt to docx online', 'txt to docx'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'txt-to-pdf',
+    name: 'TXT to PDF Converter',
+    tagline: 'Convert TXT to PDF.',
+    description:
+      'Free online TXT to PDF converter. Convert plain text into a PDF document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['txt to pdf', 'convert txt to pdf', 'txt to pdf converter', 'txt to pdf online', 'txt to pdf'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'txt-to-odt',
+    name: 'TXT to ODT Converter',
+    tagline: 'Convert TXT to ODT.',
+    description:
+      'Free online TXT to ODT converter. Convert plain text into an OpenDocument Text (.odt) file entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['txt to odt', 'convert txt to odt', 'txt to odt converter', 'txt to odt online', 'txt to odt'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'txt-to-json',
+    name: 'TXT to JSON Converter',
+    tagline: 'Convert TXT to JSON.',
+    description:
+      'Free online TXT to JSON converter. Convert plain text into structured JSON entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['txt to json', 'convert txt to json', 'txt to json converter', 'txt to json online', 'txt to json'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'txt-to-html',
+    name: 'TXT to HTML Converter',
+    tagline: 'Convert TXT to HTML.',
+    description:
+      'Free online TXT to HTML converter. Convert plain text into an HTML document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['txt to html', 'convert txt to html', 'txt to html converter', 'txt to html online', 'txt to html'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'txt-to-xml',
+    name: 'TXT to XML Converter',
+    tagline: 'Convert TXT to XML.',
+    description:
+      'Free online TXT to XML converter. Convert plain text into an XML document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['txt to xml', 'convert txt to xml', 'txt to xml converter', 'txt to xml online', 'txt to xml'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'txt-to-markdown',
+    name: 'TXT to Markdown Converter',
+    tagline: 'Convert TXT to Markdown.',
+    description:
+      'Free online TXT to Markdown converter. Convert plain text into Markdown entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['txt to markdown', 'convert txt to markdown', 'txt to markdown converter', 'txt to markdown online', 'txt to markdown'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'txt-to-rtf',
+    name: 'TXT to RTF Converter',
+    tagline: 'Convert TXT to RTF.',
+    description:
+      'Free online TXT to RTF converter. Convert plain text into a Rich Text Format (.rtf) file entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['txt to rtf', 'convert txt to rtf', 'txt to rtf converter', 'txt to rtf online', 'txt to rtf'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'txt-to-xlsx',
+    name: 'TXT to Excel Converter',
+    tagline: 'Convert TXT to Excel.',
+    description:
+      'Free online TXT to Excel converter. Convert plain text into a Microsoft Excel (.xlsx) spreadsheet entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['txt to xlsx', 'convert txt to xlsx', 'txt to xlsx converter', 'txt to xlsx online', 'txt to excel'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'txt-to-sql',
+    name: 'TXT to SQL Converter',
+    tagline: 'Convert TXT to SQL.',
+    description:
+      'Free online TXT to SQL converter. Convert plain text into SQL INSERT statements entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['txt to sql', 'convert txt to sql', 'txt to sql converter', 'txt to sql online', 'txt to sql'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'txt-to-base64',
+    name: 'TXT to Base64 Converter',
+    tagline: 'Convert TXT to Base64.',
+    description:
+      'Free online TXT to Base64 converter. Convert plain text into a Base64 string entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['txt to base64', 'convert txt to base64', 'txt to base64 converter', 'txt to base64 online', 'txt to base64'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'txt-to-png',
+    name: 'TXT to PNG Converter',
+    tagline: 'Convert TXT to PNG.',
+    description:
+      'Free online TXT to PNG converter. Convert plain text into a PNG image entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['txt to png', 'convert txt to png', 'txt to png converter', 'txt to png online', 'txt to png'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'txt-to-jpg',
+    name: 'TXT to JPG Converter',
+    tagline: 'Convert TXT to JPG.',
+    description:
+      'Free online TXT to JPG converter. Convert plain text into a JPG image entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['txt to jpg', 'convert txt to jpg', 'txt to jpg converter', 'txt to jpg online', 'txt to jpg'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'txt-to-qr-code',
+    name: 'TXT to QR Code Converter',
+    tagline: 'Convert TXT to QR Code.',
+    description:
+      'Free online TXT to QR Code converter. Convert plain text into a QR code image entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['txt to qr-code', 'convert txt to qr-code', 'txt to qr-code converter', 'txt to qr-code online', 'txt to qr code'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'txt-to-epub',
+    name: 'TXT to EPUB Converter',
+    tagline: 'Convert TXT to EPUB.',
+    description:
+      'Free online TXT to EPUB converter. Convert plain text into an EPUB ebook entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['txt to epub', 'convert txt to epub', 'txt to epub converter', 'txt to epub online', 'txt to epub'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'markdown-to-word',
+    name: 'Markdown to Word Converter',
+    tagline: 'Convert Markdown to Word.',
+    description:
+      'Free online Markdown to Word converter. Convert Markdown into an editable Microsoft Word (.docx) document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['markdown to word', 'convert markdown to word', 'markdown to word converter', 'markdown to word online', 'markdown to word'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'markdown-to-pdf',
+    name: 'Markdown to PDF Converter',
+    tagline: 'Convert Markdown to PDF.',
+    description:
+      'Free online Markdown to PDF converter. Convert Markdown into a PDF document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['markdown to pdf', 'convert markdown to pdf', 'markdown to pdf converter', 'markdown to pdf online', 'markdown to pdf'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'csv-to-pdf',
+    name: 'CSV to PDF Converter',
+    tagline: 'Convert CSV to PDF.',
+    description:
+      'Free online CSV to PDF converter. Convert CSV data into a PDF document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['csv to pdf', 'convert csv to pdf', 'csv to pdf converter', 'csv to pdf online', 'csv to pdf'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'csv-to-xml',
+    name: 'CSV to XML Converter',
+    tagline: 'Convert CSV to XML.',
+    description:
+      'Free online CSV to XML converter. Convert CSV data into an XML document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['csv to xml', 'convert csv to xml', 'csv to xml converter', 'csv to xml online', 'csv to xml'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'csv-to-sql',
+    name: 'CSV to SQL Converter',
+    tagline: 'Convert CSV to SQL.',
+    description:
+      'Free online CSV to SQL converter. Convert CSV data into SQL INSERT statements entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['csv to sql', 'convert csv to sql', 'csv to sql converter', 'csv to sql online', 'csv to sql'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'csv-to-html',
+    name: 'CSV to HTML Converter',
+    tagline: 'Convert CSV to HTML.',
+    description:
+      'Free online CSV to HTML converter. Convert CSV data into an HTML document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['csv to html', 'convert csv to html', 'csv to html converter', 'csv to html online', 'csv to html'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'csv-to-word',
+    name: 'CSV to Word Converter',
+    tagline: 'Convert CSV to Word.',
+    description:
+      'Free online CSV to Word converter. Convert CSV data into an editable Microsoft Word (.docx) document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['csv to word', 'convert csv to word', 'csv to word converter', 'csv to word online', 'csv to word'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'csv-to-markdown',
+    name: 'CSV to Markdown Converter',
+    tagline: 'Convert CSV to Markdown.',
+    description:
+      'Free online CSV to Markdown converter. Convert CSV data into Markdown entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['csv to markdown', 'convert csv to markdown', 'csv to markdown converter', 'csv to markdown online', 'csv to markdown'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'csv-to-tsv',
+    name: 'CSV to TSV Converter',
+    tagline: 'Convert CSV to TSV.',
+    description:
+      'Free online CSV to TSV converter. Convert CSV data into a tab-separated file entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['csv to tsv', 'convert csv to tsv', 'csv to tsv converter', 'csv to tsv online', 'csv to tsv'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'csv-to-yaml',
+    name: 'CSV to YAML Converter',
+    tagline: 'Convert CSV to YAML.',
+    description:
+      'Free online CSV to YAML converter. Convert CSV data into YAML entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['csv to yaml', 'convert csv to yaml', 'csv to yaml converter', 'csv to yaml online', 'csv to yaml'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'csv-to-txt',
+    name: 'CSV to TXT Converter',
+    tagline: 'Convert CSV to TXT.',
+    description:
+      'Free online CSV to TXT converter. Convert CSV data into plain text entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['csv to txt', 'convert csv to txt', 'csv to txt converter', 'csv to txt online', 'csv to txt'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'csv-to-vcard',
+    name: 'CSV to vCard Converter',
+    tagline: 'Convert CSV to vCard.',
+    description:
+      'Free online CSV to vCard converter. Convert CSV data into vCard (.vcf) contacts entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['csv to vcard', 'convert csv to vcard', 'csv to vcard converter', 'csv to vcard online', 'csv to vcard'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'ipynb-to-python',
+    name: 'IPYNB to Python Converter',
+    tagline: 'Convert IPYNB to Python.',
+    description:
+      'Free online IPYNB to Python converter. Convert a Jupyter notebook (.ipynb) into a Python (.py) script entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['ipynb to python', 'convert ipynb to python', 'ipynb to python converter', 'ipynb to python online', 'ipynb to python'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'ipynb-to-html',
+    name: 'IPYNB to HTML Converter',
+    tagline: 'Convert IPYNB to HTML.',
+    description:
+      'Free online IPYNB to HTML converter. Convert a Jupyter notebook (.ipynb) into an HTML document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['ipynb to html', 'convert ipynb to html', 'ipynb to html converter', 'ipynb to html online', 'ipynb to html'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'ipynb-to-json',
+    name: 'IPYNB to JSON Converter',
+    tagline: 'Convert IPYNB to JSON.',
+    description:
+      'Free online IPYNB to JSON converter. Convert a Jupyter notebook (.ipynb) into structured JSON entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['ipynb to json', 'convert ipynb to json', 'ipynb to json converter', 'ipynb to json online', 'ipynb to json'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'ipynb-to-latex',
+    name: 'IPYNB to LaTeX Converter',
+    tagline: 'Convert IPYNB to LaTeX.',
+    description:
+      'Free online IPYNB to LaTeX converter. Convert a Jupyter notebook (.ipynb) into a LaTeX (.tex) document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['ipynb to latex', 'convert ipynb to latex', 'ipynb to latex converter', 'ipynb to latex online', 'ipynb to latex'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'ipynb-to-word',
+    name: 'IPYNB to Word Converter',
+    tagline: 'Convert IPYNB to Word.',
+    description:
+      'Free online IPYNB to Word converter. Convert a Jupyter notebook (.ipynb) into an editable Microsoft Word (.docx) document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['ipynb to word', 'convert ipynb to word', 'ipynb to word converter', 'ipynb to word online', 'ipynb to word'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'ipynb-to-pdf',
+    name: 'IPYNB to PDF Converter',
+    tagline: 'Convert IPYNB to PDF.',
+    description:
+      'Free online IPYNB to PDF converter. Convert a Jupyter notebook (.ipynb) into a PDF document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['ipynb to pdf', 'convert ipynb to pdf', 'ipynb to pdf converter', 'ipynb to pdf online', 'ipynb to pdf'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'epub-to-txt',
+    name: 'EPUB to TXT Converter',
+    tagline: 'Convert EPUB to TXT.',
+    description:
+      'Free online EPUB to TXT converter. Convert an EPUB ebook into plain text entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['epub to txt', 'convert epub to txt', 'epub to txt converter', 'epub to txt online', 'epub to txt'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'epub-to-html',
+    name: 'EPUB to HTML Converter',
+    tagline: 'Convert EPUB to HTML.',
+    description:
+      'Free online EPUB to HTML converter. Convert an EPUB ebook into an HTML document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['epub to html', 'convert epub to html', 'epub to html converter', 'epub to html online', 'epub to html'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'epub-to-pdf',
+    name: 'EPUB to PDF Converter',
+    tagline: 'Convert EPUB to PDF.',
+    description:
+      'Free online EPUB to PDF converter. Convert an EPUB ebook into a PDF document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['epub to pdf', 'convert epub to pdf', 'epub to pdf converter', 'epub to pdf online', 'epub to pdf'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'epub-to-xml',
+    name: 'EPUB to XML Converter',
+    tagline: 'Convert EPUB to XML.',
+    description:
+      'Free online EPUB to XML converter. Convert an EPUB ebook into an XML document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['epub to xml', 'convert epub to xml', 'epub to xml converter', 'epub to xml online', 'epub to xml'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'epub-to-csv',
+    name: 'EPUB to CSV Converter',
+    tagline: 'Convert EPUB to CSV.',
+    description:
+      'Free online EPUB to CSV converter. Convert an EPUB ebook into a CSV file entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['epub to csv', 'convert epub to csv', 'epub to csv converter', 'epub to csv online', 'epub to csv'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'epub-to-fb2',
+    name: 'EPUB to FB2 Converter',
+    tagline: 'Convert EPUB to FB2.',
+    description:
+      'Free online EPUB to FB2 converter. Convert an EPUB ebook into a FictionBook (.fb2) ebook entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['epub to fb2', 'convert epub to fb2', 'epub to fb2 converter', 'epub to fb2 online', 'epub to fb2'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'ebook-converter',
+    name: 'Ebook Converter',
+    tagline: 'Convert EPUB ebooks to readable text.',
+    description:
+      'Free online ebook converter. Extract the text and chapters from an EPUB ebook in your browser — no upload required.',
+    category: 'Converters',
+    keywords: ['ebook-converter'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'word-to-pdf',
+    name: 'Word to PDF Converter',
+    tagline: 'Convert Word to PDF.',
+    description:
+      'Free online Word to PDF converter. Convert a Word (.docx) document into a PDF document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['word to pdf', 'convert word to pdf', 'word to pdf converter', 'word to pdf online', 'word to pdf'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'excel-to-pdf',
+    name: 'Excel to PDF Converter',
+    tagline: 'Convert Excel to PDF.',
+    description:
+      'Free online Excel to PDF converter. Convert an Excel (.xlsx) spreadsheet into a PDF document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['excel to pdf', 'convert excel to pdf', 'excel to pdf converter', 'excel to pdf online', 'excel to pdf'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'ppt-to-txt',
+    name: 'PowerPoint to TXT Converter',
+    tagline: 'Convert PowerPoint to TXT.',
+    description:
+      'Free online PowerPoint to TXT converter. Convert a PowerPoint (.pptx) presentation into plain text entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['ppt to txt', 'convert ppt to txt', 'ppt to txt converter', 'ppt to txt online', 'powerpoint to txt'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'ppt-to-word',
+    name: 'PowerPoint to Word Converter',
+    tagline: 'Convert PowerPoint to Word.',
+    description:
+      'Free online PowerPoint to Word converter. Convert a PowerPoint (.pptx) presentation into an editable Microsoft Word (.docx) document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['ppt to word', 'convert ppt to word', 'ppt to word converter', 'ppt to word online', 'powerpoint to word'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'ppt-to-doc',
+    name: 'PowerPoint to DOC Converter',
+    tagline: 'Convert PowerPoint to DOC.',
+    description:
+      'Free online PowerPoint to DOC converter. Convert a PowerPoint (.pptx) presentation into a Word document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['ppt to doc', 'convert ppt to doc', 'ppt to doc converter', 'ppt to doc online', 'powerpoint to doc'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'ppt-to-html',
+    name: 'PowerPoint to HTML Converter',
+    tagline: 'Convert PowerPoint to HTML.',
+    description:
+      'Free online PowerPoint to HTML converter. Convert a PowerPoint (.pptx) presentation into an HTML document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['ppt to html', 'convert ppt to html', 'ppt to html converter', 'ppt to html online', 'powerpoint to html'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'ppt-to-pdf',
+    name: 'PowerPoint to PDF Converter',
+    tagline: 'Convert PowerPoint to PDF.',
+    description:
+      'Free online PowerPoint to PDF converter. Convert a PowerPoint (.pptx) presentation into a PDF document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['ppt to pdf', 'convert ppt to pdf', 'ppt to pdf converter', 'ppt to pdf online', 'powerpoint to pdf'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'ppt-to-epub',
+    name: 'PowerPoint to EPUB Converter',
+    tagline: 'Convert PowerPoint to EPUB.',
+    description:
+      'Free online PowerPoint to EPUB converter. Convert a PowerPoint (.pptx) presentation into an EPUB ebook entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['ppt to epub', 'convert ppt to epub', 'ppt to epub converter', 'ppt to epub online', 'powerpoint to epub'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'pdf-to-csv',
+    name: 'PDF to CSV Converter',
+    tagline: 'Convert PDF to CSV.',
+    description:
+      'Free online PDF to CSV converter. Convert a PDF into a CSV file entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['pdf to csv', 'convert pdf to csv', 'pdf to csv converter', 'pdf to csv online', 'pdf to csv'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'ofx-to-csv',
+    name: 'OFX to CSV Converter',
+    tagline: 'Convert OFX to CSV.',
+    description:
+      'Free online OFX to CSV converter. Convert an OFX/QFX bank export into a CSV file entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['ofx to csv', 'convert ofx to csv', 'ofx to csv converter', 'ofx to csv online', 'ofx to csv'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'ofx-to-excel',
+    name: 'OFX to Excel Converter',
+    tagline: 'Convert OFX to Excel.',
+    description:
+      'Free online OFX to Excel converter. Convert an OFX/QFX bank export into a Microsoft Excel (.xlsx) spreadsheet entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['ofx to excel', 'convert ofx to excel', 'ofx to excel converter', 'ofx to excel online', 'ofx to excel'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'ofx-to-qfx',
+    name: 'OFX to QFX Converter',
+    tagline: 'Convert OFX to QFX.',
+    description:
+      'Free online OFX to QFX converter. Convert an OFX/QFX bank export into a Quicken QFX file entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['ofx to qfx', 'convert ofx to qfx', 'ofx to qfx converter', 'ofx to qfx online', 'ofx to qfx'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'ofx-to-qbo',
+    name: 'OFX to QBO Converter',
+    tagline: 'Convert OFX to QBO.',
+    description:
+      'Free online OFX to QBO converter. Convert an OFX/QFX bank export into a QuickBooks QBO file entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['ofx to qbo', 'convert ofx to qbo', 'ofx to qbo converter', 'ofx to qbo online', 'ofx to qbo'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'ofx-to-pdf',
+    name: 'OFX to PDF Converter',
+    tagline: 'Convert OFX to PDF.',
+    description:
+      'Free online OFX to PDF converter. Convert an OFX/QFX bank export into a PDF document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['ofx to pdf', 'convert ofx to pdf', 'ofx to pdf converter', 'ofx to pdf online', 'ofx to pdf'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'qif-to-ofx',
+    name: 'QIF to OFX Converter',
+    tagline: 'Convert QIF to OFX.',
+    description:
+      'Free online QIF to OFX converter. Convert a Quicken QIF export into an OFX file entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['qif to ofx', 'convert qif to ofx', 'qif to ofx converter', 'qif to ofx online', 'qif to ofx'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'qif-to-excel',
+    name: 'QIF to Excel Converter',
+    tagline: 'Convert QIF to Excel.',
+    description:
+      'Free online QIF to Excel converter. Convert a Quicken QIF export into a Microsoft Excel (.xlsx) spreadsheet entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['qif to excel', 'convert qif to excel', 'qif to excel converter', 'qif to excel online', 'qif to excel'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'iif-to-csv',
+    name: 'IIF to CSV Converter',
+    tagline: 'Convert IIF to CSV.',
+    description:
+      'Free online IIF to CSV converter. Convert a QuickBooks IIF export into a CSV file entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['iif to csv', 'convert iif to csv', 'iif to csv converter', 'iif to csv online', 'iif to csv'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'iif-to-excel',
+    name: 'IIF to Excel Converter',
+    tagline: 'Convert IIF to Excel.',
+    description:
+      'Free online IIF to Excel converter. Convert a QuickBooks IIF export into a Microsoft Excel (.xlsx) spreadsheet entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['iif to excel', 'convert iif to excel', 'iif to excel converter', 'iif to excel online', 'iif to excel'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'jpg-to-pdf',
+    name: 'JPG to PDF Converter',
+    tagline: 'Convert JPG to PDF.',
+    description:
+      'Free online JPG to PDF converter. Convert a JPG image into a PDF document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['jpg to pdf', 'convert jpg to pdf', 'jpg to pdf converter', 'jpg to pdf online', 'jpg to pdf'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
+    slug: 'png-to-pdf',
+    name: 'PNG to PDF Converter',
+    tagline: 'Convert PNG to PDF.',
+    description:
+      'Free online PNG to PDF converter. Convert a PNG image into a PDF document entirely in your browser — nothing is uploaded.',
+    category: 'Converters',
+    keywords: ['png to pdf', 'convert png to pdf', 'png to pdf converter', 'png to pdf online', 'png to pdf'],
+    icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
   },
 ];
 
