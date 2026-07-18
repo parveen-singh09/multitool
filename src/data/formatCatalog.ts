@@ -114,7 +114,9 @@ export function targetsFor(ext: string): string[] {
   if (cat === 'Font') return LOCAL_FONT.filter((t) => t !== e);
   if (cat === 'Archive') return LOCAL_ARCHIVE.filter((t) => t !== e);
   const reach = new Set(directApiTargets(e));
-  const okCats = cat ? COMPAT_TARGETS[cat] : null;
+  // Unknown source category → offer only direct targets, never chain: a 2-hop
+  // closure with no category guard is what surfaced image→pdf→xlsx nonsense.
+  const okCats = cat ? (COMPAT_TARGETS[cat] || []) : [];
   for (const m of [...reach])
     for (const t of directApiTargets(m)) {
       const tc = CAT_OF[t];
