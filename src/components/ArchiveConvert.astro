@@ -224,9 +224,10 @@ const accept = from ? `.${from}` : '';
 
   // Picker SDKs / hidden inputs inject focus-stealing elements that make the
   // page jump. Pin the scroll position back for a short window when opening one.
-  function keepScroll(ms = 1500) {
-    const y = window.scrollY;
+  function keepScroll(ms = 1500, targetY?: number) {
+    const y = targetY ?? window.scrollY;
     const snap = () => window.scrollTo({ top: y, behavior: 'instant' as ScrollBehavior });
+    snap();
     window.addEventListener('scroll', snap);
     const stop = setInterval(snap, 100);
     setTimeout(() => { clearInterval(stop); window.removeEventListener('scroll', snap); }, ms);
@@ -273,10 +274,14 @@ const accept = from ? `.${from}` : '';
       }
       srcNote.classList.add('hidden');
       dropLabel.textContent = `Opening ${label}…`;
-      keepScroll(2500);
       showBlur(true);
+      // Capture where the user was BEFORE auth (which can take 10-30s); restore
+      // it after the file returns, since any timer-based lock has long expired.
+      const savedY = window.scrollY;
+      const restore = () => keepScroll(800, savedY);
       try {
-        await pickFromDrive(src, (file) => load(file));
+        await pickFromDrive(src, (file) => { restore(); load(file); });
+        restore();
       } catch (err) {
         setErr(`Couldn't get the file from ${label}: ${(err as Error).message}`);
         dropLabel.textContent = 'Drop your file here to convert';
