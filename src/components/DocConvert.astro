@@ -38,7 +38,7 @@ const placeholder = spec.placeholder ?? 'Paste your text…';
   <div id="dc-out-wrap" class="hidden">
     <pre id="dc-out" class="field m-0 max-h-112 overflow-auto p-3 text-[13px]" style="white-space:pre-wrap;word-break:break-word;font-family:var(--font-mono,ui-monospace,monospace)"></pre>
   </div>
-  <div id="dc-img-wrap" class="hidden panel flex justify-center overflow-hidden p-4">
+  <div id="dc-img-wrap" class="hidden panel justify-center overflow-hidden p-4">
     <img id="dc-img" class="max-h-96 w-auto max-w-full rounded-md" alt="Converted output preview" />
   </div>
 
@@ -82,7 +82,7 @@ const placeholder = spec.placeholder ?? 'Paste your text…';
   const fmtSize = (n: number) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`;
 
   function resetOut() {
-    outWrap.classList.add('hidden'); imgWrap.classList.add('hidden');
+    outWrap.classList.add('hidden'); imgWrap.classList.add('hidden'); imgWrap.classList.remove('flex');
     dlBtn.classList.add('hidden'); copyBtn.classList.add('hidden');
     note.classList.add('hidden'); note.textContent = '';
     if (outUrl) { URL.revokeObjectURL(outUrl); outUrl = null; }
@@ -123,7 +123,7 @@ const placeholder = spec.placeholder ?? 'Paste your text…';
         // preview images inline
         if (res.blob.type.startsWith('image/')) {
           outUrl = URL.createObjectURL(res.blob);
-          img.src = outUrl; imgWrap.classList.remove('hidden');
+          img.src = outUrl; imgWrap.classList.remove('hidden'); imgWrap.classList.add('flex');
         }
       }
       if (outBlob) dlBtn.classList.remove('hidden');
