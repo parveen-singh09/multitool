@@ -108,7 +108,7 @@ async function pickOneDrive(onFile: (f: File) => void): Promise<void> {
       clientId: DRIVE_CFG.onedriveClientId,
       action: 'download',
       multiSelect: false,
-      advanced: { redirectUri: window.location.origin },
+      advanced: { redirectUri: window.location.origin + '/onedrive-callback.html' },
       success: async (files: any) => {
         try {
           const f = files.value[0];
