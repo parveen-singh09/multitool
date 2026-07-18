@@ -69,7 +69,7 @@ async function pickGoogle(onFile: (f: File) => void): Promise<void> {
   const token = await new Promise<string>((resolve, reject) => {
     const tc = (window as any).google.accounts.oauth2.initTokenClient({
       client_id: DRIVE_CFG.gdriveClientId,
-      scope: 'https://www.googleapis.com/auth/drive.readonly',
+      scope: 'https://www.googleapis.com/auth/drive.file',
       callback: (r: any) => (r.access_token ? resolve(r.access_token) : reject(new Error('No access token'))),
     });
     tc.requestAccessToken();
