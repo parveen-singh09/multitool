@@ -79,6 +79,8 @@ const accept = from ? `.${from}` : '';
 
 <style>
   .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+  /* Stop the browser from auto-scrolling when DOM shifts (picker close, button reveal). */
+  :global(html), :global(body) { overflow-anchor: none; }
   /* Dark canvas: soft white glow so the card lifts off near-black. */
   .ac-drop { box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 10px 45px -8px rgba(255,255,255,0.14); }
   .ac-drop:hover { box-shadow: 0 0 0 1px rgba(255,255,255,0.10), 0 12px 55px -8px rgba(255,255,255,0.20); }
@@ -243,19 +245,6 @@ const accept = from ? `.${from}` : '';
     scrollLockRAF = requestAnimationFrame(tick);
   }
 
-  // Blur the page while a drive picker (separate window) is open.
-  let blurEl: HTMLElement | null = null;
-  function showBlur(on: boolean) {
-    if (on) {
-      if (blurEl) return;
-      blurEl = document.createElement('div');
-      blurEl.style.cssText = 'position:fixed;inset:0;z-index:40;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);background:rgba(1,1,2,0.5);';
-      document.body.appendChild(blurEl);
-    } else {
-      blurEl?.remove();
-      blurEl = null;
-    }
-  }
 
   fileInput.addEventListener('change', () => fileInput.files?.[0] && load(fileInput.files[0]));
 
@@ -284,7 +273,6 @@ const accept = from ? `.${from}` : '';
       }
       srcNote.classList.add('hidden');
       dropLabel.textContent = `Opening ${label}…`;
-      showBlur(true);
       // Capture where the user was BEFORE auth (which can take 10-30s); restore
       // it after the file returns, since any timer-based lock has long expired.
       const savedY = window.scrollY;
@@ -295,8 +283,6 @@ const accept = from ? `.${from}` : '';
       } catch (err) {
         setErr(`Couldn't get the file from ${label}: ${(err as Error).message}`);
         dropLabel.textContent = 'Drop your file here to convert';
-      } finally {
-        showBlur(false);
       }
     });
   });
