@@ -86,7 +86,16 @@ const catStyle: Record<string, { bg: string; ring: string; fg: string; icon: str
                     <svg class="fmt-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                   </button>
                 </div>
-                <div id="fmt-from-menu" class="fmt-menu hidden" role="listbox"></div>
+                <div id="fmt-from-menu" class="fmt-panel hidden" role="dialog" aria-label="Choose source format">
+                  <div class="fmt-search">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+                    <input id="fmt-search" type="text" placeholder="Search format" autocomplete="off" spellcheck="false" />
+                  </div>
+                  <div class="fmt-body">
+                    <div id="fmt-cats" class="fmt-cats" role="tablist"></div>
+                    <div id="fmt-chips" class="fmt-chips"></div>
+                  </div>
+                </div>
               </div>
               <span class="fmt-line"></span>
               <span class="flex h-9 w-9 flex-none items-center justify-center rounded-full border border-hairline bg-surface-2 text-primary-hover">
@@ -261,6 +270,93 @@ const catStyle: Record<string, { bg: string; ring: string; fg: string; icon: str
       background: var(--color-surface-2, #141516);
       box-shadow: 0 16px 40px -12px rgba(0,0,0,0.6);
     }
+    /* CloudConvert-style source panel: search + category rail + chip grid. */
+    .fmt-panel {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      z-index: 30;
+      width: min(27rem, calc(100vw - 2rem));
+      border-radius: 14px;
+      border: 1px solid var(--color-hairline, #23252a);
+      background: var(--color-surface-2, #141516);
+      box-shadow: 0 24px 60px -16px rgba(0,0,0,0.7);
+      overflow: hidden;
+    }
+    .fmt-search {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid var(--color-hairline, #23252a);
+      color: var(--color-ink-tertiary, #8a8f98);
+    }
+    .fmt-search input {
+      flex: 1;
+      background: transparent;
+      border: 0;
+      outline: none;
+      font: inherit;
+      font-size: 14px;
+      color: var(--color-ink, #f7f8f8);
+    }
+    .fmt-search input::placeholder { color: var(--color-ink-tertiary, #8a8f98); }
+    .fmt-body { display: flex; height: 17rem; }
+    .fmt-cats {
+      flex: 0 0 8.5rem;
+      overflow-y: auto;
+      padding: 0.35rem;
+      border-right: 1px solid var(--color-hairline, #23252a);
+    }
+    .fmt-chips {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.5rem;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-auto-rows: min-content;
+      gap: 0.4rem;
+      align-content: start;
+    }
+    :global(.fmt-cat) {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0.5rem 0.6rem;
+      border-radius: 8px;
+      border: 0;
+      background: transparent;
+      color: var(--color-ink-subtle, #b3b8c0);
+      font: inherit;
+      font-size: 13.5px;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.12s ease, color 0.12s ease;
+    }
+    :global(.fmt-cat:hover) { background: var(--color-surface-3, #18191a); color: var(--color-ink, #f7f8f8); }
+    :global(.fmt-cat[aria-selected="true"]) { background: var(--color-surface-3, #18191a); color: var(--color-ink, #f7f8f8); }
+    :global(.fmt-cat svg) { opacity: 0.5; }
+    :global(.fmt-chip) {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.55rem 0.4rem;
+      border-radius: 8px;
+      border: 1px solid var(--color-hairline, #23252a);
+      background: var(--color-surface-1, #0c0d0e);
+      color: var(--color-ink, #f7f8f8);
+      font: inherit;
+      font-size: 12.5px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      transition: background 0.12s ease, border-color 0.12s ease;
+    }
+    :global(.fmt-chip:hover:not(:disabled)) { background: var(--color-surface-3, #18191a); border-color: var(--color-hairline-strong, #33353b); }
+    :global(.fmt-chip[aria-selected="true"]) { background: var(--color-primary, #5e6ad2); border-color: var(--color-primary, #5e6ad2); color: #fff; }
+    :global(.fmt-chip:disabled) { opacity: 0.32; cursor: not-allowed; }
+    :global(.fmt-chips-empty) { grid-column: 1 / -1; padding: 1rem 0.4rem; font-size: 13px; color: var(--color-ink-tertiary, #8a8f98); text-align: center; }
     /* :global — these buttons are created in JS, so they lack Astro's scope id. */
     :global(.fmt-opt) {
       display: flex;
@@ -347,6 +443,7 @@ const catStyle: Record<string, { bg: string; ring: string; fg: string; icon: str
 
   <script>
     import { CONVERT_MATRIX } from '../data/convertMatrix';
+    import { FORMAT_CATEGORIES, targetsFor as catTargetsFor } from '../data/formatCatalog';
     // Cycle the source→target format pair in the hero cards (decorative).
     // Icon follows the format family so the glyph matches the label.
     const FAMILY_ICON = {
@@ -359,21 +456,26 @@ const catStyle: Record<string, { bg: string; ring: string; fg: string; icon: str
       sheet: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>',
       generic: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
     };
+    FAMILY_ICON.font = '<path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/>';
+    FAMILY_ICON.vector = '<path d="M4.5 4.5h4v4h-4z"/><path d="M15.5 15.5h4v4h-4z"/><path d="M8.5 6.5h7a2 2 0 0 1 2 2v7"/>';
     const FAMILY_OF = {
-      pdf: 'document', docx: 'document', doc: 'document', odt: 'document', rtf: 'document', txt: 'document', html: 'document',
-      png: 'image', jpg: 'image', jpeg: 'image', webp: 'image', svg: 'image', tiff: 'image', gif: 'image', bmp: 'image', ico: 'image', heic: 'image', avif: 'image',
-      mp3: 'audio', wav: 'audio', flac: 'audio', ogg: 'audio', m4a: 'audio', aac: 'audio', opus: 'audio',
-      mp4: 'video', mov: 'video', webm: 'video', mkv: 'video', avi: 'video',
-      zip: 'archive', '7z': 'archive', tar: 'archive', rar: 'archive',
-      epub: 'ebook', mobi: 'ebook', azw3: 'ebook',
-      xlsx: 'sheet', xls: 'sheet', csv: 'sheet', ods: 'sheet',
+      pdf: 'document', docx: 'document', doc: 'document', odt: 'document', rtf: 'document', txt: 'document', html: 'document', htm: 'document', md: 'document', pages: 'document', wpd: 'document', xml: 'document', log: 'document',
+      png: 'image', jpg: 'image', jpeg: 'image', webp: 'image', tiff: 'image', tif: 'image', gif: 'image', bmp: 'image', ico: 'image', heic: 'image', heif: 'image', avif: 'image', jfif: 'image', psd: 'image',
+      mp3: 'audio', wav: 'audio', flac: 'audio', ogg: 'audio', oga: 'audio', m4a: 'audio', aac: 'audio', opus: 'audio', aiff: 'audio', ac3: 'audio', wma: 'audio',
+      mp4: 'video', mov: 'video', webm: 'video', mkv: 'video', avi: 'video', flv: 'video', ogv: 'video', wmv: 'video', mpeg: 'video', mpg: 'video', '3gp': 'video', '3g2': 'video', m2ts: 'video', mts: 'video', ts: 'video', vob: 'video', rmvb: 'video', rm: 'video', swf: 'video', m4v: 'video',
+      zip: 'archive', '7z': 'archive', tar: 'archive', rar: 'archive', gz: 'archive', bz2: 'archive', xz: 'archive', tgz: 'archive', cab: 'archive', iso: 'archive',
+      epub: 'ebook', mobi: 'ebook', azw3: 'ebook', azw: 'ebook', fb2: 'ebook', lit: 'ebook', pdb: 'ebook', cbz: 'ebook', cbr: 'ebook',
+      xlsx: 'sheet', xls: 'sheet', csv: 'sheet', ods: 'sheet', numbers: 'sheet', tsv: 'sheet',
+      pptx: 'document', ppt: 'document', odp: 'document', key: 'document',
+      ttf: 'font', otf: 'font', woff: 'font', woff2: 'font', eot: 'font',
+      svg: 'vector', ai: 'vector', eps: 'vector', cdr: 'vector', wmf: 'vector', emf: 'vector', ps: 'vector',
+      dxf: 'vector', dwg: 'vector', dwf: 'vector',
     };
     const svg = (fmt) => {
       const fam = FAMILY_OF[fmt.toLowerCase()] || 'generic';
       return `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${FAMILY_ICON[fam]}</svg>`;
     };
 
-    // Only show source formats the backend (ConvertAPI) can actually convert.
     const up = (s) => s.toUpperCase();
     const matrixTargets = (fmt) => (CONVERT_MATRIX[fmt.toLowerCase()] || []).map(up);
 
@@ -393,10 +495,6 @@ const catStyle: Record<string, { bg: string; ring: string; fg: string; icon: str
     const toBtn = document.getElementById('fmt-to-btn');
     const fromMenu = document.getElementById('fmt-from-menu');
     const toMenu = document.getElementById('fmt-to-menu');
-
-    // Common sources, kept only if the real matrix lists them with targets.
-    const FROM_OPTS = ['PNG','JPG','WEBP','GIF','BMP','TIFF','HEIC','SVG','PDF','DOCX','DOC','XLSX','PPTX','EPUB','MOBI','CSV','HTML']
-      .filter((f) => matrixTargets(f).length);
 
     const setFrom = (fmt) => { if (fromEl) fromEl.textContent = fmt; if (fromIcon) fromIcon.innerHTML = svg(fmt); };
     const setTo = (fmt) => { if (toEl) toEl.textContent = fmt; if (toIcon) toIcon.innerHTML = svg(fmt); };
@@ -445,9 +543,9 @@ const catStyle: Record<string, { bg: string; ring: string; fg: string; icon: str
       }
     }
 
-    // Compatible target formats from the real ConvertAPI matrix.
+    // Compatible target formats (routes video/audio/font locally, else ConvertAPI).
     function targetsFor(sourceFmt) {
-      return matrixTargets(sourceFmt).filter((f) => f !== sourceFmt.toUpperCase());
+      return catTargetsFor(sourceFmt).map(up);
     }
     function refreshTargets(sourceFmt) {
       const opts = targetsFor(sourceFmt);
@@ -456,14 +554,99 @@ const catStyle: Record<string, { bg: string; ring: string; fg: string; icon: str
       fillMenu(toMenu, opts, toEl?.textContent, (f) => { stopCycle(); setTo(f); });
     }
 
+    // --- Source panel: search + category rail + chip grid (CloudConvert-style). ---
+    const catsEl = document.getElementById('fmt-cats');
+    const chipsEl = document.getElementById('fmt-chips');
+    const searchEl = document.getElementById('fmt-search');
+    let activeCat = FORMAT_CATEGORIES[0]?.label || '';
+
+    const CAT_ICON = {
+      Document: FAMILY_ICON.document, Ebook: FAMILY_ICON.ebook, Font: FAMILY_ICON.font,
+      Image: FAMILY_ICON.image, Presentation: FAMILY_ICON.document, Spreadsheet: FAMILY_ICON.sheet,
+      Vector: FAMILY_ICON.vector, CAD: FAMILY_ICON.vector, Video: FAMILY_ICON.video,
+      Audio: FAMILY_ICON.audio, Archive: FAMILY_ICON.archive,
+    };
+
+    function pickSource(fmt) {
+      stopCycle();
+      setFrom(up(fmt));
+      refreshTargets(fmt);
+      closeMenus();
+    }
+
+    // Render chips: either one category, or flat search results.
+    function renderChips(query) {
+      if (!chipsEl) return;
+      chipsEl.innerHTML = '';
+      const q = (query || '').trim().toLowerCase();
+      let formats;
+      if (q) {
+        formats = FORMAT_CATEGORIES.flatMap((c) => c.formats).filter((f) => f.includes(q));
+        formats = [...new Set(formats)];
+      } else {
+        formats = FORMAT_CATEGORIES.find((c) => c.label === activeCat)?.formats || [];
+      }
+      if (!formats.length) {
+        const empty = document.createElement('div');
+        empty.className = 'fmt-chips-empty';
+        empty.textContent = 'No formats match.';
+        chipsEl.appendChild(empty);
+        return;
+      }
+      const cur = (fromEl?.textContent || '').toLowerCase();
+      for (const f of formats) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'fmt-chip';
+        b.textContent = up(f);
+        if (!catTargetsFor(f).length) b.disabled = true;      // nothing to convert to
+        if (f === cur) b.setAttribute('aria-selected', 'true');
+        b.addEventListener('click', (e) => { e.stopPropagation(); pickSource(f); });
+        chipsEl.appendChild(b);
+      }
+    }
+
+    function renderCats() {
+      if (!catsEl) return;
+      catsEl.innerHTML = '';
+      for (const c of FORMAT_CATEGORIES) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'fmt-cat';
+        b.setAttribute('role', 'tab');
+        if (c.label === activeCat) b.setAttribute('aria-selected', 'true');
+        b.innerHTML = `<span>${c.label}</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
+        const select = (e) => {
+          e.stopPropagation();
+          if (activeCat === c.label && !(searchEl && searchEl.value)) return;
+          activeCat = c.label;
+          if (searchEl) searchEl.value = '';
+          // Update selection in place — don't rebuild the rail under the cursor.
+          for (const el of catsEl.children) el.removeAttribute('aria-selected');
+          b.setAttribute('aria-selected', 'true');
+          renderChips('');
+        };
+        b.addEventListener('mouseenter', select);   // hover switches category, like CloudConvert
+        b.addEventListener('click', select);        // click/tap for touch + keyboard
+        catsEl.appendChild(b);
+      }
+    }
+
+    searchEl?.addEventListener('input', () => renderChips(searchEl.value));
+    // Keep clicks inside the panel from closing it.
+    fromMenu?.addEventListener('click', (e) => e.stopPropagation());
+
     fromBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
       const open = fromMenu.classList.contains('hidden');
       closeMenus();
       if (open) {
-        fillMenu(fromMenu, FROM_OPTS, fromEl?.textContent, (f) => { stopCycle(); setFrom(f); refreshTargets(f); });
+        if (searchEl) searchEl.value = '';
+        renderCats();
+        renderChips('');
         fromMenu.classList.remove('hidden');
         fromBtn.setAttribute('aria-expanded', 'true');
+        searchEl?.focus();
       }
     });
     toBtn?.addEventListener('click', (e) => {

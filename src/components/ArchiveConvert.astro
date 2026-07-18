@@ -98,6 +98,7 @@ const accept = from ? `.${from}` : '';
 
 <script>
   import { driveReady, pickFromDrive } from '../lib/drivePickers';
+  import { backendFor, chainPath } from '../data/formatCatalog';
 
   const root = document.getElementById('ac-root') as HTMLElement;
   const presetTo = root.dataset.to || '';
@@ -118,6 +119,7 @@ const accept = from ? `.${from}` : '';
   const err = $('ac-error');
 
   let picked: File | null = null;
+  let lastOutUrl: string | null = null;
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
 
   const CATEGORY: Record<string, string[]> = {
@@ -195,18 +197,15 @@ const accept = from ? `.${from}` : '';
     const outFormat = sync ? syncTargetFmt() : (presetTo || target?.value || 'zip');
     const inFormat = (picked.name.split('.').pop() || '').toLowerCase();
 
-    try {
-      const fd = new FormData();
-      fd.append('inputFormat', inFormat);
-      fd.append('outputFormat', outFormat);
-      fd.append('file', picked);
-      const res = await fetch('/api/cc-job', { method: 'POST', body: fd });
-      const out = await asJson(res);
-      if (!res.ok) throw new Error(out.error || 'Conversion failed.');
+    if (lastOutUrl) { URL.revokeObjectURL(lastOutUrl); lastOutUrl = null; }
 
-      dlBtn.href = out.downloadUrl;
-      if (out.filename) dlBtn.setAttribute('download', out.filename);
-      dlBtn.classList.remove('hidden');
+    try {
+      // Audio/video/font run in the browser; everything else via ConvertAPI.
+      const backend = backendFor(inFormat);
+      if (backend === 'ffmpeg') await convertMedia(picked, inFormat, outFormat);
+      else if (backend === 'font') await convertFont(picked, outFormat);
+      else if (backend === 'archive') await convertArchiveFile(picked, inFormat, outFormat);
+      else await convertApi(picked, inFormat, outFormat);
     } catch (e) {
       setErr((e as Error).message);
       status.textContent = '';
@@ -214,6 +213,110 @@ const accept = from ? `.${from}` : '';
       runBtn.disabled = false;
       runBtn.textContent = 'Convert';
     }
+  }
+
+  // Offer a local (blob) result as a download.
+  function offerDownload(data: Uint8Array, mime: string, outFormat: string) {
+    // A 0-byte result means the encoder/extractor failed silently (bad codec,
+    // empty archive) — surface it instead of handing over a broken file.
+    if (!data || data.length === 0) throw new Error('Conversion produced an empty file — the input may be unsupported or corrupt.');
+    lastOutUrl = URL.createObjectURL(new Blob([data as BlobPart], { type: mime }));
+    dlBtn.href = lastOutUrl;
+    dlBtn.setAttribute('download', (picked!.name.replace(/\.[^.]+$/, '') || 'converted') + '.' + outFormat);
+    dlBtn.classList.remove('hidden');
+    status.textContent = (data.length / 1048576).toFixed(2) + ' MB';
+  }
+
+  async function convertApi(file: File, inFormat: string, outFormat: string) {
+    // Resolve the hop path (direct or via one intermediate). The worker chains it.
+    const path = chainPath(inFormat, outFormat) || [inFormat, outFormat];
+    const fd = new FormData();
+    fd.append('inputFormat', inFormat);
+    fd.append('outputFormat', outFormat);
+    fd.append('path', path.join(','));
+    fd.append('file', file);
+    const res = await fetch('/api/cc-job', { method: 'POST', body: fd });
+    const out = await asJson(res);
+    if (!res.ok) throw new Error(out.error || 'Conversion failed.');
+    dlBtn.href = out.downloadUrl;
+    if (out.filename) dlBtn.setAttribute('download', out.filename);
+    dlBtn.classList.remove('hidden');
+  }
+
+  const AUDIO_MIME: Record<string, string> = {
+    mp3: 'audio/mpeg', m4a: 'audio/mp4', wav: 'audio/wav', flac: 'audio/flac',
+    ogg: 'audio/ogg', opus: 'audio/opus', aiff: 'audio/aiff', ac3: 'audio/ac3',
+  };
+
+  async function convertMedia(file: File, inFormat: string, outFormat: string) {
+    const { getFFmpeg, fetchFile } = await import('../lib/ffmpeg');
+    const { VIDEO_MIME, videoArgs } = await import('../lib/videoConvert');
+    const isVideo = outFormat in VIDEO_MIME;
+    status.textContent = '';
+    runBtn.textContent = 'Loading engine…';
+    const ff = await getFFmpeg({
+      onDownload: (n) => { if (n) runBtn.textContent = 'Downloading…'; },
+      onProgress: (r) => { runBtn.textContent = `Converting… ${Math.min(100, Math.round(r * 100))}%`; },
+    });
+    runBtn.textContent = 'Converting… 0%';
+    // Unique in AND out names: ffmpeg's virtual FS is a shared singleton, so a
+    // fixed "out.<fmt>" could hand back a stale file from a prior failed run.
+    const token = Math.random().toString(36).slice(2);
+    const inName = 'in_' + token + '.' + inFormat;
+    const outName = 'out_' + token + '.' + outFormat;
+    let args: string[];
+    let mime: string;
+    if (isVideo) {
+      args = videoArgs(outFormat, 'balanced', inName, outName);
+      mime = VIDEO_MIME[outFormat];
+    } else {
+      const { buildArgs, defaultQuality } = await import('../lib/media');
+      // aac is written as .m4a; map the audio ext to its OutFamily.
+      const outFamily = (outFormat === 'm4a' ? 'aac' : outFormat) as any;
+      const conv = { out: outFamily, kind: 'audio', ext: outFormat } as any;
+      args = buildArgs(conv, { quality: defaultQuality(outFamily) }, inName, outName);
+      mime = AUDIO_MIME[outFormat] || 'application/octet-stream';
+    }
+    await ff.writeFile(inName, await fetchFile(file));
+    try {
+      await ff.exec(args);
+      const data = (await ff.readFile(outName)) as Uint8Array;
+      offerDownload(data, mime, outFormat);
+    } finally {
+      // Always clean both, even on failure, so the shared FS never accumulates.
+      try { await ff.deleteFile(inName); } catch {}
+      try { await ff.deleteFile(outName); } catch {}
+    }
+  }
+
+  const FONT_MIME: Record<string, string> = {
+    ttf: 'font/ttf', woff: 'font/woff', woff2: 'font/woff2', eot: 'application/vnd.ms-fontobject',
+  };
+
+  async function convertFont(file: File, outFormat: string) {
+    const { createFont, woff2 } = await import('fonteditor-core');
+    const inType = (file.name.split('.').pop() || '').toLowerCase();
+    if (outFormat === 'woff2' || inType === 'woff2') {
+      status.textContent = 'Loading WOFF2 support…';
+      await woff2.init('/woff2.wasm');
+    }
+    status.textContent = 'Converting…';
+    const buf = await file.arrayBuffer();
+    const font = createFont(buf, { type: inType as any, hinting: true, kerning: true });
+    const out = font.write({ type: outFormat as any, hinting: true, kerning: true });
+    const data = out instanceof ArrayBuffer ? new Uint8Array(out) : (out as Uint8Array);
+    offerDownload(data, FONT_MIME[outFormat] || 'application/octet-stream', outFormat);
+  }
+
+  async function convertArchiveFile(file: File, inFormat: string, outFormat: string) {
+    const { convertArchive, archiveFormatOf, ARCHIVE_MIME } = await import('../lib/archive');
+    const to = archiveFormatOf(outFormat);
+    if (!to) throw new Error(`Can't write ${outFormat.toUpperCase()} archives in the browser.`);
+    // 7z/rar/etc. spin up a wasm worker — warn it may take a moment.
+    status.textContent = 'Extracting…';
+    const data = await convertArchive(file, to);
+    const ext = to === 'tgz' ? 'tar.gz' : to;
+    offerDownload(data, ARCHIVE_MIME[to], ext);
   }
 
   const pickBtn = $('ac-pick') as HTMLButtonElement;
