@@ -117,7 +117,7 @@ async function pickOneDrive(onFile: (f: File) => void): Promise<void> {
         } catch (e) { reject(e); }
       },
       cancel: () => resolve(),
-      error: () => reject(new Error('OneDrive picker error')),
+      error: (e: any) => reject(new Error(e?.message || e?.error || JSON.stringify(e) || 'OneDrive picker error')),
     });
   });
 }

@@ -235,6 +235,20 @@ const accept = from ? `.${from}` : '';
     setTimeout(() => { clearInterval(stop); window.removeEventListener('scroll', snap); }, ms);
   }
 
+  // Blur the page while a drive picker (separate window) is open.
+  let blurEl: HTMLElement | null = null;
+  function showBlur(on: boolean) {
+    if (on) {
+      if (blurEl) return;
+      blurEl = document.createElement('div');
+      blurEl.style.cssText = 'position:fixed;inset:0;z-index:40;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);background:rgba(1,1,2,0.5);';
+      document.body.appendChild(blurEl);
+    } else {
+      blurEl?.remove();
+      blurEl = null;
+    }
+  }
+
   fileInput.addEventListener('change', () => fileInput.files?.[0] && load(fileInput.files[0]));
 
   // Click the card body opens the picker; clicks on the button group are handled separately.
@@ -263,11 +277,14 @@ const accept = from ? `.${from}` : '';
       srcNote.classList.add('hidden');
       dropLabel.textContent = `Opening ${label}…`;
       keepScroll(2500);
+      showBlur(true);
       try {
         await pickFromDrive(src, (file) => load(file));
       } catch (err) {
         setErr(`Couldn't get the file from ${label}: ${(err as Error).message}`);
         dropLabel.textContent = 'Drop your file here to convert';
+      } finally {
+        showBlur(false);
       }
     });
   });
