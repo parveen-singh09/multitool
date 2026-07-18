@@ -224,13 +224,23 @@ const accept = from ? `.${from}` : '';
 
   // Picker SDKs / hidden inputs inject focus-stealing elements that make the
   // page jump. Pin the scroll position back for a short window when opening one.
+  // Pin scroll on every animation frame (before paint) so a picker/focus jump
+  // never becomes visible — setInterval is too slow and the bottom flashes first.
+  let scrollLockUntil = 0;
+  let scrollLockRAF = 0;
   function keepScroll(ms = 1500, targetY?: number) {
     const y = targetY ?? window.scrollY;
-    const snap = () => window.scrollTo({ top: y, behavior: 'instant' as ScrollBehavior });
-    snap();
-    window.addEventListener('scroll', snap);
-    const stop = setInterval(snap, 100);
-    setTimeout(() => { clearInterval(stop); window.removeEventListener('scroll', snap); }, ms);
+    scrollLockUntil = performance.now() + ms;
+    if (scrollLockRAF) return; // a loop is already running; just extends the deadline
+    const tick = () => {
+      if (window.scrollY !== y) window.scrollTo(0, y);
+      if (performance.now() < scrollLockUntil) {
+        scrollLockRAF = requestAnimationFrame(tick);
+      } else {
+        scrollLockRAF = 0;
+      }
+    };
+    scrollLockRAF = requestAnimationFrame(tick);
   }
 
   // Blur the page while a drive picker (separate window) is open.
