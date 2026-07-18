@@ -88,9 +88,24 @@ function directApiTargets(e: string): string[] {
   return (CONVERT_MATRIX[e] || []).filter((t) => t !== 'zip' && t !== 'json' && t !== e);
 }
 
+// 2-hop chaining can wander across categories (image→pdf→xlsx), producing
+// nonsense pairs ConvertAPI rejects with a 502. A chained target is kept only
+// when its category is compatible with the source. Direct (1-hop) targets are
+// trusted as-is — ConvertAPI advertises them directly.
+const COMPAT_TARGETS: Record<string, string[]> = {
+  Document: ['Document', 'Ebook', 'Image', 'Presentation', 'Spreadsheet', 'Vector'],
+  Ebook: ['Ebook', 'Document', 'Image'],
+  Image: ['Image', 'Document', 'Vector'],
+  Presentation: ['Presentation', 'Document', 'Image'],
+  Spreadsheet: ['Spreadsheet', 'Document'],
+  Vector: ['Vector', 'Image', 'Document'],
+  CAD: ['CAD', 'Vector', 'Image', 'Document'],
+};
+
 // The one compatibility function the picker and converter both use.
-// API formats expose the full 2-hop closure (like CloudConvert): if csv->xlsx
-// and xlsx->png both exist directly, csv->png is offered and chained in the worker.
+// API formats expose a 2-hop closure (like CloudConvert): if csv->xlsx and
+// xlsx->png both exist directly, csv->png is offered and chained in the worker —
+// but only when the chained target stays in a category compatible with the source.
 export function targetsFor(ext: string): string[] {
   const e = ext.toLowerCase().split('.').pop() || ext;
   const cat = CAT_OF[e];
@@ -99,7 +114,12 @@ export function targetsFor(ext: string): string[] {
   if (cat === 'Font') return LOCAL_FONT.filter((t) => t !== e);
   if (cat === 'Archive') return LOCAL_ARCHIVE.filter((t) => t !== e);
   const reach = new Set(directApiTargets(e));
-  for (const m of [...reach]) for (const t of directApiTargets(m)) reach.add(t);
+  const okCats = cat ? COMPAT_TARGETS[cat] : null;
+  for (const m of [...reach])
+    for (const t of directApiTargets(m)) {
+      const tc = CAT_OF[t];
+      if (!okCats || (tc && okCats.includes(tc))) reach.add(t);
+    }
   reach.delete(e);
   return [...reach];
 }

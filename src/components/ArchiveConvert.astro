@@ -178,7 +178,12 @@ const accept = from ? `.${from}` : '';
     const text = await res.text();
     try { return JSON.parse(text); }
     catch {
-      throw new Error('The conversion service is not available here. It runs on the deployed site (or via `wrangler pages dev`), not in plain dev mode.');
+      // Non-JSON body: the function didn't run (dev) or an edge/upstream error
+      // returned an HTML/text page (e.g. Cloudflare "error code: 502").
+      const isDev = /^(localhost|127\.|\[::1\])/.test(location.hostname);
+      if (isDev) throw new Error('The conversion service is not available here. It runs on the deployed site (or via `wrangler pages dev`), not in plain dev mode.');
+      const snippet = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+      throw new Error(`Conversion failed (HTTP ${res.status})${snippet ? ': ' + snippet : ''}. Try again, or a different file/format.`);
     }
   }
 
