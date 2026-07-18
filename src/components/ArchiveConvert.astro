@@ -92,6 +92,8 @@ const accept = from ? `.${from}` : '';
 </style>
 
 <script>
+  import { driveReady, pickFromDrive } from '../lib/drivePickers';
+
   const root = document.getElementById('ac-root') as HTMLElement;
   const presetTo = root.dataset.to || '';
   const smart = root.dataset.smart === 'true';
@@ -228,14 +230,27 @@ const accept = from ? `.${from}` : '';
   document.addEventListener('click', (e) => { if (!(e.target as HTMLElement).closest('#ac-src-menu, #ac-pick-more')) toggleMenu(false); });
 
   srcMenu.querySelectorAll<HTMLButtonElement>('.ac-src').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       toggleMenu(false);
-      const src = btn.dataset.src;
+      const src = btn.dataset.src!;
+      const label = btn.textContent!.trim();
       if (src === 'device') { srcNote.classList.add('hidden'); openPicker(); return; }
-      // Drive sources need OAuth apps that aren't connected yet.
-      srcNote.textContent = `${btn.textContent!.trim()} isn't connected yet — use “From this device” for now.`;
-      srcNote.classList.remove('hidden');
+
+      // Drive source: only works if its public key is configured at build time.
+      if (!driveReady(src)) {
+        srcNote.textContent = `${label} isn't set up yet — use “From this device” for now.`;
+        srcNote.classList.remove('hidden');
+        return;
+      }
+      srcNote.classList.add('hidden');
+      dropLabel.textContent = `Opening ${label}…`;
+      try {
+        await pickFromDrive(src, (file) => load(file));
+      } catch (err) {
+        setErr(`Couldn't get the file from ${label}: ${(err as Error).message}`);
+        dropLabel.textContent = 'Drop your file here to convert';
+      }
     });
   });
 
