@@ -11,6 +11,14 @@ export const DRIVE_CFG = {
   onedriveClientId: import.meta.env.PUBLIC_ONEDRIVE_CLIENT_ID as string | undefined,
 };
 
+// Native Google editor MIME → export format. Everything else downloads raw.
+const GOOGLE_EXPORT: Record<string, { mime: string; ext: string }> = {
+  'application/vnd.google-apps.spreadsheet': { mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', ext: '.xlsx' },
+  'application/vnd.google-apps.document': { mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', ext: '.docx' },
+  'application/vnd.google-apps.presentation': { mime: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', ext: '.pptx' },
+  'application/vnd.google-apps.drawing': { mime: 'image/png', ext: '.png' },
+};
+
 // Is a source configured (its key present)?
 export function driveReady(src: string): boolean {
   const c = DRIVE_CFG;
@@ -86,11 +94,13 @@ async function pickGoogle(onFile: (f: File) => void): Promise<void> {
         if (data.action === g.picker.Action.PICKED) {
           try {
             const doc = data.docs[0];
-            onFile(await toFile(
-              `https://www.googleapis.com/drive/v3/files/${doc.id}?alt=media`,
-              doc.name,
-              { Authorization: 'Bearer ' + token },
-            ));
+            // Native Google editor files can't use ?alt=media — must export to a real format.
+            const exp = GOOGLE_EXPORT[doc.mimeType as string];
+            const url = exp
+              ? `https://www.googleapis.com/drive/v3/files/${doc.id}/export?mimeType=${encodeURIComponent(exp.mime)}`
+              : `https://www.googleapis.com/drive/v3/files/${doc.id}?alt=media`;
+            const name = exp && !doc.name.endsWith(exp.ext) ? doc.name + exp.ext : doc.name;
+            onFile(await toFile(url, name, { Authorization: 'Bearer ' + token }));
             resolve();
           } catch (e) { reject(e); }
         } else if (data.action === g.picker.Action.CANCEL) resolve();
