@@ -158,7 +158,6 @@ const accept = from ? `.${from}` : '';
   }
 
   function load(file: File) {
-    keepScroll(600);                               // DOM changes below can jump the page
     setErr('');
     picked = file;
     dropLabel.textContent = file.name;
@@ -221,28 +220,31 @@ const accept = from ? `.${from}` : '';
   const moreBtn = $('ac-pick-more') as HTMLButtonElement;
   const srcMenu = $('ac-src-menu');
   const srcNote = $('ac-src-note');
-  const openPicker = () => { keepScroll(); fileInput.click(); };
+  const openPicker = () => { fileInput.click(); };
   const toggleMenu = (show?: boolean) => srcMenu.classList.toggle('hidden', show === undefined ? undefined : !show);
 
-  // Picker SDKs / hidden inputs inject focus-stealing elements that make the
-  // page jump. Pin the scroll position back for a short window when opening one.
-  // Pin scroll on every animation frame (before paint) so a picker/focus jump
-  // never becomes visible — setInterval is too slow and the bottom flashes first.
-  let scrollLockUntil = 0;
-  let scrollLockRAF = 0;
-  function keepScroll(ms = 1500, targetY?: number) {
-    const y = targetY ?? window.scrollY;
-    scrollLockUntil = performance.now() + ms;
-    if (scrollLockRAF) return; // a loop is already running; just extends the deadline
-    const tick = () => {
-      if (window.scrollY !== y) window.scrollTo(0, y);
-      if (performance.now() < scrollLockUntil) {
-        scrollLockRAF = requestAnimationFrame(tick);
-      } else {
-        scrollLockRAF = 0;
-      }
-    };
-    scrollLockRAF = requestAnimationFrame(tick);
+  // Hard scroll-lock (the technique modal libraries use): pin the body with
+  // position:fixed so the page CANNOT scroll during the picker/OAuth flow, then
+  // restore the exact position on unlock. Nothing to "catch" — it never moves.
+  let lockedY = 0;
+  let scrollLocked = false;
+  function lockScroll() {
+    if (scrollLocked) return;
+    lockedY = window.scrollY;
+    const b = document.body.style;
+    b.position = 'fixed';
+    b.top = `-${lockedY}px`;
+    b.left = '0';
+    b.right = '0';
+    b.width = '100%';
+    scrollLocked = true;
+  }
+  function unlockScroll() {
+    if (!scrollLocked) return;
+    const b = document.body.style;
+    b.position = ''; b.top = ''; b.left = ''; b.right = ''; b.width = '';
+    scrollLocked = false;
+    window.scrollTo(0, lockedY);
   }
 
 
@@ -273,16 +275,15 @@ const accept = from ? `.${from}` : '';
       }
       srcNote.classList.add('hidden');
       dropLabel.textContent = `Opening ${label}…`;
-      // Capture where the user was BEFORE auth (which can take 10-30s); restore
-      // it after the file returns, since any timer-based lock has long expired.
-      const savedY = window.scrollY;
-      const restore = () => keepScroll(800, savedY);
+      // Freeze the page for the whole pick+auth flow so it physically can't scroll.
+      lockScroll();
       try {
-        await pickFromDrive(src, (file) => { restore(); load(file); });
-        restore();
+        await pickFromDrive(src, (file) => load(file));
       } catch (err) {
         setErr(`Couldn't get the file from ${label}: ${(err as Error).message}`);
         dropLabel.textContent = 'Drop your file here to convert';
+      } finally {
+        unlockScroll();
       }
     });
   });
