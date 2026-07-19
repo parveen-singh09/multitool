@@ -71,7 +71,8 @@ export function categoryOf(ext: string): string | undefined {
 }
 
 function directApiTargets(e: string): string[] {
-  return (CONVERT_MATRIX[e] || []).filter((t) => t !== 'zip' && t !== 'json' && t !== e);
+  // ponytail: fdf is ConvertAPI-supported but useless as a generic target (PDF→FDF needs a form PDF, else Code 4000)
+  return (CONVERT_MATRIX[e] || []).filter((t) => t !== 'zip' && t !== 'json' && t !== 'fdf' && t !== e);
 }
 
 const COMPAT_TARGETS: Record<string, string[]> = {
