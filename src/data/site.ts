@@ -7,7 +7,7 @@ export const SITE = {
 
   ogImage: '/og-image.png',
   twitter: '@toolsilk',
-  tagline: 'Free online tools that run in your browser',
+  tagline: 'All the free online tools you need, in one place',
   description:
     'ToolSilk is a free collection of fast online tools — word counter, password generator, JSON formatter, Base64 encoder, QR code generator and more.',
 
