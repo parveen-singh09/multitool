@@ -9,6 +9,30 @@ const SOURCES = [
   { src: 'dropbox', label: 'Dropbox', icon: '<path d="m7 3 5 3-5 3-5-3zM17 3l5 3-5 3-5-3zM2 12l5 3 5-3-5-3zM17 9l5 3-5 3-5-3zM7 18l5-3 5 3-5 3z"/>' },
 ] as const;
 
+// The Google Picker / OAuth flow makes the browser scroll-anchor and drift for a
+// few seconds after a pick. Freeze body to position:fixed during the flow, then
+// restore the exact position (mirrors ArchiveConvert's fix).
+let lockedY = 0;
+let scrollLocked = false;
+function lockScroll() {
+  if (scrollLocked) return;
+  lockedY = window.scrollY;
+  const b = document.body.style;
+  b.position = 'fixed';
+  b.top = `-${lockedY}px`;
+  b.left = '0';
+  b.right = '0';
+  b.width = '100%';
+  scrollLocked = true;
+}
+function unlockScroll() {
+  if (!scrollLocked) return;
+  const b = document.body.style;
+  b.position = ''; b.top = ''; b.left = ''; b.right = ''; b.width = '';
+  scrollLocked = false;
+  window.scrollTo(0, lockedY);
+}
+
 // Push a File into a native input and notify listeners, so the tool reacts as if
 // the user had chosen it from disk.
 function deliver(input: HTMLInputElement, file: File) {
@@ -46,8 +70,9 @@ function wire(input: HTMLInputElement) {
   caret.style.cssText = 'border-top-left-radius:0;border-bottom-left-radius:0;border-left:1px solid rgba(255,255,255,0.22)';
   caret.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
 
+  // fixed + body-mounted so overflow-hidden drop-zone cards can't clip it (mobile).
   const menu = document.createElement('div');
-  menu.className = 'hidden absolute left-1/2 top-[calc(100%+6px)] z-30 w-[min(13rem,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-lg border border-hairline bg-surface-2 text-left shadow-xl';
+  menu.className = 'hidden fixed z-50 overflow-hidden rounded-lg border border-hairline bg-surface-2 text-left shadow-xl';
 
   const item = (icon: string, label: string, onClick: () => void) => {
     const b = document.createElement('button');
@@ -63,17 +88,35 @@ function wire(input: HTMLInputElement) {
   for (const s of ready) {
     const b = item(s.icon, s.label, async () => {
       b.disabled = true;
+      lockScroll();
       try { await pickFromDrive(s.src, (file) => deliver(input, file)); }
       catch (err) { console.error('Cloud import failed', err); }
-      finally { b.disabled = false; }
+      finally { unlockScroll(); b.disabled = false; }
     });
   }
 
-  caret.addEventListener('click', (e) => { e.stopPropagation(); menu.classList.toggle('hidden'); });
+  // Place the fixed menu under the split button, clamped to the viewport.
+  const place = () => {
+    const r = wrap.getBoundingClientRect();
+    const width = Math.min(208, window.innerWidth - 16);
+    const left = Math.min(Math.max(8, r.left), window.innerWidth - width - 8);
+    menu.style.width = `${width}px`;
+    menu.style.left = `${left}px`;
+    menu.style.top = `${r.bottom + 6}px`;
+  };
+  caret.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const opening = menu.classList.contains('hidden');
+    if (opening) place();
+    menu.classList.toggle('hidden');
+  });
   document.addEventListener('click', () => menu.classList.add('hidden'));
+  window.addEventListener('resize', () => menu.classList.add('hidden'));
+  window.addEventListener('scroll', () => menu.classList.add('hidden'), true);
   menu.addEventListener('click', (e) => e.stopPropagation());
 
-  wrap.append(main, caret, menu);
+  wrap.append(main, caret);
+  document.body.appendChild(menu);
 
   const label = input.closest('label');
   // Only rebuild genuine drop zones (border-dashed cards). Inline labels are left
