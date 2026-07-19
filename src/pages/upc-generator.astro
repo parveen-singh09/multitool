@@ -260,7 +260,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
   const outName = () => (mode === 'single' ? (toUpc(digitsEl.value) ?? 'upc') : 'upc-batch');
 
-  // Live redraw.
   digitsEl.addEventListener('input', drawSingle);
   batchTextEl.addEventListener('input', () => { if (mode === 'batch') draw(); });
   [scaleEl, heightEl, quietEl, fontEl].forEach((el) => el.addEventListener('input', () => {
@@ -280,8 +279,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   $('up-png').addEventListener('click', () => download(canvas.toDataURL('image/png'), `${outName()}.png`));
   $('up-jpg').addEventListener('click', () => download(canvas.toDataURL('image/jpeg', 0.92), `${outName()}.jpg`));
   $('up-svg').addEventListener('click', async () => {
-    // SVG export is single-code (vector stacking isn't worth it). In batch mode
-    // export the first code so the button always does something sensible.
     const code = mode === 'single' ? toUpc(digitsEl.value)
       : (batchTextEl.value.split('\n').map(toUpc).filter(Boolean)[0] as string | undefined);
     if (!code) { setErr('Enter a valid code first.'); return; }
@@ -298,7 +295,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     });
   });
 
-  // Init.
   digitsEl.value = '03600029145';
   setMode('single');
 </script>

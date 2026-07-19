@@ -127,7 +127,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (!session) return;
     try {
       const next = await listMessages(session.token);
-      // Only re-render if the id set changed, so reading isn't interrupted.
       if (next.length !== messages.length || next.some((m, i) => m.id !== messages[i]?.id)) {
         messages = next;
         renderList();
@@ -200,7 +199,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
   }
 
-  // ---- controls ----
   $('ti-new').addEventListener('click', async () => {
     if (session) { try { await deleteAccount(session.token, session.id); } catch {} }
     sessionStorage.removeItem(KEY);
@@ -214,14 +212,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (!hidden) renderToCanvas(qrCanvas, `mailto:${session.address}`, DEFAULT_OPTIONS, 200);
   });
 
-  // ---- boot: reuse a saved session across reloads, else mint a new one ----
   (async () => {
     const saved = sessionStorage.getItem(KEY);
     if (saved) {
       try {
         session = JSON.parse(saved) as Session;
         addrEl.textContent = session.address;
-        // Validate the token still works; listMessages throws on 401.
         await listMessages(session.token);
         setStatus('Waiting for mail…');
         startPoll();
@@ -237,7 +233,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   window.addEventListener('beforeunload', stopPoll);
 
-  // ===== Bulk generator (dummy @example.com, never delivers) =====
   const countEl = $('fe-count') as HTMLInputElement;
   const out = $('fe-out') as HTMLTextAreaElement;
   function generate() {

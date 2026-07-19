@@ -152,7 +152,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     sample.style.color = fgHex.value;
   }
 
-  // Push a hex value out to picker + hex field + lightness slider, then analyze.
   function setColor(which: 'fg' | 'bg', hex: string) {
     const [picker, hexEl, slider, label] =
       which === 'fg' ? [fgColor, fgHex, fgL, fgLVal] : [bgColor, bgHex, bgL, bgLVal];
@@ -167,13 +166,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     analyze();
   }
 
-  // Picker → hex.
   fgColor.addEventListener('input', () => setColor('fg', fgColor.value));
   bgColor.addEventListener('input', () => setColor('bg', bgColor.value));
-  // Hex typing → picker + slider (only when a full valid hex is present).
   fgHex.addEventListener('input', () => { if (hexToRgb(fgHex.value)) setColor('fg', fgHex.value); else analyze(); });
   bgHex.addEventListener('input', () => { if (hexToRgb(bgHex.value)) setColor('bg', bgHex.value); else analyze(); });
-  // Lightness slider → new hex.
   fgL.addEventListener('input', () => { fgLVal.textContent = `${fgL.value}%`; setColor('fg', withLightness(fgHex.value, Number(fgL.value))); });
   bgL.addEventListener('input', () => { bgLVal.textContent = `${bgL.value}%`; setColor('bg', withLightness(bgHex.value, Number(bgL.value))); });
 

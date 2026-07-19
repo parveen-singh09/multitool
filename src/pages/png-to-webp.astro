@@ -123,7 +123,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   function setErr(m: string) { err.textContent = m; err.classList.toggle('hidden', !m); }
 
-  // WebP encode support check (some old browsers can't). Cached.
   let webpSupported: boolean | null = null;
   function checkWebp(): boolean {
     if (webpSupported === null) {
@@ -134,7 +133,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return webpSupported;
   }
 
-  // Compute output dimensions from the resize controls.
   function targetSize(srcW: number, srcH: number): { w: number; h: number } {
     const mode = resizeSel.value;
     const v = Math.max(1, Number(dimEl.value) || 0);
@@ -150,7 +148,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return { w: srcW, h: srcH };
   }
 
-  // Encode one item to WebP with the current settings.
   function encode(it: Item): Promise<void> {
     return new Promise((resolve) => {
       const { w, h } = targetSize(it.srcW, it.srcH);
@@ -265,8 +262,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     URL.revokeObjectURL(a.href);
   }
 
-  // Decode a file to a drawable image. createImageBitmap is fast; fall back to
-  // <img> for browsers/edge cases where it rejects.
   async function decode(file: File): Promise<HTMLImageElement | ImageBitmap> {
     try {
       return await createImageBitmap(file);
@@ -310,9 +305,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     updateSummary();
   }
 
-  // --- Minimal store-only ZIP (no compression). WebP is already compressed, so
-  // "store" is the standard, correct choice and needs no deflate dependency.
-  // ponytail: store method only; add deflate if archive size ever matters.
   const crcTable = (() => {
     const t = new Uint32Array(256);
     for (let n = 0; n < 256; n++) {
@@ -339,39 +331,39 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
       const local = new Uint8Array(30 + nameBytes.length);
       const lv = new DataView(local.buffer);
-      lv.setUint32(0, 0x04034b50, true);   // local file header sig
-      lv.setUint16(4, 20, true);           // version needed
-      lv.setUint16(6, 0, true);            // flags
-      lv.setUint16(8, 0, true);            // method = store
-      lv.setUint16(10, 0, true);           // mod time
-      lv.setUint16(12, 0, true);           // mod date
+      lv.setUint32(0, 0x04034b50, true);
+      lv.setUint16(4, 20, true);
+      lv.setUint16(6, 0, true);
+      lv.setUint16(8, 0, true);
+      lv.setUint16(10, 0, true);
+      lv.setUint16(12, 0, true);
       lv.setUint32(14, crc, true);
-      lv.setUint32(18, size, true);        // compressed size
-      lv.setUint32(22, size, true);        // uncompressed size
+      lv.setUint32(18, size, true);
+      lv.setUint32(22, size, true);
       lv.setUint16(26, nameBytes.length, true);
-      lv.setUint16(28, 0, true);           // extra len
+      lv.setUint16(28, 0, true);
       local.set(nameBytes, 30);
       locals.push(local, f.data);
 
       const central = new Uint8Array(46 + nameBytes.length);
       const cv = new DataView(central.buffer);
-      cv.setUint32(0, 0x02014b50, true);   // central dir sig
-      cv.setUint16(4, 20, true);           // version made by
-      cv.setUint16(6, 20, true);           // version needed
+      cv.setUint32(0, 0x02014b50, true);
+      cv.setUint16(4, 20, true);
+      cv.setUint16(6, 20, true);
       cv.setUint16(8, 0, true);
-      cv.setUint16(10, 0, true);           // method
+      cv.setUint16(10, 0, true);
       cv.setUint16(12, 0, true);
       cv.setUint16(14, 0, true);
       cv.setUint32(16, crc, true);
       cv.setUint32(20, size, true);
       cv.setUint32(24, size, true);
       cv.setUint16(28, nameBytes.length, true);
-      cv.setUint16(30, 0, true);           // extra
-      cv.setUint16(32, 0, true);           // comment
-      cv.setUint16(34, 0, true);           // disk
-      cv.setUint16(36, 0, true);           // internal attrs
-      cv.setUint32(38, 0, true);           // external attrs
-      cv.setUint32(42, offset, true);      // local header offset
+      cv.setUint16(30, 0, true);
+      cv.setUint16(32, 0, true);
+      cv.setUint16(34, 0, true);
+      cv.setUint16(36, 0, true);
+      cv.setUint32(38, 0, true);
+      cv.setUint32(42, offset, true);
       central.set(nameBytes, 46);
       centrals.push(central);
 
@@ -380,11 +372,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const centralSize = centrals.reduce((s, c) => s + c.length, 0);
     const end = new Uint8Array(22);
     const ev = new DataView(end.buffer);
-    ev.setUint32(0, 0x06054b50, true);     // end of central dir sig
-    ev.setUint16(8, files.length, true);   // entries on disk
-    ev.setUint16(10, files.length, true);  // total entries
-    ev.setUint32(12, centralSize, true);   // central dir size
-    ev.setUint32(16, offset, true);        // central dir offset
+    ev.setUint32(0, 0x06054b50, true);
+    ev.setUint16(8, files.length, true);
+    ev.setUint16(10, files.length, true);
+    ev.setUint32(12, centralSize, true);
+    ev.setUint32(16, offset, true);
     return new Blob([...locals, ...centrals, end] as BlobPart[], { type: 'application/zip' });
   }
 
@@ -392,7 +384,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const ok = items.filter((i) => i.blob && !i.error);
     if (!ok.length) { setErr('Nothing to download yet.'); return; }
     if (ok.length === 1) { downloadItem(ok[0]); return; }
-    // Dedupe names inside the archive.
     const seen: Record<string, number> = {};
     const files: { name: string; data: Uint8Array }[] = [];
     for (const it of ok) {
@@ -409,7 +400,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     URL.revokeObjectURL(a.href);
   }
 
-  // --- Wiring
   qEl.addEventListener('input', () => { qval.textContent = qEl.value + '%'; void reencodeAll(); });
   resizeSel.addEventListener('change', () => {
     const mode = resizeSel.value;

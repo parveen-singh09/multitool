@@ -269,7 +269,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // ---- words -> number (short scale, cardinal) ----
   const WORD_ONES: Record<string, number> = {};
   ONES.forEach((w, i) => { WORD_ONES[w] = i; });
   const WORD_TENS: Record<string, number> = {};
@@ -286,7 +285,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       return true;
     });
 
-    // split off decimal part after "point"
     const pIdx = tokens.indexOf('point');
     const intTokens = pIdx >= 0 ? tokens.slice(0, pIdx) : tokens;
     const decTokens = pIdx >= 0 ? tokens.slice(pIdx + 1) : [];
@@ -337,12 +335,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // ---- UI wiring / visibility ----
   function syncVisibility() {
     const w2n = dirEl.value === 'w2n';
     const currency = formatEl.value === 'currency';
 
-    // in words->number direction most number-formatting controls are irrelevant
     formatWrap.hidden = w2n;
     systemWrap.hidden = w2n;
     caseWrap.hidden = w2n;
@@ -353,7 +349,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     inLabel.textContent = w2n ? 'Words' : 'Number';
     outLabel.textContent = w2n ? 'As a number' : 'In words';
 
-    // single vs batch input element
     numEl.hidden = batch.checked;
     multiEl.hidden = !batch.checked;
     if (w2n) {

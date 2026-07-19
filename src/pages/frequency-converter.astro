@@ -175,7 +175,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     [1e-6, 'µm'], [1e-9, 'nm'], [1e-12, 'pm'],
   ];
 
-  // ---- radio / EM spectrum band by frequency (Hz) ----
   function emBand(hz: number): string {
     if (!isFinite(hz) || hz <= 0) return '—';
     const bands: [number, string][] = [
@@ -201,13 +200,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return '—';
   }
 
-  // ---- nearest musical note (A4 = 440 Hz, equal temperament) ----
   const NOTE_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
   function nearestNote(hz: number): string {
     if (!isFinite(hz) || hz <= 0) return '—';
     const midi = 69 + 12 * Math.log2(hz / 440);
     const n = Math.round(midi);
-    if (n < 12 || n > 127) return '—'; // outside ~C0..G9
+    if (n < 12 || n > 127) return '—';
     const name = NOTE_NAMES[((n % 12) + 12) % 12];
     const octave = Math.floor(n / 12) - 1;
     const cents = Math.round((midi - n) * 100);
@@ -215,7 +213,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return `${name}${octave} (${dev})`;
   }
 
-  // ---- derived-property readout panel ----
   function renderDerived(hz: number) {
     if (!isFinite(hz)) { derived.innerHTML = drow('—', ''); return; }
     const rows = [
@@ -235,14 +232,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     </div>`;
   }
 
-  // ---- all-units breakdown ----
   const hzTo = (hz: number, unit: string) => hz / UNITS[unit];
   function renderBreakdown(hz: number) {
     if (!isFinite(hz)) { breakdown.innerHTML = drow('—', ''); return; }
     breakdown.innerHTML = UNIT_NAMES.map((u) => drow(u, fmt(hzTo(hz, u)))).join('');
   }
 
-  // ---- reference table of common real-world frequencies ----
   const COMMON: [number, string][] = [
     [50, 'Mains power (Europe)'],
     [60, 'Mains power (North America)'],
@@ -271,13 +266,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       </tr></thead>${rows}</table>`;
   }
 
-  // ---- short label for the inline formula ----
   function short(u: string): string {
-    const m = u.match(/\(([^)]+)\)/); // prefer the parenthetical symbol
+    const m = u.match(/\(([^)]+)\)/);
     return m ? m[1] : u.replace(/\s*\/.*$/, '').trim();
   }
 
-  // ---- main ----
   function fillUnits() {
     const opts = UNIT_NAMES.map((u) => `<option>${u}</option>`).join('');
     fromUnit.innerHTML = opts;
@@ -324,7 +317,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   renderTable();
   convert();
 
-  // ponytail: one runnable self-check — silent unless the math regresses.
   console.assert(Math.abs(hzTo(1e6, 'Megahertz (MHz)') - 1) < 1e-9, 'Hz→MHz');
   console.assert(Math.abs(hzTo(1, 'Revolution / minute (RPM)') - 60) < 1e-9, 'Hz→RPM');
   console.assert(Math.abs(hzTo(1, 'Radian / second (rad/s)') - TAU) < 1e-9, 'Hz→rad/s');

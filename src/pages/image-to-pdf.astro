@@ -157,15 +157,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     });
   }
 
-  // Returns bytes ready to embed. Direct-embeds JPG/PNG (best fidelity, smallest)
-  // unless conversion is needed (webp/gif/bmp), compression is on, or auto-rotate
-  // must bake in EXIF orientation. ponytail: first frame only for animated GIF.
   async function rasterize(file: File, compress: boolean, quality: number, rotate: boolean):
     Promise<{ bytes: ArrayBuffer; type: 'png' | 'jpg' }> {
     const isJpg = file.type === 'image/jpeg';
     const isPng = file.type === 'image/png';
     const needConv = !isJpg && !isPng;
-    // Fast path: no re-encode required.
     if (!needConv && !compress && !(rotate && isJpg)) {
       return { bytes: await file.arrayBuffer(), type: isPng ? 'png' : 'jpg' };
     }
@@ -173,8 +169,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const canvas = document.createElement('canvas');
     canvas.width = bmp.width; canvas.height = bmp.height;
     const ctx = canvas.getContext('2d')!;
-    const asJpeg = compress || isJpg; // keep JPEGs as JPEG; PNG/others stay lossless PNG unless compressing
-    if (asJpeg) { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height); } // flatten transparency
+    const asJpeg = compress || isJpg;
+    if (asJpeg) { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
     ctx.drawImage(bmp, 0, 0);
     if (typeof bmp.close === 'function') bmp.close();
     const blob: Blob = await new Promise((res, rej) =>

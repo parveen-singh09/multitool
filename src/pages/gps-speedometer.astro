@@ -145,7 +145,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   function buildTicks(u: Unit) {
     const cfg = UNITS[u];
     const step = cfg.step;
-    // top is a multiple of step, at least the default scale, and covers current max
     const top = Math.max(cfg.scale, Math.ceil(gaugeMax / step) * step);
     gaugeMax = top;
     ticksEl.innerHTML = '';
@@ -178,12 +177,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
 
   function setNeedle(frac: number) {
-    // Needle art points straight up (to y=28); rotate to the target angle.
     const rot = angleFor(frac) + 90;
     needleEl.setAttribute('transform', `rotate(${rot.toFixed(2)} ${CX} ${CY})`);
   }
 
-  // ---- state ---------------------------------------------------------------
   let unit: Unit = 'kmh';
   let watchId: number | null = null;
   let wakeLock: any = null;
@@ -233,7 +230,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   function render(speedMs: number) {
     const spd = toUnit(speedMs);
-    if (spd > gaugeMax) buildTicks(unit); // grow dial if we blow past the top
+    if (spd > gaugeMax) buildTicks(unit);
     const frac = spd / gaugeMax;
     speedEl.textContent = fmt(spd);
     setNeedle(frac);
@@ -263,7 +260,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       const dt = (now - last.t) / 1000;
       if (dt > 0) {
         const d = haversine(last.lat, last.lon, c.latitude, c.longitude);
-        if (!deviceSpeed) speedMs = d / dt; // fall back to displacement
+        if (!deviceSpeed) speedMs = d / dt;
         if (speedMs > 0.5) { // only count genuine movement, filtering GPS jitter
           distanceM += d;
           movingTimeS += dt;
@@ -355,7 +352,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     render(0);
   }
 
-  // ---- events --------------------------------------------------------------
   toggleBtn.addEventListener('click', () => (running ? stop() : start()));
   resetBtn.addEventListener('click', resetTrip);
   unitSel.addEventListener('change', applyUnit);
@@ -367,12 +363,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   });
   limitInput.addEventListener('input', updateDerivedStats);
 
-  // re-acquire wake lock when the tab becomes visible again
   document.addEventListener('visibilitychange', () => {
     if (running && document.visibilityState === 'visible' && !wakeLock) requestWakeLock();
   });
 
-  // init
   applyUnit();
   render(0);
 </script>

@@ -210,7 +210,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   function populateCurrencies() {
     const curSel = sel('gold-cur');
     const prev = curSel.value || 'USD';
-    // Merge the static ISO list with anything the live feed returned, deduped.
     const codes = Array.from(new Set([...CURRENCIES, ...Object.keys(rates)])).sort((a, b) =>
       a.localeCompare(b)
     );
@@ -222,15 +221,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   let lastUpdated = '';
 
-  // Recompute the spot-price field from live USD gold price + selected currency rate,
-  // i.e. the official gold price in the chosen currency, quoted in that market's unit.
   function syncSpotFromLive(useMarketUnit = false) {
     if (goldUsdPerOzt == null) return;
     const code = sel('gold-cur').value || 'USD';
     const rate = rates[code];
 
-    // The FX feed doesn't cover every listed currency (some pegged/rare codes).
-    // Don't fabricate a 1:1 rate — tell the user instead of showing a wrong price.
     if (rate == null) {
       const status = document.getElementById('gold-status')!;
       status.classList.add('text-red-400');
@@ -238,14 +233,13 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       return;
     }
 
-    // When the currency changes, snap the quote unit to that market's convention.
     if (useMarketUnit) {
       const gramsPerUnit = QUOTE_UNIT_BY_CCY[code] ?? OZT_G;
       sel('gold-price-unit').value = String(gramsPerUnit);
     }
 
-    const priceUnitG = Number(sel('gold-price-unit').value) || OZT_G; // grams per quoted unit
-    const premiumPct = premiumPctFor(code); // auto per-currency, no user input
+    const priceUnitG = Number(sel('gold-price-unit').value) || OZT_G;
+    const premiumPct = premiumPctFor(code);
     const premium = 1 + premiumPct / 100;
     const pricePerGram = (goldUsdPerOzt * rate) / OZT_G;
     const localSpot = pricePerGram * priceUnitG * premium;
@@ -292,7 +286,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
           : '';
 
       populateCurrencies();
-      syncSpotFromLive(true); // set spot + status to the selected currency's official price in its market unit
+      syncSpotFromLive(true);
       calc();
     } catch {
       status.textContent = 'Could not fetch live prices. Enter the spot price manually.';
@@ -304,11 +298,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
 
   function calc() {
-    const spot = Number($('gold-spot').value) || 0; // price per quoted unit
+    const spot = Number($('gold-spot').value) || 0;
     const code = sel('gold-cur').value || 'USD';
     const weight = Number($('gold-weight').value) || 0;
-    const toOzt = Number(sel('gold-unit').value); // factor: weight unit → troy ounces
-    const priceUnitG = Number(sel('gold-price-unit').value) || OZT_G; // grams per quoted unit
+    const toOzt = Number(sel('gold-unit').value);
+    const priceUnitG = Number(sel('gold-price-unit').value) || OZT_G;
     const purity = Number(sel('gold-karat').value);
     const pct = (Number($('gold-pct').value) || 0) / 100;
 
@@ -321,7 +315,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       return;
     }
 
-    const pricePerOzt = (spot / priceUnitG) * OZT_G; // normalise quote to per troy ounce
+    const pricePerOzt = (spot / priceUnitG) * OZT_G;
     const totalOzt = weight * toOzt;
     const pureOzt = totalOzt * purity;
     const melt = pureOzt * pricePerOzt;
@@ -329,7 +323,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
     valueEl.textContent = money(payout, code);
 
-    // Express weights in the same unit the price is quoted in.
     const unitLabel = UNIT_SHORT[String(priceUnitG)] ?? `${priceUnitG} g`;
     const inUnit = (ozt: number) => (ozt * OZT_G) / priceUnitG;
 
@@ -350,22 +343,17 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       .join('');
   }
 
-  // Currency change: reprice from the live USD base and snap to that market's quote unit.
   sel('gold-cur').addEventListener('change', () => {
     syncSpotFromLive(true);
     calc();
   });
 
-  // Quote-unit change: reprice the spot into the chosen unit (keeps the same currency).
   let prevPriceUnitG = Number(sel('gold-price-unit').value) || OZT_G;
   sel('gold-price-unit').addEventListener('change', () => {
     const newUnitG = Number(sel('gold-price-unit').value) || OZT_G;
     if (goldUsdPerOzt != null) {
-      // Live data present: recompute the price from the USD base.
       syncSpotFromLive(false);
     } else {
-      // Manual entry: rescale the typed price from the old unit to the new one
-      // so it keeps meaning the same per-gram price.
       const cur = Number($('gold-spot').value) || 0;
       if (cur > 0) $('gold-spot').value = ((cur / prevPriceUnitG) * newUnitG).toFixed(2);
     }
@@ -379,6 +367,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     .querySelectorAll('#gold-spot, #gold-weight, #gold-unit, #gold-karat, #gold-pct')
     .forEach((el) => el.addEventListener('input', calc));
 
-  populateCurrencies(); // fill the dropdown with all currencies on load
+  populateCurrencies();
   calc();
 </script>

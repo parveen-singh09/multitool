@@ -70,7 +70,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const ids = ['p-and', 'p-or', 'p-nota', 'p-notb', 'p-neither', 'p-onlya', 'p-agivenb', 'p-bgivena', 'p-odds'];
   const setEmpty = () => ids.forEach((id) => (document.getElementById(id)!.textContent = '—'));
 
-  // Format a probability (0–1) as a 1-in-N odds string.
   const asOdds = (p: number): string => (p <= 0 ? '—' : `1 in ${(1 / p).toFixed(p >= 0.1 ? 1 : 0)}`);
 
   function calc() {
@@ -99,13 +98,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     document.getElementById('p-notb')!.textContent = pct((1 - pb) * 100);
     document.getElementById('p-neither')!.textContent = pct(neither * 100);
     document.getElementById('p-onlya')!.textContent = pct(onlyA * 100);
-    // Under independence P(A|B)=P(A) and P(B|A)=P(B), but show the general formula result.
     document.getElementById('p-agivenb')!.textContent = pb > 0 ? pct((both / pb) * 100) : '—';
     document.getElementById('p-bgivena')!.textContent = pa > 0 ? pct((both / pa) * 100) : '—';
     document.getElementById('p-odds')!.textContent = asOdds(both);
   }
 
-  // "At least one" over N independent trials: 1 − (1 − p)^n.
   function calcAtLeast() {
     const p = parseFloat((document.getElementById('p-single') as HTMLInputElement).value) / 100;
     const n = parseInt((document.getElementById('p-trials') as HTMLInputElement).value, 10);

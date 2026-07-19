@@ -93,7 +93,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     let zones: string[] = [];
     try { zones = (Intl as any).supportedValuesOf?.('timeZone') ?? []; } catch {}
     if (!zones.length) {
-      // ponytail: fallback shortlist only when supportedValuesOf is unavailable.
       zones = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Sao_Paulo',
         'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Moscow', 'Africa/Cairo',
         'Asia/Dubai', 'Asia/Kolkata', 'Asia/Shanghai', 'Asia/Tokyo', 'Australia/Sydney', 'Pacific/Auckland'];
@@ -105,14 +104,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   function parse(raw: string): Date | null {
     const v = raw.trim();
     if (!v) return null;
-    // pure number => unix timestamp (s: 10 digits, ms: 13). Accept 9–13 for leniency.
     if (/^\d{9,13}$/.test(v)) {
       const n = Number(v);
       return new Date(v.length <= 10 ? n * 1000 : n);
     }
     const d = new Date(v);
     if (!isNaN(d.getTime())) return d;
-    // try DD/MM/YYYY (Date() assumes US MM/DD) — swap if day > 12
     const m = v.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})/);
     if (m && Number(m[1]) > 12) {
       const d2 = new Date(`${m[2]}/${m[1]}/${m[3]}`);
@@ -121,7 +118,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return null;
   }
 
-  // Wall-clock components + offset of an instant in a given IANA zone, via Intl.
   interface Zoned { Y: number; Mo: number; D: number; h: number; mi: number; s: number; ms: number; offMin: number; }
   function zoned(d: Date, tz: string): Zoned {
     const dtf = new Intl.DateTimeFormat('en-US', {
@@ -132,10 +128,9 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const parts: Record<string, string> = {};
     for (const p of dtf.formatToParts(d)) if (p.type !== 'literal') parts[p.type] = p.value;
     let hour = Number(parts.hour);
-    if (hour === 24) hour = 0; // some engines emit 24 for midnight
+    if (hour === 24) hour = 0;
     const Y = Number(parts.year), Mo = Number(parts.month) - 1, D = Number(parts.day);
     const mi = Number(parts.minute), s = Number(parts.second);
-    // offset (minutes) = wall time interpreted as UTC minus the true instant
     const asUTC = Date.UTC(Y, Mo, D, hour, mi, s, d.getMilliseconds());
     const offMin = Math.round((asUTC - d.getTime()) / 60000);
     return { Y, Mo, D, h: hour, mi, s, ms: d.getMilliseconds(), offMin };
@@ -149,8 +144,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   const isoWeek = (Y: number, Mo: number, D: number): [number, number] => {
     const dt = new Date(Date.UTC(Y, Mo, D));
-    const day = (dt.getUTCDay() + 6) % 7; // Mon=0
-    dt.setUTCDate(dt.getUTCDate() - day + 3); // nearest Thursday
+    const day = (dt.getUTCDay() + 6) % 7;
+    dt.setUTCDate(dt.getUTCDate() - day + 3);
     const isoY = dt.getUTCFullYear();
     const firstThu = new Date(Date.UTC(isoY, 0, 4));
     const firstDay = (firstThu.getUTCDay() + 6) % 7;
@@ -178,7 +173,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return 'now';
   }
 
-  // day.js / moment-style token formatter. Literals wrap in [brackets].
   function customFormat(d: Date, z: Zoned, tz: string, pattern: string): string {
     const h12 = ((z.h + 11) % 12) + 1;
     const wd = new Date(Date.UTC(z.Y, z.Mo, z.D)).getUTCDay();
@@ -200,7 +194,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       ZZ: offsetStr(z.offMin, false), Z: offsetStr(z.offMin), z: zoneAbbr(),
       X: String(Math.floor(d.getTime() / 1000)), x: String(d.getTime()),
     };
-    // Longest tokens first; [literal] segments pass through verbatim.
     return pattern.replace(/\[([^\]]*)\]|YYYY|YY|MMMM|MMM|MM|M|DDD|Do|DD|D|dddd|ddd|HH|H|hh|h|mm|m|ss|s|SSS|A|a|ZZ|Z|z|X|x/g,
       (t, lit) => (lit !== undefined ? lit : map[t] ?? t));
   }

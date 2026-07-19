@@ -233,13 +233,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     gutter.textContent = Array.from({ length: lineCount }, (_, i) => i + 1).join('\n');
   }
 
-  // Highlight the input by mirroring its text into an underlaid <pre>. The
-  // textarea sits transparent on top so the caret and selection stay native.
   function highlightInput() {
     const code = input.value;
     if (hljs) inHl.innerHTML = hljs.highlight(code, { language: 'javascript', ignoreIllegal: true }).value;
     else inHl.textContent = code;
-    // trailing newline needs a placeholder so the <pre> height matches the textarea
     if (code.endsWith('\n')) inHl.innerHTML += '\n';
     inHl.parentElement!.scrollTop = input.scrollTop;
     inHl.parentElement!.scrollLeft = input.scrollLeft;
@@ -267,8 +264,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // Highlight the input immediately on every keystroke; debounce the (heavier)
-  // Prettier/minify pass that feeds the output preview.
   let timer: number;
   input.addEventListener('input', () => {
     highlightInput();

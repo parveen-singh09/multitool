@@ -200,8 +200,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     monthly: { balance: number; interest: number; paid: number }[];
   }
 
-  // Run the full payoff simulation for one method. Pure — no DOM writes — so it
-  // can be run several times (primary + snowball/avalanche comparison).
   function simulate(debts: Debt[], method: string, extra: number, lump: number, lumpMonth: number): SimResult {
     const bals = debts.map((d) => d.balance);
     const rates = debts.map((d) => d.apr / 12 / 100);
@@ -223,7 +221,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
       const freed = mins.reduce((sum, m, i) => sum + (bals[i] <= 0 ? m : 0), 0);
       let budget = extra + freed;
-      // one-time lump sum in the chosen month
       if (months + 1 === lumpMonth) budget += lump;
 
       for (let i = 0; i < bals.length; i++) {
@@ -279,13 +276,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     interestEl.textContent = money(res.totalInterest);
     totalEl.textContent = money(res.totalStart + res.totalInterest);
 
-    // debt-free date
     const now = new Date();
     const dfDate = new Date(now.getFullYear(), now.getMonth() + res.months, 1);
     document.getElementById('dp-date')!.textContent =
       'Debt-free by ' + dfDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
-    // side-by-side comparison
     const av = simulate(debts, 'avalanche', extra, lump, lumpMonth);
     const sn = simulate(debts, 'snowball', extra, lump, lumpMonth);
     const cmp = (r: SimResult) => (r.paidOff ? `${r.months} mo · ${money0(r.totalInterest)} interest` : 'never');
@@ -301,7 +296,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       note.textContent = '';
     }
 
-    // chart + yearly schedule from the primary run
     drawChart(res.monthly, res.totalStart);
     const sched = document.getElementById('dp-sched')!;
     sched.innerHTML = '';
@@ -351,7 +345,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   snowballBtn.addEventListener('click', () => setMethod('snowball'));
   [extraEl, lumpEl, lumpMonthEl].forEach((el) => el.addEventListener('input', calc));
 
-  // Seed starting rows
   addRow('Credit card', 5000, 22, 100);
   addRow('Car loan', 12000, 6, 250);
   addRow('Personal loan', 3000, 12, 80);

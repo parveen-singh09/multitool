@@ -198,7 +198,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     status.textContent = ok ? `Done — ${ok}/${items.length} converted${savedMsg}.` : '';
   }
 
-  // Re-encode every already-decoded item with the current format/quality/size. Instant — no HEIC decode.
   async function encodeAll() {
     const fmt = fmtEl.value, ext = currentExt();
     const quality = Number(qEl.value) / 100;
@@ -215,7 +214,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     updateStatus(); render();
   }
 
-  // Decode any not-yet-decoded items (the slow HEIC step), then encode with current settings.
   async function decodePending() {
     const pending = items.filter((it) => !it.decoded && !it.error);
     if (!pending.length) { await encodeAll(); return; }
@@ -249,7 +247,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     panel.classList.add('hidden'); panel.classList.remove('flex');
   }
 
-  // Debounce re-encode so dragging the quality slider doesn't fire on every pixel.
   let reencodeTimer: number | undefined;
   const scheduleReencode = () => {
     clearTimeout(reencodeTimer);

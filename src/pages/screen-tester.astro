@@ -218,7 +218,6 @@ const tests = [
       variants: () => 2,
       variantLabel: (s) => (s.variant ? 'Near-white (highlight)' : 'Near-black (shadow)'),
       draw: (ctx, w, h, s) => {
-        // 16 fine steps at the dark or bright end — each block should be distinct.
         const base = s.variant ? 239 : 0;
         const n = 16;
         ctx.fillStyle = s.variant ? '#fff' : '#000';
@@ -237,9 +236,6 @@ const tests = [
       variants: () => 1,
       variantLabel: () => 'Bars at −2 · 0 · +2 · +4 · +6 · +8',
       draw: (ctx, w, h) => {
-        // PLUGE: reference black plus bars a few codes above (and one "below").
-        // The negative bar is clamped to 0 — a correct display shows it merging
-        // into the background; a raised black level makes it stand out.
         ctx.fillStyle = '#000';
         ctx.fillRect(0, 0, w, h);
         const levels = [-2, 0, 2, 4, 6, 8];
@@ -275,7 +271,6 @@ const tests = [
       variants: () => 2,
       variantLabel: (s) => (s.variant ? 'Horizontal lines' : 'Checkerboard'),
       draw: (ctx, w, h, s) => {
-        // 1-device-pixel pattern — must look crisp, not gray/shimmering.
         const img = ctx.createImageData(w, h);
         const d = img.data;
         for (let y = 0; y < h; y++) {
@@ -333,7 +328,6 @@ const tests = [
         for (let x = 0; x <= w; x += gap) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
         for (let y = 0; y <= h; y += gap) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
         ctx.stroke();
-        // Corner + center markers so edges/geometry are easy to eyeball.
         ctx.strokeRect(ctx.lineWidth, ctx.lineWidth, w - ctx.lineWidth * 2, h - ctx.lineWidth * 2);
         if (s.variant === 1) {
           const r = Math.min(w, h) * 0.42;
@@ -356,7 +350,6 @@ const tests = [
         const v = [255, 191, 127, 64][s.variant];
         ctx.fillStyle = `rgb(${v},${v},${v})`;
         ctx.fillRect(0, 0, w, h);
-        // Faint 3×3 guides to compare zone brightness.
         ctx.strokeStyle = 'rgba(128,128,128,0.35)';
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -381,9 +374,9 @@ const tests = [
         const dpr = w / window.innerWidth;
         const size = 120 * dpr;
         const range = w - size;
-        const period = (range / (s.speed * dpr)) * 1000; // ms for one sweep
+        const period = (range / (s.speed * dpr)) * 1000;
         const phase = (s.t % (period * 2)) / period;
-        const p = phase < 1 ? phase : 2 - phase; // ping-pong 0..1
+        const p = phase < 1 ? phase : 2 - phase;
         ctx.fillStyle = COLORS[s.variant].css;
         ctx.fillRect(p * range, (h - size) / 2, size, size);
       },
@@ -421,9 +414,6 @@ const tests = [
       variantLabel: () => 'Sweep a bright line on black',
       option: { label: 'Speed px/s', get: (s) => s.speed, set: (s, v) => (s.speed = clamp(v, 500, 8000)) },
       draw: (ctx, w, h, s) => {
-        // ponytail: canvas can't sample the backlight — this shows PWM only as
-        // aliasing of a fast line against the refresh. Real PWM measurement
-        // needs a photodiode/oscilloscope (the excluded instrument modes).
         ctx.fillStyle = '#000';
         ctx.fillRect(0, 0, w, h);
         const dpr = w / window.innerWidth;
@@ -443,8 +433,6 @@ const tests = [
       variants: () => 3,
       variantLabel: (s) => ['Fine checkerboard', '1px H lines', '1px V lines'][s.variant],
       draw: (ctx, w, h, s) => {
-        // Flip the pattern's parity every real frame; a healthy panel averages
-        // the two frames to flat gray, a bad one flickers.
         invFrame ^= 1;
         const img = ctx.createImageData(w, h);
         const d = img.data;
@@ -495,15 +483,12 @@ const tests = [
       variants: () => 1,
       variantLabel: () => 'Photograph with a camera to inspect',
       draw: (ctx, w, h, s) => {
-        // ponytail: browser can't force a true per-refresh cadence; this scrolls
-        // at ~one bar per frame so a camera capture reveals skips. Good enough
-        // for the camera-capture method, not a scanline-accurate signal.
         ctx.fillStyle = '#000';
         ctx.fillRect(0, 0, w, h);
         const dpr = w / window.innerWidth;
         const barH = 8 * dpr;
         const cycle = barH * 2;
-        const offset = (s.t / 16.67) * cycle; // ~one cycle per 60Hz frame
+        const offset = (s.t / 16.67) * cycle;
         ctx.fillStyle = '#fff';
         for (let y = -(offset % cycle); y < h; y += cycle) {
           ctx.fillRect(0, y, w, barH);
@@ -517,7 +502,6 @@ const tests = [
       variants: () => 1,
       variantLabel: () => 'Move your head off-axis',
       draw: (ctx, w, h) => {
-        // Mid grays + primaries side by side — watch for tint/brightness shift.
         const cols = ['#000', '#404040', '#7f7f7f', '#bfbfbf', '#fff', '#f00', '#0f0', '#00f'];
         const bw = w / cols.length;
         cols.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(i * bw, 0, bw + 1, h); });
@@ -531,8 +515,6 @@ const tests = [
       variantLabel: (s) => `Match at ~γ ${(s.gray / 100).toFixed(1)}`,
       option: { label: 'γ ×10', get: (s) => s.gray, set: (s, v) => (s.gray = clamp(v, 10, 30)) },
       draw: (ctx, w, h, s) => {
-        // 1px black/white lines average to 50% luminance; the solid patch that
-        // blends with them at viewing distance reveals the display gamma.
         ctx.fillStyle = '#000';
         ctx.fillRect(0, 0, w, h);
         const half = w / 2;
@@ -541,7 +523,7 @@ const tests = [
           ctx.fillRect(0, y, half, 1);
         }
         const gamma = s.gray / 10;
-        const lin = 0.5; // 50% line average
+        const lin = 0.5;
         const v = Math.round(Math.pow(lin, 1 / gamma) * 255);
         ctx.fillStyle = `rgb(${v},${v},${v})`;
         ctx.fillRect(half, 0, half, h);
@@ -555,9 +537,8 @@ const tests = [
       variants: () => 1,
       variantLabel: () => 'Rapid RGB cycling — leave running',
       draw: (ctx, w, h, s) => {
-        // Cycle full-screen R/G/B/W/K fast to exercise a stuck subpixel.
         const seq = ['#ff0000', '#00ff00', '#0000ff', '#ffffff', '#000000'];
-        const idx = Math.floor(s.t / 100) % seq.length; // ~10 flips/sec
+        const idx = Math.floor(s.t / 100) % seq.length;
         ctx.fillStyle = seq[idx];
         ctx.fillRect(0, 0, w, h);
       },
@@ -570,7 +551,6 @@ const tests = [
       variants: () => 1,
       variantLabel: () => 'Live display report',
       draw: (ctx, w, h, s) => {
-        // Rolling refresh estimate from real frame deltas.
         if (fpsPrev) {
           const dt = s.t - fpsPrev;
           if (dt > 0) fpsEst = fpsEst ? fpsEst * 0.9 + (1000 / dt) * 0.1 : 1000 / dt;
@@ -611,7 +591,6 @@ const tests = [
 
   const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-  // ---- Runner ---------------------------------------------------------------
   let overlay: HTMLDivElement | null = null;
   let canvas: HTMLCanvasElement;
   let ctx: Ctx;
@@ -665,7 +644,6 @@ const tests = [
   }
 
   function onFsChange() {
-    // Leaving fullscreen (Esc / gesture) tears the whole thing down.
     if (!document.fullscreenElement && overlay) close();
   }
 
@@ -711,7 +689,6 @@ const tests = [
     const opt = tests[testIdx].option;
     if (!opt) return;
     const cur = opt.get(state);
-    // Step sizes tuned per option magnitude.
     const step = cur >= 500 ? 120 : cur >= 32 ? 4 : cur >= 10 ? 1 : 2;
     opt.set(state, cur + dir * step);
     render();

@@ -3,7 +3,6 @@ export const VIDEO_MIME: Record<string, string> = {
   mov: 'video/quicktime', avi: 'video/x-msvideo', flv: 'video/x-flv', ogv: 'video/ogg',
 };
 
-// Browser-encodable video containers (via the bundled ffmpeg core).
 export const LOCAL_VIDEO = Object.keys(VIDEO_MIME);
 
 export function videoArgs(to: string, tier: string, input: string, output: string): string[] {

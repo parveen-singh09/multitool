@@ -87,7 +87,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   let board: Board = emptyBoard();
 
-  // Per-piece orientation, driven by each card's own Rotate/Flip buttons.
   const pose: Record<string, { rot: number; flip: boolean }> = Object.fromEntries(
     PIECES.map((p) => [p.id, { rot: 0, flip: false }]),
   );
@@ -103,7 +102,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return false;
   }
 
-  // ── Board rendering ────────────────────────────────────────────
   function renderBoard() {
     boardEl.innerHTML = '';
     const preview = computePreview();
@@ -215,7 +213,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     selectedId = next ? next.id : null;
   }
 
-  // ── Tray rendering (each card = shape preview + its own Rotate/Flip) ─────
   function renderTray() {
     trayEl.innerHTML = '';
     for (const p of PIECES) {
@@ -228,7 +225,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         (active ? 'border-primary bg-surface-2' : 'border-hairline bg-surface-1') +
         (placed ? ' opacity-40' : '');
 
-      // Clickable shape preview selects the piece.
       const previewBtn = document.createElement('button');
       previewBtn.type = 'button';
       previewBtn.setAttribute('role', 'option');
@@ -244,7 +240,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       });
       card.appendChild(previewBtn);
 
-      // Per-piece Rotate / Flip controls.
       const controls = document.createElement('div');
       controls.className = 'flex gap-1.5';
       const rotateBtn = smallBtn('Rotate', `Rotate the ${p.name} piece`);
@@ -279,11 +274,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return b;
   }
 
-  // Solid connected-block rendering of a piece (matches the physical piece look).
   function blockShape(cells: Cell[], color: string): HTMLElement {
     const maxR = Math.max(...cells.map((p) => p[0]));
     const maxC = Math.max(...cells.map((p) => p[1]));
-    const S = 15; // block px
+    const S = 15;
     const wrap = document.createElement('div');
     wrap.className = 'grid';
     wrap.style.gridTemplateColumns = `repeat(${maxC + 1}, ${S}px)`;
@@ -303,7 +297,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return wrap;
   }
 
-  // ── Actions ────────────────────────────────────────────────────
   function setStatus(msg: string) {
     statusEl.textContent = msg;
   }
@@ -405,16 +398,13 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     else if (e.key === 'Escape') { selectedId = null; hoverAnchor = null; renderTray(); renderBoard(); }
   });
 
-  // ── Random puzzle generation ───────────────────────────────────
-  // Solve an empty board to get a full tiling, then keep a random subset of the
-  // pieces as clues (removing the rest). Guarantees the puzzle is solvable.
   function makeRandomPuzzle(): Board | null {
     const order = shuffle(PIECES.map((p) => p.id));
     const full = solve(emptyBoard(), { order });
     if (!full.board) return null;
     const solved = full.board;
 
-    const keepCount = 3 + Math.floor(rand() * 4); // 3–6 clue pieces
+    const keepCount = 3 + Math.floor(rand() * 4);
     const keep = new Set(shuffle(PIECES.map((p) => p.id)).slice(0, keepCount));
 
     const puzzle = cloneBoard(solved);
@@ -438,7 +428,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return a;
   }
 
-  // Init
   selectedId = PIECES[0].id;
   renderTray();
   renderBoard();

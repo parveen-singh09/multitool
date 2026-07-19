@@ -132,7 +132,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   function len(v: string): string {
     const u = el('mq-unit').value;
     if (u === 'px' || !v) return v ? `${v}px` : v;
-    const n = Number(v) / 16; // px → em/rem at 16px base
+    const n = Number(v) / 16;
     return `${+n.toFixed(4)}${u}`;
   }
 
@@ -149,13 +149,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
     const token = el('mq-token').value;
     const type = el('mq-type').value;
-    // Drop a bare `screen`/`all` when real conditions carry the query; keep the
-    // type only when a token needs it or there are no conditions to stand on.
     const parts: string[] = [];
     if (token) parts.push(token);
     if (token || type !== 'screen' || !conds.length) parts.push(type);
     const prefix = parts.join(' ');
-    // Type and every feature are joined by `and` in a media query.
     return (prefix ? [prefix, ...conds] : conds).join(' and ') || 'all';
   }
 
@@ -164,7 +161,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     rawOutput = `@media ${query} {\n  \n}`;
     hl(cssEl, rawOutput, 'css');
 
-    // Live test: match the generated query against the actual window.
     if (mql) mql.onchange = null;
     try {
       mql = window.matchMedia(query);
@@ -189,7 +185,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   ['mq-token', 'mq-type', 'mq-unit', 'mq-min', 'mq-max', 'mq-minh', 'mq-maxh', 'mq-orient', 'mq-scheme', 'mq-aspect', 'mq-dpr']
     .forEach((id) => $(id).addEventListener('input', update));
 
-  // px ↔ em converter (independent helper).
   const pxEl = el('mq-px'), baseEl = el('mq-base'), emEl = el('mq-em');
   const toEm = () => { emEl.value = String(+(Number(pxEl.value) / Number(baseEl.value)).toFixed(4)); };
   const toPx = () => { pxEl.value = String(+(Number(emEl.value) * Number(baseEl.value)).toFixed(2)); };

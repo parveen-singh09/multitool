@@ -1,5 +1,3 @@
-// One-off asset generator: rasterizes brand SVGs into the OG image and
-// apple-touch-icon PNGs that Layout.astro references. Run: node scripts/gen-images.mjs
 import sharp from 'sharp';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -7,7 +5,6 @@ import { dirname, resolve } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pub = resolve(__dirname, '..', 'public');
 
-// ---- 1200x630 Open Graph card ----
 const og = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
@@ -44,7 +41,6 @@ const og = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" vi
   </g>
 </svg>`;
 
-// ---- 180x180 apple-touch-icon ----
 const icon = `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 128 128">
   <rect width="128" height="128" rx="28" fill="#010102"/>
   <rect x="26" y="58" width="22" height="46" rx="5" fill="#5e6ad2"/>

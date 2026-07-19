@@ -180,7 +180,6 @@ const isAudio = !isVideo;
   const num = (id: string) => { const v = Number(($(id) as HTMLInputElement)?.value); return Number.isFinite(v) && v > 0 ? v : 0; };
   const outNameFor = (f: File) => f.name.replace(/\.[^.]+$/, '') + '.' + conv.ext;
 
-  // Read media duration so fade-out and default trim end can be computed.
   function probeDuration(file: File): Promise<number> {
     return new Promise((resolve) => {
       const el = document.createElement(conv.kind === 'video' ? 'video' : 'audio');
@@ -196,7 +195,6 @@ const isAudio = !isVideo;
     setErr('');
     const arr = Array.from(list);
     if (!arr.length) return;
-    // Video tools take one file at a time.
     const toAdd = isVideo ? arr.slice(0, 1) : arr;
     if (isVideo) jobs.forEach((j) => j.row.remove()), (jobs = []);
     for (const file of toAdd) {

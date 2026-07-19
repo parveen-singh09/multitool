@@ -166,7 +166,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     pagesList = collected;
     if (failed.length) setErr('Skipped ' + failed.join('; '));
     panel.classList.remove('hidden'); panel.classList.add('flex');
-    // Rebuild the page selector.
     pageSel.innerHTML = '';
     pagesList.forEach((p, i) => {
       const o = document.createElement('option');
@@ -179,8 +178,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     convert();
   }
 
-  // Draw a page onto a fresh canvas, resized to the longest-side limit and
-  // optionally flattened onto the matte colour (for formats without alpha).
   function renderTarget(page: Page, matte: string | null): HTMLCanvasElement {
     const max = Math.max(1, Math.floor(Number(resizeEl.value) || 0));
     let w = page.canvas.width, h = page.canvas.height;
@@ -203,7 +200,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       c.toBlob((b) => b ? res(b) : rej(new Error('the browser could not encode this format')), type, q));
   }
 
-  // Encode one page to the currently-selected image format (not PDF). Returns blob + extension.
   async function encodePage(page: Page): Promise<{ blob: Blob; ext: string }> {
     const fmt = fmtEl.value;
     const q = Number(qEl.value) / 100;
@@ -225,7 +221,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const page = pagesList[Number(pageSel.value) || 0];
     try {
       if (fmtEl.value === 'application/pdf') {
-        // PDF can't preview inline; show the source page as a PNG proxy.
         preview.src = renderTarget(page, bgEl.value).toDataURL('image/png');
         status.textContent = `${pagesList.length} page(s) ready · "Combine to PDF" builds one document`;
         return;
@@ -233,7 +228,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       const { blob } = await encodePage(page);
       if (outUrl) URL.revokeObjectURL(outUrl);
       outUrl = URL.createObjectURL(blob);
-      // TIFF can't render in <img>; show a PNG proxy of the target instead.
       preview.src = fmtEl.value === 'image/tiff'
         ? renderTarget(page, null).toDataURL('image/png')
         : outUrl;
@@ -285,8 +279,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       const q = Number(qEl.value) / 100;
       const pdf = await PDFDocument.create();
       for (const page of pagesList) {
-        // ponytail: embed JPEG (matte-flattened) — the common scanned-doc case.
-        // Switch to embedPng if lossless PDF pages are ever required.
         const c = renderTarget(page, bgEl.value);
         const bytes = new Uint8Array(await (await canvasToBlob(c, 'image/jpeg', q)).arrayBuffer());
         const img = await pdf.embedJpg(bytes);
@@ -299,8 +291,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     finally { btn.disabled = false; btn.textContent = label; }
   });
 
-  // Minimal store-only (no compression) ZIP writer — inputs are already-compressed
-  // PNG/JPG/WebP/TIFF, so DEFLATE would barely help. Avoids adding a zip dependency.
   function crc32(buf: Uint8Array): number {
     let c = ~0;
     for (let i = 0; i < buf.length; i++) {

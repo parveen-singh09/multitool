@@ -148,7 +148,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       return label === tag ? tag : `${label} (${tag})`;
     }
 
-    // ── Settings persistence ──────────────────────────────────────────────
     const KEY = 'tts-settings';
     let savedVoiceName = '';
     function loadSettings() {
@@ -198,7 +197,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
             `<option value="${i}">${v.name} (${v.lang})${v.default ? ' — default' : ''}</option>`
         )
         .join('');
-      // Restore selection: previous choice → saved voice name → first match.
       if (prev && matches.some(({ i }) => String(i) === prev)) {
         voiceSel.value = prev;
       } else if (savedVoiceName) {
@@ -207,12 +205,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       }
     }
 
-    // ── Counters ──────────────────────────────────────────────────────────
     function updateCount() {
       const t = textEl.value;
       const chars = t.length;
       const words = t.trim() ? t.trim().split(/\s+/).length : 0;
-      // Rough estimate: ~180 words per minute, scaled by rate.
       const secs = words ? Math.round((words / (180 * Number(rate.value))) * 60) : 0;
       const mm = Math.floor(secs / 60), ss = secs % 60;
       const dur = words ? ` · ~${mm}:${String(ss).padStart(2, '0')}` : '';
@@ -225,7 +221,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       volVal.textContent = String(Math.round(Number(vol.value) * 100));
     }
 
-    // ── Reading highlight ────────────────────────────────────────────────
     function esc(s: string) {
       return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
@@ -252,12 +247,9 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       readingEl.textContent = '';
     }
 
-    // ── Chunking (avoids the ~15s single-utterance cutoff in some browsers) ─
     const MAX = 200;
     function splitChunks(text: string): { text: string; offset: number }[] {
       const out: { text: string; offset: number }[] = [];
-      // Partition into sentence-ish pieces; matches concatenate back to `text`
-      // exactly, so a running offset stays accurate.
       const raw = text.match(/[\s\S]*?(?:[.!?。！？]+|\n+|$)/g) || [text];
       let offset = 0;
       for (const piece of raw) {
@@ -268,7 +260,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
     function pushChunk(s: string, base: number, out: { text: string; offset: number }[]) {
       if (s.length <= MAX) { out.push({ text: s, offset: base }); return; }
-      // Split an over-long sentence on word boundaries, keeping separators.
       const words = s.split(/(\s+)/);
       let buf = '', consumed = 0, start = 0;
       for (const w of words) {
@@ -281,7 +272,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       if (buf) out.push({ text: buf, offset: base + start });
     }
 
-    // ── Playback ───────────────────────────────────────────────────────────
     let queue: { text: string; offset: number }[] = [];
     let qIndex = 0;
     let speaking = false;
@@ -333,7 +323,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       speakNext();
     }
 
-    // ── Wiring ──────────────────────────────────────────────────────────────
     loadSettings();
     loadVoices();
     synth.onvoiceschanged = loadVoices;
@@ -374,7 +363,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       syncLabels(); updateCount(); saveSettings();
     });
 
-    // Stop speech if the user leaves the page (avoids audio outliving the tab).
     window.addEventListener('beforeunload', () => synth.cancel());
 
     textEl.value = SAMPLE;

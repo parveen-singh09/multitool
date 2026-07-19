@@ -311,7 +311,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         showStatus(`${bytes.length} bytes · ${chars} code points · ${raw.length} UTF-16 units · ${encSel.selectedOptions[0].text}`);
       } else {
         const bytes = parseBytes(raw);
-        // TextDecoder with fatal:false substitutes U+FFFD on bad sequences rather than throwing.
         const text = new TextDecoder(encSel.value, { fatal: false }).decode(bytes);
         rawOutput = text;
         await hl(outEl, rawOutput, 'plaintext');
@@ -325,7 +324,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   const rerender = wireInput(inEl, inHlEl, () => 'plaintext', () => { void convert(); });
 
-  // Mode tabs
   document.querySelectorAll<HTMLButtonElement>('.te-mode').forEach((tab) => {
     tab.addEventListener('click', () => {
       const next = tab.dataset.mode as 'encode' | 'decode';
@@ -339,7 +337,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         t.classList.toggle('btn-secondary', !active);
       });
       fillEncodings(prevEnc);
-      // Swap panes: previous output becomes the new input (round-trip friendly).
       if (rawOutput) { inEl.value = rawOutput; rerender(); }
       void convert();
     });
@@ -364,7 +361,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     URL.revokeObjectURL(url);
   });
 
-  // Seed
   fillEncodings('utf-8');
   inEl.value = 'Héllo 😀';
   rerender();

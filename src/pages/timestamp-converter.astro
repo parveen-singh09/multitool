@@ -202,10 +202,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       if (isNaN(d.getTime())) return null;
       return { date: d, source: `Parsed as ${unit}` };
     }
-    // Otherwise a date string.
     const d = new Date(v);
     if (!isNaN(d.getTime())) return { date: d, source: 'Parsed as a date' };
-    // DD/MM/YYYY fallback (Date() assumes US MM/DD) — swap when day > 12.
     const m = v.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})/);
     if (m && Number(m[1]) > 12) {
       const d2 = new Date(`${m[2]}/${m[1]}/${m[3]}`);
@@ -214,11 +212,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return null;
   }
 
-  // ---- Timezone-aware wall-clock parts ----
   type Parts = {
     year: number; month: number; day: number;
     hour: number; minute: number; second: number;
-    ms: number; weekday: number; // 0=Sun
+    ms: number; weekday: number;
     monthName: string; monthShort: string; weekdayName: string; weekdayShort: string;
     offset: string;
   };
@@ -238,7 +235,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const year = Number(map.year);
     const month = Number(map.month);
     const day = Number(map.day);
-    // 'shortOffset' renders e.g. "GMT+5:30"; normalise to +HH:MM.
     let offset = map.timeZoneName || 'UTC';
     const om = offset.match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/);
     if (om) offset = `${om[1]}${p2(Number(om[2]))}:${om[3] ?? '00'}`;
@@ -254,11 +250,9 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     };
   }
 
-  // ---- Custom format tokens ----
   function formatTokens(p: Parts, template: string): string {
     const h12 = ((p.hour + 11) % 12) + 1;
     const ap = p.hour < 12 ? 'AM' : 'PM';
-    // Longest tokens first so MMMM matches before MM, dddd before ddd, etc.
     const table: [RegExp, string][] = [
       [/YYYY/g, String(p.year)],
       [/YY/g, p2(p.year % 100)],
@@ -275,7 +269,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       [/SSS/g, p3(p.ms)],
       [/\bA\b/g, ap],
       [/\ba\b/g, ap.toLowerCase()],
-      // single-letter tokens last, and only when standalone to avoid clobbering words
       [/\bM\b/g, String(p.month)],
       [/\bD\b/g, String(p.day)],
       [/\bH\b/g, String(p.hour)],
@@ -288,11 +281,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return s;
   }
 
-  // ---- Derived date facts ----
   function isoWeek(d: Date): { week: number; year: number } {
     const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
-    const day = (t.getUTCDay() + 6) % 7; // Mon=0
-    t.setUTCDate(t.getUTCDate() - day + 3); // nearest Thursday
+    const day = (t.getUTCDay() + 6) % 7;
+    t.setUTCDate(t.getUTCDate() - day + 3);
     const firstThu = new Date(Date.UTC(t.getUTCFullYear(), 0, 4));
     const firstDay = (firstThu.getUTCDay() + 6) % 7;
     firstThu.setUTCDate(firstThu.getUTCDate() - firstDay + 3);
@@ -310,7 +302,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return `${p.weekdayShort}, ${p2(p.day)} ${p.monthShort} ${p.year} ${p2(p.hour)}:${p2(p.minute)}:${p2(p.second)} ${p.offset.replace(':', '')}`;
   }
 
-  // ISO 8601 / RFC 3339 in the selected zone's wall-clock time with its offset.
   function rfc3339(p: Parts): string {
     return `${p.year}-${p2(p.month)}-${p2(p.day)}T${p2(p.hour)}:${p2(p.minute)}:${p2(p.second)}${p.offset}`;
   }
@@ -331,8 +322,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return 'now';
   }
 
-  // ---- Code snippets ----
-  // Given a moment, emit an idiomatic "parse this Unix timestamp" snippet per language.
   function codeSnippet(lang: string, secs: number): string {
     const ms = secs * 1000;
     switch (lang) {
@@ -368,7 +357,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     await hl(codeEl, codeSnippet(lang, secs), lang);
   }
 
-  // ---- Batch conversion ----
   function renderBatch() {
     const lines = batchIn.value.split('\n');
     const rows: { input: string; res: Parse }[] = [];
@@ -408,7 +396,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     batchStat.textContent = `${ok} of ${rows.length} parsed`;
   }
 
-  // Build batch export rows (used for both TSV copy and CSV download).
   function batchRows(): string[][] {
     const tz = selectedZone();
     const out: string[][] = [['input', 'unix_seconds', 'unix_ms', 'iso8601', tz]];
@@ -428,7 +415,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return out;
   }
 
-  // ---- State ----
   let current: Date | null = null;
 
   function selectedZone(): string {
@@ -526,7 +512,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     });
   }
 
-  // ---- URL sync ----
   function syncUrl() {
     const url = new URL(window.location.href);
     if (current) url.searchParams.set('t', String(current.getTime()));
@@ -535,7 +520,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     history.replaceState(null, '', url);
   }
 
-  // ---- Live clock + relative refresh ----
   function tickClock() {
     const now = Date.now();
     nowEl.textContent = Math.floor(now / 1000).toString();
@@ -544,7 +528,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   setInterval(tickClock, 1000);
   tickClock();
 
-  // Refresh the relative-time row every 30s without disturbing focus/typing.
   setInterval(() => {
     if (!current) return;
     const rows = out.querySelectorAll<HTMLElement>('.ts-row');
@@ -558,9 +541,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     });
   }, 30000);
 
-  // ---- Populate timezone dropdown ----
   const zones = zoneList();
-  if (!zones.includes(localZone)) zones.unshift(localZone); // ensure local is selectable
+  if (!zones.includes(localZone)) zones.unshift(localZone);
   for (const z of zones) {
     const opt = document.createElement('option');
     opt.value = z;
@@ -568,7 +550,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     tzSel.appendChild(opt);
   }
 
-  // ---- Wire events ----
   input.addEventListener('input', render);
   tzSel.addEventListener('change', () => { render(); renderBatch(); });
   langSel.addEventListener('change', () => { void renderCode(); });
@@ -581,7 +562,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   batchDl.addEventListener('click', () => {
     const rows = batchRows();
     if (rows.length <= 1) return;
-    // CSV-quote every field (values may contain commas/quotes from date formats).
     const csv = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(',')).join('\r\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
     const a = document.createElement('a');

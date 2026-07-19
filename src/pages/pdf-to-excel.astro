@@ -90,11 +90,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   type Cell = { x: number; y: number; w: number; str: string };
 
-  // Group text items into rows (shared baseline), then split each row into
-  // columns where the horizontal gap between items exceeds a threshold.
   function itemsToRows(items: Cell[]): string[][] {
     if (!items.length) return [];
-    // Bucket by y (rounded) — items within ~4px vertically share a row.
     const sorted = [...items].sort((a, b) => b.y - a.y || a.x - b.x);
     const lines: Cell[][] = [];
     let cur: Cell[] = [];
@@ -105,8 +102,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
     if (cur.length) lines.push(cur);
 
-    // Median character width → column-gap threshold (a gap wider than ~1.5
-    // average characters starts a new column).
     const widths = items.map((i) => i.w / Math.max(1, i.str.length)).filter((w) => w > 0).sort((a, b) => a - b);
     const charW = widths[Math.floor(widths.length / 2)] || 4;
     const gap = charW * 1.8;
@@ -125,8 +120,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }).filter((r) => r.some((c) => c !== ''));
   }
 
-  // Convert a cell string to a number when it looks purely numeric (allowing
-  // thousands separators, currency symbols and parenthesised negatives).
   function coerce(s: string): string | number {
     const cleaned = s.replace(/[$£€,\s]/g, '');
     const neg = /^\(.*\)$/.test(cleaned);
@@ -195,7 +188,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
-  // ponytail: local handler — copies the JS-built TSV, not the table's textContent
   copyBtn.addEventListener('click', async () => {
     const tsv = rows.map((r) => r.join('\t')).join('\n');
     await navigator.clipboard.writeText(tsv);

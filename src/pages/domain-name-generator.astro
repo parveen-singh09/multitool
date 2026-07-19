@@ -327,7 +327,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
     parts.push(`Use ${style} vocabulary for the added prefix/suffix, roughly ${s.syllables} syllable(s) each.`);
     if (exclude.length) {
-      // Keep the exclusion list bounded so the prompt can't balloon over rounds.
       const recent = exclude.slice(-80).join(', ');
       parts.push(`Do NOT reuse any of these already-suggested names: ${recent}. Give fresh, different ideas.`);
     }
@@ -377,18 +376,15 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   function fallbackNames(s: Settings): string[] {
     const w = s.word;
     const labels = new Set<string>([w]);
-    // Slider on → draw affixes of the requested length; off → 0-length pool.
     const prefixes = s.prefixLen ? affixPool(s.prefixLen) : [];
     const suffixes = s.suffixLen ? affixPool(s.suffixLen) : [];
     if (!prefixes.length && !suffixes.length) {
-      // No affix requested — fall back to the curated domain-flavored lists.
       for (const p of PREFIX) labels.add(`${p}${w}`);
       for (const suf of SUFFIX) labels.add(`${w}${suf}`);
       return [...labels];
     }
     for (const p of prefixes) labels.add(`${p}${w}`);
     for (const suf of suffixes) labels.add(`${w}${suf}`);
-    // Both sliders on → also offer prefix+word+suffix, sampled to stay bounded.
     if (prefixes.length && suffixes.length) {
       const ps = shuffle([...prefixes]).slice(0, 30);
       const ss = shuffle([...suffixes]).slice(0, 30);
@@ -452,14 +448,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     </a>`;
   }
 
-  // Bump on every new run so stale in-flight checks can bail out.
   let runId = 0;
   const CONCURRENCY = 8;
-  // Last generated name labels, so TLD toggles re-expand without a new request.
   let currentLabels: string[] = [];
 
-  // Persistent AI-run state so "Show more" resumes the same search instead of
-  // restarting: results and tried labels accumulate across clicks.
   const moreEl = $('dn-more') as HTMLButtonElement;
   const genEl = $('dn-gen') as HTMLButtonElement;
   const aiGenEl = $('dn-ai-gen') as HTMLButtonElement;
@@ -481,7 +473,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   let aiStates: Map<string, State> | null = null;
   let aiTried: string[] = [];
   let aiSettings: Settings | null = null;
-  // Each "Show more" click looks for this many additional available domains.
   const MORE_TARGET = 15;
 
   /** Hide the Show-more button and drop any resumable AI state. */
@@ -532,9 +523,9 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         try {
           state = await checkDoh(domain, controller.signal);
         } catch {
-          return; // aborted — a newer run took over
+          return;
         }
-        if (mine !== runId) return; // superseded while awaiting
+        if (mine !== runId) return;
         states.set(domain, state);
         renderStates(states, w);
       }
@@ -554,7 +545,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   function recheck() {
     if (!currentLabels.length) return;
     runId++;
-    resetAi(); // TLD re-check owns the display now — drop resumable AI state.
+    resetAi();
     const list = expand(currentLabels);
     if (!list.length) {
       out.innerHTML = '';
@@ -578,8 +569,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     resetAi();
     const labels = fallbackNames(s);
     currentLabels = labels;
-    // Always check the exact keyword itself first — renderStates already sorts
-    // the keyword-exact match to the top, so an available one shows first.
     const exact = TLDS.filter((t) => active.has(t)).map((t) => `${s.word}.${t}`);
     const list = [...new Set([...exact, ...expand(labels)])];
     if (!list.length) {
@@ -601,7 +590,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const s = aiSettings!;
     const states = aiStates!;
     const w = s.word;
-    let checked = 0; // fresh per-invocation budget, so each "Show more" can work
+    let checked = 0;
 
     for (let round = 0; round < MAX_ROUNDS; round++) {
       if (freeCount(states) >= target || checked >= MAX_CHECK) break;
@@ -611,8 +600,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         labels = await aiNames(s, aiTried);
       } catch {
         if (mine !== runId) return false;
-        // First AI call of a fresh run failed — degrade to a single local
-        // pass. Any later failure just stops and keeps what we've found.
         if (states.size === 0 && round === 0) {
           const fb = fallbackNames(s);
           currentLabels = fb;
@@ -622,8 +609,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       }
       if (mine !== runId) return false;
 
-      // Only labels we haven't tried yet, expanded to unchecked domains,
-      // trimmed to stay within this invocation's MAX_CHECK budget.
       const fresh = labels.filter((l) => !aiTried.includes(l));
       aiTried.push(...fresh);
       currentLabels = [...aiTried];
@@ -695,7 +680,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     finishAi();
   }
 
-  // ---- TLD filter chips ----
   const tldsEl = $('dn-tlds')!;
   function renderChips() {
     tldsEl.innerHTML = TLDS.map((tld) => {

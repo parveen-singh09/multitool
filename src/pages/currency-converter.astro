@@ -185,10 +185,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     fromSel.value = 'USD'; toSel.value = 'EUR';
   }
 
-  // Convert `amount` of `a` into `b` using USD-relative rates.
   const cross = (amount: number, a: string, b: string) => (amount / rates[a]) * rates[b];
 
-  // Recompute from a given side; `src` is which field the user last edited.
   function convert(src: 'from' | 'to' = 'from') {
     const from = fromSel.value, to = toSel.value;
     fromSym.textContent = sym(from);
@@ -265,7 +263,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       if (series.length < 2) throw new Error('no series');
       drawChart(series, from, to);
     } catch (e) {
-      // Frankfurter only covers major (ECB) currencies; degrade gracefully.
       chartMsg.textContent = `Rate history isn't available for ${from}/${to}.`;
     }
   }
@@ -324,7 +321,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   fillSelects();
   renderPeriods();
-  convert(); // show currency symbols immediately, before live rates arrive
+  convert();
   loadRates();
   loadHistory();
 </script>

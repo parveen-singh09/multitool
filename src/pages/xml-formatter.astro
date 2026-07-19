@@ -135,15 +135,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     caretWrap.classList.remove('hidden');
   }
 
-  // ---- Escaping (DOM decodes entities, so re-encode on serialize) ----
   const escText = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const escAttr = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 
   const ELEMENT = 1, TEXT = 3, CDATA = 4, PI = 7, COMMENT = 8;
 
-  // A whitespace-only text node between elements is insignificant layout, drop it.
-  // ponytail: this normalizes whitespace inside mixed content, like every
-  // pretty-printer does. Round-tripping byte-exact text is a non-goal for a formatter.
   const significant = (n: ChildNode) => !(n.nodeType === TEXT && !(n as Text).data.trim());
 
   function openTag(el: Element): string {
@@ -179,8 +175,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
 
   function beautify(doc: Document, src: string, unit: string): string {
-    // The XML declaration and DOCTYPE aren't reliably in the DOM tree; carry them
-    // over from the source verbatim.
     const decl = src.match(/^\s*<\?xml[^>]*\?>/i)?.[0].trim();
     const doctype = src.match(/<!DOCTYPE[^>]*(\[[\s\S]*?\])?\s*>/i)?.[0].trim();
     const body = Array.from(doc.childNodes)
@@ -195,7 +189,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return xml.replace(/\r\n/g, '\n').replace(/>\s+</g, '><').replace(/\n/g, '').trim();
   }
 
-  // ---- Stats ----
   function pill(text: string): HTMLElement {
     const el = document.createElement('span');
     el.className = 'status-badge';
@@ -223,7 +216,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     statsEl.classList.add('flex');
   }
 
-  // ---- Collapsible, syntax-highlighted tree (built via DOM — safe with untrusted input) ----
   const COLORS: Record<string, string> = {
     tag: 'var(--color-primary-hover)',
     attr: '#e0b978',
@@ -253,7 +245,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const elementKids = childEls.filter((c) => c.nodeType === ELEMENT);
     const textKids = childEls.filter((c) => c.nodeType === TEXT || c.nodeType === CDATA);
 
-    // Leaf: no element children — render on one line.
     if (elementKids.length === 0) {
       const line = document.createElement('div');
       line.style.whiteSpace = 'pre-wrap';
@@ -312,7 +303,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     viewWrap.classList.add('flex');
   }
 
-  // ---- Core process ----
   function process(doMinify: boolean) {
     const src = input.value.trim();
     if (!src) { hideResults(); status.classList.add('hidden'); return; }
@@ -357,7 +347,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     URL.revokeObjectURL(url);
   });
 
-  // File upload + drag & drop
   const fileInput = document.getElementById('xf-file') as HTMLInputElement;
   async function loadFile(file: File) {
     input.value = await file.text();
@@ -371,7 +360,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (file) { e.preventDefault(); loadFile(file); }
   });
 
-  // Tree expand/collapse all
   const setAll = (open: boolean) =>
     treeEl.querySelectorAll('details').forEach((d) => ((d as HTMLDetailsElement).open = open));
   document.getElementById('xf-expand')!.addEventListener('click', () => setAll(true));

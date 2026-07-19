@@ -178,8 +178,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     renderAll(empty ? null : v);
   }
 
-  // Every scale for the current input value, live. Beats competitors that only
-  // show one target at a time.
   function renderAll(v: number | null) {
     const from = byName(fromUnit.value);
     const rows = SCALES.map((s) => {
@@ -214,7 +212,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     try {
       await navigator.clipboard.writeText(text);
     } catch {
-      // Clipboard API blocked (insecure context / permissions) — fall back.
       const ta = document.createElement('textarea');
       ta.value = text; document.body.appendChild(ta); ta.select();
       document.execCommand('copy'); ta.remove();
@@ -254,7 +251,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   renderPresets();
   convert();
 
-  // ponytail: one runnable check for the offset math (freezing / boiling / abs zero).
   const approx = (a: number, b: number) => Math.abs(a - b) < 1e-9;
   console.assert(approx(convertValue(0, 'Celsius', 'Fahrenheit'), 32), 'C→F freeze');
   console.assert(approx(convertValue(100, 'Celsius', 'Fahrenheit'), 212), 'C→F boil');

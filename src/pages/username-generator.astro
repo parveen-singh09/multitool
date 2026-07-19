@@ -174,7 +174,6 @@ const TYPES = [
       return `${a}${sep}${noun.toLowerCase()}`;
     }
 
-    // random: Adjective + Noun, keyword substitutes one part
     const adj = kw ? cap(kw) : cap(pick(USERNAME_ADJ));
     return randInt(0, 1) ? adj + noun : cap(pick(USERNAME_ADJ)) + noun;
   }
@@ -182,7 +181,6 @@ const TYPES = [
   function one(maxLen: number): string {
     let u = core(maxLen);
     if (leetEl.checked) u = leet(u);
-    // Numbers: append until we hit target length (skip if random-chars already filled it).
     if (numEl.checked && !randEl.checked) {
       const room = Math.max(1, Math.min(4, maxLen - u.length));
       u += randInt(0, +('9'.repeat(room)));
@@ -192,7 +190,6 @@ const TYPES = [
   }
 
   function generate() {
-    // Deterministic when a seed is set; otherwise CSPRNG.
     setSeed(seedEl.value.trim() || null);
     lenVal.textContent = lenEl.value;
     const n = Math.max(1, Math.min(200, Number(countEl.value) || 1));
@@ -203,7 +200,7 @@ const TYPES = [
       const u = one(maxLen);
       if (u.length >= 3) set.add(u);
     }
-    setSeed(null); // restore entropy for anything else on the page
+    setSeed(null);
 
     out.innerHTML = [...set]
       .map(
@@ -225,7 +222,6 @@ const TYPES = [
   const avail = $('un-avail');
   const availName = $('un-avail-name');
   function showAvailability(name: string) {
-    // Handles are lowercased and stripped to the common allowed set.
     const handle = name.toLowerCase().replace(/[^a-z0-9._-]/g, '');
     availName.textContent = name;
     avail.querySelectorAll<HTMLAnchorElement>('a[data-site]').forEach((a) => {

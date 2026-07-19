@@ -97,7 +97,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     valEl.textContent = termGpa.toFixed(2);
     subEl.textContent = `${credits} credit hours across ${document.querySelectorAll('.gpa-row').length} courses`;
 
-    // Cumulative with prior GPA carryover.
     const priorGpa = Number((document.getElementById('gpa-prior') as HTMLInputElement).value);
     const priorCr = Number((document.getElementById('gpa-prior-cr') as HTMLInputElement).value) || 0;
     let cumGpa = termGpa, cumCr = credits, cumPoints = points;
@@ -112,13 +111,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     planCalc(cumGpa, cumCr);
   }
 
-  // GPA needed on upcoming credits to hit a target cumulative GPA.
   function planCalc(curGpa: number, curCr: number) {
     const target = Number((document.getElementById('gpa-target') as HTMLInputElement).value) || 0;
     const addCr = Number((document.getElementById('gpa-target-cr') as HTMLInputElement).value) || 0;
     const out = document.getElementById('gpa-plan')!;
     if (curCr === 0 || addCr <= 0 || target <= 0) { out.textContent = 'Enter your courses and a target to see the GPA you need.'; return; }
-    // (curGpa*curCr + needed*addCr) / (curCr+addCr) = target
     const needed = (target * (curCr + addCr) - curGpa * curCr) / addCr;
     if (needed <= 0) {
       out.textContent = `You've already exceeded a ${target.toFixed(2)} cumulative GPA — even a 0.0 keeps you above target.`;
@@ -132,7 +129,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   document.getElementById('gpa-add')!.addEventListener('click', () => { makeRow(); calc(); });
   ['gpa-prior', 'gpa-prior-cr', 'gpa-target', 'gpa-target-cr'].forEach((id) => document.getElementById(id)!.addEventListener('input', calc));
 
-  // Seed with three example rows.
   makeRow('', 'A', '3');
   makeRow('', 'B+', '4');
   makeRow('', 'A-', '3');

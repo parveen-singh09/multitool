@@ -124,7 +124,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const total = Math.max(5, Math.min(60, Number(countEl.value) || 30));
     const seen = new Set<string>();
 
-    // Take up to `n` fresh (unseen) tags from a candidate pool.
     const take = (pool: string[], n: number): string[] => {
       const picked: string[] = [];
       for (const raw of pool) {
@@ -137,24 +136,19 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       return picked;
     };
 
-    // Keyword tags (raw + CamelCase) — highest intent, always relevant.
     const kwPool = words.flatMap((w) => [w, cap(w)]);
 
-    // Broad reach: platform-native + generic engagement (high competition).
     const broadPool = shuffle([...(PLATFORM[platform] || []), 'love', 'viral', 'trending', 'explore', 'follow', 'instagram']);
 
-    // Popular: niche lexicon + keyword×modifier combos (medium competition).
     const niche = nicheTags(words);
     const combos = words.flatMap((w) => sample(MODIFIERS, 4).map((m) => w + m));
     const popularPool = shuffle([...niche, ...combos]);
 
-    // Niche & specific: CamelCase keyword pairs + long-tail combos (low competition, high intent).
     const nichePool: string[] = [];
     for (let i = 0; i < words.length; i++)
       for (let j = i + 1; j < words.length; j++) nichePool.push(cap(words[i]) + cap(words[j]));
     for (const w of words) nichePool.push(cap(w) + 'OfInstagram', 'the' + cap(w) + 'life');
 
-    // Distribute the total budget across tiers (keywords always included first).
     const kw = take(kwPool, words.length * 2);
     const remaining = Math.max(0, total - kw.length);
     const broad = take(broadPool, Math.round(remaining * 0.3));
@@ -195,7 +189,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       )
       .join('');
 
-    // Toggle-select a tag on click.
     out.querySelectorAll<HTMLElement>('button[data-t]').forEach((b) => {
       b.addEventListener('click', () => {
         const t = b.dataset.t!;
@@ -210,7 +203,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       });
     });
 
-    // Per-group copy.
     out.querySelectorAll<HTMLElement>('.hg-copy-group').forEach((b) => {
       b.addEventListener('click', async () => {
         await navigator.clipboard.writeText(b.dataset.tags!);

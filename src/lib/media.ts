@@ -100,11 +100,11 @@ export function buildArgs(conv: MediaConversion, o: ConvertOptions, input: strin
   } else if (conv.out === 'opus') {
     out.push('-c:a', 'libopus', '-b:a', (q || '128') + 'k');
   } else if (conv.out === 'flac') {
-    out.push('-c:a', 'flac', '-compression_level', q || '5'); // lossless; q = compression level 0–12
+    out.push('-c:a', 'flac', '-compression_level', q || '5');
   } else if (conv.out === 'ac3') {
     out.push('-c:a', 'ac3', '-b:a', (q || '192') + 'k');
   } else if (conv.out === 'aiff') {
-    out.push('-c:a', q || 'pcm_s16be'); // AIFF is big-endian PCM
+    out.push('-c:a', q || 'pcm_s16be');
   } else if (conv.out === 'wav') {
     out.push('-c:a', q || 'pcm_s16le');
   }

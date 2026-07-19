@@ -238,7 +238,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       return;
     }
 
-    // Full-anagram mode. Subtract any forced include words from the pool first.
     const pool = sig(raw);
     const includeWords = clean(includeEl.value).length
       ? includeEl.value.trim().split(/\s+/).map(clean).filter(Boolean)
@@ -260,12 +259,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
     summary.textContent = 'Searching…';
     out.innerHTML = '';
-    // Yield once so "Searching…" paints before the (possibly heavy) search.
     setTimeout(() => {
-      if (clean(inEl.value) !== raw) return; // input changed while yielding
+      if (clean(inEl.value) !== raw) return;
       const { results, capped } = fullAnagrams(pool);
       let phrases = results.map((r) => (prefix.length ? prefix.join(' ') + ' ' + r : r));
-      // Drop the trivial "input === output" phrase; sort shortest-word-count first.
       phrases = phrases.filter((p) => clean(p) !== raw + prefix.join(''));
       phrases.sort((a, b) => a.split(' ').length - b.split(' ').length || (a < b ? -1 : 1));
       if (capEl.checked) phrases = phrases.map(titleCase);
@@ -282,14 +279,13 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }, 0);
   }
 
-  // ── Wiring ────────────────────────────────────────────────────
   function setMode(m: 'full' | 'within') {
     mode = m;
     ($('an-mode-full') as HTMLButtonElement).className =
       'btn ' + (m === 'full' ? 'btn-primary' : 'btn-secondary');
     ($('an-mode-within') as HTMLButtonElement).className =
       'btn ' + (m === 'within' ? 'btn-primary' : 'btn-secondary');
-    optsEl.style.display = ''; // options apply to both modes (length filters)
+    optsEl.style.display = '';
     if (WORDS.length) solve();
   }
   $('an-mode-full').addEventListener('click', () => setMode('full'));
@@ -311,8 +307,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (WORDS.length) solve();
   });
 
-  // Copy source is the lastList variable (chips render without separators), so
-  // this keeps a minimal local handler instead of the global textContent one.
   $('an-copy-icon').addEventListener('click', (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
     navigator.clipboard.writeText(lastList.join('\n'));

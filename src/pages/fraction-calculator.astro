@@ -82,9 +82,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return rem === 0 ? `${sign}${whole}` : `${sign}${whole} ${rem}/${den}`;
   }
 
-  // Combine whole + fraction into a single improper fraction (sign on numerator).
   function toImproper(w: number, n: number, d: number): number {
-    // whole and fraction share a sign; treat a negative whole as negating the fraction too
     const mag = Math.abs(w) * d + Math.abs(n);
     const neg = w < 0 || (w === 0 && n < 0);
     return neg ? -mag : mag;
@@ -128,7 +126,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (g > 1) steps.push(`Reduce by GCD ${g}: ${combined} = ${num}/${den}`);
 
     resEl.textContent = format(num, den);
-    // Show both forms in the decimal line for completeness.
     const improper = den === 1 ? String(num) : `${num}/${den}`;
     const mixed = format(num, den);
     const extra = improper !== mixed ? ` = ${form === 'mixed' ? improper : mixed}` : '';
@@ -136,7 +133,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     stepsEl.innerHTML = steps.map((s) => `<li>${s}</li>`).join('');
   }
 
-  // Decimal → fraction via denominator = 10^(decimal places), then reduce.
   function decToFrac() {
     const out = document.getElementById('fr-dec-out')!;
     const raw = $('fr-dec-in').value.trim();

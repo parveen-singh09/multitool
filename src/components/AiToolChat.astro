@@ -1,16 +1,9 @@
 ---
-// AI tool chat: describe a job in plain language, the AI picks the best tool.
-// Common image conversions run inline (right here, nothing uploaded); everything
-// else opens in a new tab. fullPage=true fills the viewport (its own /ai route).
 import { tools } from '../data/tools';
 
-// launcher = landing-page entry box; sending navigates to /ai with the query
-// (auto-runs there). fullPage = the /ai route that fills the viewport.
 export interface Props { fullPage?: boolean; launcher?: boolean }
 const { fullPage = false, launcher = false } = Astro.props;
 
-// Compact index the AI router and local fallback both read. Only the fields
-// search/routing need — keeps the embedded payload lean.
 const index = tools.map((t) => ({
   slug: t.slug,
   name: t.name,
@@ -87,9 +80,7 @@ const index = tools.map((t) => ({
 
 <style>
   .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
-  /* "AI assistant": a FIXED ink→primary linear gradient (never moves), with a
-     separate white shine band swept over it. The band is transparent at both
-     ends, so the loop reset is off-screen — no color swing, no jitter. */
+  
   .ai-shine {
     background-image:
       linear-gradient(90deg, transparent 30%, rgba(255,255,255,0.9) 50%, transparent 70%),
@@ -106,7 +97,7 @@ const index = tools.map((t) => ({
   @media (prefers-reduced-motion: reduce) {
     .ai-shine { animation: none; }
   }
-  /* Auto/Edit toggle: active tab lifts onto surface-2 with ink text (mirrors DESIGN pricing-tab). */
+  
   .ai-mode { color: var(--color-ink-subtle, #8a8f98); }
   .ai-mode[aria-pressed="true"] { background: var(--color-surface-2, #141516); color: var(--color-ink, #f7f8f8); }
 </style>
@@ -124,8 +115,6 @@ const index = tools.map((t) => ({
 
   type IdxTool = { slug: string; name: string; tagline: string; category: string; keywords: string[] };
 
-  // Tools the chat can run without leaving the page. Keyed to convertImage opts.
-  // Only the 6 canvas format-conversions that exist as tools today.
   const INLINE: Record<string, { to: string; ext: string; quality: boolean; flatten: boolean }> = {
     'jpg-to-png':  { to: 'image/png',  ext: 'png',  quality: false, flatten: false },
     'webp-to-png': { to: 'image/png',  ext: 'png',  quality: false, flatten: false },
@@ -145,14 +134,12 @@ const index = tools.map((t) => ({
   const fileTag = document.getElementById('ai-file-tag')!;
   const fileChips = document.getElementById('ai-file-chips')!;
   const fileCaption = document.getElementById('ai-file-caption')!;
-  const seedLog = log.innerHTML; // greeting bubble, restored on Clear chat
+  const seedLog = log.innerHTML;
 
   let mode: 'auto' | 'edit' = 'auto';
-  let files: File[] = []; // attached uploads; inline jobs batch over the fitting ones
-  let lastQuery = ''; // the request text driving the current turn (for setting extraction)
+  let files: File[] = [];
+  let lastQuery = '';
 
-  // Deterministic setting extraction: pull the desired output image format from
-  // the request words. The LLM picks the tool; code applies the parameters.
   function parseFmt(q: string): { to: string; ext: string } | null {
     const s = q.toLowerCase();
     if (/\bpng\b/.test(s)) return { to: 'image/png', ext: 'png' };
@@ -161,8 +148,6 @@ const index = tools.map((t) => ({
     return null;
   }
 
-  // Deterministic quality extraction: map request words to an encode quality.
-  // Only meaningful for lossy outputs (jpg/webp/pdf-render). null = tool default.
   function parseQuality(q: string): number | null {
     const s = q.toLowerCase();
     if (/\b(smaller|compress|reduce|shrink|tiny|low quality)\b/.test(s)) return 0.6;
@@ -173,7 +158,6 @@ const index = tools.map((t) => ({
   const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
   const fmtSize = (n: number) => (n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`);
 
-  // --- mode toggle ---
   function setMode(m: 'auto' | 'edit') {
     mode = m;
     for (const b of document.querySelectorAll<HTMLButtonElement>('.ai-mode'))
@@ -181,16 +165,12 @@ const index = tools.map((t) => ({
     const sel = document.getElementById('ai-mode-select') as HTMLSelectElement | null;
     if (sel) sel.value = m;
   }
-  // The working files: start as the uploads, but each inline conversion REPLACES
-  // them with its own outputs so steps chain — "to png" then "now webp" reuses the
-  // results. `fromStep` marks them as produced results (shown in the tag).
   let fromStep = false;
-  let chipUrls: string[] = []; // object URLs for image thumbnails, revoked on re-render
+  let chipUrls: string[] = [];
   function setWorking(next: File[], produced = false) {
     files = next;
     fromStep = produced;
-    if (!fileTag) return; // launcher has no tag
-    // Rebuild the chip strip: one thumbnail per file, each with its own remove ✕.
+    if (!fileTag) return;
     chipUrls.forEach(URL.revokeObjectURL);
     chipUrls = [];
     fileChips.innerHTML = '';
@@ -215,7 +195,7 @@ const index = tools.map((t) => ({
       x.textContent = '✕';
       x.addEventListener('click', () => {
         const rest = files.slice(0, i).concat(files.slice(i + 1));
-        fileInput.value = ''; // detach the <input> selection; working set is the source of truth now
+        fileInput.value = '';
         setWorking(rest, fromStep);
       });
       chip.appendChild(x);
@@ -227,8 +207,6 @@ const index = tools.map((t) => ({
     fileTag.classList.toggle('flex', !!next.length);
   }
 
-  // Mode toggle + file attach only exist off the launcher (they can't survive
-  // navigation), so wire them only when present.
   if (!isLauncher) {
     document.getElementById('ai-mode-auto')!.addEventListener('click', () => setMode('auto'));
     document.getElementById('ai-mode-edit')!.addEventListener('click', () => setMode('edit'));
@@ -237,8 +215,6 @@ const index = tools.map((t) => ({
 
     fileInput.addEventListener('change', () => setWorking(Array.from(fileInput.files ?? [])));
 
-    // Plus button → source dropdown (device / Google Drive / Dropbox). Cloud
-    // sources appear only when their public key is configured at build time.
     const attachBtn = document.getElementById('ai-attach-btn')!;
     const attachMenu = document.getElementById('ai-attach-menu')!;
     for (const src of ['gdrive', 'dropbox']) {
@@ -259,7 +235,6 @@ const index = tools.map((t) => ({
         if (src === 'device') { fileInput.click(); return; }
         b.disabled = true;
         try {
-          // Add the cloud file to the working set (chat supports multiple files).
           await pickFromDrive(src, (file) => { fileInput.value = ''; setWorking([...files, file]); });
         } catch (err) { bubble('assistant', `Couldn’t import from ${src === 'gdrive' ? 'Google Drive' : 'Dropbox'}. Try again or use “From this device”.`); }
         finally { b.disabled = false; }
@@ -275,11 +250,10 @@ const index = tools.map((t) => ({
     });
   }
 
-  // --- chat rendering ---
   function bubble(role: 'user' | 'assistant', html: string): HTMLElement {
     const mine = role === 'user';
     const el = document.createElement('div');
-    el.style.overflowWrap = 'anywhere'; // base64 etc. breaks mid-token, no overflow
+    el.style.overflowWrap = 'anywhere';
     el.innerHTML = html;
 
     if (!mine) {
@@ -289,25 +263,16 @@ const index = tools.map((t) => ({
       return el;
     }
 
-    // User input reads as a code block (monospace on a dark code surface). Height
-    // is capped so a huge paste (base64) is hidden beneath a few lines; a Show
-    // more/less toggle appears only when the content actually overflows the cap.
-    // ponytail: monospace, no syntax highlighting — it'd misfire on plain text.
     const COLLAPSED = '5.5rem';
-    // break-all + w-full inside a fixed-width column so a long unbreakable string
-    // wraps to fill the width (instead of collapsing to a thin one-line strip).
-    // relative so the Show more toggle can sit inside, bottom-right.
     el.className = 'group relative w-full overflow-hidden whitespace-pre-line break-all rounded-lg border border-hairline bg-canvas px-3 py-2 font-mono text-[13px] text-ink';
     el.style.maxHeight = COLLAPSED;
     const wrap = document.createElement('div');
     wrap.className = 'ml-auto flex max-w-md flex-col items-end';
     wrap.appendChild(el);
     log.appendChild(wrap);
-    // Measure after insertion: scrollHeight > clientHeight means it's clipped.
     if (el.scrollHeight > el.clientHeight + 1) {
       const btn = document.createElement('button');
       btn.type = 'button';
-      // Inside the bubble, bottom-right, on a blurred chip so it reads over text.
       btn.className = 'absolute bottom-2 right-2 rounded-md border border-hairline px-2 py-1 text-[12px] text-ink-subtle opacity-0 backdrop-blur-sm transition-opacity hover:text-ink focus-visible:opacity-100 group-hover:opacity-100';
       btn.style.backgroundColor = 'color-mix(in srgb, var(--color-canvas) 82%, transparent)';
       btn.textContent = 'Show more';
@@ -322,7 +287,6 @@ const index = tools.map((t) => ({
     log.scrollTop = log.scrollHeight;
     return el;
   }
-  // Wider assistant card (tool chips, converted preview) — not a chat bubble.
   function card(): HTMLElement {
     const el = document.createElement('div');
     el.className = 'flex w-full max-w-md flex-col gap-3 rounded-lg bg-surface-2 p-3';
@@ -331,12 +295,7 @@ const index = tools.map((t) => ({
     return el;
   }
 
-  // --- routing / inline conversion ---
-  // Tools that can't run in-chat (full-page apps) open in a NEW tab so the
-  // conversation stays put. The chat is the hub; we never navigate away from it.
   const history: { role: 'user' | 'assistant'; content: string }[] = [];
-  // Category tints, mirrored from ToolCard.astro so the chat's tool button reads
-  // like the site's cards.
   const CAT_TINT: Record<string, string> = {
     Text: 'bg-sky-500/12 ring-sky-500/20 text-sky-400',
     Developer: 'bg-violet-500/12 ring-violet-500/20 text-violet-400',
@@ -350,8 +309,6 @@ const index = tools.map((t) => ({
     'Device & Sensors': 'bg-cyan-500/12 ring-cyan-500/20 text-cyan-400',
   };
 
-  // A compact tool-card button (icon + name + category) — the site's card look,
-  // used as the "tool that ran" footer instead of a plain text link.
   function toolCardLink(slug: string): string {
     const t = getTool(slug);
     if (!t) return '';
@@ -363,8 +320,6 @@ const index = tools.map((t) => ({
       `<span class="text-[12px] text-ink-tertiary">${esc(t.category)}</span></span></a>`;
   }
 
-  // "Download all (ZIP)" button — only when 2+ files were produced. Uses the
-  // site's own zip builder (src/lib/zip), imported lazily so the chat stays lean.
   function appendDownloadAll(container: HTMLElement, produced: { name: string; blob: Blob }[], zipName: string) {
     if (produced.length < 2) return;
     const btn = document.createElement('button');
@@ -389,8 +344,6 @@ const index = tools.map((t) => ({
     container.appendChild(btn);
   }
 
-  // "Used this tool" footer — the tool that produced the result, as a card the
-  // user can open for more options. Shared by every inline/runner result path.
   function appendToolFooter(container: HTMLElement, slug: string) {
     const foot = document.createElement('div');
     foot.className = 'flex flex-col gap-1.5';
@@ -398,9 +351,6 @@ const index = tools.map((t) => ({
     container.appendChild(foot);
   }
 
-  // Any tool that can't run in-chat: surface the related tool as a card the user
-  // opens in a new tab, instead of embedding its full page. Keeps the chat as the
-  // hub and the conversation compact.
   function embedTool(slug: string, _label: string) {
     const wrap = document.createElement('div');
     wrap.className = 'flex w-full max-w-md flex-col gap-2 rounded-lg bg-surface-2 p-3';
@@ -411,7 +361,6 @@ const index = tools.map((t) => ({
     log.scrollTop = log.scrollHeight;
   }
 
-  // PDF tools the chat renders inline (page images). Keyed to output format.
   const PDF_INLINE: Record<string, { to: string; ext: string }> = {
     'pdf-to-jpg': { to: 'image/jpeg', ext: 'jpg' },
   };
@@ -421,29 +370,16 @@ const index = tools.map((t) => ({
   const pdfFiles = () => files.filter(isPdf);
   const imageFiles = () => files.filter((f) => !isPdf(f));
 
-  // Interactive tools that are really just whimsy/random TEXT the AI can write —
-  // classified 'interactive' only because they animate on their page. Let these
-  // answer in chat. (Device/network/live tools stay embed: speed test, GPS,
-  // camera, live prices, real disposable inbox.)
   const CHATTY_INTERACTIVE = new Set([
     'zodiac-generator', 'random-animal-generator', 'emoji-generator',
     'gender-predictor', 'love-predictor', 'life-expectancy-predictor', 'child-height-predictor',
     'dice-roller', 'coin-flip', 'random-picker', 'team-generator',
   ]);
 
-  // Tools classified as file/image output whose result is REALLY just text the
-  // AI can write (fake sample data, generated word lists). No precision concern
-  // — it's synthetic. A real runner (if one lands) still wins via getRunner.
   const TEXT_ANSWERABLE = new Set([
     'fake-id-generator',
   ]);
 
-  // Tools whose result the AI can just write back into the chat: anything that
-  // outputs text/data/number (transforms, validators, calculators, generators,
-  // AI writers), plus the whimsy/text allowlists above. Image conversions run
-  // deterministically inline; files, images, and real interactive tools embed.
-  // ponytail: LLM answers can be off on exact math/encoding/hashing — the result
-  // card labels that and links the real tool. Wire per-tool code if precision matters.
   function aiAnswerable(slug: string): boolean {
     if (isInline(slug)) return false;
     if (CHATTY_INTERACTIVE.has(slug) || TEXT_ANSWERABLE.has(slug)) return true;
@@ -451,9 +387,6 @@ const index = tools.map((t) => ({
     return !!io && (io.output === 'text' || io.output === 'data' || io.output === 'number');
   }
 
-  // Run the chosen tool's job on the user's input, streaming the result. onChunk
-  // fires per token batch (progressive render); the resolved value is the full,
-  // code-fence-stripped result.
   async function computeAnswer(query: string, pick: Pick, onChunk: (t: string) => void): Promise<string> {
     const io = getToolIO(pick.slug);
     const raw = await aiChatStream([
@@ -467,20 +400,14 @@ const index = tools.map((t) => ({
     return raw.replace(/^```[a-z]*\s*|\s*```$/g, '').trim();
   }
 
-  // Params a confirmed inline job runs with. All optional — omit for tool defaults.
-  // fmt overrides output format (PDF only); quality sets initial encode; showSlider
-  // adds the post-conversion tweak slider (skipped when the confirm card already had one).
   type JobOpts = { showSlider?: boolean; quality?: number; fmt?: { to: string; ext: string } };
 
-  // Dispatch an inline job to the right renderer.
   function runInlineJob(slug: string, container: HTMLElement, opts: JobOpts = {}) {
     if (slug === 'pdf-merge') return void runInlineMerge(container);
     if (PDF_INLINE[slug]) return void runInlinePdf(slug, container, opts);
     return void runInline(slug, container, opts);
   }
 
-  // Merge every attached PDF (in upload order) into one, right in the chat.
-  // ponytail: order = upload order; drag-to-reorder lives on the full tool.
   async function runInlineMerge(container: HTMLElement) {
     const sources = pdfFiles();
     if (sources.length < 2) { bubble('assistant', 'Attach two or more PDFs (paperclip on the left), then send again — I’ll merge them here.'); return; }
@@ -505,10 +432,7 @@ const index = tools.map((t) => ({
     }
   }
 
-  // Render an attached PDF's pages to images, right in the chat. On failure,
-  // fall back to a link to the full tool.
   async function runInlinePdf(slug: string, container: HTMLElement, opts: JobOpts = {}) {
-    // Confirmed fmt wins; else the format the user asked for ("pdf to png"); else default.
     const cfg = opts.fmt ?? parseFmt(lastQuery) ?? PDF_INLINE[slug];
     const quality = opts.quality ?? 0.92;
     const sources = pdfFiles();
@@ -544,7 +468,6 @@ const index = tools.map((t) => ({
           : `${images.length} page${images.length === 1 ? '' : 's'} rendered.`;
         block.appendChild(note);
       } catch (e) {
-        // Couldn't do it inline — surface the full tool as the user asked.
         block.innerHTML +=
           `<p class="text-[13px]" style="color:#e5484d">Couldn’t render that PDF here (${esc((e as Error).message || 'error')}).</p>` +
           `<p class="text-[13px] text-ink-subtle mt-1">Try the full tool below.</p>`;
@@ -558,10 +481,8 @@ const index = tools.map((t) => ({
     const cfg = INLINE[slug];
     const sources = imageFiles();
     if (!sources.length) { bubble('assistant', 'Attach an image first, then send your request and I’ll convert it here.'); return; }
-    // Confirmed quality wins; else default 0.92 for lossy formats, undefined for lossless.
     const q = cfg.quality ? (opts.quality ?? 0.92) : undefined;
     const q0 = Math.round((q ?? 0.92) * 100);
-    // Per-file slider only makes sense converting a single image; batch skips it.
     const single = sources.length === 1;
     container.innerHTML = `<p class="text-[13px] text-ink-subtle">Converting ${single ? '' : sources.length + ' images'}…</p>`;
     const grid = document.createElement('div');
@@ -616,7 +537,6 @@ const index = tools.map((t) => ({
     }
     container.innerHTML = '';
     container.appendChild(grid);
-    // Chain: the produced results become the working files for the next step.
     if (anyOk) {
       appendDownloadAll(container, produced.map((f) => ({ name: f.name, blob: f })), `converted-${cfg.ext}.zip`);
       appendToolFooter(container, slug);
@@ -624,10 +544,7 @@ const index = tools.map((t) => ({
     }
   }
 
-  // Render a tool's AI-computed result as a card: the answer text (copyable),
-  // a caveat + link to the exact tool. Falls back to embed on AI failure.
   async function renderAnswer(query: string, pick: Pick, container: HTMLElement) {
-    // Live answer box: stream tokens straight into it as they arrive.
     container.innerHTML = '';
     const box = document.createElement('div');
     box.className = 'rounded-md bg-canvas p-3 text-[14px] text-ink whitespace-pre-wrap break-words';
@@ -641,11 +558,10 @@ const index = tools.map((t) => ({
       });
     } catch {
       container.innerHTML = '';
-      embedTool(pick.slug, pick.label); // AI down — hand off to the live tool
+      embedTool(pick.slug, pick.label);
       return;
     }
     if (!answer) { container.innerHTML = ''; embedTool(pick.slug, pick.label); return; }
-    // Replace the streamed raw text with the fence-stripped final, then footer.
     box.textContent = answer;
     const foot = document.createElement('span');
     foot.className = 'text-[13px] text-ink-subtle';
@@ -659,9 +575,6 @@ const index = tools.map((t) => ({
     container.appendChild(copy);
   }
 
-  // One-shot AI call to pull the exact input out of a chat message (e.g.
-  // "make a qr for example.com" → "example.com"). Falls back to the raw query
-  // when AI is unavailable. Injected into runners as ctx.extract.
   async function extract(instruction: string): Promise<string> {
     if (!hasAI) return lastQuery;
     try {
@@ -673,18 +586,15 @@ const index = tools.map((t) => ({
     } catch { return lastQuery; }
   }
 
-  // Does the attachment a registry runner needs exist?
   function runnerReady(needs: string): boolean {
     if (needs === 'pdf') return pdfFiles().length > 0;
     if (needs === 'image') return imageFiles().some((f) => /^image\//.test(f.type));
     if (needs === 'svg') return files.some((f) => f.type === 'image/svg+xml' || /\.svg$/i.test(f.name));
-    return true; // 'text' — works from the message
+    return true;
   }
   const needsLabel = (needs: string) =>
     needs === 'pdf' ? 'a PDF' : needs === 'svg' ? 'an SVG file' : needs === 'image' ? 'an image' : '';
 
-  // Render a registry runner's result: images preview + download, files as
-  // download buttons, text inline (copyable). Footer links the tool that ran.
   function renderRunResult(res: RunResult, container: HTMLElement, pick: Pick) {
     container.innerHTML = '';
     if (res.note) {
@@ -724,14 +634,10 @@ const index = tools.map((t) => ({
       container.appendChild(grid);
     }
     appendDownloadAll(container, produced.map((f) => ({ name: f.name, blob: f })), `${pick.slug}-files.zip`);
-    // Footer: the tool that produced this, as a card button (open for options).
     appendToolFooter(container, pick.slug);
-    // Chain produced files into the working set for a follow-up step.
     if (produced.length) setWorking(produced, true);
   }
 
-  // Non-inline pick: run a registry tool inline when one exists, else compute a
-  // text answer (text/data tools), else embed the live tool.
   async function handlePick(query: string, pick: Pick, container: HTMLElement) {
     const runner = getRunner(pick.slug);
     if (runner) {
@@ -751,8 +657,6 @@ const index = tools.map((t) => ({
       return;
     }
     if (aiAnswerable(pick.slug)) return void renderAnswer(query, pick, container);
-    // Embed path: if the tool needs a file and none is attached, ask for it
-    // (using the tool's own inputShape) instead of showing an empty form.
     const io = getToolIO(pick.slug);
     if (io && (io.input === 'file' || io.input === 'files') && !files.length) {
       container.innerHTML =
@@ -765,15 +669,9 @@ const index = tools.map((t) => ({
     embedTool(pick.slug, pick.label);
   }
 
-  // A tool the router chose: {slug, label, why}. Plus a conversational reply.
   type Pick = { slug: string; label: string; why?: string };
   type Routed = { reply: string; tools: Pick[] };
 
-  // Render the assistant turn: a conversational line, then act on the tools.
-  // Inline image jobs run right here; anything else gets an open-in-new-tab link.
-  // Nothing ever navigates the chat away.
-  // Does the attached file suit this inline tool? Image tools want an image;
-  // PDF tools want a PDF.
   function fileFits(slug: string): boolean {
     if (slug === 'pdf-merge') return pdfFiles().length >= 2;
     if (PDF_INLINE[slug]) return pdfFiles().length > 0;
@@ -782,8 +680,6 @@ const index = tools.map((t) => ({
   }
   const needLabel = (slug: string) => (slug === 'pdf-merge' ? 'two or more PDFs' : PDF_INLINE[slug] ? 'a PDF' : 'an image');
 
-  // Params extracted from the request for a given inline tool. Image tools have a
-  // fixed output format (the slug says so), so fmt is only pulled for PDF tools.
   function extractOpts(slug: string): JobOpts {
     const o: JobOpts = {};
     const q = parseQuality(lastQuery);
@@ -794,10 +690,8 @@ const index = tools.map((t) => ({
 
   function present(r: Routed) {
     const picks = r.tools;
-    // Best inline pick we can actually run now (right file attached).
     const runnable = picks.find((p) => isInline(p.slug) && fileFits(p.slug));
 
-    // Auto: if we can run an inline job right now, just do it and show the result.
     if (mode === 'auto' && runnable) {
       const c = card();
       c.innerHTML = `<p class="text-[14px] text-ink">${esc(r.reply)}</p>`;
@@ -805,15 +699,12 @@ const index = tools.map((t) => ({
       runInlineJob(runnable.slug, out, extractOpts(runnable.slug));
       return;
     }
-    // Auto: inline tool chosen but the right file isn't attached — ask for it.
     if (mode === 'auto') {
       const inlinePick = picks.find((p) => isInline(p.slug));
       if (inlinePick) {
         bubble('assistant', esc(r.reply) + `<br><span class="text-ink-subtle">Attach ${needLabel(inlinePick.slug)} (paperclip on the left) and send again — I’ll do it right here.</span>`);
         return;
       }
-      // Auto: any other tool — compute the answer in-chat (text/data tools) or
-      // embed the live tool (files, images, interactive).
       if (picks.length) {
         const c = card();
         c.innerHTML = `<p class="text-[14px] text-ink">${esc(r.reply)}</p>`;
@@ -829,13 +720,10 @@ const index = tools.map((t) => ({
     c.innerHTML = `<p class="text-[14px] text-ink">${esc(r.reply)}</p>`;
     const workspace = document.createElement('div'); workspace.className = 'flex flex-col gap-3'; c.appendChild(workspace);
 
-    // EDIT mode: stage the top pick — show the chosen tool + its extracted params,
-    // editable, and run only on Confirm. Runners-up appear below as quick switches.
     if (mode === 'edit') {
       let top = picks[0];
       const stage = document.createElement('div'); stage.className = 'flex flex-col gap-3';
       const renderConfirm = () => { stage.innerHTML = ''; confirmCard(top, stage, picks); };
-      // Alternative picks: click swaps which tool is staged.
       const alts = picks.slice(1, 3);
       workspace.appendChild(stage);
       renderConfirm();
@@ -855,7 +743,6 @@ const index = tools.map((t) => ({
       return;
     }
 
-    // Fallback path (AI down, non-auto edge cases): tools as chips.
     for (const p of picks.slice(0, 3)) {
       if (isInline(p.slug)) {
         const chip = document.createElement('button');
@@ -882,30 +769,24 @@ const index = tools.map((t) => ({
     }
   }
 
-  // EDIT-mode confirmation card: names the staged tool, exposes its runnable
-  // params for review/edit, and executes only on Confirm. Non-inline tools have
-  // no in-chat params, so they confirm straight to an embed.
   function confirmCard(p: Pick, host: HTMLElement, _all: Pick[]) {
     const inline = isInline(p.slug);
     const opts = extractOpts(p.slug);
     const box = document.createElement('div');
     box.className = 'panel flex flex-col gap-3 p-3';
 
-    // Header: tool + why.
     const head = document.createElement('div');
     head.innerHTML =
       `<div class="text-[14px] font-medium text-ink">${esc(p.label)}</div>` +
       (p.why ? `<div class="text-[13px] text-ink-subtle">${esc(p.why)}</div>` : '');
     box.appendChild(head);
 
-    // Params block (only for inline jobs that actually consume params).
     const isLossy = !!INLINE[p.slug]?.quality || !!PDF_INLINE[p.slug];
     let fmtSel: HTMLSelectElement | null = null;
     let qSlider: HTMLInputElement | null = null;
     if (inline) {
       const params = document.createElement('div');
       params.className = 'flex flex-col gap-2 rounded-md bg-surface-1 p-2.5';
-      // Output format — editable for PDF tools; fixed (shown as text) for image tools.
       if (PDF_INLINE[p.slug]) {
         const cur = (opts.fmt ?? PDF_INLINE[p.slug]).ext;
         const wrap = document.createElement('label');
@@ -925,14 +806,12 @@ const index = tools.map((t) => ({
         r.innerHTML = `<span>Output format</span><span class="text-ink">${ext.toUpperCase()}</span>`;
         params.appendChild(r);
       }
-      // pdf-merge has no format/quality params — just say what it'll do.
       if (p.slug === 'pdf-merge') {
         const r = document.createElement('div');
         r.className = 'text-[13px] text-ink-subtle';
         r.textContent = 'Merges the attached PDFs in upload order into one file.';
         params.appendChild(r);
       }
-      // Quality — only for lossy outputs.
       if (isLossy) {
         const q0 = Math.round((opts.quality ?? 0.92) * 100);
         const wrap = document.createElement('label');
@@ -944,7 +823,6 @@ const index = tools.map((t) => ({
         qSlider.addEventListener('input', () => { wrap.querySelector('[data-qv]')!.textContent = qSlider!.value + '%'; });
         wrap.appendChild(qSlider); params.appendChild(wrap);
       }
-      // File readiness note.
       if (!fileFits(p.slug)) {
         const note = document.createElement('p');
         note.className = 'text-[13px]'; note.style.color = '#e5484d';
@@ -961,7 +839,6 @@ const index = tools.map((t) => ({
       box.appendChild(note);
     }
 
-    // Actions: Confirm runs the staged job; Cancel dismisses the card.
     const actions = document.createElement('div');
     actions.className = 'flex items-center gap-2';
     const confirm = document.createElement('button');
@@ -969,7 +846,6 @@ const index = tools.map((t) => ({
     confirm.addEventListener('click', () => {
       if (!inline) { const out = document.createElement('div'); out.className = 'flex flex-col gap-3'; host.replaceWith(out); handlePick(lastQuery, p, out); return; }
       if (!fileFits(p.slug)) { bubble('assistant', `Attach ${needLabel(p.slug)} first (the paperclip on the left), then Confirm again.`); return; }
-      // Read edited params off the controls.
       const run: JobOpts = { showSlider: true };
       if (fmtSel) { const [to, ext] = fmtSel.value.split('|'); run.fmt = { to, ext }; }
       if (qSlider) run.quality = Number(qSlider.value) / 100;
@@ -986,11 +862,6 @@ const index = tools.map((t) => ({
     host.appendChild(box);
   }
 
-  // --- AI router with local-search fallback ---
-  // Lenient scored match: rank by how many query words hit the tool's haystack
-  // (name + tagline + category + keywords). Unlike matchesQuery (AND — every
-  // word must match), this surfaces the closest tools for loose phrasing like
-  // "shrink my photo size". Skips 1-2 letter noise words.
   function looseMatches(query: string): Pick[] {
     const words: string[] = query.toLowerCase().match(/[a-z0-9]{3,}/g) ?? [];
     if (!words.length) return [];
@@ -1007,12 +878,6 @@ const index = tools.map((t) => ({
   }
 
   function localRouted(query: string): Routed {
-    // Offline chit-chat guard: the AI path returns empty tools for greetings and
-    // non-tasks, but this keyword fallback would match noise to a tool ("ji" hits
-    // the "jitter" keyword → Internet Speed Test). Gate the obvious non-tasks: a
-    // query that's only a greeting, or has no word of 3+ chars.
-    // ponytail: heuristic, not intent detection — real 1-2 char tool queries
-    // ("qr") route via the header search, not this chat fallback.
     const greetingOnly = /^\s*(hi|hey+|hello|hiya|howdy|yo|sup|thanks?|thank you|thx|ty|ok|okay|cool|nice|lol|help|who are you|what can you do)[\s!?.]*$/i.test(query);
     if (greetingOnly || !/[a-z0-9]{3,}/i.test(query)) {
       return { reply: 'Hey — tell me what you need, like “convert my JPG to PNG”, “compress a PDF”, or “make a QR code”.', tools: [] };
@@ -1031,8 +896,6 @@ const index = tools.map((t) => ({
 
   async function route(query: string): Promise<Routed> {
     if (!hasAI) return localRouted(query);
-    // Feed name + category + tagline + keywords so the router matches on the
-    // same signal the local search uses. Keywords already live in tools.ts.
     const catalog = index
       .map((t) => {
         const io = getToolIO(t.slug);
@@ -1042,9 +905,6 @@ const index = tools.map((t) => ({
       .join('\n');
     try {
       const raw = await aiChat([
-        // Static prefix first (intro + full catalog) so Gemini implicit-caching
-        // reuses it across turns; the per-turn "attached files" note goes LAST so
-        // it never breaks the cached prefix.
         { role: 'system', content:
           'You are the assistant on ToolSilk, a site of free browser-based utilities. ' +
           'Chat naturally with the user. When they want to get something done, pick the best matching tool(s) from the catalog. ' +
@@ -1067,9 +927,6 @@ const index = tools.map((t) => ({
         .filter((p: Pick) => p && getTool(p.slug))
         .map((p: Pick) => ({ slug: p.slug, label: getTool(p.slug)!.name, why: p.why }));
       const conv = typeof parsed.reply === 'string' && parsed.reply.trim() ? parsed.reply.trim() : localRouted(query).reply;
-      // Trust the AI: empty tools = it decided this is chit-chat, not a task.
-      // Only fall back to keyword matches when the AI ALSO gave no reply (a
-      // parse/shape failure), so greetings stay conversational.
       let reply = conv;
       if (!tools.length && !(typeof parsed.reply === 'string' && parsed.reply.trim())) {
         const local = localRouted(query).tools;
@@ -1078,18 +935,13 @@ const index = tools.map((t) => ({
       history.push({ role: 'user', content: query }, { role: 'assistant', content: conv });
       return { reply, tools };
     } catch {
-      return localRouted(query); // AI down / bad JSON — keyword search still works
+      return localRouted(query);
     }
   }
 
-  // Live facts the AI must NOT fabricate. Domain availability we can actually
-  // check (RDAP is free + CORS-enabled); prices/weather/scores we can't, so we
-  // refuse rather than let the router hand them to a text tool that guesses.
-  // Returns true if the query was handled here (skip routing).
   async function handleLiveFact(query: string): Promise<boolean> {
     const q = query.toLowerCase();
 
-    // Domain availability → real RDAP lookup. 404 = unregistered (available).
     const domain = q.match(/\b([a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.[a-z]{2,}(?:\.[a-z]{2,})?)\b/)?.[1];
     if (domain && /\b(avail|available|taken|registered|register|whois|free|buy)\b/.test(q)) {
       const c = card();
@@ -1109,13 +961,11 @@ const index = tools.map((t) => ({
         c.innerHTML = `<p class="text-[14px] text-ink">Couldn’t check ${esc(domain)} right now.</p>` +
           `<p class="text-[13px] text-ink-subtle">RDAP lookup failed — try a WHOIS service directly.</p>`;
       }
-      // Related tool: naming ideas for the domain search.
       if (getTool('domain-name-generator'))
         c.innerHTML += `<span class="text-[13px] text-ink-subtle">Need name ideas?</span>` + toolCardLink('domain-name-generator');
       return true;
     }
 
-    // Other real-time facts we can't verify — refuse instead of fabricating.
     if (/\b(price|cost|worth|stock|crypto|bitcoin|weather|temperature|forecast|score|who won|latest news|exchange rate)\b/.test(q)) {
       bubble('assistant', 'I can’t look that up live — that’s real-time info I don’t have. I only run browser-based tools on input you give me.');
       return true;
@@ -1127,20 +977,17 @@ const index = tools.map((t) => ({
     e.preventDefault();
     const query = input.value.trim();
     if (!query) return;
-    // Launcher box on the landing page: carry the query to the full-page chat.
     if (isLauncher) { window.location.href = `/ai?q=${encodeURIComponent(query)}`; return; }
-    lastQuery = query; // drives deterministic setting extraction (format, etc.)
+    lastQuery = query;
     input.value = '';
     bubble('user', esc(query) + (files.length ? ` <span class="text-ink-subtle">(${esc(files.length === 1 ? files[0].name : files.length + ' files')})</span>` : ''));
     const thinking = bubble('assistant', 'Thinking…');
-    // Intercept live-fact questions before routing — the AI would guess otherwise.
     if (await handleLiveFact(query)) { thinking.remove(); return; }
     const routed = await route(query);
     thinking.remove();
     present(routed);
   });
 
-  // Full-page chat: if arrived with ?q=, prefill and auto-send.
   if (!isLauncher) {
     const q = new URLSearchParams(location.search).get('q');
     if (q) { input.value = q; form.requestSubmit(); }

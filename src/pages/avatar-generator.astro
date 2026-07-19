@@ -255,7 +255,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // Re-render all style thumbnails (used after a color/skin change).
   function refreshThumbs() {
     for (const g of GROUPS) if (g.kind === 'style') fillGroup(g);
   }
@@ -263,12 +262,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   function select(g: Group, value: string) {
     state[g.key] = value;
     renderMain();
-    fillGroup(g);          // update selection highlight + caption within this group
+    fillGroup(g);
     if (g.kind === 'color' || g.key === 'skinColor' || g.key === 'clothing') refreshThumbs();
     if (g.key === 'top' || g.key === 'accessories' || g.key === 'facialHair' || g.key === 'clothing') updateVisibility();
   }
 
-  // ---- Background type + shape (compact segmented controls at top) ----
   function buildSegments() {
     const wrap = document.createElement('div');
     wrap.className = 'grid grid-cols-2 gap-3';
@@ -307,13 +305,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     'flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition ' +
     (on ? 'bg-primary text-white' : 'bg-surface-2 text-ink-subtle hover:text-ink');
 
-  // ---- Build UI ----
   GROUPS.forEach(buildGroup);
   buildSegments();
   updateVisibility();
   renderMain();
 
-  // ---- Randomize ----
   function pick<T>(a: T[]): T { return a[Math.floor(Math.random() * a.length)]; }
   function randomize() {
     state.top = pick(TOPS.slice(1));
@@ -332,7 +328,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
   $('av-random').addEventListener('click', randomize);
 
-  // ---- Export ----
   function download(href: string, name: string) {
     const a = document.createElement('a'); a.href = href; a.download = name; a.click();
   }
@@ -380,7 +375,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     });
   }
 
-  // ===== Mode toggle =====
   const modeChar = $('mode-character');
   const modeInit = $('mode-initials');
   const btnChar = $('mode-char-btn');
@@ -399,7 +393,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   btnChar.addEventListener('click', () => setMode('character'));
   btnInit.addEventListener('click', () => setMode('initials'));
 
-  // ===== Initials & identicon (original generator) =====
   const inCanvas = $('in-canvas') as HTMLCanvasElement;
 
   function inHash(s: string): number {
@@ -464,6 +457,5 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const a = document.createElement('a'); a.href = inCanvas.toDataURL('image/png'); a.download = 'avatar.png'; a.click();
   });
 
-  // Start in Character mode.
   setMode('character');
 </script>

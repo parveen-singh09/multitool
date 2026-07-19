@@ -142,7 +142,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
     let payment: number;
     if (mode === 'months') {
-      // Solve required payment for target months via amortization formula.
       const n = Number(targetEl.value);
       if (!(n > 0)) { reset(); return; }
       payment = r === 0 ? balance / n : (balance * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
@@ -164,7 +163,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     interestEl.textContent = money(res.totalInterest);
     totalEl.textContent = money(balance + res.totalInterest);
 
-    // schedule
     schedEl.innerHTML = '';
     let yr = 1;
     for (const row of res.rows) {
@@ -175,7 +173,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       yr++;
     }
 
-    // extra-payment comparison (payment mode)
     const extra = Number(extraEl.value) || 0;
     if (mode === 'payment' && extra > 0) {
       const withExtra = simulate(balance, r, payment + extra);

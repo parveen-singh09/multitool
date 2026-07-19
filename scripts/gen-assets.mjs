@@ -1,5 +1,3 @@
-// One-off asset generator: renders PNG icons + OG image from inline SVG
-// using sharp. Run with `node scripts/gen-assets.mjs`.
 import sharp from 'sharp';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -7,7 +5,6 @@ import { dirname, join } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pub = join(__dirname, '..', 'public');
 
-// Brand city-blocks mark on the near-black canvas.
 const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
   <rect width="128" height="128" rx="28" fill="#010102"/>
   <rect x="26" y="58" width="22" height="46" rx="5" fill="#5e6ad2"/>
@@ -15,7 +12,6 @@ const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" f
   <rect x="80" y="72" width="22" height="32" rx="5" fill="#5e6ad2"/>
 </svg>`;
 
-// 1200x630 Open Graph card.
 const ogSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <rect width="1200" height="630" fill="#010102"/>
   <rect x="0" y="0" width="1200" height="4" fill="#5e6ad2"/>

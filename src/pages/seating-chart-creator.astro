@@ -271,7 +271,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   let uid = 0;
   const nid = (p: string) => `${p}${++uid}`;
 
-  // ── DOM refs ───────────────────────────────────────────────────
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const svg = $('scc-svg') as unknown as SVGSVGElement;
   const titleEl = $<HTMLInputElement>('scc-title');
@@ -282,8 +281,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const noteEl = $('scc-note');
   const inspector = $('scc-inspector');
 
-  // ── Geometry: seat positions per shape (local coords, centered) ─
-  // Returns { body: string (svg markup), seats: {x,y}[] } for `capacity` seats.
   function tableGeom(shape: Shape, cap: number): { body: string; seats: { x: number; y: number }[] } {
     const seats: { x: number; y: number }[] = [];
     let body = '';
@@ -303,12 +300,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       const n = Math.max(1, cap);
       for (let i = 0; i < n; i++) seats.push({ x: (i - (n - 1) / 2) * 40, y: -h / 2 - 20 });
     } else if (shape === 'head') {
-      // Seats on one long side only.
       const w = Math.max(120, cap * 46), h = 52;
       body = rect(w, h);
       for (let i = 0; i < cap; i++) seats.push({ x: (i - (cap - 1) / 2) * 46, y: -h / 2 - 20 });
     } else if (shape === 'rect') {
-      // Banquet: half top, half bottom.
       const top = Math.ceil(cap / 2), bot = cap - top;
       const perSide = Math.max(top, bot);
       const w = Math.max(120, perSide * 46), h = 60;
@@ -319,12 +314,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       place(top, -h / 2 - 20);
       place(bot, h / 2 + 20);
     } else {
-      // U-shape: seats along the inside of a U.
       const w = 200, h = 160, t = 40;
       body =
         `<path d="M ${-w / 2} ${-h / 2} h ${w} v ${h} h ${-t} v ${-(h - t)} h ${-(w - 2 * t)} v ${h - t} h ${-t} Z" class="scc-body"/>`;
-      const inner = [-w / 2 + t, h / 2 - t, w / 2 - t]; // left x, bottom y, right x
-      // distribute seats: left column, bottom row, right column
+      const inner = [-w / 2 + t, h / 2 - t, w / 2 - t];
       const per = Math.ceil(cap / 3);
       let placed = 0;
       for (let i = 0; i < per && placed < cap; i++, placed++)
@@ -337,14 +330,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return { body, seats };
   }
 
-  // ── CSV / paste parser ─────────────────────────────────────────
   const HEADER_WORDS = ['name', 'guest', 'group', 'table', 'side', 'meal', 'diet', 'entree'];
   function parseGuests(text: string): Guest[] {
     const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     if (!lines.length) return [];
     const delim = lines[0].includes('\t') ? '\t' : lines[0].includes(',') ? ',' : '';
     const split = (l: string) => (delim ? l.split(delim).map((c) => c.trim()) : [l]);
-    // header detection: first row cells are known column words
     let cols = ['name', 'group', 'side', 'meal'];
     let start = 0;
     if (delim) {
@@ -372,7 +363,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return out;
   }
 
-  // ── Templates ──────────────────────────────────────────────────
   function applyTemplate(name: string): Table[] {
     const mk = (shape: Shape, cap: number, x: number, y: number, label: string, rotation = 0): Table =>
       ({ id: nid('t'), label, shape, seats: Array(cap).fill(null), x, y, rotation });
@@ -409,8 +399,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return out;
   }
 
-  // ── Auto-seat (greedy, rule-aware) ─────────────────────────────
-  // ponytail: greedy first-fit; upgrade to backtracking only if real lists pack badly.
   function autoSeat(): void {
     const seatedIds = new Set(tables.flatMap((t) => t.seats).filter(Boolean) as string[]);
     const pending = guests.filter((g) => !seatedIds.has(g.id));
@@ -420,7 +408,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const canSit = (t: Table, id: string) =>
       t.seats.includes(null) && !t.seats.some((s) => s && apart(s, id));
 
-    // keep-together: try to route paired guests to the same table
     const partnerOf = (id: string) => {
       const r = rules.find((r) => r.type === 'together' && (r.a === id || r.b === id));
       return r ? (r.a === id ? r.b : r.a) : null;
@@ -438,7 +425,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     note(overflow ? `${overflow} guest(s) had no valid seat — add tables or relax rules.` : '');
   }
 
-  // ── Helpers ────────────────────────────────────────────────────
   const guestById = (id: string | null) => guests.find((g) => g.id === id) || null;
   const seatedSet = () => new Set(tables.flatMap((t) => t.seats).filter(Boolean) as string[]);
   function note(msg: string) {
@@ -452,7 +438,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // ── Render ─────────────────────────────────────────────────────
   function render() {
     renderRoster();
     renderRules();
@@ -464,13 +449,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   function renderRoster() {
     const seated = seatedSet();
-    // tray = unseated draggable chips
     trayEl.innerHTML = '';
     const unseated = guests.filter((g) => !seated.has(g.id));
     if (!unseated.length) trayEl.innerHTML = '<span class="scc-hint">All guests seated.</span>';
     for (const g of unseated) trayEl.appendChild(chip(g));
 
-    // roster = editable rows
     rosterEl.innerHTML = '';
     for (const g of guests) {
       const li = document.createElement('li');
@@ -566,7 +549,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   function truncate(s: string, n: number) { return s.length > n ? s.slice(0, n - 1) + '…' : s; }
   function escapeHtml(s: string) { return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!)); }
 
-  // ── Coordinate conversion ──────────────────────────────────────
   function toSVG(clientX: number, clientY: number) {
     const pt = svg.createSVGPoint(); pt.x = clientX; pt.y = clientY;
     const m = svg.getScreenCTM(); if (!m) return { x: 0, y: 0 };
@@ -574,7 +556,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return { x: p.x, y: p.y };
   }
 
-  // ── Drag: tables + rotation (delegated on SVG) ─────────────────
   let drag: null | { kind: 'move' | 'rot'; id: string; ox: number; oy: number } = null;
 
   svg.addEventListener('pointerdown', (e) => {
@@ -599,7 +580,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       svg.setPointerCapture(e.pointerId);
       return;
     }
-    // click empty space → deselect
     selectedId = null; render();
   });
 
@@ -623,7 +603,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
-  // ── Drag: guest chip / seat → seat ─────────────────────────────
   let gdrag: null | { guestId: string; from: { tableId: string; idx: number } | null; ghost: HTMLElement; captureEl: Element; pointerId: number } = null;
 
   function startGuestDrag(e: PointerEvent, guestId: string, sourceEl: Element) {
@@ -637,10 +616,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (!gid) { // empty seat → just select table
       selectedId = tableId; render(); return;
     }
-    beginGuestDrag(e, gid, { tableId, idx }, svg); // capture on the stable svg, not the seat <g>
+    beginGuestDrag(e, gid, { tableId, idx }, svg);
   }
-  // captureEl gets pointer capture so move/up keep firing after the pointer
-  // leaves the chip or crosses the scrollable rail — window listeners alone drop those.
   function beginGuestDrag(e: PointerEvent, guestId: string, from: { tableId: string; idx: number } | null, captureEl: Element) {
     const g = guestById(guestId); if (!g) return;
     const ghost = document.createElement('div');
@@ -648,7 +625,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px';
     document.body.appendChild(ghost);
     gdrag = { guestId, from, ghost, captureEl, pointerId: e.pointerId };
-    document.body.classList.add('scc-dragging'); // grabbing cursor everywhere for the drag
+    document.body.classList.add('scc-dragging');
     try { captureEl.setPointerCapture(e.pointerId); } catch {}
     captureEl.addEventListener('pointermove', onGuestMove as EventListener);
     captureEl.addEventListener('pointerup', onGuestUp as EventListener, { once: true });
@@ -675,21 +652,18 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       const occupant = t.seats[idx];
       if (from) {
         const ft = tables.find((x) => x.id === from.tableId)!;
-        ft.seats[from.idx] = occupant; // swap (occupant may be null → move)
+        ft.seats[from.idx] = occupant;
       } else if (occupant) {
-        unseat(guestId); // ensure not double-seated; occupant goes back to tray
+        unseat(guestId);
       }
-      // remove the dragged guest from any other seat, then place
       if (!from) unseat(guestId);
       t.seats[idx] = guestId;
     } else {
-      // dropped outside a seat → unseat
       unseat(guestId);
     }
     render();
   }
 
-  // ── Controls wiring ────────────────────────────────────────────
   titleEl.addEventListener('input', renderSVG);
 
   $('scc-add').addEventListener('click', () => {
@@ -713,7 +687,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     render();
   });
 
-  // Guests
   const addGuestInput = $<HTMLInputElement>('scc-new-guest');
   function addGuestFromInput() {
     const name = addGuestInput.value.trim(); if (!name) return;
@@ -734,7 +707,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     guests.push(...parsed); render();
   });
 
-  // Rules
   $('scc-rule-add-btn').addEventListener('click', () => {
     const type = $<HTMLSelectElement>('scc-rule-type').value as Rule['type'];
     const a = $<HTMLSelectElement>('scc-rule-a').value, b = $<HTMLSelectElement>('scc-rule-b').value;
@@ -743,7 +715,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     rules.push({ type, a, b }); note(''); render();
   });
 
-  // Inspector
   $('scc-tbl-label').addEventListener('input', (e) => { const t = sel(); if (t) { t.label = (e.target as HTMLInputElement).value; renderSVG(); } });
   $('scc-tbl-shape').addEventListener('change', (e) => { const t = sel(); if (t) { t.shape = (e.target as HTMLSelectElement).value as Shape; render(); } });
   $('scc-tbl-seats').addEventListener('change', (e) => {
@@ -757,18 +728,16 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   $('scc-tbl-delete').addEventListener('click', () => { const t = sel(); if (!t) return; tables = tables.filter((x) => x !== t); selectedId = null; render(); });
   function sel() { return tables.find((x) => x.id === selectedId) || null; }
 
-  // Auto-seat — toggles: seat everyone, or clear all seats if any are filled.
   const autoseatBtn = $('scc-autoseat');
   function refreshAutoseatLabel() {
     autoseatBtn.textContent = seatedSet().size ? 'Clear seats' : 'Auto-seat';
   }
   autoseatBtn.addEventListener('click', () => {
-    if (seatedSet().size) tables.forEach((t) => t.seats.fill(null)); // empty all
+    if (seatedSet().size) tables.forEach((t) => t.seats.fill(null));
     else autoSeat();
     render();
   });
 
-  // Find my seat
   $<HTMLInputElement>('scc-find').addEventListener('input', (e) => {
     const q = (e.target as HTMLInputElement).value.trim().toLowerCase();
     if (!q) { selectedId = null; render(); return; }
@@ -779,9 +748,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     else note(`${g.name} is not seated yet.`);
   });
 
-  // ── Export: PNG (SVG → canvas) ─────────────────────────────────
   $('scc-png').addEventListener('click', () => {
-    const prevSel = selectedId; selectedId = null; renderSVG(); // hide selection chrome
+    const prevSel = selectedId; selectedId = null; renderSVG();
     const styled = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VB_W} ${VB_H}">${styleBlock()}${svg.innerHTML}</svg>`;
     const blob = new Blob([styled], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -801,7 +769,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     img.src = url;
   });
 
-  // Inline styles so the serialized SVG renders standalone.
   function styleBlock() {
     return `<style>
       .scc-title-t{fill:#f7f8f8;font:600 26px Inter,system-ui,sans-serif}
@@ -814,7 +781,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     </style>`;
   }
 
-  // ── Export: PDF + table cards (print) ──────────────────────────
   function printView(html: string) {
     const host = $('scc-print');
     host.innerHTML = `<div class="scc-print-root">${styleBlockHtml()}${html}</div>`;
@@ -852,7 +818,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   });
   window.addEventListener('afterprint', () => document.body.classList.remove('scc-printing'));
 
-  // ── SVG element styling (on-page) ──────────────────────────────
   const pageStyle = document.createElement('style');
   pageStyle.textContent = `
     #scc-svg .scc-title-t{fill:var(--color-ink);font:600 26px var(--font-sans)}
@@ -869,7 +834,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   `;
   document.head.appendChild(pageStyle);
 
-  // ── Boot ───────────────────────────────────────────────────────
   function seedDemo() {
     guests = parseGuests(`name, side, meal
 Alice, Bride, Chicken
@@ -884,22 +848,18 @@ Henry, Groom, Vegan`);
     autoSeat();
   }
 
-  // ── Self-test (?selftest) ──────────────────────────────────────
   function runSelfTest() {
-    // geometry: correct seat counts, finite coords
     (['round', 'rect', 'head', 'sweetheart', 'ushape'] as Shape[]).forEach((s) => {
       const g = tableGeom(s, 6);
       console.assert(g.seats.length === 6, `geom ${s} seat count`, g.seats.length);
       console.assert(g.seats.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y)), `geom ${s} finite`);
     });
-    // parser: header + delimiter detection
     const p1 = parseGuests('name,side,meal\nAlice,Bride,Fish\nBen,Groom,Vegan');
     console.assert(p1.length === 2 && p1[0].name === 'Alice' && p1[0].side === 'Bride' && p1[0].meal === 'Fish', 'parse csv+header', p1);
     const p2 = parseGuests('Carla\nDavid');
     console.assert(p2.length === 2 && p2[0].name === 'Carla', 'parse plain', p2);
     const p3 = parseGuests('Alice\tBride\nBen\tGroom');
     console.assert(p3.length === 2 && p3[0].side === 'Bride', 'parse tab', p3);
-    // autoseat: keep-apart never co-seated, keep-together co-seated when room
     guests = [{ id: 'a', name: 'A', group: '', side: '', meal: '' }, { id: 'b', name: 'B', group: '', side: '', meal: '' },
       { id: 'c', name: 'C', group: '', side: '', meal: '' }, { id: 'd', name: 'D', group: '', side: '', meal: '' }];
     tables = [{ id: 't1', label: 'T1', shape: 'round', seats: [null, null], x: 300, y: 300, rotation: 0 },
@@ -910,7 +870,6 @@ Henry, Groom, Vegan`);
     console.assert(!sameTable('a', 'b'), 'keep-apart respected', tables.map((t) => t.seats));
     console.assert(sameTable('c', 'd'), 'keep-together respected', tables.map((t) => t.seats));
     console.log('%cseating-chart self-test complete', 'color:#5e6ad2');
-    // reset to demo after test
     guests = []; tables = []; rules = [];
   }
 

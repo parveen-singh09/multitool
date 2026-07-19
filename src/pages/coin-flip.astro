@@ -167,7 +167,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return total ? `${Math.round((part / total) * 100)}%` : '0%';
   }
 
-  // Rotation that lands on `isHeads` while always spinning forward from `from`.
   function landing(from: number, isHeads: boolean) {
     let deg = from + randInt(4, 6) * 360 + (isHeads ? 0 : 180);
     if ((Math.round(deg / 180) % 2 === 0) !== isHeads) deg += 180;
@@ -199,7 +198,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       coin.classList.add('cf-spinning');
       coin.style.transform = `rotateY(${turns}deg)`;
     } else {
-      // Grid of individual coins, each landing on its own result with a cascade.
       stage.classList.add('hidden');
       grid.classList.remove('hidden');
       grid.innerHTML = results
@@ -209,7 +207,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         )
         .join('');
       const minis = grid.querySelectorAll<HTMLElement>('.cf-mini');
-      const step = Math.min(30, 600 / n); // total stagger capped ~600ms
+      const step = Math.min(30, 600 / n);
       settleMs = 900 + Math.round(step * (n - 1)) + 60;
       requestAnimationFrame(() => {
         minis.forEach((m, i) => {
@@ -244,7 +242,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   stage.addEventListener('keydown', activate);
   grid.addEventListener('click', flip);
   grid.addEventListener('keydown', activate);
-  // Global spacebar flips too, unless typing in a field.
   document.addEventListener('keydown', (e) => {
     if (e.key !== ' ') return;
     const el = document.activeElement;

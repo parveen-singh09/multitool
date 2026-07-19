@@ -6,7 +6,6 @@ const baseOptions = Array.from({ length: 35 }, (_, i) => {
   const b = i + 2;
   return { value: b, label: names[b] ? `${b} (${names[b]})` : String(b) };
 });
-// Quick "all bases at once" rows.
 const commonBases = [
   { base: 2, label: 'Binary' },
   { base: 8, label: 'Octal' },
@@ -239,11 +238,10 @@ const commonBases = [
 
   document.getElementById('nb-swap')!.addEventListener('click', () => {
     [from.value, to.value] = [to.value, from.value];
-    if (out.value) input.value = out.value; // carry the result back as the new input
+    if (out.value) input.value = out.value;
     convert();
   });
 
-  // Per-row copy for the all-bases panel.
   document.querySelectorAll<HTMLButtonElement>('[data-copy-base]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const el = document.getElementById(`nb-all-${btn.dataset.copyBase}`)!;
@@ -255,8 +253,6 @@ const commonBases = [
     });
   });
 
-  // ponytail: one runnable check for the parse/convert core, DEV-only so it
-  // never runs in users' browsers. Fails loudly in the console if logic breaks.
   if (import.meta.env.DEV) {
     const t = (raw: string, fb: number, tb: number, exp: string) => {
       const v = parseVal(raw, fb)!;

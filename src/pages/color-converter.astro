@@ -368,11 +368,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     tintsEl.innerHTML = ''; shadesEl.innerHTML = ''; tonesEl.innerHTML = '';
     for (let i = 0; i < 10; i++) {
       const f = i / 9;
-      // tint: raise lightness toward 100
       tintsEl.appendChild(swatch(hslToRgb(h, s, l + (100 - l) * f), `Tint ${round(f * 100)}%`));
-      // shade: lower lightness toward 0
       shadesEl.appendChild(swatch(hslToRgb(h, s, l * (1 - f)), `Shade ${round(f * 100)}%`));
-      // tone: lower saturation toward 0
       tonesEl.appendChild(swatch(hslToRgb(h, s * (1 - f), l), `Tone ${round(f * 100)}%`));
     }
   }
@@ -404,11 +401,9 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     else err.classList.add('hidden');
   }
 
-  // Field commit: parse the edited field, keep alpha if the field lacks one.
   function commit(el: HTMLInputElement, label: string) {
     const parsed = parseAny(el.value);
     if (!parsed) { showError(`Could not parse ${label}: "${el.value.trim()}"`); return; }
-    // hex/rgb/hsl carry their own alpha; hsv/cmyk/name don't → preserve current alpha
     setColor(parsed);
   }
 
@@ -434,7 +429,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   render();
 
-  // ponytail: self-check — round-trips through every format must land back on the source RGB.
   function selfCheck() {
     const src: RGBA = { r: 94, g: 106, b: 210, a: 1 };
     const viaHex = hexToRgba(rgbaToHex(src))!;

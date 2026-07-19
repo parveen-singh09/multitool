@@ -221,10 +221,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const rMax = Math.min(cx, cy) - 26;
     ctx.clearRect(0, 0, W, H);
     const n = 12;
-    // Grid rings.
     ctx.strokeStyle = 'rgba(255,255,255,0.08)';
     for (let r = 1; r <= 3; r++) { ctx.beginPath(); ctx.arc(cx, cy, (rMax * r) / 3, 0, Math.PI * 2); ctx.stroke(); }
-    // Highlight the strongest pitch class.
     let peak = 0; for (let i = 1; i < n; i++) if (chroma[i] > chroma[peak]) peak = i;
     for (let i = 0; i < n; i++) {
       const a0 = (i / n) * Math.PI * 2 - Math.PI / 2 - Math.PI / n;
@@ -236,7 +234,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       ctx.closePath();
       ctx.fillStyle = i === peak ? 'rgba(130,143,255,0.95)' : 'rgba(94,106,210,0.55)';
       ctx.fill();
-      // Note label.
       const am = (a0 + a1) / 2;
       ctx.fillStyle = i === peak ? '#f7f8f8' : '#8a8f98';
       ctx.font = '11px ui-monospace, monospace';
@@ -293,7 +290,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
     $('ma-summary').textContent = summarize(r);
     drawChroma(r.chroma);
-    // Animate meters in on next frame.
     requestAnimationFrame(() => {
       document.querySelectorAll<HTMLElement>('.ma-meter-fill').forEach((el) => {
         el.style.width = (el.dataset.w || '0') + '%';
@@ -301,7 +297,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     });
   }
 
-  // ---- Microphone capture (record ~12s, then analyze) ----
   async function fromMic() {
     setErr('');
     try {
@@ -328,12 +323,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // ---- Synthesized sample (A-minor-ish loop @ 120 BPM) so the tool is usable with no file ----
   async function sample() {
     const sr = 44100, dur = 8;
     const actx = new (window.OfflineAudioContext || (window as any).webkitOfflineAudioContext)(1, sr * dur, sr);
-    const notes = [220, 261.63, 329.63, 220, 246.94, 293.66, 349.23, 246.94]; // A C E A / B D F B
-    const beat = 0.5; // 120 BPM
+    const notes = [220, 261.63, 329.63, 220, 246.94, 293.66, 349.23, 246.94];
+    const beat = 0.5;
     for (let i = 0; i < dur / beat; i++) {
       const o = actx.createOscillator(); const g = actx.createGain();
       o.type = 'triangle'; o.frequency.value = notes[i % notes.length];
@@ -341,14 +335,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(0.3, t0 + 0.02);
       g.gain.exponentialRampToValueAtTime(0.001, t0 + beat * 0.9);
       o.connect(g).connect(actx.destination); o.start(t0); o.stop(t0 + beat);
-      // kick on every beat
       const k = actx.createOscillator(); const kg = actx.createGain();
       k.frequency.setValueAtTime(120, t0); k.frequency.exponentialRampToValueAtTime(40, t0 + 0.12);
       kg.gain.setValueAtTime(0.7, t0); kg.gain.exponentialRampToValueAtTime(0.001, t0 + 0.15);
       k.connect(kg).connect(actx.destination); k.start(t0); k.stop(t0 + 0.2);
     }
     const rendered = await actx.startRendering();
-    // Serialize to a WAV ArrayBuffer so it flows through the same decode path.
     const wav = bufferToWav(rendered);
     await run(wav, 'Sample loop (120 BPM, A minor)');
   }
@@ -371,12 +363,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return ab;
   }
 
-  // ---- Genre detection (lazy ONNX model) ----
   const genreBtn = $('ma-genre-btn') as HTMLButtonElement;
   const genreHint = $('ma-genre-hint');
   const genreBody = $('ma-genre-body');
 
-  // Reset the genre panel whenever a new track is analyzed.
   function resetGenre() {
     show(genreBody, false);
     genreBtn.disabled = false;

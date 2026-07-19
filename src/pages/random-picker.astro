@@ -167,7 +167,6 @@ Farah</textarea>
       ctx.fillText(text, r - 14, 1);
       ctx.restore();
     }
-    // Outer ring
     ctx.beginPath();
     ctx.arc(c, c, r, 0, Math.PI * 2);
     ctx.lineWidth = 4;
@@ -175,7 +174,6 @@ Farah</textarea>
     ctx.stroke();
   }
 
-  // ---- Tick sound (WebAudio, no assets) ----
   let audioCtx: AudioContext | null = null;
   function tick() {
     if (!($('wp-sound') as HTMLInputElement).checked) return;
@@ -192,7 +190,6 @@ Farah</textarea>
     } catch {}
   }
 
-  // ---- Confetti (DOM particles, no assets) ----
   function confetti() {
     for (let i = 0; i < 90; i++) {
       const p = document.createElement('div');
@@ -211,7 +208,6 @@ Farah</textarea>
     }
   }
 
-  // ---- Spin ----
   function spin() {
     const list = parse();
     if (spinning || list.length < 2) return;
@@ -220,7 +216,6 @@ Farah</textarea>
     const dur = parseInt(($('wp-dur') as HTMLInputElement).value, 10) * 1000;
     const seg = (Math.PI * 2) / list.length;
 
-    // Pick the winner first, then land the wheel on it (visual == result).
     const winIdx = randInt(0, list.length - 1);
     const jitter = (randFloat() - 0.5) * seg * 0.7;
     const targetAngle = -(winIdx * seg + seg / 2) + jitter;
@@ -235,7 +230,7 @@ Farah</textarea>
 
     function frame(now: number) {
       const t = Math.min(1, (now - t0) / dur);
-      const ease = 1 - Math.pow(1 - t, 4); // easeOutQuart — long, satisfying deceleration
+      const ease = 1 - Math.pow(1 - t, 4);
       angle = start + total * ease;
       draw();
 
@@ -252,7 +247,6 @@ Farah</textarea>
     requestAnimationFrame(frame);
   }
 
-  // ---- Idle drift: slow continuous rotation when not spinning (~30s/turn) ----
   let idleT = 0;
   function idle(now: number) {
     if (spinning) { idleT = 0; return; }
@@ -290,7 +284,6 @@ Farah</textarea>
     draw();
   }
 
-  // ---- Wiring ----
   $('wp-spin').addEventListener('click', spin);
   $('wp-hub').addEventListener('click', spin);
   canvas.addEventListener('click', spin);

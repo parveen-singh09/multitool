@@ -179,13 +179,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return `${sign}${d}° ${m}′ ${sStr}″`;
   }
 
-  // ---- symbolic π radians via continued-fraction rational approx of deg/180 ----
   function toPiRadians(deg: number): string | null {
     if (!isFinite(deg) || deg === 0) return deg === 0 ? '0' : null;
-    const target = deg / 180; // radians = target * π
+    const target = deg / 180;
     const neg = target < 0;
     let x = Math.abs(target);
-    // continued fraction
     let h0 = 0, h1 = 1, k0 = 1, k1 = 0, b = x;
     for (let i = 0; i < 40; i++) {
       const a = Math.floor(b);
@@ -198,7 +196,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       if (frac < 1e-12) break;
       b = 1 / frac;
     }
-    if (k1 === 0 || Math.abs(h1 / k1 - x) > 1e-9) return null; // not a clean fraction
+    if (k1 === 0 || Math.abs(h1 / k1 - x) > 1e-9) return null;
     const p = h1, q = k1;
     const s = neg ? '-' : '';
     if (p === 0) return '0';
@@ -210,13 +208,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const toDeg = (v: number, unit: string) => v * UNITS[unit];
   const fromDeg = (deg: number, unit: string) => deg / UNITS[unit];
 
-  // ---- SVG angle preview ----
   function drawAngle(deg: number) {
     if (!isFinite(deg)) { svg.innerHTML = ''; svgLabel.textContent = '—'; return; }
     const cx = 75, cy = 75, r = 58;
-    const a = ((deg % 360) + 360) % 360; // normalized 0..360
+    const a = ((deg % 360) + 360) % 360;
     const rad = (a * Math.PI) / 180;
-    // SVG y grows downward; measure angle CCW from positive x-axis.
     const ex = cx + r * Math.cos(-rad);
     const ey = cy + r * Math.sin(-rad);
     const large = a > 180 ? 1 : 0;
@@ -233,11 +229,9 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     svgLabel.textContent = `${fmt(a)}° in circle`;
   }
 
-  // ---- all-units breakdown ----
   function renderBreakdown(deg: number) {
     if (!isFinite(deg)) { breakdown.innerHTML = '<div class="px-4 py-2 text-[13px] text-ink-tertiary">—</div>'; return; }
     const rows: string[] = [];
-    // Degrees line gets an extra DMS badge.
     const dms = toDMS(deg);
     rows.push(row('Degree (°)', fmt(deg), `DMS ${dms}`));
     const pi = toPiRadians(deg);
@@ -260,7 +254,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     </div>`;
   }
 
-  // ---- reference table of common angles ----
   const COMMON = [0, 30, 45, 60, 90, 120, 135, 180, 270, 360];
   function renderTable() {
     const rows = COMMON.map((d) => {
@@ -281,7 +274,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       </tr></thead>${rows}</table>`;
   }
 
-  // ---- main ----
   function fillUnits() {
     const opts = UNIT_NAMES.map((u) => `<option>${u}</option>`).join('');
     fromUnit.innerHTML = opts;
@@ -292,7 +284,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   function parseFrom(): number {
     const u = fromUnit.value;
-    // DMS syntax only meaningful for degrees; other units take a plain number.
     if (u === 'Degree (°)') return parseDegreesDMS(fromVal.value);
     const n = Number(fromVal.value.trim());
     return fromVal.value.trim() === '' ? NaN : n;
@@ -320,7 +311,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     renderBreakdown(deg);
   }
 
-  // short label = text before the parenthesis/slash for the inline formula
   function short(u: string): string {
     return u.replace(/\s*[/(].*$/, '').trim();
   }
@@ -340,7 +330,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   renderTable();
   convert();
 
-  // ponytail: one runnable self-check — silent unless the math regresses.
   console.assert(Math.abs(fromDeg(toDeg(1, 'Degree (°)'), RAD_KEY) - Math.PI / 180) < 1e-12, 'deg→rad');
   console.assert(Math.abs(parseDegreesDMS("12°30'15\"") - (12 + 30 / 60 + 15 / 3600)) < 1e-9, 'DMS parse');
   console.assert(parseDegreesDMS('12 30 0') === 12.5, 'DMS spaces');

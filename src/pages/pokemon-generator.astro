@@ -150,7 +150,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     typeEl.appendChild(opt);
   }
 
-  // Cache fetched JSON so rerolls don't refetch.
   const detailCache = new Map<number, any>();
   const speciesCache = new Map<number, any>();
   const typeIdsCache = new Map<string, number[]>();
@@ -161,7 +160,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return r.json();
   }
 
-  // Resolve the candidate id pool from the generation + type filters.
   async function candidateIds(): Promise<number[]> {
     const [lo, hi] = genEl.value ? genEl.value.split('-').map(Number) : [1, MAX_DEX];
 
@@ -176,7 +174,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       const data = await j(`${API}/type/${typeEl.value}`);
       typeIds = (data.pokemon as any[])
         .map((p) => Number(p.pokemon.url.split('/').filter(Boolean).pop()))
-        .filter((id) => id <= MAX_DEX); // drop alt-forms with 10000+ ids
+        .filter((id) => id <= MAX_DEX);
       typeIdsCache.set(typeEl.value, typeIds);
     }
     return typeIds.filter((id) => id >= lo && id <= hi);
@@ -212,7 +210,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         const key = s.stat.name;
         const val = s.base_stat as number;
         const pctW = Math.min(100, Math.round((val / 200) * 100));
-        // Green high, amber mid, red low — a quick read of each stat's strength.
         const hue = val >= 100 ? 140 : val >= 60 ? 45 : 0;
         return `<div class="pk-stat-row">
           <span class="pk-stat-label">${STAT_LABELS[key] ?? key}</span>
@@ -279,7 +276,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
           if (!d) { d = await j(`${API}/pokemon/${id}`); detailCache.set(id, d); }
           let sp = speciesCache.get(id);
           if (!speciesCache.has(id)) {
-            // Species is optional flavor; don't fail the card if it 404s.
             sp = await j(`${API}/pokemon-species/${id}`).catch(() => null);
             speciesCache.set(id, sp);
           }
@@ -298,5 +294,5 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
 
   $('pk-go').addEventListener('click', generate);
-  generate(); // first roll on load so the page isn't empty
+  generate();
 </script>

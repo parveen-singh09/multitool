@@ -110,7 +110,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   function setErr(m: string) { err.textContent = m; err.classList.toggle('hidden', !m); }
 
-  // Target draw dimensions from the resize option. Keeps aspect ratio; never upscales for the "max" mode.
   function targetSize(w: number, h: number): [number, number] {
     const mode = resizeSel.value;
     if (mode === '0') return [w, h];
@@ -129,7 +128,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       const canvas = document.createElement('canvas');
       canvas.width = w; canvas.height = h;
       const ctx = canvas.getContext('2d')!;
-      ctx.fillStyle = bg.value;            // JPEG has no alpha — flatten onto chosen color
+      ctx.fillStyle = bg.value;
       ctx.fillRect(0, 0, w, h);
       ctx.drawImage(it.img, 0, 0, w, h);
       canvas.toBlob((b) => {
@@ -221,7 +220,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     fileInput.value = '';
   }
 
-  // Live re-convert on option change.
   q.addEventListener('input', () => { qval.textContent = q.value + '%'; void convertAll(); });
   bg.addEventListener('input', () => { bgval.textContent = bg.value; void convertAll(); });
   resizeSel.addEventListener('change', () => {
@@ -238,7 +236,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   document.getElementById('wj-clear')!.addEventListener('click', clearAll);
   document.getElementById('wj-download-all')!.addEventListener('click', () => {
-    // ponytail: sequential anchor clicks — no zip dep. Small stagger so browsers don't drop rapid downloads.
     items.filter((it) => it.url).forEach((it, i) => setTimeout(() => {
       const a = document.createElement('a');
       a.href = it.url; a.download = jpgName(it.name);

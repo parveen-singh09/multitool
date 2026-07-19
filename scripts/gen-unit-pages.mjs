@@ -1,5 +1,3 @@
-// One-off generator: writes a thin page per unit-converter category.
-// Run: node scripts/gen-unit-pages.mjs
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -7,8 +5,6 @@ import { dirname, resolve } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pagesDir = resolve(__dirname, '../src/pages/tools');
 
-// Kept in sync with src/lib/units.ts. Each `about` continues the sentence
-// "This free {label} ..." so it must start lowercase and read naturally.
 const cats = [
   ['length-converter', 'length converter', 'converts between metric and imperial units of length — metres, kilometres, centimetres, miles, yards, feet and inches — with a live reference table. Every conversion runs entirely in your browser, so nothing you type is uploaded.'],
   ['weight-converter', 'weight and mass converter', 'converts weight and mass between kilograms, grams, tonnes, pounds, ounces and stone. Type a value, pick your units, and the result plus a quick reference table update instantly. All maths happens locally in your browser.'],

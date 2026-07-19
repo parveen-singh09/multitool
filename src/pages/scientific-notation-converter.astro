@@ -236,21 +236,18 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     normEl.textContent = `${signStr}${mant} × 10${sup(exp)}`;
     eEl.textContent = `${signStr}${mant}e${exp}`;
 
-    // Engineering: exponent to nearest lower multiple of 3.
     const engExp = Math.floor(exp / 3) * 3;
     const engM = Number((neg ? -1 : 1) * Number(mant) * Math.pow(10, exp - engExp));
     const engMStr = parseFloat(engM.toPrecision(15)).toString();
     engEl.textContent = `${engMStr}e${engExp}`;
     siEl.textContent = SI[engExp] ?? '';
 
-    // Real number: exact string expansion (lossless).
     const { int, frac } = expand(digits, decExp);
     realEl.textContent = `${signStr}${int}${frac ? '.' + frac : ''}`;
 
     magEl.textContent = `10${sup(exp)}`;
     wordsEl.textContent = toWords(neg, int, frac);
 
-    // Reflect into the other input field (not the one being typed in).
     if (source !== 'sci') sciEl.value = `${signStr}${mant} × 10^${exp}`;
     if (source !== 'dec') decEl.value = `${signStr}${int}${frac ? '.' + frac : ''}`;
   }
@@ -274,7 +271,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   decEl.addEventListener('input', fromDecimal);
   sciEl.addEventListener('input', fromScientific);
   sigEl.addEventListener('change', () => {
-    // Re-run from whichever field currently has content (prefer decimal).
     const p = parseInput(decEl.value) ?? parseInput(sciEl.value);
     if (p) render(p, null);
   });
@@ -287,7 +283,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     decEl.focus();
   });
 
-  // Copy buttons: data-copy reads an input value; data-copytext reads an element's text.
   function flash(b: HTMLButtonElement) {
     const t = b.textContent;
     b.textContent = 'Copied!';
@@ -299,7 +294,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       if (v) { await navigator.clipboard.writeText(v); flash(b); }
     }));
 
-  // Seed with the demo value; also acts as the smoke check for the derivation chain.
   decEl.value = '0.00042';
   fromDecimal();
 </script>

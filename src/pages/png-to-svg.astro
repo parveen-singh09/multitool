@@ -233,13 +233,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (!dataUrl) return;
     setErr('');
     status.textContent = 'Vectorizing… this can take a few seconds for large images.';
-    // let the status paint before the heavy synchronous trace
     setTimeout(() => {
       try {
         ImageTracer.imageToSVG(dataUrl, async (svgstr: string) => {
           try {
             svg = svgstr;
-            // Flatten transparency to white if the user opted out of keeping it.
             if (!bgEl.checked) {
               svg = svg.replace(/<svg([^>]*)>/, '<svg$1><rect width="100%" height="100%" fill="#ffffff"/>');
             }
@@ -264,7 +262,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }, 30);
   }
 
-  // Editing any advanced control means the preset no longer describes the settings.
   advCtl.forEach((el) => el.addEventListener('input', () => { presetSel.value = 'custom'; }));
   presetSel.addEventListener('change', applyPreset);
 

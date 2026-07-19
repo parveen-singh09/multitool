@@ -231,8 +231,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       class="inline-block shrink-0 rounded-full" style="width:${size}px;height:${size}px" />`;
   };
 
-  // Format with the currency's own symbol (e.g. $, €, £); fall back to code
-  // for non-ISO or unsupported codes.
   const fmtCcy = (n: number, code: string) => {
     try {
       return new Intl.NumberFormat(undefined, {
@@ -244,7 +242,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   };
 
   function fillSelects() {
-    // Custom cryptocurrency listbox: one option row per coin, icon + symbol + name.
     fromList.innerHTML = Object.entries(COINS)
       .map(([id, [sym, name]], i) => `
         <li role="option" id="cr-opt-${i}" data-id="${id}" data-search="${sym} ${name}" aria-selected="${id === fromId}"
@@ -255,14 +252,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       .join('');
     updateFromTrigger();
 
-    // De-duplicate codes while preserving order, then sort names alphabetically.
     const seen = new Set<string>();
     const codes = FIAT_CODES.filter((c) => (seen.has(c) ? false : seen.add(c)));
     codes.sort((a, b) => currencyName(a).localeCompare(currencyName(b)));
     const fiatOpts = codes
       .map((code) => `<option value="${code}">${code} — ${currencyName(code)}</option>`)
       .join('');
-    // Also let the target be another cryptocurrency (crypto-to-crypto).
     const coinOpts = Object.entries(COINS)
       .map(([id, [sym, name]]) => `<option value="c:${id}">${sym} — ${name}</option>`)
       .join('');
@@ -296,7 +291,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     fromLabel.textContent = `${sym} — ${name}`;
   }
 
-  // Paint icons into the trigger and every listbox row once images have loaded.
   function paintCoinIcons() {
     fromIcon.innerHTML = iconImg(fromId);
     fromList.querySelectorAll<HTMLElement>('li[data-id]').forEach((li) => {
@@ -328,19 +322,18 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     updateFromTrigger();
     closeList();
     fromTrigger.focus();
-    // Keep whichever side the user last edited fixed; recompute the other.
     convert();
   }
 
   function convert() {
     if (!Object.keys(coinUsd).length || !Object.keys(fx).length) return;
-    const usd = coinUsd[fromId];             // USD price of 1 "from" coin
+    const usd = coinUsd[fromId];
     const tgt = toSel.value;
-    const tgtUsd = targetUsdPerUnit(tgt);    // USD value of 1 target unit
+    const tgtUsd = targetUsdPerUnit(tgt);
     if (usd === undefined || tgtUsd === undefined) {
       toVal.value = ''; fromVal.value = ''; rateLine.textContent = ''; return;
     }
-    const perUnit = usd / tgtUsd; // how many target units 1 "from" coin is worth
+    const perUnit = usd / tgtUsd;
 
     if (lastEdited === 'to') {
       const t = Number(toVal.value);
@@ -360,7 +353,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
 
   function renderTable() {
-    // Table always prices in a fiat: use the target when it is fiat, else USD.
     const code = isCoinTarget(toSel.value) ? 'USD' : toSel.value;
     const rate = fx[code];
     if (rate === undefined) { table.innerHTML = ''; return; }
@@ -386,7 +378,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   async function loadPrices() {
     try {
       const ids = Object.keys(COINS).join(',');
-      // /coins/markets returns price and an official icon URL per coin in one call.
       const [priceRes, fxRes] = await Promise.all([
         fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&per_page=250`),
         fetch('https://open.er-api.com/v6/latest/USD'),

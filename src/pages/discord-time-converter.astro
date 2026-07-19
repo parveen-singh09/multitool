@@ -154,7 +154,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   let unix = Math.floor(Date.now() / 1000);
   let highlightStyle = '';
 
-  // unix is source of truth → fill date/time fields (in selected tz) and the unix box.
   function syncFromUnix() {
     const p = unixToZonedParts(unix, tzEl.value);
     dateEl.value = `${p.year}-${p.month}-${p.day}`;
@@ -164,7 +163,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     render();
   }
 
-  // date/time fields are source of truth → recompute unix in selected tz.
   function syncFromFields() {
     if (!dateEl.value) return;
     const [y, mo, da] = dateEl.value.split('-').map(Number);
@@ -203,7 +201,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   dateEl.addEventListener('input', () => { clearError(); highlightStyle = ''; syncFromFields(); });
   timeEl.addEventListener('input', () => { clearError(); highlightStyle = ''; syncFromFields(); });
-  // Changing the zone keeps the wall clock fixed and recomputes the timestamp.
   tzEl.addEventListener('change', () => { clearError(); syncFromFields(); });
 
   unixEl.addEventListener('input', () => {
@@ -213,7 +210,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (!raw) return;
     let v = Number(raw);
     if (!Number.isFinite(v) || !/^-?\d+$/.test(raw)) { error('Unix timestamp must be a whole number of seconds.'); return; }
-    if (Math.abs(v) >= 1e12) v = Math.floor(v / 1000); // ponytail: 13-digit input is milliseconds
+    if (Math.abs(v) >= 1e12) v = Math.floor(v / 1000);
     unix = v;
     const p = unixToZonedParts(unix, tzEl.value);
     dateEl.value = `${p.year}-${p.month}-${p.day}`;
@@ -222,7 +219,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     render();
   });
 
-  // Accept "<t:123:F>", "t:123", or a bare number; pull the first integer + optional style.
   decodeEl.addEventListener('input', () => {
     clearError();
     const raw = decodeEl.value.trim();
@@ -230,7 +226,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const m = raw.match(/-?\d+/);
     if (!m) { error('No timestamp found. Expected something like <t:1699999999:F>.'); return; }
     let v = Number(m[0]);
-    if (Math.abs(v) >= 1e12) v = Math.floor(v / 1000); // ponytail: tolerate ms if pasted
+    if (Math.abs(v) >= 1e12) v = Math.floor(v / 1000);
     unix = v;
     const sm = raw.match(/:([tTdDfFR])>?\s*$/);
     highlightStyle = sm ? sm[1] : '';

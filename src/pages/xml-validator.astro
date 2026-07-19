@@ -63,7 +63,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
           .match(/^<[^>]*>/)?.[0] ?? `<${el.nodeName}>`;
 
         if (!hasElementChildren) {
-          // Leaf element: serialize inline (keeps text content on one line).
           const single = serializer.serializeToString(el);
           out.push(indent + single);
         } else {
@@ -96,7 +95,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const doc = new DOMParser().parseFromString(text, 'application/xml');
     const errorNode = doc.querySelector('parsererror');
     if (errorNode) {
-      // The parser error text is browser-specific; show it as-is, trimmed.
       const msg = (errorNode.textContent ?? 'XML is not well-formed.').replace(/\s+/g, ' ').trim();
       showStatus(`Not well-formed: ${msg}`, false);
       return;

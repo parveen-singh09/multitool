@@ -1,8 +1,3 @@
-// Self-host libarchive.js so 7z/rar/bz2/xz/cab/iso/deb extraction makes no
-// third-party request at runtime (honors the site's privacy promise). Copies
-// the worker bundle + wasm out of node_modules into public/libarchive/. The
-// worker fetches libarchive.wasm relative to itself, so both must sit together.
-// Run once: node scripts/setup-libarchive.mjs
 import { mkdirSync, copyFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';

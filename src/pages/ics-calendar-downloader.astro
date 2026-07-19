@@ -249,7 +249,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     );
   }
 
-  // Wall-clock digits exactly as entered (used for floating and TZID times).
   function wallStamp(value: string): string {
     return value.replace(/[-:]/g, '').replace('T', 'T') + '00';
   }
@@ -312,7 +311,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     };
   }
 
-  // Returns null (and sets error) when the event is not valid enough to emit.
   function buildRule(ev: EventData): string | null {
     if (!ev.freq) return '';
     let rule = `RRULE:FREQ=${ev.freq}`;
@@ -324,7 +322,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         showError('Please choose the date the repeat ends on.');
         return null;
       }
-      // UNTIL is exclusive-safe as end of the chosen day in UTC.
       rule += `;UNTIL=${dayStamp(ev.until)}T235959Z`;
     }
     return rule;
@@ -348,7 +345,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         return null;
       }
       lines.push(`DTSTART;VALUE=DATE:${dayStamp(ev.startDay)}`);
-      // DTEND for all-day events is exclusive: default to the day after start.
       lines.push(`DTEND;VALUE=DATE:${ev.endDay ? addDay(ev.endDay) : addDay(ev.startDay)}`);
     } else {
       if (!ev.start || !ev.end) {
@@ -372,9 +368,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         lines.push(`DTSTART:${wallStamp(ev.start)}`);
         lines.push(`DTEND:${wallStamp(ev.end)}`);
       } else {
-        // Named IANA zone: emit the wall time tagged with TZID. Calendar apps
-        // resolve well-known IANA names, so no VTIMEZONE block is emitted.
-        // ponytail: skip VTIMEZONE; add DST rule block only if an importer rejects bare TZID.
         lines.push(`DTSTART;TZID=${ev.tz}:${wallStamp(ev.start)}`);
         lines.push(`DTEND;TZID=${ev.tz}:${wallStamp(ev.end)}`);
       }
@@ -402,8 +395,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     clearError();
     const events = [...saved];
     const current = readForm();
-    // Include the in-progress form as an event when it has a title, so a single
-    // event works without clicking "Add another event".
     if (current.title) events.push(current);
 
     if (!events.length) {
@@ -507,7 +498,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       showError('Please enter an event title before adding another.');
       return;
     }
-    // Validate it builds before saving.
     if (!buildEvent(ev, saved.length)) return;
     saved.push(ev);
     renderSaved();

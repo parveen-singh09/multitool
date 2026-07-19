@@ -213,7 +213,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
             added++;
           }
         }
-        // Images decode async from data URLs; wait a tick then render.
         Promise.all(frames.slice(-added).map((f) => f.img.decode().catch(() => {}))).then(() => {
           renderFrames();
           render();
@@ -226,7 +225,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     reader.readAsDataURL(file);
   }
 
-  // ---- Frame strip with drag-to-reorder + selection ----
   let dragIndex = -1;
   let selected = -1;
   const flipHBtn = document.getElementById('ssm-flip-h') as HTMLButtonElement;
@@ -281,7 +279,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     updateToolbar();
   }
 
-  // ---- Per-frame transforms (bake into a new image via canvas) ----
   function bakeTransform(f: Frame, kind: 'flipH' | 'flipV' | 'rotate'): Frame {
     const cv = document.createElement('canvas');
     const c = cv.getContext('2d')!;
@@ -318,7 +315,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     renderFrames(); render();
   });
 
-  // ---- Layout: uniform grid ----
   function layoutGrid(pad: number, cols: number): { w: number; h: number; place: Placement[] } {
     const cellW = Math.max(...frames.map((f) => f.w));
     const cellH = Math.max(...frames.map((f) => f.h));
@@ -330,11 +326,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return { w: cols * cellW + (cols + 1) * pad, h: rows * cellH + (rows + 1) * pad, place };
   }
 
-  // ---- Layout: growing binary-tree bin packer (Jake Gordon algorithm) ----
-  // ponytail: binary-tree packer, tight enough; swap for MaxRects only if measured waste matters.
   interface Node { x: number; y: number; w: number; h: number; used?: boolean; right?: Node; down?: Node; }
   function layoutPacked(pad: number): { w: number; h: number; place: Placement[] } {
-    // Each box reserves pad on its right & bottom; a leading pad offset covers left & top.
     const boxes = frames.map((f, i) => ({ i, w: f.w + pad, h: f.h + pad }));
     const order = boxes.slice().sort((a, b) => Math.max(b.w, b.h) - Math.max(a.w, a.h));
     let root: Node = { x: 0, y: 0, w: order[0].w, h: order[0].h };
@@ -409,7 +402,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     resetAnim();
   }
 
-  // ---- Exports ----
   function buildAtlas() {
     const frameMap: Record<string, unknown> = {};
     placements.forEach((p) => {
@@ -472,7 +464,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     downloadBlob(zip, 'toolsilk-sprite-sheet.zip');
   });
 
-  // ---- Animation preview ----
   let playing = false;
   let animRAF = 0;
   let animIndex = 0;
@@ -516,7 +507,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   playBtn.addEventListener('click', () => (playing ? stopAnim() : startAnim()));
   fpsEl.addEventListener('input', () => { fpsLabel.textContent = `${fpsEl.value} fps`; });
 
-  // ---- Wiring ----
   filesEl.addEventListener('change', () => { if (filesEl.files?.length) addFiles(filesEl.files); });
   ['dragover', 'dragenter'].forEach((e) => dropEl.addEventListener(e, (ev) => { ev.preventDefault(); dropEl.classList.add('bg-surface-2'); }));
   ['dragleave', 'drop'].forEach((e) => dropEl.addEventListener(e, () => dropEl.classList.remove('bg-surface-2')));

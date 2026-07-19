@@ -255,7 +255,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       preview.style.backgroundSize = `${size}px ${size}px`;
       preview.style.backgroundRepeat = 'repeat';
     } else {
-      // Reflect slider values, then paint. The engine's SVG fills the element.
       $('pt-stroke-v').textContent = ($('pt-stroke') as HTMLInputElement).value;
       $('pt-scale-v').textContent = ($('pt-scale') as HTMLInputElement).value;
       $('pt-spx-v').textContent = ($('pt-spx') as HTMLInputElement).value;
@@ -269,10 +268,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
   window.addEventListener('resize', render);
 
-  // ---- Pattern grid (build once, filter by toggling hidden) ----
   const grid = $('pt-grid');
   const selected = $('pt-selected');
-  // A neutral 2-color scheme so shapes read against the dark cells.
   const THUMB_COLORS = ['#0f1011', '#8a8f98', '#8a8f98', '#8a8f98', '#8a8f98'];
   const cells: HTMLButtonElement[] = [];
   const wraps: HTMLDivElement[] = [];
@@ -312,7 +309,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     render();
   }
 
-  // Clamp slider ranges + current values to the selected pattern's limits.
   function applyPatternBounds() {
     const stroke = $('pt-stroke') as HTMLInputElement;
     stroke.max = String(pattern.maxStroke);
@@ -328,15 +324,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     spy.max = String(pattern.maxSpacing[1]);
     spy.disabled = pattern.maxSpacing[1] === 0;
     if (Number(spy.value) > pattern.maxSpacing[1]) spy.value = String(pattern.maxSpacing[1]);
-    // Corner join only applies to stroke-join patterns.
     const joinRow = $('pt-join-row');
     const isJoin = pattern.mode === 'stroke-join';
     joinRow.classList.toggle('hidden', !isJoin);
     joinRow.classList.toggle('flex', isJoin);
   }
 
-  // Rebuild color swatches to match the pattern's color count. Built fresh only
-  // on pattern change (never mid-drag) so live <input type="color"> survives.
   function buildColorInputs() {
     const wrap = $('pt-colors');
     wrap.innerHTML = '';
@@ -353,7 +346,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // ---- Search filter ----
   $('pt-search').addEventListener('input', (e) => {
     const q = (e.target as HTMLInputElement).value.trim().toLowerCase();
     let visible = 0;
@@ -365,7 +357,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     $('pt-empty').classList.toggle('hidden', visible > 0);
   });
 
-  // ---- Randomize ----
   $('pt-random').addEventListener('click', () => {
     colors = randomPalette();
     const rc = randomConfig(pattern);
@@ -379,7 +370,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     render();
   });
 
-  // ---- Mode toggle ----
   function setMode(m: Mode) {
     mode = m;
     ($('pt-mode-lib')).setAttribute('aria-pressed', String(m === 'library'));
@@ -393,7 +383,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   $('pt-mode-lib').addEventListener('click', () => setMode('library'));
   $('pt-mode-custom').addEventListener('click', () => setMode('custom'));
 
-  // ---- Custom image upload ----
   $('pt-file').addEventListener('change', (e) => {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
@@ -403,12 +392,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   });
   ['pt-csize', 'pt-cbg'].forEach((id) => $(id).addEventListener('input', render));
 
-  // ---- Library slider listeners ----
   ['pt-stroke', 'pt-scale', 'pt-spx', 'pt-spy', 'pt-angle', 'pt-join'].forEach((id) =>
     $(id).addEventListener('input', render)
   );
 
-  // ---- Aspect-ratio picker (shared) ----
   const ratioWrap = $('pt-ratios');
   RATIOS.forEach((r, i) => {
     const btn = document.createElement('button');
@@ -425,7 +412,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     ratioWrap.appendChild(btn);
   });
 
-  // ---- Export ----
   function exportSvg(): string {
     if (mode === 'custom') {
       const { w, h } = dims();
@@ -471,7 +457,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     setTimeout(() => (btn.textContent = 'Copy SVG'), 1400);
   });
 
-  // ---- Init ----
   selected.textContent = pattern.title;
   applyPatternBounds();
   buildColorInputs();

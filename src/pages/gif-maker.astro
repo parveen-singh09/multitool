@@ -349,7 +349,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
     ($('gf-delay-row') as HTMLElement).style.display = tab === 'img' ? '' : 'none';
 
-    // Reset editor workspace on tab changes
     $('gf-editor').className = 'hidden flex-col gap-6 border-t border-hairline pt-6';
     originalFrames = [];
     textLayers = [];
@@ -372,12 +371,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   $('gf-tab-vid').addEventListener('click', () => setTab('vid'));
   $('gf-tab-hot').addEventListener('click', () => setTab('hot'));
 
-  /* ------------------------- Editor State & Types ------------------------- */
   interface TextLayer {
     id: string;
     type: 'text';
     text: string;
-    cx: number; cy: number; // center as fraction
+    cx: number; cy: number;
     size: number;
     fontFamily: string;
     fill: string;
@@ -436,7 +434,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const editorCtx = editorCanvas.getContext('2d')!;
   const timeline = $('gf-timeline') as HTMLInputElement;
 
-  /* ------------------------- Hot GIFs (Klipy + imgflip + templates) ------------------------- */
 
   const HOT_CATS: { id: string; name: string }[] = [
     { id: 'trending', name: '🔥 Trending' },
@@ -464,7 +461,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const imgflipCache: HotGif[] = [];
   const previewCache = new Map<string, HTMLCanvasElement[]>();
 
-  // --- Klipy API (requires free API key from partner.klipy.com) ---
   async function fetchKlipy(category: string, page = 1): Promise<HotGif[]> {
     const q = category === 'trending' ? '' : `&q=${encodeURIComponent(category)}`;
     const url = q
@@ -483,7 +479,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return gifs;
   }
 
-  // --- imgflip API (free, no key needed) ---
   async function fetchImgflip(): Promise<HotGif[]> {
     if (imgflipCache.length) return imgflipCache;
     const res = await fetch('https://api.imgflip.com/get_memes');
@@ -504,7 +499,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return gifs;
   }
 
-  // --- Fallback/Pagination handlers ---
   async function loadTrendingGifs(page = 1): Promise<HotGif[]> {
     if (hasKlipy) {
       try { return await fetchKlipy('trending', page); } catch {}
@@ -695,7 +689,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  /* ------------------------- Frame Loaders ------------------------- */
 
   function loadImage(file: File): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
@@ -850,7 +843,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         URL.revokeObjectURL(v.src);
         if (!srcFrames.length) throw new Error('No frames captured from video.');
       } else {
-        // template or hot gif
         let src: { canvas: HTMLCanvasElement; delayMs: number }[];
         if (selectedHot) {
           const isVideo = selectedHot.gifUrl.endsWith('.mp4');
@@ -913,13 +905,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       canvasWidth = w;
       canvasHeight = h;
 
-      // Reset layers
       textLayers = [];
       stickerLayers = [];
       strokes = [];
       selectedLayerId = null;
 
-      // Reset timing configurations to max frames
       const maxFrameIdx = originalFrames.length - 1;
       ($('gf-t-start-frame') as HTMLInputElement).max = String(maxFrameIdx);
       ($('gf-t-end-frame') as HTMLInputElement).max = String(maxFrameIdx);
@@ -928,25 +918,20 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       ($('gf-s-start-frame') as HTMLInputElement).max = String(maxFrameIdx);
       ($('gf-s-end-frame') as HTMLInputElement).max = String(maxFrameIdx);
 
-      // Setup editor canvas dims
       editorCanvas.width = w;
       editorCanvas.height = h;
 
-      // Setup timeline scrubber
       timeline.max = String(maxFrameIdx);
       timeline.value = '0';
       currentFrameIndex = 0;
 
-      // Show Editor Panel
       $('gf-editor').className = 'flex flex-col gap-6 border-t border-hairline pt-6';
       statusEl.textContent = `Successfully loaded ${originalFrames.length} frames in the editor.`;
 
-      // Sync inspectors
       syncTextInspector();
       syncStickerInspector();
       renderTextList();
 
-      // Render the first frame
       drawEditorFrame();
     } catch (err) {
       statusEl.textContent = (err as Error).message || 'Failed to load source frames.';
@@ -956,7 +941,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   $('gf-btn-load-vid').addEventListener('click', loadSourceFrames);
 
-  /* ------------------------- Editor Rendering & Controls ------------------------- */
 
   function getSelectedLayer(): any {
     if (selectedLayerId === null) return null;
@@ -1008,7 +992,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     editorCtx.setLineDash([4, 4]);
     editorCtx.strokeRect(-w / 2, -h / 2, w, h);
 
-    // Draw corner handles
     editorCtx.fillStyle = 'var(--color-primary, #5e6ad2)';
     const handleSize = 6;
     for (const sx of [-1, 1]) {
@@ -1017,7 +1000,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       }
     }
 
-    // Draw rotate handle above top edge
     const stalk = 15;
     editorCtx.beginPath();
     editorCtx.moveTo(0, -h / 2);
@@ -1037,10 +1019,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
     editorCtx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-    // 1. Draw base frame
     editorCtx.drawImage(frame.canvas, 0, 0, canvasWidth, canvasHeight);
 
-    // 2. Draw freehand drawing strokes
     for (const stroke of strokes) {
       if (stroke.allFrames || (currentFrameIndex >= stroke.frameStart && currentFrameIndex <= stroke.frameEnd)) {
         if (stroke.points.length < 2) continue;
@@ -1060,7 +1040,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       }
     }
 
-    // 3. Draw text layers
     for (const layer of textLayers) {
       if (layer.allFrames || (currentFrameIndex >= layer.frameStart && currentFrameIndex <= layer.frameEnd)) {
         editorCtx.save();
@@ -1098,7 +1077,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       }
     }
 
-    // 4. Draw sticker layers
     for (const layer of stickerLayers) {
       if (layer.allFrames || (currentFrameIndex >= layer.frameStart && currentFrameIndex <= layer.frameEnd)) {
         editorCtx.save();
@@ -1127,7 +1105,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       }
     }
 
-    // 5. Draw selection box around selected layer (only if not playing)
     if (!isPlaying) {
       drawSelectionBox();
     }
@@ -1136,7 +1113,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     $('gf-frame-info').textContent = `Frame ${currentFrameIndex + 1} of ${originalFrames.length}`;
   }
 
-  /* ------------------------- Editor Tabs & Panel syncs ------------------------- */
 
   function setEditorTab(tab: 'text' | 'draw' | 'sticker') {
     $('gf-panel-text').className = tab === 'text' ? 'flex flex-col gap-4' : 'hidden flex-col gap-4';
@@ -1270,7 +1246,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     });
   }
 
-  /* ------------------------- Layer Mutators ------------------------- */
 
   function addTextLayer() {
     const layer: TextLayer = {
@@ -1341,7 +1316,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   $('gf-add-text').addEventListener('click', addTextLayer);
 
-  // Emojis Picker setup
   const emojis = ['😀', '😂', '🤣', '😊', '😍', '🥰', '😜', '🤫', '🙄', '😬', '😡', '😭', '😱', '🤯', '👍', '👎', '👏', '🙌', '🔥', '💯', '🚀', '❤️', '💥', '🎉', '👻', 'Alien', '💩'];
   const emojisMapped = emojis.map(e => e === 'Alien' ? '👽' : e);
   const emojiGrid = $('gf-emoji-grid');
@@ -1355,7 +1329,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     emojiGrid.appendChild(btn);
   });
 
-  // Custom Sticker Upload
   $('gf-sticker-upload').addEventListener('change', () => {
     const file = ($('gf-sticker-upload') as HTMLInputElement).files?.[0];
     if (!file) return;
@@ -1387,7 +1360,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     img.src = url;
   });
 
-  /* ------------------------- Interactive Canvas Pointer Events ------------------------- */
 
   function hitTest(canvasX: number, canvasY: number) {
     for (let i = stickerLayers.length - 1; i >= 0; i--) {
@@ -1649,7 +1621,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     try { editorCanvas.releasePointerCapture(ev.pointerId); } catch {}
   });
 
-  /* ------------------------- Key Shortcuts & Inspector Bindings ------------------------- */
 
   document.addEventListener('keydown', (ev) => {
     const sel = getSelectedLayer();
@@ -1686,7 +1657,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   });
 
-  // Text inputs bindings
   $('gf-t-text').addEventListener('input', () => {
     const sel = getSelectedLayer();
     if (sel && sel.type === 'text') {
@@ -1823,7 +1793,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   });
 
-  // Draw inspectors listeners
   $('gf-draw-enable').addEventListener('change', () => {
     const checked = ($('gf-draw-enable') as HTMLInputElement).checked;
     canvasMode = checked ? 'draw' : 'select';
@@ -1863,7 +1832,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     drawEditorFrame();
   });
 
-  // Sticker inspectors listeners
   $('gf-s-scale').addEventListener('input', () => {
     const sel = getSelectedLayer();
     const val = Number(($('gf-s-scale') as HTMLInputElement).value);
@@ -1944,7 +1912,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   });
 
-  /* ------------------------- Playback Listeners ------------------------- */
 
   timeline.addEventListener('input', () => {
     if (isPlaying) {
@@ -1997,7 +1964,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   });
 
-  /* ------------------------- Compile and Encode GIF ------------------------- */
 
   const num = (id: string) => Number(($(id) as HTMLInputElement).value);
 
@@ -2032,10 +1998,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         const baseFrame = originalFrames[i];
         compCtx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-        // 1. Draw base frame
         compCtx.drawImage(baseFrame.canvas, 0, 0, canvasWidth, canvasHeight);
 
-        // 2. Draw freehand drawing strokes
         for (const stroke of strokes) {
           if (stroke.allFrames || (i >= stroke.frameStart && i <= stroke.frameEnd)) {
             if (stroke.points.length < 2) continue;
@@ -2055,7 +2019,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
           }
         }
 
-        // 3. Draw text layers
         for (const layer of textLayers) {
           if (layer.allFrames || (i >= layer.frameStart && i <= layer.frameEnd)) {
             compCtx.save();
@@ -2092,7 +2055,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
           }
         }
 
-        // 4. Draw sticker layers
         for (const layer of stickerLayers) {
           if (layer.allFrames || (i >= layer.frameStart && i <= layer.frameEnd)) {
             compCtx.save();
@@ -2185,7 +2147,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     });
   }
 
-  // Source Files triggers
   $('gf-imgs').addEventListener('change', () => {
     const newFiles = Array.from(($('gf-imgs') as HTMLInputElement).files || []);
     imageFiles.push(...newFiles);

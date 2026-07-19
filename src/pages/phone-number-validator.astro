@@ -168,7 +168,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   btn.addEventListener('click', () => (pop.classList.contains('hidden') ? openPop() : closePop()));
   search.addEventListener('input', () => filterList(search.value));
-  // Enter in the search box picks the first visible row.
   search.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -197,7 +196,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const carrierEl = document.getElementById('pnv-carrier')!;
   const locationEl = document.getElementById('pnv-location')!;
 
-  // libphonenumber's getType() codes → human labels.
   const TYPE_LABELS: Record<string, string> = {
     MOBILE: 'Mobile',
     FIXED_LINE: 'Fixed line (landline)',
@@ -212,7 +210,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     VOICEMAIL: 'Voicemail',
   };
 
-  // Best-effort region name from the ISO country code. Falls back to the code.
   const regionName = (code?: string): string => {
     if (!code) return '—';
     try {
@@ -275,14 +272,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     uriEl.textContent = phone.getURI();
     details.classList.remove('hidden');
 
-    // Carrier + location come from the server proxy (Numverify). Only look up
-    // valid numbers, debounced, so typing doesn't burn API quota.
     carrierEl.textContent = '—';
     locationEl.textContent = '—';
     if (valid) scheduleLookup(phone.format('E.164'));
   }
 
-  // Cache per E.164 number so re-checking the same number is free.
   const lookupCache = new Map<string, { carrier: string; location: string }>();
   let lookupTimer: number | undefined;
 
@@ -299,7 +293,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     lookupTimer = window.setTimeout(async () => {
       try {
         const res = await fetch(`/api/phone-lookup?number=${encodeURIComponent(e164)}`);
-        // Current input may have changed while the request was in flight.
         if (input.value.trim() === '') return;
         if (!res.ok) throw new Error();
         const d = await res.json();

@@ -214,7 +214,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   let uid = 0;
   const newId = () => `l${uid++}`;
 
-  // History
   interface Snap { layers: Layer[]; rotation: number; flipH: boolean; flipV: boolean; padTop: number; padBottom: number; selectedId: string | null; }
   const undoStack: Snap[] = [];
   const redoStack: Snap[] = [];
@@ -251,8 +250,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     updateHistoryButtons(); render(); syncInspector();
   }
 
-  // ---- Geometry --------------------------------------------------------
-  // Effective image draw dims accounting for 90/270 rotation.
   function imgDims() {
     const swap = rotation === 90 || rotation === 270;
     return { w: swap ? baseH : baseW, h: swap ? baseW : baseH };
@@ -265,7 +262,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   const selected = () => layers.find((l) => l.id === selectedId) || null;
 
-  // ---- Text layout (shared by render + hit-test) -----------------------
   function fontStr(l: TextLayer, fontPx: number) {
     return `${l.italic ? 'italic ' : ''}${l.bold ? '700' : '400'} ${fontPx}px ${l.fontFamily}`;
   }
@@ -296,7 +292,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return { w, h: w * l.aspect };
   }
 
-  // ---- Render ----------------------------------------------------------
   let dragging = false, showCenterX = false, showCenterY = false;
 
   function render() {
@@ -310,7 +305,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, cw, ch);
 
-    // Base image with rotation + flip, centered in its band.
     ctx.save();
     ctx.translate(cw / 2, cd.imgTop + cd.imgH / 2);
     ctx.rotate((rotation * Math.PI) / 180);
@@ -318,7 +312,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     ctx.drawImage(img, -baseW / 2, -baseH / 2, baseW, baseH);
     ctx.restore();
 
-    // Layers in z-order.
     for (const l of layers) {
       ctx.save();
       ctx.globalAlpha = l.opacity;
@@ -330,11 +323,9 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       ctx.restore();
     }
 
-    // Selection chrome.
     const sel = selected();
     if (sel) drawSelection(sel, cw, ch);
 
-    // Center snap guides.
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalAlpha = 1;
     if (dragging && (showCenterX || showCenterY)) {
@@ -358,7 +349,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     ctx.fillStyle = l.fill;
     ctx.lineWidth = (l.strokeW / 100) * lay.fontPx;
     const boxWpx = l.boxW * cw;
-    // x offset within the box based on alignment (box centered at origin).
     const ax = l.align === 'left' ? -boxWpx / 2 : l.align === 'right' ? boxWpx / 2 : 0;
     const startY = -lay.textH / 2;
     lay.lines.forEach((ln, i) => {
@@ -399,25 +389,21 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     ctx.strokeStyle = 'var(--color-primary, #5e6ad2)';
     ctx.lineWidth = Math.max(1.5, cw / 400);
     ctx.strokeRect(-b.w / 2, -b.h / 2, b.w, b.h);
-    // Corner handles.
     const hr = Math.max(5, cw / 110);
     ctx.fillStyle = 'var(--color-primary, #5e6ad2)';
     for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
       ctx.beginPath(); ctx.arc((sx * b.w) / 2, (sy * b.h) / 2, hr, 0, Math.PI * 2); ctx.fill();
     }
-    // Rotate handle above top edge.
     const stalk = Math.max(20, cw / 22);
     ctx.beginPath(); ctx.moveTo(0, -b.h / 2); ctx.lineTo(0, -b.h / 2 - stalk); ctx.stroke();
     ctx.beginPath(); ctx.arc(0, -b.h / 2 - stalk, hr, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
 
-  // ---- Coordinate mapping ---------------------------------------------
   function toCanvas(ev: PointerEvent) {
     const r = canvas.getBoundingClientRect();
     return { x: ((ev.clientX - r.left) / r.width) * canvas.width, y: ((ev.clientY - r.top) / r.height) * canvas.height };
   }
-  // Transform a canvas-space point into a layer's local (unrotated, origin-centered) frame.
   function toLocal(l: Layer, x: number, y: number, cw: number, ch: number) {
     const px = l.cx * cw, py = l.cy * ch;
     const dx = x - px, dy = y - py;
@@ -431,15 +417,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const b = selBox(l, cw, ch);
     const hr = Math.max(5, cw / 110) * 1.6;
     const stalk = Math.max(20, cw / 22);
-    // Rotate handle.
     if (Math.hypot(loc.x - 0, loc.y - (-b.h / 2 - stalk)) < hr) return { kind: 'rotate' };
-    // Corners.
     let ci = 0;
     for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
       if (Math.hypot(loc.x - (sx * b.w) / 2, loc.y - (sy * b.h) / 2) < hr) return { kind: 'corner', corner: ci };
       ci++;
     }
-    // Body.
     if (Math.abs(loc.x) <= b.w / 2 && Math.abs(loc.y) <= b.h / 2) return { kind: 'body' };
     return null;
   }
@@ -452,7 +435,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return null;
   }
 
-  // ---- Pointer interaction --------------------------------------------
   let mode: 'none' | 'move' | 'resize' | 'rotate' = 'none';
   let startPx = 0, startPy = 0, startCx = 0, startCy = 0;
   let startFont = 0, startWidth = 0, startDist = 0, startAngle = 0, startRot = 0;
@@ -499,7 +481,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   canvas.addEventListener('pointermove', (ev) => {
     const cw = canvas.width, ch = canvas.height;
     if (mode === 'none' || !dragging) {
-      // Hover cursor feedback.
       if (img && selected()) {
         const p = toCanvas(ev);
         const h = hitHandles(selected()!, p.x, p.y, cw, ch);
@@ -514,7 +495,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (mode === 'move') {
       let ncx = startCx + (p.x - startPx) / cw;
       let ncy = startCy + (p.y - startPy) / ch;
-      // Center snapping.
       const snapT = 0.012;
       showCenterX = Math.abs(ncx - 0.5) < snapT;
       showCenterY = Math.abs(ncy - 0.5) < snapT;
@@ -529,7 +509,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     } else if (mode === 'rotate') {
       const ang = Math.atan2(p.y - sel.cy * ch, p.x - sel.cx * cw);
       let deg = startRot + ((ang - startAngle) * 180) / Math.PI;
-      if (Math.abs(deg % 90) < 4 || Math.abs((deg % 90) - 90) < 4) deg = Math.round(deg / 90) * 90; // snap to 90s
+      if (Math.abs(deg % 90) < 4 || Math.abs((deg % 90) - 90) < 4) deg = Math.round(deg / 90) * 90;
       sel.rotation = Math.round(deg);
     }
     render(); syncInspector();
@@ -543,7 +523,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   canvas.addEventListener('pointerup', endDrag);
   canvas.addEventListener('pointercancel', endDrag);
 
-  // ---- Layer creation --------------------------------------------------
   function addText(text: string, cy: number) {
     const l: TextLayer = {
       id: newId(), type: 'text', text,
@@ -565,7 +544,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return l;
   }
 
-  // ---- Inspector sync --------------------------------------------------
   function syncPadInputs() {
     ($('mm-padt') as HTMLInputElement).value = String(Math.round(padTop * 100));
     ($('mm-padb') as HTMLInputElement).value = String(Math.round(padBottom * 100));
@@ -610,7 +588,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // ---- Inspector control wiring ---------------------------------------
   const onText = (fn: (t: TextLayer) => void) => () => { const s = selected(); if (s?.type === 'text') { fn(s); render(); } };
   const onSticker = (fn: (s: StickerLayer) => void) => () => { const s = selected(); if (s?.type === 'sticker') { fn(s); render(); } };
 
@@ -643,11 +620,9 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   ($('mm-s-op') as HTMLInputElement).addEventListener('input', onSticker((s) => { s.opacity = Number(($('mm-s-op') as HTMLInputElement).value) / 100; $('mm-s-opv').textContent = Math.round(s.opacity * 100) + '%'; }));
   ($('mm-s-op') as HTMLInputElement).addEventListener('pointerdown', beginChangeCheckpoint);
 
-  // A lightweight checkpoint used for continuous edits (one undo per gesture).
   let checkpointArmed = false;
   function beginChangeCheckpoint() { if (!checkpointArmed) { pushUndo(); checkpointArmed = true; setTimeout(() => (checkpointArmed = false), 400); } }
 
-  // ---- Layer ops -------------------------------------------------------
   $('mm-layer-del').addEventListener('click', () => { const s = selected(); if (!s) return; pushUndo(); layers = layers.filter((l) => l.id !== s.id); selectedId = null; render(); syncInspector(); });
   $('mm-layer-dup').addEventListener('click', duplicateSelected);
   function duplicateSelected() {
@@ -665,7 +640,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     [layers[i], layers[j]] = [layers[j], layers[i]]; render();
   }
 
-  // ---- Toolbar ---------------------------------------------------------
   $('mm-add-text').addEventListener('click', () => { pushUndo(); addText('New text', 0.5); render(); syncInspector(); });
   $('mm-add-sticker').addEventListener('click', () => { pushUndo(); addSticker('😂'); render(); syncInspector(); });
   $('mm-rotate').addEventListener('click', () => { pushUndo(); rotation = (rotation + 90) % 360; render(); });
@@ -679,7 +653,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   ($('mm-padb') as HTMLInputElement).addEventListener('pointerdown', beginChangeCheckpoint);
   ($('mm-padb') as HTMLInputElement).addEventListener('input', () => { padBottom = Number(($('mm-padb') as HTMLInputElement).value) / 100; $('mm-padbv').textContent = Math.round(padBottom * 100) + '%'; render(); });
 
-  // ---- Emoji palette ---------------------------------------------------
   const EMOJIS = ['😂','🤣','😭','😍','😎','🥹','😳','🤔','😱','🔥','💀','👀','👍','👎','💯','❤️','🎉','⭐','✨','😡','🤡','🥳','🙌','👑','💩','🚀','⚡','💥','😏','🫡'];
   const emojiGrid = $('mm-emoji-grid');
   EMOJIS.forEach((e) => {
@@ -692,7 +665,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     emojiGrid.appendChild(b);
   });
 
-  // Image sticker upload.
   ($('mm-sticker-file') as HTMLInputElement).addEventListener('change', (ev) => {
     const f = (ev.target as HTMLInputElement).files?.[0]; if (!f) return;
     const url = URL.createObjectURL(f);
@@ -705,7 +677,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     im.src = url;
   });
 
-  // ---- Image loading ---------------------------------------------------
   function fitDims(w: number, h: number) {
     const longest = Math.max(w, h);
     if (longest <= MAX_SIDE) return { w, h };
@@ -738,20 +709,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
   drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) loadFile(f); });
 
-  // Paste from clipboard.
   window.addEventListener('paste', (ev) => {
     const items = (ev as ClipboardEvent).clipboardData?.items; if (!items) return;
     for (const it of items) if (it.type.startsWith('image/')) { const f = it.getAsFile(); if (f) { loadFile(f); ev.preventDefault(); break; } }
   });
 
-  // ---- Template gallery -----------------------------------------------
-  // Two free, CORS-clean sources merged & deduped by name:
-  //   • imgflip get_memes    — 100 most popular (no key)
-  //   • memegen.link         — ~213 classic templates (each has a blank image)
-  // Both send Access-Control-Allow-Origin:* on API *and* images, so templates
-  // draw to the canvas without tainting it (download stays intact). imgflip's
-  // "million template" search is a paid, credentialed API and can't run
-  // client-side, so this is the practical free ceiling.
   interface Tpl { name: string; url: string; }
   let templates: Tpl[] = [];
   let tplLoaded = false;
@@ -794,7 +756,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       tplStatus.textContent = 'Could not load templates — upload an image instead.';
       return;
     }
-    // Dedupe by normalized name; earlier source (imgflip) wins.
     const seen = new Set<string>();
     templates = merged.filter((t) => {
       const key = t.name.trim().toLowerCase();
@@ -825,17 +786,15 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   function loadTemplate(t: Tpl) {
     const im = new Image();
-    im.crossOrigin = 'anonymous';   // both CDNs send ACAO:* — keeps canvas exportable
+    im.crossOrigin = 'anonymous';
     im.onload = () => {
       loadImageEl(im, true);
-      // Collapse the gallery for focus.
       tplWrap.classList.add('hidden'); tplWrap.classList.remove('flex');
     };
     im.onerror = () => { tplStatus.textContent = 'That template failed to load — try another.'; };
     im.src = t.url;
   }
 
-  // ---- Keyboard shortcuts ---------------------------------------------
   window.addEventListener('keydown', (ev) => {
     const tag = (ev.target as HTMLElement)?.tagName;
     const typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
@@ -858,11 +817,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (moved) { ev.preventDefault(); beginChangeCheckpoint(); render(); }
   });
 
-  // ---- Download --------------------------------------------------------
   function download(type: 'image/png' | 'image/jpeg') {
     if (!img) return;
     const prevSel = selectedId;
-    selectedId = null; render(); // hide selection chrome in export
+    selectedId = null; render();
     const errEl = $('mm-dl-err');
     try {
       const url = canvas.toDataURL(type, type === 'image/jpeg' ? 0.92 : undefined);

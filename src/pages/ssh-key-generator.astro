@@ -90,7 +90,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return `ssh-ed25519 ${b64(blob)}${comment ? ' ' + comment : ''}`;
   };
 
-  // Unencrypted "openssh-key-v1" private key (cipher/kdf = "none").
   const ed25519PrivateKeyToOpenSSH = (pub: Uint8Array, priv: Uint8Array, comment: string) => {
     const keyType = strBytes('ssh-ed25519');
     const pubBlob = concat([sshStr(keyType), sshStr(pub)]);
@@ -99,7 +98,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       check, check, // two matching check integers
       sshStr(keyType), sshStr(pub), sshStr(priv), sshStr(strBytes(comment)),
     ]);
-    // Pad to the cipher block size (8 for "none") with 1,2,3,…
     for (let i = 1; privSection.length % 8 !== 0; i++) privSection = concat([privSection, new Uint8Array([i & 255])]);
 
     const body = concat([
@@ -124,7 +122,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       ? `Generating ${type}-bit RSA key pair… this can take a few seconds.`
       : 'Generating Ed25519 key pair…';
     pubEl.value = ''; privEl.value = '';
-    // Let the status paint before the CPU-bound keygen blocks the thread.
     await new Promise((r) => setTimeout(r, 30));
     try {
       const forge = (await import('node-forge')).default;

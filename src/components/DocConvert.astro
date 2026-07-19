@@ -1,11 +1,8 @@
 ---
-// Universal document/data converter UI, driven by docConvertDispatch.
-// Text-input tools show a textarea; file-input tools show a drop zone.
-// Output is either a downloadable file or copyable text.
 import { getConversion } from '../lib/docConvertDispatch';
 export interface Props {
   slug: string;
-  outLabel?: string;   // e.g. "PDF", "DOCX", "JSON"
+  outLabel?: string;
 }
 const { slug, outLabel = 'file' } = Astro.props;
 const spec = getConversion(slug);
@@ -113,14 +110,12 @@ const placeholder = spec.placeholder ?? 'Paste your text…';
         outWrap.classList.remove('hidden');
         copyBtn.classList.remove('hidden');
         summary.textContent = `${res.text.length.toLocaleString()} characters`;
-        // Offer text download too.
         outBlob = new Blob([res.text], { type: 'text/plain' });
         outName = `${baseName}.${res.ext || 'txt'}`;
       } else if (res.blob) {
         outBlob = res.blob;
         outName = res.filename || `${baseName}.${res.ext || 'bin'}`;
         summary.textContent = fmtSize(res.blob.size);
-        // preview images inline
         if (res.blob.type.startsWith('image/')) {
           outUrl = URL.createObjectURL(res.blob);
           img.src = outUrl; imgWrap.classList.remove('hidden'); imgWrap.classList.add('flex');

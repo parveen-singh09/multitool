@@ -192,14 +192,13 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const curFmt = () => formatSel.value as Fmt;
   const outNameFor = (f: File) => f.name.replace(/\.[^.]+$/, '') + '.' + FORMATS[curFmt()].ext;
 
-  // Show/hide option groups per selected format and relabel the convert button.
   function syncControls() {
     const fmt = curFmt();
     const meta = FORMATS[fmt];
     const show = (group: string, on: boolean) =>
       root.querySelectorAll<HTMLElement>(`[data-group="${group}"]`).forEach((el) => el.classList.toggle('hidden', !on));
     const isVideo = !meta.audioOnly;
-    show('quality', fmt !== 'gif'); // gif quality is fixed via palette
+    show('quality', fmt !== 'gif');
     show('scale', isVideo);
     show('fps', isVideo);
     show('rotate', isVideo);
@@ -210,7 +209,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     goBtn.textContent = 'Convert to ' + fmt.toUpperCase();
   }
 
-  // Read the source media duration so fade-out timing and trim defaults work.
   function probeDuration(file: File): Promise<number> {
     return new Promise((resolve) => {
       const el = document.createElement('video');
@@ -297,24 +295,20 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (fadeIn > 0) af.push(`afade=t=in:st=0:d=${fadeIn}`);
     if (fadeOut > 0 && outDur > 0) af.push(`afade=t=out:st=${Math.max(0, outDur - fadeOut).toFixed(3)}:d=${fadeOut}`);
 
-    // GIF: single-pass split → palettegen → paletteuse for clean colors.
     if (fmt === 'gif') {
       const chain = videoFilters(scale > 0 ? scale : 480, rotate, flip);
       chain.unshift(`fps=${fps > 0 ? fps : 15}`);
-      // insert lanczos scaling flag by rewriting the scale entry if present
       const vf = chain.map((c) => c.startsWith('scale=') ? c + ':flags=lanczos' : c).join(',');
       const filter = `${vf ? vf + ',' : ''}split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse`;
       return [...pre, '-vf', filter, '-loop', '0', outName];
     }
 
-    // MP3: audio only.
     if (fmt === 'mp3') {
       const a: string[] = ['-vn', '-c:a', 'libmp3lame', '-b:a', MP3_KBPS[qual] + 'k'];
       if (af.length) a.push('-af', af.join(','));
       return [...pre, ...a, outName];
     }
 
-    // Video re-encode (mp4 / mkv / mov / webm).
     const v: string[] = [];
     const vf = videoFilters(scale, rotate, flip);
     if (vf.length) v.push('-vf', vf.join(','));

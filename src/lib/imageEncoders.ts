@@ -1,7 +1,3 @@
-// Client-side image encoders shared by every raster converter tool.
-// Native formats (jpeg/png/webp/avif) go through canvas.toBlob; the rest
-// (bmp/tiff/gif/ico/psd/svg) are encoded by hand or via small deps so the
-// whole thing runs offline in the browser with zero uploads.
 import UTIF from 'utif';
 import { encodeGif } from './gifenc';
 
@@ -10,10 +6,10 @@ export type RasterFormat =
   | 'bmp' | 'tiff' | 'gif' | 'ico' | 'psd' | 'svg';
 
 export interface EncodeOpts {
-  quality?: number;        // 0..1 for lossy raster
-  matte?: string | null;   // flatten transparency onto this colour (formats w/o alpha)
-  gifColors?: number;      // GIF palette size
-  icoSizes?: number[];     // ICO icon sizes
+  quality?: number;
+  matte?: string | null;
+  gifColors?: number;
+  icoSizes?: number[];
 }
 
 export interface Encoded { blob: Blob; ext: string; mime: string }
@@ -29,7 +25,6 @@ function toBlob(canvas: HTMLCanvasElement, type: string, quality?: number): Prom
     canvas.toBlob((b) => (b ? res(b) : rej(new Error('the browser could not encode this format'))), type, quality));
 }
 
-// --- BMP: uncompressed 24-bit BGR (transparency flattened onto matte) ---
 export function encodeBmp(data: ImageData, matteHex: string): Blob {
   const { width, height, data: px } = data;
   const bg = hexRgb(matteHex);
@@ -66,38 +61,31 @@ export function encodeBmp(data: ImageData, matteHex: string): Blob {
   return new Blob([buf], { type: 'image/bmp' });
 }
 
-// --- TIFF via utif (RGBA, uncompressed) ---
 export function encodeTiff(data: ImageData): Blob {
   const tiff = UTIF.encodeImage(data.data, data.width, data.height);
   return new Blob([tiff], { type: 'image/tiff' });
 }
 
-// --- PSD: minimal single-image RGBA, raw (uncompressed) ---
-// Photoshop reads a flattened composite from the image-data section, so a
-// layerless PSD with raw planar channels opens everywhere.
 export function encodePsd(data: ImageData): Blob {
   const { width, height, data: px } = data;
-  const channels = 4; // RGBA
+  const channels = 4;
   const headerLen = 26;
-  const sectionsLen = 4 + 4 + 4; // colour-mode + image-resources + layer/mask, all empty
+  const sectionsLen = 4 + 4 + 4;
   const compAndData = 2 + width * height * channels;
   const buf = new ArrayBuffer(headerLen + sectionsLen + compAndData);
   const dv = new DataView(buf);
   const u8 = new Uint8Array(buf);
-  // header
-  u8[0] = 0x38; u8[1] = 0x42; u8[2] = 0x50; u8[3] = 0x53; // '8BPS'
-  dv.setUint16(4, 1, false);          // version 1
-  dv.setUint16(12, channels, false);  // channels (bytes 6..11 reserved = 0)
+  u8[0] = 0x38; u8[1] = 0x42; u8[2] = 0x50; u8[3] = 0x53;
+  dv.setUint16(4, 1, false);
+  dv.setUint16(12, channels, false);
   dv.setUint32(14, height, false);
   dv.setUint32(18, width, false);
-  dv.setUint16(22, 8, false);         // depth
-  dv.setUint16(24, 3, false);         // colour mode: RGB
-  // three empty length-prefixed sections
+  dv.setUint16(22, 8, false);
+  dv.setUint16(24, 3, false);
   let off = headerLen;
-  dv.setUint32(off, 0, false); off += 4; // colour mode data
-  dv.setUint32(off, 0, false); off += 4; // image resources
-  dv.setUint32(off, 0, false); off += 4; // layer & mask
-  // image data: compression 0 = raw, planar R,G,B,A
+  dv.setUint32(off, 0, false); off += 4;
+  dv.setUint32(off, 0, false); off += 4;
+  dv.setUint32(off, 0, false); off += 4;
   dv.setUint16(off, 0, false); off += 2;
   const plane = width * height;
   for (let c = 0; c < channels; c++) {
@@ -106,7 +94,6 @@ export function encodePsd(data: ImageData): Blob {
   return new Blob([buf], { type: 'image/vnd.adobe.photoshop' });
 }
 
-// --- ICO: pack PNGs for each requested size (PNG-in-ICO, Vista+) ---
 export async function encodeIco(canvas: HTMLCanvasElement, sizes: number[]): Promise<Blob> {
   const uniq = [...new Set(sizes)].filter((s) => s > 0 && s <= 256).sort((a, b) => a - b);
   const pngs = await Promise.all(uniq.map(async (s) => {
@@ -135,13 +122,11 @@ export async function encodeIco(canvas: HTMLCanvasElement, sizes: number[]): Pro
   return new Blob([out], { type: 'image/x-icon' });
 }
 
-// --- GIF (single still frame, quantised) ---
 export function encodeGifStill(data: ImageData, maxColors = 256): Blob {
   const bytes = encodeGif([{ rgba: data.data, delayMs: 0 }], { width: data.width, height: data.height, maxColors });
   return new Blob([bytes], { type: 'image/gif' });
 }
 
-// --- SVG: wrap a raster as a base64 data-URI <image> (keeps it scalable-in-place) ---
 export async function encodeSvg(canvas: HTMLCanvasElement): Promise<Blob> {
   const dataUrl = (await toBlobDataUrl(canvas, 'image/png'));
   const { width: w, height: h } = canvas;
@@ -158,7 +143,6 @@ async function toBlobDataUrl(canvas: HTMLCanvasElement, type: string): Promise<s
   });
 }
 
-// --- Unified dispatch: canvas + format -> encoded blob ---
 export async function encodeCanvas(canvas: HTMLCanvasElement, format: RasterFormat, opts: EncodeOpts = {}): Promise<Encoded> {
   const imageData = () => canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height);
   switch (format) {
@@ -175,7 +159,6 @@ export async function encodeCanvas(canvas: HTMLCanvasElement, format: RasterForm
   }
 }
 
-// Self-check: every format encodes a non-empty blob from a 2x2 canvas.
 if (import.meta.env.DEV && typeof document !== 'undefined') {
   const c = document.createElement('canvas');
   c.width = c.height = 2;

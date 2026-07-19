@@ -216,7 +216,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return fs;
   }
 
-  // Draw `word` centered on (cx, cy) with manual letter spacing.
   function drawTracked(c: CanvasRenderingContext2D, word: string, cx: number, cy: number, track: number) {
     const widths = [...word].map((ch) => c.measureText(ch).width);
     const total = widths.reduce((a, b) => a + b, 0) + track * Math.max(0, word.length - 1);
@@ -242,8 +241,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const fs = fitFont(c, a, family, track, want, w);
     c.font = `600 ${fs}px ${family}`;
 
-    // Faint flipped overlay of the partner word (or the word itself), so you
-    // can see how each letter must morph to satisfy both readings.
     if (ghostEl.checked) {
       c.save();
       c.translate(w / 2, h / 2);
@@ -267,8 +264,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     renderPairs();
   }
 
-  // Column i pairs A[i] with the letter it overlaps when B (partner, reversed)
-  // is rotated 180°: B[len-1-i]. Missing slots pad with a gap glyph.
   function renderPairs() {
     const a = (aEl.value.trim() || 'word');
     const bRaw = bEl.value.trim() || a;
@@ -288,7 +283,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  /* ---------- export ---------- */
   function download(href: string, name: string) {
     const el = document.createElement('a');
     el.href = href; el.download = name; el.click();
@@ -324,7 +318,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  /* ---------- share link (state in URL hash) ---------- */
   function writeShare() {
     const state = {
       a: aEl.value, b: bEl.value, f: fontEl.value, c: colorEl.value,
@@ -358,7 +351,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     } catch {}
   }
 
-  /* ---------- wire up ---------- */
   async function pickFont() { await ensureFont(fontEl.value); render(); }
 
   [aEl, bEl, colorEl, bgEl].forEach((el) => el.addEventListener('input', render));

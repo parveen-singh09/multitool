@@ -132,7 +132,6 @@ ${body}
 </html>`;
   }
 
-  // Fresh instance per run so toggles apply cleanly (marked.use accumulates on a singleton).
   function buildMarked() {
     const inst = new Marked({ gfm: gfmBox.checked, breaks: breaksBox.checked });
     if (idsBox.checked) {
@@ -169,10 +168,8 @@ ${body}
     try {
       const inst = buildMarked();
       const body = (inst.parse(md) as string).trim();
-      // Sanitize only what we inject into our own page; the source keeps marked's output.
       const safe = DOMPurify.sanitize(body);
       preview.innerHTML = safe;
-      // Highlight code blocks inside the preview (hljs auto-detects or reads language-*).
       const hljs = await loadHljs();
       preview.querySelectorAll('pre code').forEach((el) => hljs.highlightElement(el as HTMLElement));
 
@@ -221,7 +218,6 @@ ${body}
     URL.revokeObjectURL(url);
   });
 
-  // Upload / drag-and-drop a markdown file onto the input pane.
   function loadFile(file: File) {
     const reader = new FileReader();
     reader.onload = () => { input.value = String(reader.result ?? ''); rerender(); void convert(); };

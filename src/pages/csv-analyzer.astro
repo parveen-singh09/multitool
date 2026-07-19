@@ -214,7 +214,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     headers = hasHeader
       ? Array.from({ length: colCount }, (_, i) => (grid[0][i] || '').trim() || `Column ${i + 1}`)
       : Array.from({ length: colCount }, (_, i) => `Column ${i + 1}`);
-    // Normalize every row to colCount cells so the grid stays rectangular.
     rows = (hasHeader ? grid.slice(1) : grid).map((r) =>
       Array.from({ length: colCount }, (_, i) => r[i] ?? ''));
 
@@ -287,7 +286,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
 
   function renderGrid() {
-    // Header with sort affordance.
     $('csva-grid-head').innerHTML = '<tr class="border-b border-hairline">' +
       headers.map((h, i) => {
         const arrow = i === sortCol ? (sortDir === 1 ? ' ▲' : ' ▼') : '';
@@ -310,7 +308,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     ($('csva-next') as HTMLButtonElement).disabled = page >= totalPages - 1;
   }
 
-  // Export builds objects from headers so JSON/CSV round-trip cleanly.
   function objects(): Record<string, string>[] {
     return rows.map((r) => Object.fromEntries(headers.map((h, i) => [h, r[i] ?? ''])));
   }
@@ -337,7 +334,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // ── wiring ──
   document.querySelectorAll<HTMLElement>('.csva-tab').forEach((tab) => {
     tab.addEventListener('click', () => {
       const name = tab.dataset.tab!;

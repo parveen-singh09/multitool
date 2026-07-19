@@ -154,7 +154,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
 
   function toBaseTemp(v: number, u: string) {
-    // base = Celsius
     return u === 'Fahrenheit' ? (v - 32) * 5 / 9
       : u === 'Kelvin' ? v - 273.15
       : u === 'Rankine' ? (v - 491.67) * 5 / 9
@@ -172,7 +171,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return (v * DATA[cat].units[from]) / DATA[cat].units[to];
   }
 
-  // Format a number: fixed decimals, or Auto (trim zeros, exponential for extremes).
   function fmt(n: number): string {
     if (!Number.isFinite(n)) return '—';
     const p = precisionSel.value;
@@ -180,7 +178,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (n === 0) return '0';
     const abs = Math.abs(n);
     if (abs >= 1e15 || abs < 1e-6) return n.toExponential(6).replace(/\.?0+e/, 'e');
-    // Round to ~9 significant digits, then strip trailing zeros.
     const s = Number(n.toPrecision(9)).toString();
     return s;
   }
@@ -258,13 +255,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const f = fromUnit.value;
     fromUnit.value = toUnit.value;
     toUnit.value = f;
-    // Carry the converted value across so the swap reads naturally.
     const cur = Number(toVal.value.replace(/[^\d.eE+-]/g, ''));
     if (Number.isFinite(cur) && toVal.value !== '') fromVal.value = String(cur);
     convert();
   });
 
-  // Build preset chips.
   presetsEl.innerHTML = PRESETS.map((p, i) =>
     `<button type="button" data-i="${i}" class="btn btn-tertiary px-3 py-1 text-[13px]">${p[3]}</button>`
   ).join('');
@@ -278,6 +273,5 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     });
   });
 
-  // init
   selectCat('length');
 </script>

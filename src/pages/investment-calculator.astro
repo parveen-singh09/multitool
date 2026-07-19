@@ -134,7 +134,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // Stacked area: lower band = invested (principal+contributions), upper = interest.
   function drawChart(points: { invested: number; balance: number }[]) {
     const svg = document.getElementById('iv-chart')!;
     svg.innerHTML = '';
@@ -147,21 +146,18 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const investedLine = points.map((p, i) => `${x(i).toFixed(1)},${y(p.invested).toFixed(1)}`);
     const balanceLine = points.map((p, i) => `${x(i).toFixed(1)},${y(p.balance).toFixed(1)}`);
 
-    // interest band (between invested and balance)
     const interestArea = document.createElementNS(SVGNS, 'polygon');
     interestArea.setAttribute('points', [...balanceLine, ...investedLine.slice().reverse()].join(' '));
     interestArea.setAttribute('fill', '#828fff');
     interestArea.setAttribute('opacity', '0.35');
     svg.appendChild(interestArea);
 
-    // invested band (baseline to invested)
     const investedArea = document.createElementNS(SVGNS, 'polygon');
     investedArea.setAttribute('points', [`0,${H}`, ...investedLine, `${W},${H}`].join(' '));
     investedArea.setAttribute('fill', '#5e6ad2');
     investedArea.setAttribute('opacity', '0.4');
     svg.appendChild(investedArea);
 
-    // balance stroke on top
     const line = document.createElementNS(SVGNS, 'polyline');
     line.setAttribute('points', balanceLine.join(' '));
     line.setAttribute('fill', 'none');
@@ -170,7 +166,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     line.setAttribute('vector-effect', 'non-scaling-stroke');
     svg.appendChild(line);
 
-    // axis labels: year 0, mid, end
     const axis = document.getElementById('iv-chart-axis')!;
     axis.innerHTML = `<span>Yr 0</span><span>Yr ${Math.round(n / 2)}</span><span>Yr ${n}</span>`;
   }

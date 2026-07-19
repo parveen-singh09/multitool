@@ -159,8 +159,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     });
   }
 
-  // Build DocData from the form. `withLogo` controls whether logo bytes are
-  // attached (needed for the PDF, skipped for the preview which uses the URL).
   function getData(withLogo: boolean): DocData {
     const taxMode = ($('iv-tax-mode') as HTMLSelectElement).value;
     const discMode = ($('iv-disc-mode') as HTMLSelectElement).value;
@@ -173,7 +171,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       fromLabel: 'From', from: collectParty('iv-from'),
       toLabel: 'Bill To', to: collectParty('iv-to'),
       items,
-      // Preview uses the pretty Unicode symbol; the PDF uses a WinAnsi-safe prefix.
       currency: withLogo ? pdfPrefixOf(($('iv-currency') as HTMLSelectElement).value) : symbolOf(($('iv-currency') as HTMLSelectElement).value),
       taxMode: taxMode === 'flat' ? 'flat' : 'percent',
       taxRate: taxMode === 'off' ? 0 : (Number(($('iv-tax') as HTMLInputElement).value) || 0),

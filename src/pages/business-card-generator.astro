@@ -273,14 +273,11 @@ const templates = [
       const p = panelRect;
       ctx.fillStyle = `rgba(255,255,255,${panelOpacity})`;
       ctx.fillRect(p.x, p.y, p.w, p.h);
-      // Text block anchored inside the panel, with padding.
       drawGenericBlock(ctx, accent, font, '#111318', '#5b616e', d, p.x + 50, p.y + 90);
-      // Draggable logo on the front.
       if (logoImg) drawContain(ctx, logoImg, logoRect.x, logoRect.y, logoRect.w, logoRect.h);
       return;
     }
 
-    // Base background.
     ctx.fillStyle = tpl.bg;
     ctx.fillRect(0, 0, W, H);
 
@@ -300,7 +297,6 @@ const templates = [
     }
   }
 
-  // Small logo helper for a top/brand slot.
   function maybeLogo(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
     if (logoImg) { drawContain(ctx, logoImg, x, y, w, h); return true; }
     return false;
@@ -318,7 +314,6 @@ const templates = [
     });
   }
 
-  // Generic block reused by the upload-background path.
   function drawGenericBlock(ctx: CanvasRenderingContext2D, accent: string, font: string, ink: string, sub: string, d: CardData, x: number, y: number) {
     ctx.textAlign = 'left';
     ctx.fillStyle = ink; ctx.font = `700 60px ${font}`;
@@ -411,7 +406,6 @@ const templates = [
   function frontSidebar(ctx: CanvasRenderingContext2D, t: Template, accent: string, font: string, d: CardData) {
     const sw = 360;
     ctx.fillStyle = accent; ctx.fillRect(1050 - sw, 0, sw, 600);
-    // Left: name block.
     ctx.textAlign = 'left';
     if (maybeLogo(ctx, 80, 80, 130, 70)) 
     ctx.fillStyle = t.ink; ctx.font = `700 60px ${font}`;
@@ -420,12 +414,10 @@ const templates = [
     ctx.fillText(d.title, 80, 348);
     ctx.fillStyle = t.sub; ctx.font = `600 28px ${font}`;
     ctx.fillText(d.company, 80, 420);
-    // Right sidebar: contacts on accent.
     contactsColumn(ctx, contactList(d), 1050 - sw + 40, 150, t.onAccent, t.onAccent, font, 24, 52);
   }
 
   function frontDarkModern(ctx: CanvasRenderingContext2D, t: Template, accent: string, font: string, d: CardData) {
-    // bg already dark
     ctx.fillStyle = accent; ctx.fillRect(0, 0, 1050, 8);
     ctx.textAlign = 'left';
     if (maybeLogo(ctx, 90, 80, 120, 60)) 
@@ -443,11 +435,9 @@ const templates = [
     ctx.fillText(d.name, 90, 200);
     ctx.fillStyle = t.sub; ctx.font = `400 26px ${font}`;
     ctx.fillText([d.title, d.company].filter(Boolean).join(', '), 90, 244);
-    // Contacts bottom-left, quiet.
     ctx.font = `400 24px ${font}`;
     const lines = contactList(d);
     lines.forEach((l, i) => { ctx.fillStyle = t.sub; ctx.fillText(l, 90, 470 + i * 34); });
-    // Single accent tick.
     ctx.fillStyle = accent; ctx.fillRect(90, 150, 44, 4);
   }
 
@@ -458,13 +448,11 @@ const templates = [
     ctx.fillText(d.name, 90, 250);
     ctx.fillStyle = t.sub; ctx.font = `500 30px ${font}`;
     ctx.fillText([d.title, d.company].filter(Boolean).join(' · '), 90, 296);
-    // Accent stripe bottom third with contacts on it.
     ctx.fillStyle = accent; ctx.fillRect(0, 400, 1050, 200);
     contactsColumn(ctx, contactList(d), 90, 470, t.onAccent, t.onAccent, font, 24, 44);
   }
 
   function frontCorner(ctx: CanvasRenderingContext2D, t: Template, accent: string, font: string, d: CardData) {
-    // L-shaped accent corners.
     ctx.fillStyle = accent;
     const len = 150, th = 14;
     ctx.fillRect(50, 50, len, th); ctx.fillRect(50, 50, th, len);
@@ -512,14 +500,11 @@ const templates = [
     contactsColumn(ctx, contactList(d), 90, 400, t.sub, t.ink, font);
   }
 
-  // ---- Back renderer (branded, shared with per-template palette) ----
   function drawBack(ctx: CanvasRenderingContext2D, tpl: Template, accent: string, font: string) {
     const W = 1050, H = 600, d = data();
     ctx.clearRect(0, 0, W, H);
     const dark = tpl.id === 'dark-modern' || tpl.id === 'gradient';
 
-    // Background: uploaded back image wins; otherwise accent-filled for light
-    // templates, dark surface for dark ones.
     if (bgImgBack) {
       drawCover(ctx, bgImgBack, 0, 0, W, H);
     } else if (dark) {
@@ -533,24 +518,16 @@ const templates = [
       ctx.fillStyle = accent; ctx.fillRect(0, 0, W, H);
     }
 
-    // Over an uploaded image, force white text with a soft shadow for legibility.
     const fg = bgImgBack ? '#ffffff' : (dark ? tpl.ink : tpl.onAccent);
     if (bgImgBack) { ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = 8; }
     const cx = qrImg ? 380 : 525;
 
-    // Brand: logo (draggable when a back background is set) or company + initials.
     ctx.textAlign = 'center';
     if (logoImg) {
-      // Until dragged, keep the logo centered on the same axis as the heading/QR
-      // layout (cx), so it never floats off-center when the QR toggles.
       if (!logoBackTouched) logoRectBack.x = cx - logoRectBack.w / 2;
-      // Logo is draggable on the back (positioned via logoRectBack). Suppress
-      // the legibility shadow so the logo art itself stays crisp.
       ctx.save(); ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
       drawContain(ctx, logoImg, logoRectBack.x, logoRectBack.y, logoRectBack.w, logoRectBack.h);
       ctx.restore();
-      // Without a back background, keep the company heading beneath the logo.
-      // Same size as the no-logo case so it never shifts when a logo is added.
       if (!bgImgBack) {
         ctx.fillStyle = fg; ctx.font = `700 72px ${font}`;
         ctx.fillText(d.company || d.name, cx, 250);
@@ -572,7 +549,6 @@ const templates = [
       ctx.globalAlpha = 1;
     }
 
-    // QR panel on the right.
     if (qrImg) {
       const s = 260, qx = 690, qy = (H - s) / 2;
       ctx.save();
@@ -588,11 +564,9 @@ const templates = [
       ctx.globalAlpha = 1;
     }
 
-    // Clear any legibility shadow so it never leaks past this renderer.
     ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
   }
 
-  // ---- vCard QR ----
   function vCard(d: CardData): string {
     return [
       'BEGIN:VCARD', 'VERSION:3.0',
@@ -621,7 +595,6 @@ const templates = [
     });
   }
 
-  // ---- Rendering orchestration ----
   function renderMain() {
     const ctx = canvas.getContext('2d')!;
     const tpl = TEMPLATES[currentTpl];
@@ -652,7 +625,6 @@ const templates = [
     renderMain();
   }
 
-  // ---- Wiring ----
   const tplButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.bc-tpl'));
   function highlightTpl() {
     tplButtons.forEach((b) => {
@@ -682,7 +654,6 @@ const templates = [
   $('bc-side-front').addEventListener('click', () => setSide('front'));
   $('bc-side-back').addEventListener('click', () => setSide('back'));
 
-  // Text + option inputs.
   ['bc-name', 'bc-title', 'bc-company', 'bc-tagline', 'bc-phone', 'bc-email', 'bc-web', 'bc-address']
     .forEach((id) => $(id).addEventListener('input', () => { renderAll(); }));
   $('bc-accent').addEventListener('input', () => { accentTouched = true; renderAll(); });
@@ -695,8 +666,7 @@ const templates = [
     renderMain();
   });
 
-  // ---- Drag / resize interaction (background-image mode, front side only) ----
-  const HANDLE = 40; // hit radius for the resize corner, in canvas coords
+  const HANDLE = 40;
   type DragTarget = 'panel' | 'logo';
   type DragMode = 'move' | 'resize';
   let drag: { target: DragTarget; mode: DragMode; dx: number; dy: number } | null = null;
@@ -706,7 +676,6 @@ const templates = [
     return side === 'front' ? logoRect : logoRectBack;
   }
 
-  // Map a pointer event to 1050×600 canvas coordinates.
   function toCanvasCoords(e: PointerEvent): { x: number; y: number } {
     const r = canvas.getBoundingClientRect();
     return { x: (e.clientX - r.left) * (1050 / r.width), y: (e.clientY - r.top) * (600 / r.height) };
@@ -719,8 +688,6 @@ const templates = [
     return p.x >= rc.x && p.x <= rc.x + rc.w && p.y >= rc.y && p.y <= rc.y + rc.h;
   }
 
-  // Which target (if any) is under the pointer, honoring z-order (logo above panel).
-  // Front has a movable panel + logo; back (over an uploaded image) has just the logo.
   function hitTest(p: { x: number; y: number }): { target: DragTarget; mode: DragMode } | null {
     if (side === 'front') {
       if (logoImg) {
@@ -736,8 +703,6 @@ const templates = [
     return null;
   }
 
-  // Front is editable once a front background is set; back is editable whenever
-  // there's a logo to drag or a back background whose panel-free layout applies.
   function bgEditable(): boolean {
     return side === 'front' ? !!bgImg : (!!logoImg || !!bgImgBack);
   }
@@ -774,7 +739,6 @@ const templates = [
     const hit = hitTest(p);
     if (!hit) return;
     const rc = rectOf(hit.target);
-    // Once the user grabs the back logo, stop auto-centering it on cx.
     if (side === 'back' && hit.target === 'logo') logoBackTouched = true;
     drag = { target: hit.target, mode: hit.mode, dx: p.x - rc.x, dy: p.y - rc.y };
     canvas.setPointerCapture(e.pointerId);
@@ -785,7 +749,6 @@ const templates = [
   canvas.addEventListener('pointerup', endDrag);
   canvas.addEventListener('pointercancel', endDrag);
 
-  // Draw drag handles as an on-screen-only overlay (not baked into downloads).
   function drawHandles(ctx: CanvasRenderingContext2D) {
     if (!bgEditable()) return;
     const targets: Rect[] = side === 'front'
@@ -798,7 +761,6 @@ const templates = [
       ctx.setLineDash([8, 6]);
       ctx.strokeRect(rc.x, rc.y, rc.w, rc.h);
       ctx.setLineDash([]);
-      // Corner resize grip.
       ctx.fillStyle = '#5e6ad2';
       const g = 18;
       ctx.fillRect(rc.x + rc.w - g, rc.y + rc.h - g, g, g);
@@ -806,7 +768,6 @@ const templates = [
     ctx.restore();
   }
 
-  // Uploads.
   function readImage(file: File, onload: (img: HTMLImageElement) => void) {
     const reader = new FileReader();
     reader.onload = () => { const img = new Image(); img.onload = () => onload(img); img.src = reader.result as string; };
@@ -821,7 +782,6 @@ const templates = [
     logoImg = null; logoBackTouched = false; ($('bc-logo') as HTMLInputElement).value = '';
     $('bc-logo-clear').classList.add('hidden'); renderAll();
   });
-  // One background control that targets whichever side is currently shown.
   function syncBgControls() {
     const has = side === 'front' ? !!bgImg : !!bgImgBack;
     $('bc-bgimg-label').textContent = `Upload ${side} background`;
@@ -841,8 +801,6 @@ const templates = [
     syncBgControls(); renderAll();
   });
 
-  // ---- Downloads ----
-  // Render a side onto an offscreen full-res canvas.
   function renderTo(side: 'front' | 'back'): HTMLCanvasElement {
     const off = document.createElement('canvas');
     off.width = 1050; off.height = 600;
@@ -873,7 +831,6 @@ const templates = [
       await ensureQR();
       const { PDFDocument } = await import('pdf-lib');
       const pdf = await PDFDocument.create();
-      // 3.5 × 2 in at 72pt/in.
       const wPt = 3.5 * 72, hPt = 2 * 72;
       for (const which of ['front', 'back'] as const) {
         const off = renderTo(which);
@@ -890,7 +847,6 @@ const templates = [
     } finally { btn.disabled = false; btn.textContent = label; }
   });
 
-  // ---- Init ----
   highlightTpl();
   setSide('front');
   renderAll();

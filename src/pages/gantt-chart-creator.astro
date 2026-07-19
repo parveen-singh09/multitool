@@ -160,14 +160,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     saveTimer = window.setTimeout(() => saveDraft(state), 250);
   }
 
-  // --- task editor rows -------------------------------------------------------
   function renderRows(): void {
     rowsEl.innerHTML = '';
     state.tasks.forEach((task, i) => {
       const wrap = document.createElement('div');
       wrap.className = 'panel flex flex-col gap-2 p-3';
 
-      // name + indent/outdent
       const top = document.createElement('div');
       top.className = 'flex items-center gap-2';
       const indentBtn = iconBtn('⟨', 'Outdent', () => { task.outline = Math.max(0, task.outline - 1); renderRows(); render(); });
@@ -180,7 +178,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       nameInput.addEventListener('input', () => { task.name = nameInput.value; render(); });
       top.append(indentBtn, outdentBtn, nameInput);
 
-      // start + duration + progress
       const grid = document.createElement('div');
       grid.className = 'grid grid-cols-3 gap-2';
       grid.append(
@@ -189,7 +186,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         numField('% done', task.progress, 0, (v) => { task.progress = Math.max(0, Math.min(100, v)); render(); }, 100),
       );
 
-      // assignee + group
       const grid2 = document.createElement('div');
       grid2.className = 'grid grid-cols-2 gap-2';
       grid2.append(
@@ -197,7 +193,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         field('Group', 'text', task.group ?? '', (v) => { task.group = v || undefined; render(); }),
       );
 
-      // dependencies
       const depWrap = document.createElement('div');
       depWrap.className = 'flex flex-col gap-2';
       const depLabel = document.createElement('span');
@@ -242,7 +237,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         depWrap.appendChild(addDep);
       }
 
-      // color + actions
       const actions = document.createElement('div');
       actions.className = 'flex items-center gap-2';
       const color = document.createElement('input');
@@ -264,7 +258,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       rm.addEventListener('click', () => {
         const goneId = task.id;
         state.tasks.splice(i, 1);
-        // drop dangling dependency references
         for (const o of state.tasks) o.deps = o.deps.filter((d) => d.pred !== goneId);
         renderRows(); render();
       });
@@ -313,13 +306,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return b;
   }
 
-  // --- drag on the SVG preview -----------------------------------------------
   type DragMode = 'move' | 'resize-l' | 'resize-r' | 'link';
   interface Drag { id: string; mode: DragMode; downIdx: number; startIdx0: number; dur0: number; }
   let drag: Drag | null = null;
   const EDGE = 6;
 
-  // Client coords -> SVG user-space coords (the SVG scales to fit the panel).
   function toUser(e: PointerEvent): { x: number; y: number } | null {
     const svg = preview.querySelector('svg');
     if (!svg || !last) return null;
@@ -347,7 +338,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       if (u.x >= bar.x + bar.w - EDGE) mode = e.shiftKey ? 'link' : 'resize-r';
       else if (u.x <= bar.x + EDGE) mode = 'resize-l';
     }
-    // milestones/summaries: only move (summaries are derived, but moving is a no-op reschedule)
     if (bar.type !== 'task' && mode !== 'move') mode = 'move';
     drag = { id: bar.id, mode, downIdx: indexAtX(u.x), startIdx0: indexAtX(bar.x), dur0: task.duration };
     preview.setPointerCapture(e.pointerId);
@@ -365,7 +355,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const delta = curIdx - drag.downIdx;
 
     if (drag.mode === 'link') {
-      // live rubber-band from the source bar's right edge to the pointer
       renderWithOverlay(drag.id, u);
       return;
     }
@@ -403,7 +392,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   });
   preview.addEventListener('pointercancel', () => { drag = null; render(); });
 
-  // Re-render then append a temporary rubber-band line for link drags.
   function renderWithOverlay(fromId: string, u: { x: number; y: number }): void {
     render();
     if (!last) return;
@@ -422,7 +410,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     svg.appendChild(line);
   }
 
-  // --- tabs -------------------------------------------------------------------
   const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('.gcc-tab'));
   const panels = Array.from(document.querySelectorAll<HTMLElement>('[data-panel]'));
   function showTab(name: string): void {
@@ -440,7 +427,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
   tabs.forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab!)));
 
-  // --- templates gallery ------------------------------------------------------
   function renderTemplates(): void {
     const host = $<HTMLDivElement>('gcc-templates');
     host.innerHTML = '';
@@ -476,7 +462,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // --- style controls ---------------------------------------------------------
   const zoomSel = $<HTMLSelectElement>('gcc-zoom');
   const themeSel = $<HTMLSelectElement>('gcc-theme');
   const sizeSel = $<HTMLSelectElement>('gcc-size');
@@ -493,7 +478,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   themeSel.addEventListener('change', () => { state.themeId = themeSel.value; render(); });
   sizeSel.addEventListener('change', () => { state.sizeId = sizeSel.value; render(); });
 
-  // --- calendar controls ------------------------------------------------------
   const startEl = $<HTMLInputElement>('gcc-start');
   const holidaysEl = $<HTMLTextAreaElement>('gcc-holidays');
   const workdaysHost = $<HTMLDivElement>('gcc-workdays');
@@ -525,7 +509,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     render();
   });
 
-  // --- exports (rasterize/download/PDF mirror the timeline tool) --------------
   function setStatus(msg: string): void { statusEl.textContent = msg; }
   function download(blob: Blob, name: string): void {
     const url = URL.createObjectURL(blob);
@@ -599,7 +582,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     download(new Blob([toMSProjectXML(state)], { type: 'application/xml' }), 'toolsilk-gantt.xml');
   });
 
-  // --- import (JSON / CSV / MS Project XML) -----------------------------------
   const fileInput = $<HTMLInputElement>('gcc-file');
   $<HTMLButtonElement>('gcc-import').addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', async () => {
@@ -628,7 +610,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     fileInput.value = '';
   });
 
-  // --- init -------------------------------------------------------------------
   $<HTMLButtonElement>('gcc-add').addEventListener('click', () => {
     const prev = state.tasks[state.tasks.length - 1];
     state.tasks.push({

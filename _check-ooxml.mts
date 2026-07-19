@@ -1,7 +1,3 @@
-// Self-check for the OOXML builders. Run: node _check-ooxml.mts
-// Verifies the .docx/.xlsx bytes are a valid ZIP (PK header + readable
-// central directory) and that the XML parts are well-formed. A broken ZIP
-// offset or malformed XML would make Word/Excel silently refuse the file.
 import assert from 'node:assert';
 import { makeDocx, xmlEscape } from './src/lib/docx.ts';
 import { makeXlsx, colLetter } from './src/lib/xlsx.ts';
@@ -22,19 +18,15 @@ function readZip(buf: Uint8Array): Record<string, string> {
     out[name] = td.decode(buf.subarray(dataStart, dataStart + size));
     i = dataStart + size;
   }
-  // Next signature must be the central directory.
   assert.equal(dv.getUint32(i, true), 0x02014b50, 'central directory follows entries');
   return out;
 }
 
-// Cheap well-formedness: balanced-ish tag scan is fragile; instead assert the
-// XML declaration, a root element, and no stray unescaped '&'.
 function assertXml(s: string, label: string) {
   assert.ok(s.startsWith('<?xml'), `${label}: has XML declaration`);
   assert.ok(!/&(?!(amp|lt|gt|quot|apos);)/.test(s), `${label}: no unescaped ampersand`);
 }
 
-// --- xmlEscape / colLetter units ---
 assert.equal(xmlEscape('a & b <c> "d" \'e\''), 'a &amp; b &lt;c&gt; &quot;d&quot; &apos;e&apos;');
 assert.equal(colLetter(0), 'A');
 assert.equal(colLetter(25), 'Z');
@@ -43,12 +35,11 @@ assert.equal(colLetter(27), 'AB');
 assert.equal(colLetter(701), 'ZZ');
 assert.equal(colLetter(702), 'AAA');
 
-// --- docx ---
 {
   const blob = makeDocx(['Hello & welcome', '', 'Line one\nLine two', 'Tab\tkept']);
   const buf = new Uint8Array(await blob.arrayBuffer());
-  assert.equal(buf[0], 0x50, 'docx PK header'); // 'P'
-  assert.equal(buf[1], 0x4b, 'docx PK header'); // 'K'
+  assert.equal(buf[0], 0x50, 'docx PK header');
+  assert.equal(buf[1], 0x4b, 'docx PK header');
   const parts = readZip(buf);
   assert.ok(parts['[Content_Types].xml'], 'docx has content types');
   assert.ok(parts['_rels/.rels'], 'docx has rels');
@@ -56,12 +47,10 @@ assert.equal(colLetter(702), 'AAA');
   const doc = parts['word/document.xml'];
   assert.ok(doc.includes('Hello &amp; welcome'), 'escaped text present');
   assert.ok(doc.includes('<w:p/>'), 'empty paragraph emitted');
-  // "Line one\nLine two" splits into two paragraphs.
   assert.ok(doc.includes('Line one') && doc.includes('Line two'), 'both lines present');
   assert.equal((doc.match(/<w:t/g) || []).length, 4, 'four text runs (3 non-empty + tab line)');
 }
 
-// --- xlsx ---
 {
   const blob = makeXlsx([
     ['Name', 'Qty', 'Price'],

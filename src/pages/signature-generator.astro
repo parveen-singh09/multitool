@@ -356,7 +356,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  /* ---------- drawing input ---------- */
   function pos(e: PointerEvent): Pt {
     const r = canvas.getBoundingClientRect();
     return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height };
@@ -385,7 +384,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   canvas.addEventListener('pointercancel', endStroke);
   canvas.addEventListener('pointerleave', endStroke);
 
-  /* ---------- mode switching ---------- */
   const tabs: Record<Mode, string> = { draw: 'sg-tab-draw', type: 'sg-tab-type', upload: 'sg-tab-upload' };
   function setMode(m: Mode) {
     mode = m;
@@ -409,7 +407,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     render();
   }
 
-  /* ---------- upload + background removal ---------- */
   function loadFile(file: File) {
     const img = new Image();
     img.onload = () => {
@@ -426,7 +423,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     img.src = URL.createObjectURL(file);
   }
 
-  // Knock out near-white pixels → transparent; softens the edge by alpha.
   function removeWhite(c: CanvasRenderingContext2D, w: number, h: number) {
     const data = c.getImageData(0, 0, w, h);
     const d = data.data;
@@ -438,7 +434,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     c.putImageData(data, 0, 0);
   }
 
-  /* ---------- export ---------- */
   function hasContent() {
     return (mode === 'draw' && strokes.length) || mode === 'type' || (mode === 'upload' && uploadImg);
   }
@@ -526,9 +521,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     URL.revokeObjectURL(url);
   }
 
-  /* ---------- wire up ---------- */
-  // Apply the active ink color to the whole signature and refresh the preview.
-  // Like pen weight, drawn strokes recolor live as the color changes.
   function applyColor(c: string) {
     inkColor = c;
     for (const s of strokes) s.color = c;
@@ -553,8 +545,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   ($('sg-pen') as HTMLInputElement).addEventListener('input', (e) => {
     penWidth = Number((e.target as HTMLInputElement).value);
     $('sg-pv').textContent = `${penWidth} px`;
-    // Live-sync: apply the new weight to every existing stroke (and the one
-    // in progress) so the preview updates as the slider moves.
     for (const s of strokes) s.width = penWidth;
     if (current) current.width = penWidth;
     if (mode === 'draw') render();

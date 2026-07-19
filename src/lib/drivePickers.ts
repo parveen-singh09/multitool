@@ -1,7 +1,3 @@
-// Cloud-drive file pickers for the converter. Each returns the chosen file's
-// bytes as a File, handed back via onFile(). Keys are PUBLIC client-side IDs
-// (safe to expose) read from PUBLIC_* env vars — set them in .env before build.
-// Cannot be tested locally: each SDK only runs on its registered/verified domain.
 
 export const DRIVE_CFG = {
   gdriveApiKey: import.meta.env.PUBLIC_GDRIVE_API_KEY as string | undefined,
@@ -11,7 +7,6 @@ export const DRIVE_CFG = {
   onedriveClientId: import.meta.env.PUBLIC_ONEDRIVE_CLIENT_ID as string | undefined,
 };
 
-// Native Google editor MIME → export format. Everything else downloads raw.
 const GOOGLE_EXPORT: Record<string, { mime: string; ext: string }> = {
   'application/vnd.google-apps.spreadsheet': { mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', ext: '.xlsx' },
   'application/vnd.google-apps.document': { mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', ext: '.docx' },
@@ -19,7 +14,6 @@ const GOOGLE_EXPORT: Record<string, { mime: string; ext: string }> = {
   'application/vnd.google-apps.drawing': { mime: 'image/png', ext: '.png' },
 };
 
-// Is a source configured (its key present)?
 export function driveReady(src: string): boolean {
   const c = DRIVE_CFG;
   if (src === 'gdrive') return !!(c.gdriveApiKey && c.gdriveClientId);
@@ -49,7 +43,6 @@ const toFile = async (url: string, name: string, headers?: HeadersInit): Promise
   return new File([blob], name, { type: blob.type || 'application/octet-stream' });
 };
 
-// ---- Dropbox Chooser (direct link → fetch bytes) ----
 async function pickDropbox(onFile: (f: File) => void): Promise<void> {
   await loadScript('https://www.dropbox.com/static/api/2/dropins.js', {
     id: 'dropboxjs',
@@ -68,7 +61,6 @@ async function pickDropbox(onFile: (f: File) => void): Promise<void> {
   });
 }
 
-// ---- Google Drive Picker (GIS token → Picker → Drive API download) ----
 async function pickGoogle(onFile: (f: File) => void): Promise<void> {
   await loadScript('https://apis.google.com/js/api.js');
   await loadScript('https://accounts.google.com/gsi/client');
@@ -94,7 +86,6 @@ async function pickGoogle(onFile: (f: File) => void): Promise<void> {
         if (data.action === g.picker.Action.PICKED) {
           try {
             const doc = data.docs[0];
-            // Native Google editor files can't use ?alt=media — must export to a real format.
             const exp = GOOGLE_EXPORT[doc.mimeType as string];
             const url = exp
               ? `https://www.googleapis.com/drive/v3/files/${doc.id}/export?mimeType=${encodeURIComponent(exp.mime)}`
@@ -110,7 +101,6 @@ async function pickGoogle(onFile: (f: File) => void): Promise<void> {
   });
 }
 
-// ---- OneDrive File Picker (download action → downloadUrl → fetch bytes) ----
 async function pickOneDrive(onFile: (f: File) => void): Promise<void> {
   await loadScript('https://js.live.net/v7.2/OneDrive.js');
   return new Promise((resolve, reject) => {

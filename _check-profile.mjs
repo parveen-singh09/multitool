@@ -1,4 +1,3 @@
-// src/lib/random.ts
 function cryptoUint32() {
   const buf = new Uint32Array(1);
   crypto.getRandomValues(buf);
@@ -58,7 +57,6 @@ function randHex(len) {
   return randString(len, HEX_LOWER);
 }
 
-// src/lib/locales.ts
 var LOCALES = [
   {
     key: "us",
@@ -466,7 +464,6 @@ function getLocale(key) {
   return LOCALE_BY_KEY.get(key) ?? pick(LOCALES);
 }
 
-// src/lib/fakedata.ts
 var EMAIL_DOMAINS = [
   "example.com",
   "mail.com",
@@ -547,7 +544,6 @@ var NOUNS = [
 ];
 var LOREM_WORDS = "lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua enim ad minim veniam quis nostrud exercitation ullamco laboris nisi aliquip ex ea commodo consequat duis aute irure".split(" ");
 
-// src/lib/fakegen.ts
 function email(first, last) {
   const sep = pick([".", "_", ""]);
   const tail = randInt(0, 1) ? String(randInt(1, 999)) : "";
@@ -636,7 +632,6 @@ function profile(opts = {}) {
   };
 }
 
-// _check-profile.mts
 import assert from "node:assert";
 setSeed("project-x");
 var a = profile({ nat: "fr", sex: "female" });

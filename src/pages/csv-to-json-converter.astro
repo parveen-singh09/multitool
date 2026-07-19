@@ -183,7 +183,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const hasHeader = headerBox.checked;
     const indent = minifyBox.checked ? undefined : getIndent();
 
-    // Array of arrays never uses a header row as keys.
     if (shape === 'matrix' || !hasHeader) {
       const rows = matrix.map((r) => r.map(cell));
       return { text: JSON.stringify(rows, null, indent), items: rows.length };
@@ -206,7 +205,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     });
 
     if (shape === 'keyed') {
-      // First column value becomes the key; remaining fields are the value.
       const keyName = header[0];
       const map: Record<string, Json> = {};
       objects.forEach((o) => {
@@ -219,7 +217,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
 
     if (shape === 'ndjson') {
-      // One object per line; indent/minify don't apply to JSON Lines.
       return { text: objects.map((o) => JSON.stringify(o)).join('\n'), items: objects.length };
     }
 
@@ -287,7 +284,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const fileInput = document.getElementById('c2j-file') as HTMLInputElement;
   fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) loadFile(fileInput.files[0]); });
 
-  // Drag-and-drop a CSV onto the input pane.
   ['dragover', 'dragenter'].forEach((ev) =>
     drop.addEventListener(ev, (e) => { e.preventDefault(); drop.style.outline = '2px solid #5e6ad2'; }));
   ['dragleave', 'drop'].forEach((ev) =>

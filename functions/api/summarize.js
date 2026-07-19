@@ -1,21 +1,4 @@
-// Cloudflare Pages Function: POST /api/summarize
-// Proxies Google's Gemini API. The browser extracts the PDF's text locally and
-// sends ONLY that text here — the file itself is never uploaded. This is the
-// one tool that leaves the no-upload model (documented in privacy.astro's
-// live-data carve-out).
-//
-// Uses PUBLIC_AI_API_KEY (same Gemini key as the client-side AI tools). Note
-// this key is NOT secret — it also ships in the client bundle — so the proxy
-// bounds cost (MAX_CHARS below) but does not hide the key.
-//
-// ponytail: no per-IP rate limiting — Workers can't do it without KV/Durable
-// Objects. Input is hard-capped below, but this endpoint is unauthenticated
-// and, with a public key upstream, abusable at volume. Add a Cloudflare rate-
-// limiting rule (dashboard → Security → Rate limiting) on /api/summarize
-// before this sees real traffic — that's the right layer, not app code.
 
-// ~100k chars ≈ 25k tokens — a long report, but bounded so one request can't
-// run up an unbounded bill. The client truncates to match and warns the user.
 const MAX_CHARS = 100_000;
 
 const json = (body, status = 200) =>
@@ -42,7 +25,6 @@ export async function onRequestPost({ request, env }) {
     return json({ error: `text too long (max ${MAX_CHARS} characters)` }, 413);
   }
 
-  // Length preset maps to a short target so summaries stay tight and cheap.
   const length = body.length === 'short' || body.length === 'detailed' ? body.length : 'medium';
   const targets = {
     short: 'in 2-3 sentences',

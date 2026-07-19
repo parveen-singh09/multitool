@@ -329,7 +329,6 @@ console.log(greet("world"));`;
     const ctx = canvas.getContext('2d')!;
     ctx.font = `${fontSize}px ${MONO}`;
 
-    // Measure widest line by summing run widths.
     let maxW = 1;
     for (const line of lines) {
       let w = 0;
@@ -337,8 +336,8 @@ console.log(greet("world"));`;
       maxW = Math.max(maxW, w);
     }
 
-    const winPad = 20;                       // inner padding of the code area
-    const titleH = (dots || title) ? 44 : 0; // window chrome height
+    const winPad = 20;
+    const titleH = (dots || title) ? 44 : 0;
     const numGutter = lineNums ? ctx.measureText(String(lines.length)).width + 24 : 0;
 
     const winW = Math.ceil(maxW + numGutter + winPad * 2);
@@ -355,7 +354,6 @@ console.log(greet("world"));`;
 
     paintBg(ctx, cw, ch);
 
-    // Window card with optional drop shadow.
     if (shadow) {
       ctx.save();
       ctx.shadowColor = 'rgba(0,0,0,0.35)';
@@ -365,12 +363,10 @@ console.log(greet("world"));`;
     ctx.beginPath(); ctx.roundRect(pad, pad, winW, winH, 12); ctx.fill();
     if (shadow) ctx.restore();
 
-    // Traffic-light dots.
     if (dots) {
       const cols = ['#ff5f56', '#ffbd2e', '#27c93f'];
       cols.forEach((c, i) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(pad + 24 + i * 20, pad + 22, 6, 0, Math.PI * 2); ctx.fill(); });
     }
-    // Title, centered in the chrome bar.
     if (title) {
       ctx.fillStyle = theme.winFg;
       ctx.font = `500 ${Math.round(fontSize * 0.9)}px Inter, system-ui, sans-serif`;
@@ -379,7 +375,6 @@ console.log(greet("world"));`;
       ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     }
 
-    // Code, run by run with real syntax colors. Record x per run for SVG reuse.
     ctx.font = `${fontSize}px ${MONO}`;
     const codeX = pad + winPad + numGutter;
     const codeY = pad + titleH + winPad;
@@ -412,14 +407,12 @@ console.log(greet("world"));`;
 
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-  // Build an SVG string from the last layout. Text is real <text>, so it stays
-  // crisp at any zoom and selectable. Uses the same coordinates as the canvas.
   function buildSvg(): string {
     if (!layout) return '';
     const L = layout, t = L.theme;
     const bg = BACKGROUNDS[bgIndex];
     const fs = L.fontSize;
-    const baseline = (i: number) => L.codeY + i * L.lineHeight + fs * 0.82; // top -> baseline
+    const baseline = (i: number) => L.codeY + i * L.lineHeight + fs * 0.82;
     let bgDef = '', bgFill = 'none';
     if (typeof bg === 'string') { bgFill = bg; }
     else if (Array.isArray(bg)) {
@@ -526,7 +519,6 @@ console.log(greet("world"));`;
   });
 
   renderBgSwatches();
-  // Draw once the mono webfont is ready so measurements are correct.
   (document as any).fonts?.ready.then(() => draw());
   draw();
 </script>

@@ -152,7 +152,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   function ensureCtx() { ctx = ctx || new (window.AudioContext || (window as any).webkitAudioContext)(); return ctx!; }
 
-  // Route a source to left, right, or both channels.
   function pan(node: AudioNode, channel: string, g: GainNode) {
     if (channel === 'both') { node.connect(g); return; }
     const p = ctx!.createStereoPanner();
@@ -206,7 +205,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     setTimeout(() => dead.forEach((n) => { try { n.stop(); } catch {} n.disconnect(); }), 40);
   }
 
-  // ---- Live updates for the tone pane ----
   freqEl.addEventListener('input', () => {
     sliderEl.value = String(Math.min(4000, freq()));
     noteEl.textContent = freqToNote(freq());
@@ -220,7 +218,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   $('at-a440').addEventListener('click', () => { freqEl.value = '440'; freqEl.dispatchEvent(new Event('input')); });
   $('at-a432').addEventListener('click', () => { freqEl.value = '432'; freqEl.dispatchEvent(new Event('input')); });
 
-  // Binaural beat readout
   const updBeat = () => {
     const l = Number(($('at-bi-left') as HTMLInputElement).value) || 0;
     const r = Number(($('at-bi-right') as HTMLInputElement).value) || 0;
@@ -232,7 +229,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   $('at-play').addEventListener('click', play);
   $('at-stop').addEventListener('click', stop);
 
-  // ---- Offline render → WAV ----
   $('at-dl').addEventListener('click', async () => {
     let dur = Math.max(1, Math.min(600, Number(($('at-dur') as HTMLInputElement).value) || 5));
     if (mode === 'sweep') dur = Math.max(0.1, Number(($('at-sw-dur') as HTMLInputElement).value) || 5);

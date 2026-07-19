@@ -181,13 +181,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const startSec = () => (Number(rStart.value) / 100) * duration;
   const endSec = () => (Number(rEnd.value) / 100) * duration;
 
-  // ---- Text overlays ----
   interface TextItem {
     id: number;
     text: string;
-    xPct: number;   // top-left, % of frame
+    xPct: number;
     yPct: number;
-    sizeFrac: number; // font size as fraction of frame height
+    sizeFrac: number;
     color: string;
     bold: boolean;
     bg: boolean;
@@ -196,7 +195,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   let nextId = 1;
   const activeTexts = () => texts.filter((t) => t.text.trim() !== '');
 
-  // Render the draggable preview boxes over the video.
   function renderBoxes() {
     textLayer.replaceChildren();
     for (const t of texts) {
@@ -219,8 +217,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     box.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      // Measure the layer/box once at grab time. Listen on window (not the box)
-      // so the drag survives the pointer passing over the video's controls.
       const layerRect = textLayer.getBoundingClientRect();
       const boxRect = box.getBoundingClientRect();
       const offX = e.clientX - boxRect.left;
@@ -247,7 +243,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     });
   }
 
-  // Render the editor rows below the preview.
   function renderTextList() {
     textList.replaceChildren();
     if (!texts.length) {
@@ -280,7 +275,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       const ctrls = document.createElement('div');
       ctrls.className = 'flex flex-wrap items-center gap-3';
 
-      // Color
       const colWrap = document.createElement('label');
       colWrap.className = 'flex items-center gap-2 text-[13px] text-ink-subtle';
       colWrap.append('Color');
@@ -289,7 +283,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       col.addEventListener('input', () => { t.color = col.value; renderBoxes(); });
       colWrap.appendChild(col);
 
-      // Size
       const sizeWrap = document.createElement('label');
       sizeWrap.className = 'flex items-center gap-2 text-[13px] text-ink-subtle';
       sizeWrap.append('Size');
@@ -299,7 +292,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       size.addEventListener('input', () => { t.sizeFrac = Number(size.value) / 100; renderBoxes(); });
       sizeWrap.appendChild(size);
 
-      // Bold
       const boldWrap = document.createElement('label');
       boldWrap.className = 'flex items-center gap-2 text-[13px] text-ink-subtle';
       const bold = document.createElement('input');
@@ -307,7 +299,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       bold.addEventListener('change', () => { t.bold = bold.checked; renderBoxes(); });
       boldWrap.append(bold, document.createTextNode('Bold'));
 
-      // Background
       const bgWrap = document.createElement('label');
       bgWrap.className = 'flex items-center gap-2 text-[13px] text-ink-subtle';
       const bg = document.createElement('input');
@@ -326,19 +317,15 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     renderTextList(); renderBoxes();
   });
 
-  // Compute the output dimensions the GIF will use (width fixed, height from aspect).
   function outputDims(): { w: number; h: number } {
     const w = Number(($('vg-width') as HTMLInputElement).value) || 480;
     const vw = video.videoWidth || 16;
     const vh = video.videoHeight || 9;
-    // Output aspect follows the crop rect when cropping, else the full frame.
     const ar = cropOn.checked ? (vw * crop.w) / (vh * crop.h) : vw / vh;
     const h = Math.max(2, Math.round(w / ar));
     return { w, h };
   }
 
-  // Keep the text layer aligned to the visible output region so overlay % stay
-  // pixel-accurate: it covers the crop rect when cropping, else the whole frame.
   function syncTextLayer() {
     const on = cropOn.checked;
     textLayer.style.left = on ? crop.x + '%' : '';
@@ -356,7 +343,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     cropBox.style.height = crop.h + '%';
   }
 
-  // Move (drag body) or resize (drag handle) the crop rect, clamped to 0–100.
   function attachCropDrag() {
     const grab = (e: PointerEvent, mode: 'move' | 'resize') => {
       e.preventDefault(); e.stopPropagation();
@@ -393,7 +379,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     syncTextLayer(); renderBoxes(); updateEstimate();
   });
 
-  // Draw all active text onto a transparent PNG at the output resolution.
   async function buildOverlayPng(outW: number, outH: number): Promise<Blob> {
     const canvas = document.createElement('canvas');
     canvas.width = outW; canvas.height = outH;
@@ -444,7 +429,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
 
   function refreshClip() {
-    // Keep start below end with a small minimum gap.
     if (Number(rStart.value) > Number(rEnd.value) - 1) rStart.value = String(Math.max(0, Number(rEnd.value) - 1));
     const s = startSec(), e = endSec();
     clipEl.textContent = `${fmtTime(s)} → ${fmtTime(e)}  (${(e - s).toFixed(1)}s)`;
@@ -456,10 +440,9 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const colors = Number(($('vg-colors') as HTMLSelectElement).value) || 256;
     const speed = Number(($('vg-speed') as HTMLSelectElement).value) || 1;
     const boomerang = ($('vg-boomerang') as HTMLInputElement).checked;
-    const outDur = dur / speed; // speed changes playback length
+    const outDur = dur / speed;
     const frames = Math.max(1, Math.round(outDur * fps)) * (boomerang ? 2 : 1);
     const { w, h } = outputDims();
-    // Rough GIF bytes: frames × pixels × bits-per-pixel(from palette)/8 × LZW factor.
     const bpp = Math.log2(colors) / 8;
     const bytes = frames * w * h * bpp * 0.5;
     estimate.textContent = dur > 0 ? `~${frames} frames · ${w}×${h} · est. ${fmtSize(bytes)}` : '';
@@ -478,8 +461,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     video.src = videoUrl;
     video.onloadedmetadata = () => {
       duration = isFinite(video.duration) ? video.duration : 0;
-      // The video sits in normal flow and defines the stage box; the text layer
-      // (absolute inset-0) covers exactly the video's pixels — no letterbox drift.
       rStart.value = '0';
       rEnd.value = String(Math.min(100, (Math.min(duration, 5) / duration) * 100));
       refreshClip();
@@ -504,8 +485,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const boomerang = ($('vg-boomerang') as HTMLInputElement).checked;
     const speed = Number(($('vg-speed') as HTMLSelectElement).value) || 1;
     const hasText = activeTexts().length > 0;
-    // Source-stream prefix applied before fps/scale: optional retime + crop.
-    // setpts=PTS/speed changes clip length; crop uses source-pixel fractions.
     const speedF = speed !== 1 ? `setpts=PTS/${speed},` : '';
     const cropF = cropOn.checked
       ? `crop=iw*${(crop.w / 100).toFixed(4)}:ih*${(crop.h / 100).toFixed(4)}:iw*${(crop.x / 100).toFixed(4)}:ih*${(crop.y / 100).toFixed(4)},`
@@ -523,25 +502,19 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       const cleanup: string[] = [inName, 'palette.png', 'out.gif'];
 
       if (hasText) {
-        // Composite a transparent PNG of the text onto every frame via `overlay`.
-        // Scale is forced to the exact overlay dimensions so they align pixel-for-pixel.
         const png = await buildOverlayPng(outW, outH);
         await ff.writeFile('overlay.png', await fetchFile(png));
         cleanup.push('overlay.png');
-        // Shared processing chain: fps + scale + text overlay + optional reverse/boomerang.
         let proc = `[0:v]${pre}fps=${fps},scale=${outW}:${outH}:flags=lanczos[b0];[b0][1:v]overlay=0:0`;
         if (boomerang) proc += `,split[sa][sb];[sb]reverse[sr];[sa][sr]concat`;
         else if (reverse) proc += `,reverse`;
         proc += `[proc]`;
-        // pass 1: palette
         await ff.exec(['-ss', String(start), '-t', String(dur), '-i', inName, '-i', 'overlay.png',
           '-filter_complex', `${proc};[proc]palettegen=max_colors=${colors}[p]`, '-map', '[p]', 'palette.png']);
         statusEl.textContent = 'Encoding GIF…';
-        // pass 2: apply palette with the chosen dithering
         await ff.exec(['-ss', String(start), '-t', String(dur), '-i', inName, '-i', 'overlay.png', '-i', 'palette.png',
           '-filter_complex', `${proc};[proc][2:v]paletteuse=dither=${dither}[o]`, '-map', '[o]', '-loop', loop, 'out.gif']);
       } else {
-        // No text: original single-filter path (keeps auto height via scale=-1).
         let chain = `${pre}fps=${fps},scale=${outW}:-1:flags=lanczos`;
         if (boomerang) chain += `,split[a][b];[b]reverse[r];[a][r]concat`;
         else if (reverse) chain += `,reverse`;

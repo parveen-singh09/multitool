@@ -253,7 +253,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
   out.addEventListener('input', () => { updateCount(); autosave(); });
 
-  // Spoken punctuation / formatting commands. Applied to each final chunk when enabled.
   const COMMANDS: Array<[RegExp, string]> = [
     [/\bnew paragraph\b/gi, '\n\n'],
     [/\bnew line\b/gi, '\n'],
@@ -274,8 +273,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   ];
   function applyCommands(s: string) {
     for (const [re, rep] of COMMANDS) s = s.replace(re, rep);
-    // Tidy spaces: collapse around line breaks, drop space before sentence
-    // punctuation (but not smiley colons like :) ), and squeeze doubles.
     return s
       .replace(/[ \t]*\n[ \t]*/g, '\n')
       .replace(/[ \t]+([.,;:!?])(?![)(])/g, '$1')
@@ -292,7 +289,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     download('transcript.txt', 'text/plain', out.value);
   });
   document.getElementById('st-download-doc')!.addEventListener('click', () => {
-    // Minimal Word-openable HTML document. ponytail: HTML .doc is the stdlib-free way Word imports cleanly.
     const esc = out.value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const html = `<html xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"></head><body><p>${esc.replace(/\n\n+/g, '</p><p>').replace(/\n/g, '<br>')}</p></body></html>`;
     download('transcript.doc', 'application/msword', html);
@@ -324,7 +320,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       }
       if (finalTxt) {
         let addition = (cmdToggle.checked ? applyCommands(finalTxt) : finalTxt).trim();
-        // Leading break (new line/paragraph) shouldn't get a space before it; nor should leading punctuation.
         const startsBreak = /^\n/.test(addition);
         const needsSpace = out.value && !/\s$/.test(out.value) && !startsBreak && !/^[.,;:!?)]/.test(addition);
         out.value += (needsSpace ? ' ' : '') + addition;
@@ -337,7 +332,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
     recog.onerror = (ev: any) => {
       if (ev.error === 'no-speech' || ev.error === 'aborted') return;
-      manualStop = true; // don't auto-restart on a real error
+      manualStop = true;
       if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
         err.textContent = 'Microphone access was blocked. Allow the mic in your browser and try again.';
       } else if (ev.error === 'network') {
@@ -350,7 +345,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     };
 
     recog.onend = () => {
-      // Chrome stops after silence; restart unless the user pressed stop.
       if (listening && !manualStop) { try { recog.start(); } catch {} }
       else setListening(false);
     };

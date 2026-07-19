@@ -582,11 +582,9 @@ https://medium.com/how-we-built-it</textarea>
     render();
   }
 
-  // LinkedIn auto-links @mentions, #hashtags and URLs (blue + semibold).
   const LINK_RE = /(https?:\/\/[^\s]+|www\.[^\s]+|@[A-Za-z0-9_.-]+|#[A-Za-z0-9_]+)/g;
   const linkCards = Array.from(document.querySelectorAll<HTMLAnchorElement>('[data-linkcard]'));
 
-  // Append text to a preview body, wrapping detected links in blue spans.
   function appendLinked(el: HTMLElement, text: string) {
     let last = 0;
     let m: RegExpExecArray | null;
@@ -602,7 +600,6 @@ https://medium.com/how-we-built-it</textarea>
     if (last < text.length) el.appendChild(document.createTextNode(text.slice(last)));
   }
 
-  // Turn a URL into a readable title guess + clean domain (no fetch — client-side).
   function describeUrl(url: string): { title: string; domain: string } {
     let href = url;
     if (!/^https?:\/\//i.test(href)) href = 'https://' + href;
@@ -637,7 +634,6 @@ https://medium.com/how-we-built-it</textarea>
     });
   }
 
-  // Render one preview body, applying LinkedIn-style truncation + "…more".
   function renderBody(el: HTMLElement) {
     const value = input.value;
     const limit = Number(el.dataset.limit) || 210;
@@ -657,7 +653,6 @@ https://medium.com/how-we-built-it</textarea>
       return;
     }
 
-    // Truncate on a nearby word boundary so we don't cut mid-word.
     let cut = limit;
     const slice = chars.slice(0, limit).join('');
     const lastSpace = slice.lastIndexOf(' ');
@@ -689,7 +684,6 @@ https://medium.com/how-we-built-it</textarea>
   });
   document.getElementById('tg-clear')!.addEventListener('click', () => applyToSelection(toPlain));
 
-  // Device toggle
   document.querySelectorAll<HTMLButtonElement>('[data-view]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const view = btn.dataset.view;
@@ -703,7 +697,6 @@ https://medium.com/how-we-built-it</textarea>
     });
   });
 
-  // Typing invalidates the manual "expand" so truncation tracks the live text.
   input.addEventListener('input', () => {
     outs.forEach((el) => expanded.delete(el));
     render();

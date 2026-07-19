@@ -117,7 +117,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const hasP = !isNaN(p) && p > 0;
     const u = unit.value;
 
-    // speed helper: seconds-per-unit → units/hour
     const speedStr = (secPerUnit: number) => `${(3600 / secPerUnit).toFixed(2)} ${u === 'mi' ? 'mph' : 'km/h'}`;
     let solvedDist = d, solvedPace = p;
 
@@ -136,7 +135,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       return;
     }
 
-    // Splits table when we know distance + pace.
     const splitsWrap = document.getElementById('pc-splits-wrap')!;
     if (solvedDist > 0 && solvedPace > 0 && solvedDist <= 200) {
       const rows: string[] = [];
@@ -157,13 +155,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     document.getElementById('pc-splits-wrap')!.classList.add('hidden');
   });
 
-  // Preset fills the distance field (in km) and sets the unit to km.
   document.getElementById('pc-preset')!.addEventListener('change', (e) => {
     const v = (e.target as HTMLSelectElement).value;
     if (v) { dist.value = v; unit.value = 'km'; }
   });
 
-  // Riegel race-time predictor: T2 = T1 × (D2/D1)^1.06 (distances in same unit → km).
   function predict() {
     const toKm = (val: number, u2: string) => (u2 === 'mi' ? val * 1.60934 : val);
     const d1 = toKm(Number((document.getElementById('pc-r-d1') as HTMLInputElement).value), (document.getElementById('pc-r-u1') as HTMLSelectElement).value);

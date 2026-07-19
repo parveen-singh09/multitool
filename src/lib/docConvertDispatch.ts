@@ -1,6 +1,3 @@
-// Single slug -> conversion registry shared by the DocConvert page component
-// and the AI-chat tool runners. Each entry declares its input kind and returns
-// either a downloadable file ({blob, ext}) or text ({text}).
 import * as D from './docConvert';
 import * as F from './finConvert';
 import { csvToJson, jsonToCsv, jsonToXml, jsonToYaml, parseCsv, detectDelimiter } from './dataformats';
@@ -9,8 +6,8 @@ export type ConvInput = { text?: string; file?: File };
 export type ConvResult = { blob?: Blob; ext?: string; text?: string; filename?: string; note?: string };
 export interface ConvSpec {
   inputKind: 'text' | 'file';
-  accept?: string;            // for file inputs
-  placeholder?: string;       // for text inputs
+  accept?: string;
+  placeholder?: string;
   run: (input: ConvInput, baseName: string) => Promise<ConvResult>;
 }
 
@@ -19,7 +16,6 @@ const blobOf = (data: string | Uint8Array, mime: string) => new Blob([data as Bl
 const textBlob = (s: string, mime = 'text/plain') => blobOf(s, mime);
 const bufOf = (f: File) => f.arrayBuffer();
 
-// Read text for text-input tools (from pasted text or an attached text file).
 async function readText(input: ConvInput): Promise<string> {
   if (input.text != null && input.text.trim()) return input.text;
   if (input.file) return await input.file.text();
@@ -29,7 +25,6 @@ async function readText(input: ConvInput): Promise<string> {
 const TEXT = 'text/plain';
 
 export const CONVERSIONS: Record<string, ConvSpec> = {
-  // ---------- TXT -> X ----------
   'txt-to-word': { inputKind: 'text', placeholder: 'Paste your text…', run: async (i) => ({ blob: D.makeDocx((await readText(i)).split(/\n{2,}/)), ext: 'docx' }) },
   'txt-to-docx': { inputKind: 'text', placeholder: 'Paste your text…', run: async (i) => ({ blob: D.makeDocx((await readText(i)).split(/\n{2,}/)), ext: 'docx' }) },
   'txt-to-pdf': { inputKind: 'text', placeholder: 'Paste your text…', run: async (i) => ({ blob: blobOf(await D.buildTextPdf((await readText(i)).split(/\n{2,}/)), 'application/pdf'), ext: 'pdf' }) },
@@ -47,11 +42,9 @@ export const CONVERSIONS: Record<string, ConvSpec> = {
   'txt-to-qr-code': { inputKind: 'text', placeholder: 'Paste text or a URL…', run: async (i) => ({ blob: await qrBlob(await readText(i)), ext: 'png' }) },
   'txt-to-epub': { inputKind: 'text', placeholder: 'Paste your text (blank lines separate paragraphs)…', run: async (i, base) => { const t = await readText(i); const html = t.split(/\n{2,}/).map((p) => `<p>${D.xmlEscape(p)}</p>`).join(''); return { blob: D.buildEpub(base || 'Document', [{ title: base || 'Document', html }]), ext: 'epub' }; } },
 
-  // ---------- Markdown -> X ----------
   'markdown-to-word': { inputKind: 'text', placeholder: 'Paste Markdown…', run: async (i) => ({ blob: D.makeDocx(D.mdToPlainParagraphs(await readText(i))), ext: 'docx' }) },
   'markdown-to-pdf': { inputKind: 'text', placeholder: 'Paste Markdown…', run: async (i) => ({ blob: blobOf(await D.buildTextPdf(D.mdToPlainParagraphs(await readText(i))), 'application/pdf'), ext: 'pdf' }) },
 
-  // ---------- CSV -> X ----------
   'csv-to-pdf': { inputKind: 'text', placeholder: 'Paste CSV…', run: async (i) => { const rows = D.csvMatrix(await readText(i)); return { blob: blobOf(await D.buildTextPdf(rows.map((r) => r.join('   '))), 'application/pdf'), ext: 'pdf' }; } },
   'csv-to-xml': { inputKind: 'text', placeholder: 'Paste CSV…', run: async (i) => { const t = await readText(i); return { text: jsonToXml(csvToJson(t, detectDelimiter(t), true)) }; } },
   'csv-to-sql': { inputKind: 'text', placeholder: 'Paste CSV…', run: async (i) => ({ text: D.csvToSql(await readText(i)) }) },
@@ -63,7 +56,6 @@ export const CONVERSIONS: Record<string, ConvSpec> = {
   'csv-to-txt': { inputKind: 'text', placeholder: 'Paste CSV…', run: async (i) => { const rows = D.csvMatrix(await readText(i)); return { text: rows.map((r) => r.join('\t')).join('\n') }; } },
   'csv-to-vcard': { inputKind: 'text', placeholder: 'Paste CSV (with name/email/phone headers)…', run: async (i) => ({ blob: textBlob(D.csvToVcard(await readText(i)), 'text/vcard'), ext: 'vcf' }) },
 
-  // ---------- IPYNB -> X ----------
   'ipynb-to-python': { inputKind: 'file', accept: '.ipynb,application/json', run: async (i) => ({ text: D.ipynbToPython(await i.file!.text()) }) },
   'ipynb-to-html': { inputKind: 'file', accept: '.ipynb,application/json', run: async (i) => ({ text: await D.ipynbToHtml(await i.file!.text()) }) },
   'ipynb-to-json': { inputKind: 'file', accept: '.ipynb,application/json', run: async (i) => ({ text: JSON.stringify(JSON.parse(await i.file!.text()), null, 2) }) },
@@ -71,7 +63,6 @@ export const CONVERSIONS: Record<string, ConvSpec> = {
   'ipynb-to-word': { inputKind: 'file', accept: '.ipynb,application/json', run: async (i) => ({ blob: D.makeDocx(D.ipynbToPlainText(await i.file!.text()).split(/\n{2,}/)), ext: 'docx' }) },
   'ipynb-to-pdf': { inputKind: 'file', accept: '.ipynb,application/json', run: async (i) => ({ blob: blobOf(await D.buildTextPdf(D.ipynbToPlainText(await i.file!.text()).split(/\n{2,}/)), 'application/pdf'), ext: 'pdf' }) },
 
-  // ---------- EPUB -> X ----------
   'epub-to-txt': { inputKind: 'file', accept: '.epub,application/epub+zip', run: async (i) => { const d = await D.readEpub(await bufOf(i.file!)); return { text: d.chapters.map((c) => c.text).join('\n\n') }; } },
   'epub-to-html': { inputKind: 'file', accept: '.epub,application/epub+zip', run: async (i) => { const d = await D.readEpub(await bufOf(i.file!)); return { text: `<!DOCTYPE html>\n<html><head><meta charset="utf-8"><title>${D.xmlEscape(d.title)}</title></head><body>${d.chapters.map((c) => c.html).join('\n<hr/>\n')}</body></html>` }; } },
   'epub-to-pdf': { inputKind: 'file', accept: '.epub,application/epub+zip', run: async (i) => { const d = await D.readEpub(await bufOf(i.file!)); const paras = d.chapters.flatMap((c) => [c.title, ...c.text.split(/(?<=\.)\s{2,}|\n{2,}/)]); return { blob: blobOf(await D.buildTextPdf(paras), 'application/pdf'), ext: 'pdf' }; } },
@@ -79,10 +70,8 @@ export const CONVERSIONS: Record<string, ConvSpec> = {
   'epub-to-csv': { inputKind: 'file', accept: '.epub,application/epub+zip', run: async (i) => { const d = await D.readEpub(await bufOf(i.file!)); const rows = [['chapter', 'title', 'text'], ...d.chapters.map((c, n) => [String(n + 1), c.title, c.text])]; return { text: rows.map((r) => r.map((v) => `"${v.replace(/"/g, '""')}"`).join(',')).join('\n') }; } },
   'epub-to-fb2': { inputKind: 'file', accept: '.epub,application/epub+zip', run: async (i) => { const d = await D.readEpub(await bufOf(i.file!)); return { blob: textBlob(D.chaptersToFb2(d.title, d.chapters), 'application/x-fictionbook+xml'), ext: 'fb2' }; } },
 
-  // ---------- Ebook converter (EPUB -> pick) ----------
   'ebook-converter': { inputKind: 'file', accept: '.epub,application/epub+zip', run: async (i) => { const d = await D.readEpub(await bufOf(i.file!)); return { text: d.chapters.map((c) => `# ${c.title}\n\n${c.text}`).join('\n\n') }; } },
 
-  // ---------- Office (text extraction) ----------
   'word-to-pdf': { inputKind: 'file', accept: '.docx', run: async (i) => ({ blob: blobOf(await D.buildTextPdf((await D.docxText(await bufOf(i.file!))).split('\n')), 'application/pdf'), ext: 'pdf', note: 'Text extracted; original layout, images and styling are not reproduced.' }) },
   'excel-to-pdf': { inputKind: 'file', accept: '.xlsx', run: async (i) => { const rows = await D.xlsxRows(await bufOf(i.file!)); return { blob: blobOf(await D.buildTextPdf(rows.map((r) => r.join('   '))), 'application/pdf'), ext: 'pdf', note: 'Cell values extracted; formulas, charts and formatting are not reproduced.' }; } },
   'ppt-to-txt': { inputKind: 'file', accept: '.pptx', run: async (i) => { const s = await D.pptxText(await bufOf(i.file!)); return { text: s.map((x) => `--- Slide ${x.slide} ---\n${x.text}`).join('\n\n') }; } },
@@ -92,10 +81,8 @@ export const CONVERSIONS: Record<string, ConvSpec> = {
   'ppt-to-pdf': { inputKind: 'file', accept: '.pptx', run: async (i) => { const s = await D.pptxText(await bufOf(i.file!)); return { blob: blobOf(await D.buildTextPdf(s.flatMap((x) => [`Slide ${x.slide}`, x.text])), 'application/pdf'), ext: 'pdf', note: 'Slide text extracted into a PDF; visual layout is not reproduced.' }; } },
   'ppt-to-epub': { inputKind: 'file', accept: '.pptx', run: async (i, base) => { const s = await D.pptxText(await bufOf(i.file!)); const chapters = s.map((x) => ({ title: `Slide ${x.slide}`, html: `<p>${D.xmlEscape(x.text)}</p>` })); return { blob: D.buildEpub(base || 'Presentation', chapters), ext: 'epub', note: 'Slide text extracted; visual layout is not reproduced.' }; } },
 
-  // ---------- PDF -> CSV (text rows) ----------
   'pdf-to-csv': { inputKind: 'file', accept: '.pdf,application/pdf', run: async (i) => { const rows = await pdfLinesToCsv(i.file!); return { text: rows }; } },
 
-  // ---------- Financial: OFX / QIF / IIF ----------
   'ofx-to-csv': { inputKind: 'file', accept: '.ofx,.qfx', run: async (i) => ({ text: F.txnsToCsv(F.parseOfx(await i.file!.text())) }) },
   'ofx-to-excel': { inputKind: 'file', accept: '.ofx,.qfx', run: async (i) => ({ blob: F.txnsToXlsx(F.parseOfx(await i.file!.text())), ext: 'xlsx' }) },
   'ofx-to-qfx': { inputKind: 'file', accept: '.ofx', run: async (i) => ({ blob: new Blob([F.txnsToOfx(F.parseOfx(await i.file!.text()))], { type: 'application/x-ofx' }), ext: 'qfx' }) },
@@ -106,12 +93,10 @@ export const CONVERSIONS: Record<string, ConvSpec> = {
   'iif-to-csv': { inputKind: 'file', accept: '.iif', run: async (i) => ({ text: F.txnsToCsv(F.parseIif(await i.file!.text())) }) },
   'iif-to-excel': { inputKind: 'file', accept: '.iif', run: async (i) => ({ blob: F.txnsToXlsx(F.parseIif(await i.file!.text())), ext: 'xlsx' }) },
 
-  // ---------- image -> PDF (jpg/png) ----------
   'jpg-to-pdf': { inputKind: 'file', accept: 'image/jpeg,.jpg,.jpeg', run: async (i) => ({ blob: await imageToPdf(i.file!), ext: 'pdf' }) },
   'png-to-pdf': { inputKind: 'file', accept: 'image/png,.png', run: async (i) => ({ blob: await imageToPdf(i.file!), ext: 'pdf' }) },
 };
 
-// ---- helpers used by specs ----
 async function qrBlob(text: string): Promise<Blob> {
   const QRCode = (await import('qrcode')).default;
   const canvas = document.createElement('canvas');
@@ -139,7 +124,6 @@ async function pdfLinesToCsv(file: File): Promise<string> {
   for (let n = 1; n <= pdf.numPages; n++) {
     const page = await pdf.getPage(n);
     const content = await page.getTextContent();
-    // Group items by their y position into rows, x order into columns.
     const rowsMap = new Map<number, { x: number; s: string }[]>();
     for (const it of content.items as any[]) {
       const y = Math.round(it.transform[5]);

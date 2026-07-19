@@ -113,7 +113,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       : '<span class="text-ink-tertiary">No letters.</span>';
   }
 
-  // --- Frequency first-guess: map most common cipher letter to E, etc. ---
   function guessByFrequency() {
     const text = input.value.toUpperCase();
     const counts: Record<string, number> = {};
@@ -124,8 +123,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     renderKey(); renderOut();
   }
 
-  // --- Auto-solve via hill climbing scored by English trigram log-frequencies ---
-  // Compact top-English-trigram scores (log-ish weights). Others default low.
   const TRIGRAMS: Record<string, number> = {
     THE: 10, AND: 8, ING: 8, ENT: 6, ION: 6, HER: 6, FOR: 6, THA: 6, NTH: 6, INT: 5,
     ERE: 5, TIO: 5, TER: 5, EST: 5, ERS: 5, ATI: 5, HAT: 5, ATE: 5, ALL: 5, VER: 4,
@@ -159,7 +156,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
 
   function applyKey(cipher: string, key: string[]): string {
-    // key is an array of 26 plain letters indexed by A..Z cipher position.
     let out = '';
     for (const ch of cipher) {
       if (ch >= 'A' && ch <= 'Z') out += key[ch.charCodeAt(0) - 65];
@@ -176,11 +172,9 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   function autoSolve() {
     const cipher = input.value.toUpperCase().replace(/[^A-Z\s]/g, ' ');
     if (cipher.replace(/\s/g, '').length < 12) {
-      // Too short for statistical solving — fall back to frequency seed.
       guessByFrequency();
       return;
     }
-    // Seed from frequency analysis.
     const counts: Record<string, number> = {};
     for (const ch of cipher) if (ch >= 'A' && ch <= 'Z') counts[ch] = (counts[ch] || 0) + 1;
     const byFreq = LETTERS.slice().sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
@@ -189,12 +183,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
     let bestScore = scoreText(applyKey(cipher, best));
 
-    // Hill climb: swap two plain-letter assignments, keep if better. Restart a few times.
     const RESTARTS = 6, ITERS = 3000;
     let globalBest = best.slice(), globalScore = bestScore;
     for (let r = 0; r < RESTARTS; r++) {
       let key = best.slice();
-      // Shuffle a little on restarts after the first.
       if (r > 0) for (let s = 0; s < 6; s++) { const i = randInt(26), j = randInt(26); [key[i], key[j]] = [key[j], key[i]]; }
       let curScore = scoreText(applyKey(cipher, key));
       let noImprove = 0;
@@ -209,7 +201,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       if (curScore > globalScore) { globalScore = curScore; globalBest = key.slice(); }
     }
 
-    // Build mapping only for letters actually present.
     mapping = {};
     for (const c of cipherLetters()) mapping[c] = globalBest[c.charCodeAt(0) - 65];
     renderKey(); renderOut();
@@ -224,7 +215,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   document.getElementById('cg-freq')!.addEventListener('click', guessByFrequency);
   document.getElementById('cg-clear')!.addEventListener('click', () => { mapping = {}; renderKey(); renderOut(); });
 
-  // Example: "THE ONLY WAY TO DO GREAT WORK IS TO LOVE WHAT YOU DO" with a simple shift.
   input.value = 'YMJ TSQD BFD YT IT LWJFY BTWP NX YT QTAJ BMFY DTZ IT';
   refreshAll();
 </script>

@@ -123,7 +123,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return `Current settings — focus: ${s.focus === 'full' ? 'full body' : s.focus}, level: ${s.level}, intensity: ${s.intensity}, days: ${s.days}, exercises/day: ${s.count}.`;
   }
 
-  // Normal path: build the plan locally, no request.
   function generate() {
     render(localPlan());
   }
@@ -146,7 +145,7 @@ Respond ONLY with JSON of this exact shape:
       if (!Array.isArray(plan.days) || !plan.days.length) throw new Error('shape');
       render(plan);
     } catch {
-      render(localPlan()); // remote unavailable / bad output — use local generator
+      render(localPlan());
     } finally {
       btn.disabled = false;
     }
@@ -156,7 +155,6 @@ Respond ONLY with JSON of this exact shape:
   $('wo-ai-gen').addEventListener('click', aiGenerate);
   render(localPlan());
 
-  // --- Chat ---
   const chatBox = $('wo-chat');
   const chatInput = $('wo-chat-input') as HTMLInputElement;
   const history: { role: 'user' | 'assistant'; content: string }[] = [];

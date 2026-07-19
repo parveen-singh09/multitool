@@ -214,7 +214,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     else b.hidden = true;
   }
 
-  // Resolve a scored spin into balance, stats, highlights and messaging.
   function settle(res: SpinResult, free: boolean) {
     spins++;
     if (!free) { credits -= totalBet(); wagered += totalBet(); }
@@ -239,7 +238,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
     if (res.totalWin > 0) pushRecent(`+${res.totalWin.toLocaleString()}${free ? ' (free)' : ''} — ${parts.join(', ') || 'win'}`);
 
-    // Award / retrigger free spins.
     if (res.freeSpinsAwarded > 0) {
       freeSpins += res.freeSpinsAwarded;
       pushRecent(`🎰 ${res.freeSpinsAwarded} free spins awarded`);
@@ -251,7 +249,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-  // Animate reels stopping left→right, then reveal the pre-decided grid.
   async function animate(finalGrid: Sym[][]) {
     const rollFor = turbo ? 0 : 260;
     const stagger = turbo ? 0 : 130;
@@ -259,7 +256,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
     for (let reel = 0; reel < 5; reel++) {
       if (!turbo) {
-        // spin this reel a touch longer than the previous
         const until = performance.now() + rollFor + reel * stagger;
         while (performance.now() < until) {
           for (let row = 0; row < 3; row++) cells[reel][row].textContent = REEL_FACES[randInt(0, REEL_FACES.length - 1)];
@@ -307,7 +303,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
     busy = false;
 
-    // Chain free spins automatically, then continue autoplay.
     if (freeSpins > 0) { await sleep(turbo ? 120 : 420); doSpin(); return; }
     if (autoplaying) {
       if (credits < totalBet()) { stopAuto(); msg.textContent = 'Autoplay stopped — out of credits.'; return; }
@@ -353,10 +348,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     $('sm-paytable').innerHTML = rows.join('');
   }
 
-  // ---- wire up -----------------------------------------------------------
   $('sm-spin').addEventListener('click', () => { if (!autoplaying) doSpin(); });
   $('sm-max').addEventListener('click', () => {
-    // largest line bet still affordable, capped at MAX
     const affordable = Math.max(1, Math.floor(credits / LINES));
     setLineBet(Math.min(MAX_LINEBET, affordable));
   });

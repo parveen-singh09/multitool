@@ -34,7 +34,7 @@ const accept = from ? `.${from}` : '';
       <button id="ac-pick-more" type="button" aria-label="Choose upload source" class="btn btn-primary px-2" style="border-top-left-radius:0;border-bottom-left-radius:0;border-left:1px solid rgba(255,255,255,0.22)">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
       </button>
-      <div id="ac-src-menu" class="hidden absolute left-1/2 top-[calc(100%+6px)] z-30 w-[min(13rem,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-lg border border-hairline bg-surface-2 text-left shadow-xl">
+      <div id="ac-src-menu" class="hidden absolute left-1/2 bottom-[calc(100%+6px)] z-30 w-[min(13rem,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-lg border border-hairline bg-surface-2 text-left shadow-xl">
         <button type="button" data-src="device" class="ac-src flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-ink hover:bg-surface-3">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-ink-subtle"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
           From this device
@@ -78,16 +78,15 @@ const accept = from ? `.${from}` : '';
 
 <style>
   .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
-  /* Stop the browser from auto-scrolling when DOM shifts (picker close, button reveal). */
+  
   :global(html), :global(body) { overflow-anchor: none; }
-  /* Dark canvas: soft white glow so the card lifts off near-black. */
+  
   .ac-drop { box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 10px 45px -8px rgba(255,255,255,0.14); }
   .ac-drop:hover { box-shadow: 0 0 0 1px rgba(255,255,255,0.10), 0 12px 55px -8px rgba(255,255,255,0.20); }
-  /* Light canvas: dark drop shadow so the card lifts off white. */
+  
   :global(html[data-theme='light']) .ac-drop { box-shadow: 0 1px 2px rgba(16,18,20,0.08), 0 12px 40px -8px rgba(16,18,20,0.22); }
   :global(html[data-theme='light']) .ac-drop:hover { box-shadow: 0 2px 4px rgba(16,18,20,0.10), 0 16px 48px -8px rgba(16,18,20,0.30); }
-  /* Google Drive picker injects .picker-dialog-bg as its backdrop into our page —
-     blur the page behind it instead of a flat dim. */
+  
   :global(.picker-dialog-bg) {
     backdrop-filter: blur(8px) !important;
     -webkit-backdrop-filter: blur(8px) !important;
@@ -104,7 +103,6 @@ const accept = from ? `.${from}` : '';
   const smart = root.dataset.smart === 'true';
   const sync = root.dataset.sync === 'true';
 
-  // In sync mode the target comes from the hero's right format card (#fmt-to).
   const syncTargetFmt = () => (document.getElementById('fmt-to')?.textContent || 'pdf').trim().toLowerCase();
 
   const $ = (id: string) => document.getElementById(id)!;
@@ -167,7 +165,7 @@ const accept = from ? `.${from}` : '';
     status.textContent = '';
     narrowTargets((file.name.split('.').pop() || '').toLowerCase());
     if (sync) {
-      runBtn.classList.remove('hidden');           // reveal Convert only after upload
+      runBtn.classList.remove('hidden');
       const inExt = (file.name.split('.').pop() || '').toLowerCase();
       document.dispatchEvent(new CustomEvent('fmt-lock', { detail: { from: inExt } }));
     }
@@ -192,7 +190,6 @@ const accept = from ? `.${from}` : '';
     if (lastOutUrl) { URL.revokeObjectURL(lastOutUrl); lastOutUrl = null; }
 
     try {
-      // Audio/video/font run in the browser; everything else via ConvertAPI.
       const backend = backendFor(inFormat);
       if (backend === 'ffmpeg') await convertMedia(picked, inFormat, outFormat);
       else if (backend === 'font') await convertFont(picked, outFormat);
@@ -207,10 +204,7 @@ const accept = from ? `.${from}` : '';
     }
   }
 
-  // Offer a local (blob) result as a download.
   function offerDownload(data: Uint8Array, mime: string, outFormat: string) {
-    // A 0-byte result means the encoder/extractor failed silently (bad codec,
-    // empty archive) — surface it instead of handing over a broken file.
     if (!data || data.length === 0) throw new Error('Conversion produced an empty file — the input may be unsupported or corrupt.');
     lastOutUrl = URL.createObjectURL(new Blob([data as BlobPart], { type: mime }));
     dlBtn.href = lastOutUrl;
@@ -220,14 +214,8 @@ const accept = from ? `.${from}` : '';
   }
 
   async function convertApi(file: File, inFormat: string, outFormat: string) {
-    // Resolve the hop path (direct or via one intermediate), then run it async:
-    // the client starts each hop and polls, so a slow conversion never holds one
-    // request open long enough for Cloudflare to 502 (the old failure on big PDFs).
     const path = chainPath(inFormat, outFormat) || [inFormat, outFormat];
     const { convertViaApi } = await import('../lib/ccConvert');
-    // The async API gives no real progress %, so ramp a simulated one toward 95%
-    // (eases out, never claims done early) — snaps to 100% when the result lands.
-    // ponytail: simulated, no per-byte signal from the async job.
     let pct = 0;
     let step = '';
     const tick = setInterval(() => {
@@ -244,16 +232,12 @@ const accept = from ? `.${from}` : '';
     }
     runBtn.textContent = 'Converting… 100%';
     if (lastOutUrl) { URL.revokeObjectURL(lastOutUrl); lastOutUrl = null; }
-    // Download through the same-origin worker proxy — the browser can't reliably
-    // fetch/save the cross-origin ConvertAPI result URL (CORS/opaque response).
     const proxy = (f: { url: string; filename: string }, fallback: string) =>
       `/api/cc-job?download=${encodeURIComponent(f.url)}&name=${encodeURIComponent(f.filename || fallback)}`;
     if (out.length === 1) {
-      // Single file: point straight at the proxy; it streams back as an attachment.
       dlBtn.href = proxy(out[0], `converted.${outFormat}`);
       dlBtn.setAttribute('download', out[0].filename || `converted.${outFormat}`);
     } else {
-      // Multi-page result (one file per page): fetch all via proxy, bundle into ZIP.
       const { makeZip } = await import('../lib/zip');
       const entries = await Promise.all(out.map(async (f, i) => {
         const r = await fetch(proxy(f, `page-${i + 1}.${outFormat}`));
@@ -284,8 +268,6 @@ const accept = from ? `.${from}` : '';
       onProgress: (r) => { runBtn.textContent = `Converting… ${Math.min(100, Math.round(r * 100))}%`; },
     });
     runBtn.textContent = 'Converting… 0%';
-    // Unique in AND out names: ffmpeg's virtual FS is a shared singleton, so a
-    // fixed "out.<fmt>" could hand back a stale file from a prior failed run.
     const token = Math.random().toString(36).slice(2);
     const inName = 'in_' + token + '.' + inFormat;
     const outName = 'out_' + token + '.' + outFormat;
@@ -296,7 +278,6 @@ const accept = from ? `.${from}` : '';
       mime = VIDEO_MIME[outFormat];
     } else {
       const { buildArgs, defaultQuality } = await import('../lib/media');
-      // aac is written as .m4a; map the audio ext to its OutFamily.
       const outFamily = (outFormat === 'm4a' ? 'aac' : outFormat) as any;
       const conv = { out: outFamily, kind: 'audio', ext: outFormat } as any;
       args = buildArgs(conv, { quality: defaultQuality(outFamily) }, inName, outName);
@@ -308,7 +289,6 @@ const accept = from ? `.${from}` : '';
       const data = (await ff.readFile(outName)) as Uint8Array;
       offerDownload(data, mime, outFormat);
     } finally {
-      // Always clean both, even on failure, so the shared FS never accumulates.
       try { await ff.deleteFile(inName); } catch {}
       try { await ff.deleteFile(outName); } catch {}
     }
@@ -337,7 +317,6 @@ const accept = from ? `.${from}` : '';
     const { convertArchive, archiveFormatOf, ARCHIVE_MIME } = await import('../lib/archive');
     const to = archiveFormatOf(outFormat);
     if (!to) throw new Error(`Can't write ${outFormat.toUpperCase()} archives in the browser.`);
-    // 7z/rar/etc. spin up a wasm worker — warn it may take a moment.
     status.textContent = 'Extracting…';
     const data = await convertArchive(file, to);
     const ext = to === 'tgz' ? 'tar.gz' : to;
@@ -351,9 +330,6 @@ const accept = from ? `.${from}` : '';
   const openPicker = () => { fileInput.click(); };
   const toggleMenu = (show?: boolean) => srcMenu.classList.toggle('hidden', show === undefined ? undefined : !show);
 
-  // Hard scroll-lock (the technique modal libraries use): pin the body with
-  // position:fixed so the page CANNOT scroll during the picker/OAuth flow, then
-  // restore the exact position on unlock. Nothing to "catch" — it never moves.
   let lockedY = 0;
   let scrollLocked = false;
   function lockScroll() {
@@ -378,7 +354,6 @@ const accept = from ? `.${from}` : '';
 
   fileInput.addEventListener('change', () => fileInput.files?.[0] && load(fileInput.files[0]));
 
-  // Click the card body opens the picker; clicks on the button group are handled separately.
   drop.addEventListener('click', (ev) => {
     if ((ev.target as HTMLElement).closest('#ac-pick, #ac-pick-more, #ac-src-menu')) return;
     openPicker();
@@ -395,7 +370,6 @@ const accept = from ? `.${from}` : '';
       const label = btn.textContent!.trim();
       if (src === 'device') { srcNote.classList.add('hidden'); openPicker(); return; }
 
-      // Drive source: only works if its public key is configured at build time.
       if (!driveReady(src)) {
         srcNote.textContent = `${label} isn't set up yet — use “From this device” for now.`;
         srcNote.classList.remove('hidden');
@@ -403,7 +377,6 @@ const accept = from ? `.${from}` : '';
       }
       srcNote.classList.add('hidden');
       dropLabel.textContent = `Opening ${label}…`;
-      // Freeze the page for the whole pick+auth flow so it physically can't scroll.
       lockScroll();
       try {
         await pickFromDrive(src, (file) => load(file));

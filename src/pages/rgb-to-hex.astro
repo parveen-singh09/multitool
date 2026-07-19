@@ -172,7 +172,6 @@ const channels = [
     return rgb;
   }
 
-  // Reflect an rgb+alpha state into every control and both outputs.
   function apply(r: number, g: number, b: number, aPct: number, push: boolean) {
     for (const k of ['r', 'g', 'b'] as const) {
       const v = k === 'r' ? r : k === 'g' ? g : b;
@@ -187,7 +186,6 @@ const channels = [
       ? `rgba(${r}, ${g}, ${b}, ${+(aPct / 100).toFixed(3)})`
       : `rgb(${r}, ${g}, ${b})`;
 
-    // Drive the shared ColorFormats panel (hex/hsl/hsv/cmyk/preview/shades/name).
     if (push && cfRoot) {
       const cfRgb = $('cf-rgb');
       if (cfRgb) {
@@ -204,7 +202,6 @@ const channels = [
     apply(r, g, b, a, true);
   }
 
-  // Wire sliders + number inputs. Slider ↔ number stay linked via apply().
   for (const k of ['r', 'g', 'b'] as const) {
     ranges[k].addEventListener('input', () => { nums[k].value = ranges[k].value; onPanelInput(); });
     nums[k].addEventListener('input', onPanelInput);
@@ -215,8 +212,6 @@ const channels = [
 
   $('rh-reset').addEventListener('click', () => apply(94, 106, 210, 100, true));
 
-  // When the user changes color via the picker / hex / hsl / etc. in
-  // ColorFormats, mirror the resulting RGB back into this panel (alpha kept).
   if (cfRoot) {
     cfRoot.addEventListener('input', () => {
       if (syncing) return;
@@ -224,7 +219,6 @@ const channels = [
       const rgb = cfRgb && parseRgb(cfRgb.value);
       if (rgb) apply(rgb.r, rgb.g, rgb.b, Number(aNum.value) || 100, false);
     });
-    // Initialise from ColorFormats' starting color (#5e6ad2).
     const start = parseRgb($('cf-rgb')?.value || 'rgb(94, 106, 210)') || { r: 94, g: 106, b: 210 };
     apply(start.r, start.g, start.b, 100, false);
   }

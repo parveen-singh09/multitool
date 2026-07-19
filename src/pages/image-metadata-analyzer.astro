@@ -195,7 +195,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     5: 'Transpose', 6: 'Rotate 90° CW', 7: 'Transverse', 8: 'Rotate 90° CCW',
   };
 
-  // Human-friendly formatting for common EXIF values
   function fmtValue(key: string, v: any): string {
     if (v == null) return '';
     if (v instanceof Date) return isNaN(v.getTime()) ? '' : v.toLocaleString();
@@ -254,7 +253,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const frame = document.getElementById('ima-gps-frame') as HTMLIFrameElement;
     frame.src = `https://www.openstreetmap.org/export/embed.html?bbox=${lon - d}%2C${lat - d}%2C${lon + d}%2C${lat + d}&layer=mapnik&marker=${lat}%2C${lon}`;
 
-    // Altitude / direction / speed when present
     const extra = document.getElementById('ima-gps-extra')!;
     extra.innerHTML = '';
     const alt = meta.GPSAltitude ?? meta.altitude;
@@ -304,28 +302,23 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     box.classList.toggle('hidden', !any);
   }
 
-  // ExifTool-style group labels for exifr's mergeOutput:false segment blocks
   const GROUP_LABELS: Record<string, string> = {
     file: 'File', ifd0: 'Image (IFD0)', ifd1: 'Thumbnail (IFD1)', exif: 'EXIF', gps: 'GPS',
     interop: 'Interoperability', iptc: 'IPTC', xmp: 'XMP', icc: 'ICC Profile',
     jfif: 'JFIF', ihdr: 'PNG', makerNote: 'Maker Note', userComment: 'User Comment',
   };
 
-  // MakerNote/UserComment come back as raw bytes for unknown makers — a few
-  // thousand numbers would flood the table, so summarise binary blobs instead.
   function isBinary(v: any): boolean {
     if (v instanceof Uint8Array || v instanceof ArrayBuffer) return true;
     return Array.isArray(v) && v.length > 64 && v.every((x) => typeof x === 'number');
   }
 
-  // grouped: { exif: {...}, gps: {...}, ... } from exifr mergeOutput:false
   function renderTable(grouped: Record<string, any>) {
     const body = document.getElementById('ima-meta-body')!;
     const box = document.getElementById('ima-meta')!;
     body.innerHTML = '';
     let total = 0;
 
-    // Stable, meaningful group order; unknown groups fall to the end
     const order = ['file', 'ifd0', 'exif', 'gps', 'interop', 'iptc', 'xmp', 'jfif', 'ihdr', 'icc', 'makerNote', 'userComment', 'ifd1'];
     const groups = Object.keys(grouped).sort((a, b) => {
       const ia = order.indexOf(a), ib = order.indexOf(b);
@@ -395,7 +388,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       const dot = f.name.lastIndexOf('.');
       const ext = dot === -1 ? '' : f.name.slice(dot + 1).toLowerCase();
 
-      // File group — checksum, type, size, raw header (the metadata2go top block)
       const fileGroup: Record<string, any> = {
         FileName: f.name,
         FileSize: fmtSize(f.size),
@@ -407,9 +399,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       };
 
       const exifr = (await import('exifr')).default;
-      // Parse every segment and keep them grouped (EXIF/GPS/IPTC/XMP/ICC/MakerNote…).
-      // exifr throws on non-container files (bare .xmp/.rdf sidecars) — swallow so
-      // the parseXmp fallback below still runs instead of skipping to "no metadata".
       let grouped: Record<string, any> = {};
       try {
         grouped = await exifr.parse(f, {
@@ -420,7 +409,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         } as any) || {};
       } catch {}
 
-      // exifr can't read a standalone .xmp/.rdf sidecar — parse the RDF/XML ourselves
       const looksXmp = /rdf\+xml|xml/.test(sniffed) || /\.(xmp|rdf)$/i.test(f.name);
       if (looksXmp && !grouped.xmp) {
         const xmp = parseXmp(await f.text());
@@ -429,7 +417,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
       grouped = { file: fileGroup, ...grouped };
 
-      // Flat merged view for the summary cards (camera/copyright/GPS)
       const merged: Record<string, any> = {};
       for (const g of Object.values(grouped)) if (g && typeof g === 'object') Object.assign(merged, g);
       renderCamera(merged);
@@ -445,7 +432,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   async function handle(f: File) {
     err.classList.add('hidden');
 
-    // Prefer a byte-sniffed type over the browser's guess (often empty on URL loads)
     const sniffed = sniffType(await f.slice(0, 16).arrayBuffer());
     const type = sniffed || f.type || 'unknown';
     const isImage = type.startsWith('image/') || /\.(heic|heif|tif|tiff)$/i.test(f.name);
@@ -454,7 +440,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     result.classList.remove('hidden');
     result.classList.add('flex');
 
-    // Image-only UI (preview, dimensions, ratio, megapixels, metadata removal)
     document.getElementById('ima-preview-wrap')!.classList.toggle('hidden', !isImage);
     for (const el of document.querySelectorAll<HTMLElement>('.ima-img-only')) {
       el.classList.toggle('hidden', !isImage);
@@ -488,24 +473,19 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     readMetadata(f);
   }
 
-  // --- Metadata removal ---------------------------------------------------
 
-  // Lossless JPEG strip: drop APP1 (EXIF/XMP), APP13 (IPTC/Photoshop) and COM
-  // segments, keep image data + APP0/JFIF + APP2/ICC (color) untouched.
   function stripJpeg(buf: ArrayBuffer): Uint8Array | null {
     const src = new Uint8Array(buf);
-    if (src[0] !== 0xff || src[1] !== 0xd8) return null; // not JPEG
+    if (src[0] !== 0xff || src[1] !== 0xd8) return null;
     const out: number[] = [0xff, 0xd8];
     let i = 2;
     while (i < src.length) {
       if (src[i] !== 0xff) { out.push(src[i++]); continue; }
       const marker = src[i + 1];
-      // Start of scan: copy the rest verbatim (compressed image data)
       if (marker === 0xda) { for (; i < src.length; i++) out.push(src[i]); break; }
-      // Standalone markers (no length): RSTn, TEM
       if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) { out.push(0xff, marker); i += 2; continue; }
       const len = (src[i + 2] << 8) | src[i + 3];
-      const strip = marker === 0xe1 || marker === 0xed || marker === 0xfe; // APP1, APP13, COM
+      const strip = marker === 0xe1 || marker === 0xed || marker === 0xfe;
       if (!strip) for (let j = 0; j < len + 2; j++) out.push(src[i + j]);
       i += len + 2;
     }
@@ -541,7 +521,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
           return;
         }
       }
-      // Canvas fallback for PNG/WebP/etc — re-encodes and drops all metadata
       const bmp = await createImageBitmap(f);
       const canvas = document.createElement('canvas');
       canvas.width = bmp.width; canvas.height = bmp.height;
@@ -557,7 +536,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   });
 
-  // --- File input wiring --------------------------------------------------
 
   async function loadUrl(raw: string) {
     const url = raw.trim();

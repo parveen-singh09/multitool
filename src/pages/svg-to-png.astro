@@ -125,16 +125,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   function setErr(m: string) { err.textContent = m; err.classList.toggle('hidden', !m); if (m) statusEl.classList.add('hidden'); }
   function showStatus(m: string) { statusEl.textContent = m; statusEl.classList.remove('hidden'); statusEl.style.borderColor = '#27a644'; statusEl.style.color = '#27a644'; }
 
-  // Parse an SVG length attribute to px. Returns null for %, em, or unparseable.
   function parseLen(v: string | null): number | null {
     if (!v) return null;
     const m = /^\s*([0-9]*\.?[0-9]+)\s*(px)?\s*$/.exec(v);
     return m ? parseFloat(m[1]) : null;
   }
 
-  // Derive intrinsic width/height from an <svg> element's width/height/viewBox.
-  // ponytail: covers px width/height and viewBox aspect; %/other units fall back
-  // to the viewBox or 512² — good enough for rasterizing to a chosen pixel size.
   function intrinsicSize(svg: SVGSVGElement): { w: number; h: number } {
     const w = parseLen(svg.getAttribute('width'));
     const h = parseLen(svg.getAttribute('height'));
@@ -161,7 +157,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return svg as SVGSVGElement;
   }
 
-  // Refresh intrinsic size + default the width/height fields when the source changes.
   function refreshIntrinsic() {
     try {
       const svg = parseSvg(input.value.trim());
@@ -183,8 +178,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const targetW = clampDim(Number(wIn.value) || intrinsicW);
     const targetH = clampDim(Number(hIn.value) || intrinsicH);
 
-    // Rasterize crisply: give the SVG an explicit target size + a viewBox so the
-    // browser renders at full output resolution rather than upscaling a bitmap.
     if (!svg.getAttribute('viewBox')) svg.setAttribute('viewBox', `0 0 ${intrinsicW} ${intrinsicH}`);
     svg.setAttribute('width', String(targetW));
     svg.setAttribute('height', String(targetH));
@@ -222,10 +215,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   function runConvert() { convert().catch(() => {}); }
 
-  // Editable highlighted SVG source (XML). Re-derive intrinsic size, then render.
   const rerender = wireInput(input, inHl, () => 'xml', () => { refreshIntrinsic(); runConvert(); });
 
-  // Width/height with optional aspect lock.
   wIn.addEventListener('input', () => {
     if (lock.checked && intrinsicW) hIn.value = String(clampDim((Number(wIn.value) || 0) * intrinsicH / intrinsicW));
     runConvert();
@@ -275,7 +266,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const reader = new FileReader();
     reader.onload = () => {
       input.value = String(reader.result ?? '');
-      wIn.value = ''; hIn.value = ''; // reset so intrinsic size repopulates
+      wIn.value = ''; hIn.value = '';
       refreshIntrinsic();
       rerender();
       runConvert();
@@ -288,12 +279,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   ['dragover', 'dragenter'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('bg-surface-2'); }));
   ['dragleave', 'drop'].forEach((ev) => drop.addEventListener(ev, () => drop.classList.remove('bg-surface-2')));
   drop.addEventListener('drop', (e) => { e.preventDefault(); const f = (e as DragEvent).dataTransfer?.files?.[0]; if (f) loadFile(f); });
-  // Allow dropping an .svg onto the source editor too.
   ['dragover', 'dragenter'].forEach((ev) => editWrap.addEventListener(ev, (e) => { e.preventDefault(); editWrap.style.outline = '2px solid #5e6ad2'; }));
   ['dragleave', 'drop'].forEach((ev) => editWrap.addEventListener(ev, () => { editWrap.style.outline = ''; }));
   editWrap.addEventListener('drop', (e) => { e.preventDefault(); const f = (e as DragEvent).dataTransfer?.files?.[0]; if (f?.name.toLowerCase().endsWith('.svg')) loadFile(f); });
 
-  // Sample so the tool renders something on load.
   input.value = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#5e6ad2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\n  <polygon points="12 2 2 7 12 12 22 7 12 2"/>\n  <polyline points="2 17 12 22 22 17"/>\n  <polyline points="2 12 12 17 22 12"/>\n</svg>';
   refreshIntrinsic();
   rerender();

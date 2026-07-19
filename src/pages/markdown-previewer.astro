@@ -212,7 +212,6 @@ graph TD
     renderMermaid();
   }
 
-  // Mermaid renders on demand: the library only loads when a mermaid block is present.
   let mermaidReady = false;
   let mmdId = 0;
   let mermaidToken = 0;
@@ -225,7 +224,7 @@ graph TD
       mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'strict' });
       mermaidReady = true;
     }
-    if (token !== mermaidToken) return; // superseded by a newer render
+    if (token !== mermaidToken) return;
     for (const code of blocks) {
       const pre = code.closest('pre') ?? code;
       try {
@@ -241,7 +240,6 @@ graph TD
     }
   }
 
-  // Proportional sync scroll: editor drives preview. (render() runs via CodeMirror's updateListener.)
   editor.scrollDOM.addEventListener('scroll', () => {
     if (!sync.checked) return;
     const s = editor.scrollDOM;
@@ -249,9 +247,6 @@ graph TD
     out.scrollTop = ratio * (out.scrollHeight - out.clientHeight);
   });
 
-  // These copy JS-derived values (rendered HTML / editor doc), not the preview
-  // elements' textContent, so they need a local handler. Reuses the global
-  // `.copied` green-check styling.
   function iconCopy(id: string, label: string, getText: () => string) {
     const btn = document.getElementById(id)!;
     btn.addEventListener('click', async () => {

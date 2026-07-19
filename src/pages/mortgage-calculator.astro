@@ -169,7 +169,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const mtax = Number(el['mg-tax'].value) / 12;
     const mins = Number(el['mg-ins'].value) / 12;
     const hoa = Number(el['mg-hoa'].value) || 0;
-    // PMI applies only while LTV > 80%; the initial monthly figure reflects month 1.
     const pmiRate = Number(el['mg-pmi'].value) / 100;
     const pmiFull = (principal * pmiRate) / 12;
     const pmiNow = price > 0 && principal / price > 0.8 ? pmiFull : 0;
@@ -178,12 +177,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const total = pi + mtax + mins + pmiNow + hoa;
     document.getElementById('mg-total')!.textContent = money(total);
 
-    // Donut + legend
     const segG = document.getElementById('mg-donut-segs')!;
     const legend = document.getElementById('mg-legend')!;
     segG.innerHTML = '';
     legend.innerHTML = '';
-    let offset = 25; // start at 12 o'clock
+    let offset = 25;
     for (const c of COMP) {
       const val = comps[c.key];
       const pct = total > 0 ? (val / total) * 100 : 0;
@@ -205,7 +203,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
     document.getElementById('mg-donut-center')!.textContent = total > 0 ? money0(total) : '—';
 
-    // Amortization — with and without extra, to show interest saved.
     const sched = document.getElementById('mg-sched')!;
     sched.innerHTML = '';
     if (principal > 0 && n > 0 && pi > 0) {
@@ -215,7 +212,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       document.getElementById('mg-totint')!.textContent = money0(withExtra.totalInterest);
       document.getElementById('mg-totpaid')!.textContent = money0(principal + withExtra.totalInterest);
 
-      // payoff date from today
       const now = new Date();
       const payoff = new Date(now.getFullYear(), now.getMonth() + withExtra.months, 1);
       document.getElementById('mg-payoff')!.textContent = withExtra.paysOff
@@ -241,7 +237,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // Down-payment unit toggle. Convert the value so the effective dollars stay put.
   const tabs = document.querySelectorAll<HTMLButtonElement>('.mg-dp-tab');
   function setMode(mode: 'dollar' | 'pct') {
     const price = Number(el['mg-price'].value);

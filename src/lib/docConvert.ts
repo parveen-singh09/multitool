@@ -1,6 +1,3 @@
-// Client-side document/data conversion engine shared by the doc-converter tools.
-// Reuses the project's existing format libs; adds notebook/epub/office readers.
-// Every conversion is pure text/bytes in -> Blob out, so tools run offline.
 import { csvToJson, jsonToCsv, jsonToYaml, jsonToXml, parseCsv, parseYaml, detectDelimiter, type Json } from './dataformats';
 import { makeDocx } from './docx';
 import { makeXlsx } from './xlsx';
@@ -13,7 +10,6 @@ const htmlEscape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;')
 
 export interface ConvOut { blob: Blob; ext: string }
 
-// ---------- Markdown ----------
 export async function mdToHtml(md: string, full = true): Promise<string> {
   const { Marked } = await import('marked');
   const inst = new Marked({ gfm: true, breaks: false });
@@ -22,14 +18,12 @@ export async function mdToHtml(md: string, full = true): Promise<string> {
   return `<!DOCTYPE html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Document</title></head>\n<body>\n${body}\n</body></html>`;
 }
 
-// Strip markdown to plain-ish text for docx/pdf paragraph rendering.
 export function mdToPlainParagraphs(md: string): string[] {
   return md.split(/\n{2,}/).map((block) =>
     block.replace(/^#{1,6}\s+/gm, '').replace(/[*_`>#-]/g, (m) => (m === '-' ? '•' : '')).trim()
   ).filter(Boolean);
 }
 
-// ---------- TXT -> various ----------
 export function txtToRtf(text: string): string {
   const esc = text.replace(/\\/g, '\\\\').replace(/\{/g, '\\{').replace(/\}/g, '\\}').replace(/\n/g, '\\par\n');
   return `{\\rtf1\\ansi\\deff0\n${esc}\n}`;
@@ -52,10 +46,8 @@ export function txtToHtml(text: string, full = true): string {
   return `<!DOCTYPE html>\n<html lang="en"><head><meta charset="utf-8"><title>Document</title></head>\n<body>\n${body}\n</body></html>`;
 }
 export function txtToMarkdown(text: string): string {
-  // Treat blank-line-separated blocks as paragraphs (already valid markdown).
   return text;
 }
-// ODT: minimal OpenDocument Text (zip of content.xml + manifest).
 export function txtToOdt(text: string): Blob {
   const paras = text.split('\n').map((l) => `<text:p>${xmlEscape(l)}</text:p>`).join('');
   const content = `<?xml version="1.0" encoding="UTF-8"?>
@@ -73,7 +65,6 @@ export function txtToOdt(text: string): Blob {
   ])], { type: 'application/vnd.oasis.opendocument.text' });
 }
 
-// ---------- EPUB (build) — minimal reflowable EPUB2 ----------
 export function buildEpub(title: string, chaptersHtml: { title: string; html: string }[]): Blob {
   const uid = 'urn:uuid:tool-' + title.replace(/\W+/g, '-').toLowerCase();
   const manifestItems = chaptersHtml.map((_, i) => `<item id="ch${i + 1}" href="ch${i + 1}.xhtml" media-type="application/xhtml+xml"/>`).join('');
@@ -104,7 +95,6 @@ export function buildEpub(title: string, chaptersHtml: { title: string; html: st
   return new Blob([makeZip(files)], { type: 'application/epub+zip' });
 }
 
-// ---------- EPUB (read) — extract chapters as {title, text, html} ----------
 export interface EpubDoc { title: string; chapters: { title: string; html: string; text: string }[] }
 export async function readEpub(buf: ArrayBuffer): Promise<EpubDoc> {
   const entries = await unzip(buf);
@@ -117,7 +107,6 @@ export async function readEpub(buf: ArrayBuffer): Promise<EpubDoc> {
   const opf = td.decode(byName.get(opfPath) || new Uint8Array());
   const base = opfPath.includes('/') ? opfPath.slice(0, opfPath.lastIndexOf('/') + 1) : '';
   const title = opf.match(/<dc:title[^>]*>([\s\S]*?)<\/dc:title>/)?.[1]?.trim() || 'ebook';
-  // manifest id -> href
   const manifest = new Map<string, string>();
   for (const m of opf.matchAll(/<item\s+[^>]*id="([^"]+)"[^>]*href="([^"]+)"[^>]*\/?>/g)) manifest.set(m[1], m[2]);
   for (const m of opf.matchAll(/<item\s+[^>]*href="([^"]+)"[^>]*id="([^"]+)"[^>]*\/?>/g)) manifest.set(m[2], m[1]);
@@ -137,7 +126,6 @@ export async function readEpub(buf: ArrayBuffer): Promise<EpubDoc> {
   return { title, chapters };
 }
 
-// ---------- FB2 (FictionBook) from chapters ----------
 export function chaptersToFb2(title: string, chapters: { title: string; text: string }[]): string {
   const sections = chapters.map((c) => {
     const paras = c.text.split(/\n{2,}|(?<=\.)\s{2,}/).filter(Boolean).map((p) => `<p>${xmlEscape(p.trim())}</p>`).join('');
@@ -149,7 +137,6 @@ export function chaptersToFb2(title: string, chapters: { title: string; text: st
 <body><title><p>${xmlEscape(title)}</p></title>${sections}</body></FictionBook>`;
 }
 
-// ---------- Jupyter notebook (.ipynb) readers ----------
 export interface Notebook { cells: { cell_type: string; source: string[] | string; outputs?: any[] }[]; metadata?: any }
 function cellSource(c: any): string { return Array.isArray(c.source) ? c.source.join('') : String(c.source || ''); }
 export function parseNotebook(json: string): Notebook {
@@ -190,12 +177,10 @@ export function ipynbToPlainText(json: string): string {
   return nb.cells.map((c) => cellSource(c)).join('\n\n');
 }
 
-// ---------- Office (read text) — docx / pptx / xlsx text extraction ----------
 const stripTags = (xml: string) => xml.replace(/<[^>]+>/g, '');
 export async function docxText(buf: ArrayBuffer): Promise<string> {
   const doc = await unzipTextEntry(buf, 'word/document.xml');
   if (!doc) throw new Error('Not a valid .docx file.');
-  // paragraphs from <w:p>, text from <w:t>
   return doc.split(/<\/w:p>/).map((p) => {
     const runs = [...p.matchAll(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g)].map((m) => m[1]).join('');
     return decodeXml(runs);
@@ -240,7 +225,6 @@ async function unzipTextEntry(buf: ArrayBuffer, name: string): Promise<string | 
   return e ? new TextDecoder().decode(e.data) : null;
 }
 
-// ---------- CSV helpers ----------
 export function csvMatrix(text: string): string[][] {
   return parseCsv(text, detectDelimiter(text));
 }
@@ -289,21 +273,19 @@ export function csvToVcard(text: string): string {
   }).join('\n');
 }
 
-// ---------- shared builders ----------
 export { makeDocx, makeXlsx };
 export function paragraphsToPdf(paragraphs: string[]): Promise<Uint8Array> { return buildTextPdf(paragraphs); }
 
-// Text -> PDF via pdf-lib with word wrap and pagination.
 export async function buildTextPdf(paragraphs: string[], opts: { title?: string } = {}): Promise<Uint8Array> {
   const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const size = 11, margin = 56, lineH = 15.5;
-  const pageW = 595.28, pageH = 841.89;               // A4
+  const pageW = 595.28, pageH = 841.89;
   const usableW = pageW - margin * 2;
   let page = pdf.addPage([pageW, pageH]);
   let y = pageH - margin;
-  const enc2 = (s: string) => s.replace(/[^\x00-\xff]/g, '?'); // Helvetica is Latin-1
+  const enc2 = (s: string) => s.replace(/[^\x00-\xff]/g, '?');
   const wrap = (text: string): string[] => {
     const words = text.split(/\s+/);
     const lines: string[] = []; let line = '';
@@ -321,18 +303,16 @@ export async function buildTextPdf(paragraphs: string[], opts: { title?: string 
       page.drawText(enc2(line), { x: margin, y, size, font, color: rgb(0.1, 0.1, 0.1) });
       y -= lineH;
     }
-    y -= lineH * 0.5; // paragraph gap
+    y -= lineH * 0.5;
   }
   return await pdf.save();
 }
 
-// TXT/Markdown -> PNG/JPG (render text onto a canvas). Browser-only.
 export async function textToImage(text: string, mime = 'image/png', quality?: number): Promise<Blob> {
   const pad = 40, fontSize = 18, lineH = 26, maxW = 800;
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d')!;
   ctx.font = `${fontSize}px ui-monospace, monospace`;
-  // wrap
   const rawLines = text.split('\n');
   const lines: string[] = [];
   for (const raw of rawLines) {
@@ -356,7 +336,6 @@ export async function textToImage(text: string, mime = 'image/png', quality?: nu
   return new Promise((res, rej) => canvas.toBlob((b) => b ? res(b) : rej(new Error('encode failed')), mime, quality));
 }
 
-// Dev self-checks for the pure text transforms.
 if (import.meta.env.DEV && typeof document !== 'undefined') {
   console.assert(txtToJson('a\nb') === '[\n  "a",\n  "b"\n]', 'txtToJson');
   console.assert(csvToTsv('a,b\n1,2') === 'a\tb\n1\t2', 'csvToTsv');

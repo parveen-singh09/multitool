@@ -211,7 +211,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   function populateCurrencies() {
     const curSel = sel('silver-cur');
     const prev = curSel.value || 'USD';
-    // Merge the static ISO list with anything the live feed returned, deduped.
     const codes = Array.from(new Set([...CURRENCIES, ...Object.keys(rates)])).sort((a, b) =>
       a.localeCompare(b)
     );
@@ -223,15 +222,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   let lastUpdated = '';
 
-  // Recompute the spot-price field from live USD silver price + selected currency
-  // rate, i.e. the local silver price in the chosen currency and market's unit.
   function syncSpotFromLive(useMarketUnit = false) {
     if (silverUsdPerOzt == null) return;
     const code = sel('silver-cur').value || 'USD';
     const rate = rates[code];
 
-    // The FX feed doesn't cover every listed currency (some pegged/rare codes).
-    // Don't fabricate a 1:1 rate — tell the user instead of showing a wrong price.
     if (rate == null) {
       const status = document.getElementById('silver-status')!;
       status.classList.add('text-red-400');
@@ -239,14 +234,13 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       return;
     }
 
-    // When the currency changes, snap the quote unit to that market's convention.
     if (useMarketUnit) {
       const gramsPerUnit = QUOTE_UNIT_BY_CCY[code] ?? OZT_G;
       sel('silver-price-unit').value = String(gramsPerUnit);
     }
 
-    const priceUnitG = Number(sel('silver-price-unit').value) || OZT_G; // grams per quoted unit
-    const premiumPct = premiumPctFor(code); // auto per-currency, no user input
+    const priceUnitG = Number(sel('silver-price-unit').value) || OZT_G;
+    const premiumPct = premiumPctFor(code);
     const premium = 1 + premiumPct / 100;
     const pricePerGram = (silverUsdPerOzt * rate) / OZT_G;
     const localSpot = pricePerGram * priceUnitG * premium;
@@ -293,7 +287,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
           : '';
 
       populateCurrencies();
-      syncSpotFromLive(true); // set spot + status to the selected currency's price in its market unit
+      syncSpotFromLive(true);
       calc();
     } catch {
       status.textContent = 'Could not fetch live prices. Enter the spot price manually.';
@@ -305,12 +299,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
 
   function calc() {
-    const spot = Number($('silver-spot').value) || 0; // price per quoted unit
+    const spot = Number($('silver-spot').value) || 0;
     const code = sel('silver-cur').value || 'USD';
     const qty = Math.max(1, Number($('silver-qty').value) || 1);
     const weight = (Number($('silver-weight').value) || 0) * qty;
-    const toOzt = Number(sel('silver-unit').value); // factor: weight unit → troy ounces
-    const priceUnitG = Number(sel('silver-price-unit').value) || OZT_G; // grams per quoted unit
+    const toOzt = Number(sel('silver-unit').value);
+    const priceUnitG = Number(sel('silver-price-unit').value) || OZT_G;
     const purity = Number(sel('silver-purity').value);
     const pct = (Number($('silver-pct').value) || 0) / 100;
 
@@ -323,7 +317,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       return;
     }
 
-    const pricePerOzt = (spot / priceUnitG) * OZT_G; // normalise quote to per troy ounce
+    const pricePerOzt = (spot / priceUnitG) * OZT_G;
     const totalOzt = weight * toOzt;
     const pureOzt = totalOzt * purity;
     const melt = pureOzt * pricePerOzt;
@@ -331,7 +325,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
     valueEl.textContent = money(payout, code);
 
-    // Express weights in the same unit the price is quoted in.
     const unitLabel = UNIT_SHORT[String(priceUnitG)] ?? `${priceUnitG} g`;
     const inUnit = (ozt: number) => (ozt * OZT_G) / priceUnitG;
 
@@ -352,22 +345,17 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       .join('');
   }
 
-  // Currency change: reprice from the live USD base and snap to that market's quote unit.
   sel('silver-cur').addEventListener('change', () => {
     syncSpotFromLive(true);
     calc();
   });
 
-  // Quote-unit change: reprice the spot into the chosen unit (keeps the same currency).
   let prevPriceUnitG = Number(sel('silver-price-unit').value) || OZT_G;
   sel('silver-price-unit').addEventListener('change', () => {
     const newUnitG = Number(sel('silver-price-unit').value) || OZT_G;
     if (silverUsdPerOzt != null) {
-      // Live data present: recompute the price from the USD base.
       syncSpotFromLive(false);
     } else {
-      // Manual entry: rescale the typed price from the old unit to the new one
-      // so it keeps meaning the same per-gram price.
       const cur = Number($('silver-spot').value) || 0;
       if (cur > 0) $('silver-spot').value = ((cur / prevPriceUnitG) * newUnitG).toFixed(2);
     }
@@ -377,7 +365,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   $('silver-fetch').addEventListener('click', fetchLive);
 
-  // Named silver coin presets: total coin weight in grams + fineness (standard US specs).
   const COINS: { label: string; grams: number; purity: string }[] = [
     { label: 'Mercury / Roosevelt dime (90%)', grams: 2.5, purity: '0.900' },
     { label: 'Washington quarter (90%)', grams: 6.25, purity: '0.900' },
@@ -394,7 +381,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   coinSel.addEventListener('change', () => {
     if (coinSel.value === '') return;
     const c = COINS[Number(coinSel.value)];
-    sel('silver-unit').value = '0.03215075'; // grams
+    sel('silver-unit').value = '0.03215075';
     $('silver-weight').value = String(c.grams);
     sel('silver-purity').value = c.purity;
     calc();
@@ -404,6 +391,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     .querySelectorAll('#silver-spot, #silver-weight, #silver-qty, #silver-unit, #silver-purity, #silver-pct')
     .forEach((el) => el.addEventListener('input', calc));
 
-  populateCurrencies(); // fill the dropdown with all currencies on load
+  populateCurrencies();
   calc();
 </script>

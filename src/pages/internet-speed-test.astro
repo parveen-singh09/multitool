@@ -177,7 +177,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 1 ${e.x} ${e.y}`;
   }
 
-  // Map a speed value to a 0..1 fraction along the piecewise scale.
   function speedToFrac(v: number) {
     const stops = SCALE_STOPS;
     const max = stops[stops.length - 1];
@@ -201,7 +200,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     needle.setAttribute('y2', String(tip.y));
   }
 
-  // Build static track + tick labels once.
   track.setAttribute('d', arcPath(START_ANGLE, START_ANGLE + SWEEP));
   SCALE_STOPS.forEach((stop, i) => {
     const frac = i / (SCALE_STOPS.length - 1);
@@ -217,7 +215,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   });
   setGauge(0);
 
-  // Smoothly animate the readout + gauge toward a target value.
   let displayed = 0;
   let raf = 0;
   function animateTo(target: number) {
@@ -238,21 +235,19 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     setGauge(0);
   }
 
-  // ---- Cloudflare endpoints ----
   const DOWN = 'https://speed.cloudflare.com/__down?bytes=';
   const UP = 'https://speed.cloudflare.com/__up';
   const TRACE = 'https://speed.cloudflare.com/cdn-cgi/trace';
   const META = 'https://speed.cloudflare.com/meta';
 
-  const STREAMS = 6; // parallel connections — saturates fast links
-  const WARMUP_MS = 1200; // ramp-up, discarded from the reported figure
-  const MEASURE_MS = 8000; // measured window
+  const STREAMS = 6;
+  const WARMUP_MS = 1200;
+  const MEASURE_MS = 8000;
   const DOWN_CHUNK = 25_000_000;
   const UP_CHUNK = 3_000_000;
 
   const bitsToMbps = (bits: number) => bits / 1_000_000;
 
-  // ---- Connection info (ISP / IP / server), client-side only ----
   const COLO: Record<string, string> = {
     SIN: 'Singapore', BOM: 'Mumbai', DEL: 'New Delhi', MAA: 'Chennai', BLR: 'Bengaluru',
     LHR: 'London', CDG: 'Paris', FRA: 'Frankfurt', AMS: 'Amsterdam', MAD: 'Madrid',
@@ -275,7 +270,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       colo = (m.colo || '').toUpperCase();
       loc = m.loc || '';
     } catch {}
-    // Enrichment: /meta returns ISP name + city in a real browser. Degrade gracefully.
     try {
       const meta = await (await fetch(META, { cache: 'no-store' })).json();
       isp = meta.asOrganization || meta.isp || '';
@@ -287,7 +281,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (place || colo) $('st-server').textContent = colo ? `${place || colo} (${colo})` : place;
   }
 
-  // ---- Latency ----
   async function measureLatency(samples = 10): Promise<{ ping: number; jitter: number }> {
     const times: number[] = [];
     for (let i = 0; i < samples; i++) {
@@ -299,7 +292,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
     if (!times.length) throw new Error('no latency');
     times.sort((a, b) => a - b);
-    const kept = times.slice(0, -1); // drop slowest outlier
+    const kept = times.slice(0, -1);
     const ping = kept.reduce((s, t) => s + t, 0) / kept.length;
     let jitter = 0;
     for (let i = 1; i < kept.length; i++) jitter += Math.abs(kept[i] - kept[i - 1]);
@@ -307,7 +300,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return { ping, jitter };
   }
 
-  // ---- Multi-stream throughput with concurrent latency probing under load ----
   type PhaseState = { stop: boolean; bytes: number };
 
   async function downStream(state: PhaseState) {
@@ -362,7 +354,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       }
     }, 200);
 
-    // Probe round-trip latency *while the link is loaded* — the bufferbloat signal.
     const prober = (async () => {
       while (!state.stop) {
         const t0 = performance.now();
@@ -385,7 +376,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     window.clearInterval(sampler);
 
     samples.sort((a, b) => a - b);
-    // Report the 90th-percentile sustained rate; fall back to overall average.
     const elapsed = (performance.now() - start) / 1000;
     const avg = elapsed > 0 ? bitsToMbps((state.bytes * 8) / elapsed) : 0;
     const mbps = samples.length ? Math.max(percentile(samples, 90), avg) : avg;
@@ -393,7 +383,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return { mbps, loaded: median(latencies) };
   }
 
-  // ---- Grading + verdict ----
   function bufferbloatGrade(deltaMs: number): { g: string; c: string } {
     if (deltaMs < 20) return { g: 'A+', c: GOOD };
     if (deltaMs < 40) return { g: 'A', c: GOOD };
@@ -448,7 +437,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     $('st-verdict').classList.add('flex');
   }
 
-  // ---- History (localStorage) ----
   const HKEY = 'toolsilk-speedtest-history';
   function loadHistory(): (Result & { t: number })[] {
     try {
@@ -548,7 +536,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       animateTo(ul.mbps);
       out.up.textContent = ul.mbps.toFixed(2);
 
-      // Loaded latency = worst of the two loaded phases; bufferbloat = increase over idle.
       const loaded = Math.max(dl.loaded, ul.loaded) || ping;
       const delta = Math.max(0, loaded - ping);
       const grade = bufferbloatGrade(delta);
@@ -588,7 +575,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   });
   startBtn.addEventListener('click', runTest);
 
-  // Kick off info + history on load.
   loadConnInfo();
   renderHistory();
 </script>

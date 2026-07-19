@@ -1,6 +1,3 @@
-// One-off generator: writes a thin page per straight media conversion,
-// driven by src/lib/media.ts. Run: node scripts/gen-media-pages.mjs
-// (imports the data by lightly parsing the slug/about via a dynamic import)
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -8,8 +5,6 @@ import { dirname, resolve } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pagesDir = resolve(__dirname, '../src/pages/tools');
 
-// The data file is TS; re-declare the (slug, about) pairs here to avoid a TS
-// loader. Keep in sync with src/lib/media.ts.
 const items = [
   ['mp4-to-mp3', 'MP4 to MP3 converter extracts the audio track from an MP4 (or other) video and saves it as an MP3 you can play anywhere.'],
   ['wav-to-mp3', 'WAV to MP3 converter compresses large uncompressed WAV files into small MP3s, saving space while keeping good quality.'],

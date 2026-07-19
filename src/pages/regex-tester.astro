@@ -256,7 +256,6 @@ Ping ada@dev.io and grace@compute.net for access.</textarea>
   function buildRegex(): RegExp | null {
     const f = curFlavor();
     let flags = flagsEl.value;
-    // x (extended) has no JS equivalent — strip it for execution but keep it in the field.
     let exec = flags.replace(/[^gimsuyd]/g, '');
     if (!exec.includes('g')) exec += 'g';
     const warn = flavorWarning(patternEl.value, f);
@@ -280,8 +279,8 @@ Ping ada@dev.io and grace@compute.net for access.</textarea>
     re.lastIndex = 0;
     while ((m = re.exec(text)) !== null) {
       out.push({ m, index: m.index });
-      if (m[0] === '') re.lastIndex++; // avoid infinite loop on empty matches
-      if (out.length > 10000) break; // ponytail: hard cap, no runaway on pathological patterns
+      if (m[0] === '') re.lastIndex++;
+      if (out.length > 10000) break;
     }
     return out;
   }
@@ -306,7 +305,6 @@ Ping ada@dev.io and grace@compute.net for access.</textarea>
 
     const matches = collectMatches(re, text);
 
-    // Highlight
     let last = 0, html = '';
     matches.forEach(({ m, index }, i) => {
       const color = MATCH_COLORS[i % MATCH_COLORS.length];
@@ -320,7 +318,6 @@ Ping ada@dev.io and grace@compute.net for access.</textarea>
     const n = matches.length;
     status.textContent = `${n} match${n === 1 ? '' : 'es'}`;
 
-    // Match details
     if (n === 0) {
       matchesBox.innerHTML = '<p class="text-[13px] text-ink-tertiary py-2">No matches.</p>';
     } else {
@@ -329,10 +326,8 @@ Ping ada@dev.io and grace@compute.net for access.</textarea>
         .join('');
     }
 
-    // Substitution
     renderSubstitution(re, text);
 
-    // Explanation
     renderExplain(patternEl.value);
   }
 
@@ -346,7 +341,6 @@ Ping ada@dev.io and grace@compute.net for access.</textarea>
       <span class="text-ink font-mono">${esc(m[0]) || '<span class=\'text-ink-tertiary\'>(empty)</span>'}</span>
     </div>`;
 
-    // Numbered groups
     for (let g = 1; g < m.length; g++) {
       const val = m[g];
       rows += `<div class="ml-4 flex items-baseline gap-2 text-[12px]">
@@ -354,7 +348,6 @@ Ping ada@dev.io and grace@compute.net for access.</textarea>
         <span class="${val === undefined ? 'text-ink-tertiary italic' : 'text-ink'} font-mono">${val === undefined ? 'undefined' : esc(val) || '(empty)'}</span>
       </div>`;
     }
-    // Named groups
     if (m.groups) {
       for (const [name, val] of Object.entries(m.groups)) {
         rows += `<div class="ml-4 flex items-baseline gap-2 text-[12px]">
@@ -375,7 +368,6 @@ Ping ada@dev.io and grace@compute.net for access.</textarea>
     }
   }
 
-  // ---- Explanation: tokenize the pattern ----
   const CLASS_DESC: Record<string, string> = {
     '\\d': 'digit (0–9)', '\\D': 'non-digit',
     '\\w': 'word char (a–z, 0–9, _)', '\\W': 'non-word char',
@@ -392,14 +384,12 @@ Ping ada@dev.io and grace@compute.net for access.</textarea>
     const push = (tok: string, desc: string) => out.push({ tok, desc });
     while (i < src.length) {
       const c = src[i];
-      // Escapes
       if (c === '\\') {
         const two = src.slice(i, i + 2);
         if (CLASS_DESC[two]) { push(two, CLASS_DESC[two]); i += 2; continue; }
         push(two, `literal "${src[i + 1] ?? ''}"`);
         i += 2; continue;
       }
-      // Groups
       if (c === '(') {
         if (src.startsWith('(?<', i) && src[i + 3] !== '=' && src[i + 3] !== '!') {
           const gt = src.indexOf('>', i);
@@ -415,7 +405,6 @@ Ping ada@dev.io and grace@compute.net for access.</textarea>
         push('(', 'start capture group'); i++; continue;
       }
       if (c === ')') { push(')', 'end group'); i++; continue; }
-      // Character class
       if (c === '[') {
         let j = i + 1;
         const neg = src[j] === '^';
@@ -424,7 +413,6 @@ Ping ada@dev.io and grace@compute.net for access.</textarea>
         push(body, neg ? 'any char NOT in set' : 'any char in set');
         i = j + 1; continue;
       }
-      // Quantifiers
       if (c === '*') { push('*', '0 or more'); i++; continue; }
       if (c === '+') { push('+', '1 or more'); i++; continue; }
       if (c === '?') {
@@ -444,7 +432,6 @@ Ping ada@dev.io and grace@compute.net for access.</textarea>
       }
       if (c === '|') { push('|', 'OR / alternation'); i++; continue; }
       if (CLASS_DESC[c]) { push(c, CLASS_DESC[c]); i++; continue; }
-      // Literal run
       let j = i;
       while (j < src.length && !'\\()[]{}*+?|^$.'.includes(src[j])) j++;
       const lit = src.slice(i, j);
@@ -468,7 +455,6 @@ Ping ada@dev.io and grace@compute.net for access.</textarea>
       .join('');
   }
 
-  // ---- Cheatsheet ----
   const CHEAT: [string, string][] = [
     ['.', 'any char'], ['\\d', 'digit'], ['\\w', 'word char'], ['\\s', 'whitespace'],
     ['\\b', 'word boundary'], ['^', 'start'], ['$', 'end'], ['[abc]', 'set'],
@@ -480,12 +466,10 @@ Ping ada@dev.io and grace@compute.net for access.</textarea>
     ([sym, desc]) => `<div class="flex gap-2"><code class="text-ink" style="min-width:4rem">${esc(sym)}</code><span>${esc(desc)}</span></div>`,
   ).join('');
 
-  // ---- Copy ----
   document.getElementById('re-copy')!.addEventListener('click', () => {
     navigator.clipboard?.writeText(patternEl.value);
   });
 
-  // ---- Wire up ----
   flagsEl.addEventListener('input', () => { syncChipsFromText(); run(); });
   [patternEl, inputEl, replaceEl].forEach((el) => el.addEventListener('input', run));
   renderFlagChips();

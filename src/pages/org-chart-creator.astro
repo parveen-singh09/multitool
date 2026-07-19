@@ -221,7 +221,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     wrap.style.marginLeft = `${Math.min(depth, 6) * 12}px`;
     if (p.id === selectedId) wrap.classList.add('border-hairline-strong');
 
-    // name + delete
     const top = document.createElement('div');
     top.className = 'flex items-center gap-2';
     const nameInput = document.createElement('input');
@@ -232,7 +231,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     nameInput.addEventListener('input', () => { p.name = nameInput.value; scheduleSnapshot(); render(); });
     const rm = iconBtn('×', 'Remove person', () => {
       snapshot();
-      // re-parent this person's reports up to its manager, then remove.
       childrenOf(state.people, p.id).forEach((c) => { c.managerId = p.managerId; });
       state.people = state.people.filter((o) => o.id !== p.id);
       if (selectedId === p.id) selectedId = null;
@@ -240,7 +238,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     });
     top.append(nameInput, rm);
 
-    // title + department
     const grid = document.createElement('div');
     grid.className = 'grid grid-cols-2 gap-2';
     grid.append(
@@ -248,7 +245,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       field('Department', 'text', p.dept ?? '', (v) => { p.dept = v || undefined; scheduleSnapshot(); render(); }),
     );
 
-    // reports-to + color + photo
     const grid2 = document.createElement('div');
     grid2.className = 'flex items-end gap-2';
 
@@ -260,7 +256,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     mgrSel.add(new Option('— top level —', '', p.managerId === null, p.managerId === null));
     for (const o of state.people) {
       if (o.id === p.id) continue;
-      // don't offer a manager that would create a cycle (o is in p's subtree)
       if (wouldCreateCycle(state.people, p.id, o.id)) continue;
       mgrSel.add(new Option(o.name || '(unnamed)', o.id, false, o.id === p.managerId));
     }
@@ -318,17 +313,14 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return b;
   }
 
-  // Debounced snapshot for streams of input events (typing) so undo steps are
-  // coarse, not per-keystroke.
   let snapTimer = 0;
   function scheduleSnapshot(): void {
     if (restoring) return;
-    if (snapTimer) return; // one snapshot per burst
+    if (snapTimer) return;
     snapTimer = window.setTimeout(() => { snapTimer = 0; }, 600);
     snapshot();
   }
 
-  // --- image picker (shared by person photo + logo) ---------------------------
   function pickImage(cb: (dataUrl: string) => void): void {
     const input = document.createElement('input');
     input.type = 'file';
@@ -343,13 +335,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     input.click();
   }
 
-  // --- selection highlight ----------------------------------------------------
   function highlightSelection(): void {
     Array.from(rowsEl.children).forEach((el) => {
       (el as HTMLElement).classList.toggle('border-hairline-strong', (el as HTMLElement).dataset.rowId === selectedId);
     });
     if (!last) return;
-    // outline the selected box in the SVG
     const svg = preview.querySelector('svg');
     if (!svg || !selectedId) return;
     const b = last.byId.get(selectedId);
@@ -367,7 +357,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     svg.appendChild(rect);
   }
 
-  // --- drag on the SVG preview (re-parent) ------------------------------------
   interface Drag { id: string; moved: boolean; }
   let drag: Drag | null = null;
 
@@ -403,8 +392,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const u = toUser(e);
     if (!u) return;
     drag.moved = true;
-    // live: render + a ghost line from the dragged box to the pointer, and
-    // highlight a valid drop target.
     render();
     const from = last.byId.get(drag.id);
     const svg = preview.querySelector('svg');
@@ -440,7 +427,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const p = person(d.id);
     if (!p) { render(); return; }
     if (targetId === null) {
-      // dropped on empty space -> promote to top level
       if (p.managerId !== null) { snapshot(); p.managerId = null; renderRows(); }
     } else if (targetId !== d.id && !wouldCreateCycle(state.people, d.id, targetId)) {
       if (p.managerId !== targetId) { snapshot(); p.managerId = targetId; renderRows(); }
@@ -454,7 +440,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     row?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 
-  // --- tabs -------------------------------------------------------------------
   const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('.occ-tab'));
   const panels = Array.from(document.querySelectorAll<HTMLElement>('[data-panel]'));
   function showTab(name: string): void {
@@ -472,7 +457,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
   tabs.forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab!)));
 
-  // --- templates gallery ------------------------------------------------------
   function renderTemplates(): void {
     const host = $<HTMLDivElement>('occ-templates');
     host.innerHTML = '';
@@ -509,7 +493,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // --- style controls ---------------------------------------------------------
   const themeSel = $<HTMLSelectElement>('occ-theme');
   const layoutSel = $<HTMLSelectElement>('occ-layout');
   const sizeSel = $<HTMLSelectElement>('occ-size');
@@ -534,7 +517,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     snapshot(); state.logo = undefined; syncStyleControls(); render();
   });
 
-  // --- import panel (outline + CSV paste) -------------------------------------
   const importErr = $<HTMLParagraphElement>('occ-import-err');
   function showImportError(msg: string): void { importErr.textContent = msg; importErr.classList.remove('hidden'); }
   function clearImportError(): void { importErr.classList.add('hidden'); }
@@ -567,7 +549,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   });
 
-  // --- exports ----------------------------------------------------------------
   function setStatus(msg: string): void { statusEl.textContent = msg; }
   function download(blob: Blob, name: string): void {
     const url = URL.createObjectURL(blob);
@@ -626,7 +607,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     download(new Blob([toCSV(state)], { type: 'text/csv' }), 'toolsilk-org-chart.csv');
   });
 
-  // --- import file (JSON / CSV) -----------------------------------------------
   const fileInput = $<HTMLInputElement>('occ-file');
   $<HTMLButtonElement>('occ-import-btn').addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', async () => {
@@ -650,10 +630,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     fileInput.value = '';
   });
 
-  // --- add person -------------------------------------------------------------
   $<HTMLButtonElement>('occ-add').addEventListener('click', () => {
     snapshot();
-    // new person reports to the current selection (or a root if none / selection is gone)
     const parent = selectedId && person(selectedId) ? selectedId : (rootsOf(state.people)[0]?.id ?? null);
     const np: Person = { id: newId(), name: 'New person', title: '', managerId: parent };
     state.people.push(np);
@@ -662,7 +640,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     scrollRowIntoView(np.id);
   });
 
-  // --- keyboard: undo/redo, delete selection ----------------------------------
   document.addEventListener('keydown', (e) => {
     const tag = (e.target as HTMLElement)?.tagName;
     const typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
@@ -685,7 +662,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   $<HTMLButtonElement>('occ-redo').addEventListener('click', redo);
   titleEl.addEventListener('input', () => { scheduleSnapshot(); render(); });
 
-  // --- init -------------------------------------------------------------------
   titleEl.value = state.title;
   syncStyleControls();
   renderTemplates();

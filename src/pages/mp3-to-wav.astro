@@ -161,8 +161,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const num = (id: string) => { const v = Number(($(id) as HTMLInputElement)?.value); return Number.isFinite(v) && v > 0 ? v : 0; };
   const outNameFor = (f: File) => f.name.replace(/\.[^.]+$/, '') + '.' + EXT;
 
-  // Build ffmpeg args for MP3 → WAV. Fast input seek (-ss before -i), -to bounds
-  // the end, and one -af chain carries volume, reverse, fades and loudnorm.
   function buildWavArgs(o: Opts, input: string, output: string, duration: number): string[] {
     const pre: string[] = [];
     const start = o.trimStart > 0 ? o.trimStart : 0;
@@ -199,7 +197,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     };
   }
 
-  // Read audio duration so fade-out and default trim end can be computed.
   function probeDuration(file: File): Promise<number> {
     return new Promise((resolve) => {
       const el = document.createElement('audio');

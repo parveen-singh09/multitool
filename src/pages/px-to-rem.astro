@@ -217,7 +217,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   function updateExtras(remVal: number, pxVal: number) {
     const remStr = fmt(remVal);
     snippetEl.textContent = `${propSel.value}: ${remStr}rem;`;
-    // Cap the preview size so large values don't blow out the layout.
     previewEl.style.fontSize = `${Math.min(Math.max(pxVal, 4), 80)}px`;
     renderTable();
   }
@@ -234,7 +233,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       case 'pt': pxVal = Number(pt.value) / PT_PER_PX; break;
     }
     if (!isFinite(pxVal)) { showError('Enter a valid number.'); return; }
-    // Write every field except the one being edited (keeps the caret steady).
     if (source !== 'px') px.value = fmt(pxVal);
     if (source !== 'rem') rem.value = fmt(pxVal / b);
     if (source !== 'em') em.value = fmt(pxVal / b);
@@ -285,7 +283,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     void hl(batchOut, batchResult, 'css');
   }
 
-  // Wire single-value fields.
   px.addEventListener('input', () => recalc('px'));
   rem.addEventListener('input', () => recalc('rem'));
   em.addEventListener('input', () => recalc('em'));
@@ -316,7 +313,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     b.textContent = 'Copied!'; setTimeout(() => (b.textContent = 'Copy'), 1400);
   });
 
-  // Batch controls.
   batchIn.addEventListener('input', convertBatch);
   batchUnit.addEventListener('change', convertBatch);
   document.getElementById('pr-batch-clear')!.addEventListener('click', () => {
@@ -331,7 +327,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     URL.revokeObjectURL(url);
   });
 
-  // Seed the batch box with a realistic CSS block so the feature is discoverable.
   batchIn.value = '.card {\n  font-size: 18px;\n  padding: 24px 32px;\n  border-radius: 8px;\n  gap: 12px;\n}';
 
   recalc('px');

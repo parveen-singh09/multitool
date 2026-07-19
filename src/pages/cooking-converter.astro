@@ -168,7 +168,6 @@ import UnitConverter from '../components/UnitConverter.astro';
     return String(Math.round(n * 1000) / 1000);
   }
 
-  // Reduce any amount+unit for an ingredient down to grams.
   function toGrams(amount: number, unit: string, gPerCup: number): number {
     const spec = UNITS[unit];
     if (spec === 'g') return amount;
@@ -213,8 +212,6 @@ import UnitConverter from '../components/UnitConverter.astro';
   );
   convertIngredient();
 
-  // ---- Oven temperature ----
-  // Gas Mark → °C reference (UK standard). °F derived from °C.
   const GAS: { gas: string; c: number; desc: string }[] = [
     { gas: '¼', c: 110, desc: 'Very cool / slow' },
     { gas: '½', c: 120, desc: 'Very cool / slow' },
@@ -266,7 +263,6 @@ import UnitConverter from '../components/UnitConverter.astro';
   ovenUnit.addEventListener('change', convertOven);
   convertOven();
 
-  // ---- Recipe scaler ----
   const sFrom = $<HTMLInputElement>('cc-scale-from');
   const sTo = $<HTMLInputElement>('cc-scale-to');
   const sQty = $<HTMLInputElement>('cc-scale-qty');
@@ -281,7 +277,6 @@ import UnitConverter from '../components/UnitConverter.astro';
   [sFrom, sTo, sQty].forEach((el) => el.addEventListener('input', scale));
   scale();
 
-  // ponytail: one self-check for the money paths (density math + gas lookup).
   if (import.meta.env.DEV) {
     console.assert(Math.abs(toGrams(1, 'Cup (US)', 125) - 125) < 1e-6, 'flour cup = 125g');
     console.assert(Math.abs(toGrams(16, 'Tablespoon (US)', 200) - 200) < 1e-6, '16 tbsp = 1 cup');

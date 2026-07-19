@@ -237,7 +237,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       grid.appendChild(cell);
     });
 
-    // Even-money row (row 5): 1-18, EVEN, RED, BLACK, ODD, 19-36.
     const low = range(1, 18), high = range(19, 36);
     const evens = range(1, 36).filter((n) => n % 2 === 0);
     const odds = range(1, 36).filter((n) => n % 2 === 1);
@@ -256,7 +255,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
     feltEl.appendChild(grid);
 
-    // Overlay for inside-bet nodes, positioned after layout.
     overlay = document.createElement('div');
     overlay.style.position = 'absolute';
     overlay.style.inset = '0';
@@ -283,7 +281,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
   }
 
-  // Compute node positions from the laid-out number cells.
   function placeNodes() {
     overlay.innerHTML = '';
     const base = feltEl.getBoundingClientRect();
@@ -305,46 +302,38 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       return el;
     };
 
-    // Horizontal-adjacent splits (same row, cols c & c+1).
     for (let r = 0; r < 3; r++)
       for (let c = 0; c < 11; c++) {
         const a = center(r, c), b = center(r, c + 1);
         addNode([val(r, c), val(r, c + 1)], (a.x + b.x) / 2, (a.y + b.y) / 2);
       }
-    // Vertical-adjacent splits (same col, rows r & r+1).
     for (let r = 0; r < 2; r++)
       for (let c = 0; c < 12; c++) {
         const a = center(r, c), b = center(r + 1, c);
         addNode([val(r, c), val(r + 1, c)], (a.x + b.x) / 2, (a.y + b.y) / 2);
       }
-    // Corners (4 numbers).
     for (let r = 0; r < 2; r++)
       for (let c = 0; c < 11; c++) {
         const a = center(r, c), d = center(r + 1, c + 1);
         addNode([val(r, c), val(r, c + 1), val(r + 1, c), val(r + 1, c + 1)], (a.x + d.x) / 2, (a.y + d.y) / 2);
       }
-    // Streets (3 in a felt column) — top edge above row 0.
     for (let c = 0; c < 12; c++) {
       const t = center(0, c);
       const half = numCells[0][c].getBoundingClientRect().height / 2;
       addNode([val(0, c), val(1, c), val(2, c)], t.x, t.y - half);
     }
-    // Six-lines (2 adjacent streets = 6) — top edge between cols c & c+1.
     for (let c = 0; c < 11; c++) {
       const a = center(0, c), b = center(0, c + 1);
       const half = numCells[0][c].getBoundingClientRect().height / 2;
       addNode([val(0, c), val(1, c), val(2, c), val(0, c + 1), val(1, c + 1), val(2, c + 1)], (a.x + b.x) / 2, a.y - half);
     }
-    // Basket: 0-1-2-3 (European/French) or 0-00-1-2-3 (American) — near bottom-left corner of numbers.
     const bl = numCells[2][0].getBoundingClientRect();
     const basket = variant === 'american' ? [0, 37, 1, 2, 3] : [0, 1, 2, 3];
     addNode(basket, bl.left - base.left, bl.top - base.top + bl.height / 2);
-    // ponytail: skipped 0/00 two-number splits and trios (0-1-2, 0-2-3); basket covers the common zero-inside bet. Add nodes along the zero cell's right edge if wanted.
 
     renderChips();
   }
 
-  // ---- betting -----------------------------------------------------------
   function addChip(id: string, numbers: number[]) {
     if (autoplaying) return;
     if (totalStaked() + selectedChip > balance) { msg.textContent = 'Not enough chips for that bet.'; return; }
@@ -380,12 +369,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     renderChips(); renderStats(); msg.textContent = 'Bets doubled.';
   }
 
-  // ---- rendering ---------------------------------------------------------
   function renderChips() {
     document.querySelectorAll('.rs-chipbadge').forEach((e) => e.remove());
     for (const [id, b] of deriveBets()) {
       const anchor = anchorMap.get(id);
-      if (!anchor) continue;   // bet not on the current felt (e.g. 00 bet after switching to European)
+      if (!anchor) continue;
       const badge = document.createElement('div');
       badge.className = 'rs-chipbadge';
       badge.style.background = chipColorFor(b.amount);
@@ -396,7 +384,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
 
   function chipColorFor(amount: number): string {
-    // Pick the largest chip color <= amount for a familiar look.
     let color = CHIP_COLORS[1];
     for (const v of CHIP_VALUES) if (amount >= v) color = CHIP_COLORS[v];
     return color;
@@ -411,7 +398,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     netEl.textContent = (net >= 0 ? '+' : '−') + Math.abs(net).toLocaleString();
     netEl.className = 'font-mono text-lg ' + (net > 0 ? 'text-primary-hover' : net < 0 ? 'text-ink' : 'text-ink');
 
-    // Recent strip.
     const recent = $('rs-recent');
     if (!results.length) recent.innerHTML = '<span class="text-[13px] text-ink-tertiary">No spins yet.</span>';
     else recent.innerHTML = results.slice(0, 24).map((n) => {
@@ -420,7 +406,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       return `<span class="rs-recent-chip" style="background:${bg}">${label(n)}</span>`;
     }).join('');
 
-    // Hot / cold.
     const hc = $('rs-hotcold');
     if (!counts.size) hc.innerHTML = '<span class="text-ink-tertiary">Spin to build stats.</span>';
     else {
@@ -430,12 +415,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       hc.innerHTML = `<div>🔥 Hot: ${hot}</div><div class="mt-1">❄️ Cold: ${cold}</div>`;
     }
 
-    // History.
     const h = $('rs-history');
     h.innerHTML = history.length ? history.map((s) => `<div>${s}</div>`).join('') : '<span class="text-ink-tertiary">No spins yet.</span>';
   }
 
-  // ---- wheel -------------------------------------------------------------
   function buildWheel() {
     const order = wheelOrder(variant);
     const N = order.length;
@@ -468,13 +451,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const N = order.length;
     const k = order.indexOf(pocket);
     const seg = 360 / N;
-    const desired = ((-k * seg) % 360 + 360) % 360;   // rotation that puts pocket k under the top pointer
+    const desired = ((-k * seg) % 360 + 360) % 360;
     const full = Math.ceil((wheelRot + 360 * 4) / 360) * 360;
     wheelRot = full + desired;
     ($('rs-wheel') as unknown as HTMLElement).style.transform = `rotate(${wheelRot}deg)`;
   }
 
-  // ---- spin --------------------------------------------------------------
   function spin() {
     if (autoplaying) return;
     doSpin();
@@ -485,7 +467,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (staked <= 0) { msg.textContent = 'Place at least one bet first.'; return false; }
     if (staked > balance) { msg.textContent = 'Not enough chips to cover the bets on the table.'; return false; }
 
-    lastRound = chipLog.map((p) => ({ ...p }));   // snapshot for Rebet/Autoplay
+    lastRound = chipLog.map((p) => ({ ...p }));
 
     const order = wheelOrder(variant);
     const pocket = order[randInt(0, order.length - 1)];
@@ -498,7 +480,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       if (b.numbers.includes(pocket)) {
         won += b.amount + b.amount * payoutFor(b.numbers.length);
       } else if (variant === 'french' && pocket === 0 && b.numbers.length === 18) {
-        // La Partage: even-money bets lose only half on a zero.
         refunded += b.amount / 2;
       }
     }
@@ -525,7 +506,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return true;
   }
 
-  // ---- autoplay ----------------------------------------------------------
   let autoTimer: number | undefined;
   function toggleAuto() {
     if (autoplaying) { stopAuto(); return; }
@@ -534,8 +514,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const btn = $('rs-auto');
     btn.textContent = 'Stop';
     btn.setAttribute('aria-pressed', 'true');
-    // Bets stay on the felt between spins, so each step just re-spins the
-    // standing bets until they can't be covered or the user stops.
     const step = () => {
       if (!autoplaying) return;
       const ok = doSpin();
@@ -561,7 +539,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     msg.textContent = 'Chips reset to 1,000.';
   }
 
-  // ---- chip tray ---------------------------------------------------------
   function buildChipTray() {
     const tray = $('rs-chips');
     tray.innerHTML = '';
@@ -580,7 +557,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // ---- wiring ------------------------------------------------------------
   ($('rs-variant') as HTMLSelectElement).addEventListener('change', (e) => {
     variant = (e.target as HTMLSelectElement).value as Variant;
     wheelRot = 0;

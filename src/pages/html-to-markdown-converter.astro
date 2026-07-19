@@ -223,7 +223,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
           const indented = text.split('\n').map((l) => `    ${l}`).join('\n');
           return `\n\n${indented}\n\n`;
         }
-        // Detect a language hint from a `language-xxx` / `lang-xxx` class.
         const cls = codeEl?.getAttribute('class') ?? '';
         const langMatch = cls.match(/(?:language|lang)-(\w+)/);
         const lang = langMatch ? langMatch[1] : '';
@@ -264,7 +263,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
           const box = li.querySelector(':scope > input[type=checkbox], :scope > p > input[type=checkbox]');
           let marker = ordered ? `${start + idx}.` : o.bullet;
           if (o.gfm && box) marker = `${o.bullet} [${(box as HTMLInputElement).checked || box.hasAttribute('checked') ? 'x' : ' '}]`;
-          // Content, with nested blocks indented under the marker.
           const raw = childrenToMd(li, depth + 1, o).trim().replace(/\n{2,}/g, '\n');
           const contIndent = ' '.repeat(marker.length + 1);
           const content = raw.split('\n').map((l, i) => (i === 0 ? l : contIndent + l)).join('\n');
@@ -357,7 +355,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     inEl.value = SAMPLE; rerender(); convert();
   });
 
-  // File upload + drag-and-drop.
   function loadFile(file: File) {
     const reader = new FileReader();
     reader.onload = () => { inEl.value = String(reader.result ?? ''); rerender(); convert(); };

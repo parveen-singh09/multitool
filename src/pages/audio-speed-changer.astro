@@ -165,7 +165,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const chain: string[] = [];
     if (reverse.checked) chain.push('areverse');
     if (link.checked) {
-      // Tape effect: resample rate scales both tempo and pitch together.
       chain.push(`asetrate=44100*${s.toFixed(4)}`, 'aresample=44100');
     } else {
       const semi = Number(pitch.value);
@@ -173,7 +172,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         const pf = Math.pow(2, semi / 12);
         chain.push(`asetrate=44100*${pf.toFixed(4)}`, 'aresample=44100', atempoChain(1 / pf));
       }
-      if (s !== 1) chain.push(atempoChain(s)); // tempo change, pitch preserved
+      if (s !== 1) chain.push(atempoChain(s));
     }
     return chain.length ? chain.join(',') : 'anull';
   }

@@ -102,14 +102,13 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'extracted.pdf'; a.click();
         status.textContent = `Done — extracted ${idx.length} page(s).`;
       } else {
-        // every page separately
         for (let i = 0; i < pageCount; i++) {
           const out = await PDFDocument.create();
           const [p] = await out.copyPages(src, [i]);
           out.addPage(p);
           const blob = new Blob([await out.save() as BlobPart], { type: 'application/pdf' });
           const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `page-${i + 1}.pdf`; a.click();
-          await new Promise((r) => setTimeout(r, 150)); // stagger downloads
+          await new Promise((r) => setTimeout(r, 150));
         }
         status.textContent = `Done — ${pageCount} single-page PDFs downloaded.`;
       }

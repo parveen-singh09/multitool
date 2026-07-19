@@ -120,29 +120,28 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
   function v7(): Uint8Array {
     const b = rand(16);
-    putBE(b, 0, BigInt(Date.now()), 6); // 48-bit unix-ms timestamp
+    putBE(b, 0, BigInt(Date.now()), 6);
     b[6] = (b[6] & 0x0f) | 0x70;
     b[8] = (b[8] & 0x3f) | 0x80;
     return b;
   }
-  // 100-ns intervals since 1582-10-15 (Gregorian epoch)
   const gregTs = () => BigInt(Date.now()) * 10000n + 122192928000000000n;
   function v1(): Uint8Array {
     const ts = gregTs();
-    const b = rand(16); // node (10-15) + clock seq (8-9) start random
-    putBE(b, 0, ts & 0xffffffffn, 4); // time_low
-    putBE(b, 4, (ts >> 32n) & 0xffffn, 2); // time_mid
-    putBE(b, 6, ((ts >> 48n) & 0x0fffn) | 0x1000n, 2); // time_hi + version 1
-    b[8] = (b[8] & 0x3f) | 0x80; // variant
-    b[10] |= 0x01; // random node → set multicast bit
+    const b = rand(16);
+    putBE(b, 0, ts & 0xffffffffn, 4);
+    putBE(b, 4, (ts >> 32n) & 0xffffn, 2);
+    putBE(b, 6, ((ts >> 48n) & 0x0fffn) | 0x1000n, 2);
+    b[8] = (b[8] & 0x3f) | 0x80;
+    b[10] |= 0x01;
     return b;
   }
   function v6(): Uint8Array {
     const ts = gregTs();
     const b = rand(16);
-    putBE(b, 0, (ts >> 28n) & 0xffffffffn, 4); // time_high
-    putBE(b, 4, (ts >> 12n) & 0xffffn, 2); // time_mid
-    putBE(b, 6, 0x6000n | (ts & 0x0fffn), 2); // version 6 + time_low
+    putBE(b, 0, (ts >> 28n) & 0xffffffffn, 4);
+    putBE(b, 4, (ts >> 12n) & 0xffffn, 2);
+    putBE(b, 6, 0x6000n | (ts & 0x0fffn), 2);
     b[8] = (b[8] & 0x3f) | 0x80;
     b[10] |= 0x01;
     return b;
@@ -214,7 +213,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     URL.revokeObjectURL(a.href);
   });
 
-  // Compact MD5 (RFC 1321) — needed for v3; crypto.subtle has no MD5.
   function md5(bytes: Uint8Array): Uint8Array {
     const rol = (x: number, c: number) => (x << c) | (x >>> (32 - c));
     const S = [7, 12, 17, 22, 5, 9, 14, 20, 4, 11, 16, 23, 6, 10, 15, 21];
@@ -251,7 +249,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return res;
   }
 
-  // Self-test against RFC known vectors: append ?selftest to the URL.
   if (location.search.includes('selftest')) {
     (async () => {
       console.assert(hex(md5(new Uint8Array())) === 'd41d8cd98f00b204e9800998ecf8427e', 'md5("")');

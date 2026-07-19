@@ -1,7 +1,3 @@
-// Adds "Google Drive / Dropbox" import buttons next to every <input type="file">
-// on the page, so any tool's upload gains cloud sources with zero per-tool code.
-// A picked cloud file is injected into the native input (via DataTransfer) and a
-// `change` event is fired — so each tool's existing change handler runs unchanged.
 import { driveReady, pickFromDrive } from './drivePickers';
 
 const SOURCES = [
@@ -9,9 +5,6 @@ const SOURCES = [
   { src: 'dropbox', label: 'Dropbox', icon: '<path d="m7 3 5 3-5 3-5-3zM17 3l5 3-5 3-5-3zM2 12l5 3 5-3-5-3zM17 9l5 3-5 3-5-3zM7 18l5-3 5 3-5 3z"/>' },
 ] as const;
 
-// The Google Picker / OAuth flow makes the browser scroll-anchor and drift for a
-// few seconds after a pick. Freeze body to position:fixed during the flow, then
-// restore the exact position (mirrors ArchiveConvert's fix).
 let lockedY = 0;
 let scrollLocked = false;
 function lockScroll() {
@@ -33,8 +26,6 @@ function unlockScroll() {
   window.scrollTo(0, lockedY);
 }
 
-// Push a File into a native input and notify listeners, so the tool reacts as if
-// the user had chosen it from disk.
 function deliver(input: HTMLInputElement, file: File) {
   const dt = new DataTransfer();
   dt.items.add(file);
@@ -45,14 +36,11 @@ function deliver(input: HTMLInputElement, file: File) {
 
 function wire(input: HTMLInputElement) {
   if (input.dataset.cloudWired) return;
-  // ArchiveConvert and the AI chat have their own Drive/Dropbox menus — skip them.
   if (input.closest('#ac-root') || input.id === 'ai-file') { input.dataset.cloudWired = '1'; return; }
   const ready = SOURCES.filter((s) => driveReady(s.src));
-  if (!ready.length) { input.dataset.cloudWired = '1'; return; } // no keys configured
+  if (!ready.length) { input.dataset.cloudWired = '1'; return; }
   input.dataset.cloudWired = '1';
 
-  // Split button "Select File ▾" (mirrors ArchiveConvert): main button + device
-  // menu item pick from disk; the chevron opens Google Drive / Dropbox sources.
   const wrap = document.createElement('div');
   wrap.className = 'relative mt-4 inline-flex';
 
@@ -70,7 +58,6 @@ function wire(input: HTMLInputElement) {
   caret.style.cssText = 'border-top-left-radius:0;border-bottom-left-radius:0;border-left:1px solid rgba(255,255,255,0.22)';
   caret.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
 
-  // fixed + body-mounted so overflow-hidden drop-zone cards can't clip it (mobile).
   const menu = document.createElement('div');
   menu.className = 'hidden fixed z-50 overflow-hidden rounded-lg border border-hairline bg-surface-2 text-left shadow-xl';
 
@@ -95,7 +82,6 @@ function wire(input: HTMLInputElement) {
     });
   }
 
-  // Place the fixed menu under the split button, clamped to the viewport.
   const place = () => {
     const r = wrap.getBoundingClientRect();
     const width = Math.min(208, window.innerWidth - 16);
@@ -119,13 +105,8 @@ function wire(input: HTMLInputElement) {
   document.body.appendChild(menu);
 
   const label = input.closest('label');
-  // Only rebuild genuine drop zones (border-dashed cards). Inline labels are left
-  // alone — we just drop the button after them.
   const isDropZone = !!label && label.className.includes('border-dashed');
   if (label && isDropZone) {
-    // Rebuild the drop zone to the converter-card look (heading + subtext + button).
-    // Preserve the input and any [id] element (page JS updates these, e.g. the
-    // filename label) by parking them in a hidden holder so those refs still resolve.
     const holder = document.createElement('span');
     holder.className = 'sr-only';
     holder.appendChild(input);
@@ -136,9 +117,6 @@ function wire(input: HTMLInputElement) {
       '<span class="text-[13px] text-ink-subtle">choose a source below, or drag a file in</span>');
     label.appendChild(wrap);
   } else if (label && label.className.includes('btn')) {
-    // A button-style label (e.g. "📁 Upload Sticker Image") is itself just a
-    // trigger for the hidden input — redundant with the "Select File" button.
-    // Replace it so only the split button shows, not two upload controls.
     const holder = document.createElement('span');
     holder.className = 'sr-only';
     holder.appendChild(input);

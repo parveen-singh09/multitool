@@ -1,19 +1,14 @@
-// Financial-format converters: OFX / QIF / IIF -> normalized transactions,
-// re-emitted as CSV / Excel / OFX-family (OFX, QFX, QBO all share the OFX body).
-// All text parsing; runs offline.
 import { makeXlsx } from './xlsx';
 
 export interface Txn {
-  date: string;    // YYYYMMDD or as-found
-  amount: string;  // signed decimal string
+  date: string;
+  amount: string;
   payee: string;
   memo: string;
-  type: string;    // DEBIT / CREDIT / etc.
+  type: string;
   checknum?: string;
 }
 
-// ---------- Parsers ----------
-// OFX (SGML/XML-ish): pull <STMTTRN> blocks.
 export function parseOfx(text: string): Txn[] {
   const txns: Txn[] = [];
   for (const m of text.matchAll(/<STMTTRN>([\s\S]*?)<\/STMTTRN>/gi)) {
@@ -26,7 +21,6 @@ export function parseOfx(text: string): Txn[] {
       checknum: g('CHECKNUM') || undefined,
     });
   }
-  // Some OFX use unclosed tags with no </STMTTRN>; fallback split on <STMTTRN>
   if (!txns.length && /<STMTTRN>/i.test(text)) {
     const parts = text.split(/<STMTTRN>/i).slice(1);
     for (const b of parts) {
@@ -38,7 +32,6 @@ export function parseOfx(text: string): Txn[] {
   return txns;
 }
 
-// QIF: line-based, letter-prefixed fields, entries end with '^'.
 export function parseQif(text: string): Txn[] {
   const txns: Txn[] = [];
   let cur: Partial<Txn> = {};
@@ -60,9 +53,7 @@ export function parseQif(text: string): Txn[] {
 function normalizeQif(c: Partial<Txn>): Txn {
   return { date: c.date || '', amount: c.amount || '0', payee: c.payee || '', memo: c.memo || '', type: parseFloat(c.amount || '0') < 0 ? 'DEBIT' : 'CREDIT', checknum: c.checknum };
 }
-// QIF dates: M/D'YY, MM/DD/YYYY, D/M/YYYY — best-effort to YYYYMMDD.
 function qifDate(s: string): string {
-  // Quicken separators are '/', '.', '-', and an apostrophe before 20xx years (D1/15'24).
   const m = s.match(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-']\s?(\d{2,4})/);
   if (!m) return s.trim();
   let [, a, b, y] = m;
@@ -70,7 +61,6 @@ function qifDate(s: string): string {
   return `${yr}${a.padStart(2, '0')}${b.padStart(2, '0')}`;
 }
 
-// IIF: tab-delimited; TRNS/SPL rows under a !TRNS header.
 export function parseIif(text: string): Txn[] {
   const lines = text.split(/\r?\n/);
   let header: string[] = [];
@@ -88,7 +78,6 @@ export function parseIif(text: string): Txn[] {
   return txns;
 }
 
-// ---------- Emitters ----------
 export function txnsToCsv(txns: Txn[]): string {
   const head = ['Date', 'Amount', 'Payee', 'Memo', 'Type', 'CheckNum'];
   const esc = (v: string) => `"${(v || '').replace(/"/g, '""')}"`;
@@ -99,7 +88,6 @@ export function txnsToXlsx(txns: Txn[]): Blob {
   for (const t of txns) rows.push([t.date, t.amount, t.payee, t.memo, t.type, t.checknum || '']);
   return makeXlsx(rows);
 }
-// Build an OFX 1.0.2 (SGML) document — the shared body for .ofx/.qfx/.qbo.
 export function txnsToOfx(txns: Txn[]): string {
   const body = txns.map((t) => `<STMTTRN><TRNTYPE>${t.type || 'OTHER'}<DTPOSTED>${t.date || ''}<TRNAMT>${t.amount || '0'}<FITID>${(t.date || '') + (t.checknum || '') + t.amount}<NAME>${t.payee || ''}${t.memo ? `<MEMO>${t.memo}` : ''}</STMTTRN>`).join('\n');
   return `OFXHEADER:100
@@ -121,7 +109,6 @@ ${body}
 </OFX>`;
 }
 
-// Dev self-checks.
 if (import.meta.env.DEV) {
   const qif = parseQif("!Type:Bank\nD01/15'24\nT-50.00\nPStore\nMgroceries\n^\n");
   console.assert(qif.length === 1 && qif[0].amount === '-50.00' && qif[0].date === '20240115', 'QIF parse', qif);

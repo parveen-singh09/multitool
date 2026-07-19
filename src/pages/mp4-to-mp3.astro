@@ -181,7 +181,6 @@ const conv = getConversion('mp4-to-mp3')!;
   const strVal = (id: string) => (($(id) as HTMLInputElement)?.value || '').trim();
   const outNameFor = (f: File) => f.name.replace(/\.[^.]+$/, '') + '.' + EXT;
 
-  // Read media duration so fade-out and default trim end can be computed.
   function probeDuration(file: File): Promise<number> {
     return new Promise((resolve) => {
       const el = document.createElement('video');
@@ -218,9 +217,6 @@ const conv = getConversion('mp4-to-mp3')!;
     };
   }
 
-  // Build the ffmpeg MP3 args. Mirrors the shared buildArgs audio path and adds
-  // volume, reverse (areverse) and ID3 -metadata flags. -ss before -i for a fast
-  // input seek; the -af chain order is reverse → fades → volume → loudnorm.
   function buildMp3Args(o: Opts, dur: number, input: string, output: string): string[] {
     const pre: string[] = [];
     const start = o.trimStart > 0 ? o.trimStart : 0;
@@ -242,10 +238,9 @@ const conv = getConversion('mp4-to-mp3')!;
     if (af.length) out.push('-af', af.join(','));
 
     out.push('-c:a', 'libmp3lame');
-    if (o.quality.startsWith('v')) out.push('-q:a', o.quality.slice(1)); // VBR 0..9
-    else out.push('-b:a', (o.quality || '192') + 'k');                    // CBR kbps
+    if (o.quality.startsWith('v')) out.push('-q:a', o.quality.slice(1));
+    else out.push('-b:a', (o.quality || '192') + 'k');
 
-    // ID3v2.3 tags — widest player support. Only write provided fields.
     const meta: [string, string][] = [
       ['title', o.title], ['artist', o.artist], ['album', o.album],
       ['date', o.year], ['genre', o.genre],

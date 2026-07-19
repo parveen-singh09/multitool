@@ -194,7 +194,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     ($('cp-redo') as HTMLButtonElement).disabled = hpos >= history.length - 1;
   }
 
-  // ---- Actions (event delegation) ----
   wrap.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest('.cp-act') as HTMLElement | null;
     if (!btn) return;
@@ -216,7 +215,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if ((e.target as HTMLElement).classList.contains('cp-edit')) commit();
   });
 
-  // ---- Drag to reorder ----
   let dragFrom = -1;
   wrap.addEventListener('dragstart', (e) => {
     const col = (e.target as HTMLElement).closest('.cp-col') as HTMLElement | null;
@@ -234,7 +232,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     dragFrom = -1;
   });
 
-  // ---- Count stepper ----
   $('cp-plus').addEventListener('click', () => {
     if (colors.length >= 8) return;
     const fresh = build(1, modeEl.value, rgbToHsl(hexToRgb(colors[colors.length - 1].hex)!))[0];
@@ -249,7 +246,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     commit();
   });
 
-  // ---- Toolbar ----
   modeEl.addEventListener('change', () => { colors.forEach((c) => (c.locked = false)); generate(); });
   $('cp-gen').addEventListener('click', generate);
   $('cp-undo').addEventListener('click', () => { if (hpos > 0) restore(history[--hpos]); updateHistoryButtons(); });
@@ -297,7 +293,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     setTimeout(() => (el.textContent = prev), 1200);
   }
 
-  // ---- Keyboard ----
   document.addEventListener('keydown', (e) => {
     const tag = (e.target as HTMLElement).tagName;
     if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
@@ -306,7 +301,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) { e.preventDefault(); if (hpos < history.length - 1) restore(history[++hpos]); updateHistoryButtons(); }
   });
 
-  // ---- Init: from URL hash or fresh ----
   function fromHash(): Swatch[] | null {
     const raw = location.hash.replace(/^#/, '');
     if (!raw) return null;

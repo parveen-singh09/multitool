@@ -160,7 +160,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const role = ROLE_PREFIXES.has(local);
     const free = FREE_PROVIDERS.has(domain);
 
-    // Verdict: invalid syntax → invalid. Disposable → risky. Role/typo → risky. Else valid (MX may downgrade).
     let verdict: Row['verdict'] = 'valid';
     if (!syntaxOk) verdict = 'invalid';
     else if (disposable) verdict = 'risky';
@@ -205,7 +204,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
     const row: Row = { card, checksEl, verdict };
 
-    // Async MX/DNS resolution updates the last chip and may downgrade the verdict.
     if (syntaxOk && mxToggle.checked && domain) {
       lookupDomain(domain).then(({ mx, a }) => {
         const mxChip = checksEl.lastElementChild as HTMLSpanElement;
@@ -243,7 +241,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
     if (mxToggle.checked && rows.length) {
       statusEl.textContent = 'Looking up MX / DNS records…';
-      // Wait for all in-flight lookups (cached promises) then clear status.
       await Promise.allSettled(Array.from(mxCache.values()));
       statusEl.textContent = '';
     }

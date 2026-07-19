@@ -132,8 +132,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
   const fmtSize = (n: number) => n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(2)} MB`;
 
-  // WebM (VP9) keeps alpha, so the background picker + transparency note only
-  // make sense for MP4. Toggle them with the output format.
   function syncFormatUI() {
     const webm = fmtSel.value === 'webm';
     bgWrap.classList.toggle('hidden', webm);
@@ -176,20 +174,16 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       statusEl.textContent = 'Converting…';
       await ff.writeFile(inName, await fetchFile(file));
 
-      // Build the filter chain. fps/scale are optional; scale caps the height
-      // (keeping aspect) and forces even dimensions for codec compatibility.
       const steps: string[] = [];
       if (fps) steps.push(`fps=${fps}`);
       if (maxH) steps.push(`scale=-2:'min(${maxH},ih)'`);
 
       let complex: string, codecArgs: string[];
       if (fmt === 'webm') {
-        // Keep alpha through VP9. No background flatten, keep even dims.
         steps.push('scale=trunc(iw/2)*2:trunc(ih/2)*2');
         complex = `[0:v]${steps.join(',')},format=yuva420p`;
         codecArgs = ['-c:v', 'libvpx-vp9', '-pix_fmt', 'yuva420p', '-crf', crf, '-b:v', '0', '-row-mt', '1'];
       } else {
-        // Flatten transparency onto the chosen color, then yuv420p for H.264.
         const pre = steps.length ? steps.join(',') + ',' : '';
         complex =
           `color=c=${bg}[bg];` +
@@ -198,7 +192,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         codecArgs = ['-c:v', 'libx264', '-crf', crf, '-preset', 'veryfast', '-movflags', '+faststart'];
       }
 
-      // -stream_loop repeats the decoded input (loop-1 extra plays) to bake in repeats.
       const args = ['-stream_loop', String(loop - 1), '-i', inName,
         '-filter_complex', complex, ...codecArgs, outName];
       await ff.exec(args);

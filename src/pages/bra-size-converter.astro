@@ -157,7 +157,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     ).join('');
     copyBtn.classList.remove('hidden');
 
-    // Sister sizes in the selected region: keep volume by trading band for cup.
     const rk = regionEl.value;
     const r = REGIONS[rk];
     const sisters: string[] = [];
@@ -188,16 +187,14 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     renderIndices(idx.bandIdx, idx.cupIdx);
   }
 
-  // Measurement → US size, then fill the known-size field and render everything.
   function calculate() {
     err.classList.add('hidden');
     let under = Number(underEl.value);
     let bust = Number(bustEl.value);
     if (!under || !bust || under <= 0 || bust <= 0) { showErr('Enter both an underbust and a bust measurement.'); return; }
     if (bust < under) { showErr('Bust should be larger than underbust — check the two fields.'); return; }
-    if (unitsEl.value === 'cm') { under /= 2.54; bust /= 2.54; } // work in inches
+    if (unitsEl.value === 'cm') { under /= 2.54; bust /= 2.54; }
 
-    // Band: round underbust to nearest whole inch, bump odd → even (US even-band convention).
     let band = Math.round(under);
     if (band % 2 !== 0) band += 1;
     let bandIdx = US_BANDS.indexOf(band);
@@ -206,17 +203,14 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       bandIdx = US_BANDS.indexOf(band);
       if (bandIdx < 0) bandIdx = band < 28 ? 0 : US_BANDS.length - 1;
     }
-    // Cup: one letter per inch of (bust − band). 0" → AA, 1" → A, 4" → D …
     let cupIdx = Math.max(0, Math.round(bust - band));
     if (cupIdx > CUPS_US.length - 1) cupIdx = CUPS_US.length - 1;
 
-    // Show the result as a US size in the known-size field, switch region to US, render.
     regionEl.value = 'US';
     sizeEl.value = `${US_BANDS[bandIdx]}${CUPS_US[cupIdx]}`;
     renderIndices(bandIdx, cupIdx);
   }
 
-  // Click / keyboard copy on a result card.
   result.addEventListener('click', (e) => copyCard(e.target as HTMLElement));
   result.addEventListener('keydown', (e) => {
     if ((e as KeyboardEvent).key === 'Enter' || (e as KeyboardEvent).key === ' ') { e.preventDefault(); copyCard(e.target as HTMLElement); }

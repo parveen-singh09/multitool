@@ -151,7 +151,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return bgSel.value;
   }
 
-  // Compute target dimensions from the active resize option.
   function targetDims(w: number, h: number): { w: number; h: number } {
     const mode = resizeSel.value;
     if (mode === 'scale') {
@@ -332,7 +331,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     else render();
   }
 
-  // ---- Minimal ZIP writer (store / no compression) — PNGs are already compressed. ----
   function crc32(bytes: Uint8Array): number {
     let crc = 0xffffffff;
     for (let i = 0; i < bytes.length; i++) {
@@ -401,7 +399,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return new Blob([...parts, ...centrals, end] as BlobPart[], { type: 'application/zip' });
   }
 
-  // Ensure filenames inside the archive are unique.
   function uniqueNames(names: string[]): string[] {
     const seen = new Map<string, number>();
     return names.map((n) => {
@@ -426,7 +423,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   });
 
-  // ---- Option wiring ----
   function syncResizeUI() {
     const m = resizeSel.value;
     scaleWrap.classList.toggle('hidden', m !== 'scale');
@@ -466,7 +462,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const f = (ev as DragEvent).dataTransfer?.files;
     if (f && f.length) addFiles(f);
   });
-  // Accept drops anywhere on the tool once the workspace is open.
   root.addEventListener('dragover', (ev) => ev.preventDefault());
   root.addEventListener('drop', (ev) => {
     if ((ev.target as HTMLElement)?.closest?.('#jp-drop')) return;

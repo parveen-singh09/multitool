@@ -1,8 +1,3 @@
-// Self-host the Tesseract OCR assets so the OCR tool makes no third-party
-// requests at runtime (honors the site's privacy promise). Copies the worker
-// and WASM core out of node_modules into public/tesseract/, and downloads the
-// English language model into public/tessdata/.
-// Run once: node scripts/setup-tesseract.mjs
 import { mkdirSync, copyFileSync, existsSync, createWriteStream, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -18,11 +13,9 @@ const dataDir = resolve(pub, 'tessdata');
 mkdirSync(tessDir, { recursive: true });
 mkdirSync(dataDir, { recursive: true });
 
-// 1. worker
 copyFileSync(resolve(nm, 'tesseract.js/dist/worker.min.js'), resolve(tessDir, 'worker.min.js'));
 console.log('copied worker.min.js');
 
-// 2. core (copy every file so tesseract can pick the right SIMD variant)
 const coreSrc = resolve(nm, 'tesseract.js-core');
 let coreCount = 0;
 for (const f of readdirSync(coreSrc)) {
@@ -34,7 +27,6 @@ for (const f of readdirSync(coreSrc)) {
 }
 console.log(`copied ${coreCount} core files`);
 
-// 3. English model (only if not already present)
 const modelPath = resolve(dataDir, 'eng.traineddata.gz');
 if (existsSync(modelPath)) {
   console.log('eng.traineddata.gz already present — skipping download');

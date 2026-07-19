@@ -162,8 +162,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     updateEstimate();
   }));
 
-  // Rough size estimate before running. In target mode it's the requested size;
-  // in quality mode it's a crude bitrate model from CRF and resolution.
   function updateEstimate() {
     if (!file) { estimate.textContent = ''; return; }
     if (mode === 'size') {
@@ -171,7 +169,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       return;
     }
     const crf = Number(($('vc-crf') as HTMLSelectElement).value);
-    // Approximate bitrate (kbps) for 720p at various CRF, scaled by width.
     const w = Number(($('vc-scale') as HTMLSelectElement).value) || 1280;
     const base: Record<number, number> = { 23: 2500, 28: 1400, 32: 800, 36: 450 };
     const kbps = (base[crf] || 1200) * Math.min(1, w / 1280);
@@ -227,7 +224,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     setErr(''); goBtn.disabled = true;
     progWrap.classList.remove('hidden'); progWrap.classList.add('flex'); result.classList.add('hidden'); bar.style.width = '0%';
     const mute = ($('vc-mute') as HTMLInputElement).checked;
-    const audioBitrate = 128; // kbps when audio kept
+    const audioBitrate = 128;
     try {
       const ff = await getFFmpeg({
         onProgress: (r) => { bar.style.width = Math.min(100, Math.round(r * 100)) + '%'; },
@@ -239,15 +236,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       if (mode === 'size') {
         const targetMB = numVal('vc-target') || 25;
         const dur = effectiveDuration() || duration || 1;
-        // Total budget → video bitrate = total − audio, with a small safety margin.
-        const totalKbps = (targetMB * 8192) / dur; // kbit total
+        const totalKbps = (targetMB * 8192) / dur;
         const aKbps = mute ? 0 : audioBitrate;
         let vKbps = Math.floor((totalKbps - aKbps) * 0.97);
-        if (vKbps < 80) vKbps = 80; // floor so ffmpeg doesn't choke
+        if (vKbps < 80) vKbps = 80;
         const common = commonArgs();
         statusEl.textContent = 'Pass 1 of 2…';
-        // Pass 1 only gathers stats; the null muxer writes no media (a plain
-        // MEMFS filename is used since /dev/null isn't present in the wasm FS).
         await ff.exec([...trimPre(), '-i', inName, ...trimPost(), '-c:v', 'libx264', '-preset', 'veryfast',
           '-b:v', `${vKbps}k`, ...common, '-pass', '1', '-an', '-f', 'null', '-y', 'pass1.null']);
         statusEl.textContent = 'Pass 2 of 2…';

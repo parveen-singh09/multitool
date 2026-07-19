@@ -208,7 +208,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     batchbar.classList.toggle('flex', items.length > 0);
   }
 
-  // ── Export helpers ──────────────────────────────────────────────
 
   function triggerDownload(blob: Blob, filename: string): void {
     const url = URL.createObjectURL(blob);
@@ -219,8 +218,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     URL.revokeObjectURL(url);
   }
 
-  // Rasterize an SVG string to a canvas at the given width (height keeps aspect,
-  // unless `square` forces a WxW canvas — used for favicons).
   function rasterize(svgStr: string, targetW: number, square = false): Promise<HTMLCanvasElement> {
     return new Promise((resolve, reject) => {
       const blob = new Blob([svgStr], { type: 'image/svg+xml' });
@@ -255,7 +252,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     });
   }
 
-  // Build a .ico from PNG entries at 16/32/48 px. ICO wraps raw PNG data.
   async function buildIco(svgStr: string): Promise<Blob> {
     const sizes = [16, 32, 48];
     const pngs = await Promise.all(
@@ -276,7 +272,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       offset += len;
     }
     const out = new Uint8Array(offset);
-    // ICONDIR: reserved=0, type=1 (icon), count
     out.set([0, 0, 1, 0, pngs.length & 0xff, (pngs.length >> 8) & 0xff], 0);
     out.set(dir, 6);
     let o = header;
@@ -291,7 +286,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     arr.push(n & 0xff, (n >>> 8) & 0xff, (n >>> 16) & 0xff, (n >>> 24) & 0xff);
   }
 
-  // Produce the export blob + extension for one item, honoring the format select.
   async function exportItem(it: Item): Promise<{ blob: Blob; ext: string }> {
     const fmt = formatEl.value;
     if (fmt === 'svg') return { blob: new Blob([it.svg], { type: 'image/svg+xml' }), ext: 'svg' };
@@ -310,8 +304,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // ── Store-only ZIP (no compression, no dependency) ──────────────
-  // ponytail: store-only zip; PNG/ICO/SVG are already compact enough. Add DEFLATE only if archive size matters.
 
   function crc32(bytes: Uint8Array): number {
     let crc = ~0;
@@ -335,28 +327,28 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
       const local = new Uint8Array(30 + nameBytes.length);
       const lv = new DataView(local.buffer);
-      lv.setUint32(0, 0x04034b50, true); // local file header sig
-      lv.setUint16(4, 20, true); // version needed
-      lv.setUint16(6, 0, true); // flags
-      lv.setUint16(8, 0, true); // method = store
+      lv.setUint32(0, 0x04034b50, true);
+      lv.setUint16(4, 20, true);
+      lv.setUint16(6, 0, true);
+      lv.setUint16(8, 0, true);
       lv.setUint32(14, crc, true);
-      lv.setUint32(18, size, true); // compressed size
-      lv.setUint32(22, size, true); // uncompressed size
+      lv.setUint32(18, size, true);
+      lv.setUint32(22, size, true);
       lv.setUint16(26, nameBytes.length, true);
       local.set(nameBytes, 30);
       chunks.push(local, e.data);
 
       const cen = new Uint8Array(46 + nameBytes.length);
       const cv = new DataView(cen.buffer);
-      cv.setUint32(0, 0x02014b50, true); // central dir sig
-      cv.setUint16(4, 20, true); // version made by
-      cv.setUint16(6, 20, true); // version needed
-      cv.setUint16(10, 0, true); // method
+      cv.setUint32(0, 0x02014b50, true);
+      cv.setUint16(4, 20, true);
+      cv.setUint16(6, 20, true);
+      cv.setUint16(10, 0, true);
       cv.setUint32(16, crc, true);
       cv.setUint32(20, size, true);
       cv.setUint32(24, size, true);
       cv.setUint16(28, nameBytes.length, true);
-      cv.setUint32(42, offset, true); // local header offset
+      cv.setUint32(42, offset, true);
       cen.set(nameBytes, 46);
       central.push(cen);
 
@@ -366,7 +358,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const centralSize = central.reduce((a, c) => a + c.length, 0);
     const end = new Uint8Array(22);
     const ev = new DataView(end.buffer);
-    ev.setUint32(0, 0x06054b50, true); // end of central dir sig
+    ev.setUint32(0, 0x06054b50, true);
     ev.setUint16(8, entries.length, true);
     ev.setUint16(10, entries.length, true);
     ev.setUint32(12, centralSize, true);
@@ -399,8 +391,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // ── Fetch from URL (via public CORS proxy) ──────────────────────
-  // ponytail: allorigins proxy. Swap for own /api route if privacy/uptime matters.
 
   function proxied(url: string): string {
     return `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
@@ -440,7 +430,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // Scan a webpage for both inline <svg> and linked .svg files (convertico misses inline).
   async function scanPage(): Promise<void> {
     const pageUrl = urlEl.value.trim();
     if (!pageUrl) return;
@@ -451,12 +440,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       const doc = new DOMParser().parseFromString(html, 'text/html');
 
       let added = 0;
-      // Inline SVGs
       doc.querySelectorAll('svg').forEach((svg) => {
         if (addSvgQuiet(svg.outerHTML, `inline-${added + 1}`)) added++;
       });
 
-      // Linked .svg references (img/src, object/data, anchors, inline styles omitted)
       const links = new Set<string>();
       doc.querySelectorAll('img[src], object[data], a[href]').forEach((el) => {
         const raw = el.getAttribute('src') || el.getAttribute('data') || el.getAttribute('href') || '';
@@ -483,7 +470,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // Like addSvg but returns success and never shows a per-item error (used in bulk scan).
   function addSvgQuiet(svgStr: string, name: string): boolean {
     const clean = normalizeSvg(svgStr);
     if (!clean) return false;
@@ -492,7 +478,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return true;
   }
 
-  // ── Wiring ──────────────────────────────────────────────────────
 
   function readFiles(files: FileList | null): void {
     if (!files) return;
@@ -607,7 +592,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   formatEl.addEventListener('change', syncFormatRows);
   syncFormatRows();
 
-  // Seed with a sample so the page isn't empty.
   addSvg(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><circle cx="50" cy="50" r="40" fill="#5e6ad2"/></svg>',
     'sample'

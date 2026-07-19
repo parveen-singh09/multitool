@@ -129,14 +129,12 @@ const templates = [
     ctx.beginPath();
     ctx.roundRect(x, y, w, h, r);
   }
-  // draw an image cropped to cover the whole w×h box (like CSS object-fit: cover)
   function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, w: number, h: number) {
     const ir = img.width / img.height, br = w / h;
     let dw = w, dh = h, dx = 0, dy = 0;
     if (ir > br) { dw = h * ir; dx = (w - dw) / 2; } else { dh = w / ir; dy = (h - dh) / 2; }
     ctx.drawImage(img, dx, dy, dw, dh);
   }
-  // shrink font until the text fits maxWidth
   function fitFont(ctx: CanvasRenderingContext2D, text: string, weight: number, base: number, maxWidth: number, family = 'Inter, system-ui, sans-serif') {
     let size = base;
     do {
@@ -147,7 +145,6 @@ const templates = [
     return size;
   }
 
-  // ---- templates --------------------------------------------------------
   const TEMPLATES: Record<string, (ctx: CanvasRenderingContext2D, o: Opts) => void> = {
     classic(ctx, o) {
       const g = ctx.createLinearGradient(0, 0, o.w, o.h);
@@ -167,7 +164,6 @@ const templates = [
       const cut = o.w * 0.62;
       ctx.fillStyle = o.c2; ctx.fillRect(0, 0, o.w, o.h);
       ctx.fillStyle = o.c1; ctx.fillRect(cut, 0, o.w - cut, o.h);
-      // diagonal seam
       ctx.fillStyle = o.c1; ctx.beginPath();
       ctx.moveTo(cut - o.h * 0.18, 0); ctx.lineTo(cut, 0); ctx.lineTo(cut, o.h); ctx.lineTo(cut - o.h * 0.18, o.h); ctx.closePath(); ctx.fill();
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
@@ -184,7 +180,6 @@ const templates = [
 
     neon(ctx, o) {
       ctx.fillStyle = o.c2; ctx.fillRect(0, 0, o.w, o.h);
-      // grid
       ctx.strokeStyle = rgba(o.c1, 0.18); ctx.lineWidth = Math.max(1, o.h * 0.004);
       const step = o.h * 0.16;
       for (let x = 0; x <= o.w; x += step) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, o.h); ctx.stroke(); }
@@ -205,7 +200,6 @@ const templates = [
     minimal(ctx, o) {
       ctx.fillStyle = o.c2; ctx.fillRect(0, 0, o.w, o.h);
       const pad = o.w * 0.07;
-      // accent line
       ctx.fillStyle = o.c1; ctx.fillRect(pad, o.h * 0.5 - o.h * 0.16, o.h * 0.02, o.h * 0.32);
       const tx = pad + o.h * 0.09;
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
@@ -261,7 +255,6 @@ const templates = [
       g.addColorStop(0, o.c2); g.addColorStop(1, rgba(o.c1, 0.35));
       ctx.fillStyle = g; ctx.fillRect(0, 0, o.w, o.h);
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      // badge for subtext
       if (o.sub) {
         ctx.font = `600 ${o.h * 0.09}px Inter, system-ui, sans-serif`;
         const bw = ctx.measureText(o.sub.toUpperCase()).width + o.h * 0.16;
@@ -287,7 +280,6 @@ const templates = [
         ctx.closePath(); ctx.fill();
       }
       ctx.restore();
-      // center plate for legibility
       ctx.fillStyle = rgba(o.c2, 0.72);
       const ph = o.h * 0.5, pw = o.w * 0.7;
       roundRect(ctx, (o.w - pw) / 2, (o.h - ph) / 2, pw, ph, o.h * 0.06); ctx.fill();
@@ -307,7 +299,6 @@ const templates = [
       const g = ctx.createRadialGradient(o.w / 2, o.h / 2, 0, o.w / 2, o.h / 2, o.w * 0.6);
       g.addColorStop(0, rgba(o.c1, 0.55)); g.addColorStop(1, rgba(o.c1, 0));
       ctx.fillStyle = g; ctx.fillRect(0, 0, o.w, o.h);
-      // vignette
       const v = ctx.createRadialGradient(o.w / 2, o.h / 2, o.h * 0.2, o.w / 2, o.h / 2, o.w * 0.7);
       v.addColorStop(0, rgba(o.c2, 0)); v.addColorStop(1, rgba(o.c2, 0.85));
       ctx.fillStyle = v; ctx.fillRect(0, 0, o.w, o.h);
@@ -343,14 +334,12 @@ const templates = [
       if (o.img) {
         drawCover(ctx, o.img, o.w, o.h);
       } else {
-        // placeholder when no image uploaded yet
         ctx.fillStyle = o.c2; ctx.fillRect(0, 0, o.w, o.h);
         ctx.fillStyle = rgba(o.c1, 0.25);
         ctx.font = `500 ${o.h * 0.09}px Inter, system-ui, sans-serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText('Upload an image →', o.w / 2, o.h / 2);
       }
-      // bottom-up dark scrim for legibility, strength from the overlay slider
       if (o.ovl > 0) {
         const g = ctx.createLinearGradient(0, o.h, 0, 0);
         g.addColorStop(0, rgba(o.c2, o.ovl)); g.addColorStop(0.7, rgba(o.c2, o.ovl * 0.55)); g.addColorStop(1, rgba(o.c2, o.ovl * 0.15));
@@ -402,7 +391,6 @@ const templates = [
     });
   }
 
-  // template selection
   document.querySelectorAll<HTMLElement>('.tpl-card').forEach((card) => {
     card.addEventListener('click', () => {
       current = card.dataset.tpl!;
@@ -414,12 +402,10 @@ const templates = [
 
   ['bn-size', 'bn-title', 'bn-sub', 'bn-c1', 'bn-c2', 'bn-fg', 'bn-ovl'].forEach((id) => $(id).addEventListener('input', draw));
 
-  // overlay slider readout
   $('bn-ovl').addEventListener('input', () => {
     $('bn-ovl-val').textContent = ($('bn-ovl') as HTMLInputElement).value + '%';
   });
 
-  // image upload → switch to Photo template
   const imgInput = $('bn-img') as HTMLInputElement;
   imgInput.addEventListener('change', () => {
     const file = imgInput.files?.[0];
@@ -429,7 +415,6 @@ const templates = [
     const img = new Image();
     img.onload = () => {
       bgImage = img;
-      // select the Photo template card
       current = 'photo';
       document.querySelectorAll<HTMLElement>('.tpl-card').forEach((c) =>
         c.setAttribute('aria-pressed', c.dataset.tpl === 'photo' ? 'true' : 'false'));

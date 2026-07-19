@@ -92,7 +92,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     });
   }
 
-  // Reuse the pdf-to-text extraction approach: read the embedded text layer.
   async function extractText(): Promise<string> {
     const pdf = await pdfjsLib.getDocument({ data: bytes!.slice(0) }).promise;
     let text = '';
@@ -101,7 +100,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       const page = await pdf.getPage(n);
       const content = await page.getTextContent();
       text += (content.items as any[]).map((it) => it.str).join(' ') + '\n\n';
-      if (text.length > MAX_CHARS) break; // stop early once we have enough
+      if (text.length > MAX_CHARS) break;
     }
     return text.trim();
   }

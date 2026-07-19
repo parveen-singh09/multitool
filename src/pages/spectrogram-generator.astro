@@ -121,7 +121,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.moveTo(p.x, y); ctx.lineTo(p.x + p.w, y); ctx.stroke();
     }
     ctx.save(); ctx.translate(12, p.y + p.h / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.fillText('Frequency (Hz)', 0, 0); ctx.restore();
-    // Time axis (bottom)
     ctx.textAlign = 'center';
     const steps = 6;
     for (let i = 0; i <= steps; i++) {
@@ -129,7 +128,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       const t = (i / steps) * totalTime;
       ctx.fillText(`${t.toFixed(totalTime < 10 ? 1 : 0)}s`, x, p.y + p.h + 14);
     }
-    // dB legend (right)
     const lx = canvas.width - PAD.r + 16, lw = 14;
     for (let i = 0; i < p.h; i++) {
       const t = 1 - i / p.h;
@@ -142,7 +140,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     ctx.fillText(`${floorDb()}`, lx + lw + 4, p.y + p.h - 4);
   }
 
-  // ---- Offline full-file render ----
   async function renderFile(file: File) {
     setErr(''); $('sp-status').textContent = 'Decoding audio…';
     stop(false);
@@ -160,7 +157,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
       const re = new Float32Array(N), im = new Float32Array(N);
       const win = new Float32Array(N);
-      for (let i = 0; i < N; i++) win[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (N - 1)); // Hann
+      for (let i = 0; i < N; i++) win[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (N - 1));
       const bins = N / 2;
       const floor = floorDb();
       const scm = scheme();
@@ -170,9 +167,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         const off = c * hop;
         for (let i = 0; i < N; i++) { re[i] = (data[off + i] || 0) * win[i]; im[i] = 0; }
         fft(re, im);
-        // Map each output row (pixel) to a frequency bin per the chosen scale.
         for (let py = 0; py < p.h; py++) {
-          const frac = 1 - py / p.h; // 0 at bottom → 1 at top
+          const frac = 1 - py / p.h;
           let bin: number;
           if (freqScale() === 'log') { const min = Math.log(20), max = Math.log(sr / 2); const f = Math.exp(min + frac * (max - min)); bin = Math.round((f / (sr / 2)) * bins); }
           else bin = Math.round(frac * bins);
@@ -195,7 +191,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // In-place iterative radix-2 FFT (N must be a power of two).
   function fft(re: Float32Array, im: Float32Array) {
     const n = re.length;
     for (let i = 1, j = 0; i < n; i++) {
@@ -221,7 +216,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // ---- Live (microphone) render ----
   function startLive(node: AudioNode) {
     stop(false);
     analyser = ac!.createAnalyser();
@@ -235,7 +229,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     const draw = () => {
       analyser!.getByteFrequencyData(data);
-      // Scroll the plot region left by 1px, keep axes intact.
       const img = ctx.getImageData(p.x + 1, p.y, p.w - 1, p.h);
       ctx.putImageData(img, p.x, p.y);
       const x = p.x + p.w - 1;
@@ -252,7 +245,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       }
       raf = requestAnimationFrame(draw);
     };
-    // Clear the axis gutters then draw static axis labels once.
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, p.x, canvas.height); ctx.fillRect(0, p.y + p.h, canvas.width, PAD.b);
     drawAxes(sr, 0);
     draw();
@@ -286,7 +278,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   });
   $('sp-mic').addEventListener('click', fromMic);
   $('sp-stop').addEventListener('click', () => stop());
-  // Re-render the loaded file when a setting changes (live view updates on its own).
   ['sp-fft', 'sp-scheme', 'sp-freqscale', 'sp-floor'].forEach((id) => $(id).addEventListener('change', () => {
     $('sp-floorval').textContent = String(floorDb());
     if (lastFile && !raf) renderFile(lastFile);

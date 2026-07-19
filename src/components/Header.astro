@@ -4,7 +4,6 @@ import ToolSearch from './ToolSearch.astro';
 import { categories, toolsByCategory } from '../data/tools';
 
 interface Props {
-  // landing = text-only wordmark, no hamburger, no search (used by the landing page)
   landing?: boolean;
 }
 const { landing = false } = Astro.props;
@@ -22,7 +21,6 @@ const CAT_BLURB: Record<string, string> = {
   Security: 'Hashes, keys, passwords and validation.',
   'Device & Sensors': 'Test your device, input and connection.',
 };
-// Per-category icon tint — mirrors index.astro catStyle so the menu reads as one product.
 const CAT_FG: Record<string, string> = {
   Text: 'text-sky-400',
   Developer: 'text-violet-400',
@@ -89,11 +87,11 @@ const CAT_MENU = categories.map((c) => {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
         </a>
 
-        <!-- Full-width mega menu -->
+        
         <div class="nav-mega">
           <div class="container-page pt-0 pb-5">
             <div class="nav-mega-card flex gap-6 rounded-xl border border-hairline bg-surface-2 shadow-2xl">
-              <!-- Category rail -->
+              
               <div class="w-44 flex-none border-r border-hairline p-2">
                 {CAT_MENU.map((cat, i) => (
                   <button type="button" class="nav-rail flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-subtle hover:bg-surface-3 hover:text-ink" data-cat={i} aria-controls={`mega-${i}`}>
@@ -102,7 +100,7 @@ const CAT_MENU = categories.map((c) => {
                 ))}
               </div>
 
-              <!-- Tool panels (one per category, JS swaps visibility) -->
+              
               <div class="min-w-0 flex-1 p-4 pr-5">
                 {CAT_MENU.map((cat, i) => (
                   <div class="nav-panel h-80 overflow-y-auto" id={`mega-${i}`} data-panel={i} hidden={i !== 0}>
@@ -173,8 +171,7 @@ const CAT_MENU = categories.map((c) => {
   :global(html[data-theme='light']) .theme-toggle .icon-sun { display: none; }
   :global(html[data-theme='light']) .theme-toggle .icon-moon { display: inline; }
 
-  /* Full-width Tools mega menu. Header is sticky (a positioning context), so the
-     panel spans the full header width. */
+  
   .nav-tools { position: static; }
   .nav-mega {
     display: none;
@@ -200,7 +197,6 @@ const CAT_MENU = categories.map((c) => {
   document.getElementById('sidebar-toggle-btn')?.addEventListener('click', dispatchToggle);
   document.getElementById('nav-toggle')?.addEventListener('click', dispatchToggle);
 
-  // Mega menu: hovering a category rail item swaps the visible tool panel.
   const rails = document.querySelectorAll<HTMLElement>('.nav-rail');
   const panels = document.querySelectorAll<HTMLElement>('.nav-panel');
   const showPanel = (idx: string) => {
@@ -213,7 +209,6 @@ const CAT_MENU = categories.map((c) => {
   });
   if (rails[0]) rails[0].setAttribute('aria-current', 'true');
 
-  // Open/close with a short close-delay so brief gaps (link → panel) don't shut it.
   const navTools = document.querySelector<HTMLElement>('.nav-tools');
   const mega = document.querySelector<HTMLElement>('.nav-mega');
   const megaCard = document.querySelector<HTMLElement>('.nav-mega-card');
@@ -221,8 +216,6 @@ const CAT_MENU = categories.map((c) => {
     let closeTimer: ReturnType<typeof setTimeout> | null = null;
     const open = () => { if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; } mega.classList.add('open'); };
     const scheduleClose = () => { if (closeTimer) clearTimeout(closeTimer); closeTimer = setTimeout(() => mega.classList.remove('open'), 220); };
-    // Only the trigger link + the card keep it open — hovering the full-width
-    // gutters beside the card closes it.
     [navTools, megaCard].forEach((el) => {
       el.addEventListener('mouseenter', open);
       el.addEventListener('mouseleave', scheduleClose);
@@ -257,7 +250,7 @@ const CAT_MENU = categories.map((c) => {
     applyMeta(theme);
   };
 
-  if (root.dataset.bg === 'image') setBg(true); // sync button states on load
+  if (root.dataset.bg === 'image') setBg(true);
 
   document.querySelectorAll('.bg-toggle').forEach((btn) => {
     btn.addEventListener('click', () => {

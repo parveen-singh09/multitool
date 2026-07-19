@@ -223,14 +223,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       case 'js':
         return cps.map((n) => (n > 0xffff ? `\\u{${hex(n)}}` : `\\u${hex(n, 4)}`)).join('');
       case 'json':
-        // JSON has no \u{}; astral code points use a UTF-16 surrogate pair.
         return cps.map((n) => utf16Units(n).map((u) => `\\u${hex(u, 4)}`).join('')).join('');
       case 'python':
         return cps.map((n) =>
           n <= 0xff ? `\\x${hex(n, 2)}` : n <= 0xffff ? `\\u${hex(n, 4)}` : `\\U${hex(n, 8)}`,
         ).join('');
       case 'css':
-        // 6-digit zero-padded hex needs no trailing space to be unambiguous.
         return cps.map((n) => `\\${hex(n, 6)}`).join('');
       case 'utf8':
         return cps.map((n) => utf8Bytes(n).map((b) => hex(b, 2)).join(' ')).join(d || ' ');
@@ -260,7 +258,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return 'Other';
   }
 
-  // Escape for safe insertion into innerHTML table cells.
   function esc(s: string): string {
     return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
   }
@@ -313,7 +310,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const fmt = FORMATS[formatSel.value];
     outLabel.textContent = fmt.label;
     delimWrap.style.display = fmt.list ? '' : 'none';
-    // Uppercase toggle is meaningless for decimal/binary output.
     caseWrap.style.display =
       formatSel.value === 'decimal' || formatSel.value === 'binary' ? 'none' : '';
   }
@@ -344,26 +340,20 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // Format-agnostic decoder. Applies each transform in turn so mixed input
-  // ("U+0041 &#66; C") still resolves.
   function decodeAll(raw: string): string {
     let s = raw;
     s = s.replace(/\\u\{([0-9a-fA-F]+)\}/g, (_, h) => String.fromCodePoint(parseInt(h, 16)));
     s = s.replace(/\\U([0-9a-fA-F]{8})/g, (_, h) => String.fromCodePoint(parseInt(h, 16)));
     s = s.replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCodePoint(parseInt(h, 16)));
     s = s.replace(/\\x([0-9a-fA-F]{2})/g, (_, h) => String.fromCodePoint(parseInt(h, 16)));
-    s = s.replace(/\\([0-9a-fA-F]{1,6})\s?/g, (_, h) => String.fromCodePoint(parseInt(h, 16))); // CSS
+    s = s.replace(/\\([0-9a-fA-F]{1,6})\s?/g, (_, h) => String.fromCodePoint(parseInt(h, 16)));
     s = s.replace(/U\+([0-9a-fA-F]+)/g, (_, h) => String.fromCodePoint(parseInt(h, 16)));
-    // HTML entities: named + numeric, decoded by the browser.
     const ta = document.createElement('textarea');
     ta.innerHTML = s;
     s = ta.value;
-    // Percent-encoded UTF-8.
     if (/%[0-9a-fA-F]{2}/.test(s)) {
       try { s = decodeURIComponent(s); } catch {}
     }
-    // Bare number lists ("1F600 61 62" or "0x61,0x62") — only when the whole
-    // string is nothing but hex tokens, so real text is never misread.
     const trimmed = s.trim();
     if (trimmed && /^(0x)?[0-9a-fA-F]+([\s,]+(0x)?[0-9a-fA-F]+)*$/.test(trimmed) && /[a-fA-F]|0x/.test(trimmed)) {
       const pts = trimmed.split(/[\s,]+/).map((t) => parseInt(t.replace(/^0x/i, ''), 16));

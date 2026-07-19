@@ -143,7 +143,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   for (const [base, el] of Object.entries(inputs)) {
     el.addEventListener('input', () => syncFrom(base));
   }
-  // Re-render the binary field's grouping without losing the current value.
   groupEl.addEventListener('change', () => {
     const v = decEl.value.trim();
     if (v && VALID.dec.test(v.replace(/\s+/g, ''))) syncFrom('dec');
@@ -159,7 +158,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   txtBinEl.addEventListener('input', () => {
     setErr('');
-    // Tolerant parse: split on any whitespace or commas regardless of chosen separator.
     const groups = txtBinEl.value.trim().split(/[\s,]+/).filter(Boolean);
     if (!groups.length) { txtEl.value = ''; return; }
     if (!groups.every((g) => /^[01]{1,8}$/.test(g))) { setErr('Use 8-bit binary groups of 0s and 1s.'); return; }

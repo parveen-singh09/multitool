@@ -326,14 +326,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     c.lineWidth = Math.max(2, size * 0.08);
     c.strokeStyle = 'rgba(0,0,0,0.55)';
 
-    // Anchor (center of the text): custom drag position wins over the preset.
     const cx = textPos ? textPos.x * cw : cw / 2;
     let cy: number;
     if (textPos) cy = textPos.y * ch;
     else if (pos === 'top' || pos === 'arc-top') cy = size * 0.7;
     else if (pos === 'center') cy = ch / 2;
-    else cy = ch - size * 0.7; // bottom / arc-bottom
-    // Arc curves around this anchor point.
+    else cy = ch - size * 0.7;
     const arcCy = textPos ? textPos.y * ch : ch / 2;
 
     if (pos.startsWith('arc')) {
@@ -362,7 +360,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     c.restore();
   }
 
-  // Full render into the visible canvas. Returns the sticker canvas for reuse.
   function render(): HTMLCanvasElement | null {
     clearErr();
     if (!subject) {
@@ -398,7 +395,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return canvas;
   }
 
-  // Run an async task while showing a spinner in `btn`; both buttons disabled.
   async function withSpinner(btn: HTMLButtonElement, label: string, fn: () => Promise<void>) {
     const prev = btn.innerHTML;
     removeBtn.disabled = true;
@@ -428,7 +424,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (!file) return;
     try {
       original = await loadFile(file);
-      subject = original; // preview raw until the user removes the bg
+      subject = original;
       removeBtn.disabled = false;
       keepBtn.disabled = false;
       render();
@@ -445,8 +441,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   });
 
-  // Drag the text around the canvas. The canvas is CSS-scaled, so map client
-  // coords back to canvas px via the bounding rect.
   function toCanvas(e: PointerEvent) {
     const r = canvas.getBoundingClientRect();
     return {
@@ -465,7 +459,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   });
   canvas.addEventListener('pointermove', (e) => {
     if (!dragging) {
-      // Show a grab cursor when hovering over the text.
       const p = toCanvas(e);
       const over = textBox && textEl.value.trim() && p.x >= textBox.x && p.x <= textBox.x + textBox.w && p.y >= textBox.y && p.y <= textBox.y + textBox.h;
       canvas.style.cursor = over ? 'grab' : 'default';
@@ -504,7 +497,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   [colorEl, shapeEl, fill1, fill2, shadowEl, glowEl, textEl, fontEl, tcolorEl, tsizeEl].forEach((el) =>
     el.addEventListener('input', render),
   );
-  // Choosing a preset position snaps back to it, discarding any drag offset.
   tposEl.addEventListener('change', () => {
     textPos = null;
     render();

@@ -253,7 +253,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     el.addEventListener('input', build);
   });
 
-  // htpasswd bcrypt line generator
   $('hp-gen').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
     const user = ($('hp-user') as HTMLInputElement).value.trim();
@@ -263,7 +262,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const mod = await import('bcryptjs');
     const bcrypt = (mod.default ?? mod) as typeof import('bcryptjs');
     const hash = await bcrypt.hash(pass, 10);
-    // Apache expects the $2y$ prefix for bcrypt in .htpasswd
     ($('hp-out') as HTMLInputElement).value = `${user}:${hash.replace(/^\$2[ab]\$/, '$2y$')}`;
     btn.textContent = 'Generate'; btn.disabled = false;
   });

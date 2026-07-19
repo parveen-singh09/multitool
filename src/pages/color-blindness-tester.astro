@@ -454,9 +454,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return typeof choice === 'string' ? (SHAPE_GLYPH[choice] ?? choice) : String(choice);
   }
 
-  // Build the answer set for the current difficulty: always the correct
-  // figure, topped up with distinct distractors from the full pool, shuffled.
-  // More options on harder levels cut the odds of a lucky guess.
   function buildChoices(plate: Plate): (number | string)[] {
     const want = DIFF[difficulty].choices;
     const pool: (number | string)[] = mode === 'shapes'
@@ -487,7 +484,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       btn.textContent = labelFor(choice);
       if (typeof choice === 'string') {
         btn.setAttribute('aria-label', String(choice));
-        btn.style.fontSize = '22px';   // shape glyphs read as icons, not tiny text
+        btn.style.fontSize = '22px';
         btn.style.lineHeight = '1';
       }
       btn.addEventListener('click', () => pick(choice, btn));
@@ -508,11 +505,9 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const correct = choice === plate.figure;
     answers.push({ axis: plate.axis, correct, sawNothing });
     progressEl.textContent = String(answers.length);
-    // Colour the picked button green (correct) or red (wrong); no popup text.
     btn.style.background = correct ? '#27a644' : '#e5484d';
     btn.style.borderColor = correct ? '#27a644' : '#e5484d';
     btn.style.color = '#fff';
-    // Lock the rest so a second click can't re-answer.
     Array.from(choicesEl.children).forEach((c) => ((c as HTMLButtonElement).disabled = true));
     window.setTimeout(next, 700);
   }
@@ -528,7 +523,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     renderChoices();
   }
 
-  // ── Scoring / classification ───────────────────────────────
   type Classification = 'Normal' | 'Protan' | 'Deutan' | 'Red-green (type undetermined)' | 'Tritan' | 'Inconclusive';
   type Severity = 'none' | 'mild' | 'moderate' | 'strong';
   interface Report {
@@ -539,8 +533,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     note: string;
   }
 
-  const NOTHING_WEIGHT = 1.0;   // "I see nothing" is exactly what a deficiency produces
-  const GUESS_WEIGHT = 0.7;     // a wrong number could be a mis-click
+  const NOTHING_WEIGHT = 1.0;
+  const GUESS_WEIGHT = 0.7;
 
   function acc(list: Answer[]): number {
     if (!list.length) return 1;
@@ -567,7 +561,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       tritan: acc(tritan),
     };
 
-    // Reliability gate.
     const controlErrors = control.filter((a) => !a.correct).length;
     if (control.length && controlErrors === control.length) {
       return { classification: 'Inconclusive', severity: 'none', perAxis, confidence: 'low',
@@ -578,17 +571,14 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const rgError = 1 - perAxis.redGreen;
     const tritanError = 1 - perAxis.tritan;
 
-    // Normal.
     if (rgError < 0.2 && tritanError < 0.34) {
       return { classification: 'Normal', severity: 'none', perAxis, confidence,
         note: 'Your responses match typical color vision across the plates shown.' };
     }
-    // Tritan (only when red-green looks clear).
     if (tritanError >= 0.5 && rgError < 0.2) {
       return { classification: 'Tritan', severity: severityFrom(tritanError), perAxis, confidence,
         note: 'Your pattern leans toward a blue-yellow (tritan) deficiency. This is the least reliable result on a web display — treat it with extra skepticism.' };
     }
-    // Red-green present → vote protan vs deutan.
     const protanMiss = missRate(protan);
     const deutanMiss = missRate(deutan);
     const MARGIN = 0.34;
@@ -604,7 +594,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return { classification, severity: severityFrom(rgError), perAxis, confidence, note };
   }
 
-  // ── Report rendering ───────────────────────────────────────
   function showReport(r: Report) {
     choicesEl.innerHTML = '';
     feedbackEl.classList.add('hidden');
@@ -651,9 +640,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     $('cb-report').classList.add('flex');
   }
 
-  // Sample TEST_SIZE plates from the stock: keep every control plate (the
-  // reliability gate needs them), fill the rest from shuffled non-controls,
-  // then shuffle the whole run so order varies each time.
   function samplePlates(stock: Plate[]): Plate[] {
     const controls = stock.filter((p) => p.axis === 'control');
     const rest = shuffle(stock.filter((p) => p.axis !== 'control'));
@@ -708,7 +694,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   $('cb-diff-hard').addEventListener('click', () => setDifficulty('hard'));
   restart();
 
-  // ── Tab switching ──────────────────────────────────────────
   const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('.cb-tab'));
   const panels = Array.from(document.querySelectorAll<HTMLElement>('.cb-panel'));
   function showTest(key: string) {
@@ -726,11 +711,9 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
   tabs.forEach((t) => t.addEventListener('click', () => showTest(t.dataset.test!)));
 
-  // Shared: euclidean RGB distance.
   type RGB = [number, number, number];
   const dist = (a: RGB, b: RGB) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
   function hsl(h: number, s: number, l: number): RGB {
-    // h 0..360, s/l 0..1 → rgb 0..255. Standard conversion.
     const c = (1 - Math.abs(2 * l - 1)) * s;
     const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
     const m = l - c / 2;
@@ -752,17 +735,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return a;
   }
 
-  // ── D-15 hue arrangement ───────────────────────────────────
-  // 15 caps evenly spaced around the hue circle. Correct order = by hue.
-  // Total error = sum of adjacent RGB distances through the placed order
-  // (starting from the fixed reference cap). Confusion axis is inferred from
-  // the orientation of the large "crossing" jumps in hue space.
-  // ponytail: chord-angle axis vote, not the full Vingrys-King-Smith TES vector
-  // analysis — a screening lean on an uncalibrated display, disclaimed as such.
   const D15_N = 15;
   const d15Hues = Array.from({ length: D15_N }, (_, i) => (i * 360) / D15_N);
   const d15Colors: RGB[] = d15Hues.map((h) => hsl(h, 0.5, 0.55));
-  const d15Ref: RGB = hsl(0, 0.5, 0.55); // reference cap = hue 0
+  const d15Ref: RGB = hsl(0, 0.5, 0.55);
   let d15Order: number[] = [];
   const capsEl = $('d15-caps');
   let dragFrom = -1;
@@ -797,19 +773,14 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     d15Render();
   }
   function d15ScoreFn() {
-    // Total error through ref → placed caps.
     let err = 0;
     let prev = d15Ref;
     for (const idx of d15Order) { err += dist(prev, d15Colors[idx]); prev = d15Colors[idx]; }
-    // Minimal (sorted-by-hue) baseline for comparison.
     const sortedIdx = [...Array(D15_N).keys()].sort((a, b) => d15Hues[a] - d15Hues[b]);
     let best = 0; prev = d15Ref;
     for (const idx of sortedIdx) { best += dist(prev, d15Colors[idx]); prev = d15Colors[idx]; }
     const ratio = err / best;
 
-    // Axis vote from large jumps: chord orientation in hue space maps to a
-    // confusion axis. Protan/deutan sit near the red-green (0-180) hue axis,
-    // tritan near blue-yellow (60-240 region on this wheel).
     let rgJumps = 0, byJumps = 0;
     let prevIdx = -1;
     for (const idx of d15Order) {
@@ -841,7 +812,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   $('d15-score').addEventListener('click', d15Report);
   d15Shuffle();
 
-  // ── Anomaloscope (Rayleigh match) ──────────────────────────
   const anTop = $('an-top') as HTMLCanvasElement;
   const anBot = $('an-bot') as HTMLCanvasElement;
   const anTopCtx = anTop.getContext('2d')!;
@@ -849,9 +819,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const anMix = $('an-mix') as HTMLInputElement;
   const anBright = $('an-bright') as HTMLInputElement;
   function anDraw() {
-    const t = +anMix.value / 100;            // 0 = green, 1 = red
+    const t = +anMix.value / 100;
     const bright = +anBright.value / 100;
-    // Additive red+green → yellow. Top mixes; bottom is reference yellow.
     const top: RGB = [Math.round(255 * t), Math.round(200 * (1 - t)), 0];
     anTopCtx.fillStyle = rgbStr(top);
     anTopCtx.fillRect(0, 0, anTop.width, anTop.height);
@@ -861,8 +830,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
   function anReport() {
     const t = +anMix.value / 100;
-    // Normal observers match near the middle. Excess red → protan lean
-    // (they need more red for equal brightness); excess green → deutan lean.
     let head = 'Match in normal range', note = 'Your red-green mix at match sits near the center, the typical Rayleigh match point.';
     if (t >= 0.68) { head = 'Protan lean'; note = 'You accepted a red-heavy mix as matching the yellow — a pattern associated with reduced red sensitivity (protan). Screening lean only.'; }
     else if (t <= 0.32) { head = 'Deutan lean'; note = 'You accepted a green-heavy mix as matching — a pattern associated with reduced green sensitivity (deutan). Screening lean only.'; }
@@ -880,7 +847,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   });
   anDraw();
 
-  // ── Cambridge Landolt-C ────────────────────────────────────
   const CAM_ROUNDS = 12;
   const camCanvas = $('cam-canvas') as HTMLCanvasElement;
   const camCtx = camCanvas.getContext('2d')!;
@@ -889,21 +855,18 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const CAM_BG: RGB = [120, 120, 120];
   let camRound = 0;
   let camDir: Dir = 'up';
-  let camThreshold = 0;      // lowest saturation still answered correctly (lower = better)
+  let camThreshold = 0;
   let camDone = false;
 
   function camDraw() {
-    // Colored C fades toward grey as rounds progress. Round 1 = easy (vivid),
-    // last round = near-threshold. Colour along the red-green axis.
-    const frac = camRound / (CAM_ROUNDS - 1);          // 0..1
-    const sat = 0.55 * (1 - frac) + 0.06;              // vivid → nearly grey
-    const target = hsl(camRound % 2 === 0 ? 15 : 135, sat, 0.47); // alternate red / green hue
+    const frac = camRound / (CAM_ROUNDS - 1);
+    const sat = 0.55 * (1 - frac) + 0.06;
+    const target = hsl(camRound % 2 === 0 ? 15 : 135, sat, 0.47);
     const W = camCanvas.width, H = camCanvas.height;
     camCtx.clearRect(0, 0, W, H);
     camCtx.fillStyle = '#0f1011';
     camCtx.fillRect(0, 0, W, H);
     const cx = W / 2, cy = H / 2, rOuter = 92, rInner = 48;
-    // Gap angle window (30°) pointing in camDir.
     const dirAngle: Record<Dir, number> = { right: 0, down: 90, left: 180, up: 270 };
     const gapCenter = dirAngle[camDir];
     for (let i = 0; i < 2600; i++) {
@@ -917,7 +880,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       if (angDiff > 180) angDiff = 360 - angDiff;
       const inRing = rad >= rInner && rad <= rOuter && angDiff > 18;
       const base = inRing ? target : CAM_BG;
-      // jitter each dot slightly so edges aren't crisp
       const c: RGB = [
         Math.max(0, Math.min(255, base[0] + (Math.random() * 30 - 15))),
         Math.max(0, Math.min(255, base[1] + (Math.random() * 30 - 15))),
@@ -930,7 +892,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
   function camNext(correct: boolean) {
-    if (correct) camThreshold = camRound;   // track deepest correct round
+    if (correct) camThreshold = camRound;
     camRound++;
     if (camRound >= CAM_ROUNDS) { camReport(); return; }
     $('cam-num').textContent = String(camRound + 1);
@@ -939,7 +901,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
   function camReport() {
     camDone = true;
-    // Higher threshold round reached = finer discrimination = better.
     const reached = camThreshold + 1;
     const pass = reached >= 9;
     $('cam-headline').textContent = pass ? 'Good discrimination' : 'Reduced discrimination';
@@ -967,12 +928,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   $('cam-total').textContent = String(CAM_ROUNDS);
   camRestart();
 
-  // ── Farnsworth Lantern ─────────────────────────────────────
   const LAN_COLORS: Record<string, RGB> = {
     red: [150, 40, 30], green: [30, 120, 60], white: [210, 205, 195],
   };
   const LAN_KEYS = ['red', 'green', 'white'];
-  // 9 pairs — every ordered combination, the classic lantern sequence.
   const LAN_PAIRS: [string, string][] = [
     ['red', 'green'], ['green', 'red'], ['white', 'green'], ['red', 'white'],
     ['green', 'white'], ['white', 'red'], ['red', 'red'], ['green', 'green'], ['white', 'white'],
@@ -1018,7 +977,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     lanDraw();
   }
   function lanReport() {
-    // Aviation lantern criterion is strict: any red/green confusion fails.
     const pass = lanErrors === 0;
     $('lan-headline').textContent = pass ? 'Pass' : `${lanErrors} error${lanErrors === 1 ? '' : 's'}`;
     $('lan-note').textContent = pass
@@ -1037,13 +995,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   $('lan-total').textContent = String(LAN_PAIRS.length);
   lanRestart();
 
-  // ── Dev self-check ─────────────────────────────────────────
-  // Smallest thing that fails if the vote logic breaks. Runs only on localhost.
   if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
     const mk = (axis: Axis, correct: boolean, sawNothing = false): Answer => ({ axis, correct, sawNothing });
     const clean = [mk('control', true), mk('control', true), mk('protan', true), mk('protan', true),
       mk('deutan', true), mk('deutan', true), mk('rg', true), mk('tritan', true)];
-    // Protan pattern: misses protan-diagnostic plates (sees nothing), reads deutan.
     const protanPat = [mk('control', true), mk('control', true),
       mk('protan', false, true), mk('protan', false, true), mk('protan', false, true),
       mk('deutan', true), mk('deutan', true), mk('deutan', true),
@@ -1056,12 +1011,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     console.assert(scoreReport(protanPat).classification === 'Protan', 'protan pattern → Protan');
     console.assert(scoreReport(deutanPat).classification === 'Deutan', 'deutan pattern → Deutan');
 
-    // hsl sanity: hue 0 = red, 120 = green, 240 = blue.
     console.assert(hsl(0, 1, 0.5)[0] === 255 && hsl(0, 1, 0.5)[2] === 0, 'hsl red');
     console.assert(hsl(120, 1, 0.5)[1] === 255, 'hsl green');
-    // D-15: sorted-by-hue order scores at the minimum ratio (~1.0), a shuffle worse.
     d15Order = [...Array(D15_N).keys()].sort((a, b) => d15Hues[a] - d15Hues[b]);
     console.assert(d15ScoreFn().ratio <= 1.001, 'sorted order is minimal');
-    d15Shuffle(); // resync state + UI after the mutation above
+    d15Shuffle();
   }
 </script>

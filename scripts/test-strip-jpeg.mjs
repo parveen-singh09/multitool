@@ -1,5 +1,3 @@
-// Self-check for the JPEG metadata stripper. Ported verbatim from
-// image-metadata-analyzer.astro. Run: node scripts/test-strip-jpeg.mjs
 import assert from 'node:assert';
 
 function stripJpeg(buf) {
@@ -20,38 +18,33 @@ function stripJpeg(buf) {
   return new Uint8Array(out);
 }
 
-// segment(marker, payloadBytes) -> FFxx + length(incl. 2) + payload
 const seg = (m, payload) => {
   const len = payload.length + 2;
   return [0xff, m, (len >> 8) & 0xff, len & 0xff, ...payload];
 };
 
-const app0 = seg(0xe0, [0x4a, 0x46, 0x49, 0x46, 0x00, 1, 1, 0, 0, 1, 0, 1, 0, 0]); // JFIF — keep
-const app1 = seg(0xe1, [0x45, 0x78, 0x69, 0x66, 0, 0, 1, 2, 3, 4]);                // EXIF — strip
-const app2 = seg(0xe2, [0x49, 0x43, 0x43, 0]);                                    // ICC — keep
-const app13 = seg(0xed, [0x50, 0x68, 0x6f, 0x74, 0x6f, 9, 9]);                    // IPTC — strip
-const com = seg(0xfe, [0x68, 0x69]);                                              // comment — strip
+const app0 = seg(0xe0, [0x4a, 0x46, 0x49, 0x46, 0x00, 1, 1, 0, 0, 1, 0, 1, 0, 0]);
+const app1 = seg(0xe1, [0x45, 0x78, 0x69, 0x66, 0, 0, 1, 2, 3, 4]);
+const app2 = seg(0xe2, [0x49, 0x43, 0x43, 0]);
+const app13 = seg(0xed, [0x50, 0x68, 0x6f, 0x74, 0x6f, 9, 9]);
+const com = seg(0xfe, [0x68, 0x69]);
 const sos = [0xff, 0xda, 0, 3, 1, /*scan data, may contain 0xff00*/ 0x12, 0xff, 0x00, 0x34, 0xff, 0xd9];
 
 const jpeg = new Uint8Array([0xff, 0xd8, ...app0, ...app1, ...app2, ...app13, ...com, ...sos]);
 const clean = stripJpeg(jpeg.buffer);
 const bytes = Array.from(clean);
 
-// EXIF, IPTC, comment payloads must be gone
 assert(!bytes.join(',').includes([0x45, 0x78, 0x69, 0x66].join(',')), 'EXIF not stripped');
 assert(!bytes.join(',').includes([0x50, 0x68, 0x6f, 0x74, 0x6f].join(',')), 'IPTC not stripped');
 assert(clean.indexOf(0xfe) === -1 || bytes[clean.indexOf(0xff)] !== 0xfe, 'comment marker present');
 
-// JFIF + ICC + scan data must survive intact
 assert(bytes.join(',').includes([0x4a, 0x46, 0x49, 0x46].join(',')), 'JFIF dropped');
 assert(bytes.join(',').includes([0x49, 0x43, 0x43].join(',')), 'ICC dropped');
 assert(bytes.slice(-11).join(',') === sos.join(','), 'scan data altered');
 
-// SOI intact, output smaller than input
 assert(clean[0] === 0xff && clean[1] === 0xd8, 'SOI missing');
 assert(clean.length < jpeg.length, 'nothing was removed');
 
-// Non-JPEG returns null
 assert(stripJpeg(new Uint8Array([0x89, 0x50]).buffer) === null, 'PNG should return null');
 
 console.log(`OK — ${jpeg.length} bytes -> ${clean.length} bytes, metadata stripped, image data intact`);

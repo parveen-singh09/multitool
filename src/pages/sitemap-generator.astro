@@ -116,11 +116,7 @@ https://example.com/contact</textarea>
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
 
-  // ── Crawler (browser-side, via public CORS proxy) ──────────────────────
-  // ponytail: allorigins proxy + BFS, low concurrency to respect proxy limits.
-  //           Swap for own /api crawl route if privacy/uptime/scale matters.
   const CONCURRENCY = 4;
-  // Skip links that clearly aren't crawlable HTML pages.
   const SKIP_EXT = /\.(?:jpe?g|png|gif|svg|webp|ico|bmp|css|js|mjs|json|xml|pdf|zip|gz|rar|7z|mp[34]|wav|ogg|webm|mov|avi|woff2?|ttf|eot|dmg|exe|csv|txt|rss)(?:$|[?#])/i;
 
   const proxied = (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`;
@@ -129,7 +125,6 @@ https://example.com/contact</textarea>
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.text();
   }
-  // Dedupe key: drop hash and trailing slash so / and /index resolve together.
   const norm = (u: string) => u.replace(/#.*$/, '').replace(/\/$/, '') || u;
 
   let stop = false;
@@ -167,7 +162,7 @@ https://example.com/contact</textarea>
           try {
             html = await proxyText(u);
           } catch {
-            return; // skip pages the proxy can't fetch
+            return;
           }
           const doc = new DOMParser().parseFromString(html, 'text/html');
           doc.querySelectorAll('a[href]').forEach((a) => {
@@ -179,7 +174,7 @@ https://example.com/contact</textarea>
             } catch {
               return;
             }
-            if (link.origin !== start.origin) return; // same-site only
+            if (link.origin !== start.origin) return;
             if (SKIP_EXT.test(link.pathname + link.search)) return;
             const key = norm(link.href);
             if (!seen.has(key)) {

@@ -1,28 +1,24 @@
-// Embed one or more images into an Office document or PDF, entirely client-side.
-// Word/Excel/PowerPoint are hand-built OOXML zips (reusing makeZip); PDF uses pdf-lib.
 import { makeZip } from './zip';
 
 export interface DocImage {
   bytes: Uint8Array;
   ext: 'png' | 'jpg';
-  w: number;   // pixels
+  w: number;
   h: number;
 }
 
 const enc = new TextEncoder();
 const b = (s: string) => enc.encode(s);
-const EMU = 9525;                       // EMU per pixel at 96dpi
+const EMU = 9525;
 const mime = (e: string) => (e === 'png' ? 'image/png' : 'image/jpeg');
 
-// Scale an image to fit a page width in pixels, preserving aspect ratio.
 function fit(img: DocImage, maxW: number, maxH: number) {
   const s = Math.min(1, maxW / img.w, maxH / img.h);
   return { w: Math.round(img.w * s), h: Math.round(img.h * s) };
 }
 
-// ---------- Word (.docx) ----------
 export function imagesToDocx(images: DocImage[]): Blob {
-  const PAGE_W = 600; // px of usable body width (~6.25in)
+  const PAGE_W = 600;
   const drawings = images.map((im, i) => {
     const { w, h } = fit(im, PAGE_W, 800);
     const cx = w * EMU, cy = h * EMU;
@@ -71,15 +67,13 @@ export function imagesToDocx(images: DocImage[]): Blob {
   return new Blob([makeZip(files)], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 }
 
-// ---------- Excel (.xlsx) with floating images on one sheet ----------
 export function imagesToXlsx(images: DocImage[]): Blob {
-  // Stack each image in its own vertical band using twoCellAnchor by row.
   let rowCursor = 0;
   const anchors = images.map((im, i) => {
     const { w, h } = fit(im, 900, 900);
     const cx = w * EMU, cy = h * EMU;
     const fromRow = rowCursor;
-    rowCursor += Math.max(1, Math.ceil(h / 20)) + 1; // rough row advance
+    rowCursor += Math.max(1, Math.ceil(h / 20)) + 1;
     return `<xdr:oneCellAnchor>` +
       `<xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${fromRow}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>` +
       `<xdr:ext cx="${cx}" cy="${cy}"/>` +
@@ -143,9 +137,8 @@ export function imagesToXlsx(images: DocImage[]): Blob {
   return new Blob([makeZip(files)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 }
 
-// ---------- PowerPoint (.pptx), one image centred per slide ----------
 export function imagesToPptx(images: DocImage[]): Blob {
-  const SLIDE_W = 9144000, SLIDE_H = 6858000; // 10in x 7.5in in EMU
+  const SLIDE_W = 9144000, SLIDE_H = 6858000;
   const slideParts: { name: string; data: Uint8Array }[] = [];
   const slideRelParts: { name: string; data: Uint8Array }[] = [];
 
@@ -247,7 +240,6 @@ export function imagesToPptx(images: DocImage[]): Blob {
   return new Blob([makeZip(files)], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
 }
 
-// ---------- PDF (one image per page) via pdf-lib ----------
 export async function imagesToPdf(images: DocImage[]): Promise<Blob> {
   const { PDFDocument } = await import('pdf-lib');
   const pdf = await PDFDocument.create();

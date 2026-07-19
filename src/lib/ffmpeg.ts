@@ -31,8 +31,6 @@ export async function getFFmpeg(hooks: LoadHooks = {}): Promise<FFmpeg> {
     return ff;
   })();
 
-  // If the load fails, clear the cached promise so a later call can retry —
-  // otherwise one CDN blip permanently bricks the converter until page reload.
   loading.catch(() => { loading = null; });
 
   return loading;

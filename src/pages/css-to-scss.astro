@@ -142,7 +142,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       return { scss: header + body, ruleCount: rules.length, varCount: vars.size };
     }
 
-    // Nest: group by first token of selector.
     const tree: Record<string, { self?: string; children: Rule[] }> = {};
     for (const r of rules) {
       const parts = r.selector.split(' ');
@@ -165,7 +164,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   function run() {
     errEl.classList.add('hidden');
     const raw = input.value;
-    // Cheap validation: unbalanced braces almost always means malformed CSS.
     const opens = (raw.match(/\{/g) || []).length;
     const closes = (raw.match(/\}/g) || []).length;
     if (raw.trim() && opens !== closes) {
@@ -201,7 +199,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     refresh(); run();
   });
 
-  // File open + drag-drop: read a .css file into the editor.
   function loadFile(file: File) {
     file.text().then((text) => { input.value = text; refresh(); run(); });
   }

@@ -159,7 +159,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     caretWrap.classList.remove('hidden');
   }
 
-  // ---- Sort object keys deeply ----
   function sortDeep(v: any): any {
     if (Array.isArray(v)) return v.map(sortDeep);
     if (v && typeof v === 'object') {
@@ -168,20 +167,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return v;
   }
 
-  // ---- Auto-fix: best-effort repair of common JSON mistakes ----
-  // ponytail: regex-based, not a full JSON5 parser. Handles the frequent cases
-  // (comments, trailing commas, single quotes, unquoted keys). Upgrade to a real
-  // tolerant parser (JSON5) only if users hit cases this misses.
   function autoFix(src: string): string {
     let s = src;
-    // strip /* */ and // comments (skips those inside strings via a scan)
     s = stripComments(s);
-    // single-quoted strings → double-quoted (only when not already inside dquotes)
     s = s.replace(/'((?:\\.|[^'\\])*)'/g, (_m, body) =>
       '"' + body.replace(/\\'/g, "'").replace(/"/g, '\\"') + '"');
-    // unquoted object keys: {key: ...} or ,key: ...  →  "key":
     s = s.replace(/([{,]\s*)([A-Za-z_$][\w$]*)(\s*:)/g, '$1"$2"$3');
-    // trailing commas before } or ]
     s = s.replace(/,(\s*[}\]])/g, '$1');
     return s.trim();
   }
@@ -204,7 +195,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return out;
   }
 
-  // ---- Stats ----
   function pill(text: string): HTMLElement {
     const el = document.createElement('span');
     el.className = 'status-badge';
@@ -235,7 +225,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     statsEl.classList.add('flex');
   }
 
-  // ---- Collapsible, syntax-highlighted tree (built via DOM — safe with untrusted input) ----
   const COLORS: Record<string, string> = {
     key: 'var(--color-primary-hover)',
     string: '#7fd88f',
@@ -261,7 +250,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return span(String(v), 'null');
   }
 
-  // Returns a block element for a value, prefixed by an optional key.
   function buildNode(key: string | null, value: any): HTMLElement {
     const isObj = value && typeof value === 'object';
     const line = document.createElement('div');
@@ -325,15 +313,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     viewWrap.classList.add('flex');
   }
 
-  // ---- Core process ----
   function parseCurrent(): { ok: true; value: any } | { ok: false } {
     const text = input.value;
     if (!text.trim()) { hideResults(); status.classList.add('hidden'); return { ok: false }; }
     const spec = specSel.value;
     try {
-      // JSON5 is a tolerant superset — normalise it to strict JSON first.
-      // RFC 8259 / 7159 / ECMA-404 all accept any top-level value; only the
-      // original RFC 4627 requires the root to be an object or array.
       const value = JSON.parse(spec === 'json5' ? autoFix(text) : text);
       if (spec === 'rfc4627' && (value === null || typeof value !== 'object')) {
         hideResults();
@@ -397,7 +381,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     URL.revokeObjectURL(url);
   });
 
-  // File upload + drag & drop
   const fileInput = document.getElementById('jf-file') as HTMLInputElement;
   async function loadFile(file: File) {
     input.value = await file.text();
@@ -411,7 +394,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (file) { e.preventDefault(); loadFile(file); }
   });
 
-  // Tree expand/collapse all
   const setAll = (open: boolean) =>
     treeEl.querySelectorAll('details').forEach((d) => ((d as HTMLDetailsElement).open = open));
   document.getElementById('jf-expand')!.addEventListener('click', () => setAll(true));

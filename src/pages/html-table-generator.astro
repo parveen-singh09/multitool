@@ -145,7 +145,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   const key = (r: number, c: number) => `${r},${c}`;
 
-  // Populate the length-unit dropdowns.
   const UNITS = ['px', '%', 'em', 'rem', 'ch', 'vh', 'vw'];
   ['s-wu', 's-hu', 's-bwu', 's-padu'].forEach((id) => {
     (id === 's-bwu' || id === 's-padu' ? ['px', 'em', 'rem', 'ch'] : UNITS).forEach((u) => {
@@ -164,7 +163,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       }
     }
     data = next;
-    // Drop or clip any span that no longer fits the grid.
     for (const [k, sp] of [...spans]) {
       const [r, c] = k.split(',').map(Number);
       if (r >= rows || c >= cols) { spans.delete(k); continue; }
@@ -174,7 +172,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // Cells hidden because a merge above/left covers them.
   function coveredSet(): Set<string> {
     const cov = new Set<string>();
     for (const [k, sp] of spans) {
@@ -230,7 +227,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (!sel) return;
     const r1 = Math.min(sel.r1, sel.r2), r2 = Math.max(sel.r1, sel.r2);
     const c1 = Math.min(sel.c1, sel.c2), c2 = Math.max(sel.c1, sel.c2);
-    // Clear any spans intersecting the region, then set the new anchor.
     for (const k of [...spans.keys()]) {
       const [r, c] = k.split(',').map(Number);
       if (r >= r1 && r <= r2 && c >= c1 && c <= c2) spans.delete(k);
@@ -303,7 +299,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
 
   function buildMarkdown() {
-    // Markdown tables can't express merges or styling — flatten to raw cells.
     const rows = data.map((row) => `| ${row.map((c) => c.replace(/\|/g, '\\|')).join(' | ')} |`);
     if (rows.length) rows.splice(1, 0, `| ${data[0].map(() => '---').join(' | ')} |`);
     return rows.join('\n');
@@ -347,12 +342,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     buildOut();
   }
 
-  // --- Import: split rows on newlines, cols on tab (Excel/Sheets) or comma. ---
   function parseDelimited(text: string): string[][] {
     const lines = text.replace(/\r/g, '').split('\n').filter((l) => l.length);
     if (!lines.length) return [];
     const delim = lines[0].includes('\t') ? '\t' : ',';
-    // Comma path honors basic RFC-4180 quoting; tab path is a plain split.
     return lines.map((line) => {
       if (delim === '\t') return line.split('\t');
       const cells: string[] = []; let cur = '', q = false;
@@ -382,7 +375,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     buildOut();
   }
 
-  // Wiring.
   ['ht-rows', 'ht-cols'].forEach((id) => $(id).addEventListener('input', rebuild));
   ['ht-header', 'ht-striped'].forEach((id) => $(id).addEventListener('change', () => { renderGrid(); buildOut(); }));
   ['s-class', 's-layout', 's-w', 's-wu', 's-h', 's-hu', 's-hbg', 's-hcolor', 's-bbg', 's-bcolor',

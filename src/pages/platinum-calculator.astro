@@ -213,7 +213,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   function populateCurrencies() {
     const curSel = sel('plat-cur');
     const prev = curSel.value || 'USD';
-    // Merge the static ISO list with anything the live feed returned, deduped.
     const codes = Array.from(new Set([...CURRENCIES, ...Object.keys(rates)])).sort((a, b) =>
       a.localeCompare(b)
     );
@@ -224,18 +223,14 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
 
   let lastUpdated = '';
-  let spotFetchedAt: number | null = null; // performance.now() at last successful fetch
-  let statusBase = ''; // status text without the age suffix
+  let spotFetchedAt: number | null = null;
+  let statusBase = '';
 
-  // Recompute the spot-price field from live USD platinum price + selected
-  // currency rate, i.e. the local price in the chosen currency and market's unit.
   function syncSpotFromLive(useMarketUnit = false) {
     if (platUsdPerOzt == null) return;
     const code = sel('plat-cur').value || 'USD';
     const rate = rates[code];
 
-    // The FX feed doesn't cover every listed currency (some pegged/rare codes).
-    // Don't fabricate a 1:1 rate — tell the user instead of showing a wrong price.
     if (rate == null) {
       const status = document.getElementById('plat-status')!;
       status.classList.add('text-red-400');
@@ -243,14 +238,13 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       return;
     }
 
-    // When the currency changes, snap the quote unit to that market's convention.
     if (useMarketUnit) {
       const gramsPerUnit = QUOTE_UNIT_BY_CCY[code] ?? OZT_G;
       sel('plat-price-unit').value = String(gramsPerUnit);
     }
 
-    const priceUnitG = Number(sel('plat-price-unit').value) || OZT_G; // grams per quoted unit
-    const premiumPct = premiumPctFor(code); // auto per-currency, no user input
+    const priceUnitG = Number(sel('plat-price-unit').value) || OZT_G;
+    const premiumPct = premiumPctFor(code);
     const premium = 1 + premiumPct / 100;
     const pricePerGram = (platUsdPerOzt * rate) / OZT_G;
     const localSpot = pricePerGram * priceUnitG * premium;
@@ -268,7 +262,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     status.textContent = statusBase;
   }
 
-  // Tick a "spot fetched N ago" suffix so users can judge the reading's freshness.
   setInterval(() => {
     if (spotFetchedAt == null || !statusBase) return;
     const status = document.getElementById('plat-status')!;
@@ -309,7 +302,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
       spotFetchedAt = performance.now();
       populateCurrencies();
-      syncSpotFromLive(true); // set spot + status to the selected currency's price in its market unit
+      syncSpotFromLive(true);
       calc();
     } catch {
       status.textContent = 'Could not fetch live prices. Enter the spot price manually.';
@@ -321,11 +314,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
 
   function calc() {
-    const spot = Number($('plat-spot').value) || 0; // price per quoted unit
+    const spot = Number($('plat-spot').value) || 0;
     const code = sel('plat-cur').value || 'USD';
     const weight = Number($('plat-weight').value) || 0;
-    const toOzt = Number(sel('plat-unit').value); // factor: weight unit → troy ounces
-    const priceUnitG = Number(sel('plat-price-unit').value) || OZT_G; // grams per quoted unit
+    const toOzt = Number(sel('plat-unit').value);
+    const priceUnitG = Number(sel('plat-price-unit').value) || OZT_G;
     const purity = sel('plat-purity').value === 'custom'
       ? Math.min(1, Math.max(0, Number($('plat-custom').value) || 0))
       : Number(sel('plat-purity').value);
@@ -340,7 +333,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       return;
     }
 
-    const pricePerOzt = (spot / priceUnitG) * OZT_G; // normalise quote to per troy ounce
+    const pricePerOzt = (spot / priceUnitG) * OZT_G;
     const totalOzt = weight * toOzt;
     const pureOzt = totalOzt * purity;
     const melt = pureOzt * pricePerOzt;
@@ -348,7 +341,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
     valueEl.textContent = money(payout, code);
 
-    // Express weights in the same unit the price is quoted in.
     const unitLabel = UNIT_SHORT[String(priceUnitG)] ?? `${priceUnitG} g`;
     const inUnit = (ozt: number) => (ozt * OZT_G) / priceUnitG;
 
@@ -369,7 +361,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       .join('');
   }
 
-  // Purity change: reveal the custom fineness field when "Custom" is picked.
   sel('plat-purity').addEventListener('change', () => {
     const custom = sel('plat-purity').value === 'custom';
     document.getElementById('plat-custom-wrap')!.classList.toggle('hidden', !custom);
@@ -377,22 +368,17 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     calc();
   });
 
-  // Currency change: reprice from the live USD base and snap to that market's quote unit.
   sel('plat-cur').addEventListener('change', () => {
     syncSpotFromLive(true);
     calc();
   });
 
-  // Quote-unit change: reprice the spot into the chosen unit (keeps the same currency).
   let prevPriceUnitG = Number(sel('plat-price-unit').value) || OZT_G;
   sel('plat-price-unit').addEventListener('change', () => {
     const newUnitG = Number(sel('plat-price-unit').value) || OZT_G;
     if (platUsdPerOzt != null) {
-      // Live data present: recompute the price from the USD base.
       syncSpotFromLive(false);
     } else {
-      // Manual entry: rescale the typed price from the old unit to the new one
-      // so it keeps meaning the same per-gram price.
       const cur = Number($('plat-spot').value) || 0;
       if (cur > 0) $('plat-spot').value = ((cur / prevPriceUnitG) * newUnitG).toFixed(2);
     }
@@ -406,6 +392,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     .querySelectorAll('#plat-spot, #plat-weight, #plat-unit, #plat-purity, #plat-pct, #plat-custom')
     .forEach((el) => el.addEventListener('input', calc));
 
-  populateCurrencies(); // fill the dropdown with all currencies on load
+  populateCurrencies();
   calc();
 </script>

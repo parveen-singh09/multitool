@@ -128,8 +128,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
   const escapeHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 
-  // Parse a page-range string like "1-3, 5, 8-" against a total page count.
-  // Empty / "all" → every page. Returns a sorted, de-duplicated 1-based list.
   function parseRange(spec: string, total: number): number[] {
     const s = spec.trim().toLowerCase();
     if (!s || s === 'all') return Array.from({ length: total }, (_, i) => i + 1);
@@ -154,7 +152,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return pages;
   }
 
-  // Group PDF text items into visual lines (by baseline y), each sorted left→right.
   function toLines(items: any[]): { y: number; text: string }[] {
     const rows: { y: number; parts: { x: number; s: string }[] }[] = [];
     for (const it of items) {
@@ -166,18 +163,13 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       if (row) row.parts.push({ x, s });
       else rows.push({ y, parts: [{ x, s }] });
     }
-    rows.sort((a, b) => b.y - a.y); // top of page first
+    rows.sort((a, b) => b.y - a.y);
     return rows.map((r) => {
       r.parts.sort((a, b) => a.x - b.x);
       return { y: r.y, text: r.parts.map((p) => p.s).join(' ').replace(/\s+/g, ' ').trim() };
     });
   }
 
-  // Reading-order: merge soft-wrapped lines into paragraphs (large vertical
-  // jump = new paragraph), then optionally repair words split by a hyphen at a
-  // line break. De-hyphenation runs as one pass on the joined text: a hyphen is
-  // only followed by a space where we joined two lines, so in-line compounds
-  // like "well-being" are left untouched.
   function reflow(lines: { y: number; text: string }[], dehyph: boolean): string {
     let text = '';
     for (let i = 0; i < lines.length; i++) {
@@ -304,7 +296,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     } finally { btn.disabled = false; }
   }
 
-  // Raw mode has no line grouping, so de-hyphenation cannot apply.
   function syncUI() { dehyphWrap.style.display = modeSel.value === 'reading' ? '' : 'none'; }
   modeSel.addEventListener('change', syncUI);
   syncUI();
@@ -328,7 +319,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
 
-  // ponytail: page-range parser self-check — run with ?selftest in the URL.
   if (new URLSearchParams(location.search).has('selftest')) {
     const eq = (a: unknown, b: unknown, m: string) => console.assert(JSON.stringify(a) === JSON.stringify(b), m, a);
     eq(parseRange('', 5), [1, 2, 3, 4, 5], 'empty=all');

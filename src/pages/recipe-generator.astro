@@ -83,7 +83,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     render(name, ingredients, steps);
   }
 
-  // AI path: ask the model for a recipe as JSON, fall back to local on any failure.
   async function aiGenerate() {
     const btn = $('rc-ai-gen') as HTMLButtonElement;
     btn.disabled = true;
@@ -98,7 +97,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       if (!r.name || !Array.isArray(r.ingredients) || !Array.isArray(r.steps)) throw new Error('shape');
       render(r.name, r.ingredients, r.steps);
     } catch {
-      generate(); // remote unavailable / bad output — use local generator
+      generate();
     } finally {
       btn.disabled = false;
     }
@@ -107,7 +106,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   ['rc-cuisine', 'rc-meal'].forEach((id) => $(id).addEventListener('change', generate));
   $('rc-gen').addEventListener('click', generate);
   $('rc-ai-gen').addEventListener('click', aiGenerate);
-  // Local copy: the formatted recipe lives in the currentRecipe string, not in rc-out's text.
   $('rc-copy-btn').addEventListener('click', async (e) => {
     if (!currentRecipe) return;
     await navigator.clipboard.writeText(currentRecipe);
@@ -117,7 +115,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   });
   generate();
 
-  // --- Chef chat (browser-side, PUBLIC_ key — no per-user login). ---
   const chatBox = $('rc-chat');
   const chatInput = $('rc-chat-input') as HTMLInputElement;
   const history: { role: 'user' | 'assistant'; content: string }[] = [];

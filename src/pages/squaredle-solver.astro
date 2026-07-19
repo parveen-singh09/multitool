@@ -142,7 +142,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   function wireCell(inp: HTMLInputElement, r: number, c: number) {
     inp.addEventListener('input', () => {
       const v = inp.value;
-      // Multi-char (paste of a whole grid) → distribute
       if (v.length > 1) {
         distributePaste(v, r, c);
         return;
@@ -185,7 +184,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   function distributePaste(text: string, startR: number, startC: number) {
     const lines = text.replace(/\r/g, '').split('\n').map((l) => l.trim()).filter((l) => l.length);
     if (lines.length > 1) {
-      // Full grid paste — resize to fit
       const r = lines.length;
       const c = Math.max(...lines.map((l) => l.replace(/\s+/g, '').length));
       rowsEl.value = String(r);
@@ -200,7 +198,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       });
       cellAt(0, 0)?.focus();
     } else {
-      // Single row of letters from one box → fill across
       const chars = [...text.replace(/\s+/g, '')];
       const { c: C } = clampSize();
       let rr = startR, cc = startC;
@@ -227,7 +224,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return g;
   }
 
-  // ── Dictionary + trie ──────────────────────────────────────────
   async function loadDict(): Promise<Trie> {
     if (trie) return trie;
     if (loadingDict) return loadingDict;
@@ -241,7 +237,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         const stream = res.body.pipeThrough(ds);
         text = await new Response(stream).text();
       } else {
-        // Fallback: browser transparently gunzips if server sets encoding; else fail gracefully
         text = await res.text();
       }
       const t: Trie = {};
@@ -262,7 +257,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return loadingDict;
   }
 
-  // ── Solver ─────────────────────────────────────────────────────
   const DIRS = [
     [-1, -1], [-1, 0], [-1, 1],
     [0, -1], [0, 1],
@@ -335,7 +329,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // ── Results rendering ──────────────────────────────────────────
   function renderResults() {
     const filter = filterEl.value.trim().toLowerCase();
     let words = [...solutions.keys()];
@@ -351,7 +344,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       return;
     }
 
-    // Group by length
     const groups = new Map<number, string[]>();
     for (const w of words) {
       if (!groups.has(w.length)) groups.set(w.length, []);
@@ -394,7 +386,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   function selectWord(w: string) {
     activeWord = activeWord === w ? null : w;
-    // Update chip styles without full re-render
     resultsEl.querySelectorAll<HTMLButtonElement>('button[data-word]').forEach((b) => {
       b.className = chipClass(b.dataset.word === activeWord);
     });
@@ -402,14 +393,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     else clearHighlight();
   }
 
-  // ── Path highlighting on the board ─────────────────────────────
   function clearHighlight() {
     gridEl.querySelectorAll<HTMLInputElement>('.sq-cell').forEach((cell) => {
       cell.classList.remove('!border-primary', '!bg-primary/20', '!text-primary-hover');
       const badge = cell.parentElement?.querySelector('.sq-badge');
       badge?.remove();
     });
-    // Also remove any wrapper badges
     gridEl.querySelectorAll('.sq-badge').forEach((b) => b.remove());
   }
 
@@ -420,7 +409,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       const cell = cellAt(r, c);
       if (!cell) return;
       cell.classList.add('!border-primary', '!bg-primary/20', '!text-primary-hover');
-      // Inputs can't hold children, so badges are positioned absolutely over the grid.
       const badge = document.createElement('span');
       badge.className =
         'sq-badge pointer-events-none absolute z-10 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-on-primary';
@@ -432,7 +420,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     });
   }
 
-  // ── Buttons ────────────────────────────────────────────────────
   solveBtn.addEventListener('click', solve);
   filterEl.addEventListener('input', renderResults);
   rowsEl.addEventListener('change', () => buildGrid(true));
@@ -479,6 +466,5 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (activeWord) highlightPath(solutions.get(activeWord)!);
   });
 
-  // Init
   buildGrid(false);
 </script>

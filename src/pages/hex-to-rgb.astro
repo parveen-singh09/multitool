@@ -172,7 +172,6 @@ const harmonies = [
     return { text: `${ratio.toFixed(2)}:1 · Fail`, ok: false };
   }
 
-  // HWB from RGB: hue from HSL, whiteness = min channel, blackness = 1 - max.
   function rgbToHwb(rgb: RGB) {
     const h = rgbToHsl(rgb).h;
     const w = Math.min(rgb.r, rgb.g, rgb.b) / 255;
@@ -209,7 +208,6 @@ const harmonies = [
     set('xf-android', android);
     set('xf-swiftui', swiftui);
 
-    // Channel breakdown table.
     const tbody = $('xf-channels')!;
     const rows: [string, number][] = [['Red', rgb.r], ['Green', rgb.g], ['Blue', rgb.b]];
     tbody.innerHTML = '';
@@ -225,7 +223,6 @@ const harmonies = [
       tbody.appendChild(tr);
     }
 
-    // Contrast & luminance.
     const l = luminance(rgb);
     const cWhite = contrast(l, 1);
     const cBlack = contrast(l, 0);
@@ -241,7 +238,6 @@ const harmonies = [
       badge.style.color = rating.ok ? 'var(--color-success)' : 'var(--color-ink-subtle)';
     }
 
-    // Color harmonies (hue rotations holding S & L).
     const rotate = (d: number) => rgbToHex(hslToRgb({ h: (hsl.h + d + 360) % 360, s: hsl.s, l: hsl.l }));
     const schemes: Record<string, number[]> = {
       complementary: [0, 180],
@@ -272,7 +268,6 @@ const harmonies = [
       }
     }
 
-    // Copy-all block: read the core synced fields plus the extended formats.
     const core = (id: string) => (document.getElementById(id) as HTMLInputElement | null)?.value ?? '';
     allText = [
       `HEX: ${core('cf-hex')}`,
@@ -303,14 +298,12 @@ const harmonies = [
       } else {
         errEl.classList.add('hidden');
       }
-      return; // keep the last valid render on screen
+      return;
     }
     errEl.classList.add('hidden');
     render(rgb);
   }
 
-  // ColorFormats updates #cf-hex synchronously on picker/field/shade interaction;
-  // reading on the next tick captures the fresh value without editing that component.
   if (root) {
     ['input', 'change', 'click'].forEach((ev) =>
       root.addEventListener(ev, () => setTimeout(update, 0)),
@@ -321,7 +314,6 @@ const harmonies = [
     update();
   });
 
-  // Copy handlers for the extended-format cards.
   document.querySelectorAll<HTMLButtonElement>('.xf-copy').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const target = document.getElementById(btn.dataset.target!);
@@ -341,6 +333,5 @@ const harmonies = [
     setTimeout(() => (copyAllBtn.textContent = old), 1400);
   });
 
-  // Initial paint after ColorFormats has seeded the fields.
   setTimeout(update, 0);
 </script>

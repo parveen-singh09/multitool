@@ -1,15 +1,10 @@
 ---
-// Universal client-side image converter used by every raster tool page.
-// One `to` target drives three output shapes:
-//   image formats (png/jpg/webp/avif/bmp/tiff/gif/ico/psd/svg) -> per-file download + zip-all
-//   text (base64/html)                                         -> per-file snippet + copy
-//   doc  (word/excel/powerpoint/pdf)                           -> combine every image into one file
 export interface Props {
-  to: string;            // target token (see above)
-  accept?: string;       // file input accept attribute
-  fromLabel?: string;    // e.g. "JPG", "BMP", "JFIF"
-  quality?: boolean;     // show quality slider (lossy)
-  matte?: boolean;       // show background flatten colour
+  to: string;
+  accept?: string;
+  fromLabel?: string;
+  quality?: boolean;
+  matte?: boolean;
 }
 const { to, accept = 'image/*', fromLabel = 'image', quality = false, matte = false } = Astro.props;
 ---
@@ -124,14 +119,12 @@ const { to, accept = 'image/*', fromLabel = 'image', quality = false, matte = fa
   const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
   const download = (url: string, name: string) => { const a = document.createElement('a'); a.href = url; a.download = name; a.click(); };
 
-  // Current image target (batch mode swaps between png/jpg).
   function targetFormat(): RasterFormat { return (isBatch ? (batchFmt?.value || 'image/png') : to) as RasterFormat; }
   function targetExt(): string {
     const map: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/avif': 'avif', bmp: 'bmp', tiff: 'tif', gif: 'gif', ico: 'ico', psd: 'psd', svg: 'svg' };
     return map[targetFormat()] || 'png';
   }
 
-  // Draw source onto a fresh canvas at the resized dimensions, optional matte.
   function renderTarget(src: HTMLCanvasElement): HTMLCanvasElement {
     const max = Math.max(0, Math.floor(Number(resizeEl.value) || 0));
     let w = src.width, h = src.height;
@@ -157,16 +150,15 @@ const { to, accept = 'image/*', fromLabel = 'image', quality = false, matte = fa
   }
 
   async function processAll() {
-    if (isDoc) { render(); return; }         // docs render source thumbnails; encode on demand
+    if (isDoc) { render(); return; }
     for (const it of items) await encodeItem(it);
     render();
   }
 
-  // ---- Base64 / HTML snippet builders ----
   async function toDataUrl(it: Item): Promise<string> {
     const c = renderTarget(it.canvas!);
     const q2 = useQuality && q ? Number(q.value) / 100 : undefined;
-    return c.toDataURL('image/png', q2);   // canvas dataURL for text output (keeps it simple + lossless)
+    return c.toDataURL('image/png', q2);
   }
 
   function render() {
@@ -175,7 +167,6 @@ const { to, accept = 'image/*', fromLabel = 'image', quality = false, matte = fa
     const bad = items.length - ok.length;
     summary.textContent = items.length ? `${ok.length} ready${bad ? `, ${bad} failed` : ''}` : '';
 
-    // primary/zip button visibility
     if (isDoc) { primaryBtn.classList.toggle('hidden', ok.length === 0); primaryBtn.textContent = `Create ${docLabel()}`; downloadAll.classList.add('hidden'); }
     else if (isText) { primaryBtn.classList.add('hidden'); downloadAll.classList.add('hidden'); }
     else { primaryBtn.classList.add('hidden'); downloadAll.classList.toggle('hidden', ok.length < 2); }
@@ -192,7 +183,6 @@ const { to, accept = 'image/*', fromLabel = 'image', quality = false, matte = fa
         list.appendChild(card); continue;
       }
 
-      // preview (source thumbnail; SVG/PSD/TIFF have no inline preview, use source canvas)
       const wrap = document.createElement('div');
       wrap.className = 'rb-checker flex justify-center overflow-hidden rounded-md p-3';
       const im = document.createElement('img');
@@ -240,7 +230,6 @@ const { to, accept = 'image/*', fromLabel = 'image', quality = false, matte = fa
     render();
   }
 
-  // Decode a file into a source canvas.
   function loadFile(f: File): Promise<Item> {
     const base = f.name.replace(/\.[^.]+$/, '') || 'image';
     const it: Item = { id: ++uid, name: f.name, base, srcSize: f.size, canvas: null, error: null, out: null, url: null };
@@ -268,13 +257,11 @@ const { to, accept = 'image/*', fromLabel = 'image', quality = false, matte = fa
     await processAll();
   }
 
-  // ---- Combined document build ----
   async function buildDoc() {
     const ok = items.filter((i) => i.canvas && !i.error);
     if (!ok.length) return;
     setErr(''); primaryBtn.disabled = true; primaryBtn.textContent = 'Building…';
     try {
-      // PDF embeds jpg for photos (smaller); everything else uses png.
       const useJpg = to === 'pdf' || to === 'powerpoint';
       const docImages: DocImage[] = await Promise.all(ok.map(async (it) => {
         const c = renderTarget(it.canvas!);
@@ -295,7 +282,6 @@ const { to, accept = 'image/*', fromLabel = 'image', quality = false, matte = fa
     finally { primaryBtn.disabled = false; primaryBtn.textContent = `Create ${docLabel()}`; }
   }
 
-  // ---- Download-all as zip ----
   async function downloadAllZip() {
     const ok = items.filter((i) => i.out && !i.error);
     if (!ok.length) return;
@@ -312,7 +298,6 @@ const { to, accept = 'image/*', fromLabel = 'image', quality = false, matte = fa
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
-  // ---- Wiring ----
   q?.addEventListener('input', () => { if (qval) qval.textContent = q.value + '%'; });
   q?.addEventListener('change', processAll);
   bg?.addEventListener('change', processAll);

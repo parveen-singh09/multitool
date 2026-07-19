@@ -121,7 +121,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return null;
   }
 
-  // Characters per second — a readability guide (Netflix targets ~17, ~20 max).
   function cps(r: Row): number {
     const s = timeToMs(r.start), e = timeToMs(r.end);
     const dur = (e - s) / 1000;
@@ -170,7 +169,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       times.appendChild(makeInput(row.start, '00:00:00,000', 'field font-mono text-[13px]', (v) => { row.start = v; refresh(); renderSpeed(speed, row); }));
       times.appendChild(makeInput(row.end, '00:00:02,000', 'field font-mono text-[13px]', (v) => { row.end = v; refresh(); renderSpeed(speed, row); }));
 
-      // Set start/end from the current video playhead (if a video is loaded).
       const syncBar = document.createElement('div');
       syncBar.className = 'flex flex-wrap gap-2';
       if (video.src) {
@@ -200,7 +198,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     span.textContent = isFinite(c) ? `${c.toFixed(1)} cps` : '';
   }
 
-  // ---- Import existing SRT / VTT ----
   function parseSubs(text: string): Row[] {
     const clean = text.replace(/^﻿/, '').replace(/\r/g, '');
     const arrow = /(\d{2}:\d{2}:\d{2}[,.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,.]\d{3})/;
@@ -224,12 +221,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     else { err.textContent = 'No captions found in that file.'; err.classList.remove('hidden'); }
   });
 
-  // ---- Video sync ----
   $('subm-video-file').addEventListener('change', (e) => {
     const f = (e.target as HTMLInputElement).files?.[0]; if (!f) return;
     video.src = URL.createObjectURL(f);
     $('subm-player').classList.remove('hidden');
-    renderRows(); // re-render so sync buttons appear
+    renderRows();
   });
   video.addEventListener('timeupdate', () => {
     const t = video.currentTime * 1000;
@@ -238,7 +234,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (active && active.text.trim()) { const s = document.createElement('span'); s.textContent = active.text; overlay.appendChild(s); }
   });
 
-  // ---- Shift all timestamps ----
   $('subm-shift-go').addEventListener('click', () => {
     const delta = Number(($('subm-shift') as HTMLInputElement).value) * 1000;
     if (!delta) return;
@@ -246,7 +241,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     renderRows(); refresh();
   });
 
-  // ---- Format toggle + add + download ----
   function setFmt(f: 'srt' | 'vtt') {
     fmt = f;
     $('subm-fmt-srt').toggleAttribute('data-active', f === 'srt');

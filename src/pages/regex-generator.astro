@@ -173,7 +173,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const langEl = $('rg-lang') as HTMLSelectElement;
 
   let tokens: Token[] = [];
-  let patternDirty = false; // user hand-edited the pattern; stop overwriting it
+  let patternDirty = false;
 
   function renderTokens() {
     tokensEl.innerHTML = '';
@@ -212,7 +212,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     run();
   }
 
-  // ---- Live tester ----
   function run() {
     matchesEl.innerHTML = '';
     const source = patternEl.value;
@@ -236,7 +235,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       chip.style.color = '#27a644';
       chip.textContent = m[0] || '(empty)';
       matchesEl.appendChild(chip);
-      if (m.index === global.lastIndex) global.lastIndex++; // avoid zero-length loop
+      if (m.index === global.lastIndex) global.lastIndex++;
       if (total > 200) break;
     }
     statusEl.style.color = total ? '#27a644' : '#8a8f98';
@@ -245,7 +244,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     renderCode(source);
   }
 
-  // ---- Code generation ----
   function renderCode(source: string) {
     const flags = flagsEl.value;
     const jsFlags = flags || '';
@@ -262,7 +260,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     codeEl.textContent = templates[langEl.value];
   }
 
-  // ---- Wiring ----
   sampleEl.addEventListener('input', retokenize);
   groupsEl.addEventListener('change', () => { patternDirty = false; syncFromTokens(); });
   anchorEl.addEventListener('change', () => { patternDirty = false; syncFromTokens(); });
@@ -272,7 +269,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   langEl.addEventListener('change', () => renderCode(patternEl.value));
 
   $('rg-all-literal').addEventListener('click', () => {
-    tokens.forEach((tk) => (tk.sel = tk.options.length - 1)); // last option is the literal fallback
+    tokens.forEach((tk) => (tk.sel = tk.options.length - 1));
     patternDirty = false; renderTokens(); syncFromTokens();
   });
   $('rg-all-match').addEventListener('click', () => {
@@ -288,7 +285,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   });
   retokenize();
 
-  // ponytail: dev-only self-check on the tokenizer — the one non-trivial piece.
   if (import.meta.env.DEV) {
     const t = tokenize("2020-03-12 #ab");
     console.assert(t[0].options[0]?.id === 'isodt', 'expected ISO date-time first token');

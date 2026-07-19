@@ -93,7 +93,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const fallAsleep = Math.max(0, Number(fallEl.value) || 0);
     const [hh, mm] = v.split(':').map(Number);
     const base = hh * 60 + mm;
-    const [recMin, recMax] = ageEl.value.split(',').map(Number); // recommended hours range
+    const [recMin, recMax] = ageEl.value.split(',').map(Number);
 
     let items: { time: number; cycles: number; sleepMin: number }[];
     if (mode === 'wake') {
@@ -110,7 +110,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       .map((it) => {
         const hrs = it.sleepMin / 60;
         const hrsLabel = Number.isInteger(hrs) ? `${hrs}h` : `${hrs.toFixed(1)}h`;
-        // Flag rows whose sleep total lands in the recommended range for the age.
         const recommended = hrs >= recMin && hrs <= recMax;
         const badge = recommended ? '<span class="status-badge ml-2" style="color:var(--color-success)">recommended</span>' : '';
         return `<div class="flex items-center justify-between border-t border-hairline pt-2 first:border-0 first:pt-0 ${recommended ? 'text-ink' : ''}"><span class="font-mono ${recommended ? 'text-primary-hover' : 'text-ink'}">${fmt12(it.time)}</span><span class="text-ink-subtle">${it.cycles} cycles · ${hrsLabel} sleep${badge}</span></div>`;
@@ -118,7 +117,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       .join('');
   }
 
-  // Default to now
   const now = new Date();
   timeInput.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   timeInput.addEventListener('input', calc);

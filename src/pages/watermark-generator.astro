@@ -230,7 +230,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
   const fmtSize = (n: number) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`;
 
-  // ---- Core render: draws image + watermark into given ctx at natural size ----
   function draw(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
     const W = img.naturalWidth, H = img.naturalHeight;
     ctx.canvas.width = W; ctx.canvas.height = H;
@@ -238,7 +237,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     ctx.drawImage(img, 0, 0, W, H);
 
     const base = Math.min(W, H);
-    const unit = base * (s.size / 100);   // nominal watermark size in px
+    const unit = base * (s.size / 100);
     const angle = s.angle * Math.PI / 180;
 
     ctx.save();
@@ -266,7 +265,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         ctx.fillText(text, 0, 0);
       }
     } else if (logoImg) {
-      // scale logo so its longest side == unit * 6 (logos read larger than text)
       const target = unit * 6;
       const lw = logoImg.naturalWidth, lh = logoImg.naturalHeight;
       const scale = target / Math.max(lw, lh);
@@ -300,14 +298,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
   }
 
-  // ---- Preview ----
   function render() {
     if (!items[active]) return;
     const ctx = canvas.getContext('2d')!;
     draw(ctx, items[active].img);
   }
 
-  // ---- Export a single item to a blob ----
   function exportItem(item: Item): Promise<Blob> {
     return new Promise((resolve, reject) => {
       const c = document.createElement('canvas');
@@ -325,7 +321,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const extFor = () => s.format === 'image/jpeg' ? 'jpg' : s.format === 'image/webp' ? 'webp' : 'png';
   const baseName = (n: string) => n.replace(/\.[^.]+$/, '');
 
-  // ---- Thumbnails ----
   function buildStrip() {
     strip.innerHTML = '';
     strip.classList.toggle('hidden', items.length < 2);
@@ -357,7 +352,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     $('wm-info').textContent = `${it.img.naturalWidth}×${it.img.naturalHeight}${count}`;
   }
 
-  // ---- Load files ----
   function addFiles(files: FileList | File[]) {
     setErr('');
     const list = Array.from(files).filter((f) => f.type.startsWith('image/'));
@@ -381,7 +375,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     buildStrip(); render(); updateInfo();
   }
 
-  // ---- Wire up ----
   function initFontSelect() {
     const sel = $('wm-font') as HTMLSelectElement;
     FONTS.forEach((f) => {
@@ -419,14 +412,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     $('wm-quality-wrap').classList.toggle('flex', isJpegOrWebp);
   }
 
-  // File inputs / drop
   fileInput.addEventListener('change', () => { if (fileInput.files?.length) addFiles(fileInput.files); });
   $('wm-add').addEventListener('click', () => fileInput.click());
   ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
   ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
   drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files; if (f?.length) addFiles(f); });
 
-  // Logo upload
   const logoFile = $('wm-logo-file') as HTMLInputElement;
   $('wm-logo-drop').addEventListener('click', () => logoFile.click());
   logoFile.addEventListener('change', () => {
@@ -437,7 +428,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     im.src = URL.createObjectURL(f);
   });
 
-  // Type / layout / tile toggles
   root.querySelectorAll<HTMLElement>('.wm-typebtn').forEach((b) => b.addEventListener('click', () => {
     s.type = b.dataset.type as WType; setPressed('wm-typebtn', 'type', s.type); applyVisibility(); render();
   }));
@@ -452,24 +442,20 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     s.posX = x; s.posY = y; setPressed('wm-pos', 'pos', b.dataset.pos!); render();
   }));
 
-  // Text inputs
   ($('wm-text') as HTMLInputElement).addEventListener('input', (e) => { s.text = (e.target as HTMLInputElement).value; render(); });
   ($('wm-font') as HTMLSelectElement).addEventListener('change', (e) => { s.font = (e.target as HTMLSelectElement).value; render(); });
   ($('wm-weight') as HTMLSelectElement).addEventListener('change', (e) => { s.weight = (e.target as HTMLSelectElement).value; render(); });
   ($('wm-color') as HTMLInputElement).addEventListener('input', (e) => { s.color = (e.target as HTMLInputElement).value; render(); });
   ($('wm-shadow') as HTMLInputElement).addEventListener('change', (e) => { s.shadow = (e.target as HTMLInputElement).checked; render(); });
 
-  // Sliders
   ($('wm-opacity') as HTMLInputElement).addEventListener('input', (e) => { s.opacity = Number((e.target as HTMLInputElement).value) / 100; syncLabels(); render(); });
   ($('wm-size') as HTMLInputElement).addEventListener('input', (e) => { s.size = Number((e.target as HTMLInputElement).value); syncLabels(); render(); });
   ($('wm-angle') as HTMLInputElement).addEventListener('input', (e) => { s.angle = Number((e.target as HTMLInputElement).value); syncLabels(); render(); });
   ($('wm-span') as HTMLInputElement).addEventListener('input', (e) => { s.span = Number((e.target as HTMLInputElement).value); syncLabels(); render(); });
 
-  // Output
   ($('wm-format') as HTMLSelectElement).addEventListener('change', (e) => { s.format = (e.target as HTMLSelectElement).value; applyVisibility(); });
   ($('wm-quality') as HTMLInputElement).addEventListener('input', (e) => { s.quality = Number((e.target as HTMLInputElement).value) / 100; syncLabels(); });
 
-  // Drag-to-reposition on the canvas (single mode)
   let dragging = false;
   function pointerToPos(ev: PointerEvent) {
     const rect = canvas.getBoundingClientRect();
@@ -483,7 +469,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   canvas.addEventListener('pointerup', () => { dragging = false; });
   stage.style.cursor = 'default';
 
-  // Download active
   $('wm-dl').addEventListener('click', async () => {
     if (!items[active]) return;
     try {
@@ -495,7 +480,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     } catch { setErr('Your browser could not encode that format.'); }
   });
 
-  // Download all as ZIP
   $('wm-dl-all').addEventListener('click', async () => {
     if (items.length < 2) return;
     const btn = $('wm-dl-all') as HTMLButtonElement;
@@ -519,7 +503,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     finally { btn.disabled = false; btn.textContent = orig; }
   });
 
-  // ---- Templates (localStorage) ----
   const TPL_KEY = 'wm-templates-v1';
   type Tpl = Omit<Settings, 'format' | 'quality'> & { label: string };
   const loadTpls = (): Tpl[] => { try { return JSON.parse(localStorage.getItem(TPL_KEY) || '[]'); } catch { return []; } };
@@ -546,7 +529,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   function applyTpl(t: Tpl) {
     Object.assign(s, { ...t });
-    // reflect into controls
     ($('wm-text') as HTMLInputElement).value = s.text;
     ($('wm-font') as HTMLSelectElement).value = s.font;
     ($('wm-weight') as HTMLSelectElement).value = s.weight;
@@ -571,7 +553,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     saveTpls(all); renderTpls();
   });
 
-  // ---- Init ----
   initFontSelect();
   setPressed('wm-typebtn', 'type', s.type);
   setPressed('wm-laybtn', 'layout', s.layout);

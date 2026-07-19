@@ -1,17 +1,13 @@
-// Chat-execution runners for the document + image converter tools.
-// Bridges the shared docConvertDispatch registry, and adds runners for the
-// image-family tools (jpg/bmp/jfif -> X) over the imageEncoders/imageDocs libs.
 import type { Runner, RunResult, RunFile } from './toolRunners';
 import { CONVERSIONS } from './docConvertDispatch';
 import { encodeCanvas, type RasterFormat } from './imageEncoders';
 import { imagesToDocx, imagesToXlsx, imagesToPptx, imagesToPdf, type DocImage } from './imageDocs';
 
-// ---- doc/data converters (text + file input) ----
 function docNeeds(slug: string, inputKind: string): Runner['needs'] {
   if (inputKind === 'text') return 'text';
   if (slug === 'pdf-to-csv') return 'pdf';
   if (slug === 'jpg-to-pdf' || slug === 'png-to-pdf') return 'image';
-  return 'text'; // other file tools: runnerReady passes; run() validates the file
+  return 'text';
 }
 
 function bridgeDoc(slug: string, spec: (typeof CONVERSIONS)[string]): Runner {
@@ -43,8 +39,6 @@ function bridgeDoc(slug: string, spec: (typeof CONVERSIONS)[string]): Runner {
   };
 }
 
-// ---- image-family converters ----
-// Map each image tool slug to its output target.
 const IMAGE_TARGETS: Record<string, string> = {
   'jpg-to-word': 'word', 'jpg-to-excel': 'excel', 'jpg-to-powerpoint': 'powerpoint',
   'jpg-to-svg': 'svg', 'jpg-to-bmp': 'bmp', 'jpg-to-tiff': 'tiff', 'jpg-to-ico': 'ico',
@@ -89,7 +83,6 @@ function bridgeImage(slug: string, target: string): Runner {
       if (!imgs.length) throw new Error('Attach an image to convert (paperclip on the left).');
       const base = imgs[0].name.replace(/\.[^.]+$/, '') || 'image';
 
-      // Combined-document targets: build one file from all attached images.
       if (DOC_TARGETS.has(target)) {
         const jpg = target === 'pdf' || target === 'powerpoint';
         const docImages = await Promise.all(imgs.map(async (f) => canvasToDocImage(await fileToCanvas(f), jpg)));
@@ -101,7 +94,6 @@ function bridgeImage(slug: string, target: string): Runner {
         return { files: [{ name: `${imgs.length === 1 ? base : 'images'}.${ext}`, blob, kind: 'file' }], note: `${imgs.length} image(s) → ${ext.toUpperCase()}` };
       }
 
-      // base64 / html text targets.
       if (target === 'base64' || target === 'html') {
         const outFiles: string[] = [];
         for (const f of imgs) {
@@ -112,7 +104,6 @@ function bridgeImage(slug: string, target: string): Runner {
         return { text: outFiles.join('\n\n'), note: `${imgs.length} image(s) → ${target === 'html' ? 'HTML <img> tag' : 'Base64 data URI'}` };
       }
 
-      // Per-image raster/file targets.
       const results: RunFile[] = [];
       for (const f of imgs) {
         const c = await fileToCanvas(f);

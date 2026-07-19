@@ -1,13 +1,3 @@
-// Self-host the ONNX Runtime Web (wasm backend) and the MSD-MusiCNN genre model
-// so the Music Analyzer makes no third-party requests at runtime (privacy
-// promise) and needs no COOP/COEP headers. We ship the SIMD wasm and run it
-// single-threaded (ort.env.wasm.numThreads = 1), which avoids SharedArrayBuffer.
-//
-// - ORT runtime glue + wasm are copied out of node_modules/onnxruntime-web.
-// - The model is a single .onnx file (no fragile zip) fetched once from the
-//   Essentia model zoo and cached under public/onnx. The class list + input
-//   spec live in the sibling metadata JSON, saved alongside as genre-meta.json.
-// Run: node scripts/setup-onnx.mjs
 import { mkdirSync, copyFileSync, existsSync, statSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -17,7 +7,6 @@ const root = resolve(__dirname, '..');
 const dest = resolve(root, 'public/onnx');
 mkdirSync(dest, { recursive: true });
 
-// 1) Copy the ORT wasm runtime (glue .mjs + .wasm) from node_modules.
 const ortDist = resolve(root, 'node_modules/onnxruntime-web/dist');
 const ortFiles = ['ort-wasm-simd-threaded.mjs', 'ort-wasm-simd-threaded.wasm'];
 for (const f of ortFiles) {
@@ -27,7 +16,6 @@ for (const f of ortFiles) {
   console.log('copied', f, `(${(statSync(resolve(dest, f)).size / 1024 / 1024).toFixed(1)} MB)`);
 }
 
-// 2) Fetch the model + metadata once (cached).
 const MODEL_URL = 'https://essentia.upf.edu/models/feature-extractors/musicnn/msd-musicnn-1.onnx';
 const META_URL = 'https://essentia.upf.edu/models/feature-extractors/musicnn/msd-musicnn-1.json';
 const modelPath = resolve(dest, 'msd-musicnn.onnx');
@@ -46,7 +34,6 @@ async function download(url, out, label) {
 
 try {
   await download(MODEL_URL, modelPath, 'msd-musicnn.onnx');
-  // Distill the metadata down to what the browser needs: class list + io spec.
   const meta = await (await fetch(META_URL)).json();
   writeFileSync(resolve(dest, 'genre-meta.json'), JSON.stringify({
     classes: meta.classes,
@@ -59,7 +46,3 @@ try {
   console.warn('onnx: model download failed (genre detection will be unavailable):', e.message);
 }
 
-// 3) RMBG-1.4 background-removal model (Sticker Maker) is loaded from
-// HuggingFace at runtime (see src/lib/bgremove.ts) — its ~42 MB quantized
-// model exceeds Cloudflare Pages' 25 MB/file cap, so it's no longer bundled.
-// License: Bria RAIL (non-commercial). Fine for a free tool; revisit if monetized.

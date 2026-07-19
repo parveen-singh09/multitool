@@ -204,7 +204,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       <input id="rc-accent-custom" type="color" value="${accent}" class="h-5 w-5 cursor-pointer border-0 bg-transparent p-0" />
     </label>`;
 
-  // Highlight whichever preset matches the active accent (none, if custom).
   function paintSwatches() {
     accentWrap.querySelectorAll<HTMLElement>('.rc-swatch').forEach((b) => {
       const on = b.dataset.c === accent;
@@ -242,7 +241,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     });
   }
 
-  // Build ReceiptData from the form. `withLogo` attaches bytes (PDF) vs URL (preview).
   function getData(withLogo: boolean): ReceiptData {
     const taxMode = ($('rc-tax-mode') as HTMLSelectElement).value;
     const discMode = ($('rc-disc-mode') as HTMLSelectElement).value;
@@ -259,7 +257,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       toLabel: 'Customer', to: collectParty('rc-to'),
       items,
       accent,
-      // Preview uses the pretty Unicode symbol; the PDF uses a WinAnsi-safe prefix.
       currency: withLogo ? pdfPrefixOf(code) : symbolOf(code),
       taxMode: taxMode === 'flat' ? 'flat' : 'percent',
       taxRate: taxMode === 'off' ? 0 : (Number(($('rc-tax') as HTMLInputElement).value) || 0),
@@ -274,7 +271,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return d;
   }
 
-  // --- Preview renderers -----------------------------------------------------
 
   function totalLines(d: ReceiptData, t: ReturnType<typeof computeTotals>, cur: string) {
     const lines: [string, string][] = [['Subtotal', money(t.subtotal, cur)]];
@@ -413,7 +409,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   wireParty('rc-from', update);
   wireParty('rc-to', update);
 
-  // Logo upload.
   $('rc-logo').addEventListener('change', async (e) => {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;

@@ -230,14 +230,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
 
   for (const f of baseFields) f.addEventListener('input', () => onBaseInput(f));
-  // Re-render hex when the display options change (re-derive from decimal).
   [upperEl, prefixEl].forEach((c) => c.addEventListener('change', () => {
     const v = decEl.value.trim();
     if (v && /^-?\d+$/.test(v)) renderBases(BigInt(v));
   }));
 
-  // ── Text ↔ Hex (multi-encoding) ──────────────────────────────────
-  // Encode a string to bytes for the chosen encoding.
   function encodeText(s: string, enc: string): Uint8Array {
     if (enc === 'utf-8') return new TextEncoder().encode(s);
     if (enc === 'latin1') {
@@ -249,7 +246,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       }
       return out;
     }
-    // UTF-16 LE/BE from the string's UTF-16 code units.
     const le = enc === 'utf-16le';
     const out = new Uint8Array(s.length * 2);
     for (let i = 0; i < s.length; i++) {
@@ -272,13 +268,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return parts.join(sep);
   }
 
-  // Parse forgiving hex input → bytes. Handles prefixes, any delimiter, or one
-  // continuous string.
   function parseHexBytes(raw: string): Uint8Array {
     let s = raw.trim();
     if (!s) return new Uint8Array(0);
     s = s.replace(/0x/gi, '').replace(/\\x/gi, '');
-    // Split on any non-hex run; if that leaves one long token, chunk into pairs.
     let tokens = s.split(/[^0-9a-fA-F]+/).filter(Boolean);
     if (tokens.length === 1 && tokens[0].length > 2) {
       const t = tokens[0];
@@ -302,7 +295,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     setErr('');
     try {
       const bytes = parseHexBytes(txtHexEl.value);
-      // TextDecoder handles utf-8, utf-16le/be and latin1 (fatal=false is lenient).
       const dec = encEl.value === 'utf-16be' ? 'utf-16be' : encEl.value;
       txtEl.value = new TextDecoder(dec).decode(bytes);
     } catch (e) { setErr((e as Error).message); }
@@ -310,10 +302,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   txtEl.addEventListener('input', textToHex);
   txtHexEl.addEventListener('input', hexToText);
-  // Option changes re-encode from the text side (text is the source of truth).
   [encEl, sepEl, tcaseEl].forEach((s) => s.addEventListener('change', textToHex));
 
-  // File → hex dump of its raw bytes.
   const fileInput = document.getElementById('hx-fileinput') as HTMLInputElement;
   document.getElementById('hx-file')!.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', async () => {
@@ -338,7 +328,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     URL.revokeObjectURL(url);
   });
 
-  // ── Tabs & copy ──────────────────────────────────────────────────
   document.querySelectorAll<HTMLButtonElement>('.hx-tab').forEach((tab) => {
     tab.addEventListener('click', () => {
       const mode = tab.dataset.mode;
@@ -356,7 +345,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     });
   });
 
-  // Seed with example values.
   renderBases(255n);
   txtEl.value = 'Hi 👋'; textToHex();
 </script>

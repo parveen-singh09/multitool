@@ -138,7 +138,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   function parse(har: any): Entry[] {
     const log = har.log || har;
     const es = (log.entries || []) as any[];
-    // Establish the capture origin (earliest startedDateTime) so waterfall offsets are relative.
     let origin = Infinity;
     for (const e of es) {
       const t = Date.parse(e.startedDateTime);
@@ -151,7 +150,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       try { host = new URL(e.request.url).hostname; } catch { host = '(invalid)'; }
       const size = Math.max(0, e.response?._transferSize ?? e.response?.content?.size ?? e.response?.bodySize ?? 0);
       const t = e.timings || {};
-      // HAR uses -1 for phases that don't apply; clamp to 0.
       const clamp = (v: any) => Math.max(0, v ?? 0);
       const timings: Timings = {
         blocked: clamp(t.blocked), dns: clamp(t.dns), connect: clamp(t.connect),
@@ -214,7 +212,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (!entries.length) return;
     const total = entries.length;
     const totalSize = entries.reduce((a, e) => a + e.size, 0);
-    // Wall-clock span: last request end minus first request start (falls back to sum if timeless).
     const spans = entries.filter((e) => e.startText);
     let wall = entries.reduce((a, e) => a + e.time, 0);
     if (spans.length) {
@@ -279,7 +276,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
 
   function waterfall(e: Entry, minStart: number, scale: number): string {
-    // Leading offset then stacked phase segments, scaled to px.
     const offset = (e.start - minStart) * scale;
     let segs = '';
     for (const p of PHASES) {
@@ -322,10 +318,9 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     document.getElementById('ha-count')!.textContent =
       `${list.length} request${list.length === 1 ? '' : 's'}${list.length > 200 ? ' (showing 200)' : ''}`;
 
-    // Scale the waterfall to the visible window.
     const minStart = Math.min(...rows.map((e) => e.start), 0);
     const maxEnd = Math.max(...rows.map((e) => e.start - minStart + e.time), 1);
-    const scale = 180 / maxEnd; // px per ms across ~180px column
+    const scale = 180 / maxEnd;
 
     document.getElementById('ha-rows')!.innerHTML = rows
       .map((e, i) => {
@@ -342,7 +337,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       })
       .join('');
 
-    // Click to expand timing detail.
     const tbody = document.getElementById('ha-rows')!;
     tbody.querySelectorAll('.ha-row').forEach((tr) => {
       tr.addEventListener('click', () => {

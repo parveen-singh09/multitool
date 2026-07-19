@@ -1,15 +1,8 @@
-// One source of truth for the home hero's format picker + which backend runs a conversion.
-// Non-media formats convert via ConvertAPI (CONVERT_MATRIX); audio/video/font convert
-// in-browser via ffmpeg / fonteditor-core, so their target lists mirror those converters.
 import { CONVERT_MATRIX } from './convertMatrix';
 
-// Mirrors VIDEO_MIME keys in lib/videoConvert.ts.
 export const LOCAL_VIDEO = ['mp4', 'webm', 'mkv', 'mov', 'avi', 'flv', 'ogv'];
-// Mirrors TARGETS in components/AudioConvert.astro (aac is written as .m4a).
 export const LOCAL_AUDIO = ['mp3', 'm4a', 'wav', 'flac', 'ogg', 'opus', 'aiff', 'ac3'];
-// Mirrors TARGETS in components/FontConvert.astro.
 export const LOCAL_FONT = ['ttf', 'woff', 'woff2', 'eot'];
-// Browser-native repackaging in lib/archive.ts (zip/unzip + tar + gzip streams).
 export const LOCAL_ARCHIVE = ['zip', 'tar', 'tgz'];
 
 export interface FormatCategory {
@@ -17,7 +10,6 @@ export interface FormatCategory {
   formats: string[];
 }
 
-// The CloudConvert catalog, grouped. Formats are lowercase extensions.
 export const FORMAT_CATEGORIES: FormatCategory[] = [
   {
     label: 'Document',
@@ -65,15 +57,11 @@ export const FORMAT_CATEGORIES: FormatCategory[] = [
       'amr', 'au', 'caf', 'aifc', 'm4b', 'm4r', 'oga', 'weba'],
   },
   {
-    // zip/tar/tgz read+write natively (lib/archive.ts). 7z/rar/bz2/xz/cab/iso/deb
-    // are EXTRACT-ONLY via libarchive.js — no browser lib can *write* them, so they
-    // only ever appear as sources (targets stay zip/tar/tgz, see LOCAL_ARCHIVE).
     label: 'Archive',
     formats: ['zip', 'tar', 'tgz', '7z', 'rar', 'bz2', 'xz', 'cab', 'iso', 'deb'],
   },
 ];
 
-// ext -> category label. First match wins (categories are ordered above).
 const CAT_OF: Record<string, string> = {};
 for (const c of FORMAT_CATEGORIES)
   for (const f of c.formats) if (!(f in CAT_OF)) CAT_OF[f] = c.label;
@@ -82,16 +70,10 @@ export function categoryOf(ext: string): string | undefined {
   return CAT_OF[ext.toLowerCase().split('.').pop() || ext];
 }
 
-// Direct (1-hop) ConvertAPI targets, minus the zip/json "package output"
-// pseudo-targets that fail on real single-file conversions.
 function directApiTargets(e: string): string[] {
   return (CONVERT_MATRIX[e] || []).filter((t) => t !== 'zip' && t !== 'json' && t !== e);
 }
 
-// 2-hop chaining can wander across categories (image→pdf→xlsx), producing
-// nonsense pairs ConvertAPI rejects with a 502. A chained target is kept only
-// when its category is compatible with the source. Direct (1-hop) targets are
-// trusted as-is — ConvertAPI advertises them directly.
 const COMPAT_TARGETS: Record<string, string[]> = {
   Document: ['Document', 'Ebook', 'Image', 'Presentation', 'Spreadsheet', 'Vector'],
   Ebook: ['Ebook', 'Document', 'Image'],
@@ -102,10 +84,6 @@ const COMPAT_TARGETS: Record<string, string[]> = {
   CAD: ['CAD', 'Vector', 'Image', 'Document'],
 };
 
-// The one compatibility function the picker and converter both use.
-// API formats expose a 2-hop closure (like CloudConvert): if csv->xlsx and
-// xlsx->png both exist directly, csv->png is offered and chained in the worker —
-// but only when the chained target stays in a category compatible with the source.
 export function targetsFor(ext: string): string[] {
   const e = ext.toLowerCase().split('.').pop() || ext;
   const cat = CAT_OF[e];
@@ -114,8 +92,6 @@ export function targetsFor(ext: string): string[] {
   if (cat === 'Font') return LOCAL_FONT.filter((t) => t !== e);
   if (cat === 'Archive') return LOCAL_ARCHIVE.filter((t) => t !== e);
   const reach = new Set(directApiTargets(e));
-  // Unknown source category → offer only direct targets, never chain: a 2-hop
-  // closure with no category guard is what surfaced image→pdf→xlsx nonsense.
   const okCats = cat ? (COMPAT_TARGETS[cat] || []) : [];
   for (const m of [...reach])
     for (const t of directApiTargets(m)) {
@@ -126,8 +102,6 @@ export function targetsFor(ext: string): string[] {
   return [...reach];
 }
 
-// Resolve the conversion hops for an API source->target. Prefers a direct hop,
-// else finds one intermediate (2-hop). Returns null if unreachable even by chain.
 export function chainPath(from: string, to: string): string[] | null {
   const f = from.toLowerCase().split('.').pop() || from;
   const t = to.toLowerCase().split('.').pop() || to;
@@ -138,8 +112,6 @@ export function chainPath(from: string, to: string): string[] | null {
   return null;
 }
 
-// Which converter backend handles a source ext: 'ffmpeg' (video/audio),
-// 'font' (fonteditor-core), or 'api' (ConvertAPI).
 export function backendFor(ext: string): 'ffmpeg' | 'font' | 'archive' | 'api' {
   const cat = categoryOf(ext);
   if (cat === 'Video' || cat === 'Audio') return 'ffmpeg';

@@ -75,7 +75,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       const two = src.slice(i, i + 2);
       if (two === '//') { const e = src.indexOf('\n', i); const end = e === -1 ? n : e; out += stash(src.slice(i, end)); i = end; continue; }
       if (two === '/*') { const e = src.indexOf('*/', i + 2); const end = e === -1 ? n : e + 2; out += stash(src.slice(i, end)); i = end; continue; }
-      // raw string r"..." / r#"..."#
       if (ch === 'r' && (src[i + 1] === '"' || src[i + 1] === '#')) {
         let j = i + 1, hashes = 0;
         while (src[j] === '#') { hashes++; j++; }
@@ -92,7 +91,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         while (j < n) { if (src[j] === '\\') { j += 2; continue; } if (src[j] === '"') { j++; break; } j++; }
         out += stash(src.slice(i, j)); i = j; continue;
       }
-      // char literal 'a' or '\n' (avoid matching lifetimes like 'a where next isn't closing quote soon)
       if (ch === "'") {
         const m = /^'(\\.|[^'\\])'/.exec(src.slice(i));
         if (m) { out += stash(m[0]); i += m[0].length; continue; }
@@ -109,13 +107,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   function format(src: string): string {
     const { code, store } = protect(src);
 
-    // Collapse whitespace runs; strings/comments are already stashed out.
     let s = code.replace(/[ \t]+/g, ' ');
 
-    // Walk the char stream tracking (), [] and {} nesting. Only insert line
-    // breaks at BRACE-BLOCK level: a `{`/`}` boundary, or a `;` that is not
-    // inside `()` or `[]`. This leaves `[u8; 32]`, `vec![1; 3]`, generics and
-    // call args untouched, which the old blind regex split mangled.
     let out = '';
     let paren = 0, bracket = 0;
     for (let i = 0; i < s.length; i++) {
@@ -129,8 +122,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       if (ch === '{' && structural) { out += ' {\n'; continue; }
       if (ch === '}' && structural) { out += '\n}\n'; continue; }
       if (ch === ';' && structural) { out += ';\n'; continue; }
-      // Space after commas at any level; single-space after ; kept inline
-      // (e.g. inside `[u8; 32]`).
       if (ch === ',') { out += ', '; while (s[i + 1] === ' ') i++; continue; }
       out += ch;
     }

@@ -218,7 +218,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     svgLabel.textContent = `${fmt(litres)} L`;
   }
 
-  // ---- all-units breakdown, grouped ----
   function renderBreakdown(litres: number) {
     if (!isFinite(litres)) { breakdown.innerHTML = '<div class="px-4 py-2 text-[13px] text-ink-tertiary">—</div>'; return; }
     const parts: string[] = [];
@@ -235,7 +234,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     breakdown.innerHTML = parts.join('');
   }
 
-  // ---- reference table of common equivalents ----
   const COMMON: [string, string][] = [
     ['1 US gallon', 'US gallon'],
     ['1 Imperial gallon', 'Imperial gallon'],
@@ -261,7 +259,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       </tr></thead>${rows}</table>`;
   }
 
-  // ---- main ----
   function fillUnits() {
     const opts = GROUPS.map((g) =>
       `<optgroup label="${g}">${UNITS.filter((u) => u.group === g).map((u) => `<option>${u.name}</option>`).join('')}</optgroup>`
@@ -303,7 +300,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     renderBreakdown(litres);
   }
 
-  // short label = drop the parenthetical for the inline formula line
   function short(u: string): string {
     return u.replace(/\s*\(.*$/, '').trim();
   }
@@ -323,7 +319,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   renderTable();
   convert();
 
-  // ponytail: one runnable self-check — silent unless the math regresses.
   const near = (a: number, b: number, e = 1e-9) => Math.abs(a - b) < e;
   console.assert(near(fromLitres(toLitres(1, 'US gallon'), 'US fluid ounce'), 128), '1 US gal = 128 fl oz');
   console.assert(near(fromLitres(1, 'Millilitre (mL)'), 1000), '1 L = 1000 mL');

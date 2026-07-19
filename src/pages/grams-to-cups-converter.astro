@@ -243,7 +243,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return w ? `${w} ${sym}` : sym;
   }
 
-  // Convert everything through a canonical grams + g/ml density model.
   function toGrams(amount: number, unit: string, gPerMl: number, cupMl: number): number {
     switch (unit) {
       case 'g': return amount;
@@ -267,7 +266,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const amount = parseFloat(raw);
     const density = activeDensity();
 
-    // Validation.
     if (Number(ingredientEl.value) === CUSTOM && !(density > 0)) {
       showError('Enter a density greater than 0 g per cup for the custom ingredient.');
       return;
@@ -283,7 +281,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     errEl.classList.add('hidden');
 
     const cupMl = parseFloat(cupEl.value);
-    const gPerMl = density / US_CUP_ML; // density measured against the US customary cup
+    const gPerMl = density / US_CUP_ML;
     const grams = toGrams(amount, fromEl.value, gPerMl, cupMl);
     const ml = gPerMl > 0 ? grams / gPerMl : 0;
     const cups = ml / cupMl;
@@ -348,14 +346,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     setTimeout(() => copiedEl.classList.add('hidden'), 1200);
   }
 
-  // Click a tile → copy its value.
   out.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest('[data-copy]') as HTMLElement | null;
     if (!btn) return;
     navigator.clipboard?.writeText(btn.dataset.copy || '').then(flashCopied).catch(() => {});
   });
 
-  // Copy all results as a labelled block.
   copyBtn.addEventListener('click', () => {
     if (!lastResults.length) return;
     const text = `${amountEl.value} ${fromEl.value} of ${activeName()}\n` +
@@ -372,17 +368,13 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   [amountEl, fromEl, cupEl, precisionEl, customEl].forEach((el) => el.addEventListener('input', compute));
   compute();
 
-  // ponytail: self-check — verify the round-trip and density model hold.
   function selfCheck() {
-    const gPerMl = 125 / US_CUP_ML; // all-purpose flour
-    // 1 US customary cup of flour ≈ 125 g
+    const gPerMl = 125 / US_CUP_ML;
     const g = toGrams(1, 'cup', gPerMl, US_CUP_ML);
     console.assert(Math.abs(g - 125) < 0.001, 'cup→g flour', g);
-    // 1 stick of butter (227 g/cup) ≈ 113.4 g
     const bMl = 227 / US_CUP_ML;
     const stick = toGrams(1, 'stick', bMl, US_CUP_ML);
     console.assert(Math.abs(stick - 113.5) < 1, 'stick→g butter', stick);
-    // metric cup of water (250 ml) ≈ 250 g
     const wMl = 236.6 / US_CUP_ML;
     console.assert(Math.abs(toGrams(1, 'cup', wMl, 250) - 250) < 0.5, 'metric cup water', toGrams(1, 'cup', wMl, 250));
   }

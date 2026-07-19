@@ -107,12 +107,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     document.getElementById('q-graph')!.innerHTML = '';
   }
 
-  // Plot y = ax²+bx+c across a window centered on the vertex, marking roots + vertex.
   function drawGraph(a: number, b: number, c: number, vx: number, realRoots: number[]) {
     const svg = document.getElementById('q-graph')!;
     svg.innerHTML = '';
     const W = 320, H = 200;
-    // x-range: span around the vertex, wide enough to show any real roots.
     let half = 5;
     for (const r of realRoots) half = Math.max(half, Math.abs(r - vx) * 1.4 + 1);
     const xMin = vx - half, xMax = vx + half;
@@ -129,7 +127,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const sx = (x: number) => ((x - xMin) / (xMax - xMin)) * W;
     const sy = (y: number) => H - ((y - yMin) / (yMax - yMin)) * H;
 
-    // axes
     const axis = (x1: number, y1: number, x2: number, y2: number) => {
       const l = document.createElementNS(SVGNS, 'line');
       l.setAttribute('x1', String(x1)); l.setAttribute('y1', String(y1));
@@ -137,8 +134,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       l.setAttribute('stroke', 'var(--color-hairline-strong)'); l.setAttribute('stroke-width', '1');
       svg.appendChild(l);
     };
-    if (0 >= yMin && 0 <= yMax) axis(0, sy(0), W, sy(0)); // x-axis
-    if (0 >= xMin && 0 <= xMax) axis(sx(0), 0, sx(0), H); // y-axis
+    if (0 >= yMin && 0 <= yMax) axis(0, sy(0), W, sy(0));
+    if (0 >= xMin && 0 <= xMax) axis(sx(0), 0, sx(0), H);
 
     const curve = document.createElementNS(SVGNS, 'polyline');
     curve.setAttribute('points', ys.map((y, i) => `${sx(xMin + (i / N) * (xMax - xMin)).toFixed(1)},${sy(y).toFixed(1)}`).join(' '));
@@ -148,7 +145,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     curve.setAttribute('vector-effect', 'non-scaling-stroke');
     svg.appendChild(curve);
 
-    // root markers
     for (const r of realRoots) {
       if (r < xMin || r > xMax) continue;
       const dot = document.createElementNS(SVGNS, 'circle');
@@ -174,7 +170,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
     eqEl.textContent = echoEq(a, b, c);
 
-    // Linear / degenerate case.
     if (a === 0) {
       discEl.textContent = '—';
       vertexEl.textContent = '—';

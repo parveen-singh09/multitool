@@ -39,7 +39,6 @@ export default {
       .filter((l) => l)
       .join('\r\n');
 
-    // Strip CR/LF from header values so they can't inject extra headers.
     const clean = (s: string) => s.replace(/[\r\n]+/g, ' ').trim();
     const headers = [
       `From: ToolSilk Feedback <${sender}>`,

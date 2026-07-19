@@ -130,7 +130,6 @@ const presets = [
 
     const n = parseInt(color.slice(1), 16);
     const rgb = `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`;
-    // Depth drives an outer drop shadow; refraction drives the inset light highlights.
     const outer = `0 ${depth}px ${(depth * 2.5).toFixed(0)}px rgba(0, 0, 0, ${(0.08 + depth * 0.008).toFixed(2)})`;
     const insetTop = `inset 0 1px 1px rgba(255, 255, 255, ${(0.5 * refr).toFixed(2)})`;
     const insetBottom = `inset 0 -1px 1px rgba(255, 255, 255, ${(0.15 * refr).toFixed(2)})`;
@@ -167,8 +166,8 @@ const presets = [
   }
 
   function update() {
-    styleTag.textContent = buildCss('#gm-box'); // live preview, exact incl. pseudo-elements
-    rawOutput = buildCss('.glass-card'); // copyable output
+    styleTag.textContent = buildCss('#gm-box');
+    rawOutput = buildCss('.glass-card');
     hl(cssEl, rawOutput, 'css');
   }
 
@@ -191,8 +190,6 @@ const presets = [
     })
   );
 
-  // Known-good picsum image IDs — random seeds sometimes 404/hang and leave the
-  // stage blank, so pick from a fixed set and preload before swapping.
   const PHOTO_IDS = [10, 15, 27, 29, 42, 65, 76, 82, 96, 110, 128, 160, 190, 225, 237];
   $('gm-photo').addEventListener('click', () => {
     const id = PHOTO_IDS[Math.floor(Math.random() * PHOTO_IDS.length)];
@@ -201,7 +198,7 @@ const presets = [
     img.onload = () => {
       $('gm-stage').style.background = `center / cover no-repeat url("${url}")`;
     };
-    img.src = url; // only swaps once loaded; if it errors the current bg stays
+    img.src = url;
   });
 
   update();
