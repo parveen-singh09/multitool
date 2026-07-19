@@ -92,6 +92,21 @@ function wire(input: HTMLInputElement) {
       '<span class="text-[15px] font-semibold text-ink">Drop your file here</span>' +
       '<span class="text-[13px] text-ink-subtle">choose a source below, or drag a file in</span>');
     label.appendChild(wrap);
+  } else if (label && label.className.includes('btn')) {
+    // A button-style label (e.g. "📁 Upload Sticker Image") is itself just a
+    // trigger for the hidden input — redundant with the "Select File" button.
+    // Replace it so only the split button shows, not two upload controls.
+    const holder = document.createElement('span');
+    holder.className = 'sr-only';
+    holder.appendChild(input);
+    for (const el of Array.from(label.querySelectorAll<HTMLElement>('[id]'))) holder.appendChild(el);
+    wrap.appendChild(holder);
+    const center = document.createElement('div');
+    center.className = 'flex w-full justify-center';
+    wrap.className = 'relative mt-4 flex w-full';
+    main.style.cssText += ';flex:1 1 auto';
+    center.appendChild(wrap);
+    label.replaceWith(center);
   } else {
     (label ?? input.parentElement ?? input).after(wrap);
   }
