@@ -67,6 +67,10 @@ const accept = from ? `.${from}` : '';
     <a id="ac-download" class="btn btn-secondary hidden" download>Download</a>
     <span id="ac-status" class="text-[13px] text-ink-subtle" aria-live="polite"></span>
     <span id="ac-error" class="hidden text-[15px] font-medium" style="color:#e5484d" role="alert"></span>
+    <span id="ac-error-hint" class="hidden text-[13px] font-medium text-ink-subtle">
+      <a href="/ai" class="text-primary-hover underline underline-offset-2">Try our AI assistant</a>
+      or <a href="/tools" class="text-primary-hover underline underline-offset-2">browse tools</a> →
+    </span>
   </div>
 
   {!syncTarget && (
@@ -117,7 +121,13 @@ const accept = from ? `.${from}` : '';
 
   let picked: File | null = null;
   let lastOutUrl: string | null = null;
-  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+  const errHint = document.getElementById('ac-error-hint');
+  const setErr = (m: string) => {
+    err.textContent = m;
+    err.classList.toggle('hidden', !m);
+    // ponytail: only nudge to the AI assistant when the service is down, not on bad-file errors
+    errHint?.classList.toggle('hidden', !/temporarily unavailable/i.test(m));
+  };
 
   const CATEGORY: Record<string, string[]> = {
     image: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'tiff', 'tif', 'svg', 'ico', 'avif', 'heic', 'psd', 'eps'],
