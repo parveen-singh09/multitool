@@ -6,6 +6,10 @@ async function asJson(res: Response): Promise<any> {
   catch {
     const isDev = /^(localhost|127\.|\[::1\])/.test(location.hostname);
     if (isDev) throw new Error('The conversion service runs on the deployed site (or via `wrangler pages dev`), not in plain dev mode.');
+    // ponytail: 5xx from the edge means Cloudflare returned its own HTML page, not our JSON — don't scrape it.
+    if (res.status >= 502 && res.status <= 504) {
+      throw new Error('The conversion service is temporarily unavailable. Please try again in a moment.');
+    }
     const snippet = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
     throw new Error(`Conversion failed (HTTP ${res.status})${snippet ? ': ' + snippet : ''}. Try again, or a different file/format.`);
   }
