@@ -289,10 +289,6 @@ const index = tools.map((t) => ({
   // Tools that can't run in-chat (full-page apps) open in a NEW tab so the
   // conversation stays put. The chat is the hub; we never navigate away from it.
   const history: { role: 'user' | 'assistant'; content: string }[] = [];
-  function openLink(slug: string, label: string): string {
-    return `<a class="text-primary-hover underline underline-offset-2 hover:text-ink" href="/${slug}" target="_blank" rel="noopener">${esc(label)} ↗</a>`;
-  }
-
   // Category tints, mirrored from ToolCard.astro so the chat's tool button reads
   // like the site's cards.
   const CAT_TINT: Record<string, string> = {
@@ -498,14 +494,14 @@ const index = tools.map((t) => ({
         const note = document.createElement('p');
         note.className = 'text-[13px] text-ink-subtle';
         note.innerHTML = truncated
-          ? `Showing first ${images.length} of ${total} pages. For all pages, page ranges, or a ZIP, use ${openLink(slug, getTool(slug)!.name)}.`
+          ? `Showing first ${images.length} of ${total} pages — open the full tool below for all pages, page ranges, or a ZIP.`
           : `${images.length} page${images.length === 1 ? '' : 's'} rendered.`;
         block.appendChild(note);
       } catch (e) {
         // Couldn't do it inline — surface the full tool as the user asked.
         block.innerHTML +=
           `<p class="text-[13px]" style="color:#e5484d">Couldn’t render that PDF here (${esc((e as Error).message || 'error')}).</p>` +
-          `<p class="text-[13px] text-ink-subtle mt-1">Try the full tool: ${openLink(slug, getTool(slug)!.name)}</p>`;
+          `<p class="text-[13px] text-ink-subtle mt-1">Try the full tool below.</p>`;
       }
     }
     appendDownloadAll(container, produced, `${cfg.ext}-pages.zip`);
@@ -703,7 +699,8 @@ const index = tools.map((t) => ({
       } catch (e) {
         container.innerHTML =
           `<p class="text-[13px]" style="color:#e5484d">${esc((e as Error).message || 'Could not run that here.')}</p>` +
-          `<p class="text-[13px] text-ink-subtle mt-1">Try the full tool: ${openLink(pick.slug, pick.label)}</p>`;
+          `<p class="text-[13px] text-ink-subtle mt-1">Try the full tool:</p>` +
+          toolCardLink(pick.slug);
       }
       return;
     }
@@ -714,7 +711,8 @@ const index = tools.map((t) => ({
     if (io && (io.input === 'file' || io.input === 'files') && !files.length) {
       container.innerHTML =
         `<p class="text-[14px] text-ink">${esc(pick.label)} needs a file first.</p>` +
-        `<p class="text-[13px] text-ink-subtle">${esc(io.inputShape)} Attach it (paperclip on the left) and send again — or open ${openLink(pick.slug, pick.label)}.</p>`;
+        `<p class="text-[13px] text-ink-subtle">${esc(io.inputShape)} Attach it (paperclip on the left) and send again — or open the tool:</p>` +
+        toolCardLink(pick.slug);
       return;
     }
     container.innerHTML = '';
@@ -990,7 +988,11 @@ const index = tools.map((t) => ({
     // Feed name + category + tagline + keywords so the router matches on the
     // same signal the local search uses. Keywords already live in tools.ts.
     const catalog = index
-      .map((t) => `${t.slug} | ${t.name} | ${t.category} | ${t.tagline} | ${t.keywords.join(', ')}`)
+      .map((t) => {
+        const io = getToolIO(t.slug);
+        const iot = io ? ` | in:${io.input} out:${io.output}` : '';
+        return `${t.slug} | ${t.name} | ${t.category} | ${t.tagline} | ${t.keywords.join(', ')}${iot}`;
+      })
       .join('\n');
     try {
       const raw = await aiChat([
@@ -1005,7 +1007,11 @@ const index = tools.map((t) => ({
           '"reply" is a short, friendly conversational message (1-2 sentences) — greet, answer questions, or say what you found. ' +
           'If the user is just chatting (no task), return an empty tools array and reply conversationally. ' +
           'When there is a task, include up to 3 tools, best first; "slug" MUST be copied verbatim from the catalog; ' +
-          '"label" is the tool name; "why" is a short reason (max ~10 words).\n\nCATALOG (slug | name | category):\n' + catalog +
+          '"label" is the tool name; "why" is a short reason (max ~10 words). ' +
+          'Each catalog row ends with "in:<input> out:<output>" — the tool\'s input and output types. ' +
+          'Use these to match the user\'s situation: prefer a tool whose "in" fits what they have (e.g. in:file/in:files when they attached a file, in:text when they pasted text) ' +
+          'and whose "out" matches what they want (e.g. out:image, out:file, out:text, out:number).\n\n' +
+          'CATALOG (slug | name | category | tagline | keywords | in:<input> out:<output>):\n' + catalog +
           '\n\n' + (files.length ? `The user has attached ${files.length === 1 ? `a file named "${files[0].name}"` : `${files.length} files: ${files.map((f) => `"${f.name}"`).join(', ')}`}.` : 'The user has NOT attached a file.') },
         ...history,
         { role: 'user', content: query },

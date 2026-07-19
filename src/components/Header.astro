@@ -22,6 +22,19 @@ const CAT_BLURB: Record<string, string> = {
   Security: 'Hashes, keys, passwords and validation.',
   'Device & Sensors': 'Test your device, input and connection.',
 };
+// Per-category icon tint — mirrors index.astro catStyle so the menu reads as one product.
+const CAT_FG: Record<string, string> = {
+  Text: 'text-sky-400',
+  Developer: 'text-violet-400',
+  Image: 'text-emerald-400',
+  Converters: 'text-amber-400',
+  Calculators: 'text-rose-400',
+  Generators: 'text-fuchsia-400',
+  Security: 'text-teal-400',
+  PDF: 'text-red-400',
+  'Audio & Video': 'text-indigo-400',
+  'Device & Sensors': 'text-cyan-400',
+};
 const CAT_MENU = categories.map((c) => {
   const all = toolsByCategory(c);
   return {
@@ -29,6 +42,7 @@ const CAT_MENU = categories.map((c) => {
     slug: catSlug(c),
     count: all.length,
     blurb: CAT_BLURB[c] ?? '',
+    fg: CAT_FG[c] ?? 'text-ink-tertiary',
     featured: all.slice(0, 4),
     tools: all,
   };
@@ -78,7 +92,7 @@ const CAT_MENU = categories.map((c) => {
         <!-- Full-width mega menu -->
         <div class="nav-mega">
           <div class="container-page pt-0 pb-5">
-            <div class="flex gap-6 rounded-xl border border-hairline bg-surface-2 shadow-2xl">
+            <div class="nav-mega-card flex gap-6 rounded-xl border border-hairline bg-surface-2 shadow-2xl">
               <!-- Category rail -->
               <div class="w-44 flex-none border-r border-hairline p-2">
                 {CAT_MENU.map((cat, i) => (
@@ -95,7 +109,7 @@ const CAT_MENU = categories.map((c) => {
                     <div class="grid grid-cols-2 gap-x-5 gap-y-0.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                       {cat.tools.map((tool) => (
                         <a href={`/${tool.slug}`} class="flex items-center gap-2 truncate rounded-md px-2 py-1.5 text-[13px] text-ink-subtle hover:bg-surface-3 hover:text-ink">
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="flex-none text-ink-tertiary"><path d={tool.icon}/></svg>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class={`flex-none ${cat.fg}`}><path d={tool.icon}/></svg>
                           <span class="truncate">{tool.name}</span>
                         </a>
                       ))}
@@ -202,11 +216,14 @@ const CAT_MENU = categories.map((c) => {
   // Open/close with a short close-delay so brief gaps (link → panel) don't shut it.
   const navTools = document.querySelector<HTMLElement>('.nav-tools');
   const mega = document.querySelector<HTMLElement>('.nav-mega');
-  if (navTools && mega) {
+  const megaCard = document.querySelector<HTMLElement>('.nav-mega-card');
+  if (navTools && mega && megaCard) {
     let closeTimer: ReturnType<typeof setTimeout> | null = null;
     const open = () => { if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; } mega.classList.add('open'); };
     const scheduleClose = () => { if (closeTimer) clearTimeout(closeTimer); closeTimer = setTimeout(() => mega.classList.remove('open'), 220); };
-    [navTools, mega].forEach((el) => {
+    // Only the trigger link + the card keep it open — hovering the full-width
+    // gutters beside the card closes it.
+    [navTools, megaCard].forEach((el) => {
       el.addEventListener('mouseenter', open);
       el.addEventListener('mouseleave', scheduleClose);
     });
