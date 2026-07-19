@@ -19,14 +19,6 @@ function friendlyError(body, pair) {
   return `Failed${p}${plain ? ': ' + plain : '.'}`;
 }
 
-function makeJobId() {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  const bytes = crypto.getRandomValues(new Uint8Array(32));
-  let s = '';
-  for (const b of bytes) s += chars[b % 36];
-  return s;
-}
-
 export async function onRequestPost({ request, env }) {
   const secret = env.CONVERTAPI_SECRET;
   if (!secret) return json({ error: 'Conversion service is not configured.' }, 500);
@@ -42,7 +34,6 @@ export async function onRequestPost({ request, env }) {
   const url = form.get('url');
   if ((!file || typeof file === 'string') && !url) return json({ error: 'No input provided.' }, 400);
 
-  const jobId = makeJobId();
   try {
     const upstream = new FormData();
     upstream.append('StoreFile', 'true');
@@ -50,7 +41,8 @@ export async function onRequestPost({ request, env }) {
     if (file && typeof file !== 'string') upstream.append(field, file, file.name || `input.${from}`);
     else upstream.append(field, String(url));
 
-    const res = await fetch(`${BASE}/async/convert/${from}/to/${to}?jobid=${jobId}`, {
+    // ponytail: sync convert — one blocking POST returns the file. No async job + poll GET, so no poll-time 502s.
+    const res = await fetch(`${BASE}/convert/${from}/to/${to}`, {
       method: 'POST',
       headers: { authorization: `Bearer ${secret}` },
       body: upstream,
@@ -58,7 +50,10 @@ export async function onRequestPost({ request, env }) {
     if (!res.ok) {
       throw new Error(friendlyError(await res.text(), `${from.toUpperCase()} → ${to.toUpperCase()}`));
     }
-    return json({ jobId });
+    const data = await res.json();
+    const files = (data?.Files || []).filter((f) => f?.Url).map((f) => ({ url: f.Url, filename: f.FileName }));
+    if (!files.length) throw new Error('Conversion produced no output.');
+    return json({ files });
   } catch (e) {
     return json({ error: e.message || 'Conversion failed.' }, 502);
   }
@@ -87,22 +82,5 @@ export async function onRequestGet({ request, env }) {
     });
   }
 
-  const jobId = params.get('jobId');
-  if (!jobId) return json({ error: 'Missing jobId.' }, 400);
-
-  try {
-    const res = await fetch(`${BASE}/async/job/${encodeURIComponent(jobId)}`, {
-      headers: { authorization: `Bearer ${secret}` },
-    });
-    if (res.status === 202) return json({ done: false });
-    if (!res.ok) {
-      throw new Error(friendlyError(await res.text()));
-    }
-    const data = await res.json();
-    const files = (data?.Files || []).filter((f) => f?.Url).map((f) => ({ url: f.Url, filename: f.FileName }));
-    if (files.length) return json({ done: true, files });
-    return json({ done: false });
-  } catch (e) {
-    return json({ error: e.message || 'Conversion failed.' }, 502);
-  }
+  return json({ error: 'Missing download url.' }, 400);
 }
