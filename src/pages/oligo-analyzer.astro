@@ -3,33 +3,110 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 ---
 
 <ToolLayout slug="oligo-analyzer">
-  <div class="flex flex-col gap-5">
+  <div class="flex flex-col gap-6">
+    <!-- Sequence input -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-end">
       <label class="flex flex-1 flex-col gap-1 text-sm text-ink-subtle">Oligo sequence (5′ → 3′)
-        <textarea id="ol-in" class="field min-h-20 resize-y font-mono text-sm tracking-wider" placeholder="e.g. ATGCGTACCGGTATCGGAATTCGCTAGC" spellcheck="false"></textarea>
+        <textarea id="ol-in" class="field min-h-20 resize-y font-mono text-sm tracking-wider" placeholder="e.g. GTAAAACGACGGCCAGT" spellcheck="false"></textarea>
       </label>
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Type
-        <select id="ol-type" class="field w-32">
+        <select id="ol-type" class="field w-28">
           <option value="dna">DNA</option>
           <option value="rna">RNA</option>
         </select>
       </label>
     </div>
 
+    <!-- Reaction conditions -->
+    <div class="panel p-4">
+      <div class="eyebrow mb-3">Reaction conditions</div>
+      <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <label class="flex flex-col gap-1 text-xs text-ink-subtle">Oligo conc. (nM)
+          <input id="ol-conc" type="number" min="1" step="1" value="250" class="field text-sm" />
+        </label>
+        <label class="flex flex-col gap-1 text-xs text-ink-subtle">Na⁺ / K⁺ (mM)
+          <input id="ol-na" type="number" min="0" step="1" value="50" class="field text-sm" />
+        </label>
+        <label class="flex flex-col gap-1 text-xs text-ink-subtle">Mg²⁺ (mM)
+          <input id="ol-mg" type="number" min="0" step="0.1" value="0" class="field text-sm" />
+        </label>
+        <label class="flex flex-col gap-1 text-xs text-ink-subtle">dNTPs (mM)
+          <input id="ol-dntp" type="number" min="0" step="0.1" value="0" class="field text-sm" />
+        </label>
+      </div>
+    </div>
+
     <div id="ol-status" class="hidden rounded-md border px-3 py-2 text-sm"></div>
 
-    <div id="ol-grid" class="grid grid-cols-2 gap-3 sm:grid-cols-3"></div>
+    <!-- Metric tiles -->
+    <div id="ol-grid" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"></div>
 
     <div id="ol-extra" class="hidden flex-col gap-4">
+      <!-- Thermodynamics detail -->
       <div class="panel p-4">
-        <div class="eyebrow mb-2">Base composition</div>
+        <div class="eyebrow mb-3">Melting temperature &amp; thermodynamics</div>
+        <div id="ol-tm" class="grid grid-cols-1 gap-2 text-sm sm:grid-cols-3"></div>
+        <p class="mt-3 text-xs text-ink-tertiary">Nearest-neighbor T<sub>m</sub> uses SantaLucia (1998) unified parameters with Owczarzy monovalent/divalent salt corrections — the same model as commercial oligo tools. Wallace and GC-rule are shown for reference.</p>
+      </div>
+
+      <!-- Base composition -->
+      <div class="panel p-4">
+        <div class="eyebrow mb-3">Base composition</div>
         <div id="ol-comp" class="flex flex-col gap-2"></div>
       </div>
+
+      <!-- Complement strands -->
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div class="panel p-4">
+          <div class="eyebrow">Reverse complement (5′ → 3′)</div>
+          <div class="copy-wrap">
+            <p id="ol-revcomp" class="mt-2 break-all font-mono text-sm tracking-wider text-ink"></p>
+            <button type="button" class="copy-icon" data-copy-target="#ol-revcomp" aria-label="Copy"></button>
+          </div>
+        </div>
+        <div class="panel p-4">
+          <div class="eyebrow">Complement (3′ → 5′)</div>
+          <div class="copy-wrap">
+            <p id="ol-comp-seq" class="mt-2 break-all font-mono text-sm tracking-wider text-ink"></p>
+            <button type="button" class="copy-icon" data-copy-target="#ol-comp-seq" aria-label="Copy"></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Secondary structure -->
       <div class="panel p-4">
-        <div class="eyebrow">Reverse complement (5′ → 3′)</div>
-        <div class="copy-wrap">
-          <p id="ol-revcomp" class="mt-2 break-all font-mono text-sm tracking-wider text-ink"></p>
-          <button type="button" class="copy-icon" data-copy-target="#ol-revcomp" aria-label="Copy"></button>
+        <div class="eyebrow mb-3">Secondary structure</div>
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-ink">Hairpin</span>
+              <span id="ol-hp-dg" class="rounded-full bg-surface-3 px-2 py-0.5 text-xs text-ink-subtle"></span>
+            </div>
+            <pre id="ol-hp" class="overflow-x-auto rounded-lg border border-hairline bg-surface-2 p-3 font-mono text-xs leading-relaxed text-ink"></pre>
+          </div>
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-ink">Self-dimer</span>
+              <span id="ol-sd-dg" class="rounded-full bg-surface-3 px-2 py-0.5 text-xs text-ink-subtle"></span>
+            </div>
+            <pre id="ol-sd" class="overflow-x-auto rounded-lg border border-hairline bg-surface-2 p-3 font-mono text-xs leading-relaxed text-ink"></pre>
+          </div>
+        </div>
+        <p class="mt-3 text-xs text-ink-tertiary">More-negative ΔG means a more stable, more troublesome structure. Rule of thumb: primer self-structures below about −9 kcal/mol (hairpin) or −6 kcal/mol (dimer) near the annealing temperature can hurt a PCR.</p>
+      </div>
+
+      <!-- Hetero-dimer (second sequence) — beats the single-sequence free tools -->
+      <div class="panel p-4">
+        <div class="eyebrow mb-3">Hetero-dimer with a second oligo</div>
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Second sequence (5′ → 3′) — e.g. your reverse primer
+          <textarea id="ol-in2" class="field min-h-16 resize-y font-mono text-sm tracking-wider" placeholder="paste a second oligo to check cross-dimers" spellcheck="false"></textarea>
+        </label>
+        <div id="ol-hd-wrap" class="mt-3 hidden flex-col gap-2">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium text-ink">Best cross-dimer</span>
+            <span id="ol-hd-dg" class="rounded-full bg-surface-3 px-2 py-0.5 text-xs text-ink-subtle"></span>
+          </div>
+          <pre id="ol-hd" class="overflow-x-auto rounded-lg border border-hairline bg-surface-2 p-3 font-mono text-xs leading-relaxed text-ink"></pre>
         </div>
       </div>
     </div>
@@ -37,27 +114,49 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free oligo analyzer computes the key properties of a DNA or RNA
-      oligonucleotide for PCR primer design and lab work: length, GC content,
-      melting temperature (T<sub>m</sub>) by the basic Wallace rule and a
-      nearest-neighbor-style salt-adjusted estimate, molecular weight, the µg/OD
-      and nmol/OD extinction coefficient, base composition, and the reverse
-      complement. Paste a sequence 5′→3′ and it recalculates instantly.
+      This free oligo analyzer computes the properties that matter for PCR primer
+      and probe design: length, GC content, melting temperature (T<sub>m</sub>),
+      molecular weight, extinction coefficient, µg/OD and nmol/OD, base
+      composition, and both complement strands. Paste a sequence 5′→3′ and it
+      recalculates instantly — nothing leaves your browser.
+    </p>
+    <p>
+      The T<sub>m</sub> uses full <strong>nearest-neighbor thermodynamics</strong>
+      (SantaLucia 1998 unified parameters) with <strong>Owczarzy salt
+      corrections</strong> for monovalent (Na⁺/K⁺) and divalent (Mg²⁺) cations,
+      accounting for dNTP chelation of magnesium — the same model as IDT
+      OligoAnalyzer and Eurofins. Set your actual oligo concentration and buffer
+      to get a T<sub>m</sub> that matches your bench conditions, plus ΔH, ΔS and
+      ΔG at 37 °C.
+    </p>
+    <p>
+      It also flags <strong>secondary structures</strong> that free tools often
+      hide behind a login: the most stable hairpin, self-dimer, and — paste a
+      second oligo — the cross/hetero-dimer between a primer pair, each drawn as
+      a base-paired alignment with an estimated ΔG.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  const input = document.getElementById('ol-in') as HTMLTextAreaElement;
-  const typeEl = document.getElementById('ol-type') as HTMLSelectElement;
-  const status = document.getElementById('ol-status')!;
-  const grid = document.getElementById('ol-grid')!;
-  const extra = document.getElementById('ol-extra')!;
+  import {
+    clean, validate, counts, gcFraction, complement, reverseComplement,
+    molecularWeight, extinctionCoefficient, meltingTemp, selfDimer, heteroDimer,
+    hairpin, DEFAULT_CONDITIONS,
+    type SeqType, type Conditions, type Alignment,
+  } from '../lib/oligo';
 
-  const DNA_MW: Record<string, number> = { A: 313.21, T: 304.2, C: 289.18, G: 329.21 };
-  const RNA_MW: Record<string, number> = { A: 329.21, U: 306.17, C: 305.18, G: 345.21 };
-
-  const EXT: Record<string, number> = { A: 15400, C: 7400, G: 11500, T: 8700, U: 9900 };
+  const $ = (id: string) => document.getElementById(id)!;
+  const input = $('ol-in') as HTMLTextAreaElement;
+  const input2 = $('ol-in2') as HTMLTextAreaElement;
+  const typeEl = $('ol-type') as HTMLSelectElement;
+  const concEl = $('ol-conc') as HTMLInputElement;
+  const naEl = $('ol-na') as HTMLInputElement;
+  const mgEl = $('ol-mg') as HTMLInputElement;
+  const dntpEl = $('ol-dntp') as HTMLInputElement;
+  const status = $('ol-status');
+  const grid = $('ol-grid');
+  const extra = $('ol-extra');
 
   function showStatus(msg: string) {
     status.textContent = msg;
@@ -85,78 +184,124 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     </div>`;
   }
 
+  function tmRow(label: string, value: string, hint = ''): string {
+    return `<div class="flex flex-col gap-0.5 rounded-lg bg-surface-2 p-3">
+      <span class="text-xs text-ink-tertiary">${label}</span>
+      <span class="font-mono text-lg text-ink">${value}</span>
+      ${hint ? `<span class="text-[11px] text-ink-tertiary">${hint}</span>` : ''}
+    </div>`;
+  }
+
+  function renderAlignment(a: Alignment): string {
+    const esc = (s: string) => s.replace(/</g, '&lt;');
+    return `5'-${esc(a.top)}-3'\n   ${esc(a.pair)}\n3'-${esc(a.bot)}-5'`;
+  }
+
+  function conditions(): Conditions {
+    return {
+      oligoNM: Math.max(0.01, Number(concEl.value) || DEFAULT_CONDITIONS.oligoNM),
+      naMM: Math.max(0, Number(naEl.value) || 0),
+      mgMM: Math.max(0, Number(mgEl.value) || 0),
+      dntpMM: Math.max(0, Number(dntpEl.value) || 0),
+    };
+  }
+
   function analyze() {
-    const isRna = typeEl.value === 'rna';
-    const valid = isRna ? 'ACGU' : 'ACGT';
-    const raw = input.value.toUpperCase().replace(/\s+/g, '');
+    const type = typeEl.value as SeqType;
+    const seq = clean(input.value);
     grid.innerHTML = '';
     extra.classList.add('hidden');
+    extra.classList.remove('flex');
 
-    if (!raw) { status.classList.add('hidden'); return; }
+    if (!seq) { status.classList.add('hidden'); return; }
 
-    // Auto-detect a mismatch: T in RNA or U in DNA.
-    const badChars = [...raw].filter((c) => !valid.includes(c));
-    if (badChars.length) {
-      const uniq = [...new Set(badChars)].join(', ');
-      showStatus(`Invalid character(s) for ${isRna ? 'RNA' : 'DNA'}: ${uniq}. Allowed bases: ${valid.split('').join(', ')}.`);
+    const v = validate(seq, type);
+    if (!v.ok) {
+      const allowed = (type === 'rna' ? 'ACGU' : 'ACGT').split('').join(', ');
+      showStatus(`Invalid character(s) for ${type.toUpperCase()}: ${v.bad.join(', ')}. Allowed bases: ${allowed}.`);
       return;
     }
     status.classList.add('hidden');
 
-    const n = raw.length;
-    const counts: Record<string, number> = {};
-    for (const c of valid) counts[c] = 0;
-    for (const c of raw) counts[c]++;
-
-    const gc = counts['G'] + counts['C'];
-    const gcPct = (gc / n) * 100;
-
-    // Tm: Wallace rule (<14 nt) and salt-adjusted for longer.
-    const at = n - gc;
-    let tmWallace = 2 * at + 4 * gc;
-    let tmSalt = 64.9 + 41 * (gc - 16.4) / n; // Marmur-Doty style approximation
-    const tm = n < 14 ? tmWallace : tmSalt;
-
-    // Molecular weight (ssDNA/ssRNA, minus one phosphate for the free 5'-OH ~ +79 correction).
-    const mwTable = isRna ? RNA_MW : DNA_MW;
-    let mw = 0;
-    for (const c of raw) mw += mwTable[c];
-    mw -= 61.96; // account for removal of HPO2 and addition of H2O across phosphodiester bonds
-
-    // Extinction coefficient (sum of per-base, then hypochromicity ~0.9).
-    let extSum = 0;
-    for (const c of raw) extSum += EXT[c];
-    const extCoef = extSum * 0.9;
-    const ugPerOD = (mw / extCoef) * 1e6; // µg per OD260 unit
-    const nmolPerOD = (1 / extCoef) * 1e9; // nmol per OD260 unit
+    const n = seq.length;
+    const c = counts(seq);
+    const cond = conditions();
+    const gcPct = gcFraction(seq) * 100;
+    const tm = meltingTemp(seq, type, cond);
+    const mw = molecularWeight(seq, type);
+    const ext = extinctionCoefficient(seq, type);
+    const ugPerOD = ext ? (mw / ext) * 1e6 : 0;
+    const nmolPerOD = ext ? (1 / ext) * 1e9 : 0;
 
     grid.innerHTML =
       tile('Length', `${n} nt`) +
       tile('GC content', `${gcPct.toFixed(1)}%`) +
-      tile('Tm', `${tm.toFixed(1)} °C`, n < 14 ? 'Wallace rule' : 'Salt-adjusted') +
-      tile('Molecular weight', `${mw.toFixed(1)}`, 'g/mol (ss)') +
+      tile('Tm (nearest-neighbor)', isNaN(tm.nn) ? '—' : `${tm.nn.toFixed(1)} °C`, 'at your conditions') +
+      tile('Molecular weight', mw.toFixed(1), 'g/mol (ss)') +
+      tile('Ext. coefficient', `${(ext / 1000).toFixed(1)}k`, 'L/(mol·cm), 260 nm') +
       tile('µg / OD₂₆₀', ugPerOD.toFixed(1)) +
-      tile('nmol / OD₂₆₀', nmolPerOD.toFixed(1));
+      tile('nmol / OD₂₆₀', nmolPerOD.toFixed(1)) +
+      tile('ΔG 37°C', `${tm.dg37.toFixed(1)}`, 'kcal/mol');
+
+    $('ol-tm').innerHTML =
+      tmRow('Nearest-neighbor', isNaN(tm.nn) ? '—' : `${tm.nn.toFixed(1)} °C`, 'SantaLucia + Owczarzy salt') +
+      tmRow('Wallace rule', `${tm.wallace.toFixed(0)} °C`, '2(A+T)+4(G+C)') +
+      tmRow('GC rule', `${tm.gcRule.toFixed(1)} °C`, 'Marmur-Doty salt-adj.') +
+      tmRow('ΔH', `${tm.dh.toFixed(1)}`, 'kcal/mol') +
+      tmRow('ΔS', `${tm.ds.toFixed(1)}`, 'cal/(mol·K)') +
+      tmRow('ΔG (37°C)', `${tm.dg37.toFixed(1)}`, 'kcal/mol');
 
     const colors: Record<string, string> = { A: '#5e6ad2', C: '#27a644', G: '#e0a055', T: '#d15b8f', U: '#d15b8f' };
-    document.getElementById('ol-comp')!.innerHTML = valid
-      .split('')
-      .map((b) => bar(b, counts[b], n, colors[b]))
-      .join('');
+    const bases = type === 'rna' ? ['A', 'C', 'G', 'U'] : ['A', 'C', 'G', 'T'];
+    $('ol-comp').innerHTML = bases.map((b) => bar(b, c[b], n, colors[b])).join('');
 
-    // Reverse complement.
-    const comp: Record<string, string> = isRna
-      ? { A: 'U', U: 'A', C: 'G', G: 'C' }
-      : { A: 'T', T: 'A', C: 'G', G: 'C' };
-    const revcomp = [...raw].reverse().map((c) => comp[c]).join('');
-    document.getElementById('ol-revcomp')!.textContent = revcomp;
+    $('ol-revcomp').textContent = reverseComplement(seq, type);
+    $('ol-comp-seq').textContent = complement(seq, type);
+
+    const hp = hairpin(seq, type);
+    if (hp) {
+      $('ol-hp').textContent = hp.render.join('\n');
+      $('ol-hp-dg').textContent = `ΔG ≈ ${hp.dg.toFixed(1)} kcal/mol · stem ${hp.stem} · loop ${hp.loop}`;
+    } else {
+      $('ol-hp').textContent = 'No significant hairpin found.';
+      $('ol-hp-dg').textContent = '';
+    }
+
+    const sd = selfDimer(seq, type);
+    if (sd) {
+      $('ol-sd').textContent = renderAlignment(sd);
+      $('ol-sd-dg').textContent = `ΔG ≈ ${sd.dg.toFixed(1)} kcal/mol · ${sd.matches} bp · run ${sd.runLen}`;
+    } else {
+      $('ol-sd').textContent = 'No significant self-dimer found.';
+      $('ol-sd-dg').textContent = '';
+    }
+
+    const seq2 = clean(input2.value);
+    const hdWrap = $('ol-hd-wrap');
+    if (seq2 && validate(seq2, type).ok) {
+      const hd = heteroDimer(seq, seq2, type);
+      hdWrap.classList.remove('hidden');
+      hdWrap.classList.add('flex');
+      if (hd) {
+        $('ol-hd').textContent = renderAlignment(hd);
+        $('ol-hd-dg').textContent = `ΔG ≈ ${hd.dg.toFixed(1)} kcal/mol · ${hd.matches} bp · run ${hd.runLen}`;
+      } else {
+        $('ol-hd').textContent = 'No significant cross-dimer found.';
+        $('ol-hd-dg').textContent = '';
+      }
+    } else {
+      hdWrap.classList.add('hidden');
+      hdWrap.classList.remove('flex');
+    }
 
     extra.classList.remove('hidden');
+    extra.classList.add('flex');
   }
 
-  input.addEventListener('input', analyze);
+  for (const el of [input, input2]) el.addEventListener('input', analyze);
+  for (const el of [concEl, naEl, mgEl, dntpEl]) el.addEventListener('input', analyze);
   typeEl.addEventListener('change', analyze);
 
-  input.value = 'ATGCGTACCGGTATCGGAATTCGCTAGC';
+  input.value = 'GTAAAACGACGGCCAGT';
   analyze();
 </script>

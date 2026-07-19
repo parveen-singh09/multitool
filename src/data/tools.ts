@@ -5123,11 +5123,11 @@ export const tools: Tool[] = [
   {
     slug: 'oligo-analyzer',
     name: 'Oligo Analyzer',
-    tagline: 'DNA/RNA oligo Tm, GC%, MW & rev-comp.',
+    tagline: 'Nearest-neighbor Tm, hairpins & dimers.',
     description:
-      'Free oligo analyzer. Compute DNA/RNA oligonucleotide length, GC content, melting temperature, molecular weight, extinction coefficient and reverse complement for PCR primer design.',
+      'Free oligo analyzer. Compute DNA/RNA oligonucleotide length, GC content, nearest-neighbor melting temperature (SantaLucia + Owczarzy salt/Mg corrections), molecular weight, extinction coefficient, both complement strands, plus hairpin, self-dimer and primer-pair hetero-dimer structures for PCR primer design.',
     category: 'Calculators',
-    keywords: ['oligo analyzer', 'oligo calculator', 'primer tm calculator', 'dna melting temperature', 'gc content calculator'],
+    keywords: ['oligo analyzer', 'oligo calculator', 'primer tm calculator', 'dna melting temperature', 'gc content calculator', 'primer dimer checker', 'hairpin calculator', 'nearest neighbor tm'],
     icon: 'M6 3c6 3 6 15 12 18M18 3c-6 3-6 15-12 18M7 7h10M7 12h10M7 17h10',
   },
   {
