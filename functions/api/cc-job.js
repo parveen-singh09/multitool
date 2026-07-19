@@ -42,8 +42,12 @@ export async function onRequestPost({ request, env }) {
   try {
     const upstream = new FormData();
     upstream.append('StoreFile', 'true'); // so the result is fetchable by URL
-    if (file && typeof file !== 'string') upstream.append('File', file, file.name || `input.${from}`);
-    else upstream.append('Url', String(url)); // chained hop: convert from the prior result URL
+    // The images→animated-GIF converter (to=gif) takes a "Files" array param;
+    // every other target takes a singular "File". Chained hops pass the prior
+    // result as File=<url string>, NOT Url= (Url is accepted then fails the job).
+    const field = to === 'gif' ? 'Files' : 'File';
+    if (file && typeof file !== 'string') upstream.append(field, file, file.name || `input.${from}`);
+    else upstream.append(field, String(url));
 
     // /async path prefix + jobid = start an async job we poll for below.
     const res = await fetch(`${BASE}/async/convert/${from}/to/${to}?jobid=${jobId}`, {

@@ -226,9 +226,24 @@ const accept = from ? `.${from}` : '';
     // request open long enough for Cloudflare to 502 (the old failure on big PDFs).
     const path = chainPath(inFormat, outFormat) || [inFormat, outFormat];
     const { convertViaApi } = await import('../lib/ccConvert');
-    const out = await convertViaApi(file, path, (hop, total) => {
-      status.textContent = total > 1 ? `Converting… (step ${hop} of ${total})` : 'Converting…';
-    });
+    // The async API gives no real progress %, so ramp a simulated one toward 95%
+    // (eases out, never claims done early) — snaps to 100% when the result lands.
+    // ponytail: simulated, no per-byte signal from the async job.
+    let pct = 0;
+    let step = '';
+    const tick = setInterval(() => {
+      pct = Math.min(95, pct + (96 - pct) * 0.06);
+      runBtn.textContent = `Converting…${step} ${Math.round(pct)}%`;
+    }, 250);
+    let out;
+    try {
+      out = await convertViaApi(file, path, (hop, total) => {
+        step = total > 1 ? ` ${hop}/${total}` : '';
+      });
+    } finally {
+      clearInterval(tick);
+    }
+    runBtn.textContent = 'Converting… 100%';
     if (lastOutUrl) { URL.revokeObjectURL(lastOutUrl); lastOutUrl = null; }
     // Download through the same-origin worker proxy — the browser can't reliably
     // fetch/save the cross-origin ConvertAPI result URL (CORS/opaque response).
@@ -240,7 +255,6 @@ const accept = from ? `.${from}` : '';
       dlBtn.setAttribute('download', out[0].filename || `converted.${outFormat}`);
     } else {
       // Multi-page result (one file per page): fetch all via proxy, bundle into ZIP.
-      status.textContent = `Zipping ${out.length} files…`;
       const { makeZip } = await import('../lib/zip');
       const entries = await Promise.all(out.map(async (f, i) => {
         const r = await fetch(proxy(f, `page-${i + 1}.${outFormat}`));
