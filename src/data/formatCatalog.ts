@@ -92,6 +92,8 @@ export function targetsFor(ext: string): string[] {
   if (cat === 'Audio') return LOCAL_AUDIO.filter((t) => t !== e);
   if (cat === 'Font') return LOCAL_FONT.filter((t) => t !== e);
   if (cat === 'Archive') return LOCAL_ARCHIVE.filter((t) => t !== e);
+  // ponytail: mobi only offers direct 1-hop conversions — chained targets (e.g. rtf via pdf) fail
+  if (e === 'mobi') return directApiTargets(e);
   const reach = new Set(directApiTargets(e));
   const okCats = cat ? (COMPAT_TARGETS[cat] || []) : [];
   for (const m of [...reach])
