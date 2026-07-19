@@ -10,6 +10,7 @@ function friendlyError(body, pair) {
   if (data) {
     const inv = data.InvalidParameters && Object.values(data.InvalidParameters)[0];
     const detail = (Array.isArray(inv) ? inv[0] : inv) || data.Message || '';
+    if (data.Code === 5001) return `Couldn't convert this file${p} — it may be empty, corrupt, or password/DRM protected. Try another file.`;
     if (data.Code === 5004) return `Nothing to extract${p} — no matching content in the file.`;
     if (data.Code === 4000) return `Unsupported or invalid file${p}.`;
     if (data.Code === 5009) return `File expired${p} — attach it again.`;

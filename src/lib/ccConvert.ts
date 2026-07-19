@@ -11,12 +11,24 @@ async function asJson(res: Response): Promise<any> {
   }
 }
 
-// ponytail: Cloudflare's edge occasionally 502/503/504s our Function with an HTML page + Retry-After.
-// It's transient (a plain curl to the same URL succeeds), so retry the request instead of failing.
+// ponytail: some extensions monkeypatch window.fetch and mangle our requests (proven: window.fetch was a
+// wrapper forking /api/cc-job to another host, 502ing it). They don't touch XHR, so use XHR as clean transport.
+function xhrFetch(url: string, init?: RequestInit): Promise<Response> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(init?.method || 'GET', url);
+    xhr.responseType = 'text';
+    xhr.onload = () => resolve(new Response(xhr.responseText, { status: xhr.status }));
+    xhr.onerror = () => reject(new Error('Network error contacting the conversion service.'));
+    xhr.send((init?.body as XMLHttpRequestBodyInit) ?? null);
+  });
+}
+
+// Cloudflare's edge can also transiently 502/503/504 the Function, so retry a few times before giving up.
 async function fetchJson(input: string, init?: RequestInit): Promise<{ res: Response; data: any }> {
   let lastErr: unknown;
   for (let attempt = 0; attempt < 4; attempt++) {
-    const res = await fetch(input, init);
+    const res = await xhrFetch(input, init);
     if (res.status >= 502 && res.status <= 504) {
       lastErr = new Error('The conversion service is temporarily unavailable. Please try again in a moment.');
       await sleep(1000 * (attempt + 1));
