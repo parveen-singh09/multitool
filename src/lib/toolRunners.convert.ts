@@ -80,25 +80,21 @@ async function runFont(to: string, ctx: RunCtx): Promise<RunResult> {
   return { files: [{ name: `${baseName(file.name)}.${to}`, blob, kind: 'file' }], note: `Converted to ${to.toUpperCase()}` };
 }
 
-// ---------- everything else (ConvertAPI via /api/cc-job) ----------
+// ---------- everything else (ConvertAPI via /api/cc-job, async) ----------
 async function runRemote(to: string, ctx: RunCtx): Promise<RunResult> {
   const file = ctx.files[0];
   if (!file) throw new Error('Attach the file you want to convert (paperclip on the left) and send again.');
-  const fd = new FormData();
-  fd.append('inputFormat', extOf(file.name));
-  fd.append('outputFormat', to);
-  fd.append('file', file);
-  const res = await fetch('/api/cc-job', { method: 'POST', body: fd });
-  const text = await res.text();
-  let data: any;
-  try { data = JSON.parse(text); }
-  catch { throw new Error('The conversion service is only available on the deployed site, not in local preview.'); }
-  if (!res.ok) throw new Error(data.error || 'Conversion failed.');
-  const dl = await fetch(data.downloadUrl);
+  const from = extOf(file.name);
+  const { chainPath } = await import('../data/formatCatalog');
+  const { convertViaApi } = await import('./ccConvert');
+  // Async start-and-poll: a slow conversion never holds one request open long
+  // enough for Cloudflare to 502 (the old failure on multi-page PDFs).
+  const { url, filename } = await convertViaApi(file, chainPath(from, to) || [from, to]);
+  const dl = await fetch(url);
   if (!dl.ok) throw new Error('Could not download the converted file.');
   const blob = await dl.blob();
   const isImg = /^(jpg|jpeg|png|webp|gif|bmp|tiff|svg|ico)$/.test(to);
-  return { files: [{ name: data.filename || `${baseName(file.name)}.${to}`, blob, kind: isImg ? 'image' : 'file' }], note: `Converted to ${to.toUpperCase()}` };
+  return { files: [{ name: filename || `${baseName(file.name)}.${to}`, blob, kind: isImg ? 'image' : 'file' }], note: `Converted to ${to.toUpperCase()}` };
 }
 
 // ---------- registry assembly ----------

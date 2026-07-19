@@ -174,18 +174,6 @@ const accept = from ? `.${from}` : '';
     }
   }
 
-  async function asJson(res: Response) {
-    const text = await res.text();
-    try { return JSON.parse(text); }
-    catch {
-      // Non-JSON body: the function didn't run (dev) or an edge/upstream error
-      // returned an HTML/text page (e.g. Cloudflare "error code: 502").
-      const isDev = /^(localhost|127\.|\[::1\])/.test(location.hostname);
-      if (isDev) throw new Error('The conversion service is not available here. It runs on the deployed site (or via `wrangler pages dev`), not in plain dev mode.');
-      const snippet = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
-      throw new Error(`Conversion failed (HTTP ${res.status})${snippet ? ': ' + snippet : ''}. Try again, or a different file/format.`);
-    }
-  }
 
   const MAX_BYTES = 100 * 1024 * 1024;
 
@@ -233,19 +221,18 @@ const accept = from ? `.${from}` : '';
   }
 
   async function convertApi(file: File, inFormat: string, outFormat: string) {
-    // Resolve the hop path (direct or via one intermediate). The worker chains it.
+    // Resolve the hop path (direct or via one intermediate), then run it async:
+    // the client starts each hop and polls, so a slow conversion never holds one
+    // request open long enough for Cloudflare to 502 (the old failure on big PDFs).
     const path = chainPath(inFormat, outFormat) || [inFormat, outFormat];
-    const fd = new FormData();
-    fd.append('inputFormat', inFormat);
-    fd.append('outputFormat', outFormat);
-    fd.append('path', path.join(','));
-    fd.append('file', file);
-    const res = await fetch('/api/cc-job', { method: 'POST', body: fd });
-    const out = await asJson(res);
-    if (!res.ok) throw new Error(out.error || 'Conversion failed.');
-    dlBtn.href = out.downloadUrl;
+    const { convertViaApi } = await import('../lib/ccConvert');
+    const out = await convertViaApi(file, path, (hop, total) => {
+      status.textContent = total > 1 ? `Converting… (step ${hop} of ${total})` : 'Converting…';
+    });
+    dlBtn.href = out.url;
     if (out.filename) dlBtn.setAttribute('download', out.filename);
     dlBtn.classList.remove('hidden');
+    status.textContent = '';
   }
 
   const AUDIO_MIME: Record<string, string> = {
