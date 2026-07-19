@@ -89,12 +89,20 @@ async function runRemote(to: string, ctx: RunCtx): Promise<RunResult> {
   const { convertViaApi } = await import('./ccConvert');
   // Async start-and-poll: a slow conversion never holds one request open long
   // enough for Cloudflare to 502 (the old failure on multi-page PDFs).
-  const { url, filename } = await convertViaApi(file, chainPath(from, to) || [from, to]);
-  const dl = await fetch(url);
-  if (!dl.ok) throw new Error('Could not download the converted file.');
-  const blob = await dl.blob();
+  const out = await convertViaApi(file, chainPath(from, to) || [from, to]);
   const isImg = /^(jpg|jpeg|png|webp|gif|bmp|tiff|svg|ico)$/.test(to);
-  return { files: [{ name: filename || `${baseName(file.name)}.${to}`, blob, kind: isImg ? 'image' : 'file' }], note: `Converted to ${to.toUpperCase()}` };
+  // Multi-page inputs return one file per page; render them all (the chat's
+  // result view offers a "Download all (ZIP)" when there are 2+).
+  const files: RunFile[] = await Promise.all(out.map(async (f, i) => {
+    const name = f.filename || `${baseName(file.name)}-${i + 1}.${to}`;
+    // Fetch via the same-origin worker proxy — the browser can't reliably read
+    // the cross-origin ConvertAPI result URL (CORS/opaque response).
+    const dl = await fetch(`/api/cc-job?download=${encodeURIComponent(f.url)}&name=${encodeURIComponent(name)}`);
+    if (!dl.ok) throw new Error('Could not download the converted file.');
+    return { name, blob: await dl.blob(), kind: isImg ? 'image' as const : 'file' as const };
+  }));
+  const note = files.length > 1 ? `Converted to ${to.toUpperCase()} · ${files.length} pages` : `Converted to ${to.toUpperCase()}`;
+  return { files, note };
 }
 
 // ---------- registry assembly ----------

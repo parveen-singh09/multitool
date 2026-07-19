@@ -229,10 +229,30 @@ const accept = from ? `.${from}` : '';
     const out = await convertViaApi(file, path, (hop, total) => {
       status.textContent = total > 1 ? `Converting… (step ${hop} of ${total})` : 'Converting…';
     });
-    dlBtn.href = out.url;
-    if (out.filename) dlBtn.setAttribute('download', out.filename);
+    if (lastOutUrl) { URL.revokeObjectURL(lastOutUrl); lastOutUrl = null; }
+    // Download through the same-origin worker proxy — the browser can't reliably
+    // fetch/save the cross-origin ConvertAPI result URL (CORS/opaque response).
+    const proxy = (f: { url: string; filename: string }, fallback: string) =>
+      `/api/cc-job?download=${encodeURIComponent(f.url)}&name=${encodeURIComponent(f.filename || fallback)}`;
+    if (out.length === 1) {
+      // Single file: point straight at the proxy; it streams back as an attachment.
+      dlBtn.href = proxy(out[0], `converted.${outFormat}`);
+      dlBtn.setAttribute('download', out[0].filename || `converted.${outFormat}`);
+    } else {
+      // Multi-page result (one file per page): fetch all via proxy, bundle into ZIP.
+      status.textContent = `Zipping ${out.length} files…`;
+      const { makeZip } = await import('../lib/zip');
+      const entries = await Promise.all(out.map(async (f, i) => {
+        const r = await fetch(proxy(f, `page-${i + 1}.${outFormat}`));
+        if (!r.ok) throw new Error('Could not download a converted page.');
+        return { name: f.filename || `page-${i + 1}.${outFormat}`, data: new Uint8Array(await r.arrayBuffer()) };
+      }));
+      lastOutUrl = URL.createObjectURL(makeZip(entries));
+      dlBtn.href = lastOutUrl;
+      dlBtn.setAttribute('download', `${(picked!.name.replace(/\.[^.]+$/, '') || 'converted')}-${outFormat}.zip`);
+    }
     dlBtn.classList.remove('hidden');
-    status.textContent = '';
+    status.textContent = out.length > 1 ? `${out.length} files · ZIP` : '';
   }
 
   const AUDIO_MIME: Record<string, string> = {

@@ -15,15 +15,18 @@ async function asJson(res: Response): Promise<any> {
   }
 }
 
+export type CcFile = { url: string; filename: string };
+
 // Run a source→target conversion along `path` (from chainPath). Resolves to the
-// final file's URL + name. onStep fires per hop so callers can show progress.
+// final hop's file(s) — multi-page inputs (e.g. pdf→jpg) yield one per page.
+// onStep fires per hop so callers can show progress. Chained hops feed the first
+// result file into the next hop as input.
 export async function convertViaApi(
   file: File,
   path: string[],
   onStep?: (hop: number, total: number) => void,
-): Promise<{ url: string; filename: string }> {
-  let inputUrl: string | null = null;
-  let filename = file.name;
+): Promise<CcFile[]> {
+  let files: CcFile[] = [];
   const hops = path.length - 1;
 
   for (let i = 0; i < hops; i++) {
@@ -35,7 +38,7 @@ export async function convertViaApi(
     fd.append('from', from);
     fd.append('to', to);
     if (i === 0) fd.append('file', file);
-    else fd.append('url', inputUrl!);
+    else fd.append('url', files[0].url); // chain from the first result of the prior hop
     const startRes = await fetch('/api/cc-job', { method: 'POST', body: fd });
     const start = await asJson(startRes);
     if (!startRes.ok || !start.jobId) throw new Error(start.error || 'Conversion failed.');
@@ -47,10 +50,10 @@ export async function convertViaApi(
       const pollRes = await fetch(`/api/cc-job?jobId=${encodeURIComponent(start.jobId)}`);
       const p = await asJson(pollRes);
       if (!pollRes.ok) throw new Error(p.error || 'Conversion failed.');
-      if (p.done) { inputUrl = p.url; filename = p.filename || filename; done = true; break; }
+      if (p.done) { files = p.files || []; done = true; break; }
     }
     if (!done) throw new Error('Conversion timed out — try a smaller file or a different format.');
   }
-  if (!inputUrl) throw new Error('Conversion produced no output.');
-  return { url: inputUrl, filename };
+  if (!files.length) throw new Error('Conversion produced no output.');
+  return files;
 }
