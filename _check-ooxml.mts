@@ -7,8 +7,6 @@ import { makeDocx, xmlEscape } from './src/lib/docx.ts';
 import { makeXlsx, colLetter } from './src/lib/xlsx.ts';
 
 const td = new TextDecoder();
-
-// Extract stored (method 0) entries from our ZIP by walking local headers.
 function readZip(buf: Uint8Array): Record<string, string> {
   const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
   const out: Record<string, string> = {};
