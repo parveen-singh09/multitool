@@ -12,6 +12,25 @@ const json = (obj, status = 200) =>
 
 const BASE = 'https://v2.convertapi.com';
 
+// Turn ConvertAPI's raw error body into a plain, user-facing sentence. Their
+// JSON carries a readable "Message"; we unwrap it, prefer a specific
+// invalid-parameter reason when present, and rewrite the most opaque codes.
+function friendlyError(body, pair) {
+  let data;
+  try { data = JSON.parse(body); } catch { data = null; }
+  const p = pair ? ` (${pair})` : '';
+  if (data) {
+    const inv = data.InvalidParameters && Object.values(data.InvalidParameters)[0];
+    const detail = (Array.isArray(inv) ? inv[0] : inv) || data.Message || '';
+    if (data.Code === 5004) return `Nothing to extract${p} — no matching content in the file.`;
+    if (data.Code === 4000) return `Unsupported or invalid file${p}.`;
+    if (data.Code === 5009) return `File expired${p} — attach it again.`;
+    if (detail) return `Failed${p}: ${detail}`;
+  }
+  const plain = body.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100);
+  return `Failed${p}${plain ? ': ' + plain : '.'}`;
+}
+
 // Self-generated job id (32 lowercase alnum) that ties the start to the poll.
 function makeJobId() {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -56,8 +75,7 @@ export async function onRequestPost({ request, env }) {
       body: upstream,
     });
     if (!res.ok) {
-      const msg = await res.text();
-      throw new Error(`Conversion failed (${from}→${to}): ${msg.slice(0, 200)}`);
+      throw new Error(friendlyError(await res.text(), `${from.toUpperCase()} → ${to.toUpperCase()}`));
     }
     return json({ jobId });
   } catch (e) {
@@ -101,8 +119,7 @@ export async function onRequestGet({ request, env }) {
     });
     if (res.status === 202) return json({ done: false }); // still processing
     if (!res.ok) {
-      const msg = await res.text();
-      throw new Error(`Conversion failed: ${msg.slice(0, 200)}`);
+      throw new Error(friendlyError(await res.text()));
     }
     const data = await res.json();
     // Multi-page inputs return one file per page — hand back the whole list.

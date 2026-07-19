@@ -4,6 +4,26 @@ var __name = (target, value) => __defProp(target, "name", { value, configurable:
 // api/cc-job.js
 var json = /* @__PURE__ */ __name((obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } }), "json");
 var BASE = "https://v2.convertapi.com";
+function friendlyError(body, pair) {
+  let data;
+  try {
+    data = JSON.parse(body);
+  } catch {
+    data = null;
+  }
+  const p = pair ? ` (${pair})` : "";
+  if (data) {
+    const inv = data.InvalidParameters && Object.values(data.InvalidParameters)[0];
+    const detail = (Array.isArray(inv) ? inv[0] : inv) || data.Message || "";
+    if (data.Code === 5004) return `Nothing to extract${p} \u2014 no matching content in the file.`;
+    if (data.Code === 4e3) return `Unsupported or invalid file${p}.`;
+    if (data.Code === 5009) return `File expired${p} \u2014 attach it again.`;
+    if (detail) return `Failed${p}: ${detail}`;
+  }
+  const plain = body.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 100);
+  return `Failed${p}${plain ? ": " + plain : "."}`;
+}
+__name(friendlyError, "friendlyError");
 function makeJobId() {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   const bytes = crypto.getRandomValues(new Uint8Array(32));
@@ -40,8 +60,7 @@ async function onRequestPost({ request, env }) {
       body: upstream
     });
     if (!res.ok) {
-      const msg = await res.text();
-      throw new Error(`Conversion failed (${from}\u2192${to}): ${msg.slice(0, 200)}`);
+      throw new Error(friendlyError(await res.text(), `${from.toUpperCase()} \u2192 ${to.toUpperCase()}`));
     }
     return json({ jobId });
   } catch (e) {
@@ -81,8 +100,7 @@ async function onRequestGet({ request, env }) {
     });
     if (res.status === 202) return json({ done: false });
     if (!res.ok) {
-      const msg = await res.text();
-      throw new Error(`Conversion failed: ${msg.slice(0, 200)}`);
+      throw new Error(friendlyError(await res.text()));
     }
     const data = await res.json();
     const files = (data?.Files || []).filter((f) => f?.Url).map((f) => ({ url: f.Url, filename: f.FileName }));
@@ -694,7 +712,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// ../.wrangler/tmp/bundle-m6MekU/middleware-insertion-facade.js
+// ../.wrangler/tmp/bundle-Pt5RJX/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -726,7 +744,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// ../.wrangler/tmp/bundle-m6MekU/middleware-loader.entry.ts
+// ../.wrangler/tmp/bundle-Pt5RJX/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

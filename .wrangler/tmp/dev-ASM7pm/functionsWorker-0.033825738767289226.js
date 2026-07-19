@@ -6,6 +6,27 @@ var __defProp2 = Object.defineProperty;
 var __name2 = /* @__PURE__ */ __name((target, value) => __defProp2(target, "name", { value, configurable: true }), "__name");
 var json = /* @__PURE__ */ __name2((obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } }), "json");
 var BASE = "https://v2.convertapi.com";
+function friendlyError(body, pair) {
+  let data;
+  try {
+    data = JSON.parse(body);
+  } catch {
+    data = null;
+  }
+  const p = pair ? ` (${pair})` : "";
+  if (data) {
+    const inv = data.InvalidParameters && Object.values(data.InvalidParameters)[0];
+    const detail = (Array.isArray(inv) ? inv[0] : inv) || data.Message || "";
+    if (data.Code === 5004) return `Nothing to extract${p} \u2014 no matching content in the file.`;
+    if (data.Code === 4e3) return `Unsupported or invalid file${p}.`;
+    if (data.Code === 5009) return `File expired${p} \u2014 attach it again.`;
+    if (detail) return `Failed${p}: ${detail}`;
+  }
+  const plain = body.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 100);
+  return `Failed${p}${plain ? ": " + plain : "."}`;
+}
+__name(friendlyError, "friendlyError");
+__name2(friendlyError, "friendlyError");
 function makeJobId() {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   const bytes = crypto.getRandomValues(new Uint8Array(32));
@@ -43,8 +64,7 @@ async function onRequestPost({ request, env }) {
       body: upstream
     });
     if (!res.ok) {
-      const msg = await res.text();
-      throw new Error(`Conversion failed (${from}\u2192${to}): ${msg.slice(0, 200)}`);
+      throw new Error(friendlyError(await res.text(), `${from.toUpperCase()} \u2192 ${to.toUpperCase()}`));
     }
     return json({ jobId });
   } catch (e) {
@@ -85,8 +105,7 @@ async function onRequestGet({ request, env }) {
     });
     if (res.status === 202) return json({ done: false });
     if (!res.ok) {
-      const msg = await res.text();
-      throw new Error(`Conversion failed: ${msg.slice(0, 200)}`);
+      throw new Error(friendlyError(await res.text()));
     }
     const data = await res.json();
     const files = (data?.Files || []).filter((f) => f?.Url).map((f) => ({ url: f.Url, filename: f.FileName }));
