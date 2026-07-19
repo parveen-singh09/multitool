@@ -24,6 +24,14 @@ function friendlyError(body, pair) {
   return `Failed${p}${plain ? ": " + plain : "."}`;
 }
 __name(friendlyError, "friendlyError");
+function makeJobId() {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  let s = "";
+  for (const b of bytes) s += chars[b % 36];
+  return s;
+}
+__name(makeJobId, "makeJobId");
 async function onRequestPost({ request, env }) {
   const secret = env.CONVERTAPI_SECRET;
   if (!secret) return json({ error: "Conversion service is not configured." }, 500);
@@ -39,13 +47,14 @@ async function onRequestPost({ request, env }) {
   const file = form.get("file");
   const url = form.get("url");
   if ((!file || typeof file === "string") && !url) return json({ error: "No input provided." }, 400);
+  const jobId = makeJobId();
   try {
     const upstream = new FormData();
     upstream.append("StoreFile", "true");
     const field = to === "gif" ? "Files" : "File";
     if (file && typeof file !== "string") upstream.append(field, file, file.name || `input.${from}`);
     else upstream.append(field, String(url));
-    const res = await fetch(`${BASE}/convert/${from}/to/${to}`, {
+    const res = await fetch(`${BASE}/async/convert/${from}/to/${to}?jobid=${jobId}`, {
       method: "POST",
       headers: { authorization: `Bearer ${secret}` },
       body: upstream
@@ -53,10 +62,7 @@ async function onRequestPost({ request, env }) {
     if (!res.ok) {
       throw new Error(friendlyError(await res.text(), `${from.toUpperCase()} \u2192 ${to.toUpperCase()}`));
     }
-    const data = await res.json();
-    const files = (data?.Files || []).filter((f) => f?.Url).map((f) => ({ url: f.Url, filename: f.FileName }));
-    if (!files.length) throw new Error("Conversion produced no output.");
-    return json({ files });
+    return json({ jobId });
   } catch (e) {
     return json({ error: e.message || "Conversion failed." }, 502);
   }
@@ -86,7 +92,23 @@ async function onRequestGet({ request, env }) {
       }
     });
   }
-  return json({ error: "Missing download url." }, 400);
+  const jobId = params.get("jobId");
+  if (!jobId) return json({ error: "Missing jobId." }, 400);
+  try {
+    const res = await fetch(`${BASE}/async/job/${encodeURIComponent(jobId)}`, {
+      headers: { authorization: `Bearer ${secret}` }
+    });
+    if (res.status === 202) return json({ done: false });
+    if (!res.ok) {
+      throw new Error(friendlyError(await res.text()));
+    }
+    const data = await res.json();
+    const files = (data?.Files || []).filter((f) => f?.Url).map((f) => ({ url: f.Url, filename: f.FileName }));
+    if (files.length) return json({ done: true, files });
+    return json({ done: false });
+  } catch (e) {
+    return json({ error: e.message || "Conversion failed." }, 502);
+  }
 }
 __name(onRequestGet, "onRequestGet");
 
@@ -690,7 +712,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// ../.wrangler/tmp/bundle-HAtCAD/middleware-insertion-facade.js
+// ../.wrangler/tmp/bundle-M9azVK/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -722,7 +744,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// ../.wrangler/tmp/bundle-HAtCAD/middleware-loader.entry.ts
+// ../.wrangler/tmp/bundle-M9azVK/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;
