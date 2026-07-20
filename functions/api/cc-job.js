@@ -3,14 +3,22 @@ const json = (obj, status = 200) =>
 
 const BASE = 'https://v2.convertapi.com';
 
-// Route office->office conversions to our LibreOffice service instead of ConvertAPI, which can't
-// do most legacy/cross-suite office pairs (ppt, odp, xls...). Rule beats a hand-kept pair list:
-// any office input -> any office target LibreOffice can WRITE goes to LO. Non-office targets
-// (pdf, png, txt...) stay on ConvertAPI.
-// ponytail: to add a target, add it here AND to server.py's ALLOWED_TO (+ FILTERS if legacy binary).
+// Route to our self-hosted conversion service (LibreOffice + ffmpeg + dcraw/ImageMagick) for
+// pairs ConvertAPI can't do. MUST mirror server.py's build_plan — if this says yes but the
+// service rejects the pair, the user gets an error instead of a silent ConvertAPI fallback.
+// ponytail: to add a category, extend both this rule AND build_plan in server.py.
 const OFFICE_IN = new Set(['doc', 'docx', 'odt', 'rtf', 'ppt', 'pptx', 'odp', 'pps', 'ppsx', 'potx', 'xls', 'xlsx', 'ods']);
 const LO_OUT = new Set(['ppt', 'pptx', 'doc', 'docx', 'odp', 'odt', 'xls', 'xlsx', 'ods', 'rtf']);
-const useLibreOffice = (from, to) => OFFICE_IN.has(from) && LO_OUT.has(to) && from !== to;
+const SVG_IN = new Set(['wmf', 'emf', 'cdr']);
+const VIDEO_IN = new Set(['ts', 'vob', 'mpeg', 'mpg', 'rmvb', 'm2ts', 'mxf', 'swf', 'wtv', '3gp', 'flv', 'ogv', 'mp4', 'webm', 'mkv', 'mov', 'avi']);
+const VIDEO_OUT = new Set(['mp4', 'webm', 'mkv', 'mov', 'avi']);
+const RAW_IN = new Set(['nef', 'cr2', 'cr3', 'arw', 'dng', 'crw', 'raf', 'rw2', 'orf', 'pef', 'srw']);
+const RAW_OUT = new Set(['jpg', 'png']);
+const useLibreOffice = (from, to) =>
+  (OFFICE_IN.has(from) && LO_OUT.has(to) && from !== to) ||
+  (SVG_IN.has(from) && to === 'svg') ||
+  (VIDEO_IN.has(from) && VIDEO_OUT.has(to) && from !== to) ||
+  (RAW_IN.has(from) && RAW_OUT.has(to));
 
 // A LibreOffice job carries its result URL in the jobId itself (base64url of {url,filename}), so
 // polling is stateless — the service converts synchronously on POST and stores under /out/<id>.
