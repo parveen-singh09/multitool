@@ -20,6 +20,12 @@ const useLibreOffice = (from, to) =>
   (VIDEO_IN.has(from) && VIDEO_OUT.has(to) && from !== to) ||
   (RAW_IN.has(from) && RAW_OUT.has(to));
 
+// Ebook<->ebook runs on a SEPARATE Render service (calibre) so its memory use can't destabilize
+// the main box. Mirror server.py's EBOOK_IN/EBOOK_OUT. pdf excluded (ConvertAPI does ebook->pdf).
+const EBOOK_IN = new Set(['epub', 'mobi', 'azw', 'azw3', 'fb2', 'lit', 'pdb', 'cbr', 'cbz', 'prc', 'htmlz']);
+const EBOOK_OUT = new Set(['epub', 'mobi', 'azw3', 'fb2', 'txt', 'cbz']);
+const useCalibre = (from, to) => EBOOK_IN.has(from) && EBOOK_OUT.has(to) && from !== to;
+
 // A LibreOffice job carries its result URL in the jobId itself (base64url of {url,filename}), so
 // polling is stateless — the service converts synchronously on POST and stores under /out/<id>.
 const b64urlEncode = (s) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -50,9 +56,9 @@ function makeJobId() {
   return s;
 }
 
-async function convertViaLibreOffice(env, from, to, file, url, pair) {
-  const base = String(env.LIBREOFFICE_URL || '').replace(/\/$/, '');
-  const token = env.LIBREOFFICE_TOKEN || '';
+async function convertViaService(base, token, from, to, file, url, pair) {
+  base = String(base || '').replace(/\/$/, '');
+  token = token || '';
   if (!base || !token) throw new Error(`This conversion (${pair}) isn't available right now.`);
 
   let blob, name;
@@ -103,7 +109,16 @@ export async function onRequestPost({ request, env }) {
 
   if (useLibreOffice(from, to)) {
     try {
-      return json(await convertViaLibreOffice(env, from, to, file, url, pair));
+      return json(await convertViaService(env.LIBREOFFICE_URL, env.LIBREOFFICE_TOKEN, from, to, file, url, pair));
+    } catch (e) {
+      return json({ error: e.message || 'Conversion failed.' }, e.status || 502);
+    }
+  }
+
+  if (useCalibre(from, to)) {
+    try {
+      // Calibre box reuses LIBREOFFICE_TOKEN unless a distinct CALIBRE_TOKEN is set.
+      return json(await convertViaService(env.CALIBRE_URL, env.CALIBRE_TOKEN || env.LIBREOFFICE_TOKEN, from, to, file, url, pair));
     } catch (e) {
       return json({ error: e.message || 'Conversion failed.' }, e.status || 502);
     }
@@ -143,9 +158,11 @@ export async function onRequestGet({ request, env }) {
   if (dl) {
     let target;
     try { target = new URL(dl); } catch { return json({ error: 'Bad download url.' }, 400); }
-    let loHost = null;
-    try { loHost = env.LIBREOFFICE_URL ? new URL(env.LIBREOFFICE_URL).hostname : null; } catch {}
-    const ok = /(^|\.)convertapi\.com$/.test(target.hostname) || (loHost && target.hostname === loHost);
+    const svcHosts = [];
+    for (const v of [env.LIBREOFFICE_URL, env.CALIBRE_URL]) {
+      try { if (v) svcHosts.push(new URL(v).hostname); } catch {}
+    }
+    const ok = /(^|\.)convertapi\.com$/.test(target.hostname) || svcHosts.includes(target.hostname);
     if (!ok) return json({ error: 'Forbidden host.' }, 403);
     const name = params.get('name') || 'download';
     const up = await fetch(target.toString());
