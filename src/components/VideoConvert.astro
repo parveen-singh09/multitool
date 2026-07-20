@@ -73,6 +73,16 @@ const accept = from ? `.${from},video/*` : 'video/*';
     setErr(''); picked = file;
     runBtn.disabled = false; dlBtn.classList.add('hidden');
     status.textContent = `${file.name} ready.`;
+    // Hide the input's own format — all other video targets are ffmpeg-compatible.
+    if (target) {
+      const inExt = (file.name.split('.').pop() || '').toLowerCase();
+      let first: HTMLOptionElement | null = null;
+      for (const opt of Array.from(target.options)) {
+        opt.hidden = opt.value === inExt;
+        if (!opt.hidden && !first) first = opt;
+      }
+      if (target.value === inExt && first) target.value = first.value;
+    }
   }
 
   async function convert() {
