@@ -26,12 +26,13 @@ const useLibreOffice = (from, to) =>
   (VECTOR_IN.has(from) && VECTOR_OUT.has(to)) ||
   (VIDEO_IN.has(from) && VIDEO_OUT.has(to) && from !== to) ||
   (RAW_IN.has(from) && RAW_OUT.has(to)) ||
-  (SEVENZIP_IN.has(from) && to === '7z');
+  (SEVENZIP_IN.has(from) && to === '7z') ||
+  (from === 'cbr' && to === 'cbz'); // comic: unar extract RAR -> zip, on main box (not calibre)
 
 // Ebook<->ebook runs on a SEPARATE Render service (calibre) so its memory use can't destabilize
 // the main box. Mirror server.py's EBOOK_IN/EBOOK_OUT. pdf excluded (ConvertAPI does ebook->pdf).
-const EBOOK_IN = new Set(['epub', 'mobi', 'azw', 'azw3', 'fb2', 'lit', 'pdb', 'cbr', 'cbz', 'prc', 'htmlz']);
-const EBOOK_OUT = new Set(['epub', 'mobi', 'azw3', 'fb2', 'txt', 'cbz']);
+const EBOOK_IN = new Set(['epub', 'mobi', 'azw', 'azw3', 'fb2', 'lit', 'pdb', 'prc', 'htmlz']);
+const EBOOK_OUT = new Set(['epub', 'mobi', 'azw3', 'fb2', 'txt']);
 const useCalibre = (from, to) => EBOOK_IN.has(from) && EBOOK_OUT.has(to) && from !== to;
 
 // A LibreOffice job carries its result URL in the jobId itself (base64url of {url,filename}), so

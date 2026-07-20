@@ -96,8 +96,8 @@ const VIDEO_SVC_OUT = ['mp4', 'mkv', 'mov', 'avi'];
 const RAW_IN = ['nef', 'cr2', 'cr3', 'arw', 'dng', 'crw', 'raf', 'rw2', 'orf', 'pef', 'srw'];
 const RAW_OUT = ['jpg', 'png'];
 const SEVENZIP_IN = ['zip', 'rar', 'tar', 'gz', 'tgz', 'bz2', 'xz', 'cab', 'iso'];
-const EBOOK_IN = ['epub', 'mobi', 'azw', 'azw3', 'fb2', 'lit', 'pdb', 'cbr', 'cbz', 'prc', 'htmlz'];
-const EBOOK_OUT = ['epub', 'mobi', 'azw3', 'fb2', 'txt', 'cbz'];
+const EBOOK_IN = ['epub', 'mobi', 'azw', 'azw3', 'fb2', 'lit', 'pdb', 'prc', 'htmlz'];
+const EBOOK_OUT = ['epub', 'mobi', 'azw3', 'fb2', 'txt'];
 
 function selfHostedTargets(e: string): string[] {
   const out: string[] = [];
@@ -107,6 +107,7 @@ function selfHostedTargets(e: string): string[] {
   if (RAW_IN.includes(e)) out.push(...RAW_OUT);
   if (SEVENZIP_IN.includes(e)) out.push('7z');
   if (EBOOK_IN.includes(e)) out.push(...EBOOK_OUT);
+  if (e === 'cbr') out.push('cbz'); // comic: unar extract RAR -> zip, main box
   return out;
 }
 
