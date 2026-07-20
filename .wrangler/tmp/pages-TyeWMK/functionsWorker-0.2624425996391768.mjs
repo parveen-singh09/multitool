@@ -4,6 +4,16 @@ var __name = (target, value) => __defProp(target, "name", { value, configurable:
 // api/cc-job.js
 var json = /* @__PURE__ */ __name((obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } }), "json");
 var BASE = "https://v2.convertapi.com";
+var LO_PAIRS = /* @__PURE__ */ new Set([
+  "pptx>ppt",
+  "docx>doc",
+  "xlsx>xls",
+  "pptx>odp",
+  "odp>pptx",
+  "pps>pptx"
+]);
+var b64urlEncode = /* @__PURE__ */ __name((s) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""), "b64urlEncode");
+var b64urlDecode = /* @__PURE__ */ __name((s) => decodeURIComponent(escape(atob(s.replace(/-/g, "+").replace(/_/g, "/")))), "b64urlDecode");
 function friendlyError(body, pair) {
   let data;
   try {
@@ -33,9 +43,46 @@ function makeJobId() {
   return s;
 }
 __name(makeJobId, "makeJobId");
+async function convertViaLibreOffice(env, from, to, file, url, pair) {
+  const base = String(env.LIBREOFFICE_URL || "").replace(/\/$/, "");
+  const token = env.LIBREOFFICE_TOKEN || "";
+  if (!base || !token) throw new Error(`This conversion (${pair}) isn't available right now.`);
+  let blob, name;
+  if (file && typeof file !== "string") {
+    blob = file;
+    name = file.name || `input.${from}`;
+  } else {
+    const src = await fetch(String(url));
+    if (!src.ok) throw new Error(`Couldn't read the input file (${pair}).`);
+    blob = await src.blob();
+    name = `input.${from}`;
+  }
+  const upstream = new FormData();
+  upstream.append("to", to);
+  upstream.append("file", blob, name);
+  const res = await fetch(`${base}/convert`, {
+    method: "POST",
+    headers: { "X-Auth-Token": token },
+    body: upstream
+  });
+  const body = await res.text();
+  if (!res.ok) {
+    let msg = body;
+    try {
+      msg = JSON.parse(body).error || body;
+    } catch {
+    }
+    const err = new Error(`Failed (${pair}): ${msg}`);
+    err.status = res.status >= 400 && res.status < 500 ? 400 : 502;
+    throw err;
+  }
+  const out = JSON.parse(body);
+  const dlUrl = `${base}/out/${out.id}/${encodeURIComponent(out.filename)}`;
+  return { jobId: "lo_" + b64urlEncode(JSON.stringify({ url: dlUrl, filename: out.filename })) };
+}
+__name(convertViaLibreOffice, "convertViaLibreOffice");
 async function onRequestPost({ request, env }) {
   const secret = env.CONVERTAPI_SECRET;
-  if (!secret) return json({ error: "Conversion service is not configured." }, 500);
   let form;
   try {
     form = await request.formData();
@@ -48,6 +95,15 @@ async function onRequestPost({ request, env }) {
   const file = form.get("file");
   const url = form.get("url");
   if ((!file || typeof file === "string") && !url) return json({ error: "No input provided." }, 400);
+  const pair = `${from.toUpperCase()} \u2192 ${to.toUpperCase()}`;
+  if (LO_PAIRS.has(`${from}>${to}`)) {
+    try {
+      return json(await convertViaLibreOffice(env, from, to, file, url, pair));
+    } catch (e) {
+      return json({ error: e.message || "Conversion failed." }, e.status || 502);
+    }
+  }
+  if (!secret) return json({ error: "Conversion service is not configured." }, 500);
   const jobId = makeJobId();
   try {
     const upstream = new FormData();
@@ -61,7 +117,8 @@ async function onRequestPost({ request, env }) {
       body: upstream
     });
     if (!res.ok) {
-      throw new Error(friendlyError(await res.text(), `${from.toUpperCase()} \u2192 ${to.toUpperCase()}`));
+      const status = res.status >= 400 && res.status < 500 ? 400 : 502;
+      return json({ error: friendlyError(await res.text(), pair) }, status);
     }
     return json({ jobId });
   } catch (e) {
@@ -70,8 +127,6 @@ async function onRequestPost({ request, env }) {
 }
 __name(onRequestPost, "onRequestPost");
 async function onRequestGet({ request, env }) {
-  const secret = env.CONVERTAPI_SECRET;
-  if (!secret) return json({ error: "Conversion service is not configured." }, 500);
   const params = new URL(request.url).searchParams;
   const dl = params.get("download");
   if (dl) {
@@ -81,7 +136,13 @@ async function onRequestGet({ request, env }) {
     } catch {
       return json({ error: "Bad download url." }, 400);
     }
-    if (!/(^|\.)convertapi\.com$/.test(target.hostname)) return json({ error: "Forbidden host." }, 403);
+    let loHost = null;
+    try {
+      loHost = env.LIBREOFFICE_URL ? new URL(env.LIBREOFFICE_URL).hostname : null;
+    } catch {
+    }
+    const ok = /(^|\.)convertapi\.com$/.test(target.hostname) || loHost && target.hostname === loHost;
+    if (!ok) return json({ error: "Forbidden host." }, 403);
     const name = params.get("name") || "download";
     const up = await fetch(target.toString());
     if (!up.ok) return json({ error: "Could not fetch the converted file." }, 502);
@@ -95,6 +156,16 @@ async function onRequestGet({ request, env }) {
   }
   const jobId = params.get("jobId");
   if (!jobId) return json({ error: "Missing jobId." }, 400);
+  if (jobId.startsWith("lo_")) {
+    try {
+      const { url, filename } = JSON.parse(b64urlDecode(jobId.slice(3)));
+      return json({ done: true, files: [{ url, filename }] });
+    } catch {
+      return json({ error: "Invalid job." }, 400);
+    }
+  }
+  const secret = env.CONVERTAPI_SECRET;
+  if (!secret) return json({ error: "Conversion service is not configured." }, 500);
   try {
     const res = await fetch(`${BASE}/async/job/${encodeURIComponent(jobId)}`, {
       headers: { authorization: `Bearer ${secret}` }
@@ -194,7 +265,7 @@ ${text}
 }
 __name(onRequestPost2, "onRequestPost");
 
-// ../.wrangler/tmp/pages-w7OYGc/functionsRoutes-0.6562101081283592.mjs
+// ../.wrangler/tmp/pages-TyeWMK/functionsRoutes-0.9620980698685337.mjs
 var routes = [
   {
     routePath: "/api/cc-job",
@@ -713,7 +784,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// ../.wrangler/tmp/bundle-UYXLtl/middleware-insertion-facade.js
+// ../.wrangler/tmp/bundle-ia6wzT/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -745,7 +816,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// ../.wrangler/tmp/bundle-UYXLtl/middleware-loader.entry.ts
+// ../.wrangler/tmp/bundle-ia6wzT/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;
@@ -845,4 +916,4 @@ export {
   __INTERNAL_WRANGLER_MIDDLEWARE__,
   middleware_loader_entry_default as default
 };
-//# sourceMappingURL=functionsWorker-0.8990883598598645.mjs.map
+//# sourceMappingURL=functionsWorker-0.2624425996391768.mjs.map
