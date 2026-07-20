@@ -13,7 +13,8 @@ const PRES_IN = new Set(['ppt', 'pptx', 'odp', 'pps', 'ppsx', 'potx']), PRES_OUT
 const SHEET_IN = new Set(['xls', 'xlsx', 'ods']), SHEET_OUT = new Set(['xls', 'xlsx', 'ods']);
 const officeOk = (f, t) => f !== t && (
   (WORD_IN.has(f) && WORD_OUT.has(t)) || (PRES_IN.has(f) && PRES_OUT.has(t)) || (SHEET_IN.has(f) && SHEET_OUT.has(t)));
-const SVG_IN = new Set(['wmf', 'emf', 'cdr']);
+const VECTOR_IN = new Set(['wmf', 'emf', 'cdr']);
+const VECTOR_OUT = new Set(['svg', 'png', 'pdf', 'jpg']);
 // swf excluded: ffmpeg can't demux SWF vector animation (verified fail on all real samples).
 const VIDEO_IN = new Set(['ts', 'vob', 'mpeg', 'mpg', 'rmvb', 'm2ts', 'mxf', 'wtv', '3gp', 'flv', 'ogv', 'mp4', 'webm', 'mkv', 'mov', 'avi']);
 const VIDEO_OUT = new Set(['mp4', 'mkv', 'mov', 'avi']); // webm excluded: VP9 transcode times out on 0.1-CPU tier
@@ -22,7 +23,7 @@ const RAW_OUT = new Set(['jpg', 'png']);
 const SEVENZIP_IN = new Set(['zip', 'rar', 'tar', 'gz', 'tgz', 'bz2', 'xz', 'cab', 'iso']); // -> 7z (extract + re-archive)
 const useLibreOffice = (from, to) =>
   officeOk(from, to) ||
-  (SVG_IN.has(from) && to === 'svg') ||
+  (VECTOR_IN.has(from) && VECTOR_OUT.has(to)) ||
   (VIDEO_IN.has(from) && VIDEO_OUT.has(to) && from !== to) ||
   (RAW_IN.has(from) && RAW_OUT.has(to)) ||
   (SEVENZIP_IN.has(from) && to === '7z');

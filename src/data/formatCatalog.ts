@@ -89,7 +89,8 @@ function officeTargets(e: string): string[] {
   if (SHEET_IN.includes(e)) return SHEET_OUT;
   return [];
 }
-const SVG_IN = ['wmf', 'emf', 'cdr'];
+const VECTOR_IN = ['wmf', 'emf', 'cdr'];
+const VECTOR_OUT = ['svg', 'png', 'pdf', 'jpg'];
 const VIDEO_SVC_IN = ['ts', 'vob', 'mpeg', 'mpg', 'rmvb', 'm2ts', 'mxf', 'wtv', '3gp', 'flv', 'ogv', 'mp4', 'webm', 'mkv', 'mov', 'avi']; // swf excluded: ffmpeg can't demux SWF
 const VIDEO_SVC_OUT = ['mp4', 'mkv', 'mov', 'avi'];
 const RAW_IN = ['nef', 'cr2', 'cr3', 'arw', 'dng', 'crw', 'raf', 'rw2', 'orf', 'pef', 'srw'];
@@ -101,7 +102,7 @@ const EBOOK_OUT = ['epub', 'mobi', 'azw3', 'fb2', 'txt', 'cbz'];
 function selfHostedTargets(e: string): string[] {
   const out: string[] = [];
   out.push(...officeTargets(e));
-  if (SVG_IN.includes(e)) out.push('svg');
+  if (VECTOR_IN.includes(e)) out.push(...VECTOR_OUT);
   if (VIDEO_SVC_IN.includes(e)) out.push(...VIDEO_SVC_OUT);
   if (RAW_IN.includes(e)) out.push(...RAW_OUT);
   if (SEVENZIP_IN.includes(e)) out.push('7z');
