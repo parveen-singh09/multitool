@@ -1013,26 +1013,6 @@ export const tools: Tool[] = [
     icon: 'M3 3h18v18H3zM3 9h18M9 21V9M15 9v12',
   },
   {
-    slug: 'dwg-to-dxf',
-    name: 'DWG to DXF',
-    tagline: 'Convert AutoCAD DWG to interchange DXF.',
-    description:
-      'Free online DWG to DXF converter. Convert AutoCAD DWG drawings to the interchange DXF format that more CAD programs can open.',
-    category: 'Converters',
-    keywords: ['dwg to dxf', 'convert dwg to dxf', 'dwg to dxf online', 'autocad dwg to dxf', 'dxf converter'],
-    icon: 'M3 3h18v18H3zM3 9h18M9 21V9M15 9v12',
-  },
-  {
-    slug: 'dxf-to-dwg',
-    name: 'DXF to DWG',
-    tagline: 'Convert DXF back to native DWG.',
-    description:
-      'Free online DXF to DWG converter. Convert DXF interchange files back to native AutoCAD DWG drawings.',
-    category: 'Converters',
-    keywords: ['dxf to dwg', 'convert dxf to dwg', 'dxf to dwg online', 'dxf to autocad', 'dwg converter'],
-    icon: 'M3 3h18v18H3zM3 9h18M9 21V9M15 9v12',
-  },
-  {
     slug: 'dwg-to-pdf',
     name: 'DWG to PDF',
     tagline: 'Export AutoCAD DWG drawings to PDF.',
@@ -1060,16 +1040,6 @@ export const tools: Tool[] = [
       'Free online DWG to SVG converter. Convert AutoCAD DWG drawings to scalable SVG vector graphics for the web.',
     category: 'Converters',
     keywords: ['dwg to svg', 'convert dwg to svg', 'dwg to svg online', 'autocad to svg', 'svg converter'],
-    icon: 'M3 3h18v18H3zM3 9h18M9 21V9M15 9v12',
-  },
-  {
-    slug: 'dwf-to-dwg',
-    name: 'DWF to DWG',
-    tagline: 'Convert Autodesk DWF to editable DWG.',
-    description:
-      'Free online DWF to DWG converter. Convert Autodesk DWF design web files to editable AutoCAD DWG drawings.',
-    category: 'Converters',
-    keywords: ['dwf to dwg', 'convert dwf to dwg', 'dwf to dwg online', 'autodesk dwf to dwg', 'dwg converter'],
     icon: 'M3 3h18v18H3zM3 9h18M9 21V9M15 9v12',
   },
   {

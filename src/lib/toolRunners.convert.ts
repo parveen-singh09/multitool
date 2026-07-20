@@ -114,7 +114,7 @@ const SEO_SLUGS = [
   'woff-to-ttf', 'woff2-to-ttf', 'ttf-to-eot',
   'rar-to-zip', '7z-to-zip', 'tar-to-zip', 'gz-to-zip', 'tar-gz-to-zip',
   'iso-to-zip', 'cab-to-zip', 'deb-to-zip', 'bz2-to-zip', 'zip-to-7z', 'zip-to-tar', 'rar-to-7z',
-  'dwg-to-dxf', 'dxf-to-dwg', 'dwg-to-pdf', 'dxf-to-pdf', 'dwg-to-svg', 'dwf-to-dwg',
+  'dwg-to-pdf', 'dxf-to-pdf', 'dwg-to-svg',
   'doc-to-docx', 'doc-to-pdf', 'docx-to-odt', 'odt-to-docx', 'odt-to-pdf',
   'rtf-to-docx', 'pages-to-docx', 'pages-to-pdf', 'djvu-to-pdf', 'wpd-to-docx',
   'mobi-to-epub', 'epub-to-mobi', 'azw3-to-epub', 'epub-to-azw3', 'azw-to-epub',
