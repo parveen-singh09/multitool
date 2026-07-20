@@ -75,16 +75,6 @@ function directApiTargets(e: string): string[] {
   return (CONVERT_MATRIX[e] || []).filter((t) => t !== 'zip' && t !== 'json' && t !== 'fdf' && t !== e);
 }
 
-const COMPAT_TARGETS: Record<string, string[]> = {
-  Document: ['Document', 'Ebook', 'Image', 'Presentation', 'Spreadsheet', 'Vector'],
-  Ebook: ['Ebook', 'Document', 'Image'],
-  Image: ['Image', 'Document', 'Vector'],
-  Presentation: ['Presentation', 'Document', 'Image'],
-  Spreadsheet: ['Spreadsheet', 'Document'],
-  Vector: ['Vector', 'Image', 'Document'],
-  CAD: ['CAD', 'Vector', 'Image', 'Document'],
-};
-
 export function targetsFor(ext: string): string[] {
   const e = ext.toLowerCase().split('.').pop() || ext;
   const cat = CAT_OF[e];
@@ -92,17 +82,8 @@ export function targetsFor(ext: string): string[] {
   if (cat === 'Audio') return LOCAL_AUDIO.filter((t) => t !== e);
   if (cat === 'Font') return LOCAL_FONT.filter((t) => t !== e);
   if (cat === 'Archive') return LOCAL_ARCHIVE.filter((t) => t !== e);
-  // ponytail: mobi only offers direct 1-hop conversions — chained targets (e.g. rtf via pdf) fail
-  if (e === 'mobi') return directApiTargets(e);
-  const reach = new Set(directApiTargets(e));
-  const okCats = cat ? (COMPAT_TARGETS[cat] || []) : [];
-  for (const m of [...reach])
-    for (const t of directApiTargets(m)) {
-      const tc = CAT_OF[t];
-      if (!okCats || (tc && okCats.includes(tc))) reach.add(t);
-    }
-  reach.delete(e);
-  return [...reach];
+  // ponytail: direct 1-hop only — invented multi-hop chains (svg→pdf→xml, mobi→pdf→rtf) 502 or produce garbage
+  return directApiTargets(e);
 }
 
 export function chainPath(from: string, to: string): string[] | null {
