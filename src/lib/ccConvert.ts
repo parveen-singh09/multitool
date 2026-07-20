@@ -24,15 +24,18 @@ function xhrFetch(url: string, init?: RequestInit): Promise<Response> {
   });
 }
 
-// Cloudflare's edge can also transiently 502/503/504 the Function, so retry a few times before giving up.
+// A self-hosted converter on a free tier can sleep and take ~50s to cold-start (returns fast 502s
+// while booting), and Cloudflare's edge can also transiently 502/503/504. Retry across a ~70s
+// window so a waking service succeeds instead of showing an error after a few seconds.
+const RETRY_SLEEPS = [1000, 2000, 4000, 5000, 5000, 5000, 5000, 5000, 5000, 8000, 8000, 8000, 8000]; // ~69s total
 async function fetchJson(input: string, init?: RequestInit): Promise<{ res: Response; data: any }> {
   let lastErr: unknown;
-  for (let attempt = 0; attempt < 4; attempt++) {
+  for (let attempt = 0; attempt <= RETRY_SLEEPS.length; attempt++) {
     const res = await xhrFetch(input, init);
     if (res.status >= 502 && res.status <= 504) {
       lastErr = new Error('The conversion service is temporarily unavailable. Please try again in a moment.');
-      await sleep(1000 * (attempt + 1));
-      continue;
+      if (attempt < RETRY_SLEEPS.length) { await sleep(RETRY_SLEEPS[attempt]); continue; }
+      break;
     }
     return { res, data: await asJson(res) };
   }
