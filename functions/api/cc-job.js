@@ -11,7 +11,7 @@ const OFFICE_IN = new Set(['doc', 'docx', 'odt', 'rtf', 'ppt', 'pptx', 'odp', 'p
 const LO_OUT = new Set(['ppt', 'pptx', 'doc', 'docx', 'odp', 'odt', 'xls', 'xlsx', 'ods', 'rtf']);
 const SVG_IN = new Set(['wmf', 'emf', 'cdr']);
 const VIDEO_IN = new Set(['ts', 'vob', 'mpeg', 'mpg', 'rmvb', 'm2ts', 'mxf', 'swf', 'wtv', '3gp', 'flv', 'ogv', 'mp4', 'webm', 'mkv', 'mov', 'avi']);
-const VIDEO_OUT = new Set(['mp4', 'webm', 'mkv', 'mov', 'avi']);
+const VIDEO_OUT = new Set(['mp4', 'mkv', 'mov', 'avi']); // webm excluded: VP9 transcode times out on 0.1-CPU tier
 const RAW_IN = new Set(['nef', 'cr2', 'cr3', 'arw', 'dng', 'crw', 'raf', 'rw2', 'orf', 'pef', 'srw']);
 const RAW_OUT = new Set(['jpg', 'png']);
 const useLibreOffice = (from, to) =>
