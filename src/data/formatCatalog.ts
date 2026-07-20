@@ -58,7 +58,7 @@ export const FORMAT_CATEGORIES: FormatCategory[] = [
   },
   {
     label: 'Archive',
-    formats: ['zip', 'tar', 'tgz', '7z', 'rar', 'bz2', 'xz', 'cab', 'iso', 'deb'],
+    formats: ['zip', 'tar', 'tgz', 'gz', '7z', 'rar', 'bz2', 'xz', 'cab', 'iso', 'deb'],
   },
 ];
 
@@ -98,6 +98,8 @@ const RAW_OUT = ['jpg', 'png'];
 const SEVENZIP_IN = ['zip', 'rar', 'tar', 'gz', 'tgz', 'bz2', 'xz', 'cab', 'iso'];
 const EBOOK_IN = ['epub', 'mobi', 'azw', 'azw3', 'fb2', 'lit', 'pdb', 'prc', 'htmlz'];
 const EBOOK_OUT = ['epub', 'mobi', 'azw3', 'fb2', 'txt'];
+// Extra LibreOffice pairs ConvertAPI can't do; mirror server.py EXTRA_LO + cc-job.js.
+const EXTRA_LO: Record<string, string[]> = { wpd: ['docx'], ods: ['csv'], svg: ['eps'], eps: ['svg'] };
 
 function selfHostedTargets(e: string): string[] {
   const out: string[] = [];
@@ -108,6 +110,7 @@ function selfHostedTargets(e: string): string[] {
   if (SEVENZIP_IN.includes(e)) out.push('7z');
   if (EBOOK_IN.includes(e)) out.push(...EBOOK_OUT);
   if (e === 'cbr') out.push('cbz'); // comic: unar extract RAR -> zip, main box
+  if (EXTRA_LO[e]) out.push(...EXTRA_LO[e]);
   return out;
 }
 

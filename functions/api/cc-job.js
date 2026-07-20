@@ -21,13 +21,16 @@ const VIDEO_OUT = new Set(['mp4', 'mkv', 'mov', 'avi']); // webm excluded: VP9 t
 const RAW_IN = new Set(['nef', 'cr2', 'cr3', 'arw', 'dng', 'crw', 'raf', 'rw2', 'orf', 'pef', 'srw']);
 const RAW_OUT = new Set(['jpg', 'png']);
 const SEVENZIP_IN = new Set(['zip', 'rar', 'tar', 'gz', 'tgz', 'bz2', 'xz', 'cab', 'iso']); // -> 7z (extract + re-archive)
+// Extra LibreOffice pairs ConvertAPI can't do; mirror server.py EXTRA_LO.
+const EXTRA_LO = new Set(['wpd>docx', 'ods>csv', 'svg>eps', 'eps>svg']);
 const useLibreOffice = (from, to) =>
   officeOk(from, to) ||
   (VECTOR_IN.has(from) && VECTOR_OUT.has(to)) ||
   (VIDEO_IN.has(from) && VIDEO_OUT.has(to) && from !== to) ||
   (RAW_IN.has(from) && RAW_OUT.has(to)) ||
   (SEVENZIP_IN.has(from) && to === '7z') ||
-  (from === 'cbr' && to === 'cbz'); // comic: unar extract RAR -> zip, on main box (not calibre)
+  (from === 'cbr' && to === 'cbz') || // comic: unar extract RAR -> zip, on main box (not calibre)
+  EXTRA_LO.has(`${from}>${to}`);
 
 // Ebook<->ebook runs on a SEPARATE Render service (calibre) so its memory use can't destabilize
 // the main box. Mirror server.py's EBOOK_IN/EBOOK_OUT. pdf excluded (ConvertAPI does ebook->pdf).

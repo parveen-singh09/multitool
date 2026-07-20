@@ -112,6 +112,12 @@ async function readArchive(file: File): Promise<UnzipEntry[]> {
     if (native === 'tar') return readTar(new Uint8Array(buf));
     return readTar(await gunzip(new Uint8Array(buf)));
   }
+  // Plain single-file gzip (foo.txt.gz), not a .tar.gz: gunzip yields one file named sans .gz.
+  const lower = file.name.toLowerCase();
+  if (lower.endsWith('.gz') && !lower.endsWith('.tar.gz')) {
+    const data = await gunzip(new Uint8Array(await file.arrayBuffer()));
+    return [{ name: file.name.replace(/\.gz$/i, '') || 'file', data }];
+  }
   if (isExtractOnly(file.name)) return extractViaLibarchive(file);
   throw new Error(`Unsupported archive: ${file.name}`);
 }
