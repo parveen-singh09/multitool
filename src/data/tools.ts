@@ -213,16 +213,6 @@ export const tools: Tool[] = [
     icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
   },
   {
-    slug: 'swf-to-mp4',
-    name: 'SWF to MP4',
-    tagline: 'Convert Flash SWF to MP4 video.',
-    description:
-      'Free online SWF to MP4 converter. Convert legacy Flash SWF animations to modern MP4 video.',
-    category: 'Audio & Video',
-    keywords: ['swf to mp4', 'convert swf to mp4', 'swf to mp4 online', 'flash to mp4', 'mp4 converter'],
-    icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
-  },
-  {
     slug: 'wtv-to-mp4',
     name: 'WTV to MP4',
     tagline: 'Convert Windows Media Center WTV to MP4.',

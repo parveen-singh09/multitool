@@ -109,7 +109,7 @@ const SEO_SLUGS = [
   'webm-to-mp4', 'mp4-to-webm', 'avi-to-mp4', 'flv-to-mp4', 'mp4-to-mkv',
   'mkv-to-webm', 'mov-to-webm', 'mp4-to-mov', 'mp4-to-avi', '3gp-to-mp4',
   'ts-to-mp4', 'vob-to-mp4', 'mpeg-to-mp4', 'rmvb-to-mp4', 'm2ts-to-mp4',
-  'mxf-to-mp4', 'swf-to-mp4', 'wtv-to-mp4',
+  'mxf-to-mp4', 'wtv-to-mp4',
   'ttf-to-woff', 'ttf-to-woff2', 'otf-to-ttf', 'otf-to-woff', 'otf-to-woff2',
   'woff-to-ttf', 'woff2-to-ttf', 'ttf-to-eot',
   'rar-to-zip', '7z-to-zip', 'tar-to-zip', 'gz-to-zip', 'tar-gz-to-zip',

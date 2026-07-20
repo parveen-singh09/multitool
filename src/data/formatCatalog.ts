@@ -90,7 +90,7 @@ function officeTargets(e: string): string[] {
   return [];
 }
 const SVG_IN = ['wmf', 'emf', 'cdr'];
-const VIDEO_SVC_IN = ['ts', 'vob', 'mpeg', 'mpg', 'rmvb', 'm2ts', 'mxf', 'swf', 'wtv', '3gp', 'flv', 'ogv', 'mp4', 'webm', 'mkv', 'mov', 'avi'];
+const VIDEO_SVC_IN = ['ts', 'vob', 'mpeg', 'mpg', 'rmvb', 'm2ts', 'mxf', 'wtv', '3gp', 'flv', 'ogv', 'mp4', 'webm', 'mkv', 'mov', 'avi']; // swf excluded: ffmpeg can't demux SWF
 const VIDEO_SVC_OUT = ['mp4', 'mkv', 'mov', 'avi'];
 const RAW_IN = ['nef', 'cr2', 'cr3', 'arw', 'dng', 'crw', 'raf', 'rw2', 'orf', 'pef', 'srw'];
 const RAW_OUT = ['jpg', 'png'];

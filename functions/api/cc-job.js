@@ -14,7 +14,8 @@ const SHEET_IN = new Set(['xls', 'xlsx', 'ods']), SHEET_OUT = new Set(['xls', 'x
 const officeOk = (f, t) => f !== t && (
   (WORD_IN.has(f) && WORD_OUT.has(t)) || (PRES_IN.has(f) && PRES_OUT.has(t)) || (SHEET_IN.has(f) && SHEET_OUT.has(t)));
 const SVG_IN = new Set(['wmf', 'emf', 'cdr']);
-const VIDEO_IN = new Set(['ts', 'vob', 'mpeg', 'mpg', 'rmvb', 'm2ts', 'mxf', 'swf', 'wtv', '3gp', 'flv', 'ogv', 'mp4', 'webm', 'mkv', 'mov', 'avi']);
+// swf excluded: ffmpeg can't demux SWF vector animation (verified fail on all real samples).
+const VIDEO_IN = new Set(['ts', 'vob', 'mpeg', 'mpg', 'rmvb', 'm2ts', 'mxf', 'wtv', '3gp', 'flv', 'ogv', 'mp4', 'webm', 'mkv', 'mov', 'avi']);
 const VIDEO_OUT = new Set(['mp4', 'mkv', 'mov', 'avi']); // webm excluded: VP9 transcode times out on 0.1-CPU tier
 const RAW_IN = new Set(['nef', 'cr2', 'cr3', 'arw', 'dng', 'crw', 'raf', 'rw2', 'orf', 'pef', 'srw']);
 const RAW_OUT = new Set(['jpg', 'png']);
