@@ -318,7 +318,8 @@ const accept = from ? `.${from}` : '';
     status.textContent = 'Converting…';
     const buf = await file.arrayBuffer();
     const font = createFont(buf, { type: inType as any, hinting: true, kerning: true });
-    const out = font.write({ type: outFormat as any, hinting: true, kerning: true });
+    // ponytail: no hinting/kerning on write — they make fonteditor re-serialize TTF in a way the woff2 encoder rejects (0 bytes)
+    const out = font.write({ type: outFormat as any });
     const data = out instanceof ArrayBuffer ? new Uint8Array(out) : (out as Uint8Array);
     offerDownload(data, FONT_MIME[outFormat] || 'application/octet-stream', outFormat);
   }
