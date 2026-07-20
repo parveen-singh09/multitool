@@ -203,7 +203,9 @@ const accept = from ? `.${from}` : '';
       const backend = backendFor(inFormat);
       if (backend === 'ffmpeg') await convertMedia(picked, inFormat, outFormat);
       else if (backend === 'font') await convertFont(picked, outFormat);
-      else if (backend === 'archive') await convertArchiveFile(picked, inFormat, outFormat);
+      // 7z output can't be written in the browser (archive.ts writes only zip/tar/tgz) — send to
+      // the API, which routes it to the self-hosted p7zip service. Other archive targets stay local.
+      else if (backend === 'archive' && outFormat !== '7z') await convertArchiveFile(picked, inFormat, outFormat);
       else await convertApi(picked, inFormat, outFormat);
     } catch (e) {
       setErr((e as Error).message);
