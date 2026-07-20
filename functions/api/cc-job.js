@@ -3,14 +3,14 @@ const json = (obj, status = 200) =>
 
 const BASE = 'https://v2.convertapi.com';
 
-// Pairs ConvertAPI can't do that our LibreOffice service can — legacy binary office formats and
-// cross-suite presentation formats missing from ConvertAPI's matrix.
-// ponytail: explicit allowlist — add a pair when ConvertAPI 400s "Unsupported conversion" and
-// `soffice --convert-to <to>` handles it. server.py's ALLOWED_TO must also include <to>.
-const LO_PAIRS = new Set([
-  'pptx>ppt', 'docx>doc', 'xlsx>xls',
-  'pptx>odp', 'odp>pptx', 'pps>pptx',
-]);
+// Route office->office conversions to our LibreOffice service instead of ConvertAPI, which can't
+// do most legacy/cross-suite office pairs (ppt, odp, xls...). Rule beats a hand-kept pair list:
+// any office input -> any office target LibreOffice can WRITE goes to LO. Non-office targets
+// (pdf, png, txt...) stay on ConvertAPI.
+// ponytail: to add a target, add it here AND to server.py's ALLOWED_TO (+ FILTERS if legacy binary).
+const OFFICE_IN = new Set(['doc', 'docx', 'odt', 'rtf', 'ppt', 'pptx', 'odp', 'pps', 'ppsx', 'potx', 'xls', 'xlsx', 'ods']);
+const LO_OUT = new Set(['ppt', 'pptx', 'doc', 'docx', 'odp', 'odt', 'xls', 'xlsx', 'ods', 'rtf']);
+const useLibreOffice = (from, to) => OFFICE_IN.has(from) && LO_OUT.has(to) && from !== to;
 
 // A LibreOffice job carries its result URL in the jobId itself (base64url of {url,filename}), so
 // polling is stateless — the service converts synchronously on POST and stores under /out/<id>.
@@ -93,7 +93,7 @@ export async function onRequestPost({ request, env }) {
 
   const pair = `${from.toUpperCase()} → ${to.toUpperCase()}`;
 
-  if (LO_PAIRS.has(`${from}>${to}`)) {
+  if (useLibreOffice(from, to)) {
     try {
       return json(await convertViaLibreOffice(env, from, to, file, url, pair));
     } catch (e) {
