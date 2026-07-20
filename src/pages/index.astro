@@ -582,6 +582,8 @@ const catStyle: Record<string, { bg: string; ring: string; fg: string; icon: str
       } else {
         formats = FORMAT_CATEGORIES.find((c) => c.label === activeCat)?.formats || [];
       }
+      // Drop formats nothing can convert (no valid targets) instead of showing them grayed out.
+      formats = formats.filter((f) => catTargetsFor(f).length);
       if (!formats.length) {
         const empty = document.createElement('div');
         empty.className = 'fmt-chips-empty';
@@ -595,7 +597,6 @@ const catStyle: Record<string, { bg: string; ring: string; fg: string; icon: str
         b.type = 'button';
         b.className = 'fmt-chip';
         b.textContent = up(f);
-        if (!catTargetsFor(f).length) b.disabled = true;
         if (f === cur) b.setAttribute('aria-selected', 'true');
         b.addEventListener('click', (e) => { e.stopPropagation(); pickSource(f); });
         chipsEl.appendChild(b);
