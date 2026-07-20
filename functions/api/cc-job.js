@@ -7,8 +7,12 @@ const BASE = 'https://v2.convertapi.com';
 // pairs ConvertAPI can't do. MUST mirror server.py's build_plan — if this says yes but the
 // service rejects the pair, the user gets an error instead of a silent ConvertAPI fallback.
 // ponytail: to add a category, extend both this rule AND build_plan in server.py.
-const OFFICE_IN = new Set(['doc', 'docx', 'odt', 'rtf', 'ppt', 'pptx', 'odp', 'pps', 'ppsx', 'potx', 'xls', 'xlsx', 'ods']);
-const LO_OUT = new Set(['ppt', 'pptx', 'doc', 'docx', 'odp', 'odt', 'xls', 'xlsx', 'ods', 'rtf']);
+// LibreOffice converts only WITHIN a document family — a slideshow can't become a spreadsheet.
+const WORD_IN = new Set(['doc', 'docx', 'odt', 'rtf']), WORD_OUT = new Set(['doc', 'docx', 'odt', 'rtf']);
+const PRES_IN = new Set(['ppt', 'pptx', 'odp', 'pps', 'ppsx', 'potx']), PRES_OUT = new Set(['ppt', 'pptx', 'odp']);
+const SHEET_IN = new Set(['xls', 'xlsx', 'ods']), SHEET_OUT = new Set(['xls', 'xlsx', 'ods']);
+const officeOk = (f, t) => f !== t && (
+  (WORD_IN.has(f) && WORD_OUT.has(t)) || (PRES_IN.has(f) && PRES_OUT.has(t)) || (SHEET_IN.has(f) && SHEET_OUT.has(t)));
 const SVG_IN = new Set(['wmf', 'emf', 'cdr']);
 const VIDEO_IN = new Set(['ts', 'vob', 'mpeg', 'mpg', 'rmvb', 'm2ts', 'mxf', 'swf', 'wtv', '3gp', 'flv', 'ogv', 'mp4', 'webm', 'mkv', 'mov', 'avi']);
 const VIDEO_OUT = new Set(['mp4', 'mkv', 'mov', 'avi']); // webm excluded: VP9 transcode times out on 0.1-CPU tier
@@ -16,7 +20,7 @@ const RAW_IN = new Set(['nef', 'cr2', 'cr3', 'arw', 'dng', 'crw', 'raf', 'rw2', 
 const RAW_OUT = new Set(['jpg', 'png']);
 const SEVENZIP_IN = new Set(['zip', 'rar', 'tar', 'gz', 'tgz', 'bz2', 'xz', 'cab', 'iso']); // -> 7z (extract + re-archive)
 const useLibreOffice = (from, to) =>
-  (OFFICE_IN.has(from) && LO_OUT.has(to) && from !== to) ||
+  officeOk(from, to) ||
   (SVG_IN.has(from) && to === 'svg') ||
   (VIDEO_IN.has(from) && VIDEO_OUT.has(to) && from !== to) ||
   (RAW_IN.has(from) && RAW_OUT.has(to)) ||

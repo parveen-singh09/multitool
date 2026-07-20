@@ -75,15 +75,62 @@ function directApiTargets(e: string): string[] {
   return (CONVERT_MATRIX[e] || []).filter((t) => t !== 'zip' && t !== 'json' && t !== 'fdf' && t !== e);
 }
 
+// Self-hosted conversion service (LibreOffice + ffmpeg + dcraw/ImageMagick + p7zip + calibre).
+// MUST mirror functions/api/cc-job.js routing + server.py build_plan, so the dropdown only offers
+// targets the backend can actually produce.
+const VIDEO_DECODABLE = ['mp4', 'webm', 'mkv', 'mov', 'avi', 'flv', 'ogv', '3gp'];
+// LibreOffice converts only WITHIN a document family — a slideshow can't become a spreadsheet.
+const WORD_IN = ['doc', 'docx', 'odt', 'rtf'], WORD_OUT = ['doc', 'docx', 'odt', 'rtf'];
+const PRES_IN = ['ppt', 'pptx', 'odp', 'pps', 'ppsx', 'potx'], PRES_OUT = ['ppt', 'pptx', 'odp'];
+const SHEET_IN = ['xls', 'xlsx', 'ods'], SHEET_OUT = ['xls', 'xlsx', 'ods'];
+function officeTargets(e: string): string[] {
+  if (WORD_IN.includes(e)) return WORD_OUT;
+  if (PRES_IN.includes(e)) return PRES_OUT;
+  if (SHEET_IN.includes(e)) return SHEET_OUT;
+  return [];
+}
+const SVG_IN = ['wmf', 'emf', 'cdr'];
+const VIDEO_SVC_IN = ['ts', 'vob', 'mpeg', 'mpg', 'rmvb', 'm2ts', 'mxf', 'swf', 'wtv', '3gp', 'flv', 'ogv', 'mp4', 'webm', 'mkv', 'mov', 'avi'];
+const VIDEO_SVC_OUT = ['mp4', 'mkv', 'mov', 'avi'];
+const RAW_IN = ['nef', 'cr2', 'cr3', 'arw', 'dng', 'crw', 'raf', 'rw2', 'orf', 'pef', 'srw'];
+const RAW_OUT = ['jpg', 'png'];
+const SEVENZIP_IN = ['zip', 'rar', 'tar', 'gz', 'tgz', 'bz2', 'xz', 'cab', 'iso'];
+const EBOOK_IN = ['epub', 'mobi', 'azw', 'azw3', 'fb2', 'lit', 'pdb', 'cbr', 'cbz', 'prc', 'htmlz'];
+const EBOOK_OUT = ['epub', 'mobi', 'azw3', 'fb2', 'txt', 'cbz'];
+
+function selfHostedTargets(e: string): string[] {
+  const out: string[] = [];
+  out.push(...officeTargets(e));
+  if (SVG_IN.includes(e)) out.push('svg');
+  if (VIDEO_SVC_IN.includes(e)) out.push(...VIDEO_SVC_OUT);
+  if (RAW_IN.includes(e)) out.push(...RAW_OUT);
+  if (SEVENZIP_IN.includes(e)) out.push('7z');
+  if (EBOOK_IN.includes(e)) out.push(...EBOOK_OUT);
+  return out;
+}
+
 export function targetsFor(ext: string): string[] {
   const e = ext.toLowerCase().split('.').pop() || ext;
   const cat = CAT_OF[e];
-  if (cat === 'Video') return LOCAL_VIDEO.filter((t) => t !== e);
-  if (cat === 'Audio') return LOCAL_AUDIO.filter((t) => t !== e);
-  if (cat === 'Font') return LOCAL_FONT.filter((t) => t !== e);
-  if (cat === 'Archive') return LOCAL_ARCHIVE.filter((t) => t !== e);
-  // ponytail: direct 1-hop only — invented multi-hop chains (svg→pdf→xml, mobi→pdf→rtf) 502 or produce garbage
-  return directApiTargets(e);
+  const set = new Set<string>();
+
+  // Browser-local engines.
+  if (cat === 'Audio') LOCAL_AUDIO.forEach((t) => set.add(t));
+  else if (cat === 'Font') LOCAL_FONT.forEach((t) => set.add(t));
+  else if (cat === 'Video') { if (VIDEO_DECODABLE.includes(e)) LOCAL_VIDEO.forEach((t) => set.add(t)); }
+  else if (cat === 'Archive') LOCAL_ARCHIVE.forEach((t) => set.add(t));
+
+  // Self-hosted service.
+  selfHostedTargets(e).forEach((t) => set.add(t));
+
+  // ConvertAPI (only for categories it serves — not audio/video/font/archive, which are local/service).
+  if (cat !== 'Audio' && cat !== 'Video' && cat !== 'Font' && cat !== 'Archive') {
+    // ponytail: direct 1-hop only — invented multi-hop chains (svg→pdf→xml, mobi→pdf→rtf) 502 or produce garbage
+    directApiTargets(e).forEach((t) => set.add(t));
+  }
+
+  set.delete(e);
+  return [...set];
 }
 
 export function chainPath(from: string, to: string): string[] | null {

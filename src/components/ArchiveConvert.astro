@@ -100,7 +100,7 @@ const accept = from ? `.${from}` : '';
 
 <script>
   import { driveReady, pickFromDrive } from '../lib/drivePickers';
-  import { backendFor, chainPath } from '../data/formatCatalog';
+  import { backendFor, chainPath, targetsFor } from '../data/formatCatalog';
 
   const root = document.getElementById('ac-root') as HTMLElement;
   const presetTo = root.dataset.to || '';
@@ -129,41 +129,20 @@ const accept = from ? `.${from}` : '';
     errHint?.classList.toggle('hidden', !/temporarily unavailable/i.test(m));
   };
 
-  const CATEGORY: Record<string, string[]> = {
-    image: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'tiff', 'tif', 'svg', 'ico', 'avif', 'heic', 'psd', 'eps'],
-    document: ['pdf', 'docx', 'doc', 'odt', 'rtf', 'txt', 'html', 'md', 'pages', 'wpd'],
-    audio: ['mp3', 'wav', 'flac', 'aac', 'm4a', 'ogg', 'opus', 'aiff', 'wma'],
-    video: ['mp4', 'webm', 'mkv', 'mov', 'avi', 'flv', 'ogv', 'wmv', '3gp', 'mpeg', 'mpg', 'ts', 'vob'],
-    spreadsheet: ['xlsx', 'xls', 'ods', 'csv', 'numbers'],
-    presentation: ['pptx', 'ppt', 'odp', 'key', 'pps'],
-    ebook: ['epub', 'mobi', 'azw', 'azw3', 'fb2', 'lit', 'pdb'],
-    archive: ['zip', '7z', 'tar', 'gz', 'bz2', 'xz', 'rar'],
-  };
-  const ALLOWED: Record<string, string[]> = {
-    image: ['image', 'document'],
-    document: ['document', 'image'],
-    audio: ['audio'],
-    video: ['video', 'audio', 'image'],
-    spreadsheet: ['spreadsheet', 'document'],
-    presentation: ['presentation', 'document'],
-    ebook: ['ebook', 'document'],
-    archive: ['archive'],
-  };
-  const catOf = (ext: string) => Object.keys(CATEGORY).find((c) => CATEGORY[c].includes(ext));
-  const targetCat = (fmt: string) => catOf(fmt.split('.').pop() || fmt);
 
   function narrowTargets(inExt: string) {
     if (!smart || !target) return;
-    const inCat = catOf(inExt);
-    const allowedCats = inCat ? ALLOWED[inCat] : null;
-    let firstVisible: HTMLOptionElement | null = null;
-    for (const opt of Array.from(target.options)) {
-      const oc = targetCat(opt.value);
-      const show = (!allowedCats || (oc && allowedCats.includes(oc))) && opt.value !== inExt;
-      opt.hidden = !show;
-      if (show && !firstVisible) firstVisible = opt;
+    // Rebuild the dropdown from the actual capability list so only convertible targets show.
+    const opts = targetsFor(inExt);
+    if (!opts.length) return; // unknown format — leave the existing list rather than emptying it
+    target.innerHTML = '';
+    for (const fmt of opts.sort()) {
+      const o = document.createElement('option');
+      o.value = fmt;
+      o.textContent = fmt.toUpperCase();
+      target.appendChild(o);
     }
-    if (firstVisible) target.value = firstVisible.value;
+    target.value = opts[0];
   }
 
   function load(file: File) {
