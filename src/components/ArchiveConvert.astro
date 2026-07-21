@@ -102,7 +102,7 @@ const accept = from ? `.${from}` : '';
 </style>
 
 <script>
-  import { driveReady, pickFromDrive } from '../lib/drivePickers';
+  import { driveReady, pickFromDrive, warmGoogle } from '../lib/drivePickers';
   import { backendFor, chainPath, targetsFor } from '../data/formatCatalog';
 
   const root = document.getElementById('ac-root') as HTMLElement;
@@ -370,7 +370,12 @@ const accept = from ? `.${from}` : '';
     openPicker();
   });
   pickBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(false); openPicker(); });
-  moreBtn.addEventListener('click', (e) => { e.stopPropagation(); srcMenu.classList.toggle('hidden'); });
+  moreBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const opening = srcMenu.classList.contains('hidden');
+    srcMenu.classList.toggle('hidden');
+    if (opening) warmGoogle().catch(() => {}); // preload SDKs so the first tap's popup survives (no double-click)
+  });
   document.addEventListener('click', (e) => { if (!(e.target as HTMLElement).closest('#ac-src-menu, #ac-pick-more')) toggleMenu(false); });
 
   srcMenu.querySelectorAll<HTMLButtonElement>('.ac-src').forEach((btn) => {
