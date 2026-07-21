@@ -92,10 +92,12 @@ async function convertViaService(base, token, from, to, file, url, pair) {
   });
   const body = await res.text();
   if (!res.ok) {
-    let msg = body;
-    try { msg = JSON.parse(body).error || body; } catch {}
-    const err = new Error(`Failed (${pair}): ${msg}`);
-    err.status = res.status >= 400 && res.status < 500 ? 400 : 502;
+    // ponytail: service returns raw JSON/stack text — don't leak it. 4xx = bad input, 5xx = service trouble.
+    const clientErr = res.status >= 400 && res.status < 500;
+    const err = new Error(clientErr
+      ? `Couldn't convert this file (${pair}) — it may be empty, corrupt, password-protected, or in an unexpected format. Try another file.`
+      : `The conversion service is temporarily unavailable (${pair}). Please try again in a moment.`);
+    err.status = clientErr ? 400 : 502;
     throw err;
   }
   const out = JSON.parse(body);
