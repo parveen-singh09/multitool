@@ -29,6 +29,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       </label>
       <button id="dr-roll" class="btn btn-primary ml-auto">Roll</button>
       <button id="dr-clear" class="btn btn-secondary">Clear</button>
+      <button id="dr-sound" type="button" class="btn btn-secondary" aria-pressed="true" aria-label="Toggle roll sound" title="Toggle roll sound">🔊</button>
     </div>
 
     <div id="dr-dice" class="flex flex-wrap gap-3"></div>
@@ -64,9 +65,24 @@ import ToolLayout from '../layouts/ToolLayout.astro';
        All selectors are `dr-`-prefixed to avoid leaking into other components. */
     /* --- 3D rolling cube (D6) --- */
     .dr-scene {
+      position: relative;
       width: 4rem;
       height: 4rem;
       perspective: 600px;
+    }
+    /* soft ground shadow so the die reads as sitting on a surface */
+    .dr-scene::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: -0.5rem;
+      width: 3.6rem;
+      height: 0.75rem;
+      transform: translateX(-50%);
+      background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.6), transparent 72%);
+      filter: blur(2px);
+      z-index: -1;
+      pointer-events: none;
     }
     .dr-cube {
       position: relative;
@@ -86,7 +102,26 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       place-items: center;
       gap: 0.125rem;
       padding: 0.5rem;
-      border-radius: 0.5rem;
+      border-radius: 0.6rem;
+      background: linear-gradient(150deg, #e5484d 0%, #c0343a 55%, #8f2025 100%);
+      border: 1px solid #7a1519;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        inset 0 -7px 14px rgba(0, 0, 0, 0.4);
+    }
+    /* pips read as engraved dots */
+    .dr-pip {
+      box-shadow:
+        inset 0 -1px 1px rgba(0, 0, 0, 0.45),
+        0 1px 1px rgba(0, 0, 0, 0.55);
+    }
+    /* lavender energy while the cube is spinning (accent, used sparingly) */
+    .dr-cube.dr-active .dr-face {
+      border-color: rgba(94, 106, 210, 0.55);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.07),
+        inset 0 -7px 14px rgba(0, 0, 0, 0.5),
+        0 0 12px rgba(94, 106, 210, 0.5);
     }
     /* half of 4rem = 2rem push outward */
     .dr-f-front  { transform: translateZ(2rem); }
@@ -156,7 +191,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   function pips(v: number): string {
     const on = new Set(PIPS[v] || []);
     return Array.from({ length: 9 }, (_, i) =>
-      `<span class="h-2 w-2 rounded-full ${on.has(i + 1) ? 'bg-ink' : ''}"></span>`
+      `<span class="h-2 w-2 rounded-full ${on.has(i + 1) ? 'bg-ink dr-pip' : ''}"></span>`
     ).join('');
   }
 
@@ -178,6 +213,47 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let animTimer = 0;
 
+  // --- Synthesized dice-clatter sound (no audio assets) ---
+  let audioCtx: AudioContext | null = null;
+  let soundOn = true;
+
+  function playRoll(count: number): void {
+    if (!soundOn) return;
+    try {
+      audioCtx ||= new (window.AudioContext || (window as any).webkitAudioContext)();
+      const ctx = audioCtx;
+      if (ctx.state === 'suspended') ctx.resume();
+
+      // A handful of short filtered-noise "clicks" per die, scattered in time,
+      // to mimic a die tumbling and knocking against a surface.
+      const hits = Math.min(14, 4 + count * 2);
+      for (let i = 0; i < hits; i++) {
+        const t = ctx.currentTime + Math.random() * 0.6;
+        const dur = 0.04 + Math.random() * 0.05;
+
+        const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let j = 0; j < data.length; j++) {
+          data[j] = (Math.random() * 2 - 1) * (1 - j / data.length); // decaying noise
+        }
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.value = 1400 + Math.random() * 2600;
+        bp.Q.value = 0.8;
+
+        const gain = ctx.createGain();
+        gain.gain.value = 0.16 + Math.random() * 0.12;
+
+        src.connect(bp).connect(gain).connect(ctx.destination);
+        src.start(t);
+        src.stop(t + dur);
+      }
+    } catch { /* Web Audio unavailable — silently skip */ }
+  }
+
   // --- D6: real 3D cubes, spun to their landed face via CSS transition ---
   function renderCubes(vals: number[], animate: boolean): void {
     diceEl.innerHTML = vals.map(cubeHtml).join('');
@@ -195,9 +271,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       cube.style.transform = 'rotateX(-24deg) rotateY(24deg)';
       void cube.offsetWidth; // force reflow so the next change animates
       cube.classList.remove('dr-instant');
+      cube.classList.add('dr-active');
       const spinX = 360 * (2 + (i % 2));
       const spinY = 360 * (3 + (i % 3));
       cube.style.transform = `rotateX(${rx + spinX}deg) rotateY(${ry + spinY}deg)`;
+      const clearGlow = () => cube.classList.remove('dr-active');
+      cube.addEventListener('transitionend', clearGlow, { once: true });
     });
   }
 
@@ -241,6 +320,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     for (let i = 0; i < count; i++) rolls.push(randInt(1, s));
 
     clearInterval(animTimer);
+    if (animate && !reduceMotion) playRoll(count);
 
     // D6 uses real 3D cubes that spin to their landed face.
     if (s === 6) {
@@ -277,6 +357,13 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   });
   ['dr-sides', 'dr-count', 'dr-mod'].forEach((id) => $(id).addEventListener('input', () => roll()));
   $('dr-roll').addEventListener('click', () => roll(true));
+
+  const soundBtn = $('dr-sound');
+  soundBtn.addEventListener('click', () => {
+    soundOn = !soundOn;
+    soundBtn.textContent = soundOn ? '🔊' : '🔇';
+    soundBtn.setAttribute('aria-pressed', String(soundOn));
+  });
   $('dr-clear').addEventListener('click', () => {
     clearInterval(animTimer);
     history.length = 0;
