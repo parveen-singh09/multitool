@@ -61,10 +61,25 @@ async function pickDropbox(onFile: (f: File) => void): Promise<void> {
   });
 }
 
+// Load Google's SDKs ahead of the click. Mobile blocks the OAuth popup if it opens
+// after network-bound awaits (the tap's user-activation is gone by then), so callers
+// warm this on menu-open; at click time the awaits below are already resolved and the
+// popup fires within the surviving activation window.
+let googleWarm: Promise<void> | null = null;
+export function warmGoogle(): Promise<void> {
+  if (!DRIVE_CFG.gdriveClientId) return Promise.resolve();
+  if (!googleWarm) {
+    googleWarm = (async () => {
+      await loadScript('https://apis.google.com/js/api.js');
+      await loadScript('https://accounts.google.com/gsi/client');
+      await new Promise<void>((res) => (window as any).gapi.load('picker', res));
+    })().catch((e) => { googleWarm = null; throw e; }); // let a failed warm retry next time
+  }
+  return googleWarm;
+}
+
 async function pickGoogle(onFile: (f: File) => void): Promise<void> {
-  await loadScript('https://apis.google.com/js/api.js');
-  await loadScript('https://accounts.google.com/gsi/client');
-  await new Promise<void>((res) => (window as any).gapi.load('picker', res));
+  await warmGoogle();
 
   const token = await new Promise<string>((resolve, reject) => {
     const tc = (window as any).google.accounts.oauth2.initTokenClient({
@@ -122,9 +137,19 @@ async function pickOneDrive(onFile: (f: File) => void): Promise<void> {
   });
 }
 
-export function pickFromDrive(src: string, onFile: (f: File) => void): Promise<void> {
-  if (src === 'gdrive') return pickGoogle(onFile);
-  if (src === 'dropbox') return pickDropbox(onFile);
-  if (src === 'onedrive') return pickOneDrive(onFile);
-  return Promise.reject(new Error('Unknown source'));
+export async function pickFromDrive(src: string, onFile: (f: File) => void): Promise<void> {
+  // ponytail: pickers focus an offscreen node, and global `scroll-behavior: smooth`
+  // animates the jump (and the return) over seconds. Force instant during the flow.
+  const html = document.documentElement;
+  const prev = html.style.scrollBehavior;
+  html.style.scrollBehavior = 'auto';
+  const restore = () => setTimeout(() => { html.style.scrollBehavior = prev; }, 600); // outlast the focus-return scroll
+  try {
+    if (src === 'gdrive') return await pickGoogle(onFile);
+    if (src === 'dropbox') return await pickDropbox(onFile);
+    if (src === 'onedrive') return await pickOneDrive(onFile);
+    throw new Error('Unknown source');
+  } finally {
+    restore();
+  }
 }

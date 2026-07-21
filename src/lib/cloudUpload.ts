@@ -1,4 +1,4 @@
-import { driveReady, pickFromDrive } from './drivePickers';
+import { driveReady, pickFromDrive, warmGoogle } from './drivePickers';
 
 const SOURCES = [
   { src: 'gdrive', label: 'Google Drive', icon: '<path d="M8 3h8l5 9-4 7H7l-4-7z"/>' },
@@ -93,7 +93,7 @@ function wire(input: HTMLInputElement) {
   caret.addEventListener('click', (e) => {
     e.stopPropagation();
     const opening = menu.classList.contains('hidden');
-    if (opening) place();
+    if (opening) { place(); warmGoogle().catch(() => {}); } // preload SDKs so the mobile popup survives the tap
     menu.classList.toggle('hidden');
   });
   document.addEventListener('click', () => menu.classList.add('hidden'));
