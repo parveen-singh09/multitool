@@ -82,6 +82,9 @@ const accept = from ? `.${from}` : '';
 
 <style>
   .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+
+  /* Long filenames (one unbreakable token) stretch the card past the viewport on mobile — wrap them. */
+  #ac-drop-label { max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
   
   :global(html), :global(body) { overflow-anchor: none; }
   
@@ -118,6 +121,7 @@ const accept = from ? `.${from}` : '';
   const dlBtn = $('ac-download') as HTMLAnchorElement;
   const status = $('ac-status');
   const err = $('ac-error');
+  const initialLabel = (dropLabel.textContent || 'Drop your file here to convert').trim();
 
   let picked: File | null = null;
   let lastOutUrl: string | null = null;
@@ -147,15 +151,30 @@ const accept = from ? `.${from}` : '';
 
   function load(file: File) {
     setErr('');
+    const inExt = (file.name.split('.').pop() || '').toLowerCase();
+    // Home-page (smart) converter only: reject formats not in the left card. targetsFor() is
+    // the same capability list that card is built from, so "no targets" == "not in the card".
+    // Dedicated pages use a preset from/to and don't go through targetsFor, so skip the guard there.
+    if (smart && (!inExt || !targetsFor(inExt).length)) {
+      picked = null;
+      runBtn.disabled = true;
+      dlBtn.classList.add('hidden');
+      status.textContent = '';
+      dropLabel.textContent = initialLabel;
+      fileInput.value = ''; // let the user re-pick after fixing
+      setErr(inExt
+        ? `Can’t convert .${inExt} files — that format isn’t supported. Pick another file.`
+        : 'That file has no extension, so we can’t tell its format. Pick a file with a recognizable extension.');
+      return;
+    }
     picked = file;
     dropLabel.textContent = file.name;
     runBtn.disabled = false;
     dlBtn.classList.add('hidden');
     status.textContent = '';
-    narrowTargets((file.name.split('.').pop() || '').toLowerCase());
+    narrowTargets(inExt);
     if (sync) {
       runBtn.classList.remove('hidden');
-      const inExt = (file.name.split('.').pop() || '').toLowerCase();
       document.dispatchEvent(new CustomEvent('fmt-lock', { detail: { from: inExt } }));
     }
   }
