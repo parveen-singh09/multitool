@@ -13,6 +13,11 @@ export default defineConfig({
   integrations: [sitemap(), react()],
   vite: {
     plugins: [tailwindcss()],
+    server: {
+      // `n:` is a mapped/network drive — native FS events don't fire reliably
+      // on Windows network drives, so HMR silently misses edits. Poll instead.
+      watch: { usePolling: true, interval: 300 },
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),

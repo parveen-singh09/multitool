@@ -58,17 +58,58 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     </div>
   </div>
 
-  <style>
-    @keyframes dr-tumble {
-      0%   { transform: rotate(0deg)   scale(1);    }
-      25%  { transform: rotate(-12deg) scale(1.08); }
-      50%  { transform: rotate(10deg)  scale(0.96); }
-      75%  { transform: rotate(-6deg)  scale(1.04); }
-      100% { transform: rotate(0deg)   scale(1);    }
+  <style is:global>
+    /* These classes are applied to elements injected via innerHTML in client JS,
+       which don't receive Astro's scope attribute — so the styles must be global.
+       All selectors are `dr-`-prefixed to avoid leaking into other components. */
+    /* --- 3D rolling cube (D6) --- */
+    .dr-scene {
+      width: 4rem;
+      height: 4rem;
+      perspective: 600px;
     }
-    .dr-rolling { animation: dr-tumble 0.12s linear infinite; }
+    .dr-cube {
+      position: relative;
+      width: 4rem;
+      height: 4rem;
+      transform-style: preserve-3d;
+      transform: rotateX(-24deg) rotateY(24deg);
+      transition: transform 1.1s cubic-bezier(0.2, 0.9, 0.25, 1);
+    }
+    .dr-cube.dr-instant { transition: none; }
+    .dr-face {
+      position: absolute;
+      width: 4rem;
+      height: 4rem;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      place-items: center;
+      gap: 0.125rem;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+    }
+    /* half of 4rem = 2rem push outward */
+    .dr-f-front  { transform: translateZ(2rem); }
+    .dr-f-back   { transform: rotateY(180deg) translateZ(2rem); }
+    .dr-f-right  { transform: rotateY(90deg)  translateZ(2rem); }
+    .dr-f-left   { transform: rotateY(-90deg) translateZ(2rem); }
+    .dr-f-top    { transform: rotateX(90deg)  translateZ(2rem); }
+    .dr-f-bottom { transform: rotateX(-90deg) translateZ(2rem); }
+
+    /* --- flat tumble for polyhedral / custom number dice --- */
+    @keyframes dr-tumble {
+      0%   { transform: translateY(0)    rotate(0deg)   scale(1);    }
+      20%  { transform: translateY(-4px) rotate(-14deg) scale(1.08); }
+      40%  { transform: translateY(2px)  rotate(11deg)  scale(0.95); }
+      60%  { transform: translateY(-3px) rotate(-7deg)  scale(1.05); }
+      80%  { transform: translateY(1px)  rotate(5deg)   scale(0.98); }
+      100% { transform: translateY(0)    rotate(0deg)   scale(1);    }
+    }
+    .dr-rolling { animation: dr-tumble 0.32s ease-in-out infinite; }
+
     @media (prefers-reduced-motion: reduce) {
       .dr-rolling { animation: none; }
+      .dr-cube { transition: none; }
     }
   </style>
 
@@ -104,15 +145,29 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     1: [5], 2: [1, 9], 3: [1, 5, 9], 4: [1, 3, 7, 9], 5: [1, 3, 5, 7, 9], 6: [1, 3, 4, 6, 7, 9],
   };
 
-  const OUTER_D6 = 'grid h-16 w-16 grid-cols-3 place-items-center gap-0.5 rounded-lg border border-hairline bg-surface-2 p-2';
   const OUTER_NUM = 'flex h-16 min-w-16 items-center justify-center rounded-lg border border-hairline bg-surface-2 px-2 font-mono text-2xl text-ink';
 
-  function dieInner(v: number, s: number): string {
-    if (s !== 6) return String(v);
+  // Cube rotation (deg) that brings each value's face toward the viewer.
+  // Faces: front=1, back=6, right=3, left=4, top=2, bottom=5 (opposites sum to 7).
+  const FACE_SHOW: Record<number, [number, number]> = {
+    1: [0, 0], 2: [-90, 0], 3: [0, -90], 4: [0, 90], 5: [90, 0], 6: [0, 180],
+  };
+
+  function pips(v: number): string {
     const on = new Set(PIPS[v] || []);
     return Array.from({ length: 9 }, (_, i) =>
       `<span class="h-2 w-2 rounded-full ${on.has(i + 1) ? 'bg-ink' : ''}"></span>`
     ).join('');
+  }
+
+  function cubeHtml(): string {
+    const face = (cls: string, n: number) =>
+      `<div class="dr-face ${cls} border border-hairline bg-surface-2">${pips(n)}</div>`;
+    return `<div class="dr-scene"><div class="dr-cube">` +
+      face('dr-f-front', 1) + face('dr-f-back', 6) +
+      face('dr-f-right', 3) + face('dr-f-left', 4) +
+      face('dr-f-top', 2) + face('dr-f-bottom', 5) +
+      `</div></div>`;
   }
 
   function sides(): number {
@@ -123,28 +178,49 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let animTimer = 0;
 
-  function layoutDice(vals: number[], s: number, rolling: boolean): void {
-    const base = s === 6 ? OUTER_D6 : OUTER_NUM;
-    const cls = rolling && !reduceMotion ? `${base} dr-rolling` : base;
+  // --- D6: real 3D cubes, spun to their landed face via CSS transition ---
+  function renderCubes(vals: number[], animate: boolean): void {
+    diceEl.innerHTML = vals.map(cubeHtml).join('');
+    const cubes = Array.from(diceEl.querySelectorAll('.dr-cube')) as HTMLElement[];
+    cubes.forEach((cube, i) => {
+      const [rx, ry] = FACE_SHOW[vals[i]];
+      (cube.parentElement as HTMLElement).title = String(vals[i]);
+
+      if (!animate || reduceMotion) {
+        cube.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
+        return;
+      }
+      // Snap to a start pose, then transition to the target + several whole spins.
+      cube.classList.add('dr-instant');
+      cube.style.transform = 'rotateX(-24deg) rotateY(24deg)';
+      void cube.offsetWidth; // force reflow so the next change animates
+      cube.classList.remove('dr-instant');
+      const spinX = 360 * (2 + (i % 2));
+      const spinY = 360 * (3 + (i % 3));
+      cube.style.transform = `rotateX(${rx + spinX}deg) rotateY(${ry + spinY}deg)`;
+    });
+  }
+
+  // --- Polyhedral / custom: flat number tiles ---
+  function renderNumbers(vals: number[], rolling: boolean): void {
+    const cls = rolling && !reduceMotion ? `${OUTER_NUM} dr-rolling` : OUTER_NUM;
     diceEl.innerHTML = vals
-      .map((r) => `<div class="${cls}" title="${r}">${dieInner(r, s)}</div>`)
+      .map((r) => `<div class="${cls}" title="${r}">${r}</div>`)
       .join('');
   }
 
-  function updateFaces(vals: number[], s: number): void {
+  function updateNumberFaces(vals: number[]): void {
     const nodes = diceEl.children;
     for (let i = 0; i < vals.length && i < nodes.length; i++) {
       const el = nodes[i] as HTMLElement;
-      el.innerHTML = dieInner(vals[i], s);
+      el.textContent = String(vals[i]);
       el.title = String(vals[i]);
     }
   }
 
-  function settle(rolls: number[], s: number, mod: number): void {
+  function updateStats(rolls: number[], s: number, mod: number): void {
     const sum = rolls.reduce((a, b) => a + b, 0);
     const total = sum + mod;
-
-    layoutDice(rolls, s, false);
     $('dr-total').textContent = String(total);
     $('dr-avg').textContent = (sum / rolls.length).toFixed(2);
     $('dr-min').textContent = String(Math.min(...rolls));
@@ -165,18 +241,32 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     for (let i = 0; i < count; i++) rolls.push(randInt(1, s));
 
     clearInterval(animTimer);
-    if (!animate || reduceMotion) { settle(rolls, s, mod); return; }
 
-    layoutDice(rolls, s, true);
+    // D6 uses real 3D cubes that spin to their landed face.
+    if (s === 6) {
+      renderCubes(rolls, animate);
+      updateStats(rolls, s, mod);
+      return;
+    }
+
+    // Polyhedral / custom: instant, or shake-and-cycle then settle.
+    if (!animate || reduceMotion) {
+      renderNumbers(rolls, false);
+      updateStats(rolls, s, mod);
+      return;
+    }
+
+    renderNumbers(rolls, true);
     const start = performance.now();
     animTimer = window.setInterval(() => {
-      if (performance.now() - start >= 500) {
+      if (performance.now() - start >= 650) {
         clearInterval(animTimer);
-        settle(rolls, s, mod);
+        renderNumbers(rolls, false);
+        updateStats(rolls, s, mod);
         return;
       }
-      updateFaces(rolls.map(() => randInt(1, s)), s);
-    }, 70);
+      updateNumberFaces(rolls.map(() => randInt(1, s)));
+    }, 80);
   }
 
   typeSel.addEventListener('change', () => {
