@@ -35,6 +35,21 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       <div class="panel p-4"><div id="we-strips-needed" class="font-mono text-lg text-ink">—</div><div class="mt-1 text-[13px] text-ink-subtle">Strips needed</div></div>
       <div class="panel panel-lift p-4"><div id="we-rolls" class="font-display text-xl font-semibold text-primary-hover">—</div><div class="mt-1 text-[13px] text-ink-subtle">Rolls needed</div></div>
     </div>
+
+    <div class="flex flex-col gap-1.5">
+      <div class="flex flex-wrap items-center gap-3">
+        <span class="text-[13px] text-ink-subtle">Wall layout preview — vertical strips across the wall</span>
+        <span class="flex-1"></span>
+        <label class="btn btn-tertiary cursor-pointer px-2 py-1 text-[13px]">
+          Upload pattern
+          <input id="we-swatch" type="file" accept="image/*" data-no-cloud class="sr-only" />
+        </label>
+        <button id="we-swatch-clear" type="button" class="btn btn-tertiary hidden px-2 py-1 text-[13px]">Remove pattern</button>
+      </div>
+      <div class="panel overflow-hidden p-3">
+        <svg id="we-preview" class="w-full" style="height:auto;max-height:20rem" role="img" aria-label="Diagram of wallpaper strips across the wall"></svg>
+      </div>
+    </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -50,6 +65,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   </div>
 </ToolLayout>
 
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
 <script>
   const wallWidth = document.getElementById('we-width') as HTMLInputElement;
   const wallHeight = document.getElementById('we-height') as HTMLInputElement;
@@ -57,6 +76,13 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const rollLength = document.getElementById('we-roll-length') as HTMLInputElement;
   const repeat = document.getElementById('we-repeat') as HTMLInputElement;
   const waste = document.getElementById('we-waste') as HTMLInputElement;
+  const swatchInput = document.getElementById('we-swatch') as HTMLInputElement;
+  const swatchClear = document.getElementById('we-swatch-clear') as HTMLButtonElement;
+
+  // Default preview pattern: a free Pexels image bundled locally (no hotlink, works offline).
+  const DEFAULT_SWATCH = '/patterns/wallpaper-default.jpg';
+  let swatchUrl: string | null = DEFAULT_SWATCH;
+  const freeSwatch = () => { if (swatchUrl && swatchUrl.startsWith('blob:')) URL.revokeObjectURL(swatchUrl); };
 
   function calc() {
     const wWidth = Number(wallWidth.value) || 0;      
@@ -78,7 +104,84 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     document.getElementById('we-strips-roll')!.textContent = String(stripsPerRoll);
     document.getElementById('we-strips-needed')!.textContent = String(stripsNeeded);
     document.getElementById('we-rolls')!.textContent = String(rolls);
+
+    drawPreview(wWidth, wHeight, rWidth, stripsNeededRaw, rep);
   }
+
+  const svg = document.getElementById('we-preview') as unknown as SVGSVGElement;
+  const xmlEsc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
+
+  // Scaled diagram: the wall as a box divided into vertical strips of roll-width.
+  // The last strip is trimmed to the remaining width so the offcut is visible.
+  // With an uploaded swatch, the pattern tiles continuously across the wall (as real
+  // wallpaper does) and the strips are drawn as seams on top.
+  function drawPreview(wWidth: number, wHeight: number, rWidth: number, strips: number, rep: number) {
+    if (wWidth <= 0 || wHeight <= 0 || rWidth <= 0 || strips <= 0) {
+      svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle"
+        fill="var(--color-ink-tertiary)" font-size="4">Enter wall and roll sizes to preview</text>`;
+      svg.setAttribute('viewBox', '0 0 100 24');
+      return;
+    }
+    // Meters → viewBox units; keep a readable minimum height for very wide/short walls.
+    const scale = 100 / wWidth;
+    const W = 100, H = Math.max(14, wHeight * scale);
+    svg.setAttribute('viewBox', `0 0 ${W} ${H + 8}`);
+
+    let fill = '';
+    let defs = '';
+    if (swatchUrl) {
+      // Decorative tile size only — kept readable (~6 tiles across the wall). NOT tied to the
+      // pattern-repeat input: that's a vertical matching value for the math, and small values
+      // (e.g. 1cm) would blur the preview into a flat colour.
+      const tile = Math.max(rWidth, wWidth / 6) * scale;
+      defs = `<defs><pattern id="we-pat" patternUnits="userSpaceOnUse" width="${tile.toFixed(2)}" height="${tile.toFixed(2)}">
+        <image href="${xmlEsc(swatchUrl)}" x="0" y="0" width="${tile.toFixed(2)}" height="${tile.toFixed(2)}" preserveAspectRatio="xMidYMid slice" /></pattern></defs>`;
+      fill = `<rect x="0" y="0" width="${W}" height="${H}" rx="0.6" fill="url(#we-pat)" />`;
+    }
+
+    let bars = '';
+    for (let i = 0; i < strips; i++) {
+      const x = i * rWidth * scale;
+      const w = Math.min(rWidth, wWidth - i * rWidth) * scale;
+      const trimmed = w < rWidth * scale - 0.01;
+      if (swatchUrl) {
+        // Just draw the seam line between strips + highlight a trimmed final strip.
+        bars += `<line x1="${(x + w).toFixed(2)}" y1="0" x2="${(x + w).toFixed(2)}" y2="${H}" stroke="rgba(255,255,255,0.55)" stroke-width="0.25" />`;
+        if (trimmed) bars += `<rect x="${x.toFixed(2)}" y="0" width="${w.toFixed(2)}" height="${H}" fill="none" stroke="var(--color-primary-hover)" stroke-width="0.4" stroke-dasharray="1.2 1" />`;
+      } else {
+        bars += `<rect x="${x.toFixed(2)}" y="0" width="${Math.max(0, w - 0.3).toFixed(2)}" height="${H}"
+          rx="0.4" fill="var(--color-primary)" fill-opacity="${i % 2 ? 0.34 : 0.52}"
+          stroke="${trimmed ? 'var(--color-primary-hover)' : 'transparent'}" stroke-width="${trimmed ? 0.4 : 0}" stroke-dasharray="${trimmed ? '1.2 1' : ''}" />`;
+      }
+    }
+    const label = `${strips} strip${strips > 1 ? 's' : ''} × ${rWidth.toLocaleString(undefined, { maximumFractionDigits: 2 })} m wide · ${wHeight.toLocaleString(undefined, { maximumFractionDigits: 2 })} m tall`;
+    svg.innerHTML =
+      defs +
+      `<rect x="0" y="0" width="${W}" height="${H}" rx="0.6" fill="var(--color-surface-2)" />` +
+      fill +
+      bars +
+      `<rect x="0" y="0" width="${W}" height="${H}" rx="0.6" fill="none" stroke="var(--color-hairline-strong)" stroke-width="0.3" />` +
+      `<text x="0" y="${(H + 6).toFixed(2)}" fill="var(--color-ink-tertiary)" font-size="3.4">${xmlEsc(label)}</text>`;
+  }
+
+  swatchInput.addEventListener('change', () => {
+    const file = swatchInput.files?.[0];
+    if (!file) return;
+    freeSwatch();
+    swatchUrl = URL.createObjectURL(file);
+    swatchClear.classList.remove('hidden');
+    calc();
+  });
+  swatchClear.addEventListener('click', () => {
+    freeSwatch();
+    swatchUrl = null;
+    swatchInput.value = '';
+    swatchClear.classList.add('hidden');
+    calc();
+  });
+
+  // A default pattern shows on load, so surface the remove control immediately.
+  swatchClear.classList.remove('hidden');
 
   [wallWidth, wallHeight, rollWidth, rollLength, repeat, waste].forEach((el) =>
     el.addEventListener('input', calc));

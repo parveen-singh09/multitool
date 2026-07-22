@@ -36,7 +36,7 @@ function deliver(input: HTMLInputElement, files: File[]) {
 
 function wire(input: HTMLInputElement) {
   if (input.dataset.cloudWired) return;
-  if (input.closest('#ac-root') || input.id === 'ai-file') { input.dataset.cloudWired = '1'; return; }
+  if (input.closest('#ac-root') || input.id === 'ai-file' || input.dataset.noCloud != null) { input.dataset.cloudWired = '1'; return; }
   const ready = SOURCES.filter((s) => driveReady(s.src));
   if (!ready.length) { input.dataset.cloudWired = '1'; return; }
   input.dataset.cloudWired = '1';
