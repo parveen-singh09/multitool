@@ -51,7 +51,7 @@ const accept = from ? `.${from}` : '';
     </div>
 
     <span id="ac-src-note" class="hidden text-[13px] text-ink-tertiary"></span>
-    <input id="ac-file" type="file" accept={accept} class="sr-only" />
+    <input id="ac-file" type="file" accept={accept} multiple class="sr-only" />
   </div>
 
   <div class="flex flex-wrap items-center gap-3">
@@ -123,7 +123,7 @@ const accept = from ? `.${from}` : '';
   const err = $('ac-error');
   const initialLabel = (dropLabel.textContent || 'Drop your file here to convert').trim();
 
-  let picked: File | null = null;
+  let picked: File[] = [];
   let lastOutUrl: string | null = null;
   const errHint = document.getElementById('ac-error-hint');
   const setErr = (m: string) => {
@@ -133,6 +133,21 @@ const accept = from ? `.${from}` : '';
     errHint?.classList.toggle('hidden', !/temporarily unavailable/i.test(m));
   };
 
+  const extOf = (name: string) => (name.split('.').pop() || '').toLowerCase();
+  const stripExt = (name: string) => name.replace(/\.[^.]+$/, '') || 'converted';
+  type OutEntry = { name: string; data: Uint8Array };
+  // Two files converting to the same name (e.g. a.svg twice, or PDF pages) would clobber in the zip.
+  const uniqueName = (name: string, seen: Set<string>) => {
+    if (!seen.has(name)) { seen.add(name); return name; }
+    const dot = name.lastIndexOf('.');
+    const base = dot < 0 ? name : name.slice(0, dot);
+    const ext = dot < 0 ? '' : name.slice(dot);
+    let i = 2;
+    while (seen.has(`${base}-${i}${ext}`)) i++;
+    const u = `${base}-${i}${ext}`;
+    seen.add(u);
+    return u;
+  };
 
   function narrowTargets(inExt: string) {
     if (!smart || !target) return;
@@ -149,26 +164,31 @@ const accept = from ? `.${from}` : '';
     target.value = opts[0];
   }
 
-  function load(file: File) {
+  function load(files: File[]) {
     setErr('');
-    const inExt = (file.name.split('.').pop() || '').toLowerCase();
+    if (!files.length) return;
+    const inExt = extOf(files[0].name);
     // Home-page (smart) converter only: reject formats not in the left card. targetsFor() is
     // the same capability list that card is built from, so "no targets" == "not in the card".
     // Dedicated pages use a preset from/to and don't go through targetsFor, so skip the guard there.
-    if (smart && (!inExt || !targetsFor(inExt).length)) {
-      picked = null;
-      runBtn.disabled = true;
-      dlBtn.classList.add('hidden');
-      status.textContent = '';
-      dropLabel.textContent = initialLabel;
-      fileInput.value = ''; // let the user re-pick after fixing
-      setErr(inExt
-        ? `Can’t convert .${inExt} files — that format isn’t supported. Pick another file.`
-        : 'That file has no extension, so we can’t tell its format. Pick a file with a recognizable extension.');
-      return;
+    if (smart) {
+      const bad = files.find((f) => { const e = extOf(f.name); return !e || !targetsFor(e).length; });
+      if (bad) {
+        picked = [];
+        runBtn.disabled = true;
+        dlBtn.classList.add('hidden');
+        status.textContent = '';
+        dropLabel.textContent = initialLabel;
+        fileInput.value = ''; // let the user re-pick after fixing
+        const e = extOf(bad.name);
+        setErr(e
+          ? `Can’t convert .${e} files — that format isn’t supported. Pick another file.`
+          : 'That file has no extension, so we can’t tell its format. Pick a file with a recognizable extension.');
+        return;
+      }
     }
-    picked = file;
-    dropLabel.textContent = file.name;
+    picked = files;
+    dropLabel.textContent = files.length === 1 ? files[0].name : `${files.length} files selected`;
     runBtn.disabled = false;
     dlBtn.classList.add('hidden');
     status.textContent = '';
@@ -183,28 +203,23 @@ const accept = from ? `.${from}` : '';
   const MAX_BYTES = 100 * 1024 * 1024;
 
   async function convert() {
-    if (!picked) return;
+    if (!picked.length) return;
     setErr('');
-    if (picked.size > MAX_BYTES) {
-      setErr('File is too large (max 100 MB for online conversion). Try a smaller file.');
+    const tooBig = picked.find((f) => f.size > MAX_BYTES);
+    if (tooBig) {
+      setErr(`"${tooBig.name}" is too large (max 100 MB for online conversion). Try a smaller file.`);
       return;
     }
     runBtn.disabled = true;
     runBtn.textContent = 'Converting…';
     dlBtn.classList.add('hidden');
     const outFormat = sync ? syncTargetFmt() : (presetTo || target?.value || 'zip');
-    const inFormat = (picked.name.split('.').pop() || '').toLowerCase();
 
     if (lastOutUrl) { URL.revokeObjectURL(lastOutUrl); lastOutUrl = null; }
 
     try {
-      const backend = backendFor(inFormat);
-      if (backend === 'ffmpeg') await convertMedia(picked, inFormat, outFormat);
-      else if (backend === 'font') await convertFont(picked, outFormat);
-      // 7z output can't be written in the browser (archive.ts writes only zip/tar/tgz) — send to
-      // the API, which routes it to the self-hosted p7zip service. Other archive targets stay local.
-      else if (backend === 'archive' && outFormat !== '7z') await convertArchiveFile(picked, inFormat, outFormat);
-      else await convertApi(picked, inFormat, outFormat);
+      if (picked.length === 1) await convertSingle(picked[0], outFormat);
+      else await convertMulti(picked, outFormat);
     } catch (e) {
       setErr((e as Error).message);
       status.textContent = '';
@@ -214,11 +229,63 @@ const accept = from ? `.${from}` : '';
     }
   }
 
+  // Single-file path: unchanged behaviour, including convertApi's proxy-streaming download.
+  async function convertSingle(file: File, outFormat: string) {
+    const inFormat = extOf(file.name);
+    const backend = backendFor(inFormat);
+    if (backend === 'ffmpeg') { const r = await convertMedia(file, inFormat, outFormat); offerDownload(r.data, r.mime, outFormat); }
+    else if (backend === 'font') { const r = await convertFont(file, outFormat); offerDownload(r.data, r.mime, outFormat); }
+    // 7z output can't be written in the browser (archive.ts writes only zip/tar/tgz) — send to
+    // the API, which routes it to the self-hosted p7zip service. Other archive targets stay local.
+    else if (backend === 'archive' && outFormat !== '7z') { const r = await convertArchiveFile(file, inFormat, outFormat); offerDownload(r.data, r.mime, r.ext); }
+    else await convertApi(file, inFormat, outFormat);
+  }
+
+  // Multi-file path: convert each to bytes, bundle every result into one ZIP.
+  async function convertMulti(files: File[], outFormat: string) {
+    const entries: OutEntry[] = [];
+    const seen = new Set<string>();
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const inFormat = extOf(file.name);
+      runBtn.textContent = `Converting ${i + 1}/${files.length}…`;
+      const outs = await convertToBytes(file, inFormat, outFormat);
+      for (const o of outs) entries.push({ name: uniqueName(o.name, seen), data: o.data });
+    }
+    if (!entries.length) throw new Error('Nothing was converted.');
+    const { makeZip } = await import('../lib/zip');
+    lastOutUrl = URL.createObjectURL(makeZip(entries));
+    dlBtn.href = lastOutUrl;
+    dlBtn.setAttribute('download', `converted-${outFormat}.zip`);
+    dlBtn.classList.remove('hidden');
+    status.textContent = `${entries.length} files · ZIP`;
+  }
+
+  // Route one file through its backend and return the converted bytes (may be several, e.g. PDF pages).
+  async function convertToBytes(file: File, inFormat: string, outFormat: string): Promise<OutEntry[]> {
+    const base = stripExt(file.name);
+    const backend = backendFor(inFormat);
+    if (backend === 'ffmpeg') { const r = await convertMedia(file, inFormat, outFormat); return [{ name: `${base}.${outFormat}`, data: r.data }]; }
+    if (backend === 'font') { const r = await convertFont(file, outFormat); return [{ name: `${base}.${outFormat}`, data: r.data }]; }
+    if (backend === 'archive' && outFormat !== '7z') { const r = await convertArchiveFile(file, inFormat, outFormat); return [{ name: `${base}.${r.ext}`, data: r.data }]; }
+    // API backend: convertViaApi returns proxy URLs; fetch each to bytes for the zip.
+    const path = chainPath(inFormat, outFormat) || [inFormat, outFormat];
+    const { convertViaApi } = await import('../lib/ccConvert');
+    const out = await convertViaApi(file, path);
+    const proxy = (f: { url: string; filename: string }, fallback: string) =>
+      `/api/cc-job?download=${encodeURIComponent(f.url)}&name=${encodeURIComponent(f.filename || fallback)}`;
+    return Promise.all(out.map(async (f, j) => {
+      const r = await fetch(proxy(f, `${base}-${j + 1}.${outFormat}`));
+      if (!r.ok) throw new Error(`Could not download the converted "${file.name}".`);
+      return { name: f.filename || (out.length > 1 ? `${base}-${j + 1}.${outFormat}` : `${base}.${outFormat}`), data: new Uint8Array(await r.arrayBuffer()) };
+    }));
+  }
+
   function offerDownload(data: Uint8Array, mime: string, outFormat: string) {
     if (!data || data.length === 0) throw new Error('Conversion produced an empty file — the input may be unsupported or corrupt.');
     lastOutUrl = URL.createObjectURL(new Blob([data as BlobPart], { type: mime }));
     dlBtn.href = lastOutUrl;
-    dlBtn.setAttribute('download', (picked!.name.replace(/\.[^.]+$/, '') || 'converted') + '.' + outFormat);
+    dlBtn.setAttribute('download', stripExt(picked[0]?.name || '') + '.' + outFormat);
     dlBtn.classList.remove('hidden');
     status.textContent = (data.length / 1048576).toFixed(2) + ' MB';
   }
@@ -256,7 +323,7 @@ const accept = from ? `.${from}` : '';
       }));
       lastOutUrl = URL.createObjectURL(makeZip(entries));
       dlBtn.href = lastOutUrl;
-      dlBtn.setAttribute('download', `${(picked!.name.replace(/\.[^.]+$/, '') || 'converted')}-${outFormat}.zip`);
+      dlBtn.setAttribute('download', `${stripExt(picked[0]?.name || '')}-${outFormat}.zip`);
     }
     dlBtn.classList.remove('hidden');
     status.textContent = out.length > 1 ? `${out.length} files · ZIP` : '';
@@ -297,7 +364,7 @@ const accept = from ? `.${from}` : '';
     try {
       await ff.exec(args);
       const data = (await ff.readFile(outName)) as Uint8Array;
-      offerDownload(data, mime, outFormat);
+      return { data, mime };
     } finally {
       try { await ff.deleteFile(inName); } catch {}
       try { await ff.deleteFile(outName); } catch {}
@@ -321,7 +388,7 @@ const accept = from ? `.${from}` : '';
     // ponytail: no hinting/kerning on write — they make fonteditor re-serialize TTF in a way the woff2 encoder rejects (0 bytes)
     const out = font.write({ type: outFormat as any });
     const data = out instanceof ArrayBuffer ? new Uint8Array(out) : (out as Uint8Array);
-    offerDownload(data, FONT_MIME[outFormat] || 'application/octet-stream', outFormat);
+    return { data, mime: FONT_MIME[outFormat] || 'application/octet-stream' };
   }
 
   async function convertArchiveFile(file: File, inFormat: string, outFormat: string) {
@@ -331,7 +398,7 @@ const accept = from ? `.${from}` : '';
     status.textContent = 'Extracting…';
     const data = await convertArchive(file, to);
     const ext = to === 'tgz' ? 'tar.gz' : to;
-    offerDownload(data, ARCHIVE_MIME[to], ext);
+    return { data, mime: ARCHIVE_MIME[to], ext };
   }
 
   const pickBtn = $('ac-pick') as HTMLButtonElement;
@@ -363,7 +430,7 @@ const accept = from ? `.${from}` : '';
   }
 
 
-  fileInput.addEventListener('change', () => fileInput.files?.[0] && load(fileInput.files[0]));
+  fileInput.addEventListener('change', () => { if (fileInput.files?.length) load(Array.from(fileInput.files)); });
 
   drop.addEventListener('click', (ev) => {
     if ((ev.target as HTMLElement).closest('#ac-pick, #ac-pick-more, #ac-src-menu')) return;
@@ -394,11 +461,14 @@ const accept = from ? `.${from}` : '';
       srcNote.classList.add('hidden');
       dropLabel.textContent = `Opening ${label}…`;
       lockScroll();
+      const fromDrive: File[] = [];
       try {
-        await pickFromDrive(src, (file) => load(file));
+        await pickFromDrive(src, (file) => fromDrive.push(file), true);
+        if (fromDrive.length) load(fromDrive);
+        else dropLabel.textContent = initialLabel;
       } catch (err) {
         setErr(`Couldn't get the file from ${label}: ${(err as Error).message}`);
-        dropLabel.textContent = 'Drop your file here to convert';
+        dropLabel.textContent = initialLabel;
       } finally {
         unlockScroll();
       }
@@ -407,6 +477,6 @@ const accept = from ? `.${from}` : '';
 
   ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
   ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
-  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) load(f); });
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const fs = (ev as DragEvent).dataTransfer?.files; if (fs?.length) load(Array.from(fs)); });
   runBtn.addEventListener('click', convert);
 </script>

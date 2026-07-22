@@ -1,70 +1,31 @@
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
-// .wrangler/tmp/bundle-lrPL39/checked-fetch.js
-var urls = /* @__PURE__ */ new Set();
-function checkURL(request, init) {
-  const url = request instanceof URL ? request : new URL(
-    (typeof request === "string" ? new Request(request, init) : request).url
-  );
-  if (url.port && url.port !== "443" && url.protocol === "https:") {
-    if (!urls.has(url.toString())) {
-      urls.add(url.toString());
-      console.warn(
-        `WARNING: known issue with \`fetch()\` requests to custom HTTPS ports in published Workers:
- - ${url.toString()} - the custom port will be ignored when the Worker is published using the \`wrangler deploy\` command.
-`
-      );
-    }
-  }
-}
-__name(checkURL, "checkURL");
-globalThis.fetch = new Proxy(globalThis.fetch, {
-  apply(target, thisArg, argArray) {
-    const [request, init] = argArray;
-    checkURL(request, init);
-    return Reflect.apply(target, thisArg, argArray);
-  }
-});
-
-// .wrangler/tmp/pages-sP82dW/functionsWorker-0.3638006471609886.mjs
+// .wrangler/tmp/pages-ecJbp5/functionsWorker-0.9692891762870014.mjs
 var __defProp2 = Object.defineProperty;
 var __name2 = /* @__PURE__ */ __name((target, value) => __defProp2(target, "name", { value, configurable: true }), "__name");
-var urls2 = /* @__PURE__ */ new Set();
-function checkURL2(request, init) {
-  const url = request instanceof URL ? request : new URL(
-    (typeof request === "string" ? new Request(request, init) : request).url
-  );
-  if (url.port && url.port !== "443" && url.protocol === "https:") {
-    if (!urls2.has(url.toString())) {
-      urls2.add(url.toString());
-      console.warn(
-        `WARNING: known issue with \`fetch()\` requests to custom HTTPS ports in published Workers:
- - ${url.toString()} - the custom port will be ignored when the Worker is published using the \`wrangler deploy\` command.
-`
-      );
-    }
-  }
-}
-__name(checkURL2, "checkURL");
-__name2(checkURL2, "checkURL");
-globalThis.fetch = new Proxy(globalThis.fetch, {
-  apply(target, thisArg, argArray) {
-    const [request, init] = argArray;
-    checkURL2(request, init);
-    return Reflect.apply(target, thisArg, argArray);
-  }
-});
 var json = /* @__PURE__ */ __name2((obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } }), "json");
 var BASE = "https://v2.convertapi.com";
-var LO_PAIRS = /* @__PURE__ */ new Set([
-  "pptx>ppt",
-  "docx>doc",
-  "xlsx>xls",
-  "pptx>odp",
-  "odp>pptx",
-  "pps>pptx"
-]);
+var WORD_IN = /* @__PURE__ */ new Set(["doc", "docx", "odt", "rtf"]);
+var WORD_OUT = /* @__PURE__ */ new Set(["doc", "docx", "odt", "rtf"]);
+var PRES_IN = /* @__PURE__ */ new Set(["ppt", "pptx", "odp", "pps", "ppsx", "potx"]);
+var PRES_OUT = /* @__PURE__ */ new Set(["ppt", "pptx", "odp"]);
+var SHEET_IN = /* @__PURE__ */ new Set(["xls", "xlsx", "ods"]);
+var SHEET_OUT = /* @__PURE__ */ new Set(["xls", "xlsx", "ods"]);
+var officeOk = /* @__PURE__ */ __name2((f, t) => f !== t && (WORD_IN.has(f) && WORD_OUT.has(t) || PRES_IN.has(f) && PRES_OUT.has(t) || SHEET_IN.has(f) && SHEET_OUT.has(t)), "officeOk");
+var VECTOR_IN = /* @__PURE__ */ new Set(["wmf", "emf", "cdr"]);
+var VECTOR_OUT = /* @__PURE__ */ new Set(["svg", "png", "pdf", "jpg"]);
+var VIDEO_IN = /* @__PURE__ */ new Set(["ts", "vob", "mpeg", "mpg", "rmvb", "m2ts", "mxf", "wtv", "3gp", "flv", "ogv", "mp4", "webm", "mkv", "mov", "avi"]);
+var VIDEO_OUT = /* @__PURE__ */ new Set(["mp4", "mkv", "mov", "avi"]);
+var RAW_IN = /* @__PURE__ */ new Set(["nef", "cr2", "cr3", "arw", "dng", "crw", "raf", "rw2", "orf", "pef", "srw"]);
+var RAW_OUT = /* @__PURE__ */ new Set(["jpg", "png"]);
+var SEVENZIP_IN = /* @__PURE__ */ new Set(["zip", "rar", "tar", "gz", "tgz", "bz2", "xz", "cab", "iso"]);
+var EXTRA_LO = /* @__PURE__ */ new Set(["wpd>docx", "ods>csv", "svg>eps", "eps>svg"]);
+var useLibreOffice = /* @__PURE__ */ __name2((from, to) => officeOk(from, to) || VECTOR_IN.has(from) && VECTOR_OUT.has(to) || VIDEO_IN.has(from) && VIDEO_OUT.has(to) && from !== to || RAW_IN.has(from) && RAW_OUT.has(to) || SEVENZIP_IN.has(from) && to === "7z" || from === "cbr" && to === "cbz" || // comic: unar extract RAR -> zip, on main box (not calibre)
+EXTRA_LO.has(`${from}>${to}`), "useLibreOffice");
+var EBOOK_IN = /* @__PURE__ */ new Set(["epub", "mobi", "azw", "azw3", "fb2", "lit", "pdb", "prc", "htmlz"]);
+var EBOOK_OUT = /* @__PURE__ */ new Set(["epub", "mobi", "azw3", "fb2", "txt"]);
+var useCalibre = /* @__PURE__ */ __name2((from, to) => EBOOK_IN.has(from) && EBOOK_OUT.has(to) && from !== to, "useCalibre");
 var b64urlEncode = /* @__PURE__ */ __name2((s) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""), "b64urlEncode");
 var b64urlDecode = /* @__PURE__ */ __name2((s) => decodeURIComponent(escape(atob(s.replace(/-/g, "+").replace(/_/g, "/")))), "b64urlDecode");
 function friendlyError(body, pair) {
@@ -98,9 +59,9 @@ function makeJobId() {
 }
 __name(makeJobId, "makeJobId");
 __name2(makeJobId, "makeJobId");
-async function convertViaLibreOffice(env, from, to, file, url, pair) {
-  const base = String(env.LIBREOFFICE_URL || "").replace(/\/$/, "");
-  const token = env.LIBREOFFICE_TOKEN || "";
+async function convertViaService(base, token, from, to, file, url, pair) {
+  base = String(base || "").replace(/\/$/, "");
+  token = token || "";
   if (!base || !token) throw new Error(`This conversion (${pair}) isn't available right now.`);
   let blob, name;
   if (file && typeof file !== "string") {
@@ -122,21 +83,17 @@ async function convertViaLibreOffice(env, from, to, file, url, pair) {
   });
   const body = await res.text();
   if (!res.ok) {
-    let msg = body;
-    try {
-      msg = JSON.parse(body).error || body;
-    } catch {
-    }
-    const err = new Error(`Failed (${pair}): ${msg}`);
-    err.status = res.status >= 400 && res.status < 500 ? 400 : 502;
+    const clientErr = res.status >= 400 && res.status < 500;
+    const err = new Error(clientErr ? `Couldn't convert this file (${pair}) \u2014 it may be empty, corrupt, password-protected, or in an unexpected format. Try another file.` : `The conversion service is temporarily unavailable (${pair}). Please try again in a moment.`);
+    err.status = clientErr ? 400 : 502;
     throw err;
   }
   const out = JSON.parse(body);
   const dlUrl = `${base}/out/${out.id}/${encodeURIComponent(out.filename)}`;
   return { jobId: "lo_" + b64urlEncode(JSON.stringify({ url: dlUrl, filename: out.filename })) };
 }
-__name(convertViaLibreOffice, "convertViaLibreOffice");
-__name2(convertViaLibreOffice, "convertViaLibreOffice");
+__name(convertViaService, "convertViaService");
+__name2(convertViaService, "convertViaService");
 async function onRequestPost({ request, env }) {
   const secret = env.CONVERTAPI_SECRET;
   let form;
@@ -152,9 +109,16 @@ async function onRequestPost({ request, env }) {
   const url = form.get("url");
   if ((!file || typeof file === "string") && !url) return json({ error: "No input provided." }, 400);
   const pair = `${from.toUpperCase()} \u2192 ${to.toUpperCase()}`;
-  if (LO_PAIRS.has(`${from}>${to}`)) {
+  if (useLibreOffice(from, to)) {
     try {
-      return json(await convertViaLibreOffice(env, from, to, file, url, pair));
+      return json(await convertViaService(env.LIBREOFFICE_URL, env.LIBREOFFICE_TOKEN, from, to, file, url, pair));
+    } catch (e) {
+      return json({ error: e.message || "Conversion failed." }, e.status || 502);
+    }
+  }
+  if (useCalibre(from, to)) {
+    try {
+      return json(await convertViaService(env.CALIBRE_URL, env.CALIBRE_TOKEN || env.LIBREOFFICE_TOKEN, from, to, file, url, pair));
     } catch (e) {
       return json({ error: e.message || "Conversion failed." }, e.status || 502);
     }
@@ -193,12 +157,14 @@ async function onRequestGet({ request, env }) {
     } catch {
       return json({ error: "Bad download url." }, 400);
     }
-    let loHost = null;
-    try {
-      loHost = env.LIBREOFFICE_URL ? new URL(env.LIBREOFFICE_URL).hostname : null;
-    } catch {
+    const svcHosts = [];
+    for (const v of [env.LIBREOFFICE_URL, env.CALIBRE_URL]) {
+      try {
+        if (v) svcHosts.push(new URL(v).hostname);
+      } catch {
+      }
     }
-    const ok = /(^|\.)convertapi\.com$/.test(target.hostname) || loHost && target.hostname === loHost;
+    const ok = /(^|\.)convertapi\.com$/.test(target.hostname) || svcHosts.includes(target.hostname);
     if (!ok) return json({ error: "Forbidden host." }, 403);
     const name = params.get("name") || "download";
     const up = await fetch(target.toString());
@@ -1015,7 +981,7 @@ var jsonError2 = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx
 }, "jsonError");
 var middleware_miniflare3_json_error_default2 = jsonError2;
 
-// .wrangler/tmp/bundle-lrPL39/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-yXaeys/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__2 = [
   middleware_ensure_req_body_drained_default2,
   middleware_miniflare3_json_error_default2
@@ -1047,7 +1013,7 @@ function __facade_invoke__2(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__2, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-lrPL39/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-yXaeys/middleware-loader.entry.ts
 var __Facade_ScheduledController__2 = class ___Facade_ScheduledController__2 {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;
@@ -1147,4 +1113,4 @@ export {
   __INTERNAL_WRANGLER_MIDDLEWARE__2 as __INTERNAL_WRANGLER_MIDDLEWARE__,
   middleware_loader_entry_default2 as default
 };
-//# sourceMappingURL=functionsWorker-0.3638006471609886.js.map
+//# sourceMappingURL=functionsWorker-0.9692891762870014.js.map

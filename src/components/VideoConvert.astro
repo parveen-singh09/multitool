@@ -10,8 +10,8 @@ const accept = from ? `.${from},video/*` : 'video/*';
 <div id="vc-root" class="flex flex-col gap-4" data-to={to ?? ''}>
   <label id="vc-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M4 5h16v14H4zM10 9l5 3-5 3z"/></svg>
-    <span class="text-sm text-ink">{from ? `Choose a .${from} file or drop it here` : 'Choose a video or drop it here'}</span>
-    <input id="vc-file" type="file" accept={accept} class="sr-only" />
+    <span class="text-sm text-ink">{from ? `Choose .${from} files or drop them here` : 'Choose videos or drop them here'}</span>
+    <input id="vc-file" type="file" accept={accept} multiple class="sr-only" />
   </label>
 
   <p class="text-[13px] text-ink-tertiary">Video re-encoding runs in your browser and is CPU-intensive — expect roughly real-time speed (a few minutes for a few minutes of footage). Your video is never uploaded.</p>
@@ -65,17 +65,18 @@ const accept = from ? `.${from},video/*` : 'video/*';
   const bar = $('vc-bar');
   const err = $('vc-error');
 
-  let picked: File | null = null;
+  let picked: File[] = [];
   let outUrl: string | null = null;
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
 
-  function load(file: File) {
-    setErr(''); picked = file;
+  function load(files: File[]) {
+    setErr(''); picked = files;
+    if (!files.length) return;
     runBtn.disabled = false; dlBtn.classList.add('hidden');
-    status.textContent = `${file.name} ready.`;
+    status.textContent = files.length === 1 ? `${files[0].name} ready.` : `${files.length} files ready.`;
     // Hide the input's own format — all other video targets are ffmpeg-compatible.
     if (target) {
-      const inExt = (file.name.split('.').pop() || '').toLowerCase();
+      const inExt = (files[0].name.split('.').pop() || '').toLowerCase();
       let first: HTMLOptionElement | null = null;
       for (const opt of Array.from(target.options)) {
         opt.hidden = opt.value === inExt;
@@ -85,8 +86,19 @@ const accept = from ? `.${from},video/*` : 'video/*';
     }
   }
 
+  // Re-encode one file to bytes in ffmpeg's virtual FS. Shared by single and multi paths.
+  async function encode(ff: any, file: File, to: string): Promise<Uint8Array> {
+    const inName = 'in_' + Math.random().toString(36).slice(2) + '.' + (file.name.split('.').pop() || 'dat');
+    const outName = 'out_' + Math.random().toString(36).slice(2) + '.' + to;
+    await ff.writeFile(inName, await fetchFile(file));
+    await ff.exec(argsFor(to, crfSel.value, inName, outName));
+    const data = (await ff.readFile(outName)) as Uint8Array;
+    try { await ff.deleteFile(inName); await ff.deleteFile(outName); } catch {}
+    return data;
+  }
+
   async function convert() {
-    if (!picked) return;
+    if (!picked.length) return;
     const to = presetTo || target?.value || 'mp4';
     setErr(''); runBtn.disabled = true; dlBtn.classList.add('hidden');
     barWrap.classList.remove('hidden'); bar.style.width = '0%';
@@ -96,28 +108,42 @@ const accept = from ? `.${from},video/*` : 'video/*';
         onDownload: (n) => { if (n) status.textContent = n; },
         onProgress: (r) => { bar.style.width = Math.min(100, Math.round(r * 100)) + '%'; },
       });
-      status.textContent = 'Converting…';
-      const inName = 'in_' + Math.random().toString(36).slice(2) + '.' + (picked.name.split('.').pop() || 'dat');
-      const outName = 'out.' + to;
-      await ff.writeFile(inName, await fetchFile(picked));
-      await ff.exec(argsFor(to, crfSel.value, inName, outName));
-      const data = (await ff.readFile(outName)) as Uint8Array;
-      try { await ff.deleteFile(inName); await ff.deleteFile(outName); } catch {}
-      outUrl = URL.createObjectURL(new Blob([data as BlobPart], { type: MIME[to] }));
-      dlBtn.href = outUrl;
-      dlBtn.setAttribute('download', picked.name.replace(/\.[^.]+$/, '') + '.' + to);
+      if (picked.length === 1) {
+        status.textContent = 'Converting…';
+        const data = await encode(ff, picked[0], to);
+        outUrl = URL.createObjectURL(new Blob([data as BlobPart], { type: MIME[to] }));
+        dlBtn.href = outUrl;
+        dlBtn.setAttribute('download', picked[0].name.replace(/\.[^.]+$/, '') + '.' + to);
+        status.textContent = 'Done — ' + (data.length / 1048576).toFixed(2) + ' MB.';
+      } else {
+        const { makeZip } = await import('../lib/zip');
+        const seen = new Set<string>();
+        const entries = [];
+        for (let i = 0; i < picked.length; i++) {
+          status.textContent = `Converting ${i + 1}/${picked.length}…`;
+          bar.style.width = '0%';
+          const data = await encode(ff, picked[i], to);
+          let name = (picked[i].name.replace(/\.[^.]+$/, '') || `video-${i + 1}`) + '.' + to;
+          while (seen.has(name)) name = name.replace(/(\.[^.]+)$/, `-${i}$1`);
+          seen.add(name);
+          entries.push({ name, data });
+        }
+        outUrl = URL.createObjectURL(makeZip(entries));
+        dlBtn.href = outUrl;
+        dlBtn.setAttribute('download', `converted-${to}.zip`);
+        status.textContent = `Done — ${entries.length} files · ZIP.`;
+      }
       dlBtn.classList.remove('hidden');
       bar.style.width = '100%';
-      status.textContent = 'Done — ' + (data.length / 1048576).toFixed(2) + ' MB.';
     } catch (e) {
       setErr('Conversion failed: ' + (e as Error).message);
       status.textContent = '';
     } finally { runBtn.disabled = false; }
   }
 
-  fileInput.addEventListener('change', () => fileInput.files?.[0] && load(fileInput.files[0]));
+  fileInput.addEventListener('change', () => { if (fileInput.files?.length) load(Array.from(fileInput.files)); });
   ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
   ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
-  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) load(f); });
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const fs = (ev as DragEvent).dataTransfer?.files; if (fs?.length) load(Array.from(fs)); });
   runBtn.addEventListener('click', convert);
 </script>

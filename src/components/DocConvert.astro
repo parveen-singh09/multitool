@@ -18,8 +18,8 @@ const placeholder = spec.placeholder ?? 'Paste your text…';
   ) : (
     <label id="dc-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-      <span id="dc-drop-label" class="text-sm text-ink">Choose a file or drop it here</span>
-      <input id="dc-file" type="file" accept={accept} class="sr-only" />
+      <span id="dc-drop-label" class="text-sm text-ink">Choose files or drop them here</span>
+      <input id="dc-file" type="file" accept={accept} multiple class="sr-only" />
     </label>
   )}
 
@@ -70,7 +70,7 @@ const placeholder = spec.placeholder ?? 'Paste your text…';
   const img = $('dc-img') as HTMLImageElement;
   const err = $('dc-error')!;
 
-  let pickedFile: File | null = null;
+  let pickedFiles: File[] = [];
   let outBlob: Blob | null = null;
   let outName = 'output';
   let outUrl: string | null = null;
@@ -86,48 +86,82 @@ const placeholder = spec.placeholder ?? 'Paste your text…';
     outBlob = null;
   }
 
+  const setFiles = (files: File[]) => {
+    pickedFiles = files;
+    if (dropLabel) dropLabel.textContent = files.length === 1 ? files[0].name : `${files.length} files selected`;
+  };
   if (kind === 'file' && fileInput && drop) {
-    fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) { pickedFile = fileInput.files[0]; if (dropLabel) dropLabel.textContent = pickedFile.name; } });
+    fileInput.addEventListener('change', () => { if (fileInput.files?.length) setFiles(Array.from(fileInput.files)); });
     ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
     ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
-    drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) { pickedFile = f; if (dropLabel) dropLabel.textContent = f.name; } });
+    drop.addEventListener('drop', (ev) => { ev.preventDefault(); const fs = (ev as DragEvent).dataTransfer?.files; if (fs?.length) setFiles(Array.from(fs)); });
   }
 
   runBtn.addEventListener('click', async () => {
     setErr(''); resetOut();
     if (!spec) { setErr('This converter is not available.'); return; }
-    const baseName = kind === 'file' ? (pickedFile?.name.replace(/\.[^.]+$/, '') || 'output') : 'output';
-    if (kind === 'file' && !pickedFile) { setErr('Choose a file to convert.'); return; }
+    if (kind === 'file' && !pickedFiles.length) { setErr('Choose a file to convert.'); return; }
     if (kind === 'text' && !input?.value.trim()) { setErr('Enter some text to convert.'); return; }
 
     runBtn.disabled = true; const label = runBtn.textContent; runBtn.textContent = 'Converting…';
     try {
-      const res = await spec.run({ text: input?.value, file: pickedFile || undefined }, baseName);
-      if (res.note) { note.textContent = res.note; note.classList.remove('hidden'); }
-
-      if (res.text != null) {
-        out.textContent = res.text;
-        outWrap.classList.remove('hidden');
-        copyBtn.classList.remove('hidden');
-        summary.textContent = `${res.text.length.toLocaleString()} characters`;
-        outBlob = new Blob([res.text], { type: 'text/plain' });
-        outName = `${baseName}.${res.ext || 'txt'}`;
-      } else if (res.blob) {
-        outBlob = res.blob;
-        outName = res.filename || `${baseName}.${res.ext || 'bin'}`;
-        summary.textContent = fmtSize(res.blob.size);
-        if (res.blob.type.startsWith('image/')) {
-          outUrl = URL.createObjectURL(res.blob);
-          img.src = outUrl; imgWrap.classList.remove('hidden'); imgWrap.classList.add('flex');
-        }
-      }
-      if (outBlob) dlBtn.classList.remove('hidden');
+      if (kind === 'file' && pickedFiles.length > 1) await runMulti();
+      else await runSingle();
     } catch (e) {
       setErr((e as Error).message || 'Conversion failed.');
     } finally {
       runBtn.disabled = false; runBtn.textContent = label;
     }
   });
+
+  async function runSingle() {
+    const pickedFile = pickedFiles[0];
+    const baseName = kind === 'file' ? (pickedFile?.name.replace(/\.[^.]+$/, '') || 'output') : 'output';
+    const res = await spec!.run({ text: input?.value, file: pickedFile || undefined }, baseName);
+    if (res.note) { note.textContent = res.note; note.classList.remove('hidden'); }
+
+    if (res.text != null) {
+      out.textContent = res.text;
+      outWrap.classList.remove('hidden');
+      copyBtn.classList.remove('hidden');
+      summary.textContent = `${res.text.length.toLocaleString()} characters`;
+      outBlob = new Blob([res.text], { type: 'text/plain' });
+      outName = `${baseName}.${res.ext || 'txt'}`;
+    } else if (res.blob) {
+      outBlob = res.blob;
+      outName = res.filename || `${baseName}.${res.ext || 'bin'}`;
+      summary.textContent = fmtSize(res.blob.size);
+      if (res.blob.type.startsWith('image/')) {
+        outUrl = URL.createObjectURL(res.blob);
+        img.src = outUrl; imgWrap.classList.remove('hidden'); imgWrap.classList.add('flex');
+      }
+    }
+    if (outBlob) dlBtn.classList.remove('hidden');
+  }
+
+  // Multi-file: run each file through the converter and bundle every result into one ZIP.
+  async function runMulti() {
+    const { makeZip } = await import('../lib/zip');
+    const seen = new Set<string>();
+    const entries = [];
+    for (let i = 0; i < pickedFiles.length; i++) {
+      const f = pickedFiles[i];
+      const baseName = f.name.replace(/\.[^.]+$/, '') || `file-${i + 1}`;
+      runBtn.textContent = `Converting ${i + 1}/${pickedFiles.length}…`;
+      const res = await spec!.run({ file: f }, baseName);
+      const data = res.text != null
+        ? new Uint8Array(new TextEncoder().encode(res.text))
+        : new Uint8Array(await res.blob!.arrayBuffer());
+      let name = res.filename || `${baseName}.${res.ext || (res.text != null ? 'txt' : 'bin')}`;
+      while (seen.has(name)) name = name.replace(/(\.[^.]+)$/, `-${i}$1`);
+      seen.add(name);
+      entries.push({ name, data });
+    }
+    outBlob = makeZip(entries);
+    outName = 'converted.zip';
+    summary.textContent = `${entries.length} files · ZIP`;
+    dlBtn.classList.remove('hidden');
+  }
 
   dlBtn.addEventListener('click', () => {
     if (!outBlob) return;

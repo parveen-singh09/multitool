@@ -17,8 +17,8 @@ const { to, accept = 'image/*', ext, quality = false, flatten = false } = Astro.
 <div id="im-root" data-to={to} data-ext={ext} data-quality={String(quality)} data-flatten={String(flatten)} class="flex flex-col gap-4">
   <label id="im-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-    <span class="text-sm text-ink">Choose an image or drop it here</span>
-    <input id="im-file" type="file" accept={accept} class="sr-only" />
+    <span class="text-sm text-ink">Choose images or drop them here</span>
+    <input id="im-file" type="file" accept={accept} multiple class="sr-only" />
   </label>
 
   <div id="im-panel" class="hidden flex-col gap-4">
@@ -96,17 +96,84 @@ const { to, accept = 'image/*', ext, quality = false, flatten = false } = Astro.
     }, to, quality);
   }
 
+  // Convert one file to an encoded blob off-screen (no shared state) — used by the multi path.
+  function convertOne(file: File): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const im = new Image();
+        im.onload = () => {
+          const canvas = document.createElement('canvas');
+          const w = im.naturalWidth || 512, h = im.naturalHeight || 512;
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d')!;
+          if (flatten) { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h); }
+          ctx.drawImage(im, 0, 0, w, h);
+          const quality = useQuality && q ? Number(q.value) / 100 : undefined;
+          canvas.toBlob((b) => b ? resolve(b) : reject(new Error(`Could not encode "${file.name}".`)), to, quality);
+        };
+        im.onerror = () => reject(new Error(`Could not read "${file.name}".`));
+        im.src = reader.result as string;
+      };
+      reader.onerror = () => reject(new Error(`Could not read "${file.name}".`));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  let multiUrl: string | null = null;
+  async function loadMany(files: File[]) {
+    setErr('');
+    panel.classList.remove('flex'); panel.classList.add('hidden'); // hide single-image preview UI
+    blob = null;
+    const dl = document.getElementById('im-download') as HTMLAnchorElement;
+    info.classList.remove('hidden');
+    try {
+      const { makeZip } = await import('../lib/zip');
+      const seen = new Set<string>();
+      const entries = [];
+      for (let i = 0; i < files.length; i++) {
+        info.textContent = `Converting ${i + 1}/${files.length}…`;
+        const b = await convertOne(files[i]);
+        let name = (files[i].name.replace(/\.[^.]+$/, '') || `image-${i + 1}`) + '.' + ext;
+        while (seen.has(name)) name = name.replace(/(\.[^.]+)$/, `-${i}$1`);
+        seen.add(name);
+        entries.push({ name, data: new Uint8Array(await b.arrayBuffer()) });
+      }
+      if (multiUrl) URL.revokeObjectURL(multiUrl);
+      multiUrl = URL.createObjectURL(makeZip(entries));
+      panel.classList.remove('hidden'); panel.classList.add('flex');
+      preview.classList.add('hidden');
+      dl.textContent = `Download ${entries.length} files (ZIP)`;
+      dl.dataset.multi = multiUrl;
+      info.textContent = `${entries.length} images · ZIP`;
+    } catch (e) {
+      setErr((e as Error).message);
+    }
+  }
+
+  function dispatch(files: File[]) {
+    if (files.length > 1) loadMany(files);
+    else {
+      preview.classList.remove('hidden');
+      const dl = document.getElementById('im-download') as HTMLAnchorElement;
+      delete dl.dataset.multi; dl.textContent = 'Download';
+      loadFile(files[0]);
+    }
+  }
+
   q?.addEventListener('input', () => { if (qval) qval.textContent = q.value + '%'; convert(); });
-  fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) loadFile(fileInput.files[0]); });
+  fileInput.addEventListener('change', () => { if (fileInput.files?.length) dispatch(Array.from(fileInput.files)); });
   ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
   ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
-  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) loadFile(f); });
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const fs = (ev as DragEvent).dataTransfer?.files; if (fs?.length) dispatch(Array.from(fs)); });
 
-  document.getElementById('im-download')!.addEventListener('click', () => {
-    if (!blob) return;
+  document.getElementById('im-download')!.addEventListener('click', (e) => {
+    const dl = e.currentTarget as HTMLAnchorElement;
+    const url = dl.dataset.multi || (blob && URL.createObjectURL(blob));
+    if (!url) return;
     const a = document.createElement('a');
-    a.download = `converted.${ext}`;
-    a.href = URL.createObjectURL(blob);
+    a.download = dl.dataset.multi ? `converted-${ext}.zip` : `converted.${ext}`;
+    a.href = url;
     a.click();
   });
 </script>
