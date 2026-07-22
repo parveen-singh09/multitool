@@ -17,7 +17,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
           <input id="ic-q" type="range" min="10" max="100" value="80" class="w-full accent-primary" />
         </label>
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">Format
-          <select id="ic-fmt" class="field w-32"><option value="image/jpeg">JPEG</option><option value="image/webp">WebP</option></select>
+          <select id="ic-fmt" class="field w-32"><option value="image/jpeg">JPEG</option><option value="image/webp">WebP</option><option value="image/png">PNG</option></select>
         </label>
         <button id="ic-download" class="btn btn-primary">Download</button>
       </div>
@@ -34,7 +34,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
       This free image compressor reduces the file size of JPG and PNG photos by
-      re-encoding them as JPEG or WebP at a quality level you control. See the
+      re-encoding them as JPEG, WebP or PNG at a quality level you control. See the
       before and after sizes and how much you saved, then download the smaller
       file.
     </p>
@@ -89,8 +89,17 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }, fmt.value, Number(q.value) / 100);
   }
 
+  // PNG is lossless: canvas.toBlob ignores quality, so dim the slider to say so.
+  function syncQuality() {
+    const lossy = fmt.value !== 'image/png';
+    const label = q.closest('label') as HTMLElement;
+    q.disabled = !lossy;
+    label.style.opacity = lossy ? '' : '0.45';
+    qval.textContent = lossy ? q.value + '%' : 'n/a';
+  }
+
   q.addEventListener('input', () => { qval.textContent = q.value + '%'; compress(); });
-  fmt.addEventListener('change', compress);
+  fmt.addEventListener('change', () => { syncQuality(); compress(); });
   fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) loadFile(fileInput.files[0]); });
   ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
   ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));

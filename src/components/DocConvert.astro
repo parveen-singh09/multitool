@@ -33,7 +33,7 @@ const placeholder = spec.placeholder ?? 'Paste your text…';
   <p id="dc-note" class="hidden text-[13px] text-ink-tertiary"></p>
 
   <div id="dc-out-wrap" class="hidden">
-    <pre id="dc-out" class="field m-0 max-h-112 overflow-auto p-3 text-[13px]" style="white-space:pre-wrap;word-break:break-word;font-family:var(--font-mono,ui-monospace,monospace)"></pre>
+    <pre id="dc-out" class="hl-block field m-0 max-h-112 overflow-auto p-3 text-[13px]" style="white-space:pre-wrap;word-break:break-word;font-family:var(--font-mono,ui-monospace,monospace)"><code id="dc-out-code" class="hljs" style="background:transparent"></code></pre>
   </div>
   <div id="dc-img-wrap" class="hidden panel justify-center overflow-hidden p-4">
     <img id="dc-img" class="max-h-96 w-auto max-w-full rounded-md" alt="Converted output preview" />
@@ -48,6 +48,7 @@ const placeholder = spec.placeholder ?? 'Paste your text…';
 
 <script>
   import { getConversion } from '../lib/docConvertDispatch';
+  import { hl } from '../lib/highlight';
 
   const root = document.getElementById('dc-root') as HTMLElement;
   const slug = root.dataset.slug!;
@@ -66,6 +67,7 @@ const placeholder = spec.placeholder ?? 'Paste your text…';
   const note = $('dc-note')!;
   const outWrap = $('dc-out-wrap')!;
   const out = $('dc-out')!;
+  const outCode = $('dc-out-code')!;
   const imgWrap = $('dc-img-wrap')!;
   const img = $('dc-img') as HTMLImageElement;
   const err = $('dc-error')!;
@@ -77,6 +79,21 @@ const placeholder = spec.placeholder ?? 'Paste your text…';
 
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
   const fmtSize = (n: number) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`;
+
+  // Map output extension → highlight.js language. Only these get syntax colors; others render plain.
+  const LANG: Record<string, string> = {
+    json: 'json', html: 'xml', htm: 'xml', xml: 'xml', svg: 'xml', sql: 'sql',
+    md: 'markdown', markdown: 'markdown', css: 'css', scss: 'scss', js: 'javascript',
+    ts: 'typescript', yaml: 'yaml', yml: 'yaml', toml: 'ini', csv: 'plaintext',
+  };
+  // Output format: prefer the spec's ext, else the slug's "-to-<fmt>" suffix (many specs omit ext).
+  const slugFmt = slug.split('-to-').pop() || '';
+  // Render output text into the <code> mirror, highlighted when the format is a known language.
+  function showText(text: string, ext?: string) {
+    const lang = LANG[(ext || '').toLowerCase()] || LANG[slugFmt.toLowerCase()];
+    if (lang && lang !== 'plaintext') hl(outCode as HTMLElement, text, lang);
+    else outCode.textContent = text;
+  }
 
   function resetOut() {
     outWrap.classList.add('hidden'); imgWrap.classList.add('hidden'); imgWrap.classList.remove('flex');
@@ -121,7 +138,7 @@ const placeholder = spec.placeholder ?? 'Paste your text…';
     if (res.note) { note.textContent = res.note; note.classList.remove('hidden'); }
 
     if (res.text != null) {
-      out.textContent = res.text;
+      showText(res.text, res.ext);
       outWrap.classList.remove('hidden');
       copyBtn.classList.remove('hidden');
       summary.textContent = `${res.text.length.toLocaleString()} characters`;
@@ -171,7 +188,7 @@ const placeholder = spec.placeholder ?? 'Paste your text…';
   });
 
   copyBtn.addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(out.textContent || ''); copyBtn.textContent = 'Copied'; }
+    try { await navigator.clipboard.writeText(outCode.textContent || ''); copyBtn.textContent = 'Copied'; }
     catch { copyBtn.textContent = 'Copy failed'; }
     setTimeout(() => (copyBtn.textContent = 'Copy'), 1500);
   });

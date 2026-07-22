@@ -139,7 +139,7 @@ const { to, accept = 'image/*', fromLabel = 'image', quality = false, matte = fa
   }
 
   async function encodeItem(it: Item) {
-    if (!it.canvas || it.error) return;
+    if (isText || !it.canvas || it.error) return; // text formats (html/base64) build a string in render(), no blob to encode
     if (it.url) { URL.revokeObjectURL(it.url); it.url = null; }
     try {
       const c = renderTarget(it.canvas);
