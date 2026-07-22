@@ -944,9 +944,26 @@ const index = tools.map((t) => ({
     return null;
   }
 
+  // Conversions available for a file's extension — used when the message names no target.
+  function fileBasedPicks(from: string): Pick[] {
+    const pre = `${from}-to-`;
+    const picks: Pick[] = index.filter((t) => t.slug.startsWith(pre)).map((t) => ({ slug: t.slug, label: t.name, why: t.tagline }));
+    const conv = CATEGORY_CONVERTER[categoryOf(from) ?? ''];
+    if (conv && getTool(conv) && !picks.some((p) => p.slug === conv)) picks.push({ slug: conv, label: getTool(conv)!.name, why: getTool(conv)!.tagline });
+    return picks;
+  }
+
   async function route(query: string): Promise<Routed> {
     const direct = resolveConvert(query);
     if (direct) return { reply: `Converting your ${extOf(files[0].name).toUpperCase()} to ${direct.slug.split('-to-')[1]?.toUpperCase() ?? 'the target format'}:`, tools: [direct] };
+    // File attached but no target named: offer that file's real conversions, not LLM guesses.
+    if (files.length) {
+      const from = extOf(files[0].name);
+      if (from && !/^(jpg|jpeg|png|webp|gif|bmp)$/.test(from)) {
+        const picks = fileBasedPicks(from);
+        if (picks.length) return { reply: `Here's what I can convert your ${from.toUpperCase()} into — pick one:`, tools: picks.slice(0, 3) };
+      }
+    }
     if (!hasAI) return localRouted(query);
     const catalog = index
       .map((t) => {
