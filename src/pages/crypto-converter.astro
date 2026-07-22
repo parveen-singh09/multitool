@@ -149,6 +149,9 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     'dash': ['DASH', 'Dash'],
   };
 
+  // Alphabetical by name for all display lists (COINS itself stays keyed for lookups).
+  const COIN_ENTRIES = Object.entries(COINS).sort((a, b) => a[1][1].localeCompare(b[1][1]));
+
 
   const FIAT_CODES: string[] = [
     'USD','EUR','GBP','JPY','CNY','INR','AUD','CAD','CHF','HKD','SGD','SEK','KRW','NOK','NZD',
@@ -242,7 +245,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   };
 
   function fillSelects() {
-    fromList.innerHTML = Object.entries(COINS)
+    fromList.innerHTML = COIN_ENTRIES
       .map(([id, [sym, name]], i) => `
         <li role="option" id="cr-opt-${i}" data-id="${id}" data-search="${sym} ${name}" aria-selected="${id === fromId}"
           class="flex cursor-pointer items-center gap-2 px-3 py-2 text-[15px] text-ink-subtle aria-selected:bg-surface-2 hover:bg-surface-2">
@@ -258,7 +261,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const fiatOpts = codes
       .map((code) => `<option value="${code}">${code} — ${currencyName(code)}</option>`)
       .join('');
-    const coinOpts = Object.entries(COINS)
+    const coinOpts = COIN_ENTRIES
       .map(([id, [sym, name]]) => `<option value="c:${id}">${sym} — ${name}</option>`)
       .join('');
     toSel.innerHTML =
@@ -357,7 +360,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const rate = fx[code];
     if (rate === undefined) { table.innerHTML = ''; return; }
     tableLabel.textContent = `Market prices (${code})`;
-    const rows = Object.entries(COINS).map(([id, [sym, name]]) => {
+    const rows = COIN_ENTRIES.map(([id, [sym, name]]) => {
       const usd = coinUsd[id];
       if (usd === undefined) return '';
       const chg = coinChg[id];
