@@ -6,8 +6,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   <div class="flex flex-col gap-4">
     <label id="pj-drop" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-      <span class="text-sm text-ink">Choose a PDF or drop it here</span>
-      <input id="pj-file" type="file" accept="application/pdf" class="sr-only" />
+      <span class="text-sm text-ink">Choose PDFs or drop them here</span>
+      <input id="pj-file" type="file" accept="application/pdf" multiple class="sr-only" />
     </label>
 
     <div id="pj-panel" class="hidden flex-col gap-4">
@@ -85,9 +85,9 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const qVal = $('pj-qval');
   const rangeEl = $('pj-range') as HTMLInputElement;
 
-  let bytes: ArrayBuffer | null = null;
+  let files: File[] = [];
   let baseName = 'page';
-  let rendered: { blob: Blob; url: string; page: number; ext: string }[] = [];
+  let rendered: { blob: Blob; url: string; page: number; ext: string; name: string }[] = [];
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
 
   const syncQuality = () => {
@@ -99,15 +99,16 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   qEl.addEventListener('input', syncQuality);
   syncQuality();
 
-  function load(file: File) {
+  function load(picked: File[]) {
     setErr('');
-    baseName = file.name.replace(/\.pdf$/i, '') || 'page';
-    file.arrayBuffer().then((b) => {
-      bytes = b;
-      panel.classList.remove('hidden');
-      panel.classList.add('flex');
-      status.textContent = `${file.name} ready — set your options and render.`;
-    }).catch((e) => setErr('Could not read that file: ' + (e as Error).message));
+    if (!picked.length) return;
+    files = picked;
+    baseName = picked[0].name.replace(/\.pdf$/i, '') || 'page';
+    panel.classList.remove('hidden');
+    panel.classList.add('flex');
+    status.textContent = picked.length === 1
+      ? `${picked[0].name} ready — set your options and render.`
+      : `${picked.length} PDFs ready — set your options and render.`;
   }
 
   function parseRange(spec: string, total: number): number[] {
@@ -133,7 +134,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
 
   async function render() {
-    if (!bytes) return;
+    if (!files.length) return;
     setErr(''); grid.innerHTML = '';
     rendered.forEach((r) => URL.revokeObjectURL(r.url));
     rendered = [];
@@ -142,31 +143,42 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const ext = fmt === 'image/png' ? 'png' : fmt === 'image/webp' ? 'webp' : 'jpg';
     const quality = fmt === 'image/png' ? undefined : Number(qEl.value) / 100;
     const scale = Number(($('pj-scale') as HTMLSelectElement).value);
+    const multi = files.length > 1;
+    const seen = new Set<string>();
     try {
-      const pdf = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
-      let pages: number[];
-      try { pages = parseRange(rangeEl.value, pdf.numPages); }
-      catch (e) { setErr((e as Error).message); return; }
-      if (!pages.length) { setErr(`No pages match that range (document has ${pdf.numPages}).`); return; }
       let totalBytes = 0;
-      for (let idx = 0; idx < pages.length; idx++) {
-        const n = pages[idx];
-        status.textContent = `Rendering page ${n} (${idx + 1} / ${pages.length})…`;
-        const page = await pdf.getPage(n);
-        const viewport = page.getViewport({ scale });
-        const canvas = document.createElement('canvas');
-        canvas.width = viewport.width; canvas.height = viewport.height;
-        const ctx = canvas.getContext('2d')!;
-        if (ext !== 'png') { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
-        await page.render({ canvasContext: ctx, viewport, canvas } as any).promise;
-        const blob = await new Promise<Blob>((res, rej) =>
-          canvas.toBlob((b) => b ? res(b) : rej(new Error('Encoding failed')), fmt, quality));
-        totalBytes += blob.size;
-        const url = URL.createObjectURL(blob);
-        rendered.push({ blob, url, page: n, ext });
-        addCard(url, n, ext);
+      for (let fi = 0; fi < files.length; fi++) {
+        const fileBase = files[fi].name.replace(/\.pdf$/i, '') || `page-${fi + 1}`;
+        const buf = await files[fi].arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+        let pages: number[];
+        try { pages = parseRange(rangeEl.value, pdf.numPages); }
+        catch (e) { setErr((e as Error).message); return; }
+        if (!pages.length) { setErr(`No pages match that range ("${files[fi].name}" has ${pdf.numPages}).`); return; }
+        for (let idx = 0; idx < pages.length; idx++) {
+          const n = pages[idx];
+          status.textContent = multi
+            ? `Rendering ${fileBase} — page ${n} (${fi + 1}/${files.length})…`
+            : `Rendering page ${n} (${idx + 1} / ${pages.length})…`;
+          const page = await pdf.getPage(n);
+          const viewport = page.getViewport({ scale });
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width; canvas.height = viewport.height;
+          const ctx = canvas.getContext('2d')!;
+          if (ext !== 'png') { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+          await page.render({ canvasContext: ctx, viewport, canvas } as any).promise;
+          const blob = await new Promise<Blob>((res, rej) =>
+            canvas.toBlob((b) => b ? res(b) : rej(new Error('Encoding failed')), fmt, quality));
+          totalBytes += blob.size;
+          const url = URL.createObjectURL(blob);
+          let name = `${fileBase}-${n}.${ext}`;
+          while (seen.has(name)) name = name.replace(new RegExp(`(\\.${ext})$`), `-${fi}$1`);
+          seen.add(name);
+          rendered.push({ blob, url, page: n, ext, name });
+          addCard(url, multi ? `${fileBase} · ${n}` : `Page ${n}`, name, ext);
+        }
       }
-      status.textContent = `Done — ${pages.length} page(s), ${fmtSize(totalBytes)} total.`;
+      status.textContent = `Done — ${rendered.length} page(s), ${fmtSize(totalBytes)} total.`;
       allBtn.classList.remove('hidden');
       if (rendered.length > 1) zipBtn.classList.remove('hidden');
     } catch (e) { setErr('Could not render that PDF: ' + (e as Error).message); }
@@ -174,17 +186,17 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   const fmtSize = (n: number) => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(0) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
 
-  function addCard(url: string, n: number, ext: string) {
+  function addCard(url: string, label: string, name: string, ext: string) {
     const div = document.createElement('div');
     div.className = 'panel panel-lift flex flex-col gap-2 p-2';
-    div.innerHTML = `<img src="${url}" class="w-full rounded-sm" alt="Page ${n}" loading="lazy" />
-      <a href="${url}" download="${baseName}-${n}.${ext}" class="btn btn-secondary py-1 text-[13px]">Page ${n} · ${ext.toUpperCase()}</a>`;
+    div.innerHTML = `<img src="${url}" class="w-full rounded-sm" alt="${label}" loading="lazy" />
+      <a href="${url}" download="${name}" class="btn btn-secondary py-1 text-[13px]">${label} · ${ext.toUpperCase()}</a>`;
     grid.appendChild(div);
   }
 
   allBtn.addEventListener('click', async () => {
     for (const r of rendered) {
-      const a = document.createElement('a'); a.href = r.url; a.download = `${baseName}-${r.page}.${r.ext}`; a.click();
+      const a = document.createElement('a'); a.href = r.url; a.download = r.name; a.click();
       await new Promise((res) => setTimeout(res, 150));
     }
   });
@@ -236,20 +248,22 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const prev = zipBtn.textContent;
     zipBtn.textContent = 'Zipping…';
     try {
-      const files = await Promise.all(rendered.map(async (r) => ({
-        name: `${baseName}-${r.page}.${r.ext}`,
+      const entries = await Promise.all(rendered.map(async (r) => ({
+        name: r.name,
         data: new Uint8Array(await r.blob.arrayBuffer()),
       })));
-      const url = URL.createObjectURL(makeZip(files));
-      const a = document.createElement('a'); a.href = url; a.download = `${baseName}.zip`; a.click();
+      const url = URL.createObjectURL(makeZip(entries));
+      const zipName = files.length > 1 ? `pdf-images-${ext(rendered)}.zip` : `${baseName}.zip`;
+      const a = document.createElement('a'); a.href = url; a.download = zipName; a.click();
       setTimeout(() => URL.revokeObjectURL(url), 4000);
     } catch (e) { setErr('Could not build ZIP: ' + (e as Error).message); }
     finally { zipBtn.disabled = false; zipBtn.textContent = prev; }
   });
+  const ext = (r: typeof rendered) => r[0]?.ext || 'img';
 
-  fileInput.addEventListener('change', () => fileInput.files?.[0] && load(fileInput.files[0]));
+  fileInput.addEventListener('change', () => { if (fileInput.files?.length) load(Array.from(fileInput.files)); });
   ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
   ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
-  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files?.[0]; if (f) load(f); });
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); const fs = (ev as DragEvent).dataTransfer?.files; if (fs?.length) load(Array.from(fs)); });
   $('pj-render').addEventListener('click', render);
 </script>
