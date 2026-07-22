@@ -112,6 +112,7 @@ const index = tools.map((t) => ({
   import type { RunResult } from '../lib/toolRunners';
   import { matchesQuery, compareByQuery, toolHaystack } from '../lib/toolSearch';
   import { driveReady, pickFromDrive } from '../lib/drivePickers';
+  import { FORMAT_CATEGORIES, categoryOf, targetsFor, chainPath } from '../data/formatCatalog';
 
   type IdxTool = { slug: string; name: string; tagline: string; category: string; keywords: string[] };
 
@@ -896,7 +897,56 @@ const index = tools.map((t) => ({
     return { reply, tools };
   }
 
+  const extOf = (name: string) => (name.split('.').pop() || '').toLowerCase();
+
+  // Category → its generic converter tool (fallback when no exact `${from}-to-${to}` tool exists).
+  const CATEGORY_CONVERTER: Record<string, string> = {
+    Document: 'document-converter', Ebook: 'ebook-format-converter', Font: 'font-converter',
+    Presentation: 'presentation-converter', Spreadsheet: 'spreadsheet-converter',
+    Vector: 'vector-converter', CAD: 'cad-converter', Video: 'video-converter',
+    Audio: 'audio-converter', Archive: 'archive-converter',
+  };
+  // Words users type for a target → the token used in tool slugs.
+  const TARGET_ALIAS: Record<string, string> = { jpeg: 'jpg', excel: 'excel', word: 'word', powerpoint: 'powerpoint', ppt: 'powerpoint' };
+
+  // Every target reachable from `from`: catalog targets + any `${from}-to-X` tool that exists.
+  function allowedTargets(from: string): Set<string> {
+    const set = new Set(targetsFor(from));
+    const pre = `${from}-to-`;
+    for (const t of index) if (t.slug.startsWith(pre)) set.add(t.slug.slice(pre.length));
+    return set;
+  }
+
+  function parseTarget(query: string, from: string): string | null {
+    const q = query.toLowerCase();
+    const allowed = allowedTargets(from);
+    // Longest token first so "docx" wins over "doc".
+    const words = [...allowed, ...Object.keys(TARGET_ALIAS)].sort((a, b) => b.length - a.length);
+    for (const w of words) {
+      if (!new RegExp(`\\b${w.replace('.', '\\.')}\\b`).test(q)) continue;
+      const tok = TARGET_ALIAS[w] ?? w;
+      if (tok !== from && (allowed.has(tok) || getTool(`${from}-to-${tok}`))) return tok;
+    }
+    return null;
+  }
+
+  // When a file is attached, route on the real extension + named target — not on LLM word-matching.
+  function resolveConvert(query: string): Pick | null {
+    if (!files.length) return null;
+    const from = extOf(files[0].name);
+    if (!from || /^(jpg|jpeg|png|webp|gif|bmp)$/.test(from)) return null; // images handled inline already
+    const to = parseTarget(query, from);
+    if (!to) return null;
+    const exact = getTool(`${from}-to-${to}`);
+    if (exact) return { slug: exact.slug, label: exact.name };
+    const conv = CATEGORY_CONVERTER[categoryOf(from) ?? ''];
+    if (conv && getTool(conv) && (targetsFor(from).includes(to) || chainPath(from, to))) return { slug: conv, label: getTool(conv)!.name };
+    return null;
+  }
+
   async function route(query: string): Promise<Routed> {
+    const direct = resolveConvert(query);
+    if (direct) return { reply: `Converting your ${extOf(files[0].name).toUpperCase()} to ${direct.slug.split('-to-')[1]?.toUpperCase() ?? 'the target format'}:`, tools: [direct] };
     if (!hasAI) return localRouted(query);
     const catalog = index
       .map((t) => {
