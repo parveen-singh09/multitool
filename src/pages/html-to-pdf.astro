@@ -14,8 +14,9 @@ import ToolLayout from '../layouts/ToolLayout.astro';
             <button id="hp-clear" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Clear</button>
           </span>
         </span>
-        <div class="copy-wrap">
-          <textarea id="hp-in" class="field font-mono text-[13px]" rows="16" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Paste HTML here. You can include <style> tags, tables, headings, lists and inline CSS."></textarea>
+        <div class="hl-edit field p-0" style="height:24rem;resize:vertical;overflow:hidden">
+          <pre class="hl-block" aria-hidden="true"><code id="hp-in-hl" class="hljs" style="background:transparent"></code></pre>
+          <textarea id="hp-in" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Paste HTML here. You can include <style> tags, tables, headings, lists and inline CSS." aria-label="HTML input"></textarea>
           <button type="button" class="copy-icon" data-copy-target="#hp-in" aria-label="Copy"></button>
         </div>
       </div>
@@ -58,7 +59,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
     <div class="flex flex-col gap-2 lg:sticky lg:top-6 self-start">
       <label class="text-sm text-ink-subtle">Live preview</label>
-      <iframe id="hp-frame" class="w-full rounded-md border border-hairline bg-white" style="height:70vh" title="HTML preview" sandbox="allow-same-origin"></iframe>
+      <iframe id="hp-frame" class="w-full rounded-md border border-hairline bg-white" style="height:70vh" title="HTML preview" sandbox="allow-same-origin allow-modals"></iframe>
     </div>
   </div>
 
@@ -82,8 +83,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 </ToolLayout>
 
 <script>
+  import { wireInput } from '../lib/highlight';
+
   const $ = (id: string) => document.getElementById(id)!;
   const input = $('hp-in') as HTMLTextAreaElement;
+  const inHl = $('hp-in-hl');
   const frame = $('hp-frame') as HTMLIFrameElement;
   const sizeSel = $('hp-size') as HTMLSelectElement;
   const orientSel = $('hp-orient') as HTMLSelectElement;
@@ -108,11 +112,13 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   function render() {
     const doc = frame.contentDocument;
     if (!doc) return;
-    const pageCss = `@page { size: ${sizeSel.value} ${orientSel.value}; margin: ${marginSel.value}; }`;
+    // margin:0 on @page removes the browser's date/title/URL header & footer;
+    // the chosen margin becomes body padding so spacing still applies.
+    const pageCss = `@page { size: ${sizeSel.value} ${orientSel.value}; margin: 0; }`;
     doc.open();
     doc.write(
       `<!DOCTYPE html><html><head><meta charset="utf-8">` +
-      `<style>${pageCss}\nhtml,body{margin:0}body{padding:12px;font-family:system-ui,sans-serif}</style>` +
+      `<style>${pageCss}\nhtml,body{margin:0}body{padding:${marginSel.value || 0};font-family:system-ui,sans-serif}</style>` +
       `</head><body>${input.value}</body></html>`,
     );
     doc.close();
@@ -126,10 +132,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     win.print();
   }
 
-  input.addEventListener('input', render);
+  const refresh = wireInput(input, inHl, () => 'html', render);
   [sizeSel, orientSel, marginSel].forEach((el) => el.addEventListener('change', render));
-  $('hp-sample').addEventListener('click', () => { input.value = SAMPLE; render(); });
-  $('hp-clear').addEventListener('click', () => { input.value = ''; render(); });
+  $('hp-sample').addEventListener('click', () => { input.value = SAMPLE; refresh(); render(); });
+  $('hp-clear').addEventListener('click', () => { input.value = ''; refresh(); render(); });
   $('hp-pdf').addEventListener('click', savePdf);
 
   render();

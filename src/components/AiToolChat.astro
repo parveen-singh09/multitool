@@ -234,8 +234,10 @@ const index = tools.map((t) => ({
         closeAttach();
         if (src === 'device') { fileInput.click(); return; }
         b.disabled = true;
+        const picked: File[] = [];
         try {
-          await pickFromDrive(src, (file) => { fileInput.value = ''; setWorking([...files, file]); });
+          await pickFromDrive(src, (file) => picked.push(file), fileInput.multiple);
+          if (picked.length) { fileInput.value = ''; setWorking([...files, ...picked]); }
         } catch (err) { bubble('assistant', `Couldn’t import from ${src === 'gdrive' ? 'Google Drive' : 'Dropbox'}. Try again or use “From this device”.`); }
         finally { b.disabled = false; }
       });

@@ -43,7 +43,7 @@ const toFile = async (url: string, name: string, headers?: HeadersInit): Promise
   return new File([blob], name, { type: blob.type || 'application/octet-stream' });
 };
 
-async function pickDropbox(onFile: (f: File) => void): Promise<void> {
+async function pickDropbox(onFiles: (f: File[]) => void, multiple: boolean): Promise<void> {
   await loadScript('https://www.dropbox.com/static/api/2/dropins.js', {
     id: 'dropboxjs',
     'data-app-key': DRIVE_CFG.dropboxAppKey!,
@@ -51,9 +51,9 @@ async function pickDropbox(onFile: (f: File) => void): Promise<void> {
   return new Promise((resolve, reject) => {
     (window as any).Dropbox.choose({
       linkType: 'direct',
-      multiselect: false,
+      multiselect: multiple,
       success: async (files: any[]) => {
-        try { onFile(await toFile(files[0].link, files[0].name)); resolve(); }
+        try { onFiles(await Promise.all(files.map((f) => toFile(f.link, f.name)))); resolve(); }
         catch (e) { reject(e); }
       },
       cancel: () => resolve(),
@@ -78,7 +78,7 @@ export function warmGoogle(): Promise<void> {
   return googleWarm;
 }
 
-async function pickGoogle(onFile: (f: File) => void): Promise<void> {
+async function pickGoogle(onFiles: (f: File[]) => void, multiple: boolean): Promise<void> {
   await warmGoogle();
 
   const token = await new Promise<string>((resolve, reject) => {
@@ -90,44 +90,46 @@ async function pickGoogle(onFile: (f: File) => void): Promise<void> {
     tc.requestAccessToken();
   });
 
+  const fetchDoc = (doc: any) => {
+    const exp = GOOGLE_EXPORT[doc.mimeType as string];
+    const url = exp
+      ? `https://www.googleapis.com/drive/v3/files/${doc.id}/export?mimeType=${encodeURIComponent(exp.mime)}`
+      : `https://www.googleapis.com/drive/v3/files/${doc.id}?alt=media`;
+    const name = exp && !doc.name.endsWith(exp.ext) ? doc.name + exp.ext : doc.name;
+    return toFile(url, name, { Authorization: 'Bearer ' + token });
+  };
+
   return new Promise((resolve, reject) => {
     const g = (window as any).google;
-    const picker = new g.picker.PickerBuilder()
-      .addView(g.picker.ViewId.DOCS)
+    const view = new g.picker.DocsView(g.picker.ViewId.DOCS);
+    if (multiple) view.setSelectFolderEnabled(false);
+    const builder = new g.picker.PickerBuilder()
+      .addView(view)
       .setOAuthToken(token)
       .setDeveloperKey(DRIVE_CFG.gdriveApiKey)
       .setAppId(DRIVE_CFG.gdriveAppId || '')
       .setCallback(async (data: any) => {
         if (data.action === g.picker.Action.PICKED) {
-          try {
-            const doc = data.docs[0];
-            const exp = GOOGLE_EXPORT[doc.mimeType as string];
-            const url = exp
-              ? `https://www.googleapis.com/drive/v3/files/${doc.id}/export?mimeType=${encodeURIComponent(exp.mime)}`
-              : `https://www.googleapis.com/drive/v3/files/${doc.id}?alt=media`;
-            const name = exp && !doc.name.endsWith(exp.ext) ? doc.name + exp.ext : doc.name;
-            onFile(await toFile(url, name, { Authorization: 'Bearer ' + token }));
-            resolve();
-          } catch (e) { reject(e); }
+          try { onFiles(await Promise.all((data.docs || []).map(fetchDoc))); resolve(); }
+          catch (e) { reject(e); }
         } else if (data.action === g.picker.Action.CANCEL) resolve();
-      })
-      .build();
-    picker.setVisible(true);
+      });
+    if (multiple) builder.enableFeature(g.picker.Feature.MULTISELECT_ENABLED);
+    builder.build().setVisible(true);
   });
 }
 
-async function pickOneDrive(onFile: (f: File) => void): Promise<void> {
+async function pickOneDrive(onFiles: (f: File[]) => void, multiple: boolean): Promise<void> {
   await loadScript('https://js.live.net/v7.2/OneDrive.js');
   return new Promise((resolve, reject) => {
     (window as any).OneDrive.open({
       clientId: DRIVE_CFG.onedriveClientId,
       action: 'download',
-      multiSelect: false,
+      multiSelect: multiple,
       advanced: { redirectUri: window.location.origin + '/onedrive-callback.html' },
       success: async (files: any) => {
         try {
-          const f = files.value[0];
-          onFile(await toFile(f['@microsoft.graph.downloadUrl'], f.name));
+          onFiles(await Promise.all((files.value || []).map((f: any) => toFile(f['@microsoft.graph.downloadUrl'], f.name))));
           resolve();
         } catch (e) { reject(e); }
       },
@@ -137,7 +139,9 @@ async function pickOneDrive(onFile: (f: File) => void): Promise<void> {
   });
 }
 
-export async function pickFromDrive(src: string, onFile: (f: File) => void): Promise<void> {
+// onFile receives one file per selection; multiple lets cloud pickers return several at once.
+export async function pickFromDrive(src: string, onFile: (f: File) => void, multiple = false): Promise<void> {
+  const onFiles = (files: File[]) => files.forEach(onFile);
   // ponytail: pickers focus an offscreen node, and global `scroll-behavior: smooth`
   // animates the jump (and the return) over seconds. Force instant during the flow.
   const html = document.documentElement;
@@ -145,9 +149,9 @@ export async function pickFromDrive(src: string, onFile: (f: File) => void): Pro
   html.style.scrollBehavior = 'auto';
   const restore = () => setTimeout(() => { html.style.scrollBehavior = prev; }, 600); // outlast the focus-return scroll
   try {
-    if (src === 'gdrive') return await pickGoogle(onFile);
-    if (src === 'dropbox') return await pickDropbox(onFile);
-    if (src === 'onedrive') return await pickOneDrive(onFile);
+    if (src === 'gdrive') return await pickGoogle(onFiles, multiple);
+    if (src === 'dropbox') return await pickDropbox(onFiles, multiple);
+    if (src === 'onedrive') return await pickOneDrive(onFiles, multiple);
     throw new Error('Unknown source');
   } finally {
     restore();

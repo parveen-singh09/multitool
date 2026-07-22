@@ -26,9 +26,9 @@ function unlockScroll() {
   window.scrollTo(0, lockedY);
 }
 
-function deliver(input: HTMLInputElement, file: File) {
+function deliver(input: HTMLInputElement, files: File[]) {
   const dt = new DataTransfer();
-  dt.items.add(file);
+  for (const f of files) dt.items.add(f);
   input.files = dt.files;
   input.dispatchEvent(new Event('input', { bubbles: true }));
   input.dispatchEvent(new Event('change', { bubbles: true }));
@@ -76,7 +76,11 @@ function wire(input: HTMLInputElement) {
     const b = item(s.icon, s.label, async () => {
       b.disabled = true;
       lockScroll();
-      try { await pickFromDrive(s.src, (file) => deliver(input, file)); }
+      const picked: File[] = [];
+      try {
+        await pickFromDrive(s.src, (file) => picked.push(file), input.multiple);
+        if (picked.length) deliver(input, picked);
+      }
       catch (err) { console.error('Cloud import failed', err); }
       finally { unlockScroll(); b.disabled = false; }
     });
