@@ -10,6 +10,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   site: 'https://toolsilk.com',
+  trailingSlash: 'never',
+  build: { format: 'file' },
   integrations: [sitemap(), react()],
   vite: {
     plugins: [tailwindcss()],
