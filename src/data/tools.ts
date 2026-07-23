@@ -2417,12 +2417,12 @@ export const tools: Tool[] = [
   },
   {
     slug: 'color-name',
-    name: 'Color Name to Code',
-    tagline: 'CSS color names to HEX & RGB, both ways.',
+    name: 'Color Name & Code Converter',
+    tagline: 'Names, HEX, RGB, HSL, HSV & CMYK — plus shades & tints.',
     description:
-      'Free online color name converter. Look up any of the 148 CSS named colors as HEX and RGB, or find the nearest color name for a hex or RGB value.',
+      'Free online color name and code converter. Look up any of the 148 CSS named colors or paste a HEX, RGB or HSL value to get the closest name plus HEX, RGB, HSL, HSV and CMYK, each copyable in one click. Includes a color picker and an auto-generated shades and tints scale.',
     category: 'Converters',
-    keywords: ['color name to code', 'css color names', 'color name to hex', 'html color names', 'name to rgb'],
+    keywords: ['color name to code', 'color code converter', 'hex to rgb', 'rgb to hex', 'hex to hsl', 'hex to cmyk', 'css color names', 'color name to hex', 'closest color name'],
     icon: 'M4 7V5h16v2M9 5v14M7 19h4M14 9h6l-6 8h6',
   },
   {

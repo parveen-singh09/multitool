@@ -3,18 +3,28 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 ---
 
 <ToolLayout slug="color-name">
-  <div class="flex flex-col gap-5">
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
+  <div class="flex flex-col gap-6">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto]">
       <label class="flex flex-col gap-1">
         <span class="text-[13px] text-ink-subtle">Color name or code</span>
-        <input id="cn-input" class="field font-mono" placeholder="e.g. royalblue, #ff6347 or rgb(255,99,71)" spellcheck="false" autocomplete="off" />
+        <input id="cn-input" class="field font-mono" placeholder="e.g. royalblue, #ff6347, rgb(255,99,71) or hsl(9,100%,64%)" spellcheck="false" autocomplete="off" />
       </label>
-      <div class="flex items-end">
+      <label class="flex flex-col gap-1">
+        <span class="text-[13px] text-ink-subtle">Picker</span>
+        <input id="cn-picker" type="color" class="h-11 w-full cursor-pointer rounded-md border border-hairline bg-surface-1 p-1 sm:w-16" value="#4169e1" />
+      </label>
+      <div class="flex flex-col gap-1">
+        <span class="text-[13px] text-ink-subtle">Preview</span>
         <div id="cn-swatch" class="panel h-11 w-full rounded-md sm:w-28" style="background:#4169e1"></div>
       </div>
     </div>
 
-    <div id="cn-result" class="grid grid-cols-2 gap-3 sm:grid-cols-4"></div>
+    <div id="cn-result" class="grid grid-cols-2 gap-3 sm:grid-cols-3"></div>
+
+    <div>
+      <span class="mb-2 block text-[13px] text-ink-subtle">Shades &amp; tints — click to load</span>
+      <div id="cn-scale" class="grid grid-cols-11 gap-1"></div>
+    </div>
 
     <div>
       <div class="mb-2 flex items-center justify-between">
@@ -27,23 +37,43 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free color name to code converter maps the 148 standard CSS named
-      colors to their HEX and RGB values, and works both ways: type a name like
-      <code>tomato</code> to get its code, or paste a hex or RGB value to find
-      the closest named color. Browse or filter the full swatch grid below and
-      click any color to load it.
+      This free color tool combines a color name lookup and a full color code
+      converter in one place. Type a name like <code>tomato</code>, paste a
+      <code>#hex</code>, <code>rgb()</code> or <code>hsl()</code> value, or use
+      the picker — and instantly get the closest CSS name plus HEX, RGB, HSL,
+      HSV and CMYK, each copyable with one click. Below, an auto-generated row
+      of shades and tints lets you explore darker and lighter variations, and
+      the full grid of 148 named colors is filterable and clickable.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  import { CSS_COLORS, hexToRgb, parseRgb, rgbToHex, nearestColorName, type RGB } from '../lib/colors';
+  import {
+    CSS_COLORS, hexToRgb, parseRgb, rgbToHex, rgbToHsl, hslToRgb,
+    rgbToHsv, rgbToCmyk, nearestColorName, clamp, type RGB,
+  } from '../lib/colors';
 
   const input = document.getElementById('cn-input') as HTMLInputElement;
+  const picker = document.getElementById('cn-picker') as HTMLInputElement;
   const swatch = document.getElementById('cn-swatch')!;
   const result = document.getElementById('cn-result')!;
+  const scale = document.getElementById('cn-scale')!;
   const grid = document.getElementById('cn-grid')!;
   const filter = document.getElementById('cn-filter') as HTMLInputElement;
+
+  // hsl(210, 100%, 50%) — parse before parseRgb, which would misread the 3 numbers as RGB.
+  function parseHsl(str: string): RGB | null {
+    const m = str.match(/hsla?\(\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)%?\s*[, ]\s*(-?\d+(?:\.\d+)?)%?/i);
+    if (!m) return null;
+    return hslToRgb({ h: +m[1], s: clamp(+m[2], 0, 100), l: clamp(+m[3], 0, 100) });
+  }
+
+  const mix = (a: RGB, b: RGB, t: number): RGB => ({
+    r: Math.round(a.r + (b.r - a.r) * t),
+    g: Math.round(a.g + (b.g - a.g) * t),
+    b: Math.round(a.b + (b.b - a.b) * t),
+  });
 
   function cell(label: string, value: string) {
     return `<button class="cn-copy panel panel-lift flex flex-col gap-0.5 p-3 text-left transition-colors hover:bg-surface-2" data-copy="${value}">
@@ -54,15 +84,43 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   function show(rgb: RGB, name: string | null) {
     const hex = rgbToHex(rgb);
+    const hsl = rgbToHsl(rgb);
+    const hsv = rgbToHsv(rgb);
+    const cmyk = rgbToCmyk(rgb);
     const near = nearestColorName(rgb);
-    swatch.style.background = hex;
     const shownName = name ?? (near.exact ? near.name : `≈ ${near.name}`);
+
+    swatch.style.background = hex;
+    picker.value = hex;
+
     result.innerHTML =
       cell('Name', shownName) +
       cell('HEX', hex) +
       cell('RGB', `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`) +
-      cell('HSL-ready', hex);
+      cell('HSL', `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`) +
+      cell('HSV', `hsv(${hsv.h}, ${hsv.s}%, ${hsv.v}%)`) +
+      cell('CMYK', `cmyk(${cmyk.c}%, ${cmyk.m}%, ${cmyk.y}%, ${cmyk.k}%)`);
     bindCopy();
+
+    renderScale(rgb);
+  }
+
+  // 5 shades (mix toward black) · base · 5 tints (mix toward white)
+  function renderScale(rgb: RGB) {
+    const black = { r: 0, g: 0, b: 0 };
+    const white = { r: 255, g: 255, b: 255 };
+    const steps: RGB[] = [];
+    for (let i = 5; i >= 1; i--) steps.push(mix(rgb, black, i / 6));
+    steps.push(rgb);
+    for (let i = 1; i <= 5; i++) steps.push(mix(rgb, white, i / 6));
+
+    scale.innerHTML = steps.map((c) => {
+      const hex = rgbToHex(c);
+      return `<button class="cn-step h-9 rounded-[5px] border border-hairline" title="${hex}" data-hex="${hex}" style="background:${hex}"></button>`;
+    }).join('');
+    scale.querySelectorAll<HTMLButtonElement>('.cn-step').forEach((b) => {
+      b.addEventListener('click', () => { input.value = b.dataset.hex!; resolve(input.value); });
+    });
   }
 
   function resolve(raw: string) {
@@ -71,6 +129,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (CSS_COLORS[v]) { show(hexToRgb(CSS_COLORS[v])!, v); return; }
     const asHex = hexToRgb(v);
     if (asHex) { show(asHex, null); return; }
+    const asHsl = parseHsl(v);
+    if (asHsl) { show(asHsl, null); return; }
     const asRgb = parseRgb(v);
     if (asRgb) { show(asRgb, null); return; }
   }
@@ -100,6 +160,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
 
   input.addEventListener('input', () => resolve(input.value));
+  picker.addEventListener('input', () => { input.value = picker.value; resolve(picker.value); });
   filter.addEventListener('input', () => renderGrid(filter.value));
 
   input.value = 'royalblue';
