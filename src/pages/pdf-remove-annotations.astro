@@ -1,0 +1,99 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pdf-remove-annotations">
+  <div class="flex flex-col gap-4">
+    <label id="dz" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a PDF or drop it here</span>
+      <input id="file" type="file" accept="application/pdf" class="sr-only" />
+    </label>
+
+    <div id="panel" class="hidden flex-col gap-4">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-[13px] text-ink-subtle"><span id="name"></span> — <span id="pages">0</span> pages, <span id="annots">0</span> annotation(s)</span>
+        <span class="flex-1"></span>
+        <button id="go" class="btn btn-primary" type="button">Remove & preview</button>
+        <button id="dl" class="btn btn-secondary hidden" type="button">Download</button>
+      </div>
+      <div id="viewer-mount"></div>
+    </div>
+    <p id="error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <p id="status" class="hidden text-[13px] text-ink-subtle"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>This free tool removes annotations from a PDF — comments, highlights, sticky notes, stamps, links and other markup layered on top of the page. The underlying page content stays intact, giving you a clean copy to share or archive. All processing happens in your browser.</p>
+  </div>
+</ToolLayout>
+
+<style>.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }</style>
+
+<script>
+  import { PDFDocument, PDFName, PDFArray } from 'pdf-lib';
+  import { setupDrop, download } from '../lib/pdfui';
+  import { mountViewer } from '../lib/pdfViewer';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const panel = $('panel'), err = $('error'), status = $('status');
+  const mount = document.getElementById('viewer-mount')!;
+  let bytes: ArrayBuffer | null = null, fname = 'document.pdf';
+  let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  let outBytes: Uint8Array | null = null;
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  function countAnnots(doc: PDFDocument): number {
+    let n = 0;
+    for (const page of doc.getPages()) {
+      const a = page.node.lookup(PDFName.of('Annots'));
+      if (a instanceof PDFArray) n += a.size();
+    }
+    return n;
+  }
+
+  async function load(files: File[]) {
+    setErr('');
+    if (!files.length) return;
+    try {
+      bytes = await files[0].arrayBuffer();
+      fname = files[0].name.replace(/\.pdf$/i, '');
+      const doc = await PDFDocument.load(bytes.slice(0));
+      $('name').textContent = files[0].name;
+      $('pages').textContent = String(doc.getPageCount());
+      $('annots').textContent = String(countAnnots(doc));
+      panel.classList.remove('hidden'); panel.classList.add('flex');
+      // Reset any prior run's preview/download.
+      outBytes = null; viewer?.destroy(); viewer = null; mount.replaceChildren();
+      $('dl').classList.add('hidden');
+    } catch (e) {
+      console.error('[pdf-remove-annotations] load failed:', e);
+      setErr('Could not open that PDF: ' + (e as Error).message);
+    }
+  }
+
+  async function run() {
+    if (!bytes) return;
+    setErr(''); status.classList.remove('hidden'); status.textContent = 'Cleaning…';
+    try {
+      const doc = await PDFDocument.load(bytes.slice(0));
+      let removed = 0;
+      for (const page of doc.getPages()) {
+        const a = page.node.lookup(PDFName.of('Annots'));
+        if (a instanceof PDFArray) { removed += a.size(); page.node.delete(PDFName.of('Annots')); }
+      }
+      outBytes = await doc.save();
+      // Preview the cleaned result and enable download.
+      const prev = viewer;
+      viewer = await mountViewer({ file: new File([outBytes as BlobPart], `${fname}-clean.pdf`, { type: 'application/pdf' }) });
+      prev?.destroy();
+      mount.replaceChildren(viewer.root);
+      $('dl').classList.remove('hidden');
+      status.textContent = `Done — removed ${removed} annotation(s). Preview below.`;
+    } catch (e) { status.classList.add('hidden'); setErr('Could not clean: ' + (e as Error).message); }
+  }
+
+  setupDrop($('dz'), $('file') as HTMLInputElement, load);
+  $('go').addEventListener('click', run);
+  $('dl').addEventListener('click', () => { if (outBytes) download(outBytes, `${fname}-clean.pdf`); });
+</script>

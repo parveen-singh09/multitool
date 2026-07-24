@@ -1,0 +1,103 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pdf-grayscale">
+  <div class="flex flex-col gap-4">
+    <label id="dz" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a PDF or drop it here</span>
+      <input id="file" type="file" accept="application/pdf" class="sr-only" />
+    </label>
+
+    <div id="panel" class="hidden flex-col gap-4">
+      <p class="text-[13px] text-ink-subtle"><span id="name"></span> — <span id="pages">0</span> pages</p>
+      <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Resolution
+        <select id="scale" class="field w-48"><option value="2">High (150 dpi)</option><option value="1.5">Medium (110 dpi)</option><option value="1">Low (72 dpi)</option></select>
+      </label>
+      <p class="text-xs text-ink-tertiary">Note: pages are rendered to images, so text will no longer be selectable.</p>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="flex-1"></span>
+        <button id="go" class="btn btn-primary" type="button">Grayscale & preview</button>
+        <button id="dl" class="btn btn-secondary hidden" type="button">Download</button>
+      </div>
+      <div id="viewer-mount"></div>
+    </div>
+    <p id="error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <p id="status" class="hidden text-[13px] text-ink-subtle"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>This free tool converts a PDF to grayscale, turning colored pages into black and white for cheaper printing or a consistent look. Each page is rendered and desaturated in your browser, then rebuilt into a new PDF. Because pages become images, text is no longer selectable — pick a higher resolution if you need crisp output. Nothing is uploaded.</p>
+  </div>
+</ToolLayout>
+
+<style>.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }</style>
+
+<script>
+  import { PDFDocument } from 'pdf-lib';
+  import { setupDrop, download } from '../lib/pdfui';
+  import { rasterizeRebuild } from '../lib/pdfRaster';
+  import { mountViewer } from '../lib/pdfViewer';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const panel = $('panel'), err = $('error'), status = $('status'), mount = $('viewer-mount');
+  let file: File | null = null, fname = 'document.pdf';
+  let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  let outBytes: Uint8Array | null = null; // grayscale bytes, held for the Download button
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  async function load(files: File[]) {
+    setErr('');
+    if (!files.length) return;
+    try {
+      file = files[0];
+      fname = file.name.replace(/\.pdf$/i, '');
+      const buf = await file.arrayBuffer();
+      const doc = await PDFDocument.load(buf.slice(0));
+      $('name').textContent = file.name;
+      $('pages').textContent = String(doc.getPageCount());
+      panel.classList.remove('hidden'); panel.classList.add('flex');
+      // Reset any prior run's preview/download.
+      outBytes = null; viewer?.destroy(); viewer = null; mount.replaceChildren();
+      $('dl').classList.add('hidden');
+    } catch (e) {
+      console.error('[pdf-grayscale] load failed:', e);
+      setErr('Could not open that PDF: ' + (e as Error).message);
+    }
+  }
+
+  async function run() {
+    if (!file) return;
+    setErr(''); status.classList.remove('hidden'); status.textContent = 'Converting…';
+    try {
+      const scale = +($('scale') as HTMLSelectElement).value;
+      const bytes = await rasterizeRebuild(file, {
+        scale, quality: 0.9,
+        onProgress: (d, t) => { status.textContent = `Converting page ${d} of ${t}…`; },
+        onCanvas: (ctx, w, h) => {
+          const img = ctx.getImageData(0, 0, w, h);
+          const px = img.data;
+          for (let i = 0; i < px.length; i += 4) {
+            // Rec. 601 luma — perceptually weighted gray.
+            const g = (px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114) | 0;
+            px[i] = px[i + 1] = px[i + 2] = g;
+          }
+          ctx.putImageData(img, 0, 0);
+        },
+      });
+      outBytes = bytes;
+      // Preview the grayscale result and enable download.
+      const prev = viewer;
+      viewer = await mountViewer({ file: new File([outBytes as BlobPart], `${fname}-grayscale.pdf`, { type: 'application/pdf' }) });
+      prev?.destroy();
+      mount.replaceChildren(viewer.root);
+      $('dl').classList.remove('hidden');
+      status.textContent = 'Done — converted to grayscale. Preview below.';
+    } catch (e) { status.classList.add('hidden'); setErr('Could not convert: ' + (e as Error).message); }
+  }
+
+  setupDrop($('dz'), $('file') as HTMLInputElement, load);
+  $('go').addEventListener('click', run);
+  $('dl').addEventListener('click', () => { if (outBytes) download(outBytes, `${fname}-grayscale.pdf`); });
+</script>

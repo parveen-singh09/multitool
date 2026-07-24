@@ -1,0 +1,196 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pdf-resize">
+  <div class="flex flex-col gap-4">
+    <label id="dz" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a PDF or drop it here</span>
+      <input id="file" type="file" accept="application/pdf" class="sr-only" />
+    </label>
+
+    <div id="panel" class="hidden flex-col gap-4">
+      <p class="text-[13px] text-ink-subtle"><span id="name"></span> — <span id="pages">0</span> pages</p>
+      <div class="flex flex-wrap items-end gap-4">
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Set all pages
+          <select id="size" class="field w-40">
+            <option value="595x842">A4</option>
+            <option value="420x595">A5</option>
+            <option value="842x1191">A3</option>
+            <option value="612x792">US Letter</option>
+            <option value="612x1008">US Legal</option>
+            <option value="792x1224">US Tabloid</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Orientation
+          <select id="orient" class="field w-36"><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select>
+        </label>
+        <label id="cw-wrap" class="hidden flex-col gap-1 text-[13px] text-ink-subtle">Width (pt)<input id="cw" type="number" value="595" min="10" class="field w-28" /></label>
+        <label id="ch-wrap" class="hidden flex-col gap-1 text-[13px] text-ink-subtle">Height (pt)<input id="ch" type="number" value="842" min="10" class="field w-28" /></label>
+      </div>
+
+      <div class="flex flex-wrap items-end gap-2 text-[13px] text-ink-subtle">
+        <label class="flex flex-col gap-1">Pages
+          <input id="rng" type="text" placeholder="1-3, 5" class="field w-28 font-mono" spellcheck="false" autocomplete="off" />
+        </label>
+        <label class="flex flex-col gap-1">Size for range
+          <select id="rng-size" class="field w-40">
+            <option value="595x842">A4</option>
+            <option value="420x595">A5</option>
+            <option value="842x1191">A3</option>
+            <option value="612x792">US Letter</option>
+            <option value="612x1008">US Legal</option>
+            <option value="792x1224">US Tabloid</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </label>
+        <button id="rng-go" class="btn btn-secondary" type="button">Apply to range</button>
+      </div>
+
+      <button id="go" class="btn btn-primary w-fit self-end">Download</button>
+      <div id="viewer-mount"></div>
+    </div>
+    <p id="error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <p id="status" class="hidden text-[13px] text-ink-subtle"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>This free tool resizes every page of a PDF to a standard paper size such as A4, A3, A5, US Letter, Legal or Tabloid — or your own custom dimensions. Each source page is scaled proportionally and centered on the new page, so nothing is stretched or cut off. The resize runs in your browser and the file is never uploaded.</p>
+  </div>
+</ToolLayout>
+
+<style>.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }</style>
+
+<script>
+  import { PDFDocument } from 'pdf-lib';
+  import { setupDrop, download, parsePageRange } from '../lib/pdfui';
+  import { mountViewer } from '../lib/pdfViewer';
+
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const panel = document.getElementById('panel')!, err = document.getElementById('error')!, status = document.getElementById('status')!;
+  const mount = document.getElementById('viewer-mount')!;
+  let bytes: ArrayBuffer | null = null, fname = 'document.pdf';
+  let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  let sizes: string[] = []; // per-page target-size preset ("WxH" or "custom"), 0-based
+  const SIZE_OPTS = [['595x842','A4'],['420x595','A5'],['842x1191','A3'],['612x792','US Letter'],['612x1008','US Legal'],['792x1224','US Tabloid'],['custom','Custom…']];
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  // The single custom W/H pair is shared by every "custom" selection (set-all, range, or per-page).
+  // Show it whenever custom is used anywhere.
+  function syncCustom() {
+    const custom = $('size').value === 'custom' || $('rng-size').value === 'custom' || sizes.includes('custom');
+    document.getElementById('cw-wrap')!.classList.toggle('hidden', !custom);
+    document.getElementById('cw-wrap')!.classList.toggle('flex', custom);
+    document.getElementById('ch-wrap')!.classList.toggle('hidden', !custom);
+    document.getElementById('ch-wrap')!.classList.toggle('flex', custom);
+  }
+
+  // Resolve a per-page size preset + the global orientation into [tw, th] points.
+  function resolveSize(spec: string): [number, number] {
+    let tw: number, th: number;
+    if (spec === 'custom') { tw = +$('cw').value || 595; th = +$('ch').value || 842; }
+    else { const [w, h] = spec.split('x').map(Number); tw = w; th = h; }
+    if ($('orient').value === 'landscape' && th > tw) [tw, th] = [th, tw];
+    if ($('orient').value === 'portrait' && tw > th) [tw, th] = [th, tw];
+    return [tw, th];
+  }
+
+  async function load(files: File[]) {
+    setErr('');
+    if (!files.length) return;
+    try {
+      bytes = await files[0].arrayBuffer();
+      fname = files[0].name.replace(/\.pdf$/i, '');
+      const doc = await PDFDocument.load(bytes.slice(0));
+      const n = doc.getPageCount();
+      document.getElementById('name')!.textContent = files[0].name;
+      document.getElementById('pages')!.textContent = String(n);
+      sizes = Array.from({ length: n }, () => $('size').value); // every page starts at the "set all" preset
+      panel.classList.remove('hidden'); panel.classList.add('flex');
+      renderPreview();
+    } catch (e) {
+      console.error('[pdf-resize] load failed:', e);
+      setErr('Could not open that PDF: ' + (e as Error).message);
+    }
+  }
+
+  // Build the resized PDF bytes with each page's own target size. Shared by preview and download.
+  async function build(): Promise<{ bytes: Uint8Array; n: number } | null> {
+    if (!bytes) return null;
+    const src = await PDFDocument.load(bytes.slice(0));
+    const out = await PDFDocument.create();
+    const embedded = await out.embedPages(src.getPages());
+    embedded.forEach((ep, i) => {
+      const [tw, th] = resolveSize(sizes[i] ?? $('size').value);
+      const page = out.addPage([tw, th]);
+      const scale = Math.min(tw / ep.width, th / ep.height);
+      const w = ep.width * scale, h = ep.height * scale;
+      page.drawPage(ep, { x: (tw - w) / 2, y: (th - h) / 2, width: w, height: h });
+    });
+    return { bytes: await out.save(), n: out.getPageCount() };
+  }
+
+  async function run() {
+    if (!bytes) return;
+    setErr(''); status.classList.remove('hidden'); status.textContent = 'Resizing…';
+    try {
+      const out = await build();
+      if (!out) return;
+      download(out.bytes, `${fname}-resized.pdf`);
+      status.textContent = `Done — ${out.n} page(s) resized.`;
+    } catch (e) { status.classList.add('hidden'); setErr('Could not resize: ' + (e as Error).message); }
+  }
+
+  // Set every page to the "set all" preset.
+  function setAll(spec: string) { sizes = sizes.map(() => spec); schedule(); }
+
+  // Apply a preset to just the pages in a range string like "1-3, 5".
+  function applyRange(spec: string, size: string) {
+    const idx = parsePageRange(spec, sizes.length); // 0-based; empty string => all pages
+    if (!idx.length) { setErr('Enter a valid page range, e.g. 1-3, 5.'); return; }
+    setErr('');
+    for (const i of idx) sizes[i] = size;
+    syncCustom(); schedule();
+  }
+
+  // Debounced live preview: build the per-page-resized PDF, then mount the viewer on it.
+  // Each rebuilt slot gets its own size dropdown (reads the current per-page value, so they stay in sync).
+  let seq = 0, timer: ReturnType<typeof setTimeout> | null = null;
+  async function renderPreview() {
+    if (!bytes) return;
+    const my = ++seq;
+    try {
+      const out = await build();
+      const data = out ? out.bytes : new Uint8Array(bytes.slice(0));
+      if (my !== seq) return;
+      const prev = viewer;
+      viewer = await mountViewer({
+        file: new File([data as BlobPart], 'preview.pdf', { type: 'application/pdf' }),
+        onPage: (page, slot) => {
+          const i = page - 1;
+          const sel = document.createElement('select');
+          sel.className = 'field absolute right-2 top-2 z-10 w-auto py-1 text-[12px] shadow';
+          sel.innerHTML = SIZE_OPTS.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+          if (sizes[i]) sel.value = sizes[i];
+          sel.addEventListener('change', () => { sizes[i] = sel.value; syncCustom(); schedule(); });
+          slot.appendChild(sel);
+        },
+      });
+      if (my !== seq) { viewer.destroy(); return; } // superseded by a newer render
+      prev?.destroy();
+      mount.replaceChildren(viewer.root);
+    } catch (e) { console.error('[pdf-resize] preview failed:', e); }
+  }
+  const schedule = () => { if (timer) clearTimeout(timer); timer = setTimeout(renderPreview, 400); };
+
+  setupDrop(document.getElementById('dz')!, $('file'), load);
+  $('size').addEventListener('change', () => { syncCustom(); setAll($('size').value); });
+  $('orient').addEventListener('change', schedule); // orientation is global; re-resolve all
+  $('cw').addEventListener('input', schedule);
+  $('ch').addEventListener('input', schedule);
+  $('rng-size').addEventListener('change', syncCustom); // reveal custom W/H if the range picks Custom
+  $('rng-go').addEventListener('click', () => applyRange($('rng').value, $('rng-size').value));
+  document.getElementById('go')!.addEventListener('click', run);
+</script>

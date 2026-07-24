@@ -1,0 +1,150 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pdf-rotate">
+  <div class="flex flex-col gap-4">
+    <label id="dz" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a PDF or drop it here</span>
+      <input id="file" type="file" accept="application/pdf" class="sr-only" />
+    </label>
+
+    <div id="panel" class="hidden flex-col gap-4">
+      <div id="viewer-mount"></div>
+    </div>
+    <p id="loading" class="hidden text-[13px] text-ink-subtle">Rendering pages…</p>
+    <p id="error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <p id="status" class="hidden text-[13px] text-ink-subtle"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>This free tool rotates the pages of a PDF. See every page as a thumbnail and pick a rotation — 0, 90, 180 or 270 degrees — for each one individually, or set the same rotation across the whole document at once. The thumbnails turn live so you can see the result before you download. Nothing is uploaded; the rotation happens entirely in your browser, so even large or sensitive documents stay on your device.</p>
+  </div>
+</ToolLayout>
+
+<style>
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+</style>
+
+<script>
+  import { PDFDocument, degrees } from 'pdf-lib';
+  import { setupDrop, download, parsePageRange } from '../lib/pdfui';
+  import { mountViewer } from '../lib/pdfViewer';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const panel = $('panel'), mount = $('viewer-mount');
+  const err = $('error'), status = $('status'), loading = $('loading');
+  let bytes: ArrayBuffer | null = null, fname = 'document.pdf';
+  let rot: number[] = [];        // per-page rotation delta, indexed by page (0-based)
+  let backdrops: HTMLImageElement[] = []; // slot backdrop imgs, so setAll can spin them live
+  let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  async function load(files: File[]) {
+    setErr('');
+    if (!files.length) return;
+    try {
+      bytes = await files[0].arrayBuffer();
+      fname = files[0].name.replace(/\.pdf$/i, '');
+      rot = []; backdrops = [];
+      viewer?.destroy(); mount.innerHTML = '';
+      panel.classList.remove('hidden'); panel.classList.add('flex');
+      loading.classList.remove('hidden');
+
+      viewer = await mountViewer({
+        file: files[0],
+        onPage: (page, slot) => {
+          const i = page - 1;
+          rot[i] = 0;
+          const img = slot.querySelector('img')! as HTMLImageElement;
+          img.style.transition = 'transform 0.2s ease';
+          backdrops[i] = img;
+          // Per-page rotation control, floated in the slot's top-right corner.
+          const sel = document.createElement('select');
+          sel.className = 'field absolute right-2 top-2 z-10 w-auto py-1 text-[13px] shadow';
+          sel.innerHTML = '<option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option>';
+          sel.addEventListener('change', () => { rot[i] = +sel.value; spin(i); });
+          sel.dataset.page = String(page);
+          slot.appendChild(sel);
+        },
+      });
+      mount.appendChild(viewer.root);
+
+      // Toolbar actions: "set all" dropdown + custom-range rotate + Rotate button.
+      const allWrap = document.createElement('label');
+      allWrap.className = 'flex items-center gap-1.5 text-[13px] text-[#a9a9ad]';
+      allWrap.innerHTML = 'All <select id="angle" class="field w-auto py-1 text-[13px]"><option value="0">0°</option><option value="90">90° right</option><option value="180">180°</option><option value="270">90° left</option></select>';
+      allWrap.querySelector('select')!.addEventListener('change', (e) => setAll(+(e.target as HTMLSelectElement).value));
+
+      // Custom range: rotate just the listed pages by the chosen amount (added to current angle).
+      const rangeWrap = document.createElement('div');
+      rangeWrap.className = 'flex items-center gap-1.5 text-[13px] text-[#a9a9ad]';
+      rangeWrap.innerHTML = 'Pages <input id="rot-range" class="field w-24 py-1 text-[13px]" placeholder="1-3, 5" /> '
+        + '<select id="rot-range-deg" class="field w-auto py-1 text-[13px]"><option value="90">90° right</option><option value="180">180°</option><option value="270">90° left</option></select>'
+        + '<button id="rot-range-go" type="button" class="btn btn-secondary py-1">Rotate range</button>';
+      rangeWrap.querySelector('#rot-range-go')!.addEventListener('click', () => {
+        const spec = (rangeWrap.querySelector('#rot-range') as HTMLInputElement).value;
+        const deg = +(rangeWrap.querySelector('#rot-range-deg') as HTMLSelectElement).value;
+        rotateRange(spec, deg);
+      });
+
+      const goBtn = document.createElement('button');
+      goBtn.className = 'btn btn-primary'; goBtn.type = 'button'; goBtn.textContent = 'Download';
+      goBtn.addEventListener('click', run);
+      viewer.actions.append(allWrap, rangeWrap, goBtn);
+
+      loading.classList.add('hidden');
+    } catch (e) {
+      loading.classList.add('hidden');
+      console.error('[pdf-rotate] load failed:', e);
+      setErr('Could not open that PDF: ' + (e as Error).message);
+    }
+  }
+
+  // Spin both the main backdrop and the matching rail thumbnail so the sidebar mirrors the page.
+  function spin(i: number) {
+    const t = `rotate(${rot[i]}deg)`;
+    if (backdrops[i]) backdrops[i].style.transform = t;
+    const thumb = viewer?.railThumbs[i];
+    if (thumb) thumb.style.transform = t;
+  }
+
+  // Reflect rot[i] into that page's per-slot dropdown so the control stays in sync.
+  function syncSelect(i: number) {
+    const s = mount.querySelector<HTMLSelectElement>(`select[data-page="${i + 1}"]`);
+    if (s) s.value = String(rot[i] % 360);
+  }
+
+  function setAll(deg: number) {
+    for (let i = 0; i < rot.length; i++) { rot[i] = deg; spin(i); syncSelect(i); }
+  }
+
+  // Rotate only the pages in a range string like "1-3, 5", by a delta added to their current angle.
+  function rotateRange(spec: string, deg: number) {
+    const idx = parsePageRange(spec, rot.length); // 0-based indices; empty string => all pages
+    if (!idx.length) { setErr('Enter a valid page range, e.g. 1-3, 5.'); return; }
+    setErr('');
+    for (const i of idx) { rot[i] = (rot[i] + deg) % 360; spin(i); syncSelect(i); }
+  }
+
+  async function run() {
+    if (!bytes) return;
+    setErr(''); status.classList.remove('hidden'); status.textContent = 'Rotating…';
+    try {
+      const doc = await PDFDocument.load(bytes.slice(0));
+      const pages = doc.getPages();
+      let changed = 0;
+      for (let i = 0; i < pages.length && i < rot.length; i++) {
+        if (!rot[i]) continue;
+        changed++;
+        const cur = pages[i].getRotation().angle;
+        pages[i].setRotation(degrees((cur + rot[i]) % 360));
+      }
+      download(await doc.save(), `${fname}-rotated.pdf`);
+      status.textContent = changed ? `Done — rotated ${changed} page(s).` : 'Done — no pages were rotated.';
+    } catch (e) { status.classList.add('hidden'); setErr('Could not rotate: ' + (e as Error).message); }
+  }
+
+  setupDrop($('dz'), $('file') as HTMLInputElement, load);
+</script>

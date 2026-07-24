@@ -26,8 +26,13 @@ The Text to PDF generator wraps your text to the page width, paginates automatic
         <input id="pg-title" class="field" placeholder="Document" />
       </label>
     </div>
-    <button id="pg-dl" class="btn btn-primary w-fit">Download PDF</button>
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="pg-dl" class="btn btn-primary" type="button">Generate & preview</button>
+      <button id="dl" class="btn btn-secondary hidden" type="button">Download</button>
+    </div>
+    <div id="viewer-mount"></div>
     <p id="pg-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <p id="pg-status" class="hidden text-[13px] text-ink-subtle"></p>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -40,13 +45,21 @@ The Text to PDF generator wraps your text to the page width, paginates automatic
 </ToolLayout>
 
 <script>
+  import { mountViewer } from '../lib/pdfViewer';
+
   const $ = (id: string) => document.getElementById(id)!;
   const err = $('pg-error')!;
+  const status = $('pg-status')!;
+  const mount = document.getElementById('viewer-mount')!;
+  let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  let outBytes: Uint8Array | null = null;
+  let outName = 'document.pdf';
 
   $('pg-dl').addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
     btn.disabled = true; btn.textContent = 'Generating…';
     err.classList.add('hidden');
+    status.classList.remove('hidden'); status.textContent = 'Generating…';
     try {
       const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
       const text = ($('pg-text') as HTMLTextAreaElement).value;
@@ -87,14 +100,27 @@ The Text to PDF generator wraps your text to the page width, paginates automatic
         if (line) drawLine(line);
       }
 
-      const bytes = await pdf.save();
-      const url = URL.createObjectURL(new Blob([bytes.slice()], { type: 'application/pdf' }));
-      const a = document.createElement('a'); a.href = url; a.download = (title || 'document') + '.pdf'; a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      outBytes = await pdf.save();
+      outName = (title || 'document') + '.pdf';
+      const prev = viewer;
+      viewer = await mountViewer({ file: new File([outBytes as BlobPart], 'preview.pdf', { type: 'application/pdf' }) });
+      prev?.destroy();
+      mount.replaceChildren(viewer.root);
+      $('dl').classList.remove('hidden');
+      status.textContent = 'Done — preview below.';
     } catch (ex) {
+      console.error('[pdf-generator] generate failed:', ex);
+      status.classList.add('hidden');
       err.textContent = 'Could not generate the PDF.'; err.classList.remove('hidden');
     } finally {
-      btn.disabled = false; btn.textContent = 'Download PDF';
+      btn.disabled = false; btn.textContent = 'Generate & preview';
     }
+  });
+
+  $('dl').addEventListener('click', () => {
+    if (!outBytes) return;
+    const url = URL.createObjectURL(new Blob([outBytes.slice() as BlobPart], { type: 'application/pdf' }));
+    const a = document.createElement('a'); a.href = url; a.download = outName; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
 </script>

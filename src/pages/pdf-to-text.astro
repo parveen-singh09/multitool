@@ -13,6 +13,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     <ul id="pt-files" class="hidden flex-col gap-1 text-[13px] text-ink-subtle"></ul>
 
     <div id="pt-panel" class="hidden flex-col gap-4">
+      <div id="pt-viewer-mount"></div>
       <div class="flex flex-wrap items-end gap-x-4 gap-y-3">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">
           Mode
@@ -90,6 +91,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 <script>
   import * as pdfjsLib from 'pdfjs-dist';
   import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+  import { mountViewer } from '../lib/pdfViewer';
   pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
   const fileInput = document.getElementById('pt-file') as HTMLInputElement;
@@ -110,6 +112,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const bar = document.getElementById('pt-bar') as HTMLElement;
 
   let files: { name: string; buffer: ArrayBuffer }[] = [];
+  let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  const mount = document.getElementById('pt-viewer-mount')!;
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
 
   function load(list: FileList) {
@@ -117,12 +121,17 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const pdfs = Array.from(list).filter((f) => /\.pdf$/i.test(f.name) || f.type === 'application/pdf');
     if (!pdfs.length) { setErr('Please choose one or more PDF files.'); return; }
     Promise.all(pdfs.map((f) => f.arrayBuffer().then((buffer) => ({ name: f.name, buffer }))))
-      .then((loaded) => {
+      .then(async (loaded) => {
         files = loaded;
         panel.classList.remove('hidden'); panel.classList.add('flex');
         fileList.classList.remove('hidden'); fileList.classList.add('flex');
         fileList.innerHTML = files.map((f) => `<li>• ${escapeHtml(f.name)}</li>`).join('');
         status.textContent = files.length === 1 ? `${files[0].name} ready.` : `${files.length} PDFs ready.`;
+        try {
+          viewer?.destroy();
+          viewer = await mountViewer({ file: pdfs[0] });
+          mount.replaceChildren(viewer.root);
+        } catch (e) { console.error('[pdf-to-text] preview failed:', e); }
       })
       .catch(() => setErr('Could not read the selected file(s).'));
   }
@@ -307,6 +316,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   document.getElementById('pt-extract')!.addEventListener('click', run);
   document.getElementById('pt-clear')!.addEventListener('click', () => {
     files = []; out.value = ''; fileInput.value = '';
+    viewer?.destroy(); viewer = null; mount.replaceChildren();
     fileList.classList.add('hidden'); panel.classList.add('hidden'); panel.classList.remove('flex');
     stats.classList.add('hidden'); status.textContent = ''; setErr('');
   });

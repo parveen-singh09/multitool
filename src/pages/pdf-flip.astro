@@ -1,0 +1,171 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pdf-flip">
+  <div class="flex flex-col gap-4">
+    <label id="dz" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a PDF or drop it here</span>
+      <input id="file" type="file" accept="application/pdf" class="sr-only" />
+    </label>
+
+    <div id="panel" class="hidden flex-col gap-4">
+      <div class="flex flex-wrap items-end gap-4">
+        <span class="self-center text-[13px] text-ink-subtle"><span id="name"></span> — <span id="pages">0</span> pages</span>
+        <span class="flex-1"></span>
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Flip all pages
+          <select id="dir" class="field w-48">
+            <option value="none">No flip</option>
+            <option value="h">Horizontal (mirror)</option>
+            <option value="v">Vertical (upside down)</option>
+            <option value="hv">Both (H + V)</option>
+          </select>
+        </label>
+        <button id="go" class="btn btn-primary">Download</button>
+      </div>
+
+      <div class="flex flex-wrap items-end gap-2 text-[13px] text-ink-subtle">
+        <label class="flex flex-col gap-1">Pages
+          <input id="rng" type="text" placeholder="1-3, 5" class="field w-28 font-mono" spellcheck="false" autocomplete="off" />
+        </label>
+        <label class="flex flex-col gap-1">Flip for range
+          <select id="rng-dir" class="field w-44">
+            <option value="h">Horizontal (mirror)</option>
+            <option value="v">Vertical (upside down)</option>
+            <option value="hv">Both (H + V)</option>
+            <option value="none">No flip</option>
+          </select>
+        </label>
+        <button id="rng-go" class="btn btn-secondary" type="button">Apply to range</button>
+      </div>
+
+      <p class="text-xs text-ink-tertiary">Set one flip for the whole document above, target specific pages with a range, or pick a flip per page in the preview.</p>
+      <div id="viewer-mount"></div>
+    </div>
+    <p id="error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <p id="status" class="hidden text-[13px] text-ink-subtle"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>This free tool flips the pages of a PDF — horizontally for a mirror image, vertically to turn a page upside down, or both at once. Flip the whole document in one click, target specific pages with a range like <span class="font-mono">1-3, 5</span>, or set a different flip on each page right in the live preview. The content is transformed as vectors rather than re-rendered, so text and graphics stay sharp and the file size barely changes. Everything runs in your browser.</p>
+  </div>
+</ToolLayout>
+
+<style>.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }</style>
+
+<script>
+  import { PDFDocument } from 'pdf-lib';
+  import { setupDrop, download, parsePageRange } from '../lib/pdfui';
+  import { mountViewer } from '../lib/pdfViewer';
+
+  type Flip = 'none' | 'h' | 'v' | 'hv';
+  const $ = (id: string) => document.getElementById(id)!;
+  const panel = $('panel'), err = $('error'), status = $('status'), mount = $('viewer-mount');
+  let bytes: ArrayBuffer | null = null, fname = 'document.pdf';
+  let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  let flips: Flip[] = []; // per-page flip, 0-based
+  const FLIP_OPTS: [Flip, string][] = [['none', 'No flip'], ['h', 'Horizontal'], ['v', 'Vertical'], ['hv', 'Both']];
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  async function load(files: File[]) {
+    setErr('');
+    if (!files.length) return;
+    try {
+      bytes = await files[0].arrayBuffer();
+      fname = files[0].name.replace(/\.pdf$/i, '');
+      const doc = await PDFDocument.load(bytes.slice(0));
+      const n = doc.getPageCount();
+      $('name').textContent = files[0].name;
+      $('pages').textContent = String(n);
+      flips = Array.from({ length: n }, () => ($('dir') as HTMLSelectElement).value as Flip);
+      panel.classList.remove('hidden'); panel.classList.add('flex');
+      renderPreview();
+    } catch (e) {
+      console.error('[pdf-flip] load failed:', e);
+      setErr('Could not open that PDF: ' + (e as Error).message);
+    }
+  }
+
+  // Build the flipped PDF bytes with each page's own flip. Shared by preview and download.
+  async function build(): Promise<{ bytes: Uint8Array; n: number } | null> {
+    if (!bytes) return null;
+    const src = await PDFDocument.load(bytes.slice(0));
+    const out = await PDFDocument.create();
+    const embedded = await out.embedPages(src.getPages());
+    embedded.forEach((ep, i) => {
+      const w = ep.width, h = ep.height;
+      const f = flips[i] ?? 'none';
+      const horiz = f === 'h' || f === 'hv';
+      const vert = f === 'v' || f === 'hv';
+      const page = out.addPage([w, h]);
+      // Negative scale mirrors on that axis; shift the origin by the page size so it stays in view.
+      page.drawPage(ep, {
+        xScale: horiz ? -1 : 1,
+        yScale: vert ? -1 : 1,
+        x: horiz ? w : 0,
+        y: vert ? h : 0,
+      });
+    });
+    return { bytes: await out.save(), n: out.getPageCount() };
+  }
+
+  async function run() {
+    if (!bytes) return;
+    setErr(''); status.classList.remove('hidden'); status.textContent = 'Flipping…';
+    try {
+      const out = await build();
+      if (!out) return;
+      download(out.bytes, `${fname}-flipped.pdf`);
+      const flipped = flips.filter((f) => f !== 'none').length;
+      status.textContent = flipped ? `Done — flipped ${flipped} page(s).` : 'Done — no pages were flipped.';
+    } catch (e) { status.classList.add('hidden'); setErr('Could not flip: ' + (e as Error).message); }
+  }
+
+  // Set every page to the "flip all" value.
+  function setAll(f: Flip) { flips = flips.map(() => f); schedule(); }
+
+  // Apply a flip to just the pages in a range string like "1-3, 5".
+  function applyRange(spec: string, f: Flip) {
+    const idx = parsePageRange(spec, flips.length); // 0-based; empty string => all pages
+    if (!idx.length) { setErr('Enter a valid page range, e.g. 1-3, 5.'); return; }
+    setErr('');
+    for (const i of idx) flips[i] = f;
+    schedule();
+  }
+
+  // Debounced live preview: flip per-page, then mount the viewer on the result.
+  // Each rebuilt slot gets its own flip dropdown reflecting that page's current value.
+  let seq = 0, timer: ReturnType<typeof setTimeout> | null = null;
+  async function renderPreview() {
+    if (!bytes) return;
+    const my = ++seq;
+    try {
+      const out = await build();
+      const data = out ? out.bytes : new Uint8Array(bytes.slice(0));
+      if (my !== seq) return;
+      const prev = viewer;
+      viewer = await mountViewer({
+        file: new File([data as BlobPart], 'preview.pdf', { type: 'application/pdf' }),
+        onPage: (page, slot) => {
+          const i = page - 1;
+          const sel = document.createElement('select');
+          sel.className = 'field absolute right-2 top-2 z-10 w-auto py-1 text-[12px] shadow';
+          sel.innerHTML = FLIP_OPTS.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+          sel.value = flips[i] ?? 'none';
+          sel.addEventListener('change', () => { flips[i] = sel.value as Flip; schedule(); });
+          slot.appendChild(sel);
+        },
+      });
+      if (my !== seq) { viewer.destroy(); return; } // superseded by a newer render
+      prev?.destroy();
+      mount.replaceChildren(viewer.root);
+    } catch (e) { console.error('[pdf-flip] preview failed:', e); }
+  }
+  const schedule = () => { if (timer) clearTimeout(timer); timer = setTimeout(renderPreview, 400); };
+
+  setupDrop($('dz'), $('file') as HTMLInputElement, load);
+  $('dir').addEventListener('change', () => setAll(($('dir') as HTMLSelectElement).value as Flip));
+  $('rng-go').addEventListener('click', () => applyRange(($('rng') as HTMLInputElement).value, ($('rng-dir') as HTMLSelectElement).value as Flip));
+  $('go').addEventListener('click', run);
+</script>

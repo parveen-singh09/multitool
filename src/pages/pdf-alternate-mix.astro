@@ -1,0 +1,139 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pdf-alternate-mix">
+  <div class="flex flex-col gap-4">
+    <label id="dz" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose PDFs or drop them here</span>
+      <span class="text-xs text-ink-tertiary">Add two or more — they interleave in the order below</span>
+      <input id="file" type="file" accept="application/pdf" multiple class="sr-only" />
+    </label>
+
+    <div id="panel" class="hidden flex-col gap-4">
+      <div>
+        <span class="text-[13px] text-ink-subtle"><span id="count">0</span> PDFs — drag to reorder, tick to reverse a file</span>
+        <ul id="list" class="mt-2 flex flex-col gap-2"></ul>
+      </div>
+
+      <div class="flex flex-wrap items-end gap-4">
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Pages per turn
+          <input id="chunk" type="number" value="1" min="1" max="50" class="field w-24" />
+        </label>
+        <p class="max-w-md text-xs text-ink-tertiary">Take this many pages from each PDF before switching. 1 = classic A, B, C, A, B, C. 2 = A, A, B, B, … — handy for duplex booklets.</p>
+      </div>
+
+      <div class="flex flex-wrap gap-2">
+        <button id="go" class="btn btn-primary w-fit">Mix & preview</button>
+        <button id="dl" class="btn btn-secondary hidden w-fit" type="button">Download</button>
+      </div>
+    </div>
+    <p id="error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <p id="status" class="hidden text-[13px] text-ink-subtle"></p>
+    <div id="viewer-mount"></div>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>This free tool interleaves the pages of two or more PDFs — first page of each file, then the second page of each, and so on. It is the fix for documents scanned in two passes: all the fronts in one file and all the backs in another. Drag the files to set the alternation order, reverse any file's page order independently when a stack was scanned backwards, and set "pages per turn" above 1 to take several pages from each PDF before switching — useful for duplex booklets. Uneven files are handled gracefully: once one runs out, the rest keep alternating. A live preview shows the mixed result before you download, and everything runs in your browser.</p>
+  </div>
+</ToolLayout>
+
+<style>.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }</style>
+
+<script>
+  import { PDFDocument } from 'pdf-lib';
+  import { setupDrop, download } from '../lib/pdfui';
+  import { mountViewer } from '../lib/pdfViewer';
+
+  interface Item { file: File; reverse: boolean }
+  const $ = (id: string) => document.getElementById(id)!;
+  const err = $('error'), status = $('status'), panel = $('panel'), list = $('list') as HTMLUListElement;
+  const mount = document.getElementById('viewer-mount')!;
+  let items: Item[] = [];
+  let dragIdx = -1;
+  let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  let outBytes: Uint8Array | null = null;
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+  const resetPreview = () => { outBytes = null; viewer?.destroy(); viewer = null; mount.replaceChildren(); $('dl').classList.add('hidden'); };
+
+  // Round-robin interleave of N page-lists: `chunk` pages from list 0, then list 1, … then repeat,
+  // skipping lists that are exhausted. Returns { l, i }: page i of list l. Order defines alternation.
+  function interleave(lens: number[], chunk: number): { l: number; i: number }[] {
+    const out: { l: number; i: number }[] = [];
+    const pos = lens.map(() => 0);
+    let remaining = lens.reduce((s, n) => s + n, 0);
+    while (remaining > 0) {
+      for (let l = 0; l < lens.length; l++) {
+        for (let k = 0; k < chunk && pos[l] < lens[l]; k++) { out.push({ l, i: pos[l]++ }); remaining--; }
+      }
+    }
+    return out;
+  }
+
+  if (import.meta.env.DEV) {
+    const key = (r: { l: number; i: number }[]) => r.map((p) => p.l + '.' + p.i).join(',');
+    console.assert(key(interleave([2, 2], 1)) === '0.0,1.0,0.1,1.1', 'classic 1:1');
+    console.assert(key(interleave([2, 2], 2)) === '0.0,0.1,1.0,1.1', 'chunk 2');
+    console.assert(key(interleave([3, 1], 1)) === '0.0,1.0,0.1,0.2', 'first longer');
+    console.assert(key(interleave([1, 1, 2], 1)) === '0.0,1.0,2.0,2.1', 'three files');
+    console.assert(key(interleave([0, 2], 1)) === '1.0,1.1', 'empty first');
+  }
+
+  function render() {
+    $('count').textContent = String(items.length);
+    list.innerHTML = '';
+    items.forEach((it, i) => {
+      const li = document.createElement('li');
+      li.className = 'panel flex items-center gap-3 p-2'; li.draggable = true;
+      li.innerHTML = `<span class="cursor-grab text-ink-tertiary">⋮⋮</span>
+        <span class="flex-1 truncate text-[13px] text-ink-subtle">${i + 1}. ${it.file.name}</span>
+        <label class="flex items-center gap-1.5 whitespace-nowrap text-xs text-ink-subtle"><input type="checkbox" class="h-4 w-4 accent-primary" ${it.reverse ? 'checked' : ''} /> Reverse</label>
+        <button type="button" class="btn btn-tertiary px-2 py-1 text-[13px]" aria-label="Remove">✕</button>`;
+      li.querySelector('input')!.addEventListener('change', (e) => { it.reverse = (e.target as HTMLInputElement).checked; resetPreview(); });
+      li.querySelector('button')!.addEventListener('click', () => { items.splice(i, 1); if (!items.length) { panel.classList.add('hidden'); panel.classList.remove('flex'); } resetPreview(); render(); });
+      li.addEventListener('dragstart', () => { dragIdx = i; });
+      li.addEventListener('dragover', (e) => e.preventDefault());
+      li.addEventListener('drop', (e) => { e.preventDefault(); if (dragIdx < 0 || dragIdx === i) return; const [m] = items.splice(dragIdx, 1); items.splice(i, 0, m); dragIdx = -1; resetPreview(); render(); });
+      list.appendChild(li);
+    });
+    // Repurpose the dropzone's own "Select File" button as the add-more affordance once files exist.
+    // (cloudUpload builds it as <button><svg/>Label>, so we retarget just the trailing text node.)
+    const pickBtn = $('dz').querySelector<HTMLButtonElement>('.btn-primary');
+    if (pickBtn?.lastChild) pickBtn.lastChild.textContent = items.length ? 'Add more PDFs' : 'Select File';
+  }
+
+  function addFiles(fl: File[]) {
+    for (const f of fl) if (f.type === 'application/pdf') items.push({ file: f, reverse: false });
+    if (items.length) { panel.classList.remove('hidden'); panel.classList.add('flex'); }
+    setErr(''); resetPreview(); render();
+  }
+
+  async function run() {
+    if (items.length < 2) { setErr('Add at least two PDFs to mix.'); return; }
+    setErr(''); status.classList.remove('hidden'); status.textContent = 'Mixing…';
+    try {
+      const out = await PDFDocument.create();
+      const lists = [];
+      for (const it of items) {
+        const doc = await PDFDocument.load(await it.file.arrayBuffer());
+        let idx = doc.getPageIndices();
+        if (it.reverse) idx = [...idx].reverse();
+        lists.push(await out.copyPages(doc, idx));
+      }
+      const chunk = Math.min(50, Math.max(1, +($('chunk') as HTMLInputElement).value || 1));
+      for (const p of interleave(lists.map((l) => l.length), chunk)) out.addPage(lists[p.l][p.i]);
+      outBytes = await out.save();
+      const prev = viewer;
+      viewer = await mountViewer({ file: new File([outBytes as BlobPart], 'preview.pdf', { type: 'application/pdf' }) });
+      prev?.destroy();
+      mount.replaceChildren(viewer.root);
+      $('dl').classList.remove('hidden');
+      status.textContent = `Done — ${out.getPageCount()} pages from ${items.length} PDFs. Preview below.`;
+    } catch (e) { console.error('[pdf-alternate-mix] mix failed:', e); status.classList.add('hidden'); setErr('Could not mix: ' + (e as Error).message + '. Encrypted PDFs are not supported.'); }
+  }
+
+  setupDrop($('dz'), $('file') as HTMLInputElement, addFiles);
+  $('go').addEventListener('click', run);
+  $('dl').addEventListener('click', () => { if (outBytes) download(outBytes, 'alternated.pdf'); });
+</script>

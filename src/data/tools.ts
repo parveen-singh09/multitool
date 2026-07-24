@@ -2866,6 +2866,236 @@ export const tools: Tool[] = [
     icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M9 13h6M12 13v4',
   },
   {
+    slug: 'pdf-rotate',
+    name: 'Rotate PDF',
+    tagline: 'Rotate all or selected pages of a PDF.',
+    description:
+      'Free online PDF rotate tool. Turn pages 90°, 180° or 270°, apply to every page or a page range, and download the rotated PDF. Everything runs in your browser — nothing is uploaded.',
+    category: 'PDF',
+    keywords: ['rotate pdf', 'pdf rotate', 'turn pdf pages', 'rotate pdf pages', 'fix pdf orientation'],
+    icon: 'M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16',
+  },
+  {
+    slug: 'pdf-delete-pages',
+    name: 'Delete PDF Pages',
+    tagline: 'Remove pages from a PDF by number or range.',
+    description:
+      'Free online tool to delete pages from a PDF. Enter the page numbers or ranges to remove and download a slimmer PDF. Runs entirely in your browser — your file never leaves your device.',
+    category: 'PDF',
+    keywords: ['delete pdf pages', 'remove pdf pages', 'delete pages from pdf', 'pdf page remover', 'drop pdf pages'],
+    icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M9 14l6 4M15 14l-6 4',
+  },
+  {
+    slug: 'pdf-page-numbers',
+    name: 'Add Page Numbers to PDF',
+    tagline: 'Stamp page numbers onto a PDF.',
+    description:
+      'Free online tool to add page numbers to a PDF. Choose position, starting number, font size and format (like "Page 1 of 10"), then download. All processing happens in your browser.',
+    category: 'PDF',
+    keywords: ['add page numbers to pdf', 'pdf page numbers', 'number pdf pages', 'pdf pagination', 'stamp page numbers'],
+    icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M9 17h2M13 13v4',
+  },
+  {
+    slug: 'pdf-watermark',
+    name: 'Watermark PDF',
+    tagline: 'Add a text watermark across every PDF page.',
+    description:
+      'Free online PDF watermark tool. Stamp text like "CONFIDENTIAL" or "DRAFT" diagonally or straight across every page, with adjustable size, opacity and color. Runs fully in your browser.',
+    category: 'PDF',
+    keywords: ['watermark pdf', 'pdf watermark', 'add watermark to pdf', 'stamp pdf', 'confidential pdf'],
+    icon: 'M4 5h16v14H4zM7 15l3-3 2 2 3-4 2 3M8 9a1 1 0 1 0 0 .01',
+  },
+  {
+    slug: 'pdf-metadata',
+    name: 'Edit PDF Metadata',
+    tagline: 'View and edit a PDF’s title, author and more.',
+    description:
+      'Free online tool to edit PDF metadata. View and change the title, author, subject, keywords, creator and producer fields, then download the updated PDF. Processed entirely in your browser.',
+    category: 'PDF',
+    keywords: ['edit pdf metadata', 'pdf metadata editor', 'change pdf title', 'pdf author', 'pdf properties'],
+    icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8M8 17h5',
+  },
+  {
+    slug: 'pdf-flatten',
+    name: 'Flatten PDF',
+    tagline: 'Flatten form fields into static content.',
+    description:
+      'Free online tool to flatten a PDF. Merge interactive form fields into the page so they can no longer be edited, keeping the filled-in values visible. Runs entirely in your browser.',
+    category: 'PDF',
+    keywords: ['flatten pdf', 'pdf flatten', 'flatten pdf form', 'lock pdf form fields', 'make pdf form non-editable'],
+    icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8M8 16h8',
+  },
+  {
+    slug: 'pdf-header-footer',
+    name: 'Add Header & Footer to PDF',
+    tagline: 'Stamp custom header and footer text on every page.',
+    description:
+      'Free online tool to add a header and footer to a PDF. Put custom text in the top and bottom margins, optionally including the page number, then download. All processing happens in your browser.',
+    category: 'PDF',
+    keywords: ['pdf header footer', 'add header to pdf', 'add footer to pdf', 'pdf running header', 'stamp text on pdf'],
+    icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M7 8h6M7 18h10',
+  },
+  {
+    slug: 'pdf-bates-numbering',
+    name: 'Bates Numbering for PDF',
+    tagline: 'Add sequential Bates numbers for legal documents.',
+    description:
+      'Free online Bates numbering tool. Stamp sequential identifiers with a custom prefix and zero-padding (like ABC-000123) onto every page — the standard for legal and business document sets. Runs fully in your browser.',
+    category: 'PDF',
+    keywords: ['bates numbering', 'bates stamp pdf', 'legal pdf numbering', 'pdf bates numbers', 'sequential pdf stamping'],
+    icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 17h8M9 13l1-1v4',
+  },
+  {
+    slug: 'pdf-n-up',
+    name: 'N-up PDF (Multiple Pages per Sheet)',
+    tagline: 'Place 2, 4, 6 or more pages onto one sheet.',
+    description:
+      'Free online N-up tool. Combine multiple PDF pages onto a single sheet — 2, 4, 6, 8, 9 or 16 per page — to save paper when printing or to make handouts. Runs entirely in your browser.',
+    category: 'PDF',
+    keywords: ['n-up pdf', 'multiple pages per sheet', 'pdf 2 pages per sheet', 'pdf 4 up', 'combine pdf pages onto one'],
+    icon: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+  },
+  {
+    slug: 'pdf-resize',
+    name: 'Resize PDF Pages',
+    tagline: 'Scale pages to A4, Letter or a custom size.',
+    description:
+      'Free online tool to resize PDF pages. Scale every page to a standard size like A4, Letter or Legal, or set custom dimensions, keeping content centered and proportional. Runs fully in your browser.',
+    category: 'PDF',
+    keywords: ['resize pdf', 'pdf page size', 'change pdf size', 'pdf to a4', 'pdf to letter', 'scale pdf pages'],
+    icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M9 12h6v5H9z',
+  },
+  {
+    slug: 'pdf-crop',
+    name: 'Crop PDF Margins',
+    tagline: 'Trim white margins by setting crop amounts.',
+    description:
+      'Free online PDF crop tool. Trim the top, bottom, left and right margins of every page by a set amount to remove white space or scanned borders. Non-destructive crop box, applied in your browser.',
+    category: 'PDF',
+    keywords: ['crop pdf', 'pdf crop', 'trim pdf margins', 'remove pdf white space', 'cut pdf borders'],
+    icon: 'M6 2v14a2 2 0 0 0 2 2h14M2 6h14a2 2 0 0 1 2 2v14',
+  },
+  {
+    slug: 'pdf-remove-annotations',
+    name: 'Remove Annotations from PDF',
+    tagline: 'Strip comments, highlights and markup.',
+    description:
+      'Free online tool to remove annotations from a PDF — comments, highlights, notes, stamps and other markup. Get a clean copy with the underlying page content untouched. Runs entirely in your browser.',
+    category: 'PDF',
+    keywords: ['remove pdf annotations', 'delete pdf comments', 'strip pdf highlights', 'clean pdf markup', 'remove pdf notes'],
+    icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M9 12l6 6M15 12l-6 6',
+  },
+  {
+    slug: 'pdf-alternate-mix',
+    name: 'Alternate & Mix PDF',
+    tagline: 'Interleave pages from two PDFs into one.',
+    description:
+      'Free online tool to alternate and mix two PDFs. Interleave their pages — great for combining separately scanned fronts and backs — with the option to reverse the second file. Runs fully in your browser.',
+    category: 'PDF',
+    keywords: ['alternate pdf', 'mix pdf pages', 'interleave pdf', 'combine scanned fronts backs', 'zip pdf pages'],
+    icon: 'M4 7h7M4 12h7M4 17h7M20 5l-3 3M20 12l-3 3M20 19l-3 3',
+  },
+  {
+    slug: 'pdf-split-half',
+    name: 'Split PDF in Half',
+    tagline: 'Cut a PDF into two equal halves.',
+    description:
+      'Free online tool to split a PDF in half. Cut the document at its midpoint into two files — the first half and the second half — in one click. Handy for separating double-length scans. Runs in your browser.',
+    category: 'PDF',
+    keywords: ['split pdf in half', 'cut pdf in two', 'halve pdf', 'divide pdf', 'split pdf midpoint'],
+    icon: 'M12 3v18M5 7h4M5 12h4M5 17h4M15 7h4M15 12h4M15 17h4',
+  },
+  {
+    slug: 'pdf-repair',
+    name: 'Repair PDF',
+    tagline: 'Rebuild a damaged or malformed PDF.',
+    description:
+      'Free online tool to repair a PDF. Re-parse and rebuild the document structure to fix minor corruption and malformed files so they open again. Best-effort and runs entirely in your browser.',
+    category: 'PDF',
+    keywords: ['repair pdf', 'fix pdf', 'recover pdf', 'pdf repair online', 'rebuild pdf'],
+    icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M12 11l3 3-3 3-3-3z',
+  },
+  {
+    slug: 'pdf-organize',
+    name: 'Organize PDF',
+    tagline: 'Reorder, rotate and delete pages visually.',
+    description:
+      'Free online tool to organize a PDF. See every page as a thumbnail, then drag to reorder, rotate or delete pages, and download the rearranged document. A live visual editor that runs entirely in your browser.',
+    category: 'PDF',
+    keywords: ['organize pdf', 'reorder pdf pages', 'rearrange pdf', 'pdf page organizer', 'sort pdf pages', 'visual pdf editor'],
+    icon: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+  },
+  {
+    slug: 'pdf-flip',
+    name: 'Flip PDF Pages',
+    tagline: 'Mirror pages horizontally or vertically.',
+    description:
+      'Free online tool to flip PDF pages. Mirror every page horizontally or vertically without losing quality — the content is transformed as vectors, not re-rendered. Runs entirely in your browser.',
+    category: 'PDF',
+    keywords: ['flip pdf', 'mirror pdf', 'flip pdf pages', 'mirror pdf horizontally', 'pdf flip vertical'],
+    icon: 'M12 3v18M8 7l-4 5 4 5M16 7l4 5-4 5',
+  },
+  {
+    slug: 'pdf-grayscale',
+    name: 'Grayscale PDF',
+    tagline: 'Convert a PDF to black and white.',
+    description:
+      'Free online tool to convert a PDF to grayscale. Turn colored pages black and white — useful for cheaper printing or a uniform look. Pages are rendered to images, so text becomes non-selectable. Runs in your browser.',
+    category: 'PDF',
+    keywords: ['grayscale pdf', 'pdf to black and white', 'convert pdf grayscale', 'desaturate pdf', 'monochrome pdf'],
+    icon: 'M12 3a9 9 0 0 0 0 18zM12 3a9 9 0 0 1 0 18',
+  },
+  {
+    slug: 'pdf-compress',
+    name: 'Compress PDF',
+    tagline: 'Shrink a PDF’s file size.',
+    description:
+      'Free online tool to compress a PDF. Reduce file size by re-rendering pages as compressed images at a resolution and quality you choose — ideal for email limits and uploads. Trades sharpness and text selectability for size. Runs entirely in your browser.',
+    category: 'PDF',
+    keywords: ['compress pdf', 'reduce pdf size', 'shrink pdf', 'pdf compressor', 'make pdf smaller'],
+    icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M9 14l3-3 3 3M12 11v6',
+  },
+  {
+    slug: 'pdf-extract-images',
+    name: 'Extract Images from PDF',
+    tagline: 'Pull out the embedded images in a PDF.',
+    description:
+      'Free online tool to extract images from a PDF. Find the raster images embedded in the document and download them individually or as a ZIP. Runs entirely in your browser — nothing is uploaded.',
+    category: 'PDF',
+    keywords: ['extract images from pdf', 'pdf image extractor', 'get images out of pdf', 'save pdf images', 'pdf to images'],
+    icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
+  },
+  {
+    slug: 'pdf-unlock',
+    name: 'Unlock PDF',
+    tagline: 'Remove printing, copying and editing restrictions.',
+    description:
+      'Free online tool to unlock a PDF. Remove owner restrictions that block printing, copying or editing, giving you an unrestricted copy. Runs entirely in your browser. Note: it cannot open a PDF that needs a password just to view it.',
+    category: 'PDF',
+    keywords: ['unlock pdf', 'remove pdf restrictions', 'remove pdf permissions', 'enable pdf printing', 'unlock pdf online'],
+    icon: 'M7 11V7a5 5 0 0 1 9.9-1M5 11h14a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2z',
+  },
+  {
+    slug: 'pdf-ocr',
+    name: 'OCR PDF',
+    tagline: 'Make scanned PDFs searchable with text recognition.',
+    description:
+      'Free online OCR tool for PDF. Recognize the text in scanned or image-based PDFs and produce a searchable, copyable document — while keeping the original page appearance. Runs entirely in your browser.',
+    category: 'PDF',
+    keywords: ['ocr pdf', 'searchable pdf', 'scanned pdf to text', 'recognize text in pdf', 'make pdf searchable'],
+    icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h5M8 17h8',
+  },
+  {
+    slug: 'pdf-deskew',
+    name: 'Deskew PDF',
+    tagline: 'Straighten crooked scanned pages.',
+    description:
+      'Free online tool to deskew a PDF. Detect and correct the tilt in crooked scanned pages so text sits level again. Pages are rendered, straightened and rebuilt in your browser — nothing is uploaded.',
+    category: 'PDF',
+    keywords: ['deskew pdf', 'straighten pdf', 'fix crooked scan', 'align scanned pdf', 'correct pdf tilt'],
+    icon: 'M4 20L20 4M6 4h4M4 4v4M14 20h4M20 14v4',
+  },
+  {
     slug: 'pdf-to-jpg',
     name: 'PDF to JPG Converter',
     tagline: 'Render PDF pages to JPG or PNG images.',

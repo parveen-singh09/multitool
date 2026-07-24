@@ -11,6 +11,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     </label>
 
     <div id="ps-panel" class="hidden flex-col gap-4">
+      <div id="viewer-mount"></div>
       <div class="flex flex-wrap items-end gap-3">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">
           Length
@@ -65,6 +66,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   import * as pdfjsLib from 'pdfjs-dist';
   import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
   import { aiChat } from '../lib/ai';
+  import { mountViewer } from '../lib/pdfViewer';
   pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
   const MAX_CHARS = 100_000;
@@ -78,17 +80,24 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const status = $('ps-status');
   const err = $('ps-error');
   const runBtn = $('ps-run') as HTMLButtonElement;
+  const mount = $('viewer-mount');
+  let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
 
   let files: File[] = [];
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
 
-  function load(picked: File[]) {
+  async function load(picked: File[]) {
     setErr('');
     if (!picked.length) return;
     files = picked;
     panel.classList.remove('hidden'); panel.classList.add('flex');
     status.textContent = picked.length === 1 ? `${picked[0].name} ready.` : `${picked.length} PDFs ready.`;
     outWrap.style.display = 'none'; out.textContent = '';
+    try {
+      viewer?.destroy();
+      viewer = await mountViewer({ file: picked[0] });
+      mount.replaceChildren(viewer.root);
+    } catch (e) { console.error('[pdf-summarizer] preview failed:', e); }
   }
 
   async function extractText(buf: ArrayBuffer): Promise<string> {

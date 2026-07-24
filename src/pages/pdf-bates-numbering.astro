@@ -1,0 +1,128 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pdf-bates-numbering">
+  <div class="flex flex-col gap-4">
+    <label id="dz" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a PDF or drop it here</span>
+      <input id="file" type="file" accept="application/pdf" class="sr-only" />
+    </label>
+
+    <div id="panel" class="hidden flex-col gap-4">
+      <p class="text-[13px] text-ink-subtle"><span id="name"></span> — <span id="pages">0</span> pages</p>
+      <div class="flex flex-wrap items-end gap-4">
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Prefix<input id="prefix" type="text" value="ABC-" class="field w-32" /></label>
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Suffix<input id="suffix" type="text" value="" class="field w-32" /></label>
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Start number<input id="start" type="number" value="1" min="0" class="field w-28" /></label>
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Digits (zero-pad)<input id="digits" type="number" value="6" min="1" max="12" class="field w-28" /></label>
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Position
+          <select id="pos" class="field w-40"><option value="br">Bottom right</option><option value="bl">Bottom left</option><option value="bc">Bottom center</option><option value="tr">Top right</option><option value="tl">Top left</option></select>
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Font size<input id="size" type="number" value="10" min="6" max="24" class="field w-24" /></label>
+      </div>
+      <p id="preview" class="text-xs text-ink-tertiary">Preview: ABC-000001</p>
+      <button id="go" class="btn btn-primary w-fit">Download</button>
+      <div id="viewer-mount"></div>
+    </div>
+    <p id="error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <p id="status" class="hidden text-[13px] text-ink-subtle"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>This free tool applies Bates numbering to a PDF — sequential identifiers with a custom prefix, suffix and zero-padding, the standard for legal discovery and business document sets. Each page gets a unique stamp like ABC-000123 in the corner you choose. Numbering runs entirely in your browser, so confidential documents never leave your device.</p>
+  </div>
+</ToolLayout>
+
+<style>.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }</style>
+
+<script>
+  import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+  import { setupDrop, download } from '../lib/pdfui';
+  import { mountViewer } from '../lib/pdfViewer';
+
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const panel = document.getElementById('panel')!, err = document.getElementById('error')!, status = document.getElementById('status')!, preview = document.getElementById('preview')!;
+  const mount = document.getElementById('viewer-mount')!;
+  let bytes: ArrayBuffer | null = null, fname = 'document.pdf';
+  let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  const stamp = (n: number) => $('prefix').value + String(n).padStart(Math.min(12, Math.max(1, +$('digits').value || 6)), '0') + $('suffix').value;
+
+  function refresh() { preview.textContent = 'Preview: ' + stamp(+$('start').value || 0); }
+
+  async function load(files: File[]) {
+    setErr('');
+    if (!files.length) return;
+    try {
+      bytes = await files[0].arrayBuffer();
+      fname = files[0].name.replace(/\.pdf$/i, '');
+      const doc = await PDFDocument.load(bytes.slice(0));
+      document.getElementById('name')!.textContent = files[0].name;
+      document.getElementById('pages')!.textContent = String(doc.getPageCount());
+      panel.classList.remove('hidden'); panel.classList.add('flex');
+      refresh();
+      renderPreview();
+    } catch (e) {
+      console.error('[pdf-bates-numbering] load failed:', e);
+      setErr('Could not open that PDF: ' + (e as Error).message);
+    }
+  }
+
+  // Build the Bates-stamped PDF bytes. Shared by the live preview and the download.
+  async function build(): Promise<{ bytes: Uint8Array; n: number } | null> {
+    if (!bytes) return null;
+    const doc = await PDFDocument.load(bytes.slice(0));
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    const size = Math.min(24, Math.max(6, +$('size').value || 10));
+    const start = +$('start').value || 0;
+    const pos = $('pos').value;
+    const M = 24;
+    doc.getPages().forEach((page, i) => {
+      const { width, height } = page.getSize();
+      const text = stamp(start + i);
+      const tw = font.widthOfTextAtSize(text, size);
+      const x = pos[1] === 'l' ? M : pos[1] === 'r' ? width - tw - M : (width - tw) / 2;
+      const y = pos[0] === 't' ? height - M - size : M;
+      page.drawText(text, { x, y, size, font, color: rgb(0.1, 0.1, 0.1) });
+    });
+    return { bytes: await doc.save(), n: doc.getPageCount() };
+  }
+
+  async function run() {
+    if (!bytes) return;
+    setErr(''); status.classList.remove('hidden'); status.textContent = 'Stamping…';
+    try {
+      const out = await build();
+      if (!out) return;
+      download(out.bytes, `${fname}-bates.pdf`);
+      status.textContent = `Done — stamped ${out.n} page(s).`;
+    } catch (e) { status.classList.add('hidden'); setErr('Could not stamp: ' + (e as Error).message); }
+  }
+
+  // Debounced full-document preview: stamp Bates numbers, then mount the viewer on the result.
+  let seq = 0, timer: ReturnType<typeof setTimeout> | null = null;
+  async function renderPreview() {
+    if (!bytes) return;
+    const my = ++seq;
+    try {
+      const out = await build();
+      const data = out ? out.bytes : new Uint8Array(bytes.slice(0));
+      if (my !== seq) return;
+      const prev = viewer;
+      viewer = await mountViewer({ file: new File([data as BlobPart], 'preview.pdf', { type: 'application/pdf' }) });
+      if (my !== seq) { viewer.destroy(); return; } // superseded by a newer render
+      prev?.destroy();
+      mount.replaceChildren(viewer.root);
+    } catch (e) { console.error('[pdf-bates-numbering] preview failed:', e); }
+  }
+  const schedule = () => { if (timer) clearTimeout(timer); timer = setTimeout(renderPreview, 400); };
+
+  setupDrop(document.getElementById('dz')!, $('file'), load);
+  ['prefix', 'suffix', 'start', 'digits'].forEach((id) => $(id).addEventListener('input', refresh));
+  panel.addEventListener('input', schedule);
+  panel.addEventListener('change', schedule);
+  document.getElementById('go')!.addEventListener('click', run);
+</script>

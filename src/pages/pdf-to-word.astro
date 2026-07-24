@@ -11,6 +11,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     </label>
 
     <div id="pw-panel" class="hidden flex-col gap-4">
+      <div id="pw-viewer-mount"></div>
       <div class="flex flex-wrap items-center gap-3">
         <button id="pw-convert" class="btn btn-primary">Convert to Word</button>
         <button id="pw-download" class="btn btn-secondary" disabled>Download .docx</button>
@@ -56,6 +57,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
   import { makeDocx } from '../lib/docx';
   import { makeZip } from '../lib/zip';
+  import { mountViewer } from '../lib/pdfViewer';
   pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
   const $ = (id: string) => document.getElementById(id)!;
@@ -70,9 +72,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   let files: File[] = [];
   let bytes: ArrayBuffer | null = null;
   let baseName = 'document';
+  let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  const mount = $('pw-viewer-mount');
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
 
-  function load(picked: File[]) {
+  async function load(picked: File[]) {
     setErr('');
     if (!picked.length) return;
     files = picked;
@@ -85,6 +89,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     preview.parentElement!.style.display = multi ? 'none' : '';
     dlBtn.textContent = multi ? 'Download .docx ZIP' : 'Download .docx';
     picked[0].arrayBuffer().then((b) => { bytes = b; });
+    try {
+      viewer?.destroy();
+      viewer = await mountViewer({ file: picked[0] });
+      mount.replaceChildren(viewer.root);
+    } catch (e) { console.error('[pdf-to-word] preview failed:', e); }
   }
 
   async function extractText(buf: ArrayBuffer): Promise<string> {

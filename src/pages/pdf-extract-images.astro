@@ -1,0 +1,148 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pdf-extract-images">
+  <div class="flex flex-col gap-4">
+    <label id="dz" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a PDF or drop it here</span>
+      <input id="file" type="file" accept="application/pdf" class="sr-only" />
+    </label>
+
+    <div id="panel" class="hidden flex-col gap-4">
+      <div id="viewer-mount"></div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-[13px] text-ink-subtle"><span id="name"></span> — <span id="count">0</span> image(s) found</span>
+        <span class="flex-1"></span>
+        <button id="zip" class="btn btn-secondary px-3 py-1.5 text-[13px]" type="button" disabled>Download all (ZIP)</button>
+      </div>
+      <ul id="grid" class="thumb-grid"></ul>
+    </div>
+    <p id="loading" class="hidden text-[13px] text-ink-subtle">Scanning pages…</p>
+    <p id="error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <p id="status" class="hidden text-[13px] text-ink-subtle"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>This free tool extracts the raster images embedded in a PDF. It scans each page for image objects, rebuilds them as PNGs, and lets you download any one of them or all at once in a ZIP. It pulls out genuinely embedded photos and graphics — not vector drawings or text. Everything runs in your browser, so your document is never uploaded.</p>
+  </div>
+</ToolLayout>
+
+<style>.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }</style>
+
+<script>
+  import * as pdfjsLib from 'pdfjs-dist';
+  import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+  import { setupDrop, download } from '../lib/pdfui';
+  import { makeZip } from '../lib/zip';
+  import { mountViewer } from '../lib/pdfViewer';
+  pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const panel = $('panel'), grid = $('grid') as HTMLUListElement;
+  const mount = $('viewer-mount');
+  let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  const err = $('error'), status = $('status'), loading = $('loading');
+  let fname = 'document.pdf';
+  let found: { name: string; blob: Blob; url: string }[] = [];
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  // Turn a pdf.js image object into a canvas we can encode as PNG.
+  function imgToCanvas(img: any): HTMLCanvasElement | null {
+    const { width, height } = img;
+    if (!width || !height) return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = width; canvas.height = height;
+    const ctx = canvas.getContext('2d')!;
+    // Newer pdf.js hands back an ImageBitmap directly.
+    if (typeof ImageBitmap !== 'undefined' && img.bitmap instanceof ImageBitmap) {
+      ctx.drawImage(img.bitmap, 0, 0); return canvas;
+    }
+    const src: Uint8ClampedArray | undefined = img.data;
+    if (!src) return null;
+    const out = ctx.createImageData(width, height);
+    const dst = out.data;
+    const kind = img.kind; // 1=GRAYSCALE_1BPP-decoded to 8bpp, 2=RGB_24BPP, 3=RGBA_32BPP
+    if (kind === 3 || src.length === width * height * 4) {
+      dst.set(src.subarray(0, dst.length));
+    } else if (kind === 2 || src.length === width * height * 3) {
+      for (let i = 0, j = 0; i < src.length; i += 3, j += 4) { dst[j] = src[i]; dst[j + 1] = src[i + 1]; dst[j + 2] = src[i + 2]; dst[j + 3] = 255; }
+    } else {
+      // Grayscale (one byte per pixel).
+      for (let i = 0, j = 0; i < src.length; i++, j += 4) { dst[j] = dst[j + 1] = dst[j + 2] = src[i]; dst[j + 3] = 255; }
+    }
+    ctx.putImageData(out, 0, 0);
+    return canvas;
+  }
+
+  async function load(files: File[]) {
+    setErr('');
+    if (!files.length) return;
+    found.forEach((f) => URL.revokeObjectURL(f.url));
+    found = []; grid.innerHTML = '';
+    fname = files[0].name.replace(/\.pdf$/i, '');
+    $('name').textContent = files[0].name;
+    panel.classList.remove('hidden'); panel.classList.add('flex');
+    try {
+      viewer?.destroy();
+      viewer = await mountViewer({ file: files[0] });
+      mount.replaceChildren(viewer.root);
+    } catch (e) { console.error('[pdf-extract-images] preview failed:', e); }
+    loading.classList.remove('hidden');
+    (($('zip')) as HTMLButtonElement).disabled = true;
+    try {
+      const buf = (await files[0].arrayBuffer()).slice(0);
+      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      const OPS = (pdfjsLib as any).OPS;
+      const seen = new Set<string>();
+      for (let n = 1; n <= pdf.numPages; n++) {
+        const page = await pdf.getPage(n);
+        const ops = await page.getOperatorList();
+        for (let i = 0; i < ops.fnArray.length; i++) {
+          const fn = ops.fnArray[i];
+          if (fn !== OPS.paintImageXObject && fn !== OPS.paintInlineImageXObject) continue;
+          const arg = ops.argsArray[i][0];
+          const key = typeof arg === 'string' ? `${n}:${arg}` : `${n}:inline:${i}`;
+          if (seen.has(key)) continue; seen.add(key);
+          const img = typeof arg === 'string'
+            ? await new Promise<any>((res) => page.objs.get(arg, res)).catch(() => null)
+            : arg;
+          if (!img) continue;
+          const canvas = imgToCanvas(img);
+          if (!canvas) continue;
+          const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/png'));
+          if (!blob) continue;
+          const name = `${fname}-p${n}-img${found.length + 1}.png`;
+          const url = URL.createObjectURL(blob);
+          found.push({ name, blob, url });
+          addCard(url, name, canvas.width, canvas.height);
+        }
+      }
+      loading.classList.add('hidden');
+      $('count').textContent = String(found.length);
+      (($('zip')) as HTMLButtonElement).disabled = found.length === 0;
+      if (!found.length) setErr('No embedded raster images found. Vector graphics and text are not extracted.');
+    } catch (e) { loading.classList.add('hidden'); setErr('Could not read that PDF: ' + (e as Error).message); }
+  }
+
+  function addCard(url: string, name: string, w: number, h: number) {
+    const li = document.createElement('li');
+    li.className = 'panel panel-lift overflow-hidden p-2 flex flex-col gap-2';
+    li.innerHTML = `<img src="${url}" class="w-full rounded" style="background:#fff" alt="${name}" />
+      <span class="text-xs text-ink-tertiary">${w}×${h}</span>`;
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'btn btn-secondary px-2 py-1 text-[13px]'; btn.textContent = 'Download';
+    btn.addEventListener('click', () => { const a = document.createElement('a'); a.href = url; a.download = name; a.click(); });
+    li.appendChild(btn);
+    grid.appendChild(li);
+  }
+
+  $('zip').addEventListener('click', () => {
+    if (!found.length) return;
+    Promise.all(found.map(async (f) => ({ name: f.name, data: new Uint8Array(await f.blob.arrayBuffer()) })))
+      .then((entries) => download(new Blob([makeZip(entries) as BlobPart], { type: 'application/zip' }), `${fname}-images.zip`));
+  });
+
+  setupDrop($('dz'), $('file') as HTMLInputElement, load);
+</script>

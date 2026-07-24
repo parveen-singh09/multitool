@@ -1,0 +1,89 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pdf-unlock">
+  <div class="flex flex-col gap-4">
+    <label id="dz" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a PDF or drop it here</span>
+      <input id="file" type="file" accept="application/pdf" class="sr-only" />
+    </label>
+
+    <div id="panel" class="hidden flex-col gap-4">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-[13px] text-ink-subtle"><span id="name"></span> — <span id="pages">0</span> pages</span>
+        <span class="flex-1"></span>
+        <button id="go" class="btn btn-primary" type="button">Unlock & preview</button>
+        <button id="dl" class="btn btn-secondary hidden" type="button">Download</button>
+      </div>
+      <div id="viewer-mount"></div>
+    </div>
+    <p id="error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <p id="status" class="hidden text-[13px] text-ink-subtle"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>This free tool removes owner restrictions from a PDF — the permissions that block printing, copying text or editing — and gives you an unrestricted copy. It works on files you can already open and view. It cannot bypass a password that is required just to open the document; nothing running in your browser can do that without the password. All processing stays on your device.</p>
+  </div>
+</ToolLayout>
+
+<style>.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }</style>
+
+<script>
+  import { PDFDocument } from 'pdf-lib';
+  import { setupDrop, download } from '../lib/pdfui';
+  import { mountViewer } from '../lib/pdfViewer';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const panel = $('panel'), err = $('error'), status = $('status');
+  const mount = document.getElementById('viewer-mount')!;
+  let bytes: ArrayBuffer | null = null, fname = 'document.pdf';
+  let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  let outBytes: Uint8Array | null = null; // unlocked bytes, held for the Download button
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  async function load(files: File[]) {
+    setErr('');
+    if (!files.length) return;
+    try {
+      bytes = await files[0].arrayBuffer();
+      fname = files[0].name.replace(/\.pdf$/i, '');
+      // ignoreEncryption lets us open permission-restricted files; a re-save drops the owner password.
+      const doc = await PDFDocument.load(bytes.slice(0), { ignoreEncryption: true });
+      $('name').textContent = files[0].name;
+      $('pages').textContent = String(doc.getPageCount());
+      panel.classList.remove('hidden'); panel.classList.add('flex');
+      // Reset any prior run's preview/download. Don't mount here — the source may be encrypted and fail to render.
+      outBytes = null; viewer?.destroy(); viewer = null; mount.replaceChildren();
+      $('dl').classList.add('hidden');
+    } catch (e) {
+      console.error('[pdf-unlock] load failed:', e);
+      setErr('Could not open this PDF. If it asks for a password just to view it, that password is required and cannot be removed here.');
+    }
+  }
+
+  async function run() {
+    if (!bytes) return;
+    setErr(''); status.classList.remove('hidden'); status.textContent = 'Unlocking…';
+    try {
+      const src = await PDFDocument.load(bytes.slice(0), { ignoreEncryption: true });
+      // Copy into a fresh document so no encryption dictionary carries over.
+      const out = await PDFDocument.create();
+      const pages = await out.copyPages(src, src.getPageIndices());
+      pages.forEach((p) => out.addPage(p));
+      outBytes = await out.save();
+      // Preview the unlocked result and enable download.
+      const prev = viewer;
+      viewer = await mountViewer({ file: new File([outBytes as BlobPart], `${fname}-unlocked.pdf`, { type: 'application/pdf' }) });
+      prev?.destroy();
+      mount.replaceChildren(viewer.root);
+      $('dl').classList.remove('hidden');
+      status.textContent = `Done — restrictions removed from ${out.getPageCount()} page(s). Preview below.`;
+    } catch (e) { status.classList.add('hidden'); setErr('Could not unlock: ' + (e as Error).message); }
+  }
+
+  setupDrop($('dz'), $('file') as HTMLInputElement, load);
+  $('go').addEventListener('click', run);
+  $('dl').addEventListener('click', () => { if (outBytes) download(outBytes, `${fname}-unlocked.pdf`); });
+</script>

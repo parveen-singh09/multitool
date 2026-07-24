@@ -1,0 +1,154 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pdf-crop">
+  <div class="flex flex-col gap-4">
+    <label id="dz" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a PDF or drop it here</span>
+      <input id="file" type="file" accept="application/pdf" class="sr-only" />
+    </label>
+
+    <div id="panel" class="hidden flex-col gap-4">
+      <p class="text-[13px] text-ink-subtle"><span id="name"></span> — <span id="pages">0</span> pages, <span id="dims"></span></p>
+      <div class="flex flex-wrap items-end gap-4">
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Top<input id="top" type="number" value="0" min="0" class="field w-24" /></label>
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Bottom<input id="bottom" type="number" value="0" min="0" class="field w-24" /></label>
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Left<input id="left" type="number" value="0" min="0" class="field w-24" /></label>
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Right<input id="right" type="number" value="0" min="0" class="field w-24" /></label>
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Unit
+          <select id="unit" class="field w-28"><option value="1">points</option><option value="72">inches</option><option value="28.35">mm</option></select>
+        </label>
+      </div>
+
+      <div class="flex flex-wrap items-end gap-2 text-[13px] text-ink-subtle">
+        <label class="flex flex-col gap-1">Pages
+          <input id="rng" type="text" placeholder="1-3, 5" class="field w-28 font-mono" spellcheck="false" autocomplete="off" />
+        </label>
+        <button id="rng-go" class="btn btn-secondary" type="button">Apply crop to range</button>
+        <span class="text-xs text-ink-tertiary">Uses the top/bottom/left/right values above. Leave blank to affect every page.</span>
+      </div>
+
+      <button id="go" class="btn btn-primary w-fit self-end">Download</button>
+      <div id="viewer-mount"></div>
+    </div>
+    <p id="error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <p id="status" class="hidden text-[13px] text-ink-subtle"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>This free tool crops the margins of a PDF. Set how much to trim from the top, bottom, left and right — in points, inches or millimeters — and every page is cropped by that amount to remove white space or scanned borders. It adjusts the crop box, so the underlying content is preserved and the change can be reversed by another editor. Runs entirely in your browser.</p>
+  </div>
+</ToolLayout>
+
+<style>.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }</style>
+
+<script>
+  import { PDFDocument } from 'pdf-lib';
+  import { setupDrop, download, parsePageRange } from '../lib/pdfui';
+  import { mountViewer } from '../lib/pdfViewer';
+
+  interface Crop { top: number; bottom: number; left: number; right: number } // points
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const panel = document.getElementById('panel')!, err = document.getElementById('error')!, status = document.getElementById('status')!;
+  const mount = document.getElementById('viewer-mount')!;
+  let bytes: ArrayBuffer | null = null, fname = 'document.pdf';
+  let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  let crops: Crop[] = []; // per-page crop in points, 0-based
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  // Read the four inputs, converted from the selected unit into points.
+  function inputCrop(): Crop {
+    const u = +$('unit').value;
+    return { top: (+$('top').value || 0) * u, bottom: (+$('bottom').value || 0) * u, left: (+$('left').value || 0) * u, right: (+$('right').value || 0) * u };
+  }
+
+  async function load(files: File[]) {
+    setErr('');
+    if (!files.length) return;
+    try {
+      bytes = await files[0].arrayBuffer();
+      fname = files[0].name.replace(/\.pdf$/i, '');
+      const doc = await PDFDocument.load(bytes.slice(0));
+      const n = doc.getPageCount();
+      const { width, height } = doc.getPage(0).getSize();
+      document.getElementById('name')!.textContent = files[0].name;
+      document.getElementById('pages')!.textContent = String(n);
+      document.getElementById('dims')!.textContent = `${Math.round(width)}×${Math.round(height)} pt`;
+      crops = Array.from({ length: n }, () => ({ top: 0, bottom: 0, left: 0, right: 0 }));
+      panel.classList.remove('hidden'); panel.classList.add('flex');
+      renderPreview();
+    } catch (e) {
+      console.error('[pdf-crop] load failed:', e);
+      setErr('Could not open that PDF: ' + (e as Error).message);
+    }
+  }
+
+  // Build the cropped PDF bytes with each page's own crop. Shared by preview and download.
+  // Returns null when no page has any crop (nothing to show).
+  async function build(): Promise<{ bytes: Uint8Array; n: number } | null> {
+    if (!bytes) return null;
+    if (crops.every((c) => c.top + c.bottom + c.left + c.right === 0)) return null;
+    const doc = await PDFDocument.load(bytes.slice(0));
+    doc.getPages().forEach((page, i) => {
+      const c = crops[i]; if (!c) return;
+      const mb = page.getMediaBox();
+      const w = mb.width - c.left - c.right, h = mb.height - c.top - c.bottom;
+      if (w <= 0 || h <= 0) throw new Error(`crop amounts exceed page ${i + 1} size`);
+      page.setCropBox(mb.x + c.left, mb.y + c.bottom, w, h);
+    });
+    return { bytes: await doc.save(), n: doc.getPageCount() };
+  }
+
+  async function run() {
+    if (!bytes) return;
+    if (crops.every((c) => c.top + c.bottom + c.left + c.right === 0)) { setErr('Enter a crop amount on at least one side.'); return; }
+    setErr(''); status.classList.remove('hidden'); status.textContent = 'Cropping…';
+    try {
+      const out = await build();
+      if (!out) return;
+      download(out.bytes, `${fname}-cropped.pdf`);
+      status.textContent = `Done — cropped ${out.n} page(s).`;
+    } catch (e) { status.classList.add('hidden'); setErr('Could not crop: ' + (e as Error).message); }
+  }
+
+  // Editing the four inputs = "set all": apply the current values to every page.
+  function setAll() { const c = inputCrop(); crops = crops.map(() => ({ ...c })); schedule(); }
+
+  // Apply the current input values to just the pages in a range string like "1-3, 5".
+  function applyRange(spec: string) {
+    if (!crops.length) return;
+    const idx = parsePageRange(spec, crops.length); // 0-based; empty string => all pages
+    if (!idx.length) { setErr('Enter a valid page range, e.g. 1-3, 5.'); return; }
+    setErr('');
+    const c = inputCrop();
+    for (const i of idx) crops[i] = { ...c };
+    schedule();
+  }
+
+  // Debounced live preview: crop per-page, then mount the viewer on the result.
+  // With no crop set, show the original PDF so there's always a preview.
+  let seq = 0, timer: ReturnType<typeof setTimeout> | null = null;
+  async function renderPreview() {
+    if (!bytes) return;
+    const my = ++seq;
+    try {
+      const out = await build();
+      const data = out ? out.bytes : new Uint8Array(bytes.slice(0));
+      if (my !== seq) return;
+      const prev = viewer;
+      viewer = await mountViewer({ file: new File([data as BlobPart], 'preview.pdf', { type: 'application/pdf' }) });
+      if (my !== seq) { viewer.destroy(); return; } // superseded by a newer render
+      prev?.destroy();
+      mount.replaceChildren(viewer.root);
+    } catch (e) { console.error('[pdf-crop] preview failed:', e); }
+  }
+  const schedule = () => { if (timer) clearTimeout(timer); timer = setTimeout(renderPreview, 400); };
+
+  setupDrop(document.getElementById('dz')!, $('file'), load);
+  // The four crop inputs + unit drive "set all"; the range button targets a subset.
+  ['top', 'bottom', 'left', 'right', 'unit'].forEach((id) => $(id).addEventListener('input', setAll));
+  $('rng-go').addEventListener('click', () => applyRange($('rng').value));
+  document.getElementById('go')!.addEventListener('click', run);
+</script>

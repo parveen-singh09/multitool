@@ -23,6 +23,8 @@ const placeholder = spec.placeholder ?? 'Paste your text…';
     </label>
   )}
 
+  <div id="dc-viewer-mount"></div>
+
   <div class="flex flex-wrap items-center gap-3">
     <button id="dc-run" class="btn btn-primary">Convert</button>
     <button id="dc-download" class="btn btn-secondary hidden">Download {outLabel}</button>
@@ -49,6 +51,7 @@ const placeholder = spec.placeholder ?? 'Paste your text…';
 <script>
   import { getConversion } from '../lib/docConvertDispatch';
   import { hl } from '../lib/highlight';
+  import { mountViewer } from '../lib/pdfViewer';
 
   const root = document.getElementById('dc-root') as HTMLElement;
   const slug = root.dataset.slug!;
@@ -76,6 +79,21 @@ const placeholder = spec.placeholder ?? 'Paste your text…';
   let outBlob: Blob | null = null;
   let outName = 'output';
   let outUrl: string | null = null;
+
+  // Source PDF preview — only when the picked source is a PDF (this component is shared by many converters).
+  let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  const mount = $('dc-viewer-mount');
+  const isPdf = (f: File) => /\.pdf$/i.test(f.name) || f.type === 'application/pdf';
+  async function previewSource(files: File[]) {
+    if (!mount) return;
+    viewer?.destroy(); viewer = null; mount.replaceChildren();
+    const pdf = files.find(isPdf);
+    if (!pdf) return;
+    try {
+      viewer = await mountViewer({ file: pdf });
+      mount.replaceChildren(viewer.root);
+    } catch (e) { console.error('[pdf-to-csv] preview failed:', e); }
+  }
 
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
   const fmtSize = (n: number) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`;
@@ -106,6 +124,7 @@ const placeholder = spec.placeholder ?? 'Paste your text…';
   const setFiles = (files: File[]) => {
     pickedFiles = files;
     if (dropLabel) dropLabel.textContent = files.length === 1 ? files[0].name : `${files.length} files selected`;
+    previewSource(files);
   };
   if (kind === 'file' && fileInput && drop) {
     fileInput.addEventListener('change', () => { if (fileInput.files?.length) setFiles(Array.from(fileInput.files)); });

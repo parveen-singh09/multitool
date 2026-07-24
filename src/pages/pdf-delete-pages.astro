@@ -1,0 +1,151 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pdf-delete-pages">
+  <div class="flex flex-col gap-4">
+    <label id="dz" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a PDF or drop it here</span>
+      <input id="file" type="file" accept="application/pdf" class="sr-only" />
+    </label>
+
+    <div id="panel" class="hidden flex-col gap-4">
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">
+          <span class="whitespace-nowrap">Delete pages by number (e.g. <span class="font-mono">2, 5-7, 10</span>)</span>
+          <input id="range" type="text" placeholder="2, 5-7, 10" class="field w-56 font-mono" spellcheck="false" autocomplete="off" />
+        </label>
+        <button id="apply-range" class="btn btn-secondary" type="button">Remove these</button>
+        <span class="flex-1"></span>
+        <button id="reset" class="btn btn-secondary" type="button">Restore all</button>
+        <button id="go" class="btn btn-primary" type="button">Download</button>
+      </div>
+      <p class="text-xs text-ink-tertiary">Or click delete on any page below. Page numbers follow what you keep.</p>
+      <div id="viewer-mount"></div>
+    </div>
+    <p id="loading" class="hidden text-[13px] text-ink-subtle">Rendering pages…</p>
+    <p id="error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <p id="status" class="hidden text-[13px] text-ink-subtle"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>This free tool removes pages from a PDF. Load a file to see every page as a thumbnail, then delete the ones you do not want — click the delete button on a page, or type page numbers like <code>2, 5-7, 10</code> to remove several at once. Download a trimmed document when you are done. The original stays untouched, and everything runs in your browser so your file is never uploaded.</p>
+  </div>
+</ToolLayout>
+
+<style>.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }</style>
+
+<script>
+  import { PDFDocument } from 'pdf-lib';
+  import { setupDrop, parsePageRange, download } from '../lib/pdfui';
+  import { mountViewer } from '../lib/pdfViewer';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const panel = $('panel'), mount = $('viewer-mount');
+  const err = $('error'), status = $('status'), loading = $('loading');
+  let bytes: ArrayBuffer | null = null, fname = 'document.pdf', file: File | null = null;
+  let order: number[] = [];                          // kept original 0-based indices, in order
+  let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  const labelEls = new Map<number, HTMLElement>();   // original idx -> "Page N" label in its slot
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  async function load(files: File[]) {
+    setErr('');
+    if (!files.length) return;
+    try {
+      file = files[0];
+      bytes = await file.arrayBuffer();
+      fname = file.name.replace(/\.pdf$/i, '');
+      panel.classList.remove('hidden'); panel.classList.add('flex');
+      await mountPreview(file);
+    } catch (e) {
+      console.error('[pdf-delete-pages] load failed:', e);
+      setErr('Could not open that PDF: ' + (e as Error).message);
+    }
+  }
+
+  // Mount the shared viewer and inject a "Page N" label + delete button into every page slot.
+  async function mountPreview(f: File) {
+    loading.classList.remove('hidden');
+    order = []; labelEls.clear();
+    const prev = viewer;
+    viewer = await mountViewer({
+      file: f,
+      onPage: (page, slot) => {
+        const idx = page - 1;
+        order.push(idx);
+        const bar = document.createElement('div');
+        bar.className = 'absolute inset-x-0 top-0 z-10 flex items-center gap-2 bg-black/45 px-2 py-1';
+        const num = document.createElement('span');
+        num.className = 'flex-1 text-xs text-white';
+        const del = document.createElement('button');
+        del.type = 'button'; del.setAttribute('aria-label', 'Delete page');
+        del.className = 'inline-flex h-6 w-6 items-center justify-center rounded text-white hover:bg-white/20';
+        del.style.color = '#ff8a8d';
+        del.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>';
+        del.addEventListener('click', () => removePage(idx));
+        bar.append(num, del);
+        slot.appendChild(bar);
+        labelEls.set(idx, num);
+      },
+    });
+    prev?.destroy();
+    mount.replaceChildren(viewer.root);
+    relabel();
+    loading.classList.add('hidden');
+  }
+
+  function removePage(idx: number) {
+    if (order.length <= 1) { setErr('Keep at least one page.'); return; }
+    setErr('');
+    order = order.filter((x) => x !== idx);
+    viewer?.setPageVisible(idx + 1, false); // hide both the slot and its rail thumbnail
+    labelEls.delete(idx);
+    relabel();
+  }
+
+  // Renumber kept pages 1..N in display order and refresh the count.
+  function relabel() {
+    order.forEach((idx, pos) => { const el = labelEls.get(idx); if (el) el.textContent = `Page ${pos + 1}`; });
+  }
+
+  // Bulk-remove by typed range. Range numbers refer to current kept-page positions.
+  function applyRange() {
+    const raw = ($('range') as HTMLInputElement).value;
+    if (!raw.trim()) { setErr('Enter page numbers to remove.'); return; }
+    const pos = parsePageRange(raw, order.length);   // 0-based positions into `order`
+    if (!pos.length) { setErr(`No pages in that range (1–${order.length}).`); return; }
+    if (pos.length >= order.length) { setErr('That would delete every page.'); return; }
+    setErr('');
+    const drop = new Set(pos.map((p) => order[p]));   // map to original indices
+    for (const idx of drop) { viewer?.setPageVisible(idx + 1, false); labelEls.delete(idx); }
+    order = order.filter((x) => !drop.has(x));
+    ($('range') as HTMLInputElement).value = '';
+    relabel();
+  }
+
+  function reset() {
+    if (!file) return;
+    setErr('');
+    mountPreview(file);
+  }
+
+  async function run() {
+    if (!bytes) return;
+    if (!order.length) { setErr('Keep at least one page.'); return; }
+    setErr(''); status.classList.remove('hidden'); status.textContent = 'Working…';
+    try {
+      const src = await PDFDocument.load(bytes.slice(0));
+      const out = await PDFDocument.create();
+      (await out.copyPages(src, order)).forEach((p) => out.addPage(p));
+      download(await out.save(), `${fname}-edited.pdf`);
+      status.textContent = `Done — ${out.getPageCount()} page(s) kept.`;
+    } catch (e) { status.classList.add('hidden'); setErr('Could not edit: ' + (e as Error).message); }
+  }
+
+  setupDrop($('dz'), $('file') as HTMLInputElement, load);
+  $('apply-range').addEventListener('click', applyRange);
+  $('reset').addEventListener('click', reset);
+  $('go').addEventListener('click', run);
+</script>

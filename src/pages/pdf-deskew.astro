@@ -1,0 +1,146 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pdf-deskew">
+  <div class="flex flex-col gap-4">
+    <label id="dz" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a PDF or drop it here</span>
+      <input id="file" type="file" accept="application/pdf" class="sr-only" />
+    </label>
+
+    <div id="panel" class="hidden flex-col gap-4">
+      <p class="text-[13px] text-ink-subtle"><span id="name"></span> — <span id="pages">0</span> pages</p>
+      <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Max tilt to correct
+        <select id="maxang" class="field w-44"><option value="10">±10°</option><option value="15">±15°</option><option value="20">±20°</option></select>
+      </label>
+      <p class="text-xs text-ink-tertiary">Pages are rendered, straightened and rebuilt as images, so text becomes non-selectable. Run OCR afterwards if you need searchable text.</p>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="flex-1"></span>
+        <button id="go" class="btn btn-primary" type="button">Deskew & preview</button>
+        <button id="dl" class="btn btn-secondary hidden" type="button">Download</button>
+      </div>
+      <div id="viewer-mount"></div>
+    </div>
+    <p id="error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <p id="status" class="hidden text-[13px] text-ink-subtle"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>This free tool deskews a PDF — it finds the tilt in crooked scanned pages and rotates each one so the text sits level again. It measures the skew by testing candidate angles and picking the one where text rows line up most sharply, then straightens the page. Everything is rendered and rebuilt in your browser, so your document is never uploaded.</p>
+  </div>
+</ToolLayout>
+
+<style>.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }</style>
+
+<script>
+  import { PDFDocument } from 'pdf-lib';
+  import { setupDrop, download } from '../lib/pdfui';
+  import { rasterizeRebuild } from '../lib/pdfRaster';
+  import { mountViewer } from '../lib/pdfViewer';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const panel = $('panel'), err = $('error'), status = $('status');
+  const mount = document.getElementById('viewer-mount')!;
+  let file: File | null = null, fname = 'document.pdf';
+  let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  let outBytes: Uint8Array | null = null;
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  async function load(files: File[]) {
+    setErr('');
+    if (!files.length) return;
+    try {
+      file = files[0];
+      fname = file.name.replace(/\.pdf$/i, '');
+      const doc = await PDFDocument.load((await file.arrayBuffer()).slice(0), { ignoreEncryption: true });
+      $('name').textContent = file.name;
+      $('pages').textContent = String(doc.getPageCount());
+      panel.classList.remove('hidden'); panel.classList.add('flex');
+      // Reset any prior run's preview/download.
+      outBytes = null; viewer?.destroy(); viewer = null; mount.replaceChildren();
+      $('dl').classList.add('hidden');
+    } catch (e) {
+      console.error('[pdf-deskew] load failed:', e);
+      setErr('Could not open that PDF: ' + (e as Error).message);
+    }
+  }
+
+  // Estimate skew by projection-profile variance: for each candidate angle, sum dark
+  // pixels per row on a downscaled binarized image; the true angle maximizes row variance
+  // (straight text lines pack darkness into few rows). ponytail: coarse 1° then fine 0.25°
+  // sweep on a ≤400px-wide sample — full Hough would be overkill for page deskew.
+  function detectSkew(ctx: CanvasRenderingContext2D, w: number, h: number, maxDeg: number): number {
+    const dw = Math.min(400, w), dh = Math.round(h * (dw / w));
+    const tmp = document.createElement('canvas'); tmp.width = dw; tmp.height = dh;
+    const tctx = tmp.getContext('2d')!;
+    tctx.drawImage(ctx.canvas, 0, 0, dw, dh);
+    const px = tctx.getImageData(0, 0, dw, dh).data;
+    // Binarize to a dark-pixel mask (1 = ink).
+    const mask = new Uint8Array(dw * dh);
+    for (let i = 0, p = 0; i < px.length; i += 4, p++) {
+      const lum = px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114;
+      mask[p] = lum < 160 ? 1 : 0;
+    }
+    const score = (deg: number): number => {
+      const rad = deg * Math.PI / 180, tan = Math.tan(rad);
+      const rows = new Float64Array(dh);
+      for (let y = 0; y < dh; y++) {
+        for (let x = 0; x < dw; x++) {
+          if (!mask[y * dw + x]) continue;
+          // Shear vertically by the candidate angle, then bin into the nearest row.
+          const yy = y + (x - dw / 2) * tan;
+          const ry = yy | 0;
+          if (ry >= 0 && ry < dh) rows[ry]++;
+        }
+      }
+      let mean = 0; for (let y = 0; y < dh; y++) mean += rows[y]; mean /= dh;
+      let v = 0; for (let y = 0; y < dh; y++) { const d = rows[y] - mean; v += d * d; }
+      return v;
+    };
+    let best = 0, bestScore = -1;
+    for (let d = -maxDeg; d <= maxDeg; d += 1) { const s = score(d); if (s > bestScore) { bestScore = s; best = d; } }
+    for (let d = best - 1; d <= best + 1; d += 0.25) { const s = score(d); if (s > bestScore) { bestScore = s; best = d; } }
+    return best;
+  }
+
+  async function run() {
+    if (!file) return;
+    setErr(''); status.classList.remove('hidden'); status.textContent = 'Deskewing…';
+    try {
+      const maxDeg = +($('maxang') as HTMLSelectElement).value;
+      let corrected = 0;
+      const bytes = await rasterizeRebuild(file, {
+        scale: 2, quality: 0.9,
+        onProgress: (d, t) => { status.textContent = `Deskewing page ${d} of ${t}…`; },
+        onCanvas: (ctx, w, h) => {
+          const angle = detectSkew(ctx, w, h, maxDeg);
+          if (Math.abs(angle) < 0.25) return; // already straight
+          corrected++;
+          // Snapshot the page, then redraw it rotated by -angle onto a white background.
+          const snap = document.createElement('canvas'); snap.width = w; snap.height = h;
+          snap.getContext('2d')!.drawImage(ctx.canvas, 0, 0);
+          ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
+          ctx.save();
+          ctx.translate(w / 2, h / 2);
+          ctx.rotate(-angle * Math.PI / 180);
+          ctx.drawImage(snap, -w / 2, -h / 2);
+          ctx.restore();
+        },
+      });
+      outBytes = bytes;
+      // Preview the deskewed result and enable download.
+      const prev = viewer;
+      viewer = await mountViewer({ file: new File([bytes as BlobPart], `${fname}-deskewed.pdf`, { type: 'application/pdf' }) });
+      prev?.destroy();
+      mount.replaceChildren(viewer.root);
+      $('dl').classList.remove('hidden');
+      status.textContent = corrected ? `Done — straightened ${corrected} page(s). Preview below.` : 'Done — pages were already level. Preview below.';
+    } catch (e) { status.classList.add('hidden'); setErr('Could not deskew: ' + (e as Error).message); }
+  }
+
+  setupDrop($('dz'), $('file') as HTMLInputElement, load);
+  $('go').addEventListener('click', run);
+  $('dl').addEventListener('click', () => { if (outBytes) download(outBytes, `${fname}-deskewed.pdf`); });
+</script>

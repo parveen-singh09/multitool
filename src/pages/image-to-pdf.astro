@@ -54,7 +54,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
           <input id="ip-rotate" type="checkbox" class="accent-primary" checked />
           Auto-rotate (EXIF)
         </label>
-        <button id="ip-make" class="btn btn-primary ml-auto">Create PDF</button>
+        <button id="ip-show" class="btn btn-secondary ml-auto" type="button">Show preview</button>
+        <button id="ip-make" class="btn btn-primary">Download</button>
       </div>
 
       <div>
@@ -67,6 +68,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         </div>
         <ul id="ip-list" class="mt-2 flex flex-col gap-2"></ul>
       </div>
+
+      <div id="ip-viewer" class="hidden"></div>
     </div>
     <p id="ip-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
     <p id="ip-status" class="hidden text-[13px] text-ink-subtle" aria-live="polite"></p>
@@ -97,6 +100,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
 <script>
   import { PDFDocument } from 'pdf-lib';
+  import { mountViewer } from '../lib/pdfViewer';
 
   const fileInput = document.getElementById('ip-file') as HTMLInputElement;
   const drop = document.getElementById('ip-drop')!;
@@ -114,6 +118,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   interface Item { file: File; url: string; }
   let items: Item[] = [];
   let dragIdx = -1;
+  let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  let lastPdf: File | null = null; // built PDF, mounted only when "Show preview" is clicked
 
   const PAGE: Record<'a4' | 'letter', [number, number]> = { a4: [595.28, 841.89], letter: [612, 792] };
   function setErr(m: string) { err.textContent = m; err.classList.toggle('hidden', !m); }
@@ -178,8 +184,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return { bytes: await blob.arrayBuffer(), type: asJpeg ? 'jpg' : 'png' };
   }
 
-  async function build() {
-    if (!items.length) { setErr('Add at least one image.'); return; }
+  // Build the PDF from the current images + settings. Returns the file, or null on failure.
+  // Shared by Create PDF (build + download) and Show preview (build + mount).
+  async function buildPdf(): Promise<File | null> {
+    if (!items.length) { setErr('Add at least one image.'); return null; }
     setErr('');
     status.classList.remove('hidden'); status.textContent = 'Building PDF…';
     try {
@@ -212,15 +220,23 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         page.drawImage(img, { x: (pw - dw) / 2, y: (ph - dh) / 2, width: dw, height: dh });
       }
       const out = await pdf.save();
-      const blob = new Blob([out as BlobPart], { type: 'application/pdf' });
       let name = ((document.getElementById('ip-name') as HTMLInputElement).value || 'images').trim().replace(/[\\/:*?"<>|]+/g, '_');
       if (!/\.pdf$/i.test(name)) name += '.pdf';
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
-      status.textContent = `Done — ${items.length} page(s), ${(blob.size / 1024).toFixed(0)} KB.`;
+      status.classList.add('hidden');
+      lastPdf = new File([out as BlobPart], name, { type: 'application/pdf' });
+      return lastPdf;
     } catch (e) {
       status.classList.add('hidden');
       setErr('Could not build the PDF: ' + (e as Error).message);
+      return null;
     }
+  }
+
+  async function build() {
+    const pdf = await buildPdf();
+    if (!pdf) return;
+    const a = document.createElement('a'); a.href = URL.createObjectURL(pdf); a.download = pdf.name; a.click();
+    status.classList.remove('hidden'); status.textContent = `Done — ${items.length} page(s), ${(pdf.size / 1024).toFixed(0)} KB.`;
   }
 
   function clearAll() {
@@ -228,7 +244,26 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     items = [];
     panel.classList.add('hidden'); panel.classList.remove('flex');
     setErr(''); status.classList.add('hidden');
+    viewer?.destroy(); viewer = null; lastPdf = null;
+    const mount = document.getElementById('ip-viewer')!;
+    mount.replaceChildren(); mount.classList.add('hidden');
+    document.getElementById('ip-show')!.textContent = 'Show preview';
     render();
+  }
+
+  // Standalone: builds the PDF from the current images and mounts the viewer. Toggles show/hide.
+  async function togglePreview() {
+    const mount = document.getElementById('ip-viewer')!;
+    const show = document.getElementById('ip-show')!;
+    if (viewer) { viewer.destroy(); viewer = null; mount.replaceChildren(); mount.classList.add('hidden'); show.textContent = 'Show preview'; return; }
+    const pdf = await buildPdf();
+    if (!pdf) return;
+    show.textContent = 'Rendering…';
+    try {
+      viewer = await mountViewer({ file: pdf });
+      mount.replaceChildren(viewer.root); mount.classList.remove('hidden');
+      show.textContent = 'Hide preview';
+    } catch (e) { console.error('[image-to-pdf] preview failed:', e); setErr('Preview failed: ' + (e as Error).message); show.textContent = 'Show preview'; }
   }
 
   fileInput.addEventListener('change', () => fileInput.files && addFiles(fileInput.files));
@@ -239,6 +274,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   document.getElementById('ip-sort')!.addEventListener('click', () => { items.sort((a, b) => a.file.name.localeCompare(b.file.name, undefined, { numeric: true })); render(); });
   document.getElementById('ip-reverse')!.addEventListener('click', () => { items.reverse(); render(); });
   document.getElementById('ip-clear')!.addEventListener('click', clearAll);
+  document.getElementById('ip-show')!.addEventListener('click', togglePreview);
   compressEl.addEventListener('change', () => { qualityWrap.classList.toggle('hidden', !compressEl.checked); qualityWrap.classList.toggle('flex', compressEl.checked); });
   qualityEl.addEventListener('input', () => { qualityVal.textContent = qualityEl.value + '%'; });
 </script>

@@ -1,0 +1,125 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pdf-ocr">
+  <div class="flex flex-col gap-4">
+    <label id="dz" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a PDF or drop it here</span>
+      <input id="file" type="file" accept="application/pdf" class="sr-only" />
+    </label>
+
+    <div id="panel" class="hidden flex-col gap-4">
+      <p class="text-[13px] text-ink-subtle"><span id="name"></span> — <span id="pages">0</span> pages</p>
+      <div class="flex flex-wrap items-end gap-4">
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Resolution
+          <select id="scale" class="field w-44"><option value="2">High (150 dpi)</option><option value="1.5">Medium (110 dpi)</option></select>
+        </label>
+      </div>
+      <p class="text-xs text-ink-tertiary">OCR runs page by page in your browser and can take a while on long documents. The output keeps the original page image with a searchable text layer added.</p>
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="go" class="btn btn-primary" type="button">Make searchable &amp; preview</button>
+        <button id="dl" class="btn btn-secondary hidden" type="button">Download</button>
+      </div>
+      <div id="viewer-mount"></div>
+    </div>
+    <p id="error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <p id="status" class="hidden text-[13px] text-ink-subtle"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>This free OCR tool makes scanned or image-based PDFs searchable. It recognizes the text on every page and adds an invisible, selectable text layer over the original image, so you can search, copy and highlight while the document still looks exactly the same. Recognition runs entirely in your browser using an on-device engine — your file is never uploaded.</p>
+  </div>
+</ToolLayout>
+
+<style>.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }</style>
+
+<script>
+  import * as pdfjsLib from 'pdfjs-dist';
+  import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+  import { PDFDocument } from 'pdf-lib';
+  import { setupDrop, download } from '../lib/pdfui';
+  import { mountViewer } from '../lib/pdfViewer';
+  pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const panel = $('panel'), err = $('error'), status = $('status');
+  const mount = document.getElementById('viewer-mount')!;
+  let file: File | null = null, fname = 'document.pdf';
+  let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  let ocr: Uint8Array | null = null; // searchable bytes, held for the Download button
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  async function load(files: File[]) {
+    setErr('');
+    if (!files.length) return;
+    try {
+      file = files[0];
+      fname = file.name.replace(/\.pdf$/i, '');
+      const bytes = await file.arrayBuffer();
+      const doc = await PDFDocument.load(bytes.slice(0), { ignoreEncryption: true });
+      $('name').textContent = file.name;
+      $('pages').textContent = String(doc.getPageCount());
+      panel.classList.remove('hidden'); panel.classList.add('flex');
+      // Reset any prior run's preview/download.
+      ocr = null; viewer?.destroy(); viewer = null; mount.replaceChildren();
+      $('dl').classList.add('hidden');
+    } catch (e) {
+      console.error('[pdf-ocr] load failed:', e);
+      setErr('Could not open that PDF: ' + (e as Error).message);
+    }
+  }
+
+  async function run() {
+    if (!file) return;
+    setErr(''); status.classList.remove('hidden'); status.textContent = 'Loading OCR engine…';
+    let worker: any;
+    try {
+      const scale = +($('scale') as HTMLSelectElement).value;
+      const Tesseract = await import('tesseract.js');
+      worker = await Tesseract.createWorker('eng', 1, {
+        workerPath: '/tesseract/worker.min.js',
+        corePath: '/tesseract/',
+        langPath: '/tessdata/',
+      });
+
+      const buf = (await file.arrayBuffer()).slice(0); // pdf.js detaches its input
+      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      const out = await PDFDocument.create();
+      for (let n = 1; n <= pdf.numPages; n++) {
+        status.textContent = `Recognizing page ${n} of ${pdf.numPages}…`;
+        const page = await pdf.getPage(n);
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width; canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d')!;
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await page.render({ canvasContext: ctx, viewport, canvas } as any).promise;
+        // Ask tesseract for a searchable single-page PDF (image + invisible text layer).
+        const { data } = await worker.recognize(canvas, {}, { pdf: true, text: false });
+        if (!data.pdf) throw new Error('OCR produced no output for page ' + n);
+        const pagePdf = await PDFDocument.load(Uint8Array.from(data.pdf));
+        const copied = await out.copyPages(pagePdf, pagePdf.getPageIndices());
+        copied.forEach((p) => out.addPage(p));
+      }
+      ocr = await out.save();
+      // Preview the searchable result and enable download.
+      const prev = viewer;
+      viewer = await mountViewer({ file: new File([ocr as BlobPart], `${fname}-searchable.pdf`, { type: 'application/pdf' }) });
+      prev?.destroy();
+      mount.replaceChildren(viewer.root);
+      $('dl').classList.remove('hidden');
+      status.textContent = `Done — ${out.getPageCount()} page(s) made searchable. Preview below.`;
+    } catch (e) {
+      status.classList.add('hidden');
+      setErr('Could not run OCR: ' + (e as Error).message);
+    } finally {
+      if (worker) await worker.terminate();
+    }
+  }
+
+  setupDrop($('dz'), $('file') as HTMLInputElement, load);
+  $('go').addEventListener('click', run);
+  $('dl').addEventListener('click', () => { if (ocr) download(ocr, `${fname}-searchable.pdf`); });
+</script>

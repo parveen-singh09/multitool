@@ -1,0 +1,146 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pdf-compress">
+  <div class="flex flex-col gap-4">
+    <label id="dz" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a PDF or drop it here</span>
+      <input id="file" type="file" accept="application/pdf" class="sr-only" />
+    </label>
+
+    <div id="panel" class="hidden flex-col gap-4">
+      <p class="text-[13px] text-ink-subtle"><span id="name"></span> — <span id="pages">0</span> pages, <span id="insize"></span></p>
+      <div class="flex flex-wrap items-end gap-4">
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Mode
+          <select id="mode" class="field w-64">
+            <option value="optimize" selected>Optimize — keep text selectable</option>
+            <option value="rasterize">Rasterize — smallest, images only</option>
+          </select>
+        </label>
+        <label id="level-wrap" class="hidden flex-col gap-1 text-[13px] text-ink-subtle">Compression level
+          <select id="level" class="field w-56">
+            <option value="strong">Strong — smallest file (72 dpi)</option>
+            <option value="medium" selected>Medium — balanced (110 dpi)</option>
+            <option value="light">Light — best quality (150 dpi)</option>
+          </select>
+        </label>
+      </div>
+      <p id="mode-note" class="text-xs text-ink-tertiary">Optimize rebuilds the file structure and strips metadata while keeping text sharp and selectable — best for normal documents. Switch to Rasterize for scans and image-heavy PDFs where you need the smallest possible file.</p>
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="go" class="btn btn-primary" type="button">Compress & preview</button>
+        <span class="flex-1"></span>
+        <button id="dl" class="btn btn-secondary hidden" type="button">Download</button>
+      </div>
+      <p id="result" class="hidden text-[13px] font-medium text-ink"></p>
+      <div id="viewer-mount"></div>
+    </div>
+    <p id="error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <p id="status" class="hidden text-[13px] text-ink-subtle"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>This free tool compresses a PDF to a smaller file size so it fits under email and upload limits. Two modes: <strong>Optimize</strong> rebuilds the file with object streams and strips metadata while keeping text selectable and vectors sharp — the right choice for normal documents. <strong>Rasterize</strong> re-renders each page as a compressed image at the resolution you choose for the smallest possible file, best for scans and image-heavy PDFs (text becomes non-selectable). A live preview shows the result and the size saved before you download. Unlike most online compressors, everything runs in your browser — your file is never uploaded.</p>
+  </div>
+</ToolLayout>
+
+<style>.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }</style>
+
+<script>
+  import { PDFDocument } from 'pdf-lib';
+  import { setupDrop, download } from '../lib/pdfui';
+  import { rasterizeRebuild } from '../lib/pdfRaster';
+  import { mountViewer } from '../lib/pdfViewer';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const panel = $('panel'), err = $('error'), status = $('status');
+  const mount = document.getElementById('viewer-mount')!;
+  let file: File | null = null, fname = 'document.pdf', inBytes = 0;
+  let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  let outBytes: Uint8Array | null = null;
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+  const kb = (n: number) => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : (n / 1024).toFixed(0) + ' KB';
+
+  // level -> [renderScale, jpegQuality]
+  const LEVELS: Record<string, [number, number]> = { strong: [1, 0.6], medium: [1.5, 0.75], light: [2, 0.85] };
+
+  async function load(files: File[]) {
+    setErr('');
+    if (!files.length) return;
+    try {
+      file = files[0]; inBytes = file.size;
+      fname = file.name.replace(/\.pdf$/i, '');
+      const doc = await PDFDocument.load((await file.arrayBuffer()).slice(0));
+      $('name').textContent = file.name;
+      $('pages').textContent = String(doc.getPageCount());
+      $('insize').textContent = kb(inBytes);
+      panel.classList.remove('hidden'); panel.classList.add('flex');
+      // Reset any prior run's preview/download.
+      outBytes = null; viewer?.destroy(); viewer = null; mount.replaceChildren();
+      $('dl').classList.add('hidden'); $('result').classList.add('hidden');
+    } catch (e) {
+      console.error('[pdf-compress] load failed:', e);
+      setErr('Could not read that PDF. Encrypted files are not supported.');
+    }
+  }
+
+  // Text-preserving optimize: rebuild the file with object streams + drop metadata. Keeps text/vectors.
+  async function optimize(f: File): Promise<Uint8Array> {
+    const doc = await PDFDocument.load((await f.arrayBuffer()).slice(0), { updateMetadata: false });
+    // Strip metadata bloat (kept minimal, not the page content).
+    doc.setTitle(''); doc.setAuthor(''); doc.setSubject(''); doc.setKeywords([]);
+    doc.setProducer(''); doc.setCreator('');
+    return doc.save({ useObjectStreams: true });
+  }
+
+  async function run() {
+    if (!file) return;
+    setErr(''); status.classList.remove('hidden'); status.textContent = 'Compressing…';
+    try {
+      const mode = ($('mode') as HTMLSelectElement).value;
+      let bytes: Uint8Array;
+      if (mode === 'optimize') {
+        bytes = await optimize(file);
+      } else {
+        const [scale, quality] = LEVELS[($('level') as HTMLSelectElement).value];
+        bytes = await rasterizeRebuild(file, {
+          scale, quality,
+          onProgress: (d, t) => { status.textContent = `Compressing page ${d} of ${t}…`; },
+        });
+      }
+      const outLen = bytes.byteLength;
+      if (outLen >= inBytes) {
+        const hint = mode === 'optimize'
+          ? 'This PDF is already well-optimized. Try Rasterize mode if it is scan- or image-heavy.'
+          : 'This PDF is likely already optimized — compression helps most with scans and image-heavy files.';
+        setErr(`Result (${kb(outLen)}) is not smaller than the original (${kb(inBytes)}). ${hint}`);
+        status.classList.add('hidden');
+        return;
+      }
+      outBytes = bytes;
+      // Preview the compressed result and enable download.
+      const prev = viewer;
+      viewer = await mountViewer({ file: new File([bytes as BlobPart], `${fname}-compressed.pdf`, { type: 'application/pdf' }) });
+      prev?.destroy();
+      mount.replaceChildren(viewer.root);
+      $('dl').classList.remove('hidden');
+      const saved = (100 * (1 - outLen / inBytes)).toFixed(0);
+      $('result').textContent = `${kb(inBytes)} → ${kb(outLen)} (${saved}% smaller)`;
+      $('result').classList.remove('hidden');
+      status.textContent = `Done — ${saved}% smaller.`;
+    } catch (e) { status.classList.add('hidden'); setErr('Could not compress: ' + (e as Error).message); }
+  }
+
+  // Level only applies to Rasterize mode; show it accordingly.
+  function syncMode() {
+    const raster = ($('mode') as HTMLSelectElement).value === 'rasterize';
+    $('level-wrap').classList.toggle('hidden', !raster);
+    $('level-wrap').classList.toggle('flex', raster);
+  }
+
+  setupDrop($('dz'), $('file') as HTMLInputElement, load);
+  $('mode').addEventListener('change', syncMode);
+  $('go').addEventListener('click', run);
+  $('dl').addEventListener('click', () => { if (outBytes) download(outBytes, `${fname}-compressed.pdf`); });
+</script>

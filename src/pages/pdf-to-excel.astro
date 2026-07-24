@@ -11,6 +11,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     </label>
 
     <div id="pe-panel" class="hidden flex-col gap-4">
+      <div id="pe-viewer-mount"></div>
       <div class="flex flex-wrap items-center gap-3">
         <button id="pe-convert" class="btn btn-primary">Detect tables</button>
         <button id="pe-download" class="btn btn-secondary" disabled>Download .xlsx</button>
@@ -61,6 +62,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
   import { makeXlsx } from '../lib/xlsx';
   import { makeZip } from '../lib/zip';
+  import { mountViewer } from '../lib/pdfViewer';
   pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
   const $ = (id: string) => document.getElementById(id)!;
@@ -78,9 +80,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   let baseName = 'document';
   let rows: (string | number)[][] = [];
   let batchBlob: Blob | null = null;
+  let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  const mount = $('pe-viewer-mount');
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
 
-  function load(picked: File[]) {
+  async function load(picked: File[]) {
     setErr('');
     if (!picked.length) return;
     files = picked; batchBlob = null;
@@ -94,6 +98,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     dlBtn.textContent = multi ? 'Download .xlsx ZIP' : 'Download .xlsx';
     ($('pe-convert') as HTMLButtonElement).textContent = multi ? 'Convert all' : 'Detect tables';
     picked[0].arrayBuffer().then((b) => { bytes = b; });
+    try {
+      viewer?.destroy();
+      viewer = await mountViewer({ file: picked[0] });
+      mount.replaceChildren(viewer.root);
+    } catch (e) { console.error('[pdf-to-excel] preview failed:', e); }
   }
 
   type Cell = { x: number; y: number; w: number; str: string };

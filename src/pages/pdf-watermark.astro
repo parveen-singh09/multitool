@@ -1,0 +1,444 @@
+---
+import ToolLayout from '../layouts/ToolLayout.astro';
+---
+
+<ToolLayout slug="pdf-watermark">
+  <div class="flex flex-col gap-4">
+    <label id="dz" class="panel panel-lift flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed p-8 text-center transition-colors hover:bg-surface-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-ink-tertiary" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span class="text-sm text-ink">Choose a PDF or drop it here</span>
+      <input id="file" type="file" accept="application/pdf" class="sr-only" />
+    </label>
+
+    <div id="panel" class="hidden flex-col gap-4">
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="add-text" class="btn btn-secondary" type="button">+ Text</button>
+        <button id="add-image" class="btn btn-primary" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> Add image</button>
+        <input id="img-file" type="file" accept="image/*" data-pick-inline="add-image" data-pick-label="Add image" class="sr-only" />
+        <button id="del-sel" class="btn btn-secondary" type="button">Delete selected</button>
+        <span class="flex-1"></span>
+        <label class="flex items-center gap-2 text-[13px] text-ink-subtle">
+          <input id="all-pages" type="checkbox" class="h-4 w-4 accent-primary" checked /> Apply to all pages
+        </label>
+        <label id="range-wrap" class="hidden items-center gap-2 text-[13px] text-ink-subtle">
+          Pages
+          <input id="page-range" type="text" value="1" placeholder="e.g. 1-3, 5" class="field w-32" />
+        </label>
+      </div>
+
+      <div id="sel-tools" class="hidden flex-wrap items-end gap-4">
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Text
+          <input id="text-val" type="text" class="field w-56" />
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Font size
+          <input id="text-size" type="number" min="6" max="400" class="field w-24" />
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Color
+          <input id="text-color" type="color" value="#ff0000" class="field h-10 w-16 cursor-pointer p-1" />
+        </label>
+        <label class="flex flex-col gap-1 text-[13px] text-ink-subtle">Opacity
+          <input id="obj-op" type="range" min="5" max="100" value="60" class="w-32 accent-primary" />
+        </label>
+      </div>
+
+      <div class="overflow-hidden rounded-lg border border-hairline">
+        <!-- Viewer toolbar header (dark chrome, like a PDF viewer) -->
+        <div class="flex flex-wrap items-center gap-x-2 gap-y-2 border-b border-hairline bg-[#333338] px-3 py-2 text-[13px] text-[#e8e8ea]">
+          <button id="toggle-rail" type="button" title="Toggle thumbnails" aria-label="Toggle thumbnails" class="rounded p-1.5 hover:bg-white/10">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+          </button>
+          <span id="name" class="min-w-0 max-w-[40%] truncate font-medium"></span>
+          <span class="whitespace-nowrap text-[#a9a9ad]"><span id="cur-page">1</span> / <span id="pages">0</span></span>
+          <span class="flex-1"></span>
+          <div class="flex items-center gap-1">
+            <button id="zoom-out" type="button" title="Zoom out" aria-label="Zoom out" class="rounded px-2 py-1 text-base leading-none hover:bg-white/10">−</button>
+            <span id="zoom-pct" class="w-12 text-center tabular-nums text-[#a9a9ad]">100%</span>
+            <button id="zoom-in" type="button" title="Zoom in" aria-label="Zoom in" class="rounded px-2 py-1 text-base leading-none hover:bg-white/10">+</button>
+            <button id="zoom-fit" type="button" title="Fit to width" class="ml-1 rounded px-2 py-1 text-xs hover:bg-white/10">Fit</button>
+          </div>
+          <button id="go" class="btn btn-primary ml-2 shrink-0 inline-flex items-center gap-1.5" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Download</button>
+        </div>
+
+        <!-- Body: thumbnail rail + editor -->
+        <div class="flex flex-col sm:flex-row sm:items-stretch">
+          <!-- Thumbnail rail: charcoal PDF-viewer style. Horizontal strip on mobile, vertical list on sm+. -->
+          <div id="previews" class="order-2 flex shrink-0 flex-nowrap items-start gap-4 overflow-x-auto bg-[#2b2b2f] p-4 sm:order-1 sm:max-h-[72vh] sm:w-[210px] sm:flex-col sm:items-center sm:overflow-x-hidden sm:overflow-y-auto sm:border-r sm:border-hairline"></div>
+
+          <!-- Main viewer: all pages stacked & scrollable. The one live editor floats onto the centered page. -->
+          <div id="editor" class="order-1 flex min-w-0 flex-col items-center gap-4 bg-[#1a1a1d] p-4 max-h-[70vh] overflow-auto sm:order-2 sm:flex-1 sm:max-h-[72vh]">
+            <!-- page slots injected here; #fab-holder is the movable fabric editor -->
+          </div>
+          <p class="sr-only">Drag to move. Use the corner handles to scale and the top handle to rotate. The layout applies to every page.</p>
+        </div>
+      </div>
+    </div>
+    <p id="error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+    <p id="status" class="hidden text-[13px] text-ink-subtle"></p>
+  </div>
+
+  <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
+    <p>This free tool adds text and image watermarks to a PDF with a live visual editor. Add as many text labels or logos as you like, then drag, rotate, scale and set the opacity of each one directly on a preview of your page. When you download, the exact layout you arranged is stamped onto every page (or just the first, if you prefer). Everything runs in your browser — the file is never uploaded.</p>
+  </div>
+</ToolLayout>
+
+<style>.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }</style>
+
+<script>
+  import * as fabric from 'fabric';
+  import * as pdfjsLib from 'pdfjs-dist';
+  import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+  import { PDFDocument } from 'pdf-lib';
+  import { setupDrop, download } from '../lib/pdfui';
+  pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const panel = $('panel'), err = $('error'), status = $('status'), selTools = $('sel-tools');
+  let bytes: ArrayBuffer | null = null, fname = 'document.pdf';
+  let canvas: fabric.Canvas | null = null;
+  let displayW = 0, displayH = 0; // fabric canvas pixel size (page-1 render size)
+  let pageImgs: HTMLCanvasElement[] = []; // cached white-bg page renders, thumbnail size
+  let previewEls: HTMLCanvasElement[] = []; // visible preview canvases, 1:1 with pageImgs
+  let previewTimer = 0;
+  let pdfDoc: any = null; // pdfjs doc, kept so slots can render their page backdrop
+  let backdrops: (string | undefined)[] = []; // full-size page renders (data URLs), lazily filled
+  let slotEls: HTMLElement[] = []; // per-page scroll slots in the main viewer
+  let slotOverlays: HTMLImageElement[] = []; // shared-watermark <img> in each slot, 1:1 with slotEls
+  let activeSlot = 1; // page whose slot currently hosts the live fabric editor
+  let pageObserver: IntersectionObserver | null = null;
+  const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  async function load(files: File[]) {
+    setErr('');
+    if (!files.length) return;
+    try {
+      bytes = await files[0].arrayBuffer();
+      fname = files[0].name.replace(/\.pdf$/i, '');
+      // Render page 1 as the editor backdrop. Fit width ~560px for a comfortable editor.
+      const pdf = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+      $('name').textContent = files[0].name;
+      $('pages').textContent = String(pdf.numPages);
+      const page = await pdf.getPage(1);
+      const base = page.getViewport({ scale: 1 });
+      const scale = Math.min(560 / base.width, 1.6);
+      const vp = page.getViewport({ scale });
+      const bg = document.createElement('canvas');
+      bg.width = displayW = Math.round(vp.width);
+      bg.height = displayH = Math.round(vp.height);
+      const bctx = bg.getContext('2d')!;
+      bctx.fillStyle = '#fff'; bctx.fillRect(0, 0, bg.width, bg.height);
+      await page.render({ canvasContext: bctx, viewport: vp, canvas: bg } as any).promise;
+
+      // One live fabric editor (transparent). It floats into whichever page slot is centered while
+      // scrolling. Overlay is identical on every page, so moving the single editor is enough.
+      canvas?.dispose();
+      const fabEl = document.createElement('canvas');
+      canvas = new fabric.Canvas(fabEl, { width: displayW, height: displayH, backgroundColor: 'transparent', preserveObjectStacking: true });
+      canvas.wrapperEl.style.position = 'absolute';
+      canvas.wrapperEl.style.top = '0';
+      canvas.wrapperEl.style.left = '0';
+      pdfDoc = pdf; backdrops = [];
+      backdrops[0] = bg.toDataURL('image/jpeg', 0.9);
+      canvas.on('selection:created', syncTools);
+      canvas.on('selection:updated', syncTools);
+      canvas.on('selection:cleared', () => { selTools.classList.add('hidden'); selTools.classList.remove('flex'); });
+
+      // Left rail: every page as a white-bg thumbnail.
+      const previews = $('previews');
+      previews.innerHTML = '';
+      pageImgs = []; previewEls = [];
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const pg = await pdf.getPage(i);
+        const tvp = pg.getViewport({ scale: 150 / pg.getViewport({ scale: 1 }).width });
+        const c = document.createElement('canvas');
+        c.width = Math.round(tvp.width); c.height = Math.round(tvp.height);
+        const cx = c.getContext('2d')!;
+        cx.fillStyle = '#fff'; cx.fillRect(0, 0, c.width, c.height);
+        await pg.render({ canvasContext: cx, viewport: tvp, canvas: c } as any).promise;
+        pageImgs.push(c);
+        const out = document.createElement('canvas');
+        out.width = c.width; out.height = c.height;
+        out.className = 'block h-auto w-[130px] bg-white shadow ring-1 ring-black/10';
+        const idx = i;
+        const label = document.createElement('button');
+        label.type = 'button';
+        label.dataset.page = String(i);
+        label.className = 'flex shrink-0 flex-col items-center gap-1.5 rounded border-2 border-transparent p-2 text-[12px] text-[#d0d0d3] transition-colors';
+        label.append(out, document.createTextNode(String(i)));
+        label.addEventListener('click', () => scrollToPage(idx));
+        previews.appendChild(label);
+        previewEls.push(out);
+      }
+
+      // Right pane: one scroll slot per page (backdrop img + shared-watermark img). Ratio matches page 1.
+      const editor = $('editor');
+      editor.innerHTML = '';
+      slotEls = []; slotOverlays = [];
+      pageObserver?.disconnect();
+      pageObserver = new IntersectionObserver((entries) => {
+        // Pick the most-visible slot as the current page.
+        let best: IntersectionObserverEntry | null = null;
+        for (const e of entries) if (!best || e.intersectionRatio > best.intersectionRatio) best = e;
+        if (best && best.isIntersecting) {
+          const n = Number((best.target as HTMLElement).dataset.page);
+          if (n && n !== activeSlot) moveEditorTo(n);
+        }
+      }, { root: editor, threshold: [0.25, 0.5, 0.75] });
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const slot = document.createElement('div');
+        slot.dataset.page = String(i);
+        slot.className = 'relative shrink-0 bg-white shadow-lg';
+        slot.style.width = `${displayW}px`;
+        slot.style.aspectRatio = `${displayW} / ${displayH}`;
+        const bd = document.createElement('img');
+        bd.className = 'block h-full w-full select-none';
+        bd.alt = `Page ${i}`;
+        const ov = document.createElement('img');
+        ov.className = 'pointer-events-none absolute inset-0 h-full w-full';
+        ov.alt = '';
+        slot.append(bd, ov);
+        editor.appendChild(slot);
+        slotEls.push(slot); slotOverlays.push(ov);
+        loadBackdrop(i).then((url) => { bd.src = url; });
+        pageObserver!.observe(slot);
+      }
+
+      canvas.on('after:render', () => { schedulePreview(); scheduleOverlaySync(); });
+      moveEditorTo(1);
+      setZoom(1);
+
+      panel.classList.remove('hidden'); panel.classList.add('flex');
+      addText(); // start with one watermark so the editor isn't empty
+    } catch { setErr('Could not read that PDF. Encrypted files are not supported.'); }
+  }
+
+  // Render page n's backdrop at display width (cached).
+  async function loadBackdrop(n: number): Promise<string> {
+    if (backdrops[n - 1]) return backdrops[n - 1]!;
+    const pg = await pdfDoc.getPage(n);
+    const vp = pg.getViewport({ scale: displayW / pg.getViewport({ scale: 1 }).width });
+    const c = document.createElement('canvas');
+    c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+    const cx = c.getContext('2d')!;
+    cx.fillStyle = '#fff'; cx.fillRect(0, 0, c.width, c.height);
+    await pg.render({ canvasContext: cx, viewport: vp, canvas: c } as any).promise;
+    return (backdrops[n - 1] = c.toDataURL('image/jpeg', 0.9));
+  }
+
+  // Move the single live editor onto page n's slot; other slots show the shared static overlay.
+  function moveEditorTo(n: number) {
+    if (!canvas || !slotEls[n - 1]) return;
+    activeSlot = n;
+    slotEls[n - 1].appendChild(canvas.wrapperEl);
+    slotOverlays.forEach((ov, i) => { ov.style.visibility = i + 1 === n ? 'hidden' : 'visible'; });
+    syncActiveRail(n);
+    syncOverlays();
+  }
+
+  // Click a thumbnail -> scroll that page into view; the observer handles the rest.
+  function scrollToPage(n: number) {
+    slotEls[n - 1]?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+
+  // Reflect the active page into the rail highlight + counter.
+  function syncActiveRail(n: number) {
+    $('cur-page').textContent = String(n);
+    previewEls.forEach((out, i) => {
+      const active = i + 1 === n;
+      const card = out.parentElement!;
+      card.classList.toggle('border-primary', active);
+      card.classList.toggle('border-transparent', !active);
+      card.classList.toggle('text-primary', active);
+      card.classList.toggle('text-[#d0d0d3]', !active);
+      if (active) card.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
+  }
+
+  // Copy the live overlay into every non-active slot so all pages show the same watermark.
+  let overlayTimer = 0;
+  function scheduleOverlaySync() {
+    if (compositing) return; // toDataURL below re-fires after:render; don't loop
+    clearTimeout(overlayTimer); overlayTimer = window.setTimeout(syncOverlays, 120);
+  }
+  function syncOverlays() {
+    if (!canvas || !slotOverlays.length) return;
+    compositing = true;
+    const url = canvas.toDataURL({ format: 'png', multiplier: 1 });
+    compositing = false;
+    slotOverlays.forEach((ov, i) => { if (i + 1 !== activeSlot) ov.src = url; });
+  }
+
+  // Composite the live overlay onto every page thumbnail, matching the export's stretch-to-fill.
+  // Pages outside the current selection are dimmed so you can see what will actually be stamped.
+  function renderPreviews() {
+    if (!canvas || !previewEls.length) return;
+    const targets = targetSet(pageImgs.length);
+    const overlay = new Image();
+    overlay.onload = () => {
+      previewEls.forEach((out, i) => {
+        const cx = out.getContext('2d')!;
+        cx.clearRect(0, 0, out.width, out.height);
+        cx.drawImage(pageImgs[i], 0, 0);
+        if (targets.has(i + 1)) cx.drawImage(overlay, 0, 0, out.width, out.height);
+        else { cx.fillStyle = 'rgba(1,1,2,0.55)'; cx.fillRect(0, 0, out.width, out.height); }
+      });
+    };
+    compositing = true;
+    overlay.src = canvas.toDataURL({ format: 'png', multiplier: 1 });
+    compositing = false;
+  }
+
+  // Zoom scales every page slot's width. The fabric editor's CSS size follows via cssOnly setDimensions
+  // (backstore stays displayW×displayH, so run()'s export is pixel-identical at any zoom).
+  let zoom = 1;
+  function setZoom(z: number) {
+    if (!canvas) return;
+    zoom = Math.min(3, Math.max(0.25, z));
+    for (const slot of slotEls) slot.style.width = `${displayW * zoom}px`;
+    canvas.setDimensions({ width: `${displayW * zoom}px`, height: `${displayH * zoom}px` }, { cssOnly: true });
+    $('zoom-pct').textContent = `${Math.round(zoom * 100)}%`;
+  }
+  function fitZoom() {
+    const avail = $('editor').clientWidth - 32; // minus p-4 padding
+    if (avail > 0 && displayW) setZoom(avail / displayW);
+  }
+
+  let compositing = false;
+  function schedulePreview() {
+    if (compositing) return; // toDataURL below can re-fire after:render; don't loop
+    clearTimeout(previewTimer);
+    previewTimer = window.setTimeout(renderPreviews, 120);
+  }
+
+  // Which 1-based page numbers get the watermark, given the current controls.
+  function targetSet(max: number): Set<number> {
+    if (($('all-pages') as HTMLInputElement).checked) return new Set(Array.from({ length: max }, (_, i) => i + 1));
+    return new Set(parseRange(($('page-range') as HTMLInputElement).value, max));
+  }
+
+  function addText() {
+    if (!canvas) return;
+    const t = new fabric.IText('CONFIDENTIAL', {
+      left: displayW / 2, top: displayH / 2, originX: 'center', originY: 'center',
+      fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 'bold',
+      fill: '#ff0000', opacity: 0.6, fontSize: Math.round(displayW / 8), angle: -30,
+    });
+    canvas.add(t); canvas.setActiveObject(t); canvas.requestRenderAll(); syncTools();
+  }
+
+  async function addImage(file: File) {
+    if (!canvas) return;
+    const url = URL.createObjectURL(file);
+    const img = await fabric.FabricImage.fromURL(url);
+    const scale = Math.min(1, (displayW * 0.4) / (img.width || 1));
+    img.set({ left: displayW / 2, top: displayH / 2, originX: 'center', originY: 'center', scaleX: scale, scaleY: scale, opacity: 0.8 });
+    canvas.add(img); canvas.setActiveObject(img); canvas.requestRenderAll(); syncTools();
+  }
+
+  // Reflect the selected object's props into the toolbar.
+  function syncTools() {
+    if (!canvas) return;
+    const o = canvas.getActiveObject();
+    if (!o) { selTools.classList.add('hidden'); selTools.classList.remove('flex'); return; }
+    selTools.classList.remove('hidden'); selTools.classList.add('flex');
+    ($('obj-op') as HTMLInputElement).value = String(Math.round((o.opacity ?? 1) * 100));
+    const isText = o instanceof fabric.IText || o instanceof fabric.Textbox;
+    ['text-val', 'text-size', 'text-color'].forEach((id) => {
+      ($(id).closest('label') as HTMLElement).style.display = isText ? '' : 'none';
+    });
+    if (isText) {
+      const t = o as fabric.IText;
+      ($('text-val') as HTMLInputElement).value = t.text ?? '';
+      ($('text-size') as HTMLInputElement).value = String(Math.round(t.fontSize ?? 40));
+      ($('text-color') as HTMLInputElement).value = (t.fill as string) || '#ff0000';
+    }
+  }
+
+  function withActive(fn: (o: fabric.Object) => void) {
+    const o = canvas?.getActiveObject(); if (!o) return;
+    fn(o); canvas!.requestRenderAll();
+  }
+
+  // "1-3, 5, 8" -> [1,2,3,5,8], clamped to [1,max], sorted & deduped. Bad input -> [].
+  function parseRange(spec: string, max: number): number[] {
+    const out = new Set<number>();
+    for (const part of spec.split(',')) {
+      const s = part.trim(); if (!s) continue;
+      const m = s.match(/^(\d+)(?:\s*-\s*(\d+))?$/);
+      if (!m) return [];
+      let a = +m[1], b = m[2] ? +m[2] : a;
+      if (a > b) [a, b] = [b, a];
+      for (let n = a; n <= b; n++) if (n >= 1 && n <= max) out.add(n);
+    }
+    return [...out].sort((x, y) => x - y);
+  }
+
+  async function run() {
+    if (!bytes || !canvas) return;
+    if (!canvas.getObjects().length) { setErr('Add at least one text or image watermark.'); return; }
+    setErr(''); status.classList.remove('hidden'); status.textContent = 'Applying…';
+    try {
+      canvas.discardActiveObject(); canvas.requestRenderAll();
+      // Rasterize the overlay (objects only, transparent) at 2x for crisp output.
+      const overlayUrl = canvas.toDataURL({ format: 'png', multiplier: 2 });
+      const doc = await PDFDocument.load(bytes.slice(0));
+      const png = await doc.embedPng(overlayUrl);
+      const pages = doc.getPages();
+      const want = targetSet(pages.length);
+      if (!want.size) { status.classList.add('hidden'); setErr('Enter a valid page range, e.g. 1-3, 5.'); return; }
+      const targets = [...want].map((n) => pages[n - 1]);
+      for (const p of targets) {
+        const { width, height } = p.getSize();
+        // The overlay was arranged on a page-1-shaped canvas; stretch it to fill each page.
+        // ponytail: assumes uniform page size — fine for typical docs; per-page re-fit if that ever matters.
+        p.drawImage(png, { x: 0, y: 0, width, height });
+      }
+      download(await doc.save(), `${fname}-watermarked.pdf`);
+      status.textContent = `Done — watermarked ${targets.length} page(s).`;
+    } catch (e) { status.classList.add('hidden'); setErr('Could not watermark: ' + (e as Error).message); }
+  }
+
+  setupDrop($('dz'), $('file') as HTMLInputElement, load);
+  $('add-text').addEventListener('click', addText);
+  // #add-image is replaced by the cloud split-picker when cloud sources are configured;
+  // keep this as the native fallback when it isn't.
+  document.getElementById('add-image')?.addEventListener('click', () => ($('img-file') as HTMLInputElement).click());
+  ($('img-file') as HTMLInputElement).addEventListener('change', (e) => {
+    const f = (e.target as HTMLInputElement).files?.[0]; if (f) addImage(f);
+  });
+  $('del-sel').addEventListener('click', () => {
+    const o = canvas?.getActiveObject(); if (o) { canvas!.remove(o); canvas!.discardActiveObject(); canvas!.requestRenderAll(); selTools.classList.add('hidden'); selTools.classList.remove('flex'); }
+  });
+  $('text-val').addEventListener('input', (e) => withActive((o) => { if (o instanceof fabric.IText) o.set('text', (e.target as HTMLInputElement).value); }));
+  $('text-size').addEventListener('input', (e) => withActive((o) => { if (o instanceof fabric.IText) o.set('fontSize', +(e.target as HTMLInputElement).value || 40); }));
+  $('text-color').addEventListener('input', (e) => withActive((o) => { if (o instanceof fabric.IText) o.set('fill', (e.target as HTMLInputElement).value); }));
+  $('obj-op').addEventListener('input', (e) => withActive((o) => o.set('opacity', (+(e.target as HTMLInputElement).value || 60) / 100)));
+  $('go').addEventListener('click', run);
+
+  const rangeWrap = $('range-wrap');
+  ($('all-pages') as HTMLInputElement).addEventListener('change', (e) => {
+    const all = (e.target as HTMLInputElement).checked;
+    rangeWrap.classList.toggle('hidden', all);
+    rangeWrap.classList.toggle('flex', !all);
+    renderPreviews();
+  });
+  $('page-range').addEventListener('input', renderPreviews);
+
+  $('zoom-in').addEventListener('click', () => setZoom(zoom + 0.15));
+  $('zoom-out').addEventListener('click', () => setZoom(zoom - 0.15));
+  $('zoom-fit').addEventListener('click', fitZoom);
+  $('toggle-rail').addEventListener('click', () => {
+    const rail = $('previews');
+    rail.style.display = rail.style.display === 'none' ? '' : 'none';
+  });
+
+  if (import.meta.env.DEV) {
+    const eq = (a: number[], b: number[]) => a.length === b.length && a.every((v, i) => v === b[i]);
+    console.assert(eq(parseRange('1-3, 5', 10), [1, 2, 3, 5]), 'range basic');
+    console.assert(eq(parseRange('5-1', 10), [1, 2, 3, 4, 5]), 'range reversed');
+    console.assert(eq(parseRange('3, 3, 2', 10), [2, 3]), 'range dedupe+sort');
+    console.assert(eq(parseRange('8-100', 10), [8, 9, 10]), 'range clamp');
+    console.assert(eq(parseRange('abc', 10), []), 'range invalid');
+    console.assert(eq(parseRange('', 10), []), 'range empty');
+  }
+</script>

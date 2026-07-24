@@ -11,6 +11,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     </label>
 
     <div id="pj-panel" class="hidden flex-col gap-4">
+      <div id="pj-viewer-mount"></div>
       <div class="flex flex-wrap items-end gap-3">
         <label class="flex flex-col gap-1 text-sm text-ink-subtle">Format
           <select id="pj-fmt" class="field w-32">
@@ -68,6 +69,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 <script>
   import * as pdfjsLib from 'pdfjs-dist';
   import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+  import { mountViewer } from '../lib/pdfViewer';
   pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
   const $ = (id: string) => document.getElementById(id)!;
@@ -88,6 +90,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   let files: File[] = [];
   let baseName = 'page';
   let rendered: { blob: Blob; url: string; page: number; ext: string; name: string }[] = [];
+  let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  const mount = $('pj-viewer-mount');
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
 
   const syncQuality = () => {
@@ -99,7 +103,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   qEl.addEventListener('input', syncQuality);
   syncQuality();
 
-  function load(picked: File[]) {
+  async function load(picked: File[]) {
     setErr('');
     if (!picked.length) return;
     files = picked;
@@ -109,6 +113,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     status.textContent = picked.length === 1
       ? `${picked[0].name} ready — set your options and render.`
       : `${picked.length} PDFs ready — set your options and render.`;
+    try {
+      viewer?.destroy();
+      viewer = await mountViewer({ file: picked[0] });
+      mount.replaceChildren(viewer.root);
+    } catch (e) { console.error('[pdf-to-jpg] preview failed:', e); }
   }
 
   function parseRange(spec: string, total: number): number[] {
