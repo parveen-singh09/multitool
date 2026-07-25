@@ -45,14 +45,24 @@ const keywordList = keywords.join(', ');
     <meta charset="utf-8" />
 
     
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6275174939004737" crossorigin="anonymous"></script>
-
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-D20SZQY0DY"></script>
     <script is:inline>
+      // ponytail: defer third-party JS (AdSense + GA) to after load so it
+      // stays off the critical path. Ads/analytics still run, just a beat later.
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-D20SZQY0DY');
+      addEventListener('load', () => {
+        gtag('js', new Date());
+        gtag('config', 'G-D20SZQY0DY');
+        const ga = document.createElement('script');
+        ga.src = 'https://www.googletagmanager.com/gtag/js?id=G-D20SZQY0DY';
+        ga.async = true;
+        document.head.appendChild(ga);
+        const ad = document.createElement('script');
+        ad.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6275174939004737';
+        ad.async = true;
+        ad.crossOrigin = 'anonymous';
+        document.head.appendChild(ad);
+      }, { once: true });
     </script>
 
     <script is:inline>
@@ -133,7 +143,7 @@ const keywordList = keywords.join(', ');
     {bare ? (
       <slot />
     ) : (
-      <SidebarLayout currentPath={Astro.url.pathname} client:load>
+      <SidebarLayout currentPath={Astro.url.pathname} client:idle>
         <slot />
       </SidebarLayout>
     )}
