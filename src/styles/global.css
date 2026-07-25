@@ -86,19 +86,22 @@ html[data-theme='light'] {
   --lift-highlight: color-mix(in srgb, #000000 5%, transparent);
 }
 
-/* Ambient gradient band painted straight onto the root element (not a pseudo-element) so no
-   descendant can stack in front of it. Fixed attachment keeps it put on scroll. `body` and the
-   layout wrappers are transparent, so this shows through the main content area.
-   Unlayered → wins over the @layer base html background-color, which stays as the solid base. */
-html {
+/* Ambient gradient band as a fixed, viewport-anchored pseudo-element behind all content.
+   background-attachment:fixed on the root is unreliable on mobile (iOS/Android ignore or
+   misrender it), so we pin a position:fixed layer instead. z-index:-1 keeps it behind normal-
+   flow content; `body` is transparent and `html` carries the solid canvas color underneath. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background-image: linear-gradient(135deg,
     rgba(148, 163, 184, 0.22) 0%,
     rgba(148, 163, 184, 0.08) 34%,
     transparent 60%);
-  background-repeat: no-repeat;
-  background-attachment: fixed;
 }
-html[data-theme='light'] {
+html[data-theme='light'] body::before {
   background-image: linear-gradient(135deg,
     rgba(0, 0, 0, 0.08) 0%,
     rgba(0, 0, 0, 0.03) 34%,
