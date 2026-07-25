@@ -256,7 +256,7 @@ const BY_ARCHETYPE: Record<Archetype, string[]> = {
     'currency-converter', 'crypto-converter', 'sitemap-generator',
     'dice-roller', 'coin-flip', 'random-picker', 'team-generator', 'probability-simulator',
     'roulette-simulator', 'slot-machine-simulator', 'monty-hall-simulator', 'savings-goal-simulator',
-    'kanoodle-solver', 'pokemon-generator', 'pokemon-team-planner', 'pokemon-team-builder',
+    'kanoodle-solver', 'pokemon-generator',
     'tarot-card-generator', 'random-animal-generator', 'zodiac-generator', 'emoji-generator',
     'gender-predictor', 'love-predictor', 'life-expectancy-predictor', 'child-height-predictor',
     'fake-email-generator',

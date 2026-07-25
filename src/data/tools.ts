@@ -5301,16 +5301,6 @@ export const tools: Tool[] = [
     icon: 'M6 3l4 18 3-7 7-3zM6 3l7 7',
   },
   {
-    slug: 'pokemon-team-planner',
-    name: 'Pokémon Team Planner',
-    tagline: 'Build & analyze a team for any Pokémon game.',
-    description:
-      'Free Pokémon team planner for every mainline game, Red/Blue through Scarlet/Violet. Pick catchable Pokémon by region, toggle gender/shiny/Tera, randomize, and see live type weakness, resistance and coverage analysis. Share your team by URL.',
-    category: 'Generators',
-    keywords: ['pokemon team planner', 'pokemon team builder', 'pokemon type coverage', 'team weakness calculator', 'pokemon planner'],
-    icon: 'M3 12h6a3 3 0 0 0 6 0h6M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM9 12a3 3 0 0 1 6 0',
-  },
-  {
     slug: 'oligo-analyzer',
     name: 'Oligo Analyzer',
     tagline: 'Nearest-neighbor Tm, hairpins & dimers.',
@@ -5329,16 +5319,6 @@ export const tools: Tool[] = [
     category: 'Audio & Video',
     keywords: ['bpm analyzer', 'bpm counter', 'tap tempo', 'song bpm finder', 'tempo detector'],
     icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
-  },
-  {
-    slug: 'pokemon-team-builder',
-    name: 'Pokémon Team Builder',
-    tagline: 'Build a team & analyze type coverage.',
-    description:
-      'Free Pokémon team builder. Assemble a team of up to six Kanto Pokémon and instantly analyze type weaknesses, resistances and coverage. Type badges in official colors.',
-    category: 'Generators',
-    keywords: ['pokemon team builder', 'pokemon type coverage', 'team weakness calculator', 'pokemon team planner', 'kanto team builder'],
-    icon: 'M3 12h6a3 3 0 0 1 6 0h6M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
   },
   {
     slug: 'cryptogram-solver',
