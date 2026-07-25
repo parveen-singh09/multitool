@@ -1,8 +1,16 @@
 import { driveReady, pickFromDrive, warmGoogle } from './drivePickers';
 
+// Full brand-coloured SVG markup per source (rendered as-is in the menu).
+const ICON_DRIVE = '<svg width="18" height="18" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0-1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/><path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/></svg>';
+const ICON_DROPBOX = '<svg width="18" height="18" viewBox="0 0 24 24"><path fill="#0061ff" d="M6 2 0 6l6 4 6-4zM18 2l-6 4 6 4 6-4zM0 14l6 4 6-4-6-4zM18 10l-6 4 6 4 6-4zM6 19l6 4 6-4-6-4z"/></svg>';
+const ICON_ONEDRIVE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="#0364b8"><path d="M13.5 6.5a6 6 0 0 0-5.8 4.2A5 5 0 0 0 5 20.5h13.2a4 4 0 0 0 .8-7.9 6 6 0 0 0-5.5-6.1z"/></svg>';
+const ICON_URL = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e5484d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></svg>';
+const ICON_DEVICE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5e6ad2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2" fill="#5e6ad2" fill-opacity="0.18"/><path d="M2 20h20M8 16v4M16 16v4"/></svg>';
+
 const SOURCES = [
-  { src: 'gdrive', label: 'Google Drive', icon: '<path d="M8 3h8l5 9-4 7H7l-4-7z"/>' },
-  { src: 'dropbox', label: 'Dropbox', icon: '<path d="m7 3 5 3-5 3-5-3zM17 3l5 3-5 3-5-3zM2 12l5 3 5-3-5-3zM17 9l5 3-5 3-5-3zM7 18l5-3 5 3-5 3z"/>' },
+  { src: 'gdrive', label: 'Google Drive', icon: ICON_DRIVE },
+  { src: 'dropbox', label: 'Dropbox', icon: ICON_DROPBOX },
+  { src: 'onedrive', label: 'OneDrive', icon: ICON_ONEDRIVE },
 ] as const;
 
 let lockedY = 0;
@@ -32,6 +40,26 @@ function deliver(input: HTMLInputElement, files: File[]) {
   input.files = dt.files;
   input.dispatchEvent(new Event('input', { bubbles: true }));
   input.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+// Fetch a file straight from a URL in the browser and hand it to the input.
+// Client-side only, so cross-origin hosts that don't send CORS headers will fail — reported plainly.
+async function importFromUrl(input: HTMLInputElement) {
+  const url = window.prompt('Paste a direct file URL:');
+  if (!url) return;
+  let u: URL;
+  try { u = new URL(url.trim()); } catch { alert('That is not a valid URL.'); return; }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') { alert('Only http(s) URLs are supported.'); return; }
+  try {
+    const res = await fetch(u.href);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    const name = decodeURIComponent(u.pathname.split('/').pop() || 'download') || 'download';
+    deliver(input, [new File([blob], name, { type: blob.type || 'application/octet-stream' })]);
+  } catch (err) {
+    console.error('URL import failed', err);
+    alert("Couldn't fetch that URL. The site may block cross-origin downloads — try saving the file and uploading it from your device.");
+  }
 }
 
 function wire(input: HTMLInputElement) {
@@ -66,13 +94,13 @@ function wire(input: HTMLInputElement) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-ink hover:bg-surface-3';
-    b.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-ink-subtle">${icon}</svg>${label}`;
+    b.innerHTML = `<span class="flex h-[18px] w-[18px] shrink-0 items-center justify-center">${icon}</span>${label}`;
     b.addEventListener('click', () => { menu.classList.add('hidden'); onClick(); });
     menu.appendChild(b);
     return b;
   };
 
-  item('<rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/>', 'From this device', () => input.click());
+  item(ICON_DEVICE, 'From this device', () => input.click());
   for (const s of ready) {
     const b = item(s.icon, s.label, async () => {
       b.disabled = true;
@@ -86,6 +114,10 @@ function wire(input: HTMLInputElement) {
       finally { unlockScroll(); b.disabled = false; }
     });
   }
+
+  // Web address (URL): fully client-side, so it's subject to CORS — works for hosts that allow
+  // cross-origin fetches, fails clearly otherwise (we have no server to proxy through).
+  item(ICON_URL, 'Web Address (URL)', () => importFromUrl(input));
 
   const place = () => {
     const r = wrap.getBoundingClientRect();

@@ -47,7 +47,7 @@ export const tools: Tool[] = [
     name: 'Video Converter',
     tagline: 'Convert between MP4, WebM, MKV, MOV, AVI, FLV & OGV.',
     description:
-      'Free online video converter. Convert between MP4, WebM, MKV, MOV, AVI, FLV and OGV — entirely in your browser, nothing uploaded.',
+      'Free online video converter. Convert between MP4, WebM, MKV, MOV, AVI, FLV and OGV.',
     category: 'Audio & Video',
     keywords: ['video converter', 'convert video online', 'mp4 converter', 'webm converter', 'mkv converter'],
     icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
@@ -57,7 +57,7 @@ export const tools: Tool[] = [
     name: 'WebM to MP4',
     tagline: 'Convert WebM to compatible MP4.',
     description:
-      'Free online WebM to MP4 converter. Convert WebM videos to widely-compatible MP4 (H.264 + AAC) — entirely in your browser.',
+      'Free online WebM to MP4 converter. Convert WebM videos to widely-compatible MP4 (H.264 + AAC).',
     category: 'Audio & Video',
     keywords: ['webm to mp4', 'convert webm to mp4', 'webm to mp4 online', 'webm to mp4 browser', 'mp4 converter'],
     icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
@@ -67,7 +67,7 @@ export const tools: Tool[] = [
     name: 'MP4 to WebM',
     tagline: 'Convert MP4 to open WebM.',
     description:
-      'Free online MP4 to WebM converter. Convert MP4 videos to the open WebM format (VP8 + Vorbis) for the web — entirely in your browser.',
+      'Free online MP4 to WebM converter. Convert MP4 videos to the open WebM format (VP8 + Vorbis) for the web.',
     category: 'Audio & Video',
     keywords: ['mp4 to webm', 'convert mp4 to webm', 'mp4 to webm online', 'mp4 to vp8', 'webm converter'],
     icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
@@ -77,7 +77,7 @@ export const tools: Tool[] = [
     name: 'AVI to MP4',
     tagline: 'Convert older AVI to modern MP4.',
     description:
-      'Free online AVI to MP4 converter. Convert older AVI videos to modern MP4 that plays on any device — entirely in your browser.',
+      'Free online AVI to MP4 converter. Convert older AVI videos to modern MP4 that plays on any device.',
     category: 'Audio & Video',
     keywords: ['avi to mp4', 'convert avi to mp4', 'avi to mp4 online', 'avi to mp4 browser', 'mp4 converter'],
     icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
@@ -87,7 +87,7 @@ export const tools: Tool[] = [
     name: 'FLV to MP4',
     tagline: 'Convert legacy Flash FLV to MP4.',
     description:
-      'Free online FLV to MP4 converter. Convert legacy Flash FLV videos to modern MP4 — entirely in your browser.',
+      'Free online FLV to MP4 converter. Convert legacy Flash FLV videos to modern MP4.',
     category: 'Audio & Video',
     keywords: ['flv to mp4', 'convert flv to mp4', 'flv to mp4 online', 'flash video to mp4', 'mp4 converter'],
     icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
@@ -97,7 +97,7 @@ export const tools: Tool[] = [
     name: 'MP4 to MKV',
     tagline: 'Repackage MP4 into Matroska MKV.',
     description:
-      'Free online MP4 to MKV converter. Repackage MP4 videos into the flexible Matroska MKV container — entirely in your browser.',
+      'Free online MP4 to MKV converter. Repackage MP4 videos into the flexible Matroska MKV container.',
     category: 'Audio & Video',
     keywords: ['mp4 to mkv', 'convert mp4 to mkv', 'mp4 to mkv online', 'mp4 to matroska', 'mkv converter'],
     icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
@@ -107,7 +107,7 @@ export const tools: Tool[] = [
     name: 'MKV to WebM',
     tagline: 'Convert Matroska MKV to open WebM.',
     description:
-      'Free online MKV to WebM converter. Convert Matroska MKV videos to the open WebM format for the web — entirely in your browser.',
+      'Free online MKV to WebM converter. Convert Matroska MKV videos to the open WebM format for the web.',
     category: 'Audio & Video',
     keywords: ['mkv to webm', 'convert mkv to webm', 'mkv to webm online', 'matroska to webm', 'webm converter'],
     icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
@@ -117,7 +117,7 @@ export const tools: Tool[] = [
     name: 'MOV to WebM',
     tagline: 'Convert QuickTime MOV to open WebM.',
     description:
-      'Free online MOV to WebM converter. Convert Apple QuickTime MOV videos to the open WebM format — entirely in your browser.',
+      'Free online MOV to WebM converter. Convert Apple QuickTime MOV videos to the open WebM format.',
     category: 'Audio & Video',
     keywords: ['mov to webm', 'convert mov to webm', 'mov to webm online', 'quicktime to webm', 'webm converter'],
     icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
@@ -127,7 +127,7 @@ export const tools: Tool[] = [
     name: 'MP4 to MOV',
     tagline: 'Convert MP4 to QuickTime MOV.',
     description:
-      'Free online MP4 to MOV converter. Convert MP4 videos to Apple QuickTime MOV — entirely in your browser.',
+      'Free online MP4 to MOV converter. Convert MP4 videos to Apple QuickTime MOV.',
     category: 'Audio & Video',
     keywords: ['mp4 to mov', 'convert mp4 to mov', 'mp4 to mov online', 'mp4 to quicktime', 'mov converter'],
     icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
@@ -137,7 +137,7 @@ export const tools: Tool[] = [
     name: 'MP4 to AVI',
     tagline: 'Convert MP4 to legacy AVI.',
     description:
-      'Free online MP4 to AVI converter. Convert MP4 videos to the older AVI container for legacy players — entirely in your browser.',
+      'Free online MP4 to AVI converter. Convert MP4 videos to the older AVI container for legacy players.',
     category: 'Audio & Video',
     keywords: ['mp4 to avi', 'convert mp4 to avi', 'mp4 to avi online', 'mp4 to avi browser', 'avi converter'],
     icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
@@ -147,7 +147,7 @@ export const tools: Tool[] = [
     name: '3GP to MP4',
     tagline: 'Convert mobile 3GP to MP4.',
     description:
-      'Free online 3GP to MP4 converter. Convert mobile 3GP videos to widely-compatible MP4 — entirely in your browser.',
+      'Free online 3GP to MP4 converter. Convert mobile 3GP videos to widely-compatible MP4.',
     category: 'Audio & Video',
     keywords: ['3gp to mp4', 'convert 3gp to mp4', '3gp to mp4 online', 'mobile video to mp4', 'mp4 converter'],
     icon: 'M4 5h16v14H4zM10 9l5 3-5 3z',
@@ -557,7 +557,7 @@ export const tools: Tool[] = [
     name: 'Image Converter',
     tagline: 'Convert between JPG, PNG, WebP, AVIF, BMP, TIFF, GIF & ICO.',
     description:
-      'Free online image converter. Convert between JPG, PNG, WebP, AVIF, BMP, TIFF, GIF and ICO — entirely in your browser, nothing uploaded.',
+      'Free online image converter. Convert between JPG, PNG, WebP, AVIF, BMP, TIFF, GIF and ICO.',
     category: 'Image',
     keywords: ['image converter', 'convert image online', 'photo converter', 'jpg converter', 'png converter'],
     icon: 'M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 15l-5-5L5 21',
@@ -677,7 +677,7 @@ export const tools: Tool[] = [
     name: 'Font Converter',
     tagline: 'Convert between TTF, OTF, WOFF, WOFF2 & EOT.',
     description:
-      'Free online font converter. Convert between TTF, OTF, WOFF, WOFF2 and EOT font formats — entirely in your browser, nothing uploaded.',
+      'Free online font converter. Convert between TTF, OTF, WOFF, WOFF2 and EOT font formats.',
     category: 'Converters',
     keywords: ['font converter', 'convert font online', 'ttf converter', 'woff converter', 'webfont converter'],
     icon: 'M4 7V4h16v3M9 20h6M12 4v16',
@@ -687,7 +687,7 @@ export const tools: Tool[] = [
     name: 'TTF to WOFF',
     tagline: 'Convert TrueType TTF to web WOFF.',
     description:
-      'Free online TTF to WOFF converter. Convert desktop TrueType TTF fonts to web-ready WOFF for @font-face CSS — entirely in your browser.',
+      'Free online TTF to WOFF converter. Convert desktop TrueType TTF fonts to web-ready WOFF for @font-face CSS.',
     category: 'Converters',
     keywords: ['ttf to woff', 'convert ttf to woff', 'ttf to woff online', 'truetype to webfont', 'woff converter'],
     icon: 'M4 7V4h16v3M9 20h6M12 4v16',
@@ -697,7 +697,7 @@ export const tools: Tool[] = [
     name: 'TTF to WOFF2',
     tagline: 'Convert TrueType TTF to compact WOFF2.',
     description:
-      'Free online TTF to WOFF2 converter. Convert TrueType TTF fonts to WOFF2, the smallest, most modern web font format — entirely in your browser.',
+      'Free online TTF to WOFF2 converter. Convert TrueType TTF fonts to WOFF2, the smallest, most modern web font format.',
     category: 'Converters',
     keywords: ['ttf to woff2', 'convert ttf to woff2', 'ttf to woff2 online', 'truetype to woff2', 'woff2 converter'],
     icon: 'M4 7V4h16v3M9 20h6M12 4v16',
@@ -707,7 +707,7 @@ export const tools: Tool[] = [
     name: 'OTF to TTF',
     tagline: 'Convert OpenType OTF to TrueType TTF.',
     description:
-      'Free online OTF to TTF converter. Convert OpenType OTF fonts to TrueType TTF for wider software compatibility — entirely in your browser.',
+      'Free online OTF to TTF converter. Convert OpenType OTF fonts to TrueType TTF for wider software compatibility.',
     category: 'Converters',
     keywords: ['otf to ttf', 'convert otf to ttf', 'otf to ttf online', 'opentype to truetype', 'ttf converter'],
     icon: 'M4 7V4h16v3M9 20h6M12 4v16',
@@ -717,7 +717,7 @@ export const tools: Tool[] = [
     name: 'OTF to WOFF',
     tagline: 'Convert OpenType OTF to web WOFF.',
     description:
-      'Free online OTF to WOFF converter. Convert OpenType OTF fonts to web-ready WOFF for @font-face embedding — entirely in your browser.',
+      'Free online OTF to WOFF converter. Convert OpenType OTF fonts to web-ready WOFF for @font-face embedding.',
     category: 'Converters',
     keywords: ['otf to woff', 'convert otf to woff', 'otf to woff online', 'opentype to webfont', 'woff converter'],
     icon: 'M4 7V4h16v3M9 20h6M12 4v16',
@@ -727,7 +727,7 @@ export const tools: Tool[] = [
     name: 'OTF to WOFF2',
     tagline: 'Convert OpenType OTF to compact WOFF2.',
     description:
-      'Free online OTF to WOFF2 converter. Convert OpenType OTF fonts to compact WOFF2 web fonts — entirely in your browser.',
+      'Free online OTF to WOFF2 converter. Convert OpenType OTF fonts to compact WOFF2 web fonts.',
     category: 'Converters',
     keywords: ['otf to woff2', 'convert otf to woff2', 'otf to woff2 online', 'opentype to woff2', 'woff2 converter'],
     icon: 'M4 7V4h16v3M9 20h6M12 4v16',
@@ -737,7 +737,7 @@ export const tools: Tool[] = [
     name: 'WOFF to TTF',
     tagline: 'Convert web WOFF back to TrueType TTF.',
     description:
-      'Free online WOFF to TTF converter. Convert web WOFF fonts back to desktop-installable TrueType TTF — entirely in your browser.',
+      'Free online WOFF to TTF converter. Convert web WOFF fonts back to desktop-installable TrueType TTF.',
     category: 'Converters',
     keywords: ['woff to ttf', 'convert woff to ttf', 'woff to ttf online', 'webfont to truetype', 'ttf converter'],
     icon: 'M4 7V4h16v3M9 20h6M12 4v16',
@@ -747,7 +747,7 @@ export const tools: Tool[] = [
     name: 'WOFF2 to TTF',
     tagline: 'Convert modern WOFF2 back to TrueType TTF.',
     description:
-      'Free online WOFF2 to TTF converter. Convert modern WOFF2 web fonts back to desktop TrueType TTF — entirely in your browser.',
+      'Free online WOFF2 to TTF converter. Convert modern WOFF2 web fonts back to desktop TrueType TTF.',
     category: 'Converters',
     keywords: ['woff2 to ttf', 'convert woff2 to ttf', 'woff2 to ttf online', 'woff2 to truetype', 'ttf converter'],
     icon: 'M4 7V4h16v3M9 20h6M12 4v16',
@@ -757,7 +757,7 @@ export const tools: Tool[] = [
     name: 'TTF to EOT',
     tagline: 'Convert TrueType TTF to legacy EOT.',
     description:
-      'Free online TTF to EOT converter. Convert TrueType TTF fonts to EOT for embedding in legacy Internet Explorer — entirely in your browser.',
+      'Free online TTF to EOT converter. Convert TrueType TTF fonts to EOT for embedding in legacy Internet Explorer.',
     category: 'Converters',
     keywords: ['ttf to eot', 'convert ttf to eot', 'ttf to eot online', 'truetype to eot', 'eot converter'],
     icon: 'M4 7V4h16v3M9 20h6M12 4v16',
@@ -1037,7 +1037,7 @@ export const tools: Tool[] = [
     name: 'Audio Converter',
     tagline: 'Convert between MP3, WAV, FLAC, AAC, OGG, Opus & more.',
     description:
-      'Free online audio converter. Convert between MP3, WAV, FLAC, AAC (M4A), OGG, Opus, AIFF and AC3 — entirely in your browser, nothing uploaded.',
+      'Free online audio converter. Convert between MP3, WAV, FLAC, AAC (M4A), OGG, Opus, AIFF and AC3.',
     category: 'Audio & Video',
     keywords: ['audio converter', 'convert audio online', 'mp3 converter', 'flac converter', 'opus converter'],
     icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
@@ -1047,7 +1047,7 @@ export const tools: Tool[] = [
     name: 'MP3 to OGG',
     tagline: 'Convert MP3 to open OGG Vorbis.',
     description:
-      'Free online MP3 to OGG converter. Convert MP3 files to the free, open OGG Vorbis format — entirely in your browser, nothing uploaded.',
+      'Free online MP3 to OGG converter. Convert MP3 files to the free, open OGG Vorbis format.',
     category: 'Audio & Video',
     keywords: ['mp3 to ogg', 'convert mp3 to ogg', 'mp3 to ogg vorbis', 'mp3 to ogg online', 'ogg converter'],
     icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
@@ -1057,7 +1057,7 @@ export const tools: Tool[] = [
     name: 'MP3 to FLAC',
     tagline: 'Convert MP3 to lossless FLAC container.',
     description:
-      'Free online MP3 to FLAC converter. Convert MP3 files into the lossless FLAC format — entirely in your browser, nothing uploaded.',
+      'Free online MP3 to FLAC converter. Convert MP3 files into the lossless FLAC format.',
     category: 'Audio & Video',
     keywords: ['mp3 to flac', 'convert mp3 to flac', 'mp3 to flac online', 'mp3 to lossless', 'flac converter'],
     icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
@@ -1067,7 +1067,7 @@ export const tools: Tool[] = [
     name: 'MP3 to AAC',
     tagline: 'Convert MP3 to efficient AAC (M4A).',
     description:
-      'Free online MP3 to AAC converter. Convert MP3 files to AAC (.m4a) audio used by Apple Music and streaming — entirely in your browser.',
+      'Free online MP3 to AAC converter. Convert MP3 files to AAC (.m4a) audio used by Apple Music and streaming.',
     category: 'Audio & Video',
     keywords: ['mp3 to aac', 'convert mp3 to aac', 'mp3 to m4a', 'mp3 to aac online', 'aac converter'],
     icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
@@ -1077,7 +1077,7 @@ export const tools: Tool[] = [
     name: 'MP3 to Opus',
     tagline: 'Convert MP3 to modern Opus codec.',
     description:
-      'Free online MP3 to Opus converter. Convert MP3 files to Opus, the modern low-bitrate codec for voice and streaming — entirely in your browser.',
+      'Free online MP3 to Opus converter. Convert MP3 files to Opus, the modern low-bitrate codec for voice and streaming.',
     category: 'Audio & Video',
     keywords: ['mp3 to opus', 'convert mp3 to opus', 'mp3 to opus online', 'mp3 to opus codec', 'opus converter'],
     icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
@@ -1087,7 +1087,7 @@ export const tools: Tool[] = [
     name: 'WAV to FLAC',
     tagline: 'Losslessly compress WAV to FLAC.',
     description:
-      'Free online WAV to FLAC converter. Losslessly compress uncompressed WAV audio into FLAC, cutting file size with no quality loss — in your browser.',
+      'Free online WAV to FLAC converter. Losslessly compress uncompressed WAV audio into FLAC, cutting file size with no quality loss.',
     category: 'Audio & Video',
     keywords: ['wav to flac', 'convert wav to flac', 'wav to flac lossless', 'compress wav', 'flac converter'],
     icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
@@ -1097,7 +1097,7 @@ export const tools: Tool[] = [
     name: 'FLAC to WAV',
     tagline: 'Decode FLAC to uncompressed WAV.',
     description:
-      'Free online FLAC to WAV converter. Decode lossless FLAC into uncompressed WAV (PCM) for audio editing — entirely in your browser.',
+      'Free online FLAC to WAV converter. Decode lossless FLAC into uncompressed WAV (PCM) for audio editing.',
     category: 'Audio & Video',
     keywords: ['flac to wav', 'convert flac to wav', 'flac to wav online', 'flac to pcm', 'wav converter'],
     icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
@@ -1107,7 +1107,7 @@ export const tools: Tool[] = [
     name: 'M4A to WAV',
     tagline: 'Decode M4A/AAC to uncompressed WAV.',
     description:
-      'Free online M4A to WAV converter. Decode Apple M4A/AAC audio into uncompressed WAV for editing and mastering — entirely in your browser.',
+      'Free online M4A to WAV converter. Decode Apple M4A/AAC audio into uncompressed WAV for editing and mastering.',
     category: 'Audio & Video',
     keywords: ['m4a to wav', 'convert m4a to wav', 'm4a to wav online', 'aac to wav', 'wav converter'],
     icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
@@ -1117,7 +1117,7 @@ export const tools: Tool[] = [
     name: 'AAC to MP3',
     tagline: 'Convert AAC audio to universal MP3.',
     description:
-      'Free online AAC to MP3 converter. Convert AAC audio into universally-supported MP3 files that play on any device — entirely in your browser.',
+      'Free online AAC to MP3 converter. Convert AAC audio into universally-supported MP3 files that play on any device.',
     category: 'Audio & Video',
     keywords: ['aac to mp3', 'convert aac to mp3', 'aac to mp3 online', 'm4a to mp3', 'mp3 converter'],
     icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
@@ -1127,7 +1127,7 @@ export const tools: Tool[] = [
     name: 'Opus to MP3',
     tagline: 'Convert Opus audio to MP3.',
     description:
-      'Free online Opus to MP3 converter. Convert Opus audio into MP3 for players and devices that don’t support Opus — entirely in your browser.',
+      'Free online Opus to MP3 converter. Convert Opus audio into MP3 for players and devices that don’t support Opus.',
     category: 'Audio & Video',
     keywords: ['opus to mp3', 'convert opus to mp3', 'opus to mp3 online', 'ogg opus to mp3', 'mp3 converter'],
     icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
@@ -1137,7 +1137,7 @@ export const tools: Tool[] = [
     name: 'WAV to OGG',
     tagline: 'Compress WAV audio to OGG Vorbis.',
     description:
-      'Free online WAV to OGG converter. Compress uncompressed WAV audio into small OGG Vorbis files — entirely in your browser, nothing uploaded.',
+      'Free online WAV to OGG converter. Compress uncompressed WAV audio into small OGG Vorbis files.',
     category: 'Audio & Video',
     keywords: ['wav to ogg', 'convert wav to ogg', 'wav to ogg online', 'wav to ogg vorbis', 'ogg converter'],
     icon: 'M9 18V5l12-2v13M9 13l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
@@ -1299,7 +1299,7 @@ export const tools: Tool[] = [
     name: 'Case Converter',
     tagline: 'UPPERCASE, lowercase, Title Case, camelCase & more.',
     description:
-      'Free online case converter. Change text to uppercase, lowercase, title case, sentence case, camelCase, snake_case and kebab-case instantly in your browser.',
+      'Free online case converter. Change text to uppercase, lowercase, title case, sentence case, camelCase, snake_case and kebab-case instantly.',
     category: 'Text',
     keywords: [
       'case converter',
@@ -1313,7 +1313,7 @@ export const tools: Tool[] = [
   {
     slug: 'password-generator',
     name: 'Password Generator',
-    tagline: 'Strong, random passwords generated locally.',
+    tagline: 'Strong, random passwords.',
     description:
       'Free secure password generator. Create strong, random passwords with custom length, symbols and numbers.',
     category: 'Security',
@@ -1462,7 +1462,7 @@ export const tools: Tool[] = [
     name: 'Line Tools',
     tagline: 'Sort, dedupe, reverse & trim lines of text.',
     description:
-      'Free online line tools. Sort lines alphabetically, remove duplicates, reverse order, shuffle and trim whitespace instantly in your browser.',
+      'Free online line tools. Sort lines alphabetically, remove duplicates, reverse order, shuffle and trim whitespace instantly.',
     category: 'Text',
     keywords: [
       'sort lines online',
@@ -1611,7 +1611,7 @@ export const tools: Tool[] = [
   {
     slug: 'image-compressor',
     name: 'Image Compressor',
-    tagline: 'Shrink image file size right in your browser.',
+    tagline: 'Shrink image file size.',
     description:
       'Free online image compressor. Reduce JPG, PNG and WebP file size with adjustable quality and download instantly.',
     category: 'Image',
@@ -1730,7 +1730,7 @@ export const tools: Tool[] = [
     name: 'Age Calculator',
     tagline: 'Calculate exact age in years, months & days.',
     description:
-      'Free online age calculator. Enter a birth date to calculate exact age in years, months and days, plus total days lived. Runs instantly in your browser.',
+      'Free online age calculator. Enter a birth date to calculate exact age in years, months and days, plus total days lived.',
     category: 'Calculators',
     keywords: [
       'age calculator',
@@ -1777,7 +1777,7 @@ export const tools: Tool[] = [
     name: 'Simple Interest Calculator',
     tagline: 'Interest on principal, rate & time.',
     description:
-      'Free online simple interest calculator. Calculate simple interest and total amount from principal, annual rate and time period instantly in your browser.',
+      'Free online simple interest calculator. Calculate simple interest and total amount from principal, annual rate and time period instantly.',
     category: 'Calculators',
     keywords: ['simple interest calculator', 'interest calculator', 'principal interest calculator', 'si calculator', 'calculate interest'],
     icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM9.5 9.5h.01M14.5 14.5h.01M15 9l-6 6',
@@ -1979,7 +1979,7 @@ export const tools: Tool[] = [
     name: 'GCD & LCM Calculator',
     tagline: 'Greatest common divisor & lowest multiple.',
     description:
-      'Free online GCD and LCM calculator. Find the greatest common divisor (HCF) and least common multiple of two or more numbers instantly in your browser.',
+      'Free online GCD and LCM calculator. Find the greatest common divisor (HCF) and least common multiple of two or more numbers instantly.',
     category: 'Calculators',
     keywords: ['gcd calculator', 'lcm calculator', 'hcf calculator', 'greatest common divisor', 'least common multiple'],
     icon: 'M6 6h12v12H6zM3 9h3M3 15h3M18 9h3M18 15h3M9 3v3M15 3v3M9 18v3M15 18v3',
@@ -2664,7 +2664,7 @@ export const tools: Tool[] = [
     name: 'CSS to SCSS Converter',
     tagline: 'Convert CSS to nested SCSS with variables.',
     description:
-      'Free online CSS to SCSS converter. Rewrite plain CSS into SCSS with nested selectors and repeated colors pulled into variables. Valid Sass output, generated in your browser.',
+      'Free online CSS to SCSS converter. Rewrite plain CSS into SCSS with nested selectors and repeated colors pulled into variables. Valid Sass output.',
     category: 'Developer',
     keywords: ['css to scss', 'css to sass', 'convert css to scss', 'scss converter', 'css to scss online'],
     icon: 'M4 3h16l-1.5 17L12 22l-6.5-2zM8 8h8l-.5 5L12 14l-3.5-1',
@@ -2818,7 +2818,7 @@ export const tools: Tool[] = [
     name: 'Currency Converter',
     tagline: 'Live exchange rates for 30+ currencies.',
     description:
-      'Free online currency converter with live European Central Bank exchange rates for 30+ currencies. Convert any amount and see a quick reference table. Rates fetched in your browser.',
+      'Free online currency converter with live European Central Bank exchange rates for 30+ currencies. Convert any amount and see a quick reference table.',
     category: 'Converters',
     keywords: ['currency converter', 'exchange rate calculator', 'usd to eur', 'money converter', 'live currency rates'],
     icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM9.5 9a2.5 2.5 0 0 1 5 0M14.5 15a2.5 2.5 0 0 1-5 0M12 7v10',
@@ -2829,7 +2829,7 @@ export const tools: Tool[] = [
     tagline: 'Live crypto prices in any currency.',
     hideTagline: true,
     description:
-      'Free online cryptocurrency converter with live market prices. Convert Bitcoin, Ethereum, Solana and more to and from world currencies, with a live price table. Prices fetched in your browser.',
+      'Free online cryptocurrency converter with live market prices. Convert Bitcoin, Ethereum, Solana and more to and from world currencies, with a live price table.',
     category: 'Converters',
     keywords: ['crypto converter', 'bitcoin converter', 'cryptocurrency converter', 'btc to usd', 'eth to usd'],
     icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM9 8h4a2 2 0 0 1 0 4H9m0 0h4.5a2 2 0 0 1 0 4H9m0-8V6m0 12v-2m2-10v2m0 8v2',
@@ -2870,7 +2870,7 @@ export const tools: Tool[] = [
     name: 'Rotate PDF',
     tagline: 'Rotate all or selected pages of a PDF.',
     description:
-      'Free online PDF rotate tool. Turn pages 90°, 180° or 270°, apply to every page or a page range, and download the rotated PDF. Everything runs in your browser — nothing is uploaded.',
+      'Free online PDF rotate tool. Turn pages 90°, 180° or 270°, apply to every page or a page range, and download the rotated PDF.',
     category: 'PDF',
     keywords: ['rotate pdf', 'pdf rotate', 'turn pdf pages', 'rotate pdf pages', 'fix pdf orientation'],
     icon: 'M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16',
@@ -2880,7 +2880,7 @@ export const tools: Tool[] = [
     name: 'Delete PDF Pages',
     tagline: 'Remove pages from a PDF by number or range.',
     description:
-      'Free online tool to delete pages from a PDF. Enter the page numbers or ranges to remove and download a slimmer PDF. Runs entirely in your browser — your file never leaves your device.',
+      'Free online tool to delete pages from a PDF. Enter the page numbers or ranges to remove and download a slimmer PDF.',
     category: 'PDF',
     keywords: ['delete pdf pages', 'remove pdf pages', 'delete pages from pdf', 'pdf page remover', 'drop pdf pages'],
     icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M9 14l6 4M15 14l-6 4',
@@ -2890,7 +2890,7 @@ export const tools: Tool[] = [
     name: 'Add Page Numbers to PDF',
     tagline: 'Stamp page numbers onto a PDF.',
     description:
-      'Free online tool to add page numbers to a PDF. Choose position, starting number, font size and format (like "Page 1 of 10"), then download. All processing happens in your browser.',
+      'Free online tool to add page numbers to a PDF. Choose position, starting number, font size and format (like "Page 1 of 10"), then download.',
     category: 'PDF',
     keywords: ['add page numbers to pdf', 'pdf page numbers', 'number pdf pages', 'pdf pagination', 'stamp page numbers'],
     icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M9 17h2M13 13v4',
@@ -2900,7 +2900,7 @@ export const tools: Tool[] = [
     name: 'Watermark PDF',
     tagline: 'Add a text watermark across every PDF page.',
     description:
-      'Free online PDF watermark tool. Stamp text like "CONFIDENTIAL" or "DRAFT" diagonally or straight across every page, with adjustable size, opacity and color. Runs fully in your browser.',
+      'Free online PDF watermark tool. Stamp text like "CONFIDENTIAL" or "DRAFT" diagonally or straight across every page, with adjustable size, opacity and color.',
     category: 'PDF',
     keywords: ['watermark pdf', 'pdf watermark', 'add watermark to pdf', 'stamp pdf', 'confidential pdf'],
     icon: 'M4 5h16v14H4zM7 15l3-3 2 2 3-4 2 3M8 9a1 1 0 1 0 0 .01',
@@ -2910,7 +2910,7 @@ export const tools: Tool[] = [
     name: 'Edit PDF Metadata',
     tagline: 'View and edit a PDF’s title, author and more.',
     description:
-      'Free online tool to edit PDF metadata. View and change the title, author, subject, keywords, creator and producer fields, then download the updated PDF. Processed entirely in your browser.',
+      'Free online tool to edit PDF metadata. View and change the title, author, subject, keywords, creator and producer fields, then download the updated PDF.',
     category: 'PDF',
     keywords: ['edit pdf metadata', 'pdf metadata editor', 'change pdf title', 'pdf author', 'pdf properties'],
     icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8M8 17h5',
@@ -2920,7 +2920,7 @@ export const tools: Tool[] = [
     name: 'Flatten PDF',
     tagline: 'Flatten form fields into static content.',
     description:
-      'Free online tool to flatten a PDF. Merge interactive form fields into the page so they can no longer be edited, keeping the filled-in values visible. Runs entirely in your browser.',
+      'Free online tool to flatten a PDF. Merge interactive form fields into the page so they can no longer be edited, keeping the filled-in values visible.',
     category: 'PDF',
     keywords: ['flatten pdf', 'pdf flatten', 'flatten pdf form', 'lock pdf form fields', 'make pdf form non-editable'],
     icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8M8 16h8',
@@ -2930,7 +2930,7 @@ export const tools: Tool[] = [
     name: 'Add Header & Footer to PDF',
     tagline: 'Stamp custom header and footer text on every page.',
     description:
-      'Free online tool to add a header and footer to a PDF. Put custom text in the top and bottom margins, optionally including the page number, then download. All processing happens in your browser.',
+      'Free online tool to add a header and footer to a PDF. Put custom text in the top and bottom margins, optionally including the page number, then download.',
     category: 'PDF',
     keywords: ['pdf header footer', 'add header to pdf', 'add footer to pdf', 'pdf running header', 'stamp text on pdf'],
     icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M7 8h6M7 18h10',
@@ -2940,7 +2940,7 @@ export const tools: Tool[] = [
     name: 'Bates Numbering for PDF',
     tagline: 'Add sequential Bates numbers for legal documents.',
     description:
-      'Free online Bates numbering tool. Stamp sequential identifiers with a custom prefix and zero-padding (like ABC-000123) onto every page — the standard for legal and business document sets. Runs fully in your browser.',
+      'Free online Bates numbering tool. Stamp sequential identifiers with a custom prefix and zero-padding (like ABC-000123) onto every page — the standard for legal and business document sets.',
     category: 'PDF',
     keywords: ['bates numbering', 'bates stamp pdf', 'legal pdf numbering', 'pdf bates numbers', 'sequential pdf stamping'],
     icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 17h8M9 13l1-1v4',
@@ -2950,7 +2950,7 @@ export const tools: Tool[] = [
     name: 'N-up PDF (Multiple Pages per Sheet)',
     tagline: 'Place 2, 4, 6 or more pages onto one sheet.',
     description:
-      'Free online N-up tool. Combine multiple PDF pages onto a single sheet — 2, 4, 6, 8, 9 or 16 per page — to save paper when printing or to make handouts. Runs entirely in your browser.',
+      'Free online N-up tool. Combine multiple PDF pages onto a single sheet — 2, 4, 6, 8, 9 or 16 per page — to save paper when printing or to make handouts.',
     category: 'PDF',
     keywords: ['n-up pdf', 'multiple pages per sheet', 'pdf 2 pages per sheet', 'pdf 4 up', 'combine pdf pages onto one'],
     icon: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
@@ -2960,7 +2960,7 @@ export const tools: Tool[] = [
     name: 'Resize PDF Pages',
     tagline: 'Scale pages to A4, Letter or a custom size.',
     description:
-      'Free online tool to resize PDF pages. Scale every page to a standard size like A4, Letter or Legal, or set custom dimensions, keeping content centered and proportional. Runs fully in your browser.',
+      'Free online tool to resize PDF pages. Scale every page to a standard size like A4, Letter or Legal, or set custom dimensions, keeping content centered and proportional.',
     category: 'PDF',
     keywords: ['resize pdf', 'pdf page size', 'change pdf size', 'pdf to a4', 'pdf to letter', 'scale pdf pages'],
     icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M9 12h6v5H9z',
@@ -2970,7 +2970,7 @@ export const tools: Tool[] = [
     name: 'Crop PDF Margins',
     tagline: 'Trim white margins by setting crop amounts.',
     description:
-      'Free online PDF crop tool. Trim the top, bottom, left and right margins of every page by a set amount to remove white space or scanned borders. Non-destructive crop box, applied in your browser.',
+      'Free online PDF crop tool. Trim the top, bottom, left and right margins of every page by a set amount to remove white space or scanned borders. Non-destructive crop box.',
     category: 'PDF',
     keywords: ['crop pdf', 'pdf crop', 'trim pdf margins', 'remove pdf white space', 'cut pdf borders'],
     icon: 'M6 2v14a2 2 0 0 0 2 2h14M2 6h14a2 2 0 0 1 2 2v14',
@@ -2980,7 +2980,7 @@ export const tools: Tool[] = [
     name: 'Remove Annotations from PDF',
     tagline: 'Strip comments, highlights and markup.',
     description:
-      'Free online tool to remove annotations from a PDF — comments, highlights, notes, stamps and other markup. Get a clean copy with the underlying page content untouched. Runs entirely in your browser.',
+      'Free online tool to remove annotations from a PDF — comments, highlights, notes, stamps and other markup. Get a clean copy with the underlying page content untouched.',
     category: 'PDF',
     keywords: ['remove pdf annotations', 'delete pdf comments', 'strip pdf highlights', 'clean pdf markup', 'remove pdf notes'],
     icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M9 12l6 6M15 12l-6 6',
@@ -2990,7 +2990,7 @@ export const tools: Tool[] = [
     name: 'Alternate & Mix PDF',
     tagline: 'Interleave pages from two PDFs into one.',
     description:
-      'Free online tool to alternate and mix two PDFs. Interleave their pages — great for combining separately scanned fronts and backs — with the option to reverse the second file. Runs fully in your browser.',
+      'Free online tool to alternate and mix two PDFs. Interleave their pages — great for combining separately scanned fronts and backs — with the option to reverse the second file.',
     category: 'PDF',
     keywords: ['alternate pdf', 'mix pdf pages', 'interleave pdf', 'combine scanned fronts backs', 'zip pdf pages'],
     icon: 'M4 7h7M4 12h7M4 17h7M20 5l-3 3M20 12l-3 3M20 19l-3 3',
@@ -3000,7 +3000,7 @@ export const tools: Tool[] = [
     name: 'Split PDF in Half',
     tagline: 'Cut a PDF into two equal halves.',
     description:
-      'Free online tool to split a PDF in half. Cut the document at its midpoint into two files — the first half and the second half — in one click. Handy for separating double-length scans. Runs in your browser.',
+      'Free online tool to split a PDF in half. Cut the document at its midpoint into two files — the first half and the second half — in one click. Handy for separating double-length scans.',
     category: 'PDF',
     keywords: ['split pdf in half', 'cut pdf in two', 'halve pdf', 'divide pdf', 'split pdf midpoint'],
     icon: 'M12 3v18M5 7h4M5 12h4M5 17h4M15 7h4M15 12h4M15 17h4',
@@ -3010,7 +3010,7 @@ export const tools: Tool[] = [
     name: 'Repair PDF',
     tagline: 'Rebuild a damaged or malformed PDF.',
     description:
-      'Free online tool to repair a PDF. Re-parse and rebuild the document structure to fix minor corruption and malformed files so they open again. Best-effort and runs entirely in your browser.',
+      'Free online tool to repair a PDF. Re-parse and rebuild the document structure to fix minor corruption and malformed files so they open again. Best-effort.',
     category: 'PDF',
     keywords: ['repair pdf', 'fix pdf', 'recover pdf', 'pdf repair online', 'rebuild pdf'],
     icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M12 11l3 3-3 3-3-3z',
@@ -3020,7 +3020,7 @@ export const tools: Tool[] = [
     name: 'Organize PDF',
     tagline: 'Reorder, rotate and delete pages visually.',
     description:
-      'Free online tool to organize a PDF. See every page as a thumbnail, then drag to reorder, rotate or delete pages, and download the rearranged document. A live visual editor that runs entirely in your browser.',
+      'Free online tool to organize a PDF. See every page as a thumbnail, then drag to reorder, rotate or delete pages, and download the rearranged document. A live visual editor.',
     category: 'PDF',
     keywords: ['organize pdf', 'reorder pdf pages', 'rearrange pdf', 'pdf page organizer', 'sort pdf pages', 'visual pdf editor'],
     icon: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
@@ -3030,7 +3030,7 @@ export const tools: Tool[] = [
     name: 'Flip PDF Pages',
     tagline: 'Mirror pages horizontally or vertically.',
     description:
-      'Free online tool to flip PDF pages. Mirror every page horizontally or vertically without losing quality — the content is transformed as vectors, not re-rendered. Runs entirely in your browser.',
+      'Free online tool to flip PDF pages. Mirror every page horizontally or vertically without losing quality — the content is transformed as vectors, not re-rendered.',
     category: 'PDF',
     keywords: ['flip pdf', 'mirror pdf', 'flip pdf pages', 'mirror pdf horizontally', 'pdf flip vertical'],
     icon: 'M12 3v18M8 7l-4 5 4 5M16 7l4 5-4 5',
@@ -3040,7 +3040,7 @@ export const tools: Tool[] = [
     name: 'Grayscale PDF',
     tagline: 'Convert a PDF to black and white.',
     description:
-      'Free online tool to convert a PDF to grayscale. Turn colored pages black and white — useful for cheaper printing or a uniform look. Pages are rendered to images, so text becomes non-selectable. Runs in your browser.',
+      'Free online tool to convert a PDF to grayscale. Turn colored pages black and white — useful for cheaper printing or a uniform look. Pages are rendered to images, so text becomes non-selectable.',
     category: 'PDF',
     keywords: ['grayscale pdf', 'pdf to black and white', 'convert pdf grayscale', 'desaturate pdf', 'monochrome pdf'],
     icon: 'M12 3a9 9 0 0 0 0 18zM12 3a9 9 0 0 1 0 18',
@@ -3050,7 +3050,7 @@ export const tools: Tool[] = [
     name: 'Compress PDF',
     tagline: 'Shrink a PDF’s file size.',
     description:
-      'Free online tool to compress a PDF. Reduce file size by re-rendering pages as compressed images at a resolution and quality you choose — ideal for email limits and uploads. Trades sharpness and text selectability for size. Runs entirely in your browser.',
+      'Free online tool to compress a PDF. Reduce file size by re-rendering pages as compressed images at a resolution and quality you choose — ideal for email limits and uploads. Trades sharpness and text selectability for size.',
     category: 'PDF',
     keywords: ['compress pdf', 'reduce pdf size', 'shrink pdf', 'pdf compressor', 'make pdf smaller'],
     icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M9 14l3-3 3 3M12 11v6',
@@ -3060,7 +3060,7 @@ export const tools: Tool[] = [
     name: 'Extract Images from PDF',
     tagline: 'Pull out the embedded images in a PDF.',
     description:
-      'Free online tool to extract images from a PDF. Find the raster images embedded in the document and download them individually or as a ZIP. Runs entirely in your browser — nothing is uploaded.',
+      'Free online tool to extract images from a PDF. Find the raster images embedded in the document and download them individually or as a ZIP.',
     category: 'PDF',
     keywords: ['extract images from pdf', 'pdf image extractor', 'get images out of pdf', 'save pdf images', 'pdf to images'],
     icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
@@ -3070,7 +3070,7 @@ export const tools: Tool[] = [
     name: 'Unlock PDF',
     tagline: 'Remove printing, copying and editing restrictions.',
     description:
-      'Free online tool to unlock a PDF. Remove owner restrictions that block printing, copying or editing, giving you an unrestricted copy. Runs entirely in your browser. Note: it cannot open a PDF that needs a password just to view it.',
+      'Free online tool to unlock a PDF. Remove owner restrictions that block printing, copying or editing, giving you an unrestricted copy. Note: it cannot open a PDF that needs a password just to view it.',
     category: 'PDF',
     keywords: ['unlock pdf', 'remove pdf restrictions', 'remove pdf permissions', 'enable pdf printing', 'unlock pdf online'],
     icon: 'M7 11V7a5 5 0 0 1 9.9-1M5 11h14a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2z',
@@ -3080,7 +3080,7 @@ export const tools: Tool[] = [
     name: 'OCR PDF',
     tagline: 'Make scanned PDFs searchable with text recognition.',
     description:
-      'Free online OCR tool for PDF. Recognize the text in scanned or image-based PDFs and produce a searchable, copyable document — while keeping the original page appearance. Runs entirely in your browser.',
+      'Free online OCR tool for PDF. Recognize the text in scanned or image-based PDFs and produce a searchable, copyable document — while keeping the original page appearance.',
     category: 'PDF',
     keywords: ['ocr pdf', 'searchable pdf', 'scanned pdf to text', 'recognize text in pdf', 'make pdf searchable'],
     icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h5M8 17h8',
@@ -3090,7 +3090,7 @@ export const tools: Tool[] = [
     name: 'Deskew PDF',
     tagline: 'Straighten crooked scanned pages.',
     description:
-      'Free online tool to deskew a PDF. Detect and correct the tilt in crooked scanned pages so text sits level again. Pages are rendered, straightened and rebuilt in your browser — nothing is uploaded.',
+      'Free online tool to deskew a PDF. Detect and correct the tilt in crooked scanned pages so text sits level again. Pages are rendered, straightened and rebuilt.',
     category: 'PDF',
     keywords: ['deskew pdf', 'straighten pdf', 'fix crooked scan', 'align scanned pdf', 'correct pdf tilt'],
     icon: 'M4 20L20 4M6 4h4M4 4v4M14 20h4M20 14v4',
@@ -3110,7 +3110,7 @@ export const tools: Tool[] = [
     name: 'PDF to Text (OCR)',
     tagline: 'Extract text from PDFs, with OCR fallback.',
     description:
-      'Free online PDF to text tool. Extract the embedded text layer from digital PDFs instantly, or run in-browser OCR on scanned documents. Copy or download the result.',
+      'Free online PDF to text tool. Extract the embedded text layer from digital PDFs instantly, or run OCR on scanned documents. Copy or download the result.',
     category: 'PDF',
     keywords: ['pdf to text', 'pdf ocr', 'extract text from pdf', 'pdf to txt', 'ocr pdf online'],
     icon: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8M8 17h5',
@@ -3220,7 +3220,7 @@ export const tools: Tool[] = [
   {
     slug: 'video-compressor',
     name: 'Video Compressor',
-    tagline: 'Shrink video file size in your browser.',
+    tagline: 'Shrink video file size.',
     description:
       'Free online video compressor. Reduce video file size by re-encoding with H.264 at a chosen quality and optional lower resolution, with before-and-after sizes.',
     category: 'Audio & Video',
@@ -3323,7 +3323,7 @@ export const tools: Tool[] = [
     name: 'Aztec Code Generator',
     tagline: 'Encode text into an Aztec 2D code.',
     description:
-      'Free online Aztec code generator. Encode any text into an Aztec 2D barcode — common on transit and event tickets — and download it as PNG or SVG. Generated in your browser.',
+      'Free online Aztec code generator. Encode any text into an Aztec 2D barcode — common on transit and event tickets — and download it as PNG or SVG.',
     category: 'Generators',
     keywords: ['aztec code generator', 'aztec barcode generator', 'create aztec code', '2d barcode generator', 'aztec 2d code'],
     icon: 'M4 4h16v16H4zM8 8h8v8H8zM11 11h2v2h-2z',
@@ -3363,7 +3363,7 @@ export const tools: Tool[] = [
     name: 'Coupon Code Generator',
     tagline: 'Bulk unique coupon codes for promotions.',
     description:
-      'Free online coupon code generator. Create batches of unique, hard-to-guess coupon codes with a custom prefix, length and character set for promotions. Generated in your browser.',
+      'Free online coupon code generator. Create batches of unique, hard-to-guess coupon codes with a custom prefix, length and character set for promotions.',
     category: 'Generators',
     keywords: ['coupon code generator', 'promo code generator', 'discount code generator', 'bulk coupon generator', 'create coupon codes'],
     icon: 'M4 8a2 2 0 0 0 0 8v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2a2 2 0 0 1 0-8V6a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1zM12 6v12',
@@ -3432,7 +3432,7 @@ export const tools: Tool[] = [
   {
     slug: 'jwt-generator',
     name: 'JWT Generator',
-    tagline: 'Sign HS256 JSON Web Tokens in-browser.',
+    tagline: 'Sign HS256 JSON Web Tokens.',
     description:
       'Free online JWT generator. Build and sign HMAC (HS256/384/512) JSON Web Tokens from a custom header, payload and secret, using the Web Crypto API.',
     category: 'Security',
@@ -3474,7 +3474,7 @@ export const tools: Tool[] = [
     name: 'SSH Key Generator',
     tagline: 'Ed25519 & RSA key pairs in OpenSSH format.',
     description:
-      'Free online SSH key generator. Generate an Ed25519 or RSA key pair in your browser and download the OpenSSH public and private keys. Keys are created with a JS crypto engine.',
+      'Free online SSH key generator. Generate an Ed25519 or RSA key pair and download the OpenSSH public and private keys.',
     category: 'Security',
     keywords: ['ssh key generator', 'generate ssh key', 'ed25519 key generator', 'rsa key generator', 'ssh keygen online', 'ssh key pair generator'],
     icon: 'M14 7a5 5 0 1 0-4.9 6H12v3h3v3h4v-3l-1.1-1.1A5 5 0 0 0 14 7ZM7 12a1 1 0 1 0 0 .01',
@@ -3707,7 +3707,7 @@ export const tools: Tool[] = [
     name: 'Placeholder Image Generator',
     tagline: 'Custom placeholder images with size label.',
     description:
-      'Free online placeholder image generator. Create placeholder images at any size with custom colors and a size label, and download as PNG or copy a data URI for mockups. Generated in your browser.',
+      'Free online placeholder image generator. Create placeholder images at any size with custom colors and a size label, and download as PNG or copy a data URI for mockups.',
     category: 'Image',
     keywords: ['placeholder image generator', 'dummy image generator', 'placeholder png generator', 'image placeholder maker', 'mockup image generator'],
     icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
@@ -4332,7 +4332,7 @@ export const tools: Tool[] = [
     name: 'Anagram Generator',
     tagline: 'Rearrange letters to find hidden words.',
     description:
-      'Free online anagram generator. Enter letters or a word and find every dictionary word that can be built from them, sorted by length — great for word games and Scrabble. Solved in your browser.',
+      'Free online anagram generator. Enter letters or a word and find every dictionary word that can be built from them, sorted by length — great for word games and Scrabble.',
     category: 'Generators',
     keywords: ['anagram generator', 'anagram solver', 'word unscrambler', 'scrabble word finder', 'letters to words'],
     icon: 'M4 7V5h16v2M9 5v14M7 19h4M14 12h6M17 9v6',
@@ -4352,7 +4352,7 @@ export const tools: Tool[] = [
     name: 'Tarot Card Generator',
     tagline: 'Draw random tarot cards and readings.',
     description:
-      'Free online tarot card generator. Draw a single card, ask Yes or No, or lay Past-Present-Future, five-card cross or Celtic Cross spreads. Each card shows its element, astrology, keywords, verdict and upright, reversed or love meaning from the full 78-card deck. Shuffled in your browser.',
+      'Free online tarot card generator. Draw a single card, ask Yes or No, or lay Past-Present-Future, five-card cross or Celtic Cross spreads. Each card shows its element, astrology, keywords, verdict and upright, reversed or love meaning from the full 78-card deck.',
     category: 'Generators',
     keywords: ['tarot card generator', 'random tarot card', 'tarot reading online', 'yes or no tarot', 'celtic cross spread', 'love tarot reading', 'three card tarot spread', 'daily tarot draw'],
     icon: 'M7 3h7l4 4v14H7zM14 3v4h4M10 12l1.5 3 1.5-3M11.5 15v3',
@@ -4827,7 +4827,7 @@ export const tools: Tool[] = [
   {
     slug: 'screen-tester',
     name: 'Screen Tester',
-    tagline: 'Test any display end to end, right in your browser.',
+    tagline: 'Test any display end to end.',
     description:
       'Free screen tester. Cycle full-screen solid colors and gradients to spot dead or stuck pixels and check backlight uniformity on any display.',
     category: 'Device & Sensors',
@@ -5134,7 +5134,7 @@ export const tools: Tool[] = [
     name: 'Checklist Creator',
     tagline: 'Build and print a task checklist.',
     description:
-      'Free checklist creator. Type tasks to build a clean, tickable checklist you can check off, print or download as text. Everything is saved locally in your browser.',
+      'Free checklist creator. Type tasks to build a clean, tickable checklist you can check off, print or download as text.',
     category: 'Generators',
     keywords: ['checklist creator', 'checklist maker', 'create a checklist', 'todo list maker', 'printable checklist'],
     icon: 'M4 6h2l1 1 2-2M11 6h9M4 12h2l1 1 2-2M11 12h9M4 18h2l1 1 2-2M11 18h9',
@@ -5428,7 +5428,7 @@ export const tools: Tool[] = [
     name: 'JPG to Word Converter',
     tagline: 'Embed JPG images into a Word .docx.',
     description:
-      'Free online JPG to Word converter. Insert one or many JPG photos into an editable Microsoft Word (.docx) document, right in your browser.',
+      'Free online JPG to Word converter. Insert one or many JPG photos into an editable Microsoft Word (.docx) document.',
     category: 'Image',
     keywords: ['jpg to word', 'jpeg to word', 'jpg to docx', 'insert jpg in word', 'convert jpg to word document'],
     icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
@@ -5438,7 +5438,7 @@ export const tools: Tool[] = [
     name: 'JPG to Excel Converter',
     tagline: 'Embed JPG images into an Excel .xlsx.',
     description:
-      'Free online JPG to Excel converter. Place JPG images onto a Microsoft Excel (.xlsx) worksheet in your browser, no upload required.',
+      'Free online JPG to Excel converter. Place JPG images onto a Microsoft Excel (.xlsx) worksheet.',
     category: 'Image',
     keywords: ['jpg to excel', 'jpeg to excel', 'jpg to xlsx', 'insert jpg in excel', 'jpg to spreadsheet'],
     icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
@@ -5548,7 +5548,7 @@ export const tools: Tool[] = [
     name: 'BMP to GIF Converter',
     tagline: 'Convert BMP bitmaps to indexed GIF.',
     description:
-      'Free online BMP to GIF converter. Turn BMP bitmaps into compact 256-colour GIF images in your browser.',
+      'Free online BMP to GIF converter. Turn BMP bitmaps into compact 256-colour GIF images.',
     category: 'Image',
     keywords: ['bmp to gif', 'convert bmp to gif', 'bitmap to gif', 'bmp to gif online', 'bmp to animated gif'],
     icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
@@ -5648,7 +5648,7 @@ export const tools: Tool[] = [
     name: 'JFIF to GIF Converter',
     tagline: 'Convert JFIF images to indexed GIF.',
     description:
-      'Free online JFIF to GIF converter. Turn .jfif files into compact 256-colour GIF images in your browser.',
+      'Free online JFIF to GIF converter. Turn .jfif files into compact 256-colour GIF images.',
     category: 'Image',
     keywords: ['jfif to gif', 'convert jfif to gif', 'change jfif to gif', 'jfif to gif online', 'jfif to animated gif'],
     icon: 'M4 5h16v14H4zM4 15l4-4 5 5M14 13l2-2 4 4M15 8h.01',
@@ -5738,7 +5738,7 @@ export const tools: Tool[] = [
     name: 'TXT to Word Converter',
     tagline: 'Convert TXT to Word.',
     description:
-      'Free online TXT to Word converter. Convert plain text into an editable Microsoft Word (.docx) document entirely in your browser — nothing is uploaded.',
+      'Free online TXT to Word converter. Convert plain text into an editable Microsoft Word (.docx) document.',
     category: 'Converters',
     keywords: ['txt to word', 'convert txt to word', 'txt to word converter', 'txt to word online', 'txt to word'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5748,7 +5748,7 @@ export const tools: Tool[] = [
     name: 'TXT to DOCX Converter',
     tagline: 'Convert TXT to DOCX.',
     description:
-      'Free online TXT to DOCX converter. Convert plain text into a Microsoft Word (.docx) document entirely in your browser — nothing is uploaded.',
+      'Free online TXT to DOCX converter. Convert plain text into a Microsoft Word (.docx) document.',
     category: 'Converters',
     keywords: ['txt to docx', 'convert txt to docx', 'txt to docx converter', 'txt to docx online', 'txt to docx'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5758,7 +5758,7 @@ export const tools: Tool[] = [
     name: 'TXT to PDF Converter',
     tagline: 'Convert TXT to PDF.',
     description:
-      'Free online TXT to PDF converter. Convert plain text into a PDF document entirely in your browser — nothing is uploaded.',
+      'Free online TXT to PDF converter. Convert plain text into a PDF document.',
     category: 'Converters',
     keywords: ['txt to pdf', 'convert txt to pdf', 'txt to pdf converter', 'txt to pdf online', 'txt to pdf'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5768,7 +5768,7 @@ export const tools: Tool[] = [
     name: 'TXT to ODT Converter',
     tagline: 'Convert TXT to ODT.',
     description:
-      'Free online TXT to ODT converter. Convert plain text into an OpenDocument Text (.odt) file entirely in your browser — nothing is uploaded.',
+      'Free online TXT to ODT converter. Convert plain text into an OpenDocument Text (.odt) file.',
     category: 'Converters',
     keywords: ['txt to odt', 'convert txt to odt', 'txt to odt converter', 'txt to odt online', 'txt to odt'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5778,7 +5778,7 @@ export const tools: Tool[] = [
     name: 'TXT to JSON Converter',
     tagline: 'Convert TXT to JSON.',
     description:
-      'Free online TXT to JSON converter. Convert plain text into structured JSON entirely in your browser — nothing is uploaded.',
+      'Free online TXT to JSON converter. Convert plain text into structured JSON.',
     category: 'Converters',
     keywords: ['txt to json', 'convert txt to json', 'txt to json converter', 'txt to json online', 'txt to json'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5788,7 +5788,7 @@ export const tools: Tool[] = [
     name: 'TXT to HTML Converter',
     tagline: 'Convert TXT to HTML.',
     description:
-      'Free online TXT to HTML converter. Convert plain text into an HTML document entirely in your browser — nothing is uploaded.',
+      'Free online TXT to HTML converter. Convert plain text into an HTML document.',
     category: 'Converters',
     keywords: ['txt to html', 'convert txt to html', 'txt to html converter', 'txt to html online', 'txt to html'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5798,7 +5798,7 @@ export const tools: Tool[] = [
     name: 'TXT to XML Converter',
     tagline: 'Convert TXT to XML.',
     description:
-      'Free online TXT to XML converter. Convert plain text into an XML document entirely in your browser — nothing is uploaded.',
+      'Free online TXT to XML converter. Convert plain text into an XML document.',
     category: 'Converters',
     keywords: ['txt to xml', 'convert txt to xml', 'txt to xml converter', 'txt to xml online', 'txt to xml'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5808,7 +5808,7 @@ export const tools: Tool[] = [
     name: 'TXT to Markdown Converter',
     tagline: 'Convert TXT to Markdown.',
     description:
-      'Free online TXT to Markdown converter. Convert plain text into Markdown entirely in your browser — nothing is uploaded.',
+      'Free online TXT to Markdown converter. Convert plain text into Markdown.',
     category: 'Converters',
     keywords: ['txt to markdown', 'convert txt to markdown', 'txt to markdown converter', 'txt to markdown online', 'txt to markdown'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5818,7 +5818,7 @@ export const tools: Tool[] = [
     name: 'TXT to RTF Converter',
     tagline: 'Convert TXT to RTF.',
     description:
-      'Free online TXT to RTF converter. Convert plain text into a Rich Text Format (.rtf) file entirely in your browser — nothing is uploaded.',
+      'Free online TXT to RTF converter. Convert plain text into a Rich Text Format (.rtf) file.',
     category: 'Converters',
     keywords: ['txt to rtf', 'convert txt to rtf', 'txt to rtf converter', 'txt to rtf online', 'txt to rtf'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5828,7 +5828,7 @@ export const tools: Tool[] = [
     name: 'TXT to Excel Converter',
     tagline: 'Convert TXT to Excel.',
     description:
-      'Free online TXT to Excel converter. Convert plain text into a Microsoft Excel (.xlsx) spreadsheet entirely in your browser — nothing is uploaded.',
+      'Free online TXT to Excel converter. Convert plain text into a Microsoft Excel (.xlsx) spreadsheet.',
     category: 'Converters',
     keywords: ['txt to xlsx', 'convert txt to xlsx', 'txt to xlsx converter', 'txt to xlsx online', 'txt to excel'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5838,7 +5838,7 @@ export const tools: Tool[] = [
     name: 'TXT to SQL Converter',
     tagline: 'Convert TXT to SQL.',
     description:
-      'Free online TXT to SQL converter. Convert plain text into SQL INSERT statements entirely in your browser — nothing is uploaded.',
+      'Free online TXT to SQL converter. Convert plain text into SQL INSERT statements.',
     category: 'Converters',
     keywords: ['txt to sql', 'convert txt to sql', 'txt to sql converter', 'txt to sql online', 'txt to sql'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5848,7 +5848,7 @@ export const tools: Tool[] = [
     name: 'TXT to Base64 Converter',
     tagline: 'Convert TXT to Base64.',
     description:
-      'Free online TXT to Base64 converter. Convert plain text into a Base64 string entirely in your browser — nothing is uploaded.',
+      'Free online TXT to Base64 converter. Convert plain text into a Base64 string.',
     category: 'Converters',
     keywords: ['txt to base64', 'convert txt to base64', 'txt to base64 converter', 'txt to base64 online', 'txt to base64'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5858,7 +5858,7 @@ export const tools: Tool[] = [
     name: 'TXT to PNG Converter',
     tagline: 'Convert TXT to PNG.',
     description:
-      'Free online TXT to PNG converter. Convert plain text into a PNG image entirely in your browser — nothing is uploaded.',
+      'Free online TXT to PNG converter. Convert plain text into a PNG image.',
     category: 'Converters',
     keywords: ['txt to png', 'convert txt to png', 'txt to png converter', 'txt to png online', 'txt to png'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5868,7 +5868,7 @@ export const tools: Tool[] = [
     name: 'TXT to JPG Converter',
     tagline: 'Convert TXT to JPG.',
     description:
-      'Free online TXT to JPG converter. Convert plain text into a JPG image entirely in your browser — nothing is uploaded.',
+      'Free online TXT to JPG converter. Convert plain text into a JPG image.',
     category: 'Converters',
     keywords: ['txt to jpg', 'convert txt to jpg', 'txt to jpg converter', 'txt to jpg online', 'txt to jpg'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5878,7 +5878,7 @@ export const tools: Tool[] = [
     name: 'TXT to QR Code Converter',
     tagline: 'Convert TXT to QR Code.',
     description:
-      'Free online TXT to QR Code converter. Convert plain text into a QR code image entirely in your browser — nothing is uploaded.',
+      'Free online TXT to QR Code converter. Convert plain text into a QR code image.',
     category: 'Converters',
     keywords: ['txt to qr-code', 'convert txt to qr-code', 'txt to qr-code converter', 'txt to qr-code online', 'txt to qr code'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5888,7 +5888,7 @@ export const tools: Tool[] = [
     name: 'TXT to EPUB Converter',
     tagline: 'Convert TXT to EPUB.',
     description:
-      'Free online TXT to EPUB converter. Convert plain text into an EPUB ebook entirely in your browser — nothing is uploaded.',
+      'Free online TXT to EPUB converter. Convert plain text into an EPUB ebook.',
     category: 'Converters',
     keywords: ['txt to epub', 'convert txt to epub', 'txt to epub converter', 'txt to epub online', 'txt to epub'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5898,7 +5898,7 @@ export const tools: Tool[] = [
     name: 'Markdown to Word Converter',
     tagline: 'Convert Markdown to Word.',
     description:
-      'Free online Markdown to Word converter. Convert Markdown into an editable Microsoft Word (.docx) document entirely in your browser — nothing is uploaded.',
+      'Free online Markdown to Word converter. Convert Markdown into an editable Microsoft Word (.docx) document.',
     category: 'Converters',
     keywords: ['markdown to word', 'convert markdown to word', 'markdown to word converter', 'markdown to word online', 'markdown to word'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5908,7 +5908,7 @@ export const tools: Tool[] = [
     name: 'Markdown to PDF Converter',
     tagline: 'Convert Markdown to PDF.',
     description:
-      'Free online Markdown to PDF converter. Convert Markdown into a PDF document entirely in your browser — nothing is uploaded.',
+      'Free online Markdown to PDF converter. Convert Markdown into a PDF document.',
     category: 'Converters',
     keywords: ['markdown to pdf', 'convert markdown to pdf', 'markdown to pdf converter', 'markdown to pdf online', 'markdown to pdf'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5918,7 +5918,7 @@ export const tools: Tool[] = [
     name: 'CSV to PDF Converter',
     tagline: 'Convert CSV to PDF.',
     description:
-      'Free online CSV to PDF converter. Convert CSV data into a PDF document entirely in your browser — nothing is uploaded.',
+      'Free online CSV to PDF converter. Convert CSV data into a PDF document.',
     category: 'Converters',
     keywords: ['csv to pdf', 'convert csv to pdf', 'csv to pdf converter', 'csv to pdf online', 'csv to pdf'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5928,7 +5928,7 @@ export const tools: Tool[] = [
     name: 'CSV to XML Converter',
     tagline: 'Convert CSV to XML.',
     description:
-      'Free online CSV to XML converter. Convert CSV data into an XML document entirely in your browser — nothing is uploaded.',
+      'Free online CSV to XML converter. Convert CSV data into an XML document.',
     category: 'Converters',
     keywords: ['csv to xml', 'convert csv to xml', 'csv to xml converter', 'csv to xml online', 'csv to xml'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5938,7 +5938,7 @@ export const tools: Tool[] = [
     name: 'CSV to SQL Converter',
     tagline: 'Convert CSV to SQL.',
     description:
-      'Free online CSV to SQL converter. Convert CSV data into SQL INSERT statements entirely in your browser — nothing is uploaded.',
+      'Free online CSV to SQL converter. Convert CSV data into SQL INSERT statements.',
     category: 'Converters',
     keywords: ['csv to sql', 'convert csv to sql', 'csv to sql converter', 'csv to sql online', 'csv to sql'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5948,7 +5948,7 @@ export const tools: Tool[] = [
     name: 'CSV to HTML Converter',
     tagline: 'Convert CSV to HTML.',
     description:
-      'Free online CSV to HTML converter. Convert CSV data into an HTML document entirely in your browser — nothing is uploaded.',
+      'Free online CSV to HTML converter. Convert CSV data into an HTML document.',
     category: 'Converters',
     keywords: ['csv to html', 'convert csv to html', 'csv to html converter', 'csv to html online', 'csv to html'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5958,7 +5958,7 @@ export const tools: Tool[] = [
     name: 'CSV to Word Converter',
     tagline: 'Convert CSV to Word.',
     description:
-      'Free online CSV to Word converter. Convert CSV data into an editable Microsoft Word (.docx) document entirely in your browser — nothing is uploaded.',
+      'Free online CSV to Word converter. Convert CSV data into an editable Microsoft Word (.docx) document.',
     category: 'Converters',
     keywords: ['csv to word', 'convert csv to word', 'csv to word converter', 'csv to word online', 'csv to word'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5968,7 +5968,7 @@ export const tools: Tool[] = [
     name: 'CSV to Markdown Converter',
     tagline: 'Convert CSV to Markdown.',
     description:
-      'Free online CSV to Markdown converter. Convert CSV data into Markdown entirely in your browser — nothing is uploaded.',
+      'Free online CSV to Markdown converter. Convert CSV data into Markdown.',
     category: 'Converters',
     keywords: ['csv to markdown', 'convert csv to markdown', 'csv to markdown converter', 'csv to markdown online', 'csv to markdown'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5978,7 +5978,7 @@ export const tools: Tool[] = [
     name: 'CSV to TSV Converter',
     tagline: 'Convert CSV to TSV.',
     description:
-      'Free online CSV to TSV converter. Convert CSV data into a tab-separated file entirely in your browser — nothing is uploaded.',
+      'Free online CSV to TSV converter. Convert CSV data into a tab-separated file.',
     category: 'Converters',
     keywords: ['csv to tsv', 'convert csv to tsv', 'csv to tsv converter', 'csv to tsv online', 'csv to tsv'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5988,7 +5988,7 @@ export const tools: Tool[] = [
     name: 'CSV to YAML Converter',
     tagline: 'Convert CSV to YAML.',
     description:
-      'Free online CSV to YAML converter. Convert CSV data into YAML entirely in your browser — nothing is uploaded.',
+      'Free online CSV to YAML converter. Convert CSV data into YAML.',
     category: 'Converters',
     keywords: ['csv to yaml', 'convert csv to yaml', 'csv to yaml converter', 'csv to yaml online', 'csv to yaml'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -5998,7 +5998,7 @@ export const tools: Tool[] = [
     name: 'CSV to TXT Converter',
     tagline: 'Convert CSV to TXT.',
     description:
-      'Free online CSV to TXT converter. Convert CSV data into plain text entirely in your browser — nothing is uploaded.',
+      'Free online CSV to TXT converter. Convert CSV data into plain text.',
     category: 'Converters',
     keywords: ['csv to txt', 'convert csv to txt', 'csv to txt converter', 'csv to txt online', 'csv to txt'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6008,7 +6008,7 @@ export const tools: Tool[] = [
     name: 'CSV to vCard Converter',
     tagline: 'Convert CSV to vCard.',
     description:
-      'Free online CSV to vCard converter. Convert CSV data into vCard (.vcf) contacts entirely in your browser — nothing is uploaded.',
+      'Free online CSV to vCard converter. Convert CSV data into vCard (.vcf) contacts.',
     category: 'Converters',
     keywords: ['csv to vcard', 'convert csv to vcard', 'csv to vcard converter', 'csv to vcard online', 'csv to vcard'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6018,7 +6018,7 @@ export const tools: Tool[] = [
     name: 'IPYNB to Python Converter',
     tagline: 'Convert IPYNB to Python.',
     description:
-      'Free online IPYNB to Python converter. Convert a Jupyter notebook (.ipynb) into a Python (.py) script entirely in your browser — nothing is uploaded.',
+      'Free online IPYNB to Python converter. Convert a Jupyter notebook (.ipynb) into a Python (.py) script.',
     category: 'Converters',
     keywords: ['ipynb to python', 'convert ipynb to python', 'ipynb to python converter', 'ipynb to python online', 'ipynb to python'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6028,7 +6028,7 @@ export const tools: Tool[] = [
     name: 'IPYNB to HTML Converter',
     tagline: 'Convert IPYNB to HTML.',
     description:
-      'Free online IPYNB to HTML converter. Convert a Jupyter notebook (.ipynb) into an HTML document entirely in your browser — nothing is uploaded.',
+      'Free online IPYNB to HTML converter. Convert a Jupyter notebook (.ipynb) into an HTML document.',
     category: 'Converters',
     keywords: ['ipynb to html', 'convert ipynb to html', 'ipynb to html converter', 'ipynb to html online', 'ipynb to html'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6038,7 +6038,7 @@ export const tools: Tool[] = [
     name: 'IPYNB to JSON Converter',
     tagline: 'Convert IPYNB to JSON.',
     description:
-      'Free online IPYNB to JSON converter. Convert a Jupyter notebook (.ipynb) into structured JSON entirely in your browser — nothing is uploaded.',
+      'Free online IPYNB to JSON converter. Convert a Jupyter notebook (.ipynb) into structured JSON.',
     category: 'Converters',
     keywords: ['ipynb to json', 'convert ipynb to json', 'ipynb to json converter', 'ipynb to json online', 'ipynb to json'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6048,7 +6048,7 @@ export const tools: Tool[] = [
     name: 'IPYNB to LaTeX Converter',
     tagline: 'Convert IPYNB to LaTeX.',
     description:
-      'Free online IPYNB to LaTeX converter. Convert a Jupyter notebook (.ipynb) into a LaTeX (.tex) document entirely in your browser — nothing is uploaded.',
+      'Free online IPYNB to LaTeX converter. Convert a Jupyter notebook (.ipynb) into a LaTeX (.tex) document.',
     category: 'Converters',
     keywords: ['ipynb to latex', 'convert ipynb to latex', 'ipynb to latex converter', 'ipynb to latex online', 'ipynb to latex'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6058,7 +6058,7 @@ export const tools: Tool[] = [
     name: 'IPYNB to Word Converter',
     tagline: 'Convert IPYNB to Word.',
     description:
-      'Free online IPYNB to Word converter. Convert a Jupyter notebook (.ipynb) into an editable Microsoft Word (.docx) document entirely in your browser — nothing is uploaded.',
+      'Free online IPYNB to Word converter. Convert a Jupyter notebook (.ipynb) into an editable Microsoft Word (.docx) document.',
     category: 'Converters',
     keywords: ['ipynb to word', 'convert ipynb to word', 'ipynb to word converter', 'ipynb to word online', 'ipynb to word'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6068,7 +6068,7 @@ export const tools: Tool[] = [
     name: 'IPYNB to PDF Converter',
     tagline: 'Convert IPYNB to PDF.',
     description:
-      'Free online IPYNB to PDF converter. Convert a Jupyter notebook (.ipynb) into a PDF document entirely in your browser — nothing is uploaded.',
+      'Free online IPYNB to PDF converter. Convert a Jupyter notebook (.ipynb) into a PDF document.',
     category: 'Converters',
     keywords: ['ipynb to pdf', 'convert ipynb to pdf', 'ipynb to pdf converter', 'ipynb to pdf online', 'ipynb to pdf'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6078,7 +6078,7 @@ export const tools: Tool[] = [
     name: 'EPUB to TXT Converter',
     tagline: 'Convert EPUB to TXT.',
     description:
-      'Free online EPUB to TXT converter. Convert an EPUB ebook into plain text entirely in your browser — nothing is uploaded.',
+      'Free online EPUB to TXT converter. Convert an EPUB ebook into plain text.',
     category: 'Converters',
     keywords: ['epub to txt', 'convert epub to txt', 'epub to txt converter', 'epub to txt online', 'epub to txt'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6088,7 +6088,7 @@ export const tools: Tool[] = [
     name: 'EPUB to HTML Converter',
     tagline: 'Convert EPUB to HTML.',
     description:
-      'Free online EPUB to HTML converter. Convert an EPUB ebook into an HTML document entirely in your browser — nothing is uploaded.',
+      'Free online EPUB to HTML converter. Convert an EPUB ebook into an HTML document.',
     category: 'Converters',
     keywords: ['epub to html', 'convert epub to html', 'epub to html converter', 'epub to html online', 'epub to html'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6098,7 +6098,7 @@ export const tools: Tool[] = [
     name: 'EPUB to PDF Converter',
     tagline: 'Convert EPUB to PDF.',
     description:
-      'Free online EPUB to PDF converter. Convert an EPUB ebook into a PDF document entirely in your browser — nothing is uploaded.',
+      'Free online EPUB to PDF converter. Convert an EPUB ebook into a PDF document.',
     category: 'Converters',
     keywords: ['epub to pdf', 'convert epub to pdf', 'epub to pdf converter', 'epub to pdf online', 'epub to pdf'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6108,7 +6108,7 @@ export const tools: Tool[] = [
     name: 'EPUB to XML Converter',
     tagline: 'Convert EPUB to XML.',
     description:
-      'Free online EPUB to XML converter. Convert an EPUB ebook into an XML document entirely in your browser — nothing is uploaded.',
+      'Free online EPUB to XML converter. Convert an EPUB ebook into an XML document.',
     category: 'Converters',
     keywords: ['epub to xml', 'convert epub to xml', 'epub to xml converter', 'epub to xml online', 'epub to xml'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6118,7 +6118,7 @@ export const tools: Tool[] = [
     name: 'EPUB to CSV Converter',
     tagline: 'Convert EPUB to CSV.',
     description:
-      'Free online EPUB to CSV converter. Convert an EPUB ebook into a CSV file entirely in your browser — nothing is uploaded.',
+      'Free online EPUB to CSV converter. Convert an EPUB ebook into a CSV file.',
     category: 'Converters',
     keywords: ['epub to csv', 'convert epub to csv', 'epub to csv converter', 'epub to csv online', 'epub to csv'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6128,7 +6128,7 @@ export const tools: Tool[] = [
     name: 'EPUB to FB2 Converter',
     tagline: 'Convert EPUB to FB2.',
     description:
-      'Free online EPUB to FB2 converter. Convert an EPUB ebook into a FictionBook (.fb2) ebook entirely in your browser — nothing is uploaded.',
+      'Free online EPUB to FB2 converter. Convert an EPUB ebook into a FictionBook (.fb2) ebook.',
     category: 'Converters',
     keywords: ['epub to fb2', 'convert epub to fb2', 'epub to fb2 converter', 'epub to fb2 online', 'epub to fb2'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6138,7 +6138,7 @@ export const tools: Tool[] = [
     name: 'Ebook Converter',
     tagline: 'Convert EPUB ebooks to readable text.',
     description:
-      'Free online ebook converter. Extract the text and chapters from an EPUB ebook in your browser — no upload required.',
+      'Free online ebook converter. Extract the text and chapters from an EPUB ebook.',
     category: 'Converters',
     keywords: ['ebook-converter'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6148,7 +6148,7 @@ export const tools: Tool[] = [
     name: 'Word to PDF Converter',
     tagline: 'Convert Word to PDF.',
     description:
-      'Free online Word to PDF converter. Convert a Word (.docx) document into a PDF document entirely in your browser — nothing is uploaded.',
+      'Free online Word to PDF converter. Convert a Word (.docx) document into a PDF document.',
     category: 'Converters',
     keywords: ['word to pdf', 'convert word to pdf', 'word to pdf converter', 'word to pdf online', 'word to pdf'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6158,7 +6158,7 @@ export const tools: Tool[] = [
     name: 'Excel to PDF Converter',
     tagline: 'Convert Excel to PDF.',
     description:
-      'Free online Excel to PDF converter. Convert an Excel (.xlsx) spreadsheet into a PDF document entirely in your browser — nothing is uploaded.',
+      'Free online Excel to PDF converter. Convert an Excel (.xlsx) spreadsheet into a PDF document.',
     category: 'Converters',
     keywords: ['excel to pdf', 'convert excel to pdf', 'excel to pdf converter', 'excel to pdf online', 'excel to pdf'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6168,7 +6168,7 @@ export const tools: Tool[] = [
     name: 'PowerPoint to TXT Converter',
     tagline: 'Convert PowerPoint to TXT.',
     description:
-      'Free online PowerPoint to TXT converter. Convert a PowerPoint (.pptx) presentation into plain text entirely in your browser — nothing is uploaded.',
+      'Free online PowerPoint to TXT converter. Convert a PowerPoint (.pptx) presentation into plain text.',
     category: 'Converters',
     keywords: ['ppt to txt', 'convert ppt to txt', 'ppt to txt converter', 'ppt to txt online', 'powerpoint to txt'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6178,7 +6178,7 @@ export const tools: Tool[] = [
     name: 'PowerPoint to Word Converter',
     tagline: 'Convert PowerPoint to Word.',
     description:
-      'Free online PowerPoint to Word converter. Convert a PowerPoint (.pptx) presentation into an editable Microsoft Word (.docx) document entirely in your browser — nothing is uploaded.',
+      'Free online PowerPoint to Word converter. Convert a PowerPoint (.pptx) presentation into an editable Microsoft Word (.docx) document.',
     category: 'Converters',
     keywords: ['ppt to word', 'convert ppt to word', 'ppt to word converter', 'ppt to word online', 'powerpoint to word'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6188,7 +6188,7 @@ export const tools: Tool[] = [
     name: 'PowerPoint to DOC Converter',
     tagline: 'Convert PowerPoint to DOC.',
     description:
-      'Free online PowerPoint to DOC converter. Convert a PowerPoint (.pptx) presentation into a Word document entirely in your browser — nothing is uploaded.',
+      'Free online PowerPoint to DOC converter. Convert a PowerPoint (.pptx) presentation into a Word document.',
     category: 'Converters',
     keywords: ['ppt to doc', 'convert ppt to doc', 'ppt to doc converter', 'ppt to doc online', 'powerpoint to doc'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6198,7 +6198,7 @@ export const tools: Tool[] = [
     name: 'PowerPoint to HTML Converter',
     tagline: 'Convert PowerPoint to HTML.',
     description:
-      'Free online PowerPoint to HTML converter. Convert a PowerPoint (.pptx) presentation into an HTML document entirely in your browser — nothing is uploaded.',
+      'Free online PowerPoint to HTML converter. Convert a PowerPoint (.pptx) presentation into an HTML document.',
     category: 'Converters',
     keywords: ['ppt to html', 'convert ppt to html', 'ppt to html converter', 'ppt to html online', 'powerpoint to html'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6208,7 +6208,7 @@ export const tools: Tool[] = [
     name: 'PowerPoint to PDF Converter',
     tagline: 'Convert PowerPoint to PDF.',
     description:
-      'Free online PowerPoint to PDF converter. Convert a PowerPoint (.pptx) presentation into a PDF document entirely in your browser — nothing is uploaded.',
+      'Free online PowerPoint to PDF converter. Convert a PowerPoint (.pptx) presentation into a PDF document.',
     category: 'Converters',
     keywords: ['ppt to pdf', 'convert ppt to pdf', 'ppt to pdf converter', 'ppt to pdf online', 'powerpoint to pdf'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6218,7 +6218,7 @@ export const tools: Tool[] = [
     name: 'PowerPoint to EPUB Converter',
     tagline: 'Convert PowerPoint to EPUB.',
     description:
-      'Free online PowerPoint to EPUB converter. Convert a PowerPoint (.pptx) presentation into an EPUB ebook entirely in your browser — nothing is uploaded.',
+      'Free online PowerPoint to EPUB converter. Convert a PowerPoint (.pptx) presentation into an EPUB ebook.',
     category: 'Converters',
     keywords: ['ppt to epub', 'convert ppt to epub', 'ppt to epub converter', 'ppt to epub online', 'powerpoint to epub'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6228,7 +6228,7 @@ export const tools: Tool[] = [
     name: 'PDF to CSV Converter',
     tagline: 'Convert PDF to CSV.',
     description:
-      'Free online PDF to CSV converter. Convert a PDF into a CSV file entirely in your browser — nothing is uploaded.',
+      'Free online PDF to CSV converter. Convert a PDF into a CSV file.',
     category: 'Converters',
     keywords: ['pdf to csv', 'convert pdf to csv', 'pdf to csv converter', 'pdf to csv online', 'pdf to csv'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6238,7 +6238,7 @@ export const tools: Tool[] = [
     name: 'OFX to CSV Converter',
     tagline: 'Convert OFX to CSV.',
     description:
-      'Free online OFX to CSV converter. Convert an OFX/QFX bank export into a CSV file entirely in your browser — nothing is uploaded.',
+      'Free online OFX to CSV converter. Convert an OFX/QFX bank export into a CSV file.',
     category: 'Converters',
     keywords: ['ofx to csv', 'convert ofx to csv', 'ofx to csv converter', 'ofx to csv online', 'ofx to csv'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6248,7 +6248,7 @@ export const tools: Tool[] = [
     name: 'OFX to Excel Converter',
     tagline: 'Convert OFX to Excel.',
     description:
-      'Free online OFX to Excel converter. Convert an OFX/QFX bank export into a Microsoft Excel (.xlsx) spreadsheet entirely in your browser — nothing is uploaded.',
+      'Free online OFX to Excel converter. Convert an OFX/QFX bank export into a Microsoft Excel (.xlsx) spreadsheet.',
     category: 'Converters',
     keywords: ['ofx to excel', 'convert ofx to excel', 'ofx to excel converter', 'ofx to excel online', 'ofx to excel'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6258,7 +6258,7 @@ export const tools: Tool[] = [
     name: 'OFX to QFX Converter',
     tagline: 'Convert OFX to QFX.',
     description:
-      'Free online OFX to QFX converter. Convert an OFX/QFX bank export into a Quicken QFX file entirely in your browser — nothing is uploaded.',
+      'Free online OFX to QFX converter. Convert an OFX/QFX bank export into a Quicken QFX file.',
     category: 'Converters',
     keywords: ['ofx to qfx', 'convert ofx to qfx', 'ofx to qfx converter', 'ofx to qfx online', 'ofx to qfx'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6268,7 +6268,7 @@ export const tools: Tool[] = [
     name: 'OFX to QBO Converter',
     tagline: 'Convert OFX to QBO.',
     description:
-      'Free online OFX to QBO converter. Convert an OFX/QFX bank export into a QuickBooks QBO file entirely in your browser — nothing is uploaded.',
+      'Free online OFX to QBO converter. Convert an OFX/QFX bank export into a QuickBooks QBO file.',
     category: 'Converters',
     keywords: ['ofx to qbo', 'convert ofx to qbo', 'ofx to qbo converter', 'ofx to qbo online', 'ofx to qbo'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6278,7 +6278,7 @@ export const tools: Tool[] = [
     name: 'OFX to PDF Converter',
     tagline: 'Convert OFX to PDF.',
     description:
-      'Free online OFX to PDF converter. Convert an OFX/QFX bank export into a PDF document entirely in your browser — nothing is uploaded.',
+      'Free online OFX to PDF converter. Convert an OFX/QFX bank export into a PDF document.',
     category: 'Converters',
     keywords: ['ofx to pdf', 'convert ofx to pdf', 'ofx to pdf converter', 'ofx to pdf online', 'ofx to pdf'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6288,7 +6288,7 @@ export const tools: Tool[] = [
     name: 'QIF to OFX Converter',
     tagline: 'Convert QIF to OFX.',
     description:
-      'Free online QIF to OFX converter. Convert a Quicken QIF export into an OFX file entirely in your browser — nothing is uploaded.',
+      'Free online QIF to OFX converter. Convert a Quicken QIF export into an OFX file.',
     category: 'Converters',
     keywords: ['qif to ofx', 'convert qif to ofx', 'qif to ofx converter', 'qif to ofx online', 'qif to ofx'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6298,7 +6298,7 @@ export const tools: Tool[] = [
     name: 'QIF to Excel Converter',
     tagline: 'Convert QIF to Excel.',
     description:
-      'Free online QIF to Excel converter. Convert a Quicken QIF export into a Microsoft Excel (.xlsx) spreadsheet entirely in your browser — nothing is uploaded.',
+      'Free online QIF to Excel converter. Convert a Quicken QIF export into a Microsoft Excel (.xlsx) spreadsheet.',
     category: 'Converters',
     keywords: ['qif to excel', 'convert qif to excel', 'qif to excel converter', 'qif to excel online', 'qif to excel'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6308,7 +6308,7 @@ export const tools: Tool[] = [
     name: 'IIF to CSV Converter',
     tagline: 'Convert IIF to CSV.',
     description:
-      'Free online IIF to CSV converter. Convert a QuickBooks IIF export into a CSV file entirely in your browser — nothing is uploaded.',
+      'Free online IIF to CSV converter. Convert a QuickBooks IIF export into a CSV file.',
     category: 'Converters',
     keywords: ['iif to csv', 'convert iif to csv', 'iif to csv converter', 'iif to csv online', 'iif to csv'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6318,7 +6318,7 @@ export const tools: Tool[] = [
     name: 'IIF to Excel Converter',
     tagline: 'Convert IIF to Excel.',
     description:
-      'Free online IIF to Excel converter. Convert a QuickBooks IIF export into a Microsoft Excel (.xlsx) spreadsheet entirely in your browser — nothing is uploaded.',
+      'Free online IIF to Excel converter. Convert a QuickBooks IIF export into a Microsoft Excel (.xlsx) spreadsheet.',
     category: 'Converters',
     keywords: ['iif to excel', 'convert iif to excel', 'iif to excel converter', 'iif to excel online', 'iif to excel'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6328,7 +6328,7 @@ export const tools: Tool[] = [
     name: 'JPG to PDF Converter',
     tagline: 'Convert JPG to PDF.',
     description:
-      'Free online JPG to PDF converter. Convert a JPG image into a PDF document entirely in your browser — nothing is uploaded.',
+      'Free online JPG to PDF converter. Convert a JPG image into a PDF document.',
     category: 'Converters',
     keywords: ['jpg to pdf', 'convert jpg to pdf', 'jpg to pdf converter', 'jpg to pdf online', 'jpg to pdf'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
@@ -6338,7 +6338,7 @@ export const tools: Tool[] = [
     name: 'PNG to PDF Converter',
     tagline: 'Convert PNG to PDF.',
     description:
-      'Free online PNG to PDF converter. Convert a PNG image into a PDF document entirely in your browser — nothing is uploaded.',
+      'Free online PNG to PDF converter. Convert a PNG image into a PDF document.',
     category: 'Converters',
     keywords: ['png to pdf', 'convert png to pdf', 'png to pdf converter', 'png to pdf online', 'png to pdf'],
     icon: 'M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',

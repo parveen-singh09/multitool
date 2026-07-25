@@ -55,7 +55,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       <div id="rn-out" class="panel panel-lift min-h-24 p-5 font-mono text-lg text-ink" aria-live="polite"></div>
       <button type="button" class="copy-icon" data-copy-target="#rn-out" aria-label="Copy"></button>
     </div>
-    <div id="rn-stats" class="hidden grid grid-cols-2 gap-3 sm:grid-cols-4 text-sm"></div>
+    <div id="rn-stats" class="hidden grid-cols-2 gap-3 sm:grid-cols-4 text-sm"></div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
@@ -64,7 +64,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       between any minimum and maximum you choose. Generate a single number for a
       quick draw, or a whole batch — keep every value unique (great for raffles
       and lotteries), sort ascending or descending, and see a summary of the
-      count, sum, mean and range. Numbers are generated in your browser using a
+      count, sum, mean and range. Numbers are generated using a
       cryptographically strong, bias-free random source.
     </p>
   </div>
@@ -76,11 +76,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const minEl = document.getElementById('rn-min') as HTMLInputElement;
   const maxEl = document.getElementById('rn-max') as HTMLInputElement;
   const countEl = document.getElementById('rn-count') as HTMLInputElement;
-  const typeEl = document.getElementById('rn-type') as HTMLSelectElement;
+  const typeEl = document.getElementById('rn-type') as unknown as HTMLSelectElement;
   const precEl = document.getElementById('rn-prec') as HTMLInputElement;
   const precWrap = document.getElementById('rn-prec-wrap')!;
   const uniqueEl = document.getElementById('rn-unique') as HTMLInputElement;
-  const sortEl = document.getElementById('rn-sort') as HTMLSelectElement;
+  const sortEl = document.getElementById('rn-sort') as unknown as HTMLSelectElement;
   const out = document.getElementById('rn-out')!;
   const err = document.getElementById('rn-error')!;
   const stats = document.getElementById('rn-stats')!;
@@ -96,6 +96,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     err.classList.remove('hidden');
     out.textContent = '';
     stats.classList.add('hidden');
+    stats.classList.remove('grid');
   }
 
   function generate() {
@@ -147,6 +148,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       )
       .join('');
     stats.classList.remove('hidden');
+    stats.classList.add('grid');
   }
 
   typeEl.addEventListener('change', generate);

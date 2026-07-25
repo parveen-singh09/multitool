@@ -86,34 +86,23 @@ html[data-theme='light'] {
   --lift-highlight: color-mix(in srgb, #000000 5%, transparent);
 }
 
-/* ponytail: bg-image mode — 4 files (mobile/desktop × dark/light) picked by data-theme + media query */
-/* iOS Safari ignores background-attachment:fixed, so paint on a position:fixed pseudo-element instead */
-html[data-bg='image'] body::before {
-  content: '';
-  position: fixed;
-  /* inset:0 pins the layer to the *visual* viewport and lets it resize with the
-     URL bar — a fixed lvh height + centered cover shifts on scroll instead. */
-  inset: 0;
-  z-index: -1;
-  background-image: url('/mob_dark.webp');
-  background-size: cover;
-  background-position: center;
+/* Ambient gradient band painted straight onto the root element (not a pseudo-element) so no
+   descendant can stack in front of it. Fixed attachment keeps it put on scroll. `body` and the
+   layout wrappers are transparent, so this shows through the main content area.
+   Unlayered → wins over the @layer base html background-color, which stays as the solid base. */
+html {
+  background-image: linear-gradient(135deg,
+    rgba(148, 163, 184, 0.22) 0%,
+    rgba(148, 163, 184, 0.08) 34%,
+    transparent 60%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
-html[data-bg='image'][data-theme='light'] body::before {
-  background-image: url('/mob_light.webp');
-}
-@media (min-width: 768px) {
-  html[data-bg='image'] body::before { background-image: url('/desk_dark.webp'); }
-  html[data-bg='image'][data-theme='light'] body::before { background-image: url('/desk_light.webp'); }
-}
-/* body's own bg-color + SidebarLayout's wrapper both paint over the ::before image — clear them so it shows through */
-html[data-bg='image'] body,
-html[data-bg='image'] .bg-canvas { background-color: transparent; }
-
-/* Hero sits over the photo in image mode — force light text + shadow so it reads on the bright landscape (both themes). Without the image it keeps the normal theme colors. */
-html[data-bg='image'] .hero-copy :is(h1, h1 span, p) {
-  color: #ffffff;
-  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.6);
+html[data-theme='light'] {
+  background-image: linear-gradient(135deg,
+    rgba(0, 0, 0, 0.08) 0%,
+    rgba(0, 0, 0, 0.03) 34%,
+    transparent 60%);
 }
 
 @layer base {
@@ -127,7 +116,8 @@ html[data-bg='image'] .hero-copy :is(h1, h1 span, p) {
   }
 
   body {
-    background-color: var(--color-canvas);
+    /* transparent so the fixed body::before ambient band shows through; html carries the canvas color */
+    background-color: transparent;
     color: var(--color-ink);
     font-family: var(--font-sans);
     font-size: 16px;

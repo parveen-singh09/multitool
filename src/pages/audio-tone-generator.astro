@@ -100,7 +100,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       binaural beats with an independent frequency in each ear. Use it to test
       speakers and headphones, match tinnitus, tune instruments, or explore
       beats. Add a fade to avoid clicks and download any of them as a WAV.
-      Everything is synthesized with the Web Audio API in your browser.
+      Everything is synthesized with the Web Audio API.
     </p>
   </div>
 </ToolLayout>
@@ -114,7 +114,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const $ = (id: string) => document.getElementById(id)!;
   const freqEl = $('at-freq') as HTMLInputElement;
   const sliderEl = $('at-slider') as HTMLInputElement;
-  const waveEl = $('at-wave') as HTMLSelectElement;
+  const waveEl = $('at-wave') as unknown as HTMLSelectElement;
   const volEl = $('at-vol') as HTMLInputElement;
   const noteEl = $('at-note');
   let mode: 'tone' | 'sweep' | 'binaural' = 'tone';
@@ -171,7 +171,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (mode === 'tone') {
       const o = ac.createOscillator();
       o.type = type(); o.frequency.value = freq();
-      pan(o, ($('at-channel') as HTMLSelectElement).value, gain);
+      pan(o, ($('at-channel') as unknown as HTMLSelectElement).value, gain);
       o.start(); nodes.push(o);
     } else if (mode === 'sweep') {
       const o = ac.createOscillator();
@@ -179,7 +179,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       const s = Number(($('at-sw-start') as HTMLInputElement).value) || 200;
       const e = Number(($('at-sw-end') as HTMLInputElement).value) || 2000;
       const d = Math.max(0.1, Number(($('at-sw-dur') as HTMLInputElement).value) || 5);
-      const curve = ($('at-sw-curve') as HTMLSelectElement).value;
+      const curve = ($('at-sw-curve') as unknown as HTMLSelectElement).value;
       o.frequency.setValueAtTime(s, ac.currentTime);
       if (curve === 'log' && s > 0 && e > 0) o.frequency.exponentialRampToValueAtTime(e, ac.currentTime + d);
       else o.frequency.linearRampToValueAtTime(e, ac.currentTime + d);
@@ -250,12 +250,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
     if (mode === 'tone') {
       const o = oac.createOscillator(); o.type = type(); o.frequency.value = freq();
-      panTo(o, ($('at-channel') as HTMLSelectElement).value); o.start(); o.stop(dur);
+      panTo(o, ($('at-channel') as unknown as HTMLSelectElement).value); o.start(); o.stop(dur);
     } else if (mode === 'sweep') {
       const o = oac.createOscillator(); o.type = type();
       const s = Number(($('at-sw-start') as HTMLInputElement).value) || 200;
       const e = Number(($('at-sw-end') as HTMLInputElement).value) || 2000;
-      const curve = ($('at-sw-curve') as HTMLSelectElement).value;
+      const curve = ($('at-sw-curve') as unknown as HTMLSelectElement).value;
       o.frequency.setValueAtTime(s, 0);
       if (curve === 'log' && s > 0 && e > 0) o.frequency.exponentialRampToValueAtTime(e, dur);
       else o.frequency.linearRampToValueAtTime(e, dur);
