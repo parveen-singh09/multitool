@@ -63,6 +63,15 @@ const CAT_MENU = categories.map((c) => {
     tools: all,
   };
 });
+
+// ponytail: the mega-menu is desktop-only (hidden lg:flex) and hover-gated, but
+// rendering all ~627 tool links + inline SVGs inline made the doc 660KB — 84% of
+// it dead weight on mobile. Emit the tool data as JSON and build the grid
+// client-side on first hover instead. Footer still ships the links for SEO.
+const MEGA_TOOLS = CAT_MENU.map((cat) => ({
+  fg: cat.fg,
+  tools: cat.tools.map((t) => [t.slug, t.name, t.icon]),
+}));
 ---
 
 <header class="sticky top-0 z-50 border-b border-hairline bg-canvas/85 backdrop-blur-md">
@@ -119,23 +128,17 @@ const CAT_MENU = categories.map((c) => {
                 ))}
               </div>
 
-              
+
               <div class="min-w-0 flex-1 p-4 pr-5">
                 {CAT_MENU.map((cat, i) => (
                   <div class="nav-panel h-80 overflow-y-auto" id={`mega-${i}`} data-panel={i} hidden={i !== 0}>
-                    <div class="grid grid-cols-2 gap-x-5 gap-y-0.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                      {cat.tools.map((tool) => (
-                        <a href={`/${tool.slug}`} class="flex items-center gap-2 truncate rounded-md px-2 py-1.5 text-[13px] text-ink-subtle hover:bg-surface-3 hover:text-ink">
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class={`flex-none ${cat.fg}`}><path d={tool.icon}/></svg>
-                          <span class="truncate">{tool.name}</span>
-                        </a>
-                      ))}
-                    </div>
+                    <div class="nav-grid grid grid-cols-2 gap-x-5 gap-y-0.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"></div>
                   </div>
                 ))}
               </div>
             </div>
           </div>
+          <script type="application/json" id="mega-data" set:html={JSON.stringify(MEGA_TOOLS)} />
         </div>
       </div>
     </div>
@@ -214,12 +217,53 @@ const CAT_MENU = categories.map((c) => {
   });
   if (rails[0]) rails[0].setAttribute('aria-current', 'true');
 
+  // Tool links live in a JSON blob, not the HTML — build the grids on first open.
+  let megaBuilt = false;
+  const buildMega = () => {
+    if (megaBuilt) return;
+    megaBuilt = true;
+    const raw = document.getElementById('mega-data')?.textContent;
+    if (!raw) return;
+    const NS = 'http://www.w3.org/2000/svg';
+    const data = JSON.parse(raw) as { fg: string; tools: [string, string, string][] }[];
+    const grids = document.querySelectorAll<HTMLElement>('.nav-grid');
+    data.forEach((cat, i) => {
+      const grid = grids[i];
+      if (!grid) return;
+      const frag = document.createDocumentFragment();
+      for (const [slug, name, icon] of cat.tools) {
+        const a = document.createElement('a');
+        a.href = `/${slug}`;
+        a.className = 'flex items-center gap-2 truncate rounded-md px-2 py-1.5 text-[13px] text-ink-subtle hover:bg-surface-3 hover:text-ink';
+        const svg = document.createElementNS(NS, 'svg');
+        svg.setAttribute('width', '15');
+        svg.setAttribute('height', '15');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('stroke-width', '1.75');
+        svg.setAttribute('stroke-linecap', 'round');
+        svg.setAttribute('stroke-linejoin', 'round');
+        svg.setAttribute('class', `flex-none ${cat.fg}`);
+        const path = document.createElementNS(NS, 'path');
+        path.setAttribute('d', icon);
+        svg.appendChild(path);
+        const span = document.createElement('span');
+        span.className = 'truncate';
+        span.textContent = name;
+        a.append(svg, span);
+        frag.appendChild(a);
+      }
+      grid.appendChild(frag);
+    });
+  };
+
   const navTools = document.querySelector<HTMLElement>('.nav-tools');
   const mega = document.querySelector<HTMLElement>('.nav-mega');
   const megaCard = document.querySelector<HTMLElement>('.nav-mega-card');
   if (navTools && mega && megaCard) {
     let closeTimer: ReturnType<typeof setTimeout> | null = null;
-    const open = () => { if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; } mega.classList.add('open'); };
+    const open = () => { buildMega(); if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; } mega.classList.add('open'); };
     const scheduleClose = () => { if (closeTimer) clearTimeout(closeTimer); closeTimer = setTimeout(() => mega.classList.remove('open'), 220); };
     [navTools, megaCard].forEach((el) => {
       el.addEventListener('mouseenter', open);
