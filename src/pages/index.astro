@@ -28,17 +28,23 @@ const jsonLd = {
   },
 };
 
-const catStyle: Record<string, { bg: string; ring: string; fg: string; icon: string }> = {
-  Text: { bg: 'bg-sky-500/12', ring: 'ring-sky-500/20', fg: 'text-sky-400', icon: 'M4 7V4h16v3 M9 20h6 M12 4v16' },
-  Developer: { bg: 'bg-violet-500/12', ring: 'ring-violet-500/20', fg: 'text-violet-400', icon: 'm16 18 6-6-6-6 M8 6l-6 6 6 6' },
-  Image: { bg: 'bg-emerald-500/12', ring: 'ring-emerald-500/20', fg: 'text-emerald-400', icon: 'M3 3h18v18H3z M8.5 8.5a1.5 1.5 0 1 0 0 3 M21 15l-5-5L5 21' },
-  Converters: { bg: 'bg-amber-500/12', ring: 'ring-amber-500/20', fg: 'text-amber-400', icon: 'M21 12a9 9 0 1 1-3-6.7L21 8 M21 3v5h-5' },
-  Calculators: { bg: 'bg-rose-500/12', ring: 'ring-rose-500/20', fg: 'text-rose-400', icon: 'M5 2h14v20H5z M8 6h8 M8 11h2 M12 11h2 M8 15h2 M12 15h2' },
-  Generators: { bg: 'bg-fuchsia-500/12', ring: 'ring-fuchsia-500/20', fg: 'text-fuchsia-400', icon: 'M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11z' },
-  Security: { bg: 'bg-teal-500/12', ring: 'ring-teal-500/20', fg: 'text-teal-400', icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' },
-  PDF: { bg: 'bg-red-500/12', ring: 'ring-red-500/20', fg: 'text-red-400', icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6' },
-  'Audio & Video': { bg: 'bg-indigo-500/12', ring: 'ring-indigo-500/20', fg: 'text-indigo-400', icon: 'm22 8-6 4 6 4V8z M2 6h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2z' },
-  'Device & Sensors': { bg: 'bg-cyan-500/12', ring: 'ring-cyan-500/20', fg: 'text-cyan-400', icon: 'M12 13l4-4 M3.5 16a9 9 0 1 1 17 0z' },
+const catStyle: Record<string, { bg: string; ring: string; emoji: string }> = {
+  Text: { bg: 'bg-sky-500/12', ring: 'ring-sky-500/20', emoji: '🔤' },
+  Developer: { bg: 'bg-violet-500/12', ring: 'ring-violet-500/20', emoji: '🖥️' },
+  Image: { bg: 'bg-emerald-500/12', ring: 'ring-emerald-500/20', emoji: '🎨' },
+  Converters: { bg: 'bg-amber-500/12', ring: 'ring-amber-500/20', emoji: '🔀' },
+  Calculators: { bg: 'bg-rose-500/12', ring: 'ring-rose-500/20', emoji: '🧮' },
+  Generators: { bg: 'bg-fuchsia-500/12', ring: 'ring-fuchsia-500/20', emoji: '🪄' },
+  Security: { bg: 'bg-teal-500/12', ring: 'ring-teal-500/20', emoji: '🛡️' },
+  PDF: { bg: 'bg-red-500/12', ring: 'ring-red-500/20', emoji: '📚' },
+  'Audio & Video': { bg: 'bg-indigo-500/12', ring: 'ring-indigo-500/20', emoji: '🎥' },
+  'Device & Sensors': { bg: 'bg-cyan-500/12', ring: 'ring-cyan-500/20', emoji: '📟' },
+};
+
+const TWEMOJI_BASE = 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/';
+const twemojiUrl = (emoji: string): string => {
+  const chars = emoji.indexOf('‍') < 0 ? emoji.replace(/️/g, '') : emoji;
+  return TWEMOJI_BASE + Array.from(chars).map((ch) => ch.codePointAt(0)!.toString(16)).join('-') + '.svg';
 };
 ---
 
@@ -140,8 +146,8 @@ const catStyle: Record<string, { bg: string; ring: string; fg: string; icon: str
               href={`/${category.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`}
               class="panel panel-lift group flex items-start gap-4 p-5 transition-colors duration-150 hover:bg-surface-2 hover:border-hairline-strong"
             >
-              <span class={`flex h-10 w-10 flex-none items-center justify-center rounded-lg ring-1 ${s.bg} ${s.ring} ${s.fg}`}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={s.icon} /></svg>
+              <span class={`flex h-10 w-10 flex-none items-center justify-center rounded-lg ring-1 ${s.bg} ${s.ring}`}>
+                <img src={twemojiUrl(s.emoji)} alt="" aria-hidden="true" loading="lazy" width="20" height="20" />
               </span>
               <div class="min-w-0">
                 <div class="flex items-center gap-2">
