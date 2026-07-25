@@ -40,17 +40,17 @@ export async function mountViewer(opts: ViewerOptions): Promise<ViewerController
 
   // --- Chrome ---------------------------------------------------------------
   const root = el('div', 'overflow-hidden rounded-lg border border-hairline');
-  const bar = el('div', 'flex flex-wrap items-center gap-x-2 gap-y-2 border-b border-hairline bg-[#333338] px-3 py-2 text-[13px] text-[#e8e8ea]');
+  const bar = el('div', 'flex flex-wrap items-center gap-x-2 gap-y-2 border-b border-hairline bg-surface-3 px-3 py-2 text-[13px] text-ink');
   const railToggle = btn('rounded p-1.5 hover:bg-white/10', ICON_MENU, 'Toggle thumbnails');
   const nameEl = el('span', 'min-w-0 max-w-[40%] truncate font-medium'); nameEl.textContent = opts.file.name;
-  const counter = el('span', 'whitespace-nowrap text-[#a9a9ad]');
+  const counter = el('span', 'whitespace-nowrap text-ink-tertiary');
   const curEl = el('span', ''); curEl.textContent = '1';
   const totEl = el('span', ''); totEl.textContent = String(pageCount);
   counter.append(curEl, document.createTextNode(' / '), totEl);
   const spacer = el('span', 'flex-1');
   const zoomWrap = el('div', 'flex items-center gap-1');
   const zOut = btn('rounded px-2 py-1 text-base leading-none hover:bg-white/10', '−', 'Zoom out');
-  const zPct = el('span', 'w-12 text-center tabular-nums text-[#a9a9ad]'); zPct.textContent = '100%';
+  const zPct = el('span', 'w-12 text-center tabular-nums text-ink-tertiary'); zPct.textContent = '100%';
   const zIn = btn('rounded px-2 py-1 text-base leading-none hover:bg-white/10', '+', 'Zoom in');
   const zFit = btn('ml-1 rounded px-2 py-1 text-xs hover:bg-white/10', 'Fit', 'Fit to width');
   zoomWrap.append(zOut, zPct, zIn, zFit);
@@ -59,9 +59,9 @@ export async function mountViewer(opts: ViewerOptions): Promise<ViewerController
 
   const body = el('div', 'relative flex sm:items-stretch');
   // Rail: off-canvas left drawer on mobile (slides in over the viewer), static sidebar on sm+.
-  const rail = el('div', 'absolute inset-y-0 left-0 z-30 flex w-[75%] max-w-[250px] shrink-0 -translate-x-full flex-col items-center gap-4 overflow-y-auto bg-[#2b2b2f] p-4 shadow-xl transition-transform duration-200 sm:static sm:z-auto sm:w-[210px] sm:max-h-[72vh] sm:translate-x-0 sm:shadow-none sm:border-r sm:border-hairline');
+  const rail = el('div', 'absolute inset-y-0 left-0 z-30 flex w-[75%] max-w-[250px] shrink-0 -translate-x-full flex-col items-center gap-4 overflow-y-auto bg-surface-2 p-4 shadow-xl transition-transform duration-200 sm:static sm:z-auto sm:w-[210px] sm:max-h-[72vh] sm:translate-x-0 sm:shadow-none sm:border-r sm:border-hairline');
   const backdrop = el('div', 'absolute inset-0 z-20 hidden bg-black/50 sm:hidden');
-  const viewer = el('div', 'flex min-w-0 flex-1 flex-col items-center gap-4 bg-[#1a1a1d] p-4 max-h-[70vh] overflow-auto sm:max-h-[72vh]');
+  const viewer = el('div', 'flex min-w-0 flex-1 flex-col items-center gap-4 bg-surface-1 p-4 max-h-[70vh] overflow-auto sm:max-h-[72vh]');
   body.append(backdrop, rail, viewer);
   root.append(bar, body);
 
@@ -76,7 +76,7 @@ export async function mountViewer(opts: ViewerOptions): Promise<ViewerController
     const thumb = document.createElement('canvas');
     thumb.className = 'block h-auto w-[130px] bg-white shadow ring-1 ring-black/10';
     thumb.style.transition = 'transform 0.2s ease';
-    const card = btn('flex shrink-0 flex-col items-center gap-1.5 rounded border-2 border-transparent p-2 text-[12px] text-[#d0d0d3] transition-colors', '');
+    const card = btn('flex shrink-0 flex-col items-center gap-1.5 rounded border-2 border-transparent p-2 text-[12px] text-ink-subtle transition-colors', '');
     card.append(thumb, document.createTextNode(String(i)));
     card.addEventListener('click', () => goToPage(i));
     rail.appendChild(card);
@@ -140,13 +140,14 @@ export async function mountViewer(opts: ViewerOptions): Promise<ViewerController
       card.classList.toggle('border-primary', active);
       card.classList.toggle('border-transparent', !active);
       card.classList.toggle('text-primary', active);
-      card.classList.toggle('text-[#d0d0d3]', !active);
+      card.classList.toggle('text-ink-subtle', !active);
       if (active) card.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     });
   }
   setCurrent(1);
 
   function goToPage(n: number) {
+    setCurrent(n); // highlight now; don't wait for the scroll observer to catch up
     slots[n - 1]?.scrollIntoView({ block: 'start', behavior: 'smooth' });
     if (window.innerWidth < 640) setRail(false); // close the mobile drawer after picking a page
   }
