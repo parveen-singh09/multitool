@@ -204,6 +204,11 @@ const BY_ARCHETYPE: Record<Archetype, string[]> = {
     'pdf-to-excel', 'html-to-pdf', 'video-to-gif', 'gif-to-mp4', 'video-compressor',
     'audio-compressor', 'audio-speed-changer', 'waveform-generator', 'spectrogram-generator',
     'svg-downloader', 'base64-file-downloader', 'pdf-summarizer',
+    'pdf-rotate', 'pdf-delete-pages', 'pdf-page-numbers', 'pdf-watermark', 'pdf-metadata',
+    'pdf-flatten', 'pdf-header-footer', 'pdf-bates-numbering', 'pdf-n-up', 'pdf-resize',
+    'pdf-crop', 'pdf-remove-annotations', 'pdf-alternate-mix', 'pdf-split-half', 'pdf-repair',
+    'pdf-organize', 'pdf-flip', 'pdf-grayscale', 'pdf-compress', 'pdf-extract-images',
+    'pdf-unlock', 'pdf-ocr', 'pdf-deskew',
     'ipynb-to-python', 'ipynb-to-html', 'ipynb-to-json', 'ipynb-to-latex', 'ipynb-to-word', 'ipynb-to-pdf', 'epub-to-txt', 'epub-to-html', 'epub-to-pdf', 'epub-to-xml', 'epub-to-csv', 'epub-to-fb2', 'ebook-converter', 'word-to-pdf', 'excel-to-pdf', 'ppt-to-txt', 'ppt-to-word', 'ppt-to-doc', 'ppt-to-html', 'ppt-to-pdf', 'ppt-to-epub', 'pdf-to-csv', 'ofx-to-csv', 'ofx-to-excel', 'ofx-to-qfx', 'ofx-to-qbo', 'ofx-to-pdf', 'qif-to-ofx', 'qif-to-excel', 'iif-to-csv', 'iif-to-excel', 'jpg-to-pdf', 'png-to-pdf',
   ],
   'generate-text': [
