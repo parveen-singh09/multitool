@@ -1,16 +1,6 @@
 import * as React from "react";
 import { useState, useEffect } from "react";
-import {
-  Sparkles,
-  Shield,
-  ChevronRight,
-  Home,
-  BookOpen,
-  Search,
-  Mail,
-  MessageSquare,
-  Coffee
-} from "lucide-react";
+import { ChevronRight, Search } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -147,7 +137,7 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={normalizedPath === "/tools"}>
                 <a href="/tools">
-                  <Home className="h-4 w-4" />
+                  <img src={twemojiUrl("🏠")} alt="" aria-hidden="true" loading="lazy" className="h-4 w-4 shrink-0" />
                   <span>Home</span>
                 </a>
               </SidebarMenuButton>
@@ -155,7 +145,7 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={normalizedPath === "/ai"}>
                 <a href="/ai">
-                  <Sparkles className="h-4 w-4" />
+                  <img src={twemojiUrl("✨")} alt="" aria-hidden="true" loading="lazy" className="h-4 w-4 shrink-0" />
                   <span>Ask AI</span>
                 </a>
               </SidebarMenuButton>
@@ -163,7 +153,7 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={normalizedPath === "/feedback"}>
                 <a href="/feedback">
-                  <MessageSquare className="h-4 w-4" />
+                  <img src={twemojiUrl("💬")} alt="" aria-hidden="true" loading="lazy" className="h-4 w-4 shrink-0" />
                   <span>Feedback</span>
                 </a>
               </SidebarMenuButton>
@@ -171,7 +161,7 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
                 <a href="https://ko-fi.com/toolsilk" target="_blank" rel="noopener noreferrer">
-                  <Coffee className="h-4 w-4" />
+                  <img src={twemojiUrl("☕")} alt="" aria-hidden="true" loading="lazy" className="h-4 w-4 shrink-0" />
                   <span>Buy me a coffee</span>
                 </a>
               </SidebarMenuButton>
@@ -282,7 +272,7 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={normalizedPath === "/about"}>
               <a href="/about">
-                <BookOpen className="h-4 w-4" />
+                <img src={twemojiUrl("📖")} alt="" aria-hidden="true" loading="lazy" className="h-4 w-4 shrink-0" />
                 <span>About</span>
               </a>
             </SidebarMenuButton>
@@ -290,7 +280,7 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={normalizedPath === "/contact"}>
               <a href="/contact">
-                <Mail className="h-4 w-4" />
+                <img src={twemojiUrl("✉️")} alt="" aria-hidden="true" loading="lazy" className="h-4 w-4 shrink-0" />
                 <span>Contact Us</span>
               </a>
             </SidebarMenuButton>
@@ -298,7 +288,7 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={normalizedPath === "/privacy"}>
               <a href="/privacy">
-                <Shield className="h-4 w-4" />
+                <img src={twemojiUrl("🔒")} alt="" aria-hidden="true" loading="lazy" className="h-4 w-4 shrink-0" />
                 <span>Privacy</span>
               </a>
             </SidebarMenuButton>
