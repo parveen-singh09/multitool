@@ -1,5 +1,6 @@
 ---
 import { tools } from '../data/tools';
+import { ICON_DEVICE, ICON_DRIVE, ICON_DROPBOX, ICON_URL } from '../lib/cloudUpload';
 
 export interface Props { fullPage?: boolean; launcher?: boolean }
 const { fullPage = false, launcher = false } = Astro.props;
@@ -42,16 +43,20 @@ const index = tools.map((t) => ({
             </button>
             <div id="ai-attach-menu" class="hidden absolute bottom-[calc(100%+6px)] left-0 z-30 w-[min(13rem,calc(100vw-2rem))] overflow-hidden rounded-lg border border-hairline bg-surface-2 text-left shadow-xl">
               <button type="button" data-src="device" class="ai-src flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-ink hover:bg-surface-3">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-ink-subtle"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
+                <span class="flex h-4.5 w-4.5 shrink-0 items-center justify-center" set:html={ICON_DEVICE} />
                 From this device
               </button>
               <button type="button" data-src="gdrive" class="ai-src hidden w-full items-center gap-2.5 px-3 py-2.5 text-sm text-ink hover:bg-surface-3">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-ink-subtle"><path d="M8 3h8l5 9-4 7H7l-4-7z"/></svg>
+                <span class="flex h-4.5 w-4.5 shrink-0 items-center justify-center" set:html={ICON_DRIVE} />
                 Google Drive
               </button>
               <button type="button" data-src="dropbox" class="ai-src hidden w-full items-center gap-2.5 px-3 py-2.5 text-sm text-ink hover:bg-surface-3">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-ink-subtle"><path d="m7 3 5 3-5 3-5-3zM17 3l5 3-5 3-5-3zM2 12l5 3 5-3-5-3zM17 9l5 3-5 3-5-3zM7 18l5-3 5 3-5 3z"/></svg>
+                <span class="flex h-4.5 w-4.5 shrink-0 items-center justify-center" set:html={ICON_DROPBOX} />
                 Dropbox
+              </button>
+              <button type="button" data-src="url" class="ai-src flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-ink hover:bg-surface-3">
+                <span class="flex h-4.5 w-4.5 shrink-0 items-center justify-center" set:html={ICON_URL} />
+                Web Address (URL)
               </button>
             </div>
             <input id="ai-file" type="file" multiple class="sr-only" />
@@ -112,6 +117,7 @@ const index = tools.map((t) => ({
   import type { RunResult } from '../lib/toolRunners';
   import { matchesQuery, compareByQuery, toolHaystack } from '../lib/toolSearch';
   import { driveReady, pickFromDrive } from '../lib/drivePickers';
+  import { importFileFromUrl } from '../lib/cloudUpload';
   import { FORMAT_CATEGORIES, categoryOf, targetsFor, chainPath } from '../data/formatCatalog';
 
   type IdxTool = { slug: string; name: string; tagline: string; category: string; keywords: string[] };
@@ -163,7 +169,7 @@ const index = tools.map((t) => ({
     mode = m;
     for (const b of document.querySelectorAll<HTMLButtonElement>('.ai-mode'))
       b.setAttribute('aria-pressed', String(b.dataset.mode === m));
-    const sel = document.getElementById('ai-mode-select') as HTMLSelectElement | null;
+    const sel = document.getElementById('ai-mode-select') as unknown as HTMLSelectElement | null;
     if (sel) sel.value = m;
   }
   let fromStep = false;
@@ -234,6 +240,13 @@ const index = tools.map((t) => ({
         const src = b.dataset.src!;
         closeAttach();
         if (src === 'device') { fileInput.click(); return; }
+        if (src === 'url') {
+          try {
+            const file = await importFileFromUrl();
+            if (file) { fileInput.value = ''; setWorking([...files, file]); }
+          } catch (err) { bubble('assistant', (err as Error).message || 'Couldn’t fetch that URL. Try saving the file and attaching it from your device.'); }
+          return;
+        }
         b.disabled = true;
         const picked: File[] = [];
         try {
@@ -859,7 +872,8 @@ const index = tools.map((t) => ({
     const cancel = document.createElement('button');
     cancel.type = 'button'; cancel.className = 'btn btn-tertiary'; cancel.textContent = 'Cancel';
     cancel.addEventListener('click', () => host.replaceWith(document.createComment('cancelled')));
-    actions.append(confirm, cancel);
+    actions.appendChild(confirm);
+    actions.appendChild(cancel);
     box.appendChild(actions);
 
     host.appendChild(box);

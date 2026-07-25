@@ -14,6 +14,7 @@ const ARCHIVE_TARGETS = [
   'tar.7z', 'tar.z', 'tz', 'tar.lzo', 'tzo',
   'gz', 'bz2', 'xz', 'z', 'lzo', 'rz',
 ];
+import { ICON_DEVICE, ICON_DRIVE, ICON_DROPBOX, ICON_URL } from '../lib/cloudUpload';
 const { from, to, targets = ARCHIVE_TARGETS, noun = 'archive', smart = false, syncTarget = false } = Astro.props;
 const TARGETS = targets;
 const accept = from ? `.${from}` : '';
@@ -36,16 +37,20 @@ const accept = from ? `.${from}` : '';
       </button>
       <div id="ac-src-menu" class="hidden absolute left-1/2 bottom-[calc(100%+6px)] z-30 w-[min(13rem,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-lg border border-hairline bg-surface-2 text-left shadow-xl">
         <button type="button" data-src="device" class="ac-src flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-ink hover:bg-surface-3">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-ink-subtle"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
+          <span class="flex h-4.5 w-4.5 shrink-0 items-center justify-center" set:html={ICON_DEVICE} />
           From this device
         </button>
         <button type="button" data-src="gdrive" class="ac-src flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-ink hover:bg-surface-3">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-ink-subtle"><path d="M8 3h8l5 9-4 7H7l-4-7z"/></svg>
+          <span class="flex h-4.5 w-4.5 shrink-0 items-center justify-center" set:html={ICON_DRIVE} />
           Google Drive
         </button>
         <button type="button" data-src="dropbox" class="ac-src flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-ink hover:bg-surface-3">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-ink-subtle"><path d="m7 3 5 3-5 3-5-3zM17 3l5 3-5 3-5-3zM2 12l5 3 5-3-5-3zM17 9l5 3-5 3-5-3zM7 18l5-3 5 3-5 3z"/></svg>
+          <span class="flex h-4.5 w-4.5 shrink-0 items-center justify-center" set:html={ICON_DROPBOX} />
           Dropbox
+        </button>
+        <button type="button" data-src="url" class="ac-src flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-ink hover:bg-surface-3">
+          <span class="flex h-4.5 w-4.5 shrink-0 items-center justify-center" set:html={ICON_URL} />
+          Web Address (URL)
         </button>
       </div>
     </div>
@@ -103,6 +108,7 @@ const accept = from ? `.${from}` : '';
 
 <script>
   import { driveReady, pickFromDrive, warmGoogle } from '../lib/drivePickers';
+  import { importFileFromUrl } from '../lib/cloudUpload';
   import { backendFor, chainPath, targetsFor } from '../data/formatCatalog';
 
   const root = document.getElementById('ac-root') as HTMLElement;
@@ -116,7 +122,7 @@ const accept = from ? `.${from}` : '';
   const fileInput = $('ac-file') as HTMLInputElement;
   const drop = $('ac-drop');
   const dropLabel = $('ac-drop-label');
-  const target = document.querySelector<HTMLSelectElement>('#ac-target');
+  const target = document.getElementById('ac-target') as unknown as HTMLSelectElement | null;
   const runBtn = $('ac-run') as HTMLButtonElement;
   const dlBtn = $('ac-download') as HTMLAnchorElement;
   const status = $('ac-status');
@@ -452,6 +458,14 @@ const accept = from ? `.${from}` : '';
       const src = btn.dataset.src!;
       const label = btn.textContent!.trim();
       if (src === 'device') { srcNote.classList.add('hidden'); openPicker(); return; }
+      if (src === 'url') {
+        srcNote.classList.add('hidden');
+        try {
+          const file = await importFileFromUrl();
+          if (file) load([file]);
+        } catch (err) { setErr((err as Error).message); }
+        return;
+      }
 
       if (!driveReady(src)) {
         srcNote.textContent = `${label} isn't set up yet — use “From this device” for now.`;
