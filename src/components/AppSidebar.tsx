@@ -1,15 +1,8 @@
 import * as React from "react";
 import { useState, useEffect } from "react";
 import {
-  FileText,
-  Code,
-  Image as ImageIcon,
-  RefreshCw,
-  Calculator,
   Sparkles,
   Shield,
-  Video,
-  Gauge,
   ChevronRight,
   Home,
   BookOpen,
@@ -43,18 +36,39 @@ interface AppSidebarProps {
   currentPath: string;
 }
 
-const categoryIcons: Record<string, React.ComponentType<any>> = {
-  Text: FileText,
-  Developer: Code,
-  Image: ImageIcon,
-  Converters: RefreshCw,
-  Calculators: Calculator,
-  Generators: Sparkles,
-  Security: Shield,
-  PDF: FileText,
-  "Audio & Video": Video,
-  "Device & Sensors": Gauge,
+const categoryEmoji: Record<string, string> = {
+  Text: "🔤",
+  Developer: "🖥️",
+  Image: "🎨",
+  Converters: "🔀",
+  Calculators: "🧮",
+  Generators: "🪄",
+  Security: "🛡️",
+  PDF: "📚",
+  "Audio & Video": "🎥",
+  "Device & Sensors": "📟",
 };
+
+// Render an emoji as a Twemoji SVG so it looks identical on every OS.
+// Codepoint logic mirrors twemoji's grabTheRightIcon: strip VS16 unless part of a ZWJ sequence.
+const TWEMOJI_BASE = "https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/";
+function twemojiUrl(emoji: string): string {
+  const chars = emoji.indexOf("‍") < 0 ? emoji.replace(/️/g, "") : emoji;
+  const cp: string[] = [];
+  let hi = 0;
+  for (let i = 0; i < chars.length; i++) {
+    const c = chars.charCodeAt(i);
+    if (hi) {
+      cp.push((0x10000 + ((hi - 0xd800) << 10) + (c - 0xdc00)).toString(16));
+      hi = 0;
+    } else if (c >= 0xd800 && c <= 0xdbff) {
+      hi = c;
+    } else {
+      cp.push(c.toString(16));
+    }
+  }
+  return `${TWEMOJI_BASE}${cp.join("-")}.svg`;
+}
 
 export function AppSidebar({ currentPath }: AppSidebarProps) {
   const { toggleSidebar } = useSidebar();
@@ -198,7 +212,7 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
                 )
               )}
               {!isSearching && categories.map((category) => {
-                const Icon = categoryIcons[category] || FileText;
+                const emoji = categoryEmoji[category] || "🔧";
                 const categoryTools = filteredTools.filter((t) => t.category === category);
 
                 if (categoryTools.length === 0) return null;
@@ -218,7 +232,7 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
                       <CollapsibleTrigger asChild>
                         <SidebarMenuButton className="w-full justify-between">
                           <span className="flex items-center gap-2">
-                            <Icon className="h-4 w-4 text-ink-subtle" />
+                            <img src={twemojiUrl(emoji)} alt="" aria-hidden="true" loading="lazy" className="h-4 w-4 shrink-0" />
                             <span>{category}</span>
                           </span>
                           <ChevronRight className="h-4 w-4 text-ink-subtle transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
