@@ -441,6 +441,24 @@ pre.hl-block > code { background: transparent; padding: 0; }
 .hl-block .hljs-punctuation,
 .hl-block .hljs-tag { color: #8a8f98; }
 
+/* Tool control bars share one idiom across ~117 pages: a flex container with
+   `flex-wrap items-end justify-center gap-3` holding labels (flex-col with a
+   .field inside), a checkbox, and an action button. On phones that wraps into
+   ragged, misaligned rows with fixed-width fields (w-24/w-44/…) leaving gaps.
+   Below sm we stack it: column + stretch, and force .field full-width so inputs
+   fill the row instead of sitting tiny inside a full-width label. UNLAYERED so
+   it beats Tailwind's utility-layer width classes (w-24 etc.) without !important.
+   ponytail: one rule for all control bars; per-page overrides only if a page needs them. */
+@media (max-width: 639px) {
+  [class~="flex-wrap"][class~="items-end"][class~="justify-center"] {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  [class~="flex-wrap"][class~="items-end"][class~="justify-center"] .field {
+    width: 100%;
+  }
+}
+
 /* Mobile sidebar (Radix Sheet) slide. Kept UNLAYERED on purpose: inside
    @layer base it lost the cascade to Tailwind's utilities layer and never
    ran (panel snapped open). tailwindcss-animate@1 is a v3 plugin whose
