@@ -33,6 +33,23 @@ const CAT_FG: Record<string, string> = {
   'Audio & Video': 'text-indigo-400',
   'Device & Sensors': 'text-cyan-400',
 };
+const CAT_EMOJI: Record<string, string> = {
+  Text: '🔤',
+  Developer: '🖥️',
+  Image: '🎨',
+  Converters: '🔀',
+  Calculators: '🧮',
+  Generators: '🪄',
+  Security: '🛡️',
+  PDF: '📚',
+  'Audio & Video': '🎥',
+  'Device & Sensors': '📟',
+};
+const TWEMOJI_BASE = 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/';
+const twemojiUrl = (emoji: string): string => {
+  const chars = emoji.indexOf('‍') < 0 ? emoji.replace(/️/g, '') : emoji;
+  return TWEMOJI_BASE + Array.from(chars).map((ch) => ch.codePointAt(0)!.toString(16)).join('-') + '.svg';
+};
 const CAT_MENU = categories.map((c) => {
   const all = toolsByCategory(c);
   return {
@@ -41,6 +58,7 @@ const CAT_MENU = categories.map((c) => {
     count: all.length,
     blurb: CAT_BLURB[c] ?? '',
     fg: CAT_FG[c] ?? 'text-ink-tertiary',
+    emoji: twemojiUrl(CAT_EMOJI[c] ?? '🔧'),
     featured: all.slice(0, 4),
     tools: all,
   };
@@ -94,7 +112,8 @@ const CAT_MENU = categories.map((c) => {
               
               <div class="w-44 flex-none border-r border-hairline p-2">
                 {CAT_MENU.map((cat, i) => (
-                  <button type="button" class="nav-rail flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-subtle hover:bg-surface-3 hover:text-ink" data-cat={i} aria-controls={`mega-${i}`}>
+                  <button type="button" class="nav-rail flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-subtle hover:bg-surface-3 hover:text-ink" data-cat={i} aria-controls={`mega-${i}`}>
+                    <img src={cat.emoji} alt="" aria-hidden="true" loading="lazy" width="16" height="16" class="flex-none" />
                     <span>{cat.name}</span>
                   </button>
                 ))}
