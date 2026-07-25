@@ -4,7 +4,6 @@ import { ChevronRight, Search } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
@@ -265,36 +264,37 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-      </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border/50">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={normalizedPath === "/about"}>
-              <a href="/about">
-                <img src={twemojiUrl("📖")} alt="" aria-hidden="true" loading="lazy" className="h-4 w-4 shrink-0" />
-                <span>About</span>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={normalizedPath === "/contact"}>
-              <a href="/contact">
-                <img src={twemojiUrl("✉️")} alt="" aria-hidden="true" loading="lazy" className="h-4 w-4 shrink-0" />
-                <span>Contact Us</span>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={normalizedPath === "/privacy"}>
-              <a href="/privacy">
-                <img src={twemojiUrl("🔒")} alt="" aria-hidden="true" loading="lazy" className="h-4 w-4 shrink-0" />
-                <span>Privacy</span>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
+        {/* About / Contact / Privacy — scroll with the rest of the content */}
+        <SidebarGroup className="border-t border-sidebar-border/50">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={normalizedPath === "/about"}>
+                <a href="/about">
+                  <img src={twemojiUrl("📖")} alt="" aria-hidden="true" loading="lazy" className="h-4 w-4 shrink-0" />
+                  <span>About</span>
+                </a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={normalizedPath === "/contact"}>
+                <a href="/contact">
+                  <img src={twemojiUrl("✉️")} alt="" aria-hidden="true" loading="lazy" className="h-4 w-4 shrink-0" />
+                  <span>Contact Us</span>
+                </a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={normalizedPath === "/privacy"}>
+                <a href="/privacy">
+                  <img src={twemojiUrl("🔒")} alt="" aria-hidden="true" loading="lazy" className="h-4 w-4 shrink-0" />
+                  <span>Privacy</span>
+                </a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+      </SidebarContent>
     </Sidebar>
   );
 }
