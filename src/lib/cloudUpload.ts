@@ -180,7 +180,14 @@ function wire(input: HTMLInputElement) {
     const anchor = input.dataset.pickInline && document.getElementById(input.dataset.pickInline);
     if (anchor) anchor.replaceWith(wrap); else input.after(wrap);
   } else {
-    (label ?? input.parentElement ?? input).after(wrap);
+    // Fallback: drop the split picker exactly where the native input sat (no empty gap),
+    // and tuck the now-hidden input inside it so its "Choose File" text is gone.
+    wrap.className = 'relative inline-flex';
+    const holder = document.createElement('span');
+    holder.className = 'sr-only';
+    input.replaceWith(wrap);
+    holder.appendChild(input);
+    wrap.appendChild(holder);
   }
 }
 
