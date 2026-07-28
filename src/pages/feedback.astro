@@ -26,6 +26,29 @@ const toolIndex = tools.map((t) => ({ n: t.name, h: toolHaystack(t) }));
       </p>
 
       <form id="feedback-form" class="mt-8 flex flex-col gap-5">
+        <fieldset class="flex flex-col gap-2">
+          <legend class="text-sm font-medium text-ink">Rate ToolSilk</legend>
+          <div class="star-rating" role="radiogroup" aria-label="Rating out of 5 stars">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <>
+                <input
+                  type="radio"
+                  name="rating"
+                  id={`star-${n}`}
+                  value={n}
+                  class="sr-only"
+                />
+                <label for={`star-${n}`} title={`${n} star${n > 1 ? 's' : ''}`}>
+                  <span class="sr-only">{n} star{n > 1 ? 's' : ''}</span>
+                  <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
+                    <path d="M12 2.5l2.9 6.06 6.6.86-4.86 4.54 1.24 6.54L12 17.9l-5.88 3.1 1.24-6.54L2.5 9.42l6.6-.86z" />
+                  </svg>
+                </label>
+              </>
+            ))}
+          </div>
+        </fieldset>
+
         <label class="flex flex-col gap-2">
           <span class="text-sm font-medium text-ink">Type of request</span>
           <select
@@ -59,11 +82,10 @@ const toolIndex = tools.map((t) => ({ n: t.name, h: toolHaystack(t) }));
         </label>
 
         <label class="flex flex-col gap-2">
-          <span class="text-sm font-medium text-ink">Message</span>
+          <span class="text-sm font-medium text-ink">Message <span id="msg-optional" class="text-ink-subtle">(optional if you leave a rating)</span></span>
           <textarea
             name="message"
             rows="6"
-            required
             placeholder="Tell us what you'd like — what it should do, who it helps, or what went wrong."
             class="rounded-md border border-hairline bg-surface-2 px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           ></textarea>
@@ -139,6 +161,30 @@ const toolIndex = tools.map((t) => ({ n: t.name, h: toolHaystack(t) }));
     background-color: #16a34a;
     border-color: #16a34a;
     color: #fff;
+  }
+
+  /* Star rating. Radios drive state (works without JS, keyboard-accessible);
+     labels render the stars. We can't do a pure-CSS "highlight up to hovered"
+     with source order star-1..star-5, so JS toggles .is-on on the labels; the
+     :checked sibling rules below are the no-JS fallback (fill checked + earlier). */
+  .star-rating { display: flex; align-items: center; gap: 0.25rem; }
+  .star-rating label {
+    cursor: pointer;
+    color: var(--color-hairline-tertiary);
+    line-height: 0;
+    border-radius: var(--radius-sm);
+    transition: color 0.12s ease, transform 0.12s ease;
+  }
+  .star-rating label:hover { transform: scale(1.1); }
+  .star-rating svg { fill: currentColor; display: block; }
+  .star-rating label.is-on { color: #f5a524; }
+  /* No-JS fallback: fill just the checked star (CSS can't reach earlier siblings).
+     JS fills 1..N on change/hover via .is-on for the real experience. */
+  .star-rating input:checked + label { color: #f5a524; }
+  /* Keyboard focus ring on the visually-hidden radio → show on its label. */
+  .star-rating input:focus-visible + label {
+    outline: 2px solid color-mix(in srgb, var(--color-primary-focus) 60%, transparent);
+    outline-offset: 2px;
   }
 </style>
 
@@ -229,6 +275,21 @@ const toolIndex = tools.map((t) => ({ n: t.name, h: toolHaystack(t) }));
 </script>
 
 <script is:inline>
+  // Star rating: fill labels 1..N on hover/selection, support clearing.
+  (() => {
+    const group = document.querySelector('.star-rating');
+    if (!group) return;
+    const radios = [...group.querySelectorAll('input[name="rating"]')];
+    const labels = [...group.querySelectorAll('label')];
+    const paint = (upto) => labels.forEach((l, i) => l.classList.toggle('is-on', i < upto));
+    const selected = () => radios.findIndex((r) => r.checked) + 1;
+    labels.forEach((l, i) => {
+      l.addEventListener('mouseenter', () => paint(i + 1));
+    });
+    group.addEventListener('mouseleave', () => paint(selected()));
+    radios.forEach((r) => r.addEventListener('change', () => paint(selected())));
+  })();
+
   const form = document.getElementById('feedback-form');
   const status = document.getElementById('feedback-status');
   const btn = form?.querySelector('button[type="submit"]');
@@ -241,7 +302,17 @@ const toolIndex = tools.map((t) => ({ n: t.name, h: toolHaystack(t) }));
       tool: (data.get('tool') || '').toString().trim(),
       message: (data.get('message') || '').toString().trim(),
       from: (data.get('from') || '').toString().trim(),
+      rating: (data.get('rating') || '').toString(),
     };
+
+    // A rating alone is a valid submission; otherwise require a message.
+    if (!payload.rating && !payload.message) {
+      if (status) {
+        status.textContent = 'Leave a rating or a message (or both).';
+        status.style.color = '#f87171';
+      }
+      return;
+    }
 
     if (status) { status.textContent = ''; status.style.color = ''; }
     if (btn) {

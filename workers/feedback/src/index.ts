@@ -17,7 +17,7 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
-    let body: { type?: string; tool?: string; message?: string; from?: string };
+    let body: { type?: string; tool?: string; message?: string; from?: string; rating?: unknown };
     try {
       body = await request.json();
     } catch {
@@ -28,14 +28,28 @@ export default {
     const tool = (body.tool || '').toString().slice(0, 200);
     const message = (body.message || '').toString().trim().slice(0, 5000);
     const from = (body.from || '').toString().slice(0, 200);
+    // Rating is optional; accept only an integer 1–5, otherwise treat as none.
+    const ratingNum = Math.trunc(Number(body.rating));
+    const rating = ratingNum >= 1 && ratingNum <= 5 ? ratingNum : 0;
 
-    if (!message) return json({ error: 'Message is required' }, 400);
+    // A rating on its own is a valid submission; otherwise a message is required.
+    if (!message && !rating) return json({ error: 'Message or rating is required' }, 400);
     if (!env.FEEDBACK_EMAIL) return json({ error: 'Email not configured' }, 500);
 
     const to = env.FEEDBACK_TO || 'hello@toolsilk.com';
     const sender = env.FEEDBACK_FROM || 'feedback@toolsilk.com';
-    const subject = tool ? `${type}: ${tool}` : type;
-    const text = [`Type: ${type}`, tool && `Tool: ${tool}`, from && `From: ${from}`, '', message]
+    const stars = rating ? `${'★'.repeat(rating)}${'☆'.repeat(5 - rating)} (${rating}/5)` : '';
+    const subject = rating
+      ? `${type}: ${rating}★${tool ? ` — ${tool}` : ''}`
+      : tool ? `${type}: ${tool}` : type;
+    const text = [
+      `Type: ${type}`,
+      tool && `Tool: ${tool}`,
+      stars && `Rating: ${stars}`,
+      from && `From: ${from}`,
+      '',
+      message,
+    ]
       .filter((l) => l)
       .join('\r\n');
 

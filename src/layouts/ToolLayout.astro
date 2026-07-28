@@ -16,10 +16,13 @@ if (!tool) throw new Error(`Unknown tool slug: ${slug}`);
 
 const pageUrl = `${SITE.url}/${tool.slug}`;
 
+// Same-category tools first (most relevant + strongest topical signal), then
+// fill from other categories. 12 links per page ~doubles the internal crawl
+// paths into the 605 tools vs the old 6 — helps Google justify crawling deeper.
 const related = [
   ...tools.filter((t) => t.slug !== tool.slug && t.category === tool.category),
   ...tools.filter((t) => t.slug !== tool.slug && t.category !== tool.category),
-].slice(0, 6);
+].slice(0, 12);
 
 const jsonLd = [
   {
@@ -31,11 +34,6 @@ const jsonLd = [
     url: pageUrl,
     description: tool.description,
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: '4.8',
-      ratingCount: '128',
-    },
   },
   {
     '@context': 'https://schema.org',
