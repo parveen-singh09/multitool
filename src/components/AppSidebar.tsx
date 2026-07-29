@@ -64,7 +64,10 @@ export function AppSidebar({ currentPath }: AppSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
 
-  const normalizedPath = currentPath.replace(/\/$/, "");
+  // build.format:'file' makes Astro.url.pathname end in `.html` at build time
+  // (`/foo.html`), while the dev server serves the clean `/foo`. Strip it or the
+  // `/${slug}` comparisons below never match in the deployed site.
+  const normalizedPath = currentPath.replace(/\.html$/, "").replace(/\/$/, "");
 
   useEffect(() => {
     const nextOpen: Record<string, boolean> = {};
