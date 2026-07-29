@@ -259,11 +259,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const pdf = await buildPdf();
     if (!pdf) return;
     show.textContent = 'Rendering…';
+    mount.classList.remove('hidden'); // unhide first, else the loading placeholder animates out of sight
     try {
-      viewer = await mountViewer({ file: pdf });
-      mount.replaceChildren(viewer.root); mount.classList.remove('hidden');
+      viewer = await mountViewer({ file: pdf, mount });
+      mount.replaceChildren(viewer.root);
       show.textContent = 'Hide preview';
-    } catch (e) { console.error('[image-to-pdf] preview failed:', e); setErr('Preview failed: ' + (e as Error).message); show.textContent = 'Show preview'; }
+    } catch (e) { mount.classList.add('hidden'); console.error('[image-to-pdf] preview failed:', e); setErr('Preview failed: ' + (e as Error).message); show.textContent = 'Show preview'; }
   }
 
   fileInput.addEventListener('change', () => fileInput.files && addFiles(fileInput.files));

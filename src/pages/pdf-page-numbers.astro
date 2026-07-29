@@ -60,7 +60,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const panel = $('panel'), err = $('error'), status = $('status'), mount = $('viewer-mount');
   let bytes: ArrayBuffer | null = null, fname = 'document.pdf';
   let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  // Page geometry in pt, unrotated (pdf-lib's coordinate space — the one drawText writes into),
+  // plus /Rotate so the preview overlay can be turned to match how the viewer displays the page.
+  let sizes: { w: number; h: number; rot: number }[] = [];
+  const stamps: HTMLElement[] = [];             // one preview span per page slot
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+  const M = 24;                                 // margin, pt
 
   async function load(files: File[]) {
     setErr('');
@@ -68,8 +73,46 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     try {
       bytes = await files[0].arrayBuffer();
       fname = files[0].name.replace(/\.pdf$/i, '');
-      await PDFDocument.load(bytes.slice(0)); // validate
+      const doc = await PDFDocument.load(bytes.slice(0)); // validates + gives us page geometry
+      sizes = doc.getPages().map((p) => {
+        const { width, height } = p.getSize();
+        return { w: width, h: height, rot: ((p.getRotation().angle % 360) + 360) % 360 };
+      });
       panel.classList.remove('hidden'); panel.classList.add('flex');
+
+      // Mount the viewer once, on the *original* file. Numbers are DOM overlays, so changing the
+      // format or position never re-renders the PDF — the old code rebuilt and remounted the whole
+      // document on every keystroke, which is what made big files unusable.
+      const prev = viewer;
+      stamps.length = 0;
+      viewer = await mountViewer({
+        file: files[0],
+        onPage: (page, slot) => {
+          const g = sizes[page - 1];
+          const rot = g?.rot ?? 0, swap = rot === 90 || rot === 270;
+          // The viewer draws each page with /Rotate applied; pdf-lib draws text in unrotated space.
+          // This frame re-establishes unrotated space inside the slot, so one set of percentages is
+          // right on every page — and a rotated page previews its number turned, as it will appear.
+          slot.style.setProperty('container-type', 'size'); // frame sizes off the slot's height too
+          const frame = document.createElement('div');
+          frame.className = 'pointer-events-none absolute left-1/2 top-1/2 z-10';
+          frame.style.width = swap ? '100cqh' : '100cqw';
+          frame.style.height = swap ? '100cqw' : '100cqh';
+          frame.style.transform = `translate(-50%, -50%) rotate(${rot}deg)`;
+          frame.style.setProperty('container-type', 'inline-size'); // cqw inside = unrotated page width
+          const s = document.createElement('span');
+          s.className = 'absolute whitespace-nowrap';
+          s.style.fontFamily = 'Helvetica, Arial, sans-serif';
+          s.style.color = '#1a1a1a';
+          s.style.lineHeight = '1'; // predictable box height (1em) so paint() can offset to the baseline
+          frame.appendChild(s);
+          slot.appendChild(frame);
+          stamps[page - 1] = s;
+        },
+      });
+      prev?.destroy();
+      mount.replaceChildren(viewer.root);
+      paint();
     } catch (e) {
       console.error('[pdf-page-numbers] load failed:', e);
       setErr('Could not open that PDF: ' + (e as Error).message);
@@ -83,59 +126,67 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     return String(n);
   }
 
-  // Build the numbered PDF bytes. Shared by the live preview and the download.
-  async function build(): Promise<{ bytes: Uint8Array; n: number } | null> {
-    if (!bytes) return null;
-    const doc = await PDFDocument.load(bytes.slice(0));
-    const font = await doc.embedFont(StandardFonts.Helvetica);
-    const pages = doc.getPages();
-    const total = pages.length;
-    const start = parseInt(($('start') as HTMLInputElement).value, 10) || 0;
-    const size = Math.min(48, Math.max(6, +($('size') as HTMLInputElement).value || 11));
-    const pos = ($('pos') as HTMLSelectElement).value;
-    const fmt = ($('fmt') as HTMLSelectElement).value;
-    const M = 24;
-    pages.forEach((page, i) => {
-      const { width, height } = page.getSize();
-      const text = label(fmt, start + i, start + total - 1);
-      const tw = font.widthOfTextAtSize(text, size);
-      const x = pos[1] === 'l' ? M : pos[1] === 'r' ? width - tw - M : (width - tw) / 2;
-      const y = pos[0] === 't' ? height - M - size : M;
-      page.drawText(text, { x, y, size, font, color: rgb(0.1, 0.1, 0.1) });
+  const opts = () => ({
+    start: parseInt(($('start') as HTMLInputElement).value, 10) || 0,
+    size: Math.min(48, Math.max(6, +($('size') as HTMLInputElement).value || 11)),
+    pos: ($('pos') as HTMLSelectElement).value,
+    fmt: ($('fmt') as HTMLSelectElement).value,
+  });
+
+  // Helvetica metrics, as fractions of font size: where the baseline sits in a line-height:1 box.
+  // Used to line the preview text up with pdf-lib, which positions by baseline rather than box edge.
+  const ASC = 0.7555, DESC = 0.2445;
+
+  // Preview: retext and reposition the overlay spans. Pure DOM — no PDF rebuild, so this stays
+  // instant on a 500-page file. Percentages resolve against the unrotated frame, matching pt space.
+  // ponytail: Arial stands in for Helvetica, so centring can be a hair off; the download is authoritative.
+  function paint() {
+    const { start, size, pos, fmt } = opts();
+    const total = sizes.length;
+    stamps.forEach((s, i) => {
+      if (!s || !sizes[i]) return;
+      const { w, h } = sizes[i];
+      s.textContent = label(fmt, start + i, start + total - 1);
+      s.style.fontSize = `${(size / w) * 100}cqw`;
+      s.style.left = s.style.right = s.style.top = s.style.bottom = '';
+      s.style.transform = '';
+      if (pos[1] === 'l') s.style.left = `${(M / w) * 100}%`;
+      else if (pos[1] === 'r') s.style.right = `${(M / w) * 100}%`;
+      else { s.style.left = '50%'; s.style.transform = 'translateX(-50%)'; }
+      // Baseline targets: M from the bottom edge, or M + size down from the top edge.
+      if (pos[0] === 't') s.style.top = `${((M + size - ASC * size) / h) * 100}%`;
+      else s.style.bottom = `${((M - DESC * size) / h) * 100}%`;
     });
-    return { bytes: await doc.save(), n: total };
   }
 
   async function run() {
     if (!bytes) return;
     setErr(''); status.classList.remove('hidden'); status.textContent = 'Working…';
+    const go = $('go') as HTMLButtonElement;
+    go.disabled = true;
     try {
-      const out = await build();
-      if (!out) return;
-      download(out.bytes, `${fname}-numbered.pdf`);
-      status.textContent = `Done — numbered ${out.n} page(s).`;
-    } catch (e) { status.classList.add('hidden'); setErr('Could not add numbers: ' + (e as Error).message); }
+      const { start, size, pos, fmt } = opts();
+      const doc = await PDFDocument.load(bytes.slice(0));
+      const font = await doc.embedFont(StandardFonts.Helvetica);
+      const pages = doc.getPages();
+      const total = pages.length;
+      pages.forEach((page, i) => {
+        const { width, height } = page.getSize();
+        const text = label(fmt, start + i, start + total - 1);
+        const tw = font.widthOfTextAtSize(text, size);
+        const x = pos[1] === 'l' ? M : pos[1] === 'r' ? width - tw - M : (width - tw) / 2;
+        const y = pos[0] === 't' ? height - M - size : M;
+        page.drawText(text, { x, y, size, font, color: rgb(0.1, 0.1, 0.1) });
+      });
+      download(await doc.save(), `${fname}-numbered.pdf`);
+      status.textContent = `Done — numbered ${total} page(s).`;
+    } catch (e) {
+      status.classList.add('hidden'); setErr('Could not add numbers: ' + (e as Error).message);
+    } finally { go.disabled = false; }
   }
 
-  // Debounced full-document preview: stamp numbers, then mount the viewer on the numbered output.
-  let seq = 0, timer: ReturnType<typeof setTimeout> | null = null;
-  async function renderPreview() {
-    if (!bytes) return;
-    const my = ++seq;
-    try {
-      const out = await build();
-      if (!out || my !== seq) return;
-      const prev = viewer;
-      viewer = await mountViewer({ file: new File([out.bytes as BlobPart], 'numbered.pdf', { type: 'application/pdf' }) });
-      if (my !== seq) { viewer.destroy(); return; } // a newer render superseded us
-      prev?.destroy();
-      mount.replaceChildren(viewer.root);
-    } catch (e) { console.error('[pdf-page-numbers] preview failed:', e); }
-  }
-  const schedule = () => { if (timer) clearTimeout(timer); timer = setTimeout(renderPreview, 400); };
-
-  setupDrop($('dz'), $('file') as HTMLInputElement, async (f) => { await load(f); renderPreview(); });
-  panel.addEventListener('input', schedule);
-  panel.addEventListener('change', schedule);
+  setupDrop($('dz'), $('file') as HTMLInputElement, load);
+  panel.addEventListener('input', paint);
+  panel.addEventListener('change', paint);
   $('go').addEventListener('click', run);
 </script>
