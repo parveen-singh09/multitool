@@ -67,6 +67,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
   import { aiChat } from '../lib/ai';
   import { mountViewer } from '../lib/pdfViewer';
+  import { bindRun } from '../lib/pdfui';
   pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
   const MAX_CHARS = 100_000;
@@ -174,5 +175,5 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
   ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
   drop.addEventListener('drop', (ev) => { ev.preventDefault(); const fs = (ev as DragEvent).dataTransfer?.files; if (fs?.length) load(Array.from(fs)); });
-  runBtn.addEventListener('click', run);
+  bindRun(runBtn, run);
 </script>

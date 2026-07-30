@@ -37,13 +37,13 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
 <script>
   import { PDFDocument } from 'pdf-lib';
-  import { setupDrop, download, makeScheduler } from '../lib/pdfui';
+  import { setupDrop, download, makeScheduler, canPreviewRebuild, previewNote, bindRun } from '../lib/pdfui';
   import { mountViewer } from '../lib/pdfViewer';
 
   const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
   const panel = document.getElementById('panel')!, err = document.getElementById('error')!, status = document.getElementById('status')!;
   const mount = document.getElementById('viewer-mount')!;
-  let bytes: ArrayBuffer | null = null, fname = 'document.pdf';
+  let bytes: ArrayBuffer | null = null, fname = 'document.pdf', pageCount = 0;
   let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
 
@@ -57,8 +57,9 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       bytes = await files[0].arrayBuffer();
       fname = files[0].name.replace(/\.pdf$/i, '');
       const doc = await PDFDocument.load(bytes.slice(0));
+      pageCount = doc.getPageCount();
       document.getElementById('name')!.textContent = files[0].name;
-      document.getElementById('pages')!.textContent = String(doc.getPageCount());
+      document.getElementById('pages')!.textContent = String(pageCount);
       panel.classList.remove('hidden'); panel.classList.add('flex');
       renderPreview();
     } catch (e) {
@@ -117,14 +118,23 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (!bytes) return;
     const my = ++seq;
     try {
-      const out = await build();
+      // Past the phone budget, re-running pdf-lib on every change is what kills the tab. There we
+      // preview the original once and impose the sheets on download. Settings still apply — only the
+      // preview pixels stop tracking them.
+      const live = canPreviewRebuild(bytes.byteLength, pageCount);
+      if (!live && viewer) return; // static preview: nothing to re-render
+      const out = live ? await build() : null;
       const data = out ? out.bytes : new Uint8Array(bytes.slice(0));
       if (my !== seq) return;
-      const prev = viewer;
-      viewer = await mountViewer({ file: new File([data as BlobPart], 'preview.pdf', { type: 'application/pdf' }) });
-      if (my !== seq) { viewer.destroy(); return; } // superseded by a newer render
-      prev?.destroy();
+      const next = await mountViewer({
+        file: new File([data as BlobPart], 'preview.pdf', { type: 'application/pdf' }),
+        mount,
+        replaces: viewer, // viewer destroys it at the safe moment (before parsing, on phones)
+      });
+      if (my !== seq) { next.destroy(); return; } // superseded by a newer render
+      viewer = next;
       mount.replaceChildren(viewer.root);
+      if (!live) previewNote(mount, 'Preview shows the original pages. The N-up layout is applied to the downloaded file.');
     } catch (e) { console.error('[pdf-n-up] preview failed:', e); }
   }
   // Coalescing scheduler: never two full rebuilds in flight at once (see makeScheduler).
@@ -133,5 +143,5 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   setupDrop(document.getElementById('dz')!, $('file'), load);
   panel.addEventListener('input', schedule);
   panel.addEventListener('change', schedule);
-  document.getElementById('go')!.addEventListener('click', run);
+  bindRun(document.getElementById('go')!, run);
 </script>

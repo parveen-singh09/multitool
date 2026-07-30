@@ -31,6 +31,9 @@ export interface ViewerOptions {
   // and parsing the file happens before this function can return a root, so without it the page
   // sits empty for that whole stretch. We remove the placeholder ourselves before returning.
   mount?: HTMLElement;
+  // The viewer this one replaces, for tools that re-mount when settings change. We destroy it at the
+  // right moment and swap the new root into `mount`, which is what makes the swap safe on a phone.
+  replaces?: ViewerController | null;
 }
 
 const ICON_MENU = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>';
@@ -40,9 +43,21 @@ export async function mountViewer(opts: ViewerOptions): Promise<ViewerController
   // This runs before the first await, so it paints immediately. Convention default: the #viewer-mount
   // container every tool page already uses, so tools get this without passing anything.
   const target = opts.mount ?? document.getElementById('viewer-mount');
+  const prev = opts.replaces ?? null;
+  let killed = false;
+  const killPrev = () => { if (prev && !killed) { killed = true; prev.destroy(); } };
+  // On a phone, tear the outgoing viewer down BEFORE parsing the replacement. Holding both means two
+  // parsed documents and both sets of decoded pages are live at the same moment, and that peak is what
+  // makes the renderer kill the tab — which comes back looking like the page reloaded. Desktop keeps
+  // the old pixels up during the swap, since it has the headroom and the flash is worse than the cost.
+  if (prev && window.innerWidth < 640) { killPrev(); target?.replaceChildren(); }
   const placeholder = target ? showLoading(target) : null;
   try {
-    return await build(opts);
+    const ctl = await build(opts);
+    placeholder?.remove();
+    killPrev();
+    if (target && prev) target.replaceChildren(ctl.root);
+    return ctl;
   } finally {
     placeholder?.remove();
   }

@@ -46,7 +46,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
 <script>
   import { PDFDocument } from 'pdf-lib';
-  import { setupDrop, download, parsePageRange, makeScheduler } from '../lib/pdfui';
+  import { setupDrop, download, parsePageRange, makeScheduler, canPreviewRebuild, previewNote, bindRun } from '../lib/pdfui';
   import { mountViewer } from '../lib/pdfViewer';
 
   interface Crop { top: number; bottom: number; left: number; right: number } // points
@@ -134,14 +134,23 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (!bytes) return;
     const my = ++seq;
     try {
-      const out = await build();
+      // Past the phone budget, re-running pdf-lib on every keystroke is what kills the tab. There we
+      // preview the original once and crop on download. The inputs still apply — only the preview
+      // pixels stop tracking them.
+      const live = canPreviewRebuild(bytes.byteLength, crops.length);
+      if (!live && viewer) return; // static preview: nothing to re-render
+      const out = live ? await build() : null;
       const data = out ? out.bytes : new Uint8Array(bytes.slice(0));
       if (my !== seq) return;
-      const prev = viewer;
-      viewer = await mountViewer({ file: new File([data as BlobPart], 'preview.pdf', { type: 'application/pdf' }) });
-      if (my !== seq) { viewer.destroy(); return; } // superseded by a newer render
-      prev?.destroy();
+      const next = await mountViewer({
+        file: new File([data as BlobPart], 'preview.pdf', { type: 'application/pdf' }),
+        mount,
+        replaces: viewer, // viewer destroys it at the safe moment (before parsing, on phones)
+      });
+      if (my !== seq) { next.destroy(); return; } // superseded by a newer render
+      viewer = next;
       mount.replaceChildren(viewer.root);
+      if (!live) previewNote(mount, 'Preview shows the original. Your crop is applied to the downloaded file.');
     } catch (e) { console.error('[pdf-crop] preview failed:', e); }
   }
   // Coalescing scheduler: never two full rebuilds in flight at once (see makeScheduler).
@@ -151,5 +160,5 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   // The four crop inputs + unit drive "set all"; the range button targets a subset.
   ['top', 'bottom', 'left', 'right', 'unit'].forEach((id) => $(id).addEventListener('input', setAll));
   $('rng-go').addEventListener('click', () => applyRange($('rng').value));
-  document.getElementById('go')!.addEventListener('click', run);
+  bindRun(document.getElementById('go')!, run);
 </script>

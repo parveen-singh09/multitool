@@ -65,7 +65,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
 <script>
   import { PDFDocument } from 'pdf-lib';
-  import { setupDrop, download, parsePageRange, makeScheduler } from '../lib/pdfui';
+  import { setupDrop, download, parsePageRange, makeScheduler, canPreviewRebuild, previewNote, bindRun } from '../lib/pdfui';
   import { mountViewer } from '../lib/pdfViewer';
 
   const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
@@ -162,12 +162,18 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     if (!bytes) return;
     const my = ++seq;
     try {
-      const out = await build();
+      // Past the phone budget, re-running pdf-lib on every change is what kills the tab. There we
+      // preview the original once and apply the sizes on download. The dropdowns still work — only
+      // the preview pixels stop tracking them.
+      const live = canPreviewRebuild(bytes.byteLength, sizes.length);
+      if (!live && viewer) return; // static preview: nothing to re-render
+      const out = live ? await build() : null;
       const data = out ? out.bytes : new Uint8Array(bytes.slice(0));
       if (my !== seq) return;
-      const prev = viewer;
-      viewer = await mountViewer({
+      const next = await mountViewer({
         file: new File([data as BlobPart], 'preview.pdf', { type: 'application/pdf' }),
+        mount,
+        replaces: viewer, // viewer destroys it at the safe moment (before parsing, on phones)
         onPage: (page, slot) => {
           const i = page - 1;
           const sel = document.createElement('select');
@@ -178,9 +184,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
           slot.appendChild(sel);
         },
       });
-      if (my !== seq) { viewer.destroy(); return; } // superseded by a newer render
-      prev?.destroy();
+      if (my !== seq) { next.destroy(); return; } // superseded by a newer render
+      viewer = next;
       mount.replaceChildren(viewer.root);
+      if (!live) previewNote(mount, 'Preview shows the original. Your page sizes are applied to the downloaded file.');
     } catch (e) { console.error('[pdf-resize] preview failed:', e); }
   }
   // Coalescing scheduler: never two full rebuilds in flight at once (see makeScheduler).
@@ -193,5 +200,5 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   $('ch').addEventListener('input', schedule);
   $('rng-size').addEventListener('change', syncCustom); // reveal custom W/H if the range picks Custom
   $('rng-go').addEventListener('click', () => applyRange($('rng').value, $('rng-size').value));
-  document.getElementById('go')!.addEventListener('click', run);
+  bindRun(document.getElementById('go')!, run);
 </script>

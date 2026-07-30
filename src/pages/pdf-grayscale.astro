@@ -36,12 +36,13 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
 <script>
   import { PDFDocument } from 'pdf-lib';
-  import { setupDrop, download } from '../lib/pdfui';
+  import { setupDrop, download, bindRun } from '../lib/pdfui';
   import { rasterizeRebuild } from '../lib/pdfRaster';
   import { mountViewer } from '../lib/pdfViewer';
 
   const $ = (id: string) => document.getElementById(id)!;
   const panel = $('panel'), err = $('error'), status = $('status'), mount = $('viewer-mount');
+  let busy = false; // a second run while one is in flight doubles peak memory; ignore the tap instead
   let file: File | null = null, fname = 'document.pdf';
   let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
   let outBytes: Uint8Array | null = null; // grayscale bytes, held for the Download button
@@ -68,7 +69,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
 
   async function run() {
-    if (!file) return;
+    if (!file || busy) return;
+    busy = true;
     setErr(''); status.classList.remove('hidden'); status.textContent = 'Converting…';
     try {
       const scale = +($('scale') as HTMLSelectElement).value;
@@ -87,17 +89,26 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         },
       });
       outBytes = bytes;
-      // Preview the grayscale result and enable download.
-      const prev = viewer;
-      viewer = await mountViewer({ file: new File([outBytes as BlobPart], `${fname}-grayscale.pdf`, { type: 'application/pdf' }) });
-      prev?.destroy();
+      // Preview the grayscale result and enable download. `replaces` lets the viewer tear the old
+      // preview down before parsing the new one, which on a phone is the difference between a swap
+      // and an out-of-memory kill (the tab comes back looking like it reloaded).
+      viewer = await mountViewer({
+        file: new File([outBytes as BlobPart], `${fname}-grayscale.pdf`, { type: 'application/pdf' }),
+        mount,
+        replaces: viewer,
+      });
       mount.replaceChildren(viewer.root);
       $('dl').classList.remove('hidden');
       status.textContent = 'Done — converted to grayscale. Preview below.';
-    } catch (e) { status.classList.add('hidden'); setErr('Could not convert: ' + (e as Error).message); }
+    } catch (e) {
+      status.classList.add('hidden');
+      setErr('Could not convert: ' + (e as Error).message);
+    } finally {
+      busy = false;
+    }
   }
 
   setupDrop($('dz'), $('file') as HTMLInputElement, load);
-  $('go').addEventListener('click', run);
+  bindRun($('go'), run);
   $('dl').addEventListener('click', () => { if (outBytes) download(outBytes, `${fname}-grayscale.pdf`); });
 </script>

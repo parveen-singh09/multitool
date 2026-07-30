@@ -34,10 +34,14 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 <script>
   import * as pdfjsLib from 'pdfjs-dist';
   import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-  import { setupDrop, download } from '../lib/pdfui';
+  import { setupDrop, download, working, bindRun } from '../lib/pdfui';
   import { makeZip } from '../lib/zip';
   import { mountViewer } from '../lib/pdfViewer';
   pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+
+  // A very image-heavy PDF can hold more decoded bitmaps than a phone will allow. Stop at a cap and
+  // say so, rather than filling memory until the tab is killed.
+  const MAX_IMAGES = window.innerWidth < 640 ? 120 : 500;
 
   const $ = (id: string) => document.getElementById(id)!;
   const panel = $('panel'), grid = $('grid') as HTMLUListElement;
@@ -85,45 +89,80 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     $('name').textContent = files[0].name;
     panel.classList.remove('hidden'); panel.classList.add('flex');
     try {
-      viewer?.destroy();
-      viewer = await mountViewer({ file: files[0] });
+      viewer = await mountViewer({ file: files[0], mount, replaces: viewer });
       mount.replaceChildren(viewer.root);
     } catch (e) { console.error('[pdf-extract-images] preview failed:', e); }
     loading.classList.remove('hidden');
-    (($('zip')) as HTMLButtonElement).disabled = true;
+    loading.textContent = 'Scanning pages…';
+    working($('zip'), true, 'Scanning…');
+    let task: ReturnType<typeof pdfjsLib.getDocument> | null = null;
     try {
       const buf = (await files[0].arrayBuffer()).slice(0);
-      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      task = pdfjsLib.getDocument({ data: buf });
+      const pdf = await task.promise;
       const OPS = (pdfjsLib as any).OPS;
       const seen = new Set<string>();
-      for (let n = 1; n <= pdf.numPages; n++) {
+      let capped = false;
+      for (let n = 1; n <= pdf.numPages && !capped; n++) {
+        loading.textContent = `Scanning page ${n} of ${pdf.numPages}… ${found.length} image(s) found`;
         const page = await pdf.getPage(n);
         const ops = await page.getOperatorList();
         for (let i = 0; i < ops.fnArray.length; i++) {
           const fn = ops.fnArray[i];
           if (fn !== OPS.paintImageXObject && fn !== OPS.paintInlineImageXObject) continue;
           const arg = ops.argsArray[i][0];
-          const key = typeof arg === 'string' ? `${n}:${arg}` : `${n}:inline:${i}`;
+          // Key on the object id alone, not per-page: a logo repeated on 400 pages is one image, and
+          // re-extracting it per page is most of why a large file never finished.
+          const key = typeof arg === 'string' ? arg : `${n}:inline:${i}`;
           if (seen.has(key)) continue; seen.add(key);
-          const img = typeof arg === 'string'
-            ? await new Promise<any>((res) => page.objs.get(arg, res)).catch(() => null)
-            : arg;
+          const img = typeof arg === 'string' ? await getObj(page, arg) : arg;
           if (!img) continue;
           const canvas = imgToCanvas(img);
           if (!canvas) continue;
           const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/png'));
+          canvas.width = canvas.height = 0; // release the backing store now, not at the next GC
           if (!blob) continue;
           const name = `${fname}-p${n}-img${found.length + 1}.png`;
           const url = URL.createObjectURL(blob);
           found.push({ name, blob, url });
-          addCard(url, name, canvas.width, canvas.height);
+          addCard(url, name, img.width, img.height);
+          if (found.length >= MAX_IMAGES) { capped = true; break; }
         }
+        page.cleanup();
+        // Yield between pages: without this the whole scan is one long task, so nothing repaints
+        // (the progress line looks frozen) and the browser can't reclaim the last page's bitmaps.
+        await new Promise((r) => setTimeout(r, 0));
       }
       loading.classList.add('hidden');
       $('count').textContent = String(found.length);
-      (($('zip')) as HTMLButtonElement).disabled = found.length === 0;
-      if (!found.length) setErr('No embedded raster images found. Vector graphics and text are not extracted.');
-    } catch (e) { loading.classList.add('hidden'); setErr('Could not read that PDF: ' + (e as Error).message); }
+      working($('zip'), false);
+      ($('zip') as HTMLButtonElement).disabled = found.length === 0;
+      if (capped) setErr(`Stopped at ${MAX_IMAGES} images to stay within this device's memory. Extracted the first ${MAX_IMAGES}.`);
+      else if (!found.length) setErr('No embedded raster images found. Vector graphics and text are not extracted.');
+    } catch (e) {
+      loading.classList.add('hidden');
+      working($('zip'), false);
+      ($('zip') as HTMLButtonElement).disabled = true;
+      setErr('Could not read that PDF: ' + (e as Error).message);
+    } finally {
+      task?.destroy().catch(() => {}); // frees the worker's copy of the document
+    }
+  }
+
+  // Resolve a pdf.js image XObject.
+  //
+  // objs.get(id, cb) INSERTS a pending entry and only settles when the worker sends that object — but
+  // an image reused across pages is sent to `commonObjs` instead, so the page-store promise never
+  // settles and never rejects. Awaiting it froze the whole scan on the first shared image, which is
+  // why a large PDF produced nothing at all. Check both stores, and never wait forever.
+  async function getObj(page: any, id: string): Promise<any> {
+    for (const store of [page.objs, page.commonObjs]) {
+      try { if (store?.has?.(id)) return store.get(id); } catch { /* not resolved yet */ }
+    }
+    return Promise.race([
+      new Promise<any>((res) => page.objs.get(id, res)),
+      new Promise<null>((res) => setTimeout(() => res(null), 3000)),
+    ]);
   }
 
   function addCard(url: string, name: string, w: number, h: number) {
@@ -133,16 +172,17 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       <span class="text-xs text-ink-tertiary">${w}×${h}</span>`;
     const btn = document.createElement('button');
     btn.type = 'button'; btn.className = 'btn btn-secondary px-2 py-1 text-[13px]'; btn.textContent = 'Download';
-    btn.addEventListener('click', () => { const a = document.createElement('a'); a.href = url; a.download = name; a.click(); });
+    // Via download(): a detached anchor's .click() is ignored by iOS Safari, so these did nothing on a phone.
+    btn.addEventListener('click', () => { const f = found.find((x) => x.url === url); if (f) download(f.blob, name, 'image/png'); });
     li.appendChild(btn);
     grid.appendChild(li);
   }
 
-  $('zip').addEventListener('click', () => {
+  bindRun($('zip'), async () => {
     if (!found.length) return;
-    Promise.all(found.map(async (f) => ({ name: f.name, data: new Uint8Array(await f.blob.arrayBuffer()) })))
-      .then((entries) => download(new Blob([makeZip(entries) as BlobPart], { type: 'application/zip' }), `${fname}-images.zip`));
-  });
+    const entries = await Promise.all(found.map(async (f) => ({ name: f.name, data: new Uint8Array(await f.blob.arrayBuffer()) })));
+    download(new Blob([makeZip(entries) as BlobPart], { type: 'application/zip' }), `${fname}-images.zip`);
+  }, 'Zipping…');
 
   setupDrop($('dz'), $('file') as HTMLInputElement, load);
 </script>

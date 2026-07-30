@@ -92,6 +92,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   import * as pdfjsLib from 'pdfjs-dist';
   import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
   import { mountViewer } from '../lib/pdfViewer';
+  import { bindRun } from '../lib/pdfui';
   pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
   const fileInput = document.getElementById('pt-file') as HTMLInputElement;
@@ -313,7 +314,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   ['dragover', 'dragenter'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('bg-surface-2'); }));
   ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
   drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files; if (f?.length) load(f); });
-  document.getElementById('pt-extract')!.addEventListener('click', run);
+  bindRun(document.getElementById('pt-extract')!, run);
   document.getElementById('pt-clear')!.addEventListener('click', () => {
     files = []; out.value = ''; fileInput.value = '';
     viewer?.destroy(); viewer = null; mount.replaceChildren();

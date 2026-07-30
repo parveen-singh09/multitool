@@ -61,6 +61,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   import { PDFDocument } from 'pdf-lib';
   import { makeZip } from '../lib/zip';
   import { mountViewer } from '../lib/pdfViewer';
+  import { bindRun } from '../lib/pdfui';
 
   const $ = (id: string) => document.getElementById(id)!;
   const fileInput = $('ps-file') as HTMLInputElement;
@@ -269,5 +270,5 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   ['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, () => drop.classList.remove('bg-surface-2')));
   drop.addEventListener('drop', (ev) => { ev.preventDefault(); const fs = (ev as DragEvent).dataTransfer?.files; if (fs?.length) load(Array.from(fs)); });
   $('ps-reset').addEventListener('click', restore);
-  $('ps-go').addEventListener('click', run);
+  bindRun($('ps-go'), run);
 </script>

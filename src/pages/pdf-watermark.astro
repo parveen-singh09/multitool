@@ -89,7 +89,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
   import { PDFDocument, degrees } from 'pdf-lib';
   import { fillPlacement, visibleBox, pageRotation } from '../lib/pdfStamp';
-  import { setupDrop, download } from '../lib/pdfui';
+  import { setupDrop, download, bindRun } from '../lib/pdfui';
   pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
   const $ = (id: string) => document.getElementById(id)!;
@@ -416,7 +416,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   $('text-size').addEventListener('input', (e) => withActive((o) => { if (o instanceof fabric.IText) o.set('fontSize', +(e.target as HTMLInputElement).value || 40); }));
   $('text-color').addEventListener('input', (e) => withActive((o) => { if (o instanceof fabric.IText) o.set('fill', (e.target as HTMLInputElement).value); }));
   $('obj-op').addEventListener('input', (e) => withActive((o) => o.set('opacity', (+(e.target as HTMLInputElement).value || 60) / 100)));
-  $('go').addEventListener('click', run);
+  bindRun($('go'), run);
 
   const rangeWrap = $('range-wrap');
   ($('all-pages') as HTMLInputElement).addEventListener('change', (e) => {
