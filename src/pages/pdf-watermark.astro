@@ -87,7 +87,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   import * as fabric from 'fabric';
   import * as pdfjsLib from 'pdfjs-dist';
   import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-  import { PDFDocument } from 'pdf-lib';
+  import { PDFDocument, degrees } from 'pdf-lib';
+  import { fillPlacement, visibleBox, pageRotation } from '../lib/pdfStamp';
   import { setupDrop, download } from '../lib/pdfui';
   pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
@@ -388,10 +389,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       if (!want.size) { status.classList.add('hidden'); setErr('Enter a valid page range, e.g. 1-3, 5.'); return; }
       const targets = [...want].map((n) => pages[n - 1]);
       for (const p of targets) {
-        const { width, height } = p.getSize();
         // The overlay was arranged on a page-1-shaped canvas; stretch it to fill each page.
+        // Anchored to the CropBox (not x:0,y:0 + MediaBox size) and counter-rotated for /Rotate —
+        // otherwise the watermark is displaced or sideways on scanned and imposed pages.
         // ponytail: assumes uniform page size — fine for typical docs; per-page re-fit if that ever matters.
-        p.drawImage(png, { x: 0, y: 0, width, height });
+        const f = fillPlacement(visibleBox(p), pageRotation(p));
+        p.drawImage(png, { x: f.x, y: f.y, width: f.width, height: f.height, rotate: degrees(f.rotate) });
       }
       download(await doc.save(), `${fname}-watermarked.pdf`);
       status.textContent = `Done — watermarked ${targets.length} page(s).`;

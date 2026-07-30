@@ -38,20 +38,27 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 <style>.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }</style>
 
 <script>
-  import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+  import { PDFDocument, StandardFonts, rgb, type PDFFont } from 'pdf-lib';
   import { setupDrop, download } from '../lib/pdfui';
   import { mountViewer } from '../lib/pdfViewer';
+  import { stampCorner, pageGeom, placeStamp, type PageGeom, type Corner } from '../lib/pdfStamp';
 
   const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
   const panel = document.getElementById('panel')!, err = document.getElementById('error')!, status = document.getElementById('status')!, preview = document.getElementById('preview')!;
   const mount = document.getElementById('viewer-mount')!;
   let bytes: ArrayBuffer | null = null, fname = 'document.pdf';
   let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  let geoms: PageGeom[] = [];          // per-page visible box + rotation, read once at load
+  let measure: PDFFont | null = null;  // Helvetica metrics for preview text widths
+  const spans: HTMLElement[] = [];     // one preview span per page slot
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
 
   const stamp = (n: number) => $('prefix').value + String(n).padStart(Math.min(12, Math.max(1, +$('digits').value || 6)), '0') + $('suffix').value;
-
-  function refresh() { preview.textContent = 'Preview: ' + stamp(+$('start').value || 0); }
+  const opts = () => ({
+    size: Math.min(24, Math.max(6, +$('size').value || 10)),
+    start: +$('start').value || 0,
+    corner: $('pos').value as Corner,
+  });
 
   async function load(files: File[]) {
     setErr('');
@@ -60,69 +67,73 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       bytes = await files[0].arrayBuffer();
       fname = files[0].name.replace(/\.pdf$/i, '');
       const doc = await PDFDocument.load(bytes.slice(0));
+      geoms = doc.getPages().map(pageGeom);
+      measure = await doc.embedFont(StandardFonts.Helvetica);
       document.getElementById('name')!.textContent = files[0].name;
       document.getElementById('pages')!.textContent = String(doc.getPageCount());
       panel.classList.remove('hidden'); panel.classList.add('flex');
+
+      // Mount the viewer once on the ORIGINAL file; stamps preview as DOM overlays. The old code
+      // re-stamped every page with pdf-lib and remounted the whole viewer on each keystroke, which
+      // is what made large documents crawl.
+      const prev = viewer;
+      spans.length = 0;
+      viewer = await mountViewer({
+        file: files[0],
+        mount,
+        onPage: (page, slot) => {
+          slot.style.setProperty('container-type', 'inline-size'); // placeStamp sizes in cqw
+          const s = document.createElement('span');
+          s.className = 'pointer-events-none z-10';
+          s.style.fontFamily = 'Helvetica, Arial, sans-serif';
+          s.style.color = '#1a1a1a';
+          slot.appendChild(s);
+          spans[page - 1] = s;
+        },
+      });
+      prev?.destroy();
+      mount.replaceChildren(viewer.root);
       refresh();
-      renderPreview();
     } catch (e) {
       console.error('[pdf-bates-numbering] load failed:', e);
       setErr('Could not open that PDF: ' + (e as Error).message);
     }
   }
 
-  // Build the Bates-stamped PDF bytes. Shared by the live preview and the download.
-  async function build(): Promise<{ bytes: Uint8Array; n: number } | null> {
-    if (!bytes) return null;
-    const doc = await PDFDocument.load(bytes.slice(0));
-    const font = await doc.embedFont(StandardFonts.Helvetica);
-    const size = Math.min(24, Math.max(6, +$('size').value || 10));
-    const start = +$('start').value || 0;
-    const pos = $('pos').value;
-    const M = 24;
-    doc.getPages().forEach((page, i) => {
-      const { width, height } = page.getSize();
+  // Retext + reposition the overlays. Pure DOM, so it stays instant on a 1000-page discovery set.
+  function refresh() {
+    const { size, start, corner } = opts();
+    preview.textContent = 'Preview: ' + stamp(start);
+    if (!measure) return;
+    spans.forEach((s, i) => {
+      if (!s || !geoms[i]) return;
       const text = stamp(start + i);
-      const tw = font.widthOfTextAtSize(text, size);
-      const x = pos[1] === 'l' ? M : pos[1] === 'r' ? width - tw - M : (width - tw) / 2;
-      const y = pos[0] === 't' ? height - M - size : M;
-      page.drawText(text, { x, y, size, font, color: rgb(0.1, 0.1, 0.1) });
+      placeStamp(s, geoms[i], { text, corner, size, textWidth: measure!.widthOfTextAtSize(text, size) });
     });
-    return { bytes: await doc.save(), n: doc.getPageCount() };
   }
 
   async function run() {
     if (!bytes) return;
     setErr(''); status.classList.remove('hidden'); status.textContent = 'Stamping…';
+    const go = document.getElementById('go') as HTMLButtonElement;
+    go.disabled = true;
     try {
-      const out = await build();
-      if (!out) return;
-      download(out.bytes, `${fname}-bates.pdf`);
-      status.textContent = `Done — stamped ${out.n} page(s).`;
-    } catch (e) { status.classList.add('hidden'); setErr('Could not stamp: ' + (e as Error).message); }
+      const { size, start, corner } = opts();
+      const doc = await PDFDocument.load(bytes.slice(0));
+      const font = await doc.embedFont(StandardFonts.Helvetica);
+      const pages = doc.getPages();
+      // stampCorner anchors to the CropBox and compensates for /Rotate, so every page gets a
+      // visible stamp — including scanned sets that mix page geometry.
+      pages.forEach((page, i) => stampCorner(page, { text: stamp(start + i), font, size, corner, color: rgb(0.1, 0.1, 0.1) }));
+      download(await doc.save(), `${fname}-bates.pdf`);
+      status.textContent = `Done — stamped ${pages.length} page(s).`;
+    } catch (e) {
+      status.classList.add('hidden'); setErr('Could not stamp: ' + (e as Error).message);
+    } finally { go.disabled = false; }
   }
-
-  // Debounced full-document preview: stamp Bates numbers, then mount the viewer on the result.
-  let seq = 0, timer: ReturnType<typeof setTimeout> | null = null;
-  async function renderPreview() {
-    if (!bytes) return;
-    const my = ++seq;
-    try {
-      const out = await build();
-      const data = out ? out.bytes : new Uint8Array(bytes.slice(0));
-      if (my !== seq) return;
-      const prev = viewer;
-      viewer = await mountViewer({ file: new File([data as BlobPart], 'preview.pdf', { type: 'application/pdf' }) });
-      if (my !== seq) { viewer.destroy(); return; } // superseded by a newer render
-      prev?.destroy();
-      mount.replaceChildren(viewer.root);
-    } catch (e) { console.error('[pdf-bates-numbering] preview failed:', e); }
-  }
-  const schedule = () => { if (timer) clearTimeout(timer); timer = setTimeout(renderPreview, 400); };
 
   setupDrop(document.getElementById('dz')!, $('file'), load);
-  ['prefix', 'suffix', 'start', 'digits'].forEach((id) => $(id).addEventListener('input', refresh));
-  panel.addEventListener('input', schedule);
-  panel.addEventListener('change', schedule);
+  panel.addEventListener('input', refresh);
+  panel.addEventListener('change', refresh);
   document.getElementById('go')!.addEventListener('click', run);
 </script>

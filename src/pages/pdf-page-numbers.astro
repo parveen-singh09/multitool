@@ -52,20 +52,19 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 <style>.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }</style>
 
 <script>
-  import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+  import { PDFDocument, StandardFonts, rgb, type PDFFont } from 'pdf-lib';
   import { setupDrop, download } from '../lib/pdfui';
   import { mountViewer } from '../lib/pdfViewer';
+  import { stampCorner, pageGeom, placeStamp, type PageGeom, type Corner } from '../lib/pdfStamp';
 
   const $ = (id: string) => document.getElementById(id)!;
   const panel = $('panel'), err = $('error'), status = $('status'), mount = $('viewer-mount');
   let bytes: ArrayBuffer | null = null, fname = 'document.pdf';
   let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
-  // Page geometry in pt, unrotated (pdf-lib's coordinate space — the one drawText writes into),
-  // plus /Rotate so the preview overlay can be turned to match how the viewer displays the page.
-  let sizes: { w: number; h: number; rot: number }[] = [];
+  let geoms: PageGeom[] = [];          // per-page visible box + rotation, read once at load
+  let measure: PDFFont | null = null;  // Helvetica metrics for preview text widths
   const stamps: HTMLElement[] = [];             // one preview span per page slot
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
-  const M = 24;                                 // margin, pt
 
   async function load(files: File[]) {
     setErr('');
@@ -74,10 +73,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       bytes = await files[0].arrayBuffer();
       fname = files[0].name.replace(/\.pdf$/i, '');
       const doc = await PDFDocument.load(bytes.slice(0)); // validates + gives us page geometry
-      sizes = doc.getPages().map((p) => {
-        const { width, height } = p.getSize();
-        return { w: width, h: height, rot: ((p.getRotation().angle % 360) + 360) % 360 };
-      });
+      geoms = doc.getPages().map(pageGeom);
+      measure = await doc.embedFont(StandardFonts.Helvetica);
       panel.classList.remove('hidden'); panel.classList.add('flex');
 
       // Mount the viewer once, on the *original* file. Numbers are DOM overlays, so changing the
@@ -87,26 +84,14 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       stamps.length = 0;
       viewer = await mountViewer({
         file: files[0],
+        mount,
         onPage: (page, slot) => {
-          const g = sizes[page - 1];
-          const rot = g?.rot ?? 0, swap = rot === 90 || rot === 270;
-          // The viewer draws each page with /Rotate applied; pdf-lib draws text in unrotated space.
-          // This frame re-establishes unrotated space inside the slot, so one set of percentages is
-          // right on every page — and a rotated page previews its number turned, as it will appear.
-          slot.style.setProperty('container-type', 'size'); // frame sizes off the slot's height too
-          const frame = document.createElement('div');
-          frame.className = 'pointer-events-none absolute left-1/2 top-1/2 z-10';
-          frame.style.width = swap ? '100cqh' : '100cqw';
-          frame.style.height = swap ? '100cqw' : '100cqh';
-          frame.style.transform = `translate(-50%, -50%) rotate(${rot}deg)`;
-          frame.style.setProperty('container-type', 'inline-size'); // cqw inside = unrotated page width
+          slot.style.setProperty('container-type', 'inline-size'); // placeStamp sizes in cqw
           const s = document.createElement('span');
-          s.className = 'absolute whitespace-nowrap';
+          s.className = 'pointer-events-none z-10';
           s.style.fontFamily = 'Helvetica, Arial, sans-serif';
           s.style.color = '#1a1a1a';
-          s.style.lineHeight = '1'; // predictable box height (1em) so paint() can offset to the baseline
-          frame.appendChild(s);
-          slot.appendChild(frame);
+          slot.appendChild(s);
           stamps[page - 1] = s;
         },
       });
@@ -129,33 +114,21 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const opts = () => ({
     start: parseInt(($('start') as HTMLInputElement).value, 10) || 0,
     size: Math.min(48, Math.max(6, +($('size') as HTMLInputElement).value || 11)),
-    pos: ($('pos') as HTMLSelectElement).value,
+    corner: ($('pos') as HTMLSelectElement).value as Corner,
     fmt: ($('fmt') as HTMLSelectElement).value,
   });
 
-  // Helvetica metrics, as fractions of font size: where the baseline sits in a line-height:1 box.
-  // Used to line the preview text up with pdf-lib, which positions by baseline rather than box edge.
-  const ASC = 0.7555, DESC = 0.2445;
-
   // Preview: retext and reposition the overlay spans. Pure DOM — no PDF rebuild, so this stays
-  // instant on a 500-page file. Percentages resolve against the unrotated frame, matching pt space.
+  // instant on a 500-page file. placeStamp mirrors the download's placement, CropBox and /Rotate included.
   // ponytail: Arial stands in for Helvetica, so centring can be a hair off; the download is authoritative.
   function paint() {
-    const { start, size, pos, fmt } = opts();
-    const total = sizes.length;
+    const { start, size, corner, fmt } = opts();
+    const total = geoms.length;
+    if (!measure) return;
     stamps.forEach((s, i) => {
-      if (!s || !sizes[i]) return;
-      const { w, h } = sizes[i];
-      s.textContent = label(fmt, start + i, start + total - 1);
-      s.style.fontSize = `${(size / w) * 100}cqw`;
-      s.style.left = s.style.right = s.style.top = s.style.bottom = '';
-      s.style.transform = '';
-      if (pos[1] === 'l') s.style.left = `${(M / w) * 100}%`;
-      else if (pos[1] === 'r') s.style.right = `${(M / w) * 100}%`;
-      else { s.style.left = '50%'; s.style.transform = 'translateX(-50%)'; }
-      // Baseline targets: M from the bottom edge, or M + size down from the top edge.
-      if (pos[0] === 't') s.style.top = `${((M + size - ASC * size) / h) * 100}%`;
-      else s.style.bottom = `${((M - DESC * size) / h) * 100}%`;
+      if (!s || !geoms[i]) return;
+      const text = label(fmt, start + i, start + total - 1);
+      placeStamp(s, geoms[i], { text, corner, size, textWidth: measure!.widthOfTextAtSize(text, size) });
     });
   }
 
@@ -165,19 +138,16 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const go = $('go') as HTMLButtonElement;
     go.disabled = true;
     try {
-      const { start, size, pos, fmt } = opts();
+      const { start, size, corner, fmt } = opts();
       const doc = await PDFDocument.load(bytes.slice(0));
       const font = await doc.embedFont(StandardFonts.Helvetica);
       const pages = doc.getPages();
       const total = pages.length;
-      pages.forEach((page, i) => {
-        const { width, height } = page.getSize();
-        const text = label(fmt, start + i, start + total - 1);
-        const tw = font.widthOfTextAtSize(text, size);
-        const x = pos[1] === 'l' ? M : pos[1] === 'r' ? width - tw - M : (width - tw) / 2;
-        const y = pos[0] === 't' ? height - M - size : M;
-        page.drawText(text, { x, y, size, font, color: rgb(0.1, 0.1, 0.1) });
-      });
+      // stampCorner anchors to the CropBox and compensates for /Rotate, so pages with an inset or
+      // offset visible area get a number that's actually on screen, not just in the file.
+      pages.forEach((page, i) => stampCorner(page, {
+        text: label(fmt, start + i, start + total - 1), font, size, corner, color: rgb(0.1, 0.1, 0.1),
+      }));
       download(await doc.save(), `${fname}-numbered.pdf`);
       status.textContent = `Done — numbered ${total} page(s).`;
     } catch (e) {

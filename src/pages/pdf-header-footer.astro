@@ -38,16 +38,29 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 <style>.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; } code { background: var(--color-surface-2); color: var(--color-ink); padding: 0 4px; border-radius: 3px; }</style>
 
 <script>
-  import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+  import { PDFDocument, StandardFonts, rgb, type PDFFont } from 'pdf-lib';
   import { setupDrop, download } from '../lib/pdfui';
   import { mountViewer } from '../lib/pdfViewer';
+  import { stampCorner, pageGeom, placeStamp, type PageGeom, type Corner } from '../lib/pdfStamp';
 
   const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
   const panel = document.getElementById('panel')!, err = document.getElementById('error')!, status = document.getElementById('status')!;
   const mount = document.getElementById('viewer-mount')!;
   let bytes: ArrayBuffer | null = null, fname = 'document.pdf';
   let viewer: Awaited<ReturnType<typeof mountViewer>> | null = null;
+  let geoms: PageGeom[] = [];          // per-page visible box + rotation, read once at load
+  let measure: PDFFont | null = null;  // Helvetica metrics for preview text widths
+  const rows: HTMLElement[][] = [];    // per page: one preview span per slot, in SLOTS order
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
+
+  // Input id -> the corner it stamps. The ids already encode header/footer + left/center/right.
+  const SLOTS: { id: string; corner: Corner }[] = [
+    { id: 'hl', corner: 'tl' }, { id: 'hc', corner: 'tc' }, { id: 'hr', corner: 'tr' },
+    { id: 'fl', corner: 'bl' }, { id: 'fc', corner: 'bc' }, { id: 'fr', corner: 'br' },
+  ];
+  const values = () => SLOTS.map((s) => $(s.id).value);
+  const fontSize = () => Math.min(24, Math.max(6, +$('size').value || 10));
+  const sub = (t: string, n: number, total: number) => t.replace(/\{n\}/g, String(n)).replace(/\{total\}/g, String(total));
 
   async function load(files: File[]) {
     setErr('');
@@ -56,79 +69,86 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       bytes = await files[0].arrayBuffer();
       fname = files[0].name.replace(/\.pdf$/i, '');
       const doc = await PDFDocument.load(bytes.slice(0));
+      geoms = doc.getPages().map(pageGeom);
+      measure = await doc.embedFont(StandardFonts.Helvetica);
       document.getElementById('name')!.textContent = files[0].name;
       document.getElementById('pages')!.textContent = String(doc.getPageCount());
       panel.classList.remove('hidden'); panel.classList.add('flex');
-      renderPreview();
+
+      // Mount once on the original file; the six slots preview as DOM overlays. The old code
+      // re-stamped and remounted the entire document on every keystroke.
+      const prev = viewer;
+      rows.length = 0;
+      viewer = await mountViewer({
+        file: files[0],
+        mount,
+        onPage: (page, slot) => {
+          slot.style.setProperty('container-type', 'inline-size'); // placeStamp sizes in cqw
+          rows[page - 1] = SLOTS.map(() => {
+            const s = document.createElement('span');
+            s.className = 'pointer-events-none z-10';
+            s.style.fontFamily = 'Helvetica, Arial, sans-serif';
+            s.style.color = '#1a1a1a';
+            slot.appendChild(s);
+            return s;
+          });
+        },
+      });
+      prev?.destroy();
+      mount.replaceChildren(viewer.root);
+      paint();
     } catch (e) {
       console.error('[pdf-header-footer] load failed:', e);
       setErr('Could not open that PDF: ' + (e as Error).message);
     }
   }
 
-  const sub = (t: string, n: number, total: number) => t.replace(/\{n\}/g, String(n)).replace(/\{total\}/g, String(total));
-
-  // Build the stamped PDF bytes. Shared by the live preview and the download.
-  // Returns null when every slot is empty (nothing to show).
-  async function build(): Promise<{ bytes: Uint8Array; n: number } | null> {
-    if (!bytes) return null;
-    const slots = ['hl', 'hc', 'hr', 'fl', 'fc', 'fr'].map((id) => $(id).value);
-    if (slots.every((s) => !s.trim())) return null;
-    const doc = await PDFDocument.load(bytes.slice(0));
-    const font = await doc.embedFont(StandardFonts.Helvetica);
-    const size = Math.min(24, Math.max(6, +$('size').value || 10));
-    const M = 24, color = rgb(0.1, 0.1, 0.1);
-    const pages = doc.getPages();
-    const total = pages.length;
-    pages.forEach((page, i) => {
-      const { width, height } = page.getSize();
-      const draw = (raw: string, align: number, top: boolean) => {
-        const text = sub(raw, i + 1, total);
-        if (!text.trim()) return;
-        const tw = font.widthOfTextAtSize(text, size);
-        const x = align === 0 ? M : align === 2 ? width - tw - M : (width - tw) / 2;
-        const y = top ? height - M : M - size + 4;
-        page.drawText(text, { x, y, size, font, color });
-      };
-      [slots[0], slots[1], slots[2]].forEach((s, a) => draw(s, a, true));
-      [slots[3], slots[4], slots[5]].forEach((s, a) => draw(s, a, false));
+  // Preview: retext and reposition the overlays. Pure DOM, no PDF rebuild.
+  function paint() {
+    const vals = values(), size = fontSize(), total = geoms.length;
+    if (!measure) return;
+    rows.forEach((spans, i) => {
+      if (!geoms[i]) return;
+      SLOTS.forEach((slot, k) => {
+        const span = spans?.[k];
+        if (!span) return;
+        const text = sub(vals[k], i + 1, total);
+        // Empty slots collapse rather than positioning an invisible span.
+        if (!text.trim()) { span.textContent = ''; span.style.display = 'none'; return; }
+        span.style.display = '';
+        placeStamp(span, geoms[i], { text, corner: slot.corner, size, textWidth: measure!.widthOfTextAtSize(text, size) });
+      });
     });
-    return { bytes: await doc.save(), n: total };
   }
 
   async function run() {
     if (!bytes) return;
-    const slots = ['hl', 'hc', 'hr', 'fl', 'fc', 'fr'].map((id) => $(id).value);
-    if (slots.every((s) => !s.trim())) { setErr('Enter text in at least one slot.'); return; }
+    const vals = values();
+    if (vals.every((s) => !s.trim())) { setErr('Enter text in at least one slot.'); return; }
     setErr(''); status.classList.remove('hidden'); status.textContent = 'Working…';
+    const go = document.getElementById('go') as HTMLButtonElement;
+    go.disabled = true;
     try {
-      const out = await build();
-      if (!out) return;
-      download(out.bytes, `${fname}-header-footer.pdf`);
-      status.textContent = `Done — stamped ${out.n} page(s).`;
-    } catch (e) { status.classList.add('hidden'); setErr('Could not stamp: ' + (e as Error).message); }
+      const size = fontSize();
+      const doc = await PDFDocument.load(bytes.slice(0));
+      const font = await doc.embedFont(StandardFonts.Helvetica);
+      const pages = doc.getPages();
+      const total = pages.length;
+      // stampCorner anchors to the CropBox and compensates for /Rotate. The old footer baseline
+      // (M - size + 4) sat below even the MediaBox floor, so footers could vanish entirely.
+      pages.forEach((page, i) => SLOTS.forEach((slot, k) => {
+        const text = sub(vals[k], i + 1, total);
+        if (text.trim()) stampCorner(page, { text, font, size, corner: slot.corner, color: rgb(0.1, 0.1, 0.1) });
+      }));
+      download(await doc.save(), `${fname}-header-footer.pdf`);
+      status.textContent = `Done — stamped ${total} page(s).`;
+    } catch (e) {
+      status.classList.add('hidden'); setErr('Could not stamp: ' + (e as Error).message);
+    } finally { go.disabled = false; }
   }
-
-  // Debounced live preview: stamp the header/footer, then mount the viewer on the result.
-  // With every slot empty, show the original PDF so there's always a preview.
-  let seq = 0, timer: ReturnType<typeof setTimeout> | null = null;
-  async function renderPreview() {
-    if (!bytes) return;
-    const my = ++seq;
-    try {
-      const out = await build();
-      const data = out ? out.bytes : new Uint8Array(bytes.slice(0));
-      if (my !== seq) return;
-      const prev = viewer;
-      viewer = await mountViewer({ file: new File([data as BlobPart], 'preview.pdf', { type: 'application/pdf' }) });
-      if (my !== seq) { viewer.destroy(); return; } // superseded by a newer render
-      prev?.destroy();
-      mount.replaceChildren(viewer.root);
-    } catch (e) { console.error('[pdf-header-footer] preview failed:', e); }
-  }
-  const schedule = () => { if (timer) clearTimeout(timer); timer = setTimeout(renderPreview, 400); };
 
   setupDrop(document.getElementById('dz')!, $('file'), load);
-  panel.addEventListener('input', schedule);
+  panel.addEventListener('input', paint);
+  panel.addEventListener('change', paint);
   document.getElementById('go')!.addEventListener('click', run);
 </script>
