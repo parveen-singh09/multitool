@@ -23,6 +23,32 @@ export function setupDrop(
   drop.addEventListener('drop', (ev) => { ev.preventDefault(); const f = (ev as DragEvent).dataTransfer?.files; if (f) onFiles(keep(f)); });
 }
 
+// Debounce a rebuild-the-whole-PDF preview, and never let two run at once.
+//
+// The tools that change page geometry (crop, flip, resize, n-up) can't preview with a DOM overlay —
+// they have to re-run pdf-lib and re-parse the result. Plain debouncing isn't enough: on a phone one
+// rebuild of a large document outlasts the debounce window, so the next one starts while the first is
+// still going and two full documents (plus their saved copies) are live at once. That's what pushes a
+// mobile renderer over its memory limit, and the tab comes back looking like it reloaded.
+//
+// So: coalesce. While a rebuild is running, extra requests set a flag and re-run once, after.
+// Phones also get a longer window, since a rebuild there costs seconds rather than milliseconds.
+export function makeScheduler(run: () => Promise<void>, delay?: number, mobileDelay?: number) {
+  const wait = window.innerWidth < 640 ? (mobileDelay ?? 900) : (delay ?? 400);
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let running = false, queued = false;
+  const fire = async () => {
+    if (running) { queued = true; return; }
+    running = true;
+    try { await run(); } catch (e) { console.error('[preview] rebuild failed:', e); }
+    finally {
+      running = false;
+      if (queued) { queued = false; void fire(); }
+    }
+  };
+  return () => { if (timer) clearTimeout(timer); timer = setTimeout(fire, wait); };
+}
+
 // Parse "1-3, 5, 8-10" into zero-based unique page indices within [1, count]. Empty string => all pages.
 export function parsePageRange(str: string, count: number): number[] {
   if (!str.trim()) return Array.from({ length: count }, (_, i) => i);

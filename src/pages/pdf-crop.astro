@@ -46,7 +46,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
 <script>
   import { PDFDocument } from 'pdf-lib';
-  import { setupDrop, download, parsePageRange } from '../lib/pdfui';
+  import { setupDrop, download, parsePageRange, makeScheduler } from '../lib/pdfui';
   import { mountViewer } from '../lib/pdfViewer';
 
   interface Crop { top: number; bottom: number; left: number; right: number } // points
@@ -129,7 +129,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   // Debounced live preview: crop per-page, then mount the viewer on the result.
   // With no crop set, show the original PDF so there's always a preview.
-  let seq = 0, timer: ReturnType<typeof setTimeout> | null = null;
+  let seq = 0;
   async function renderPreview() {
     if (!bytes) return;
     const my = ++seq;
@@ -144,7 +144,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       mount.replaceChildren(viewer.root);
     } catch (e) { console.error('[pdf-crop] preview failed:', e); }
   }
-  const schedule = () => { if (timer) clearTimeout(timer); timer = setTimeout(renderPreview, 400); };
+  // Coalescing scheduler: never two full rebuilds in flight at once (see makeScheduler).
+  const schedule = makeScheduler(renderPreview);
 
   setupDrop(document.getElementById('dz')!, $('file'), load);
   // The four crop inputs + unit drive "set all"; the range button targets a subset.

@@ -496,7 +496,12 @@ pre.hl-block > code { background: transparent; padding: 0; }
 @keyframes pdf-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @keyframes pdf-spin { to { transform: rotate(1turn); } }
 
-.pdf-skel {
+/* Flat by default. Animating background-position on a gradient repaints on the main thread every
+   frame and is NOT compositor-accelerated, so a 500-page doc animating 1000 placeholders (page +
+   thumbnail) pegs the CPU on a phone. Only placeholders near the viewport get .is-live. */
+.pdf-skel { background: #e9ebee; }
+
+.pdf-skel.is-live {
   background: linear-gradient(90deg, #e9ebee 25%, #f4f5f7 50%, #e9ebee 75%);
   background-size: 200% 100%;
   animation: pdf-shimmer 1.4s linear infinite;

@@ -62,25 +62,41 @@ async function build(opts: ViewerOptions): Promise<ViewerController> {
 
   // --- Chrome ---------------------------------------------------------------
   const root = el('div', 'overflow-hidden rounded-lg border border-hairline');
-  const bar = el('div', 'flex flex-wrap items-center gap-x-2 gap-y-2 border-b border-hairline bg-surface-3 px-3 py-2 text-[13px] text-ink');
-  const railToggle = btn('rounded p-1.5 hover:bg-white/10', ICON_MENU, 'Toggle thumbnails');
-  const nameEl = el('span', 'min-w-0 max-w-[40%] truncate font-medium'); nameEl.textContent = opts.file.name;
-  const busy = el('span', 'hidden shrink-0 items-center gap-1.5 whitespace-nowrap text-ink-subtle');
-  busy.innerHTML = '<span class="pdf-spin"></span>Rendering…';
+  // Toolbar. Two fixed rows on mobile, one row on sm+ — NOT flex-wrap. With wrapping, the zoom
+  // controls slid left and right mid-render: the "Rendering…" chip appears and disappears in the
+  // same row, and the page counter changes width as you scroll, so items kept re-flowing between
+  // rows. `sm:contents` lets each row dissolve into the single desktop row without duplicate markup.
+  const bar = el('div', 'flex flex-col gap-y-2 border-b border-hairline bg-surface-3 px-3 py-2 text-[13px] text-ink sm:flex-row sm:items-center sm:gap-x-2');
+  const topRow = el('div', 'flex min-w-0 items-center gap-2 sm:contents');
+  const ctlRow = el('div', 'flex items-center justify-between gap-2 sm:contents');
+  const railToggle = btn('shrink-0 rounded p-1.5 hover:bg-white/10', ICON_MENU, 'Toggle thumbnails');
+  const nameEl = el('span', 'min-w-0 flex-1 truncate font-medium sm:max-w-[40%] sm:flex-none'); nameEl.textContent = opts.file.name;
+  // Reserves its width even when idle, so showing it can't shift anything. Desktop keeps the label;
+  // mobile shows the spinner alone, where horizontal room is scarce.
+  const busy = el('span', 'invisible flex shrink-0 items-center gap-1.5 whitespace-nowrap text-ink-subtle');
+  busy.innerHTML = '<span class="pdf-spin"></span><span class="hidden sm:inline">Rendering…</span>';
   busy.setAttribute('role', 'status');
-  const counter = el('span', 'whitespace-nowrap text-ink-tertiary');
-  const curEl = el('span', ''); curEl.textContent = '1';
+  const counter = el('span', 'shrink-0 whitespace-nowrap tabular-nums text-ink-tertiary');
+  const curEl = el('span', 'inline-block text-right'); curEl.textContent = '1';
+  // Widest page number decides the width up front, so "9 / 500" -> "10 / 500" doesn't nudge the row.
+  curEl.style.minWidth = `${String(pageCount).length}ch`;
   const totEl = el('span', ''); totEl.textContent = String(pageCount);
-  counter.append(curEl, document.createTextNode(' / '), totEl);
-  const spacer = el('span', 'flex-1');
-  const zoomWrap = el('div', 'flex items-center gap-1');
+  counter.appendChild(curEl);
+  counter.appendChild(document.createTextNode(' / '));
+  counter.appendChild(totEl);
+  const spacer = el('span', 'hidden flex-1 sm:block');
+  const zoomWrap = el('div', 'flex shrink-0 items-center gap-1');
   const zOut = btn('rounded px-2 py-1 text-base leading-none hover:bg-white/10', '−', 'Zoom out');
   const zPct = el('span', 'w-12 text-center tabular-nums text-ink-tertiary'); zPct.textContent = '100%';
   const zIn = btn('rounded px-2 py-1 text-base leading-none hover:bg-white/10', '+', 'Zoom in');
   const zFit = btn('ml-1 rounded px-2 py-1 text-xs hover:bg-white/10', 'Fit', 'Fit to width');
   zoomWrap.append(zOut, zPct, zIn, zFit);
-  const actions = el('div', 'ml-2 flex shrink-0 items-center gap-2'); // tool buttons land here
-  bar.append(railToggle, nameEl, counter, busy, spacer, zoomWrap, actions);
+  const actions = el('div', 'flex shrink-0 items-center gap-2 sm:ml-2'); // tool buttons land here
+  // appendChild, not append(...kids): the repo's DOM lib resolves multi-arg append to a non-Node overload.
+  const add = (p: HTMLElement, kids: HTMLElement[]) => { for (const k of kids) p.appendChild(k); };
+  add(topRow, [railToggle, nameEl, counter, busy]);
+  add(ctlRow, [zoomWrap, actions]);
+  add(bar, [topRow, spacer, ctlRow]);
 
   const body = el('div', 'relative flex sm:items-stretch');
   // Rail: off-canvas left drawer on mobile (slides in over the viewer), static sidebar on sm+.
@@ -95,18 +111,35 @@ async function build(opts: ViewerOptions): Promise<ViewerController> {
   const railCards: HTMLElement[] = [];
   const railThumbs: HTMLElement[] = [];
   const backdrops: HTMLImageElement[] = [];
-  const skels: HTMLElement[] = [];  // shimmer placeholders, removed as each page renders
+  const skels: HTMLElement[] = [];  // shimmer placeholders, hidden (not removed) as pages render
   const started: boolean[] = [];   // page has begun rendering (never render twice)
-  const urls: string[] = [];       // blob URLs to revoke on destroy
+  const pageUrl: (string | null)[] = [];  // live blob URL per page, null once evicted
+  const resident: number[] = [];   // page numbers currently holding a decoded image
+  const visible = new Set<number>();  // pages intersecting the viewport — never evicted
+  const gen: number[] = [];        // bumped on evict, so a render in flight knows it was superseded
   let destroyed = false;
   let current = 1;
+
+  // A rendered page keeps a decoded bitmap alive for as long as its <img> holds the blob URL —
+  // roughly width*height*4 bytes, so ~0.5MB per page at phone width. Holding all of them was
+  // ~275MB for a 500-page document, which a mobile renderer kills rather than swaps: the tab
+  // reappears "reloaded". So cap how many stay resident and evict the ones furthest from view.
+  // Phones get a tighter cap and less render concurrency (each in-flight render needs its own
+  // full-page canvas, and one core doing 4 rasterizations at once is what makes scrolling lag).
+  const phone = window.innerWidth < 640;
+  const MAX_RESIDENT = phone ? 8 : 24;
+  const MAX_CONCURRENT = phone ? 1 : 3;
 
   for (let i = 1; i <= pageCount; i++) {
     // Rail thumbnail. Sized from page 1's ratio up front so the rail doesn't reflow as pages fill in.
     const thumb = document.createElement('canvas');
     thumb.className = 'pdf-skel block h-auto w-[130px] bg-white shadow ring-1 ring-black/10';
     thumb.style.transition = 'transform 0.2s ease';
-    thumb.width = 130; thumb.height = Math.round(130 / seedRatio);
+    // Backing store stays 1x1 until this thumb actually renders. Sizing it up front allocated
+    // 130x168x4 bytes per page — ~45MB of canvas for a 500-page doc, before rendering anything.
+    // CSS aspect-ratio holds the layout box, so the rail doesn't reflow when the real size lands.
+    thumb.width = 1; thumb.height = 1;
+    thumb.style.aspectRatio = `${seed.width} / ${seed.height}`;
     const card = btn('flex shrink-0 flex-col items-center gap-1.5 rounded border-2 border-transparent p-2 text-[12px] text-ink-subtle transition-colors', '');
     card.append(thumb, document.createTextNode(String(i)));
     card.addEventListener('click', () => goToPage(i));
@@ -141,44 +174,107 @@ async function build(opts: ViewerOptions): Promise<ViewerController> {
     opts.onPage?.(i, slot);
   }
 
-  // Pages render on approach, not all at once — a 300-page doc would otherwise queue 300 render
-  // tasks into the pdf.js worker at load and pin ~300 decoded images in memory.
   // Toolbar spinner reflects "some page is still rendering", counted rather than boolean so
   // overlapping renders don't clear it early.
   let pending = 0;
   function setBusy(delta: number) {
     pending += delta;
     const on = pending > 0 && !destroyed;
-    busy.classList.toggle('hidden', !on);
-    busy.classList.toggle('flex', on);
+    // visibility, not display: the chip keeps its space either way, so the zoom controls never move.
+    busy.classList.toggle('invisible', !on);
   }
 
-  async function ensure(n: number) {
-    if (destroyed || started[n - 1]) return;
-    started[n - 1] = true;
-    setBusy(1);
+  // Drop a rendered page's pixels. It re-renders from the queue if scrolled back to, so this is a
+  // cache, not a teardown: the slot keeps its size and its tool overlays, and shows the placeholder.
+  function evict(n: number) {
+    const i = n - 1;
+    const url = pageUrl[i];
+    if (!url) return;
+    backdrops[i]?.removeAttribute('src'); // release the decoded bitmap before revoking
+    URL.revokeObjectURL(url);
+    pageUrl[i] = null;
+    started[i] = false;
+    gen[i] = (gen[i] ?? 0) + 1; // invalidate any render still in flight for this page
+    const skel = skels[i];
+    if (skel) skel.style.display = '';
+    const t = railThumbs[i] as HTMLCanvasElement | undefined;
+    if (t) { t.width = 1; t.height = 1; t.classList.add('pdf-skel'); }
+    const at = resident.indexOf(n);
+    if (at >= 0) resident.splice(at, 1);
+  }
+
+  // Keep only MAX_RESIDENT pages in memory, dropping whichever is furthest from where you're looking.
+  // On-screen pages are never evicted: IntersectionObserver only fires on *changes*, so a page
+  // evicted while still visible would sit as a placeholder until you scrolled it away and back.
+  function trim() {
+    while (resident.length > MAX_RESIDENT) {
+      let worst = -1;
+      for (const n of resident) {
+        if (n === current || visible.has(n)) continue;
+        if (worst < 0 || Math.abs(n - current) > Math.abs(worst - current)) worst = n;
+      }
+      if (worst < 0) break; // everything resident is in view; over cap is better than a blank page
+      evict(worst);
+    }
+  }
+
+  // Render queue. Each in-flight render allocates a full-page canvas and competes for the single
+  // pdf.js worker, so running several at once on a phone is what makes scrolling stutter — one at a
+  // time there. Nearest-to-viewport goes first so the page you're actually on doesn't wait.
+  const queue: number[] = [];
+  let active = 0;
+
+  function ensure(n: number) {
+    if (destroyed || started[n - 1] || queue.includes(n)) return;
+    queue.push(n);
+    pump();
+  }
+
+  function pump() {
+    while (!destroyed && active < MAX_CONCURRENT && queue.length) {
+      let best = 0;
+      for (let k = 1; k < queue.length; k++) {
+        if (Math.abs(queue[k] - current) < Math.abs(queue[best] - current)) best = k;
+      }
+      const n = queue.splice(best, 1)[0];
+      // Scrolled far past while queued: drop it. Re-requested by the observer if it comes back.
+      if (Math.abs(n - current) > MAX_RESIDENT * 2) continue;
+      if (started[n - 1]) continue;
+      started[n - 1] = true;
+      active++;
+      setBusy(1);
+      void draw(n).finally(() => { active--; setBusy(-1); pump(); });
+    }
+  }
+
+  async function draw(n: number) {
+    const myGen = gen[n - 1] ?? 0;
     try {
       const { url, w, h } = await renderPage(n, railThumbs[n - 1] as HTMLCanvasElement);
-      if (destroyed) { URL.revokeObjectURL(url); return; }
-      urls.push(url);
+      // Evicted (and possibly re-queued) while this render was in flight: throw the pixels away
+      // rather than write a second URL into the slot and leak the first.
+      if (destroyed || myGen !== (gen[n - 1] ?? 0)) { URL.revokeObjectURL(url); return; }
+      pageUrl[n - 1] = url;
+      resident.push(n);
       slots[n - 1].style.aspectRatio = `${w} / ${h}`;
-      // Swap placeholder for the page only once the decode is done, so no white flash between them.
+      // Hide the placeholder only once the decode lands, so there's no white flash between them.
       const bd = backdrops[n - 1];
-      const drop = () => skels[n - 1]?.remove();
-      bd.addEventListener('load', drop, { once: true });
-      bd.addEventListener('error', drop, { once: true });
+      const hide = () => { const s = skels[n - 1]; if (s) s.style.display = 'none'; };
+      bd.addEventListener('load', hide, { once: true });
+      bd.addEventListener('error', hide, { once: true });
       bd.src = url;
       railThumbs[n - 1]?.classList.remove('pdf-skel');
+      trim();
     } catch (e) {
       if (destroyed) return; // a render aborted by destroy() isn't a failure worth showing
       console.error(`[pdfViewer] page ${n} render failed:`, e);
-      skels[n - 1]?.remove();
+      const s = skels[n - 1]; if (s) s.style.display = 'none';
       railThumbs[n - 1]?.classList.remove('pdf-skel');
       const note = el('div', 'absolute inset-0 z-[2] flex items-center justify-center p-4 text-center text-[12px]');
       note.style.color = '#e5484d';
       note.textContent = `Page ${n} failed to render: ${(e as Error).message}`;
       slots[n - 1]?.appendChild(note);
-    } finally { setBusy(-1); }
+    }
   }
 
   async function renderPage(n: number, thumb: HTMLCanvasElement): Promise<{ url: string; w: number; h: number }> {
@@ -199,12 +295,23 @@ async function build(opts: ViewerOptions): Promise<ViewerController> {
   }
 
   // Two lazy observers because the rail and the page stack scroll independently.
-  const lazyMain = new IntersectionObserver(
-    (es) => { for (const e of es) if (e.isIntersecting) ensure(Number((e.target as HTMLElement).dataset.page)); },
-    { root: viewer, rootMargin: '400px 0px' });
-  const lazyRail = new IntersectionObserver(
-    (es) => { for (const e of es) if (e.isIntersecting) ensure(Number((e.target as HTMLElement).dataset.page)); },
-    { root: rail, rootMargin: '300px 0px' });
+  // The shimmer only animates while a placeholder is near the viewport: it repaints on the main
+  // thread every frame, so leaving hundreds running off-screen is pure CPU burn on a phone.
+  const lazyMain = new IntersectionObserver((es) => {
+    for (const e of es) {
+      const n = Number((e.target as HTMLElement).dataset.page);
+      if (e.isIntersecting) { visible.add(n); ensure(n); } else visible.delete(n);
+      skels[n - 1]?.classList.toggle('is-live', e.isIntersecting);
+    }
+    trim(); // the visible band moved; drop what left it
+  }, { root: viewer, rootMargin: phone ? '150px 0px' : '400px 0px' });
+  const lazyRail = new IntersectionObserver((es) => {
+    for (const e of es) {
+      const n = Number((e.target as HTMLElement).dataset.page);
+      railThumbs[n - 1]?.classList.toggle('is-live', e.isIntersecting && !pageUrl[n - 1]);
+      if (e.isIntersecting) ensure(n);
+    }
+  }, { root: rail, rootMargin: phone ? '150px 0px' : '300px 0px' });
   slots.forEach((s) => lazyMain.observe(s));
   railCards.forEach((c) => lazyRail.observe(c));
   // Warm the first pages unconditionally: the observers can't fire while root is still detached
@@ -231,6 +338,7 @@ async function build(opts: ViewerOptions): Promise<ViewerController> {
       card.classList.toggle('text-ink-subtle', !active);
       if (active) card.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     });
+    trim(); // "furthest from view" moved, so re-check what's worth keeping
   }
   setCurrent(1);
 
@@ -295,7 +403,11 @@ async function build(opts: ViewerOptions): Promise<ViewerController> {
     destroy: () => {
       destroyed = true;
       observer.disconnect(); lazyMain.disconnect(); lazyRail.disconnect();
-      urls.forEach(URL.revokeObjectURL); urls.length = 0;
+      queue.length = 0;
+      // Drop every <img> src before revoking, else the decoded bitmaps outlive the URLs.
+      backdrops.forEach((bd) => bd.removeAttribute('src'));
+      pageUrl.forEach((u) => u && URL.revokeObjectURL(u));
+      pageUrl.length = 0; resident.length = 0;
       // Frees the worker's copy of the file. Tools that remount per keystroke leaked one whole
       // parsed document per render before this. destroy() lives on the loading task, not the proxy.
       task.destroy().catch(() => {});
@@ -317,7 +429,7 @@ function showLoading(target: HTMLElement): HTMLElement | null {
   label.textContent = 'Loading preview…';
   bar.appendChild(label);
   const body = el('div', 'flex justify-center bg-surface-1 p-4');
-  const page = el('div', 'pdf-skel w-full max-w-[620px] rounded-sm');
+  const page = el('div', 'pdf-skel is-live w-full max-w-[620px] rounded-sm'); // one element, always animating
   page.style.aspectRatio = '8.5 / 11'; // letter — the real ratio replaces it once page 1 is measured
   body.appendChild(page);
   box.appendChild(bar); box.appendChild(body);

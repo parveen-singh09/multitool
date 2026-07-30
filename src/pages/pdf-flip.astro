@@ -56,7 +56,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
 <script>
   import { PDFDocument } from 'pdf-lib';
-  import { setupDrop, download, parsePageRange } from '../lib/pdfui';
+  import { setupDrop, download, parsePageRange, makeScheduler } from '../lib/pdfui';
   import { mountViewer } from '../lib/pdfViewer';
 
   type Flip = 'none' | 'h' | 'v' | 'hv';
@@ -136,7 +136,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   // Debounced live preview: flip per-page, then mount the viewer on the result.
   // Each rebuilt slot gets its own flip dropdown reflecting that page's current value.
-  let seq = 0, timer: ReturnType<typeof setTimeout> | null = null;
+  let seq = 0;
   async function renderPreview() {
     if (!bytes) return;
     const my = ++seq;
@@ -162,7 +162,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       mount.replaceChildren(viewer.root);
     } catch (e) { console.error('[pdf-flip] preview failed:', e); }
   }
-  const schedule = () => { if (timer) clearTimeout(timer); timer = setTimeout(renderPreview, 400); };
+  // Coalescing scheduler: never two full rebuilds in flight at once (see makeScheduler).
+  const schedule = makeScheduler(renderPreview);
 
   setupDrop($('dz'), $('file') as HTMLInputElement, load);
   $('dir').addEventListener('change', () => setAll(($('dir') as HTMLSelectElement).value as Flip));

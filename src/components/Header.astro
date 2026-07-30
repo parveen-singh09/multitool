@@ -68,7 +68,12 @@ const CAT_MENU = categories.map((c) => {
 // rendering all ~627 tool links + inline SVGs inline made the doc 660KB — 84% of
 // it dead weight on mobile. Emit the tool data as JSON and build the grid
 // client-side on first hover instead. Footer still ships the links for SEO.
+// name/emoji are here for the mobile panel's section headings — the desktop rail renders those in
+// markup, but mobile builds the whole thing from this blob.
 const MEGA_TOOLS = CAT_MENU.map((cat) => ({
+  name: cat.name,
+  slug: cat.slug,
+  emoji: cat.emoji,
   fg: cat.fg,
   tools: cat.tools.map((t) => [t.slug, t.name, t.icon]),
 }));
@@ -80,7 +85,7 @@ const MEGA_TOOLS = CAT_MENU.map((cat) => ({
       {landing ? (
         <a href="/" class="inline-flex items-center gap-2 no-underline" aria-label="ToolSilk home">
           <img src="/favicon.svg" width="24" height="24" alt="" aria-hidden="true" class="rounded-[5px]" />
-          <span class="font-display font-semibold text-[15px] tracking-[-0.01em] text-ink">
+          <span class="hidden font-display font-semibold text-[15px] tracking-[-0.01em] text-ink lg:inline">
             Tool<span class="text-ink-subtle">Silk</span>
           </span>
         </a>
@@ -98,9 +103,23 @@ const MEGA_TOOLS = CAT_MENU.map((cat) => ({
               <line x1="4" y1="18" x2="20" y2="18" />
             </svg>
           </button>
-          <Logo />
+          <!-- Wordmark hides below lg so "All Tools" can take that slot; the favicon still links home. -->
+          <Logo class="[&>span]:hidden lg:[&>span]:inline" />
         </>
       )}
+
+      <!-- Mobile/tablet tool browser. The desktop mega-menu is hover-gated and hidden below lg,
+           so small screens had no way to see what tools exist. Same JSON blob, different shell. -->
+      <button
+        id="mtools-open"
+        type="button"
+        class="ml-1 inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-[13px] font-medium text-ink-subtle hover:bg-surface-2 hover:text-ink lg:hidden"
+        aria-expanded="false"
+        aria-controls="mtools-panel"
+      >
+        All Tools
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
     </div>
 
     <div class="hidden items-center gap-1 lg:flex">
@@ -138,7 +157,6 @@ const MEGA_TOOLS = CAT_MENU.map((cat) => ({
               </div>
             </div>
           </div>
-          <script type="application/json" id="mega-data" set:html={JSON.stringify(MEGA_TOOLS)} />
         </div>
       </div>
     </div>
@@ -163,7 +181,30 @@ const MEGA_TOOLS = CAT_MENU.map((cat) => ({
     </div>
   </nav>
 
+  <script is:inline type="application/json" id="mega-data" set:html={JSON.stringify(MEGA_TOOLS)} />
 </header>
+
+<!-- Mobile tool browser panel. Empty on purpose: the grid is built client-side on first open from
+     #mega-data, same as the desktop mega-menu. Inlining ~627 links would add ~550KB to every page.
+     Kept OUTSIDE <header> — the header's backdrop-blur makes it a containing block for fixed
+     descendants, which would collapse inset-0 to the 56px nav bar. -->
+<div id="mtools-panel" class="fixed inset-0 z-[70] hidden lg:hidden" role="dialog" aria-modal="true" aria-label="All tools">
+  <div id="mtools-backdrop" class="absolute inset-0 bg-black/60"></div>
+  <div class="absolute inset-x-0 top-0 flex max-h-[100dvh] flex-col border-b border-hairline bg-canvas shadow-2xl">
+    <div class="flex items-center justify-between gap-3 border-b border-hairline px-4 py-3">
+      <span class="text-[13px] font-medium text-ink">All Tools</span>
+      <button
+        id="mtools-close"
+        type="button"
+        class="-mr-1 rounded-md p-1.5 text-ink-subtle hover:bg-surface-2 hover:text-ink"
+        aria-label="Close tool menu"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div id="mtools-body" class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4"></div>
+  </div>
+</div>
 
 <style>
 
@@ -257,6 +298,118 @@ const MEGA_TOOLS = CAT_MENU.map((cat) => ({
       grid.appendChild(frag);
     });
   };
+
+  // --- Mobile tool browser --------------------------------------------------
+  // Same #mega-data blob as the desktop mega-menu, laid out as flowing columns of category
+  // sections. Built once, on first open, so pages that never open it pay nothing.
+  const mtBtn = document.getElementById('mtools-open');
+  const mtPanel = document.getElementById('mtools-panel');
+  const mtBody = document.getElementById('mtools-body');
+  if (mtBtn && mtPanel && mtBody) {
+    const NS2 = 'http://www.w3.org/2000/svg';
+    let mtBuilt = false;
+
+    const buildMobile = () => {
+      if (mtBuilt) return;
+      mtBuilt = true;
+      const raw = document.getElementById('mega-data')?.textContent;
+      if (!raw) return;
+      const data = JSON.parse(raw) as {
+        name: string; slug: string; emoji: string; fg: string; tools: [string, string, string][];
+      }[];
+      const sections: HTMLElement[] = [];
+      for (const cat of data) {
+        const section = document.createElement('section');
+        section.className = 'mb-4';
+
+        const h = document.createElement('a');
+        h.href = `/tools/${cat.slug}`;
+        h.className = 'mb-2 flex items-center gap-1.5 text-[16px] font-semibold uppercase tracking-wide text-ink no-underline';
+        const em = document.createElement('img');
+        em.src = cat.emoji; em.width = 17; em.height = 17; em.alt = ''; em.loading = 'lazy';
+        em.setAttribute('aria-hidden', 'true');
+        em.className = 'flex-none';
+        const hl = document.createElement('span');
+        hl.textContent = cat.name;
+        h.appendChild(em);
+        h.appendChild(hl);
+        section.appendChild(h);
+
+        for (const [slug, name, icon] of cat.tools) {
+          const a = document.createElement('a');
+          a.href = `/${slug}`;
+          a.className = 'flex items-center gap-2 rounded-md py-1 text-[13px] leading-snug text-ink-subtle no-underline hover:text-ink';
+          const svg = document.createElementNS(NS2, 'svg');
+          svg.setAttribute('width', '14');
+          svg.setAttribute('height', '14');
+          svg.setAttribute('viewBox', '0 0 24 24');
+          svg.setAttribute('fill', 'none');
+          svg.setAttribute('stroke', 'currentColor');
+          svg.setAttribute('stroke-width', '1.75');
+          svg.setAttribute('stroke-linecap', 'round');
+          svg.setAttribute('stroke-linejoin', 'round');
+          svg.setAttribute('class', `flex-none ${cat.fg}`);
+          const p = document.createElementNS(NS2, 'path');
+          p.setAttribute('d', icon);
+          svg.appendChild(p);
+          const sp = document.createElement('span');
+          sp.className = 'min-w-0 flex-1';
+          sp.textContent = name;
+          a.appendChild(svg);
+          a.appendChild(sp);
+          section.appendChild(a);
+        }
+        sections.push(section);
+      }
+
+      // ponytail: pack whole sections into flex columns rather than using CSS multi-column.
+      // CSS columns split a tall category mid-list and the continuation loses its heading — there's
+      // no way to repeat one. Packing by section means nothing splits, so nothing is orphaned.
+      const wrap = document.createElement('div');
+      wrap.className = 'flex items-start gap-5';
+      const n = Math.min(4, Math.max(1, Math.floor((mtBody.clientWidth || 320) / 152)));
+      const cols: HTMLElement[] = [];
+      for (let i = 0; i < n; i++) {
+        const c = document.createElement('div');
+        c.className = 'min-w-0 flex-1';
+        cols.push(c);
+        wrap.appendChild(c);
+      }
+      mtBody.appendChild(wrap);
+      // Each section lands in whichever column is currently shortest, measured live after every
+      // append. Deciding the split up front from tool counts or pre-measured heights kept ending up
+      // lopsided; reading the real height as we go can't be wrong, and an empty column is always
+      // the shortest, so none can be left blank.
+      for (const s of sections) {
+        let best = 0;
+        for (let i = 1; i < n; i++) {
+          if (cols[i].offsetHeight < cols[best].offsetHeight) best = i;
+        }
+        cols[best].appendChild(s);
+      }
+    };
+
+    const setOpen = (open: boolean) => {
+      // Unhide first: the column count reads mtBody.clientWidth, which is 0 while display:none.
+      mtPanel.classList.toggle('hidden', !open);
+      if (open) buildMobile();
+      mtBtn.setAttribute('aria-expanded', String(open));
+      // Stop the page behind from scrolling while the sheet is up.
+      document.documentElement.style.overflow = open ? 'hidden' : '';
+      if (open) mtBody.scrollTop = 0;
+    };
+
+    mtBtn.addEventListener('click', () => setOpen(mtPanel.classList.contains('hidden')));
+    document.getElementById('mtools-close')?.addEventListener('click', () => setOpen(false));
+    document.getElementById('mtools-backdrop')?.addEventListener('click', () => setOpen(false));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !mtPanel.classList.contains('hidden')) setOpen(false);
+    });
+    // Tapping a tool navigates; clear the scroll lock so a restored back-forward page isn't frozen.
+    mtBody.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('a')) setOpen(false);
+    });
+  }
 
   const navTools = document.querySelector<HTMLElement>('.nav-tools');
   const mega = document.querySelector<HTMLElement>('.nav-mega');

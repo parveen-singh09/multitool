@@ -37,7 +37,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
 <script>
   import { PDFDocument } from 'pdf-lib';
-  import { setupDrop, download } from '../lib/pdfui';
+  import { setupDrop, download, makeScheduler } from '../lib/pdfui';
   import { mountViewer } from '../lib/pdfViewer';
 
   const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
@@ -112,7 +112,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   }
 
   // Debounced full-document preview: build the N-up PDF, then mount the viewer on the result.
-  let seq = 0, timer: ReturnType<typeof setTimeout> | null = null;
+  let seq = 0;
   async function renderPreview() {
     if (!bytes) return;
     const my = ++seq;
@@ -127,7 +127,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       mount.replaceChildren(viewer.root);
     } catch (e) { console.error('[pdf-n-up] preview failed:', e); }
   }
-  const schedule = () => { if (timer) clearTimeout(timer); timer = setTimeout(renderPreview, 400); };
+  // Coalescing scheduler: never two full rebuilds in flight at once (see makeScheduler).
+  const schedule = makeScheduler(renderPreview);
 
   setupDrop(document.getElementById('dz')!, $('file'), load);
   panel.addEventListener('input', schedule);
