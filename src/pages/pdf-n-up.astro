@@ -78,7 +78,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     const gap = Math.max(0, +$('gap').value || 0);
     // A4 in points; swap for landscape.
     const SW = landscape ? 842 : 595, SH = landscape ? 595 : 842;
-    const cols = COLS[n], rows = Math.ceil(n / cols);
+    // Portrait favors more rows (tall sheet); landscape swaps to more columns (wide sheet), so a
+    // 2-up lands side-by-side instead of stacked. Square grids (4/9/16) are unchanged by the swap.
+    const c0 = COLS[n], r0 = Math.ceil(n / c0);
+    const [cols, rows] = landscape ? [r0, c0] : [c0, r0];
     const M = 20;
     const cellW = (SW - 2 * M - (cols - 1) * gap) / cols;
     const cellH = (SH - 2 * M - (rows - 1) * gap) / rows;
