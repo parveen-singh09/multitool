@@ -109,6 +109,7 @@ const accept = from ? `.${from}` : '.ttf,.otf,.woff,.woff2,.eot';
         job.done = true;
         job.statusEl.textContent = fmt(data.length);
         job.statusEl.style.color = 'var(--color-success)';
+        addPreview(job, data, outType);
         const dl = document.createElement('button');
         dl.className = 'btn btn-secondary'; dl.style.minHeight = '28px'; dl.style.padding = '2px 10px'; dl.style.fontSize = '12px';
         dl.textContent = 'Download';
@@ -125,6 +126,32 @@ const accept = from ? `.${from}` : '.ttf,.otf,.woff,.woff2,.eot';
       setErr('Conversion failed: ' + (e as Error).message);
       status.textContent = '';
     } finally { runBtn.disabled = false; }
+  }
+
+  let previewSeq = 0;
+  // Render a live sample using the converted bytes so you can confirm it worked.
+  // EOT can't load via FontFace — skip preview there (conversion still succeeds).
+  async function addPreview(job: Job, data: Uint8Array, outType: FontType) {
+    if (outType === 'eot') return;
+    const family = `ftprev-${++previewSeq}`;
+    try {
+      const face = new FontFace(family, data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer);
+      await face.load();
+      (document as any).fonts.add(face);
+      const p = document.createElement('div');
+      p.className = 'w-full text-ink';
+      p.style.fontFamily = `'${family}', sans-serif`;
+      p.style.fontSize = '22px';
+      p.style.lineHeight = '1.4';
+      p.contentEditable = 'true';
+      p.spellcheck = false;
+      p.setAttribute('aria-label', 'Font preview — click to edit');
+      p.style.outline = 'none';
+      p.textContent = 'The quick brown fox jumps over the lazy dog 0123456789';
+      job.row.appendChild(p);
+    } catch {
+      // Preview is best-effort; a failure here never blocks the download.
+    }
   }
 
   zipBtn.addEventListener('click', () => {

@@ -6,74 +6,251 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   <div class="flex flex-col gap-4">
     <div class="flex flex-wrap items-end gap-3">
       <label class="flex flex-col gap-1 text-sm text-ink-subtle">Category
-        <select id="tv-cat" class="field w-48">
-          <option value="any">Any</option>
-          <option value="Science">Science</option>
-          <option value="History">History</option>
-          <option value="Geography">Geography</option>
-          <option value="Pop culture">Pop culture</option>
-          <option value="Sports">Sports</option>
+        <select id="tv-cat" class="field w-52">
+          <option value="any">Any category</option>
+          <option value="9">General Knowledge</option>
+          <option value="17">Science &amp; Nature</option>
+          <option value="18">Computers</option>
+          <option value="19">Mathematics</option>
+          <option value="23">History</option>
+          <option value="22">Geography</option>
+          <option value="21">Sports</option>
+          <option value="11">Film</option>
+          <option value="12">Music</option>
+          <option value="14">Television</option>
+          <option value="15">Video Games</option>
+          <option value="10">Books</option>
+          <option value="20">Mythology</option>
+          <option value="25">Art</option>
+          <option value="27">Animals</option>
+          <option value="26">Celebrities</option>
         </select>
       </label>
-      <button id="tv-gen" class="btn btn-primary ml-auto">New question</button>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Difficulty
+        <select id="tv-diff" class="field w-36">
+          <option value="any">Any</option>
+          <option value="easy">Easy</option>
+          <option value="medium">Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-ink-subtle">Type
+        <select id="tv-type" class="field w-44">
+          <option value="any">Any</option>
+          <option value="multiple">Multiple choice</option>
+          <option value="boolean">True / False</option>
+        </select>
+      </label>
+      <div class="ml-auto flex items-center gap-4">
+        <span id="tv-score" class="text-sm text-ink-subtle">Score <span class="font-semibold text-ink">0</span> / <span class="text-ink">0</span></span>
+        <button id="tv-reset" class="btn btn-secondary" title="Reset score">Reset</button>
+      </div>
     </div>
-    <div class="panel panel-lift flex flex-col gap-3 p-5">
-      <span id="tv-cat-label" class="text-xs uppercase tracking-wide text-primary-hover"></span>
-      <p id="tv-q" class="text-lg leading-relaxed text-ink"></p>
-      <button id="tv-reveal" class="btn btn-secondary w-fit">Reveal answer</button>
-      <p id="tv-a" class="hidden text-[15px] font-medium text-success"></p>
+
+    <div class="panel panel-lift flex flex-col gap-4 p-5">
+      <div class="flex items-center gap-2">
+        <span id="tv-cat-label" class="text-xs uppercase tracking-wide text-primary-hover"></span>
+        <span id="tv-diff-label" class="rounded-pill bg-surface-2 px-2 py-0.5 text-[11px] uppercase tracking-wide text-ink-muted"></span>
+      </div>
+      <p id="tv-q" class="text-lg leading-relaxed text-ink">Loading a question…</p>
+      <div id="tv-answers" class="flex flex-col gap-2"></div>
+      <p id="tv-status" class="hidden text-sm font-medium"></p>
+      <div class="flex flex-wrap gap-3">
+        <button id="tv-next" class="btn btn-primary">Next question</button>
+        <button id="tv-reveal" class="btn btn-secondary">Reveal answer</button>
+      </div>
     </div>
   </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free trivia question generator draws random questions across categories
-      — science, history, geography, pop culture and sports — with the answer
-      hidden until you click reveal. It's a quick source of questions for quiz
-      night, the classroom, icebreakers and road trips. Everything runs in your
-      browser.
+      This free trivia question generator pulls from a bank of thousands of
+      questions across 16 categories — general knowledge, science, history,
+      geography, sports, film, music, video games and more. Pick a difficulty,
+      choose multiple-choice or true/false, then answer to build a running score.
+    </p>
+    <p>
+      Great for quiz night, the classroom, icebreakers, pub quizzes and road
+      trips. Questions come from the community-run Open Trivia Database; if you're
+      offline, the tool falls back to a built-in question set so it always works.
     </p>
   </div>
 </ToolLayout>
 
 <script>
-  import { pick } from '../lib/random';
+  import { shuffle, pick } from '../lib/random';
 
   const $ = (id: string) => document.getElementById(id)!;
+  const catEl = $('tv-cat') as HTMLSelectElement;
+  const diffEl = $('tv-diff') as HTMLSelectElement;
+  const typeEl = $('tv-type') as HTMLSelectElement;
 
-  const Q: { c: string; q: string; a: string }[] = [
-    { c: 'Science', q: 'What is the chemical symbol for gold?', a: 'Au' },
-    { c: 'Science', q: 'How many bones are in the adult human body?', a: '206' },
-    { c: 'Science', q: 'What planet is known as the Red Planet?', a: 'Mars' },
-    { c: 'Science', q: 'What gas do plants absorb from the atmosphere?', a: 'Carbon dioxide' },
-    { c: 'History', q: 'In what year did World War II end?', a: '1945' },
-    { c: 'History', q: 'Who was the first President of the United States?', a: 'George Washington' },
-    { c: 'History', q: 'The Great Wall is located in which country?', a: 'China' },
-    { c: 'Geography', q: 'What is the largest ocean on Earth?', a: 'The Pacific Ocean' },
-    { c: 'Geography', q: 'What is the capital of Australia?', a: 'Canberra' },
-    { c: 'Geography', q: 'Which country has the most natural lakes?', a: 'Canada' },
-    { c: 'Geography', q: 'What is the longest river in the world?', a: 'The Nile (by most measures)' },
-    { c: 'Pop culture', q: 'Which band released the album "Abbey Road"?', a: 'The Beatles' },
-    { c: 'Pop culture', q: 'What is the name of the toy cowboy in Toy Story?', a: 'Woody' },
-    { c: 'Pop culture', q: 'Who painted the Mona Lisa?', a: 'Leonardo da Vinci' },
-    { c: 'Sports', q: 'How many players are on a soccer team on the field?', a: '11' },
-    { c: 'Sports', q: 'In which sport would you perform a slam dunk?', a: 'Basketball' },
-    { c: 'Sports', q: 'How often are the Summer Olympics held?', a: 'Every four years' },
-  ];
-
-  function generate() {
-    const cat = ($('tv-cat') as HTMLSelectElement).value;
-    const pool = cat === 'any' ? Q : Q.filter((x) => x.c === cat);
-    const item = pick(pool);
-    $('tv-cat-label').textContent = item.c;
-    $('tv-q').textContent = item.q;
-    const a = $('tv-a')!;
-    a.textContent = 'Answer: ' + item.a;
-    a.classList.add('hidden');
+  interface Q {
+    category: string;
+    difficulty: string;
+    question: string;
+    correct: string;
+    answers: string[];
   }
 
-  $('tv-cat').addEventListener('change', generate);
-  $('tv-gen').addEventListener('click', generate);
-  $('tv-reveal').addEventListener('click', () => $('tv-a').classList.toggle('hidden'));
-  generate();
+  // Decode HTML entities returned by the API (&quot;, &#039;, etc.)
+  const decode = (s: string): string => {
+    const t = document.createElement('textarea');
+    t.innerHTML = s;
+    return t.value;
+  };
+
+  // ponytail: offline fallback bank — used only when the API is unreachable.
+  const FALLBACK: Q[] = [
+    { category: 'Science', difficulty: 'easy', question: 'What is the chemical symbol for gold?', correct: 'Au', answers: ['Au', 'Ag', 'Gd', 'Go'] },
+    { category: 'Science', difficulty: 'easy', question: 'How many bones are in the adult human body?', correct: '206', answers: ['206', '198', '212', '224'] },
+    { category: 'Science', difficulty: 'easy', question: 'What planet is known as the Red Planet?', correct: 'Mars', answers: ['Mars', 'Venus', 'Jupiter', 'Mercury'] },
+    { category: 'History', difficulty: 'easy', question: 'In what year did World War II end?', correct: '1945', answers: ['1945', '1939', '1918', '1950'] },
+    { category: 'History', difficulty: 'easy', question: 'Who was the first President of the United States?', correct: 'George Washington', answers: ['George Washington', 'Thomas Jefferson', 'John Adams', 'Abraham Lincoln'] },
+    { category: 'Geography', difficulty: 'easy', question: 'What is the largest ocean on Earth?', correct: 'Pacific', answers: ['Pacific', 'Atlantic', 'Indian', 'Arctic'] },
+    { category: 'Geography', difficulty: 'medium', question: 'What is the capital of Australia?', correct: 'Canberra', answers: ['Canberra', 'Sydney', 'Melbourne', 'Perth'] },
+    { category: 'Pop culture', difficulty: 'easy', question: 'Which band released the album "Abbey Road"?', correct: 'The Beatles', answers: ['The Beatles', 'The Rolling Stones', 'Pink Floyd', 'The Who'] },
+    { category: 'Pop culture', difficulty: 'easy', question: 'Who painted the Mona Lisa?', correct: 'Leonardo da Vinci', answers: ['Leonardo da Vinci', 'Michelangelo', 'Raphael', 'Donatello'] },
+    { category: 'Sports', difficulty: 'easy', question: 'How many players are on a soccer team on the field?', correct: '11', answers: ['11', '9', '10', '12'] },
+  ];
+
+  let queue: Q[] = [];
+  let current: Q | null = null;
+  let answered = false;
+  let correctCount = 0;
+  let totalCount = 0;
+
+  const scoreEl = $('tv-score');
+  function renderScore() {
+    scoreEl.innerHTML = `Score <span class="font-semibold text-ink">${correctCount}</span> / <span class="text-ink">${totalCount}</span>`;
+  }
+
+  async function fetchBatch(): Promise<Q[]> {
+    const params = new URLSearchParams({ amount: '15' });
+    if (catEl.value !== 'any') params.set('category', catEl.value);
+    if (diffEl.value !== 'any') params.set('difficulty', diffEl.value);
+    if (typeEl.value !== 'any') params.set('type', typeEl.value);
+    const r = await fetch(`https://opentdb.com/api.php?${params}`);
+    if (!r.ok) throw new Error('network');
+    const data: any = await r.json();
+    if (data.response_code !== 0 || !data.results?.length) throw new Error('empty');
+    return data.results.map((x: any): Q => ({
+      category: decode(x.category).replace(/^Entertainment: |^Science: /, ''),
+      difficulty: x.difficulty,
+      question: decode(x.question),
+      correct: decode(x.correct_answer),
+      answers:
+        x.type === 'boolean'
+          ? ['True', 'False']
+          : shuffle([x.correct_answer, ...x.incorrect_answers].map(decode)),
+    }));
+  }
+
+  function fallbackQ(): Q {
+    let pool = FALLBACK;
+    if (diffEl.value !== 'any') {
+      const f = pool.filter((q) => q.difficulty === diffEl.value);
+      if (f.length) pool = f;
+    }
+    const q = pick(pool);
+    return { ...q, answers: shuffle(q.answers) };
+  }
+
+  function renderQuestion(q: Q) {
+    current = q;
+    answered = false;
+    $('tv-cat-label').textContent = q.category;
+    const dl = $('tv-diff-label');
+    dl.textContent = q.difficulty;
+    $('tv-q').textContent = q.question;
+    const status = $('tv-status');
+    status.className = 'hidden text-sm font-medium';
+    status.textContent = '';
+
+    const box = $('tv-answers');
+    box.innerHTML = '';
+    q.answers.forEach((ans) => {
+      const b = document.createElement('button');
+      b.className = 'field w-full text-left transition hover:border-hairline-strong';
+      b.textContent = ans;
+      b.addEventListener('click', () => choose(b, ans));
+      box.appendChild(b);
+    });
+  }
+
+  function choose(btn: HTMLButtonElement, ans: string) {
+    if (answered || !current) return;
+    answered = true;
+    totalCount++;
+    const right = ans === current.correct;
+    if (right) correctCount++;
+    renderScore();
+
+    const buttons = Array.from($('tv-answers').querySelectorAll('button'));
+    buttons.forEach((b) => {
+      b.disabled = true;
+      if (b.textContent === current!.correct) {
+        b.style.borderColor = '#27a644';
+        b.style.color = '#27a644';
+      }
+    });
+    if (!right) {
+      btn.style.borderColor = '#e5484d';
+      btn.style.color = '#e5484d';
+    }
+
+    const status = $('tv-status');
+    status.className = 'text-sm font-medium';
+    status.style.color = right ? '#27a644' : '#e5484d';
+    status.textContent = right ? 'Correct!' : `Incorrect — the answer is ${current.correct}.`;
+  }
+
+  function reveal() {
+    if (answered || !current) return;
+    answered = true;
+    const buttons = Array.from($('tv-answers').querySelectorAll('button'));
+    buttons.forEach((b) => {
+      b.disabled = true;
+      if (b.textContent === current!.correct) {
+        b.style.borderColor = '#27a644';
+        b.style.color = '#27a644';
+      }
+    });
+    const status = $('tv-status');
+    status.className = 'text-sm font-medium';
+    status.style.color = '#27a644';
+    status.textContent = `Answer: ${current.correct}`;
+  }
+
+  async function next() {
+    $('tv-q').textContent = 'Loading a question…';
+    $('tv-answers').innerHTML = '';
+    if (queue.length === 0) {
+      try {
+        queue = await fetchBatch();
+      } catch {
+        renderQuestion(fallbackQ());
+        return;
+      }
+    }
+    renderQuestion(queue.shift()!);
+  }
+
+  // Changing any filter clears the queue so the next fetch uses new settings.
+  [catEl, diffEl, typeEl].forEach((el) =>
+    el.addEventListener('change', () => {
+      queue = [];
+      next();
+    })
+  );
+  $('tv-next').addEventListener('click', next);
+  $('tv-reveal').addEventListener('click', reveal);
+  $('tv-reset').addEventListener('click', () => {
+    correctCount = 0;
+    totalCount = 0;
+    renderScore();
+  });
+
+  renderScore();
+  next();
 </script>

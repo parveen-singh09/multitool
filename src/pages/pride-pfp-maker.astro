@@ -44,7 +44,16 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     <div class="flex flex-col items-center gap-4">
       <canvas id="pp-canvas" width="512" height="512" class="h-56 w-56 cursor-grab touch-none rounded-full bg-surface-2 active:cursor-grabbing"></canvas>
       <span class="text-xs text-ink-tertiary">Drag the photo to reposition</span>
-      <button id="pp-dl" class="btn btn-primary">Download PNG</button>
+      <div class="flex items-end gap-2">
+        <label class="flex flex-col gap-1 text-sm text-ink-subtle">Size
+          <select id="pp-size" class="field w-32">
+            <option value="512">512 px</option>
+            <option value="1024" selected>1024 px</option>
+            <option value="2048">2048 px</option>
+          </select>
+        </label>
+        <button id="pp-dl" class="btn btn-primary">Download PNG</button>
+      </div>
     </div>
   </div>
 
@@ -54,8 +63,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       photo, drag to reposition, zoom and rotate to frame it, then choose from the
       Rainbow, Progress, Trans, Bisexual, Pansexual, Lesbian, Nonbinary, Asexual and
       many other flags. Pick a ring, a tinted overlay, a flag background or a corner
-      banner, and export as a circle or square. It downloads as a PNG ready for
-      any social profile.
+      banner, and export as a circle or square at up to 2048px — rendered from
+      your photo's full detail, not upscaled — as a PNG ready for any social profile.
     </p>
   </div>
 </ToolLayout>
@@ -112,76 +121,80 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     ctx.fillText('Upload a photo', SIZE / 2, SIZE / 2);
   }
 
-  function draw() {
+  // Render at any resolution. offX/offY are stored in 512-space, so scale by S/SIZE.
+  function renderTo(c: CanvasRenderingContext2D, S: number, placeholder: boolean) {
     const flag = FLAGS[Number(flagSel.value)];
     const style = styleSel.value;
     const s = Number(strength.value) / 100;
     const z = Number(zoom.value) / 100;
     const rad = (Number(rotate.value) * Math.PI) / 180;
     const stripes = flag.colors;
+    const k = S / SIZE;
 
-    ctx.clearRect(0, 0, SIZE, SIZE);
+    c.clearRect(0, 0, S, S);
 
     if (style === 'background') {
-      const per = SIZE / stripes.length;
-      stripes.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(0, i * per, SIZE, per + 1); });
+      const per = S / stripes.length;
+      stripes.forEach((col, i) => { c.fillStyle = col; c.fillRect(0, i * per, S, per + 1); });
     }
 
     if (img) {
-      const base = Math.max(SIZE / img.width, SIZE / img.height);
+      const base = Math.max(S / img.width, S / img.height);
       const scale = base * z;
       const w = img.width * scale, h = img.height * scale;
-      ctx.save();
+      c.save();
 
       if (style === 'background') {
-        const inset = SIZE * (0.5 - s);
-        ctx.beginPath();
-        ctx.arc(SIZE / 2, SIZE / 2, inset, 0, Math.PI * 2);
-        ctx.clip();
+        const inset = S * (0.5 - s);
+        c.beginPath();
+        c.arc(S / 2, S / 2, inset, 0, Math.PI * 2);
+        c.clip();
       }
-      ctx.translate(SIZE / 2 + offX, SIZE / 2 + offY);
-      ctx.rotate(rad);
-      ctx.drawImage(img, -w / 2, -h / 2, w, h);
-      ctx.restore();
-    } else if (style !== 'background') {
+      c.translate(S / 2 + offX * k, S / 2 + offY * k);
+      c.rotate(rad);
+      c.drawImage(img, -w / 2, -h / 2, w, h);
+      c.restore();
+    } else if (style !== 'background' && placeholder) {
       drawPlaceholder();
     }
 
     if (style === 'ring') {
-      const ringW = SIZE * s;
-      const outer = SIZE / 2;
+      const ringW = S * s;
+      const outer = S / 2;
       const per = ringW / stripes.length;
-      stripes.forEach((c, i) => {
-        ctx.beginPath();
-        ctx.arc(SIZE / 2, SIZE / 2, outer - i * per, 0, Math.PI * 2);
-        ctx.arc(SIZE / 2, SIZE / 2, outer - (i + 1) * per, 0, Math.PI * 2, true);
-        ctx.fillStyle = c;
-        ctx.fill('evenodd');
+      stripes.forEach((col, i) => {
+        c.beginPath();
+        c.arc(S / 2, S / 2, outer - i * per, 0, Math.PI * 2);
+        c.arc(S / 2, S / 2, outer - (i + 1) * per, 0, Math.PI * 2, true);
+        c.fillStyle = col;
+        c.fill('evenodd');
       });
     } else if (style === 'overlay') {
-      const per = SIZE / stripes.length;
-      ctx.globalAlpha = s * 2.2;
-      stripes.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(0, i * per, SIZE, per + 1); });
-      ctx.globalAlpha = 1;
+      const per = S / stripes.length;
+      c.globalAlpha = s * 2.2;
+      stripes.forEach((col, i) => { c.fillStyle = col; c.fillRect(0, i * per, S, per + 1); });
+      c.globalAlpha = 1;
     } else if (style === 'corner') {
-      const band = SIZE * s * 1.6;
+      const band = S * s * 1.6;
       const per = band / stripes.length;
-      ctx.save();
-      ctx.translate(SIZE * 0.5, -SIZE * 0.5);
-      ctx.rotate(Math.PI / 4);
-      stripes.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(0, SIZE * 0.9 + i * per, SIZE * 1.5, per + 1); });
-      ctx.restore();
+      c.save();
+      c.translate(S * 0.5, -S * 0.5);
+      c.rotate(Math.PI / 4);
+      stripes.forEach((col, i) => { c.fillStyle = col; c.fillRect(0, S * 0.9 + i * per, S * 1.5, per + 1); });
+      c.restore();
     }
 
     if (circle.checked) {
-      ctx.save();
-      ctx.globalCompositeOperation = 'destination-in';
-      ctx.beginPath();
-      ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
+      c.save();
+      c.globalCompositeOperation = 'destination-in';
+      c.beginPath();
+      c.arc(S / 2, S / 2, S / 2, 0, Math.PI * 2);
+      c.fill();
+      c.restore();
     }
   }
+
+  const draw = () => renderTo(ctx, SIZE, true);
 
   function handleFile(file: File) {
     const url = URL.createObjectURL(file);
@@ -231,8 +244,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   });
 
   $('pp-dl').addEventListener('click', () => {
+    const S = Number(($('pp-size') as HTMLSelectElement).value) || 1024;
+    const off = document.createElement('canvas');
+    off.width = S; off.height = S;
+    renderTo(off.getContext('2d')!, S, false);
     const a = document.createElement('a');
-    a.href = canvas.toDataURL('image/png');
+    a.href = off.toDataURL('image/png');
     a.download = 'pride-pfp.png';
     a.click();
   });

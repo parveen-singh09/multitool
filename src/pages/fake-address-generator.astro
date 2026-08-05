@@ -56,7 +56,7 @@ import { COUNTRIES } from '../lib/faddr';
       country's naming conventions, a street, real city and region, a correctly
       formatted postal code and phone number, plus latitude, longitude, currency and
       timezone. Pick a country and gender for a single identity with click-to-copy
-      fields, or generate up to a thousand at once as multi-line text, CSV or JSON and
+      fields and a link to view the coordinates on a map, or generate up to a thousand at once as multi-line text, CSV or JSON and
       download them.
     </p>
     <p>
@@ -93,13 +93,19 @@ import { COUNTRIES } from '../lib/faddr';
 
   function renderCard() {
     const a = build();
-    card.innerHTML = FIELDS.map(([k, label]) => {
+    const fields = FIELDS.map(([k, label]) => {
       const v = k === 'region' ? (a.regionAbbr ? `${a.region} (${a.regionAbbr})` : a.region) : String(a[k] ?? '');
       return `<button type="button" class="fa-field flex flex-col items-start gap-0.5 rounded-md p-1 text-left transition-colors hover:bg-surface-2" data-copy="${attr(v)}">
            <span class="text-xs uppercase tracking-wide text-ink-tertiary">${label}</span>
            <span class="font-mono text-sm text-ink">${attr(v)}</span>
          </button>`;
     }).join('');
+    const mapUrl = `https://www.openstreetmap.org/?mlat=${a.latitude}&mlon=${a.longitude}#map=13/${a.latitude}/${a.longitude}`;
+    const mapLink = `<a href="${attr(mapUrl)}" target="_blank" rel="noopener" class="sm:col-span-2 mt-1 flex items-center gap-1.5 text-sm text-primary-hover hover:underline">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        View coordinates on map
+      </a>`;
+    card.innerHTML = fields + mapLink;
   }
 
   card.addEventListener('click', async (e) => {

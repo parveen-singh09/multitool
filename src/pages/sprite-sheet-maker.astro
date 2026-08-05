@@ -1,4 +1,4 @@
-?---
+---
 import ToolLayout from '../layouts/ToolLayout.astro';
 ---
 
@@ -58,6 +58,14 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         <input id="ssm-transparent" type="checkbox" checked class="h-4 w-4 accent-primary" />
         Transparent background
       </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle" title="Crop transparent edges off each frame to shrink the sheet">
+        <input id="ssm-trim" type="checkbox" class="h-4 w-4 accent-primary" />
+        Trim transparent edges
+      </label>
+      <label class="flex items-center gap-2 text-sm text-ink-subtle" title="Pad the sheet up to power-of-two dimensions for game engines">
+        <input id="ssm-pot" type="checkbox" class="h-4 w-4 accent-primary" />
+        Power-of-two size
+      </label>
     </div>
 
     <p id="ssm-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
@@ -102,9 +110,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       This free sprite sheet maker packs multiple images into a single texture
       atlas for games and CSS. Drop your frames in, drag to reorder them, and
       choose a uniform grid or tight bin-packing that fits sprites of different
-      sizes with minimal wasted space. Preview the animation at any frame rate,
-      then export the combined PNG along with a JSON atlas (Phaser / PixiJS
-      style), CSS sprite rules, or a ZIP bundle with all three.
+      sizes with minimal wasted space. Trim transparent edges to shrink the
+      atlas, or pad it out to power-of-two dimensions for game engines that
+      require them. Preview the animation at any frame rate, then export the
+      combined PNG along with a JSON atlas (Phaser / PixiJS style, with correct
+      trim metadata), CSS sprite rules, or a ZIP bundle with all three.
     </p>
     <p>
       You can also split an existing sprite sheet back into individual frames by
@@ -131,7 +141,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   import { makeZip } from '../lib/zip';
 
   interface Frame { name: string; img: HTMLImageElement; w: number; h: number; }
-  interface Placement { name: string; x: number; y: number; w: number; h: number; }
+  // sx/sy = crop origin in the source image; ow/oh = original (untrimmed) size.
+  interface Placement { name: string; x: number; y: number; w: number; h: number; sx?: number; sy?: number; ow?: number; oh?: number; }
 
   const dropEl = document.getElementById('ssm-drop')!;
   const filesEl = document.getElementById('ssm-files') as HTMLInputElement;
@@ -148,6 +159,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const padEl = document.getElementById('ssm-pad') as HTMLInputElement;
   const bgEl = document.getElementById('ssm-bg') as HTMLInputElement;
   const transparentEl = document.getElementById('ssm-transparent') as HTMLInputElement;
+  const trimEl = document.getElementById('ssm-trim') as HTMLInputElement;
+  const potEl = document.getElementById('ssm-pot') as HTMLInputElement;
   const canvas = document.getElementById('ssm-canvas') as HTMLCanvasElement;
   const animCanvas = document.getElementById('ssm-anim') as HTMLCanvasElement;
   const playBtn = document.getElementById('ssm-play')!;
@@ -315,20 +328,61 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     renderFrames(); render();
   });
 
-  function layoutGrid(pad: number, cols: number): { w: number; h: number; place: Placement[] } {
-    const cellW = Math.max(...frames.map((f) => f.w));
-    const cellH = Math.max(...frames.map((f) => f.h));
+  // Effective (possibly trimmed) rect for each frame — drives layout and draw.
+  interface Eff { sx: number; sy: number; w: number; h: number; ow: number; oh: number; }
+  const trimCache = new WeakMap<HTMLImageElement, Eff>();
+
+  function trimRect(f: Frame): Eff {
+    const cached = trimCache.get(f.img);
+    if (cached) return cached;
+    const cv = document.createElement('canvas');
+    cv.width = f.w; cv.height = f.h;
+    const c = cv.getContext('2d')!;
+    c.drawImage(f.img, 0, 0);
+    let x0 = f.w, y0 = f.h, x1 = 0, y1 = 0, found = false;
+    try {
+      const { data } = c.getImageData(0, 0, f.w, f.h);
+      for (let y = 0; y < f.h; y++) {
+        for (let x = 0; x < f.w; x++) {
+          if (data[(y * f.w + x) * 4 + 3] !== 0) {
+            found = true;
+            if (x < x0) x0 = x; if (x > x1) x1 = x;
+            if (y < y0) y0 = y; if (y > y1) y1 = y;
+          }
+        }
+      }
+    } catch {
+      // getImageData can throw on tainted canvases — fall back to no trim.
+      found = false;
+    }
+    const eff: Eff = found
+      ? { sx: x0, sy: y0, w: x1 - x0 + 1, h: y1 - y0 + 1, ow: f.w, oh: f.h }
+      : { sx: 0, sy: 0, w: f.w, h: f.h, ow: f.w, oh: f.h };
+    trimCache.set(f.img, eff);
+    return eff;
+  }
+
+  function effDims(): Eff[] {
+    return frames.map((f) =>
+      trimEl.checked ? trimRect(f) : { sx: 0, sy: 0, w: f.w, h: f.h, ow: f.w, oh: f.h }
+    );
+  }
+
+  function layoutGrid(pad: number, cols: number, eff: Eff[]): { w: number; h: number; place: Placement[] } {
+    const cellW = Math.max(...eff.map((e) => e.w));
+    const cellH = Math.max(...eff.map((e) => e.h));
     const rows = Math.ceil(frames.length / cols);
     const place = frames.map((f, i) => {
+      const e = eff[i];
       const c = i % cols, r = Math.floor(i / cols);
-      return { name: f.name, x: pad + c * (cellW + pad), y: pad + r * (cellH + pad), w: f.w, h: f.h };
+      return { name: f.name, x: pad + c * (cellW + pad), y: pad + r * (cellH + pad), w: e.w, h: e.h, sx: e.sx, sy: e.sy, ow: e.ow, oh: e.oh };
     });
     return { w: cols * cellW + (cols + 1) * pad, h: rows * cellH + (rows + 1) * pad, place };
   }
 
   interface Node { x: number; y: number; w: number; h: number; used?: boolean; right?: Node; down?: Node; }
-  function layoutPacked(pad: number): { w: number; h: number; place: Placement[] } {
-    const boxes = frames.map((f, i) => ({ i, w: f.w + pad, h: f.h + pad }));
+  function layoutPacked(pad: number, eff: Eff[]): { w: number; h: number; place: Placement[] } {
+    const boxes = eff.map((e, i) => ({ i, w: e.w + pad, h: e.h + pad }));
     const order = boxes.slice().sort((a, b) => Math.max(b.w, b.h) - Math.max(a.w, a.h));
     let root: Node = { x: 0, y: 0, w: order[0].w, h: order[0].h };
 
@@ -372,11 +426,13 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       if (fit) fits[box.i] = fit;
     }
     const place = frames.map((f, i) => {
-      const n = fits[i];
-      return { name: f.name, x: (n ? n.x : 0) + pad, y: (n ? n.y : 0) + pad, w: f.w, h: f.h };
+      const n = fits[i], e = eff[i];
+      return { name: f.name, x: (n ? n.x : 0) + pad, y: (n ? n.y : 0) + pad, w: e.w, h: e.h, sx: e.sx, sy: e.sy, ow: e.ow, oh: e.oh };
     });
     return { w: root.w + pad, h: root.h + pad, place };
   }
+
+  const nextPOT = (n: number) => { let p = 1; while (p < n) p *= 2; return p; };
 
   function render() {
     err.classList.add('hidden');
@@ -390,13 +446,19 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
     const pad = Math.max(0, Number(padEl.value) || 0);
     const cols = Math.max(1, Number(colsEl.value) || 1);
-    const { w, h, place } = modeEl.value === 'packed' ? layoutPacked(pad) : layoutGrid(pad, cols);
+    const eff = effDims();
+    const { w, h, place } = modeEl.value === 'packed' ? layoutPacked(pad, eff) : layoutGrid(pad, cols, eff);
     placements = place;
 
-    canvas.width = w; canvas.height = h;
-    ctx.clearRect(0, 0, w, h);
-    if (!transparentEl.checked) { ctx.fillStyle = bgEl.value; ctx.fillRect(0, 0, w, h); }
-    frames.forEach((f, i) => { const p = placements[i]; ctx.drawImage(f.img, p.x, p.y); });
+    canvas.width = potEl.checked ? nextPOT(w) : w;
+    canvas.height = potEl.checked ? nextPOT(h) : h;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!transparentEl.checked) { ctx.fillStyle = bgEl.value; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+    frames.forEach((f, i) => {
+      const p = placements[i];
+      // Draw only the (possibly trimmed) source rect into its packed slot.
+      ctx.drawImage(f.img, p.sx ?? 0, p.sy ?? 0, p.w, p.h, p.x, p.y, p.w, p.h);
+    });
 
     coordsEl.textContent = JSON.stringify(buildAtlas(), null, 2);
     resetAnim();
@@ -405,11 +467,13 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   function buildAtlas() {
     const frameMap: Record<string, unknown> = {};
     placements.forEach((p) => {
+      const ow = p.ow ?? p.w, oh = p.oh ?? p.h;
+      const trimmed = ow !== p.w || oh !== p.h;
       frameMap[p.name] = {
         frame: { x: p.x, y: p.y, w: p.w, h: p.h },
-        rotated: false, trimmed: false,
-        spriteSourceSize: { x: 0, y: 0, w: p.w, h: p.h },
-        sourceSize: { w: p.w, h: p.h },
+        rotated: false, trimmed,
+        spriteSourceSize: { x: p.sx ?? 0, y: p.sy ?? 0, w: p.w, h: p.h },
+        sourceSize: { w: ow, h: oh },
       };
     });
     return { frames: frameMap, meta: { app: 'toolsilk.com sprite sheet maker', image: PNG_NAME, format: 'RGBA8888', size: { w: canvas.width, h: canvas.height }, scale: '1' } };
@@ -522,7 +586,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     splitSheet(file, Math.max(1, Number(splitColsEl.value) || 1), Math.max(1, Number(splitRowsEl.value) || 1));
   });
 
-  [modeEl, colsEl, padEl, bgEl, transparentEl].forEach((el) => el.addEventListener('input', render));
+  [modeEl, colsEl, padEl, bgEl, transparentEl, trimEl, potEl].forEach((el) => el.addEventListener('input', render));
 
   render();
 </script>

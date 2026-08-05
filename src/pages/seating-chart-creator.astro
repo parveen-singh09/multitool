@@ -42,6 +42,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       </label>
 
       <div class="scc-tb-actions">
+        <button id="scc-new" class="btn btn-tertiary">New chart</button>
         <button id="scc-autoseat" class="btn btn-secondary">Auto-seat</button>
         <button id="scc-png" class="btn btn-primary">PNG</button>
         <button id="scc-pdf" class="btn btn-secondary">PDF</button>
@@ -153,7 +154,9 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       keep-together and keep-apart rules, then let auto-seat fill the remaining
       guests while respecting them. When you're done, download a high-resolution
       PNG floor plan, save a PDF, or print table cards with each table's guest
-      list. A day-of "find my seat" search highlights any guest's table.
+      list. A day-of "find my seat" search highlights any guest's table. Your
+      chart saves automatically in your browser, so it's still there when you come
+      back — hit "New chart" to start over.
     </p>
   </div>
 </ToolLayout>
@@ -456,6 +459,29 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     renderInspector();
     countEl.textContent = String(guests.length);
     refreshAutoseatLabel();
+    save();
+  }
+
+  const STORE_KEY = 'toolsilk-seating-chart';
+  function save() {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify({ title: titleEl.value, guests, tables, rules, uid }));
+    } catch {
+      // localStorage can be full or blocked (private mode) — non-fatal.
+    }
+  }
+  function load(): boolean {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return false;
+      const s = JSON.parse(raw);
+      if (!Array.isArray(s.guests) || !Array.isArray(s.tables)) return false;
+      titleEl.value = s.title ?? 'Seating Chart';
+      guests = s.guests; tables = s.tables; rules = s.rules ?? []; uid = s.uid ?? 0;
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   function renderRoster() {
@@ -739,6 +765,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   $('scc-tbl-delete').addEventListener('click', () => { const t = sel(); if (!t) return; tables = tables.filter((x) => x !== t); selectedId = null; render(); });
   function sel() { return tables.find((x) => x.id === selectedId) || null; }
 
+  $('scc-new').addEventListener('click', () => {
+    if (!confirm('Start a new chart? This clears all guests, tables and rules.')) return;
+    guests = []; tables = []; rules = []; selectedId = null; titleEl.value = 'Seating Chart';
+    note(''); render();
+  });
+
   const autoseatBtn = $('scc-autoseat');
   function refreshAutoseatLabel() {
     autoseatBtn.textContent = seatedSet().size ? 'Clear seats' : 'Auto-seat';
@@ -885,6 +917,6 @@ Henry, Groom, Vegan`);
   }
 
   if (new URLSearchParams(location.search).has('selftest')) runSelfTest();
-  seedDemo();
+  if (!load()) seedDemo();
   render();
 </script>
