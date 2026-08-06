@@ -100,7 +100,11 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         </div>`;
       li.querySelector('[data-act="rot"]')!.addEventListener('click', (e) => { e.stopPropagation(); it.rot = (it.rot + 90) % 360; render(); });
       li.querySelector('[data-act="del"]')!.addEventListener('click', (e) => { e.stopPropagation(); items.splice(i, 1); render(); });
-      li.addEventListener('dragstart', () => { dragIdx = i; li.classList.add('dragging'); });
+      li.addEventListener('dragstart', (e) => {
+        // Don't start a drag when the press began on a tool button — it eats the click.
+        if ((e.target as HTMLElement).closest('.pg-tools')) { e.preventDefault(); return; }
+        dragIdx = i; li.classList.add('dragging');
+      });
       li.addEventListener('dragend', () => { dragIdx = -1; li.classList.remove('dragging'); });
       li.addEventListener('dragover', (e) => { e.preventDefault(); li.classList.add('over'); });
       li.addEventListener('dragleave', () => li.classList.remove('over'));
