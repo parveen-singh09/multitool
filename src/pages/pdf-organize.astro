@@ -18,7 +18,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         <button id="reset" class="btn btn-secondary px-3 py-1.5 text-[13px]" type="button">Reset</button>
         <button id="go" class="btn btn-primary px-3 py-1.5 text-[13px]" type="button">Download</button>
       </div>
-      <p class="text-xs text-ink-tertiary">Drag a page to reorder. Hover a page to rotate or delete it.</p>
+      <p class="text-xs text-ink-tertiary">Drag a page to reorder (works on touch too). Use the buttons on each page to rotate or delete it.</p>
       <ul id="grid" class="grid grid-cols-2 gap-4 rounded-lg border border-hairline bg-[#1a1a1d] p-4 sm:grid-cols-3 md:grid-cols-4"></ul>
     </div>
     <p id="loading" class="hidden text-[13px] text-ink-subtle">Rendering pages…</p>
@@ -33,9 +33,13 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
 <style>
   .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
-  .pg-card { position: relative; cursor: grab; }
-  .pg-card.dragging { opacity: 0.4; }
+  /* touch-action:none lets pointer-drag work on touch without the browser
+     stealing the gesture for scrolling. Scroll the page from the gaps/margins. */
+  .pg-card { position: relative; cursor: grab; touch-action: none; }
+  .pg-card.dragging { opacity: 0.35; }
   .pg-card.over { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .pg-ghost { position: fixed; z-index: 60; pointer-events: none; opacity: 0.85;
+    transform: translate(-50%, -50%); box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
   .pg-thumb { transition: transform 0.2s ease; }
   /* Always visible (not hover-gated) so delete/rotate work on touch devices too. */
   .pg-tools { position: absolute; top: 6px; right: 6px; display: flex; gap: 4px; z-index: 2; }
@@ -58,7 +62,6 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   let bytes: ArrayBuffer | null = null, fname = 'document.pdf';
   let items: Item[] = [];
   let original: Item[] = [];
-  let dragIdx = -1;
   const setErr = (m: string) => { err.textContent = m; err.classList.toggle('hidden', !m); };
 
   async function load(files: File[]) {
@@ -87,34 +90,82 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     grid.innerHTML = '';
     items.forEach((it, i) => {
       const li = document.createElement('li');
-      li.className = 'pg-card overflow-hidden rounded bg-white shadow-lg'; li.draggable = true;
+      li.className = 'pg-card overflow-hidden rounded bg-white shadow-lg';
       li.dataset.idx = String(i);
       li.innerHTML = `
         <img src="${it.url}" class="pg-thumb w-full rounded" style="transform:rotate(${it.rot}deg)" alt="Page ${it.src + 1}" draggable="false" />
         <span class="pg-num">${i + 1}</span>
         <div class="pg-tools">
-          <button type="button" class="pg-btn" data-act="rot" draggable="false" aria-label="Rotate page" title="Rotate">
+          <button type="button" class="pg-btn" data-act="rot" aria-label="Rotate page" title="Rotate">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8"/></svg>
           </button>
-          <button type="button" class="pg-btn" data-act="del" draggable="false" aria-label="Delete page" title="Delete">
+          <button type="button" class="pg-btn" data-act="del" aria-label="Delete page" title="Delete">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
           </button>
         </div>`;
-      li.addEventListener('dragstart', (e) => {
-        // Don't start a drag when the press began on a tool button — it eats the click.
-        if ((e.target as HTMLElement).closest('.pg-tools')) { e.preventDefault(); return; }
-        dragIdx = i; li.classList.add('dragging');
-      });
-      li.addEventListener('dragend', () => { dragIdx = -1; li.classList.remove('dragging'); });
-      li.addEventListener('dragover', (e) => { e.preventDefault(); li.classList.add('over'); });
-      li.addEventListener('dragleave', () => li.classList.remove('over'));
-      li.addEventListener('drop', (e) => {
-        e.preventDefault(); li.classList.remove('over');
-        if (dragIdx < 0 || dragIdx === i) return;
-        const [m] = items.splice(dragIdx, 1); items.splice(i, 0, m); dragIdx = -1; render();
-      });
+      li.addEventListener('pointerdown', (e) => onDragStart(e as PointerEvent, i, li));
       grid.appendChild(li);
     });
+  }
+
+  // Pointer-based reordering — works on both mouse and touch (HTML5 drag-and-drop
+  // does not fire on touchscreens at all, which is why mobile drag was dead).
+  let ptr: null | { fromIdx: number; startX: number; startY: number; card: HTMLElement; ghost: HTMLElement | null; active: boolean } = null;
+
+  function cardUnder(x: number, y: number): HTMLElement | null {
+    // Ghost is pointer-events:none, so elementFromPoint sees the card beneath it.
+    const el = document.elementFromPoint(x, y) as HTMLElement | null;
+    const card = el?.closest<HTMLElement>('.pg-card') ?? null;
+    return card && card.parentElement === grid ? card : null;
+  }
+
+  function onDragStart(e: PointerEvent, i: number, card: HTMLElement) {
+    // A press that starts on a tool button is a click, never a drag.
+    if ((e.target as HTMLElement).closest('.pg-btn')) return;
+    if (e.button && e.button !== 0) return;
+    ptr = { fromIdx: i, startX: e.clientX, startY: e.clientY, card, ghost: null, active: false };
+    window.addEventListener('pointermove', onDragMove);
+    window.addEventListener('pointerup', onDragEnd, { once: true });
+    window.addEventListener('pointercancel', onDragEnd, { once: true });
+  }
+
+  function onDragMove(e: PointerEvent) {
+    if (!ptr) return;
+    if (!ptr.active) {
+      // Small threshold so a tap or tiny jitter doesn't become a drag.
+      if (Math.hypot(e.clientX - ptr.startX, e.clientY - ptr.startY) < 6) return;
+      ptr.active = true;
+      ptr.card.classList.add('dragging');
+      document.body.style.userSelect = 'none';
+      const g = ptr.card.cloneNode(true) as HTMLElement;
+      g.className = 'pg-card pg-ghost overflow-hidden rounded bg-white shadow-lg';
+      g.style.width = `${ptr.card.offsetWidth}px`;
+      document.body.appendChild(g);
+      ptr.ghost = g;
+    }
+    if (ptr.ghost) { ptr.ghost.style.left = `${e.clientX}px`; ptr.ghost.style.top = `${e.clientY}px`; }
+    const over = cardUnder(e.clientX, e.clientY);
+    grid.querySelectorAll('.pg-card.over').forEach((el) => el.classList.remove('over'));
+    if (over && over !== ptr.card) over.classList.add('over');
+  }
+
+  function onDragEnd(e: PointerEvent) {
+    window.removeEventListener('pointermove', onDragMove);
+    if (!ptr) return;
+    const { active, fromIdx, ghost, card } = ptr;
+    ghost?.remove();
+    card.classList.remove('dragging');
+    document.body.style.userSelect = '';
+    grid.querySelectorAll('.pg-card.over').forEach((el) => el.classList.remove('over'));
+    ptr = null;
+    if (!active) return; // was a tap, not a drag — nothing to reorder
+    const target = cardUnder(e.clientX, e.clientY);
+    const toIdx = target ? Number(target.dataset.idx) : -1;
+    if (Number.isInteger(toIdx) && toIdx >= 0 && toIdx !== fromIdx) {
+      const [m] = items.splice(fromIdx, 1);
+      items.splice(toIdx, 0, m);
+    }
+    render();
   }
 
   async function run() {
