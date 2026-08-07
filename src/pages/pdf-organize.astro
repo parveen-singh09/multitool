@@ -88,19 +88,18 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     items.forEach((it, i) => {
       const li = document.createElement('li');
       li.className = 'pg-card overflow-hidden rounded bg-white shadow-lg'; li.draggable = true;
+      li.dataset.idx = String(i);
       li.innerHTML = `
-        <img src="${it.url}" class="pg-thumb w-full rounded" style="transform:rotate(${it.rot}deg)" alt="Page ${it.src + 1}" />
+        <img src="${it.url}" class="pg-thumb w-full rounded" style="transform:rotate(${it.rot}deg)" alt="Page ${it.src + 1}" draggable="false" />
         <span class="pg-num">${i + 1}</span>
         <div class="pg-tools">
-          <button type="button" class="pg-btn" data-act="rot" aria-label="Rotate page">
+          <button type="button" class="pg-btn" data-act="rot" draggable="false" aria-label="Rotate page" title="Rotate">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8"/></svg>
           </button>
-          <button type="button" class="pg-btn" data-act="del" aria-label="Delete page">
+          <button type="button" class="pg-btn" data-act="del" draggable="false" aria-label="Delete page" title="Delete">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
           </button>
         </div>`;
-      li.querySelector('[data-act="rot"]')!.addEventListener('click', (e) => { e.stopPropagation(); it.rot = (it.rot + 90) % 360; render(); });
-      li.querySelector('[data-act="del"]')!.addEventListener('click', (e) => { e.stopPropagation(); items.splice(i, 1); render(); });
       li.addEventListener('dragstart', (e) => {
         // Don't start a drag when the press began on a tool button — it eats the click.
         if ((e.target as HTMLElement).closest('.pg-tools')) { e.preventDefault(); return; }
@@ -134,6 +133,20 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       status.textContent = `Done — ${out.getPageCount()} page(s).`;
     } catch (e) { status.classList.add('hidden'); setErr('Could not build: ' + (e as Error).message); }
   }
+
+  // One delegated handler on the grid — a click on a tool button can't be
+  // swallowed by the draggable card the way per-button listeners could be.
+  grid.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.pg-btn');
+    if (!btn) return;
+    e.stopPropagation(); e.preventDefault();
+    const card = btn.closest<HTMLElement>('.pg-card');
+    const i = Number(card?.dataset.idx);
+    if (!Number.isInteger(i) || i < 0 || i >= items.length) return;
+    if (btn.dataset.act === 'del') items.splice(i, 1);
+    else if (btn.dataset.act === 'rot') items[i].rot = (items[i].rot + 90) % 360;
+    render();
+  });
 
   setupDrop($('dz'), $('file') as HTMLInputElement, load);
   $('rot-all').addEventListener('click', () => { items.forEach((it) => (it.rot = (it.rot + 90) % 360)); render(); });
