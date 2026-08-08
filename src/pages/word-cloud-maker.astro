@@ -386,14 +386,26 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Segoe UI Symbol",sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      let size = H * 0.92;
+      const margin = 0.9; // keep the glyph off the canvas edges
+
+      // Measure the glyph's real ink box (not the em-square) and scale it to
+      // fit both width AND height — measuring width only clips tall glyphs
+      // (e.g. a butterfly's antennae) off the top.
+      let size = H;
       ctx.font = `${size}px ${family}`;
-      const w = ctx.measureText(ch).width || size;
-      if (w > W * 0.92) {
-        size *= (W * 0.92) / w;
-        ctx.font = `${size}px ${family}`;
-      }
-      ctx.fillText(ch, W / 2, H / 2);
+      let m = ctx.measureText(ch);
+      const gw = (m.actualBoundingBoxLeft || 0) + (m.actualBoundingBoxRight || 0) || m.width || size;
+      const gh = (m.actualBoundingBoxAscent || 0) + (m.actualBoundingBoxDescent || 0) || size;
+      size *= Math.min((W * margin) / gw, (H * margin) / gh);
+      ctx.font = `${size}px ${family}`;
+
+      // Center on the actual ink box so it sits in the middle of the canvas.
+      m = ctx.measureText(ch);
+      const asc = m.actualBoundingBoxAscent || size / 2;
+      const desc = m.actualBoundingBoxDescent || size / 2;
+      const left = m.actualBoundingBoxLeft || 0;
+      const right = m.actualBoundingBoxRight || 0;
+      ctx.fillText(ch, W / 2 - (right - left) / 2, H / 2 + (asc - desc) / 2);
       return hasOpaque(c) ? c : null;
     }
 

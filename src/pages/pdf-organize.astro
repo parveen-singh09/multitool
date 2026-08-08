@@ -43,9 +43,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   .pg-thumb { transition: transform 0.2s ease; }
   /* Always visible (not hover-gated) so delete/rotate work on touch devices too. */
   .pg-tools { position: absolute; top: 6px; right: 6px; display: flex; gap: 4px; z-index: 2; }
-  .pg-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: var(--radius-sm); border: none; background: color-mix(in srgb, var(--color-surface-1) 92%, transparent); backdrop-filter: blur(4px); color: var(--color-ink); cursor: pointer; opacity: 0.85; }
-  .pg-btn:hover { opacity: 1; background: var(--color-surface-1); }
-  .pg-btn[data-act="del"]:hover { color: #e5484d; }
+  /* Solid, high-contrast so the tools stay visible on white page thumbnails. */
+  .pg-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.28); background: rgba(20,20,24,0.92); color: #fff; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.45); }
+  .pg-btn:hover { background: rgba(20,20,24,1); }
+  .pg-btn[data-act="del"]:hover { color: #ff6169; border-color: #ff6169; }
   .pg-num { position: absolute; bottom: 6px; left: 6px; font-size: 11px; padding: 1px 6px; border-radius: var(--radius-sm); background: color-mix(in srgb, var(--color-surface-1) 88%, transparent); color: var(--color-ink-subtle); }
 </style>
 
@@ -54,7 +55,8 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   import { setupDrop, download, bindRun } from '../lib/pdfui';
   import { renderThumbs } from '../lib/pdfThumbs';
 
-  interface Item { src: number; rot: number; url: string }
+  interface Item { id: number; src: number; rot: number; url: string }
+  let nextId = 0;
 
   const $ = (id: string) => document.getElementById(id)!;
   const panel = $('panel'), grid = $('grid') as HTMLUListElement;
@@ -76,7 +78,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       panel.classList.remove('hidden'); panel.classList.add('flex');
       loading.classList.remove('hidden');
       const { total, truncated } = await renderThumbs(files[0], {
-        onThumb: (t) => { items.push({ src: t.page - 1, rot: 0, url: t.url }); render(); },
+        onThumb: (t) => { items.push({ id: nextId++, src: t.page - 1, rot: 0, url: t.url }); render(); },
       });
       loading.classList.add('hidden');
       original = items.map((it) => ({ ...it }));
@@ -92,6 +94,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
       const li = document.createElement('li');
       li.className = 'pg-card overflow-hidden rounded bg-white shadow-lg';
       li.dataset.idx = String(i);
+      li.dataset.id = String(it.id);
       li.innerHTML = `
         <img src="${it.url}" class="pg-thumb w-full rounded" style="transform:rotate(${it.rot}deg)" alt="Page ${it.src + 1}" draggable="false" />
         <span class="pg-num">${i + 1}</span>
@@ -110,7 +113,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   // Pointer-based reordering — works on both mouse and touch (HTML5 drag-and-drop
   // does not fire on touchscreens at all, which is why mobile drag was dead).
-  let ptr: null | { fromIdx: number; startX: number; startY: number; card: HTMLElement; ghost: HTMLElement | null; active: boolean } = null;
+  // We reorder `items` live as the pointer moves and re-render, so the grid
+  // reflows under the cursor and you see the real landing layout while dragging.
+  let ptr: null | { id: number; startX: number; startY: number; ghost: HTMLElement | null; active: boolean } = null;
+
+  const cardById = (id: number) => grid.querySelector<HTMLElement>(`.pg-card[data-id="${id}"]`);
+  const idxById = (id: number) => items.findIndex((it) => it.id === id);
 
   function cardUnder(x: number, y: number): HTMLElement | null {
     // Ghost is pointer-events:none, so elementFromPoint sees the card beneath it.
@@ -123,7 +131,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     // A press that starts on a tool button is a click, never a drag.
     if ((e.target as HTMLElement).closest('.pg-btn')) return;
     if (e.button && e.button !== 0) return;
-    ptr = { fromIdx: i, startX: e.clientX, startY: e.clientY, card, ghost: null, active: false };
+    ptr = { id: items[i].id, startX: e.clientX, startY: e.clientY, ghost: null, active: false };
     window.addEventListener('pointermove', onDragMove);
     window.addEventListener('pointerup', onDragEnd, { once: true });
     window.addEventListener('pointercancel', onDragEnd, { once: true });
@@ -131,41 +139,44 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
   function onDragMove(e: PointerEvent) {
     if (!ptr) return;
+    const card = cardById(ptr.id);
+    if (!card) return;
     if (!ptr.active) {
       // Small threshold so a tap or tiny jitter doesn't become a drag.
       if (Math.hypot(e.clientX - ptr.startX, e.clientY - ptr.startY) < 6) return;
       ptr.active = true;
-      ptr.card.classList.add('dragging');
       document.body.style.userSelect = 'none';
-      const g = ptr.card.cloneNode(true) as HTMLElement;
+      const g = card.cloneNode(true) as HTMLElement;
       g.className = 'pg-card pg-ghost overflow-hidden rounded bg-white shadow-lg';
-      g.style.width = `${ptr.card.offsetWidth}px`;
+      g.style.width = `${card.offsetWidth}px`;
       document.body.appendChild(g);
       ptr.ghost = g;
     }
     if (ptr.ghost) { ptr.ghost.style.left = `${e.clientX}px`; ptr.ghost.style.top = `${e.clientY}px`; }
+    card.classList.add('dragging');
+    // Reflow live: if hovering a different card, move the dragged item to its
+    // slot and re-render so the pages physically shift to show the new order.
     const over = cardUnder(e.clientX, e.clientY);
-    grid.querySelectorAll('.pg-card.over').forEach((el) => el.classList.remove('over'));
-    if (over && over !== ptr.card) over.classList.add('over');
+    if (over && over.dataset.id !== String(ptr.id)) {
+      const from = idxById(ptr.id);
+      const to = idxById(Number(over.dataset.id));
+      if (from >= 0 && to >= 0 && from !== to) {
+        const [m] = items.splice(from, 1);
+        items.splice(to, 0, m);
+        render();
+        cardById(ptr.id)?.classList.add('dragging');
+      }
+    }
   }
 
-  function onDragEnd(e: PointerEvent) {
+  function onDragEnd() {
     window.removeEventListener('pointermove', onDragMove);
     if (!ptr) return;
-    const { active, fromIdx, ghost, card } = ptr;
-    ghost?.remove();
-    card.classList.remove('dragging');
+    ptr.ghost?.remove();
     document.body.style.userSelect = '';
-    grid.querySelectorAll('.pg-card.over').forEach((el) => el.classList.remove('over'));
+    const active = ptr.active;
     ptr = null;
-    if (!active) return; // was a tap, not a drag — nothing to reorder
-    const target = cardUnder(e.clientX, e.clientY);
-    const toIdx = target ? Number(target.dataset.idx) : -1;
-    if (Number.isInteger(toIdx) && toIdx >= 0 && toIdx !== fromIdx) {
-      const [m] = items.splice(fromIdx, 1);
-      items.splice(toIdx, 0, m);
-    }
-    render();
+    if (active) render(); // clears the dragging class and renumbers; order is already applied live
   }
 
   async function run() {
