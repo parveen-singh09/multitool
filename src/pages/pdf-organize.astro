@@ -35,19 +35,20 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
   /* touch-action:none lets pointer-drag work on touch without the browser
      stealing the gesture for scrolling. Scroll the page from the gaps/margins. */
-  .pg-card { position: relative; cursor: grab; touch-action: none; }
-  .pg-card.dragging { opacity: 0.35; }
-  .pg-card.over { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-  .pg-ghost { position: fixed; z-index: 60; pointer-events: none; opacity: 0.85;
+  /* These cards/buttons are built in JS (innerHTML), so Astro's scoped styles
+     never reach them — :global keeps the rules from being scoped away. */
+  :global(.pg-card) { position: relative; cursor: grab; touch-action: none; }
+  :global(.pg-card.dragging) { opacity: 0.35; }
+  :global(.pg-ghost) { position: fixed; z-index: 60; pointer-events: none; opacity: 0.9;
     transform: translate(-50%, -50%); box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
-  .pg-thumb { transition: transform 0.2s ease; }
+  :global(.pg-thumb) { display: block; }
   /* Always visible (not hover-gated) so delete/rotate work on touch devices too. */
-  .pg-tools { position: absolute; top: 6px; right: 6px; display: flex; gap: 4px; z-index: 2; }
+  :global(.pg-tools) { position: absolute; top: 6px; right: 6px; display: flex; gap: 4px; z-index: 2; }
   /* Solid, high-contrast so the tools stay visible on white page thumbnails. */
-  .pg-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.28); background: rgba(20,20,24,0.92); color: #fff; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.45); }
-  .pg-btn:hover { background: rgba(20,20,24,1); }
-  .pg-btn[data-act="del"]:hover { color: #ff6169; border-color: #ff6169; }
-  .pg-num { position: absolute; bottom: 6px; left: 6px; font-size: 11px; padding: 1px 6px; border-radius: var(--radius-sm); background: color-mix(in srgb, var(--color-surface-1) 88%, transparent); color: var(--color-ink-subtle); }
+  :global(.pg-btn) { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.28); background: rgba(20,20,24,0.92); color: #fff; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.45); }
+  :global(.pg-btn:hover) { background: rgba(20,20,24,1); }
+  :global(.pg-btn[data-act="del"]:hover) { color: #ff6169; border-color: #ff6169; }
+  :global(.pg-num) { position: absolute; bottom: 6px; left: 6px; font-size: 11px; padding: 1px 6px; border-radius: 6px; background: rgba(20,20,24,0.85); color: #fff; }
 </style>
 
 <script>
@@ -154,18 +155,13 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     }
     if (ptr.ghost) { ptr.ghost.style.left = `${e.clientX}px`; ptr.ghost.style.top = `${e.clientY}px`; }
     card.classList.add('dragging');
-    // Reflow live: if hovering a different card, move the dragged item to its
-    // slot and re-render so the pages physically shift to show the new order.
+    // Reflow live by moving ONLY the dragged node among its siblings — no full
+    // rebuild, so the grid shifts smoothly and the drag stays responsive.
     const over = cardUnder(e.clientX, e.clientY);
-    if (over && over.dataset.id !== String(ptr.id)) {
-      const from = idxById(ptr.id);
-      const to = idxById(Number(over.dataset.id));
-      if (from >= 0 && to >= 0 && from !== to) {
-        const [m] = items.splice(from, 1);
-        items.splice(to, 0, m);
-        render();
-        cardById(ptr.id)?.classList.add('dragging');
-      }
+    if (over && over !== card) {
+      const kids = [...grid.children];
+      if (kids.indexOf(over) < kids.indexOf(card)) grid.insertBefore(card, over);
+      else grid.insertBefore(card, over.nextSibling);
     }
   }
 
@@ -176,7 +172,12 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     document.body.style.userSelect = '';
     const active = ptr.active;
     ptr = null;
-    if (active) render(); // clears the dragging class and renumbers; order is already applied live
+    if (!active) return; // was a tap, not a drag
+    // Rebuild the items array from the final DOM order, then render once to
+    // renumber the page badges.
+    const order = [...grid.children].map((el) => Number((el as HTMLElement).dataset.id));
+    items.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+    render();
   }
 
   async function run() {
