@@ -1,17 +1,259 @@
 ---
 import ToolLayout from '../layouts/ToolLayout.astro';
-import DocConvert from '../components/DocConvert.astro';
 ---
 
 <ToolLayout slug="markdown-to-pdf">
-  <DocConvert slug="markdown-to-pdf" outLabel="PDF" />
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="md-pdf" class="btn btn-primary">Download PDF</button>
+      <label class="btn btn-tertiary cursor-pointer">
+        Upload .md
+        <input id="md-file" type="file" accept=".md,.markdown,.mdown,.mkd,.txt,text/markdown,text/plain" class="hidden" />
+      </label>
+      <button id="md-clear" class="btn btn-tertiary">Clear</button>
+      <button id="md-reset" class="btn btn-tertiary">Reset</button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        <span>Markdown</span>
+        <div class="copy-wrap">
+          <div
+            id="md-in"
+            class="cm-host field min-h-112 resize-y overflow-hidden p-0"
+            aria-label="Markdown input"></div>
+          <button type="button" id="md-copy-md" class="copy-icon" aria-label="Copy Markdown"></button>
+        </div>
+      </div>
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Preview
+        <div
+          id="md-out"
+          class="md-preview panel panel-lift min-h-112 overflow-y-auto p-5 text-ink"
+          aria-label="Rendered preview"
+          aria-live="polite"></div>
+      </div>
+    </div>
+
+    <p id="md-stats" class="text-[13px] text-ink-tertiary"></p>
+  </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free Markdown to PDF converter converts Markdown into a PDF document.
+      This free Markdown to PDF converter renders your Markdown to a styled
+      preview as you type, then produces a PDF from that preview. It supports
+      GitHub Flavored Markdown: headings, bold, italic and strikethrough, links
+      and images, ordered, unordered and nested lists, task lists, tables,
+      blockquotes, inline code and fenced code blocks, and horizontal rules.
     </p>
     <p>
-      Paste your content or attach a file, click Convert, then download or copy the result.
+      Paste your Markdown or upload a <code>.md</code> file, then click
+      <strong>Download PDF</strong> and choose <em>Save as PDF</em> in your
+      browser's print dialog. The PDF keeps selectable text and matches the
+      preview.
     </p>
   </div>
 </ToolLayout>
+
+<script>
+  import { marked } from 'marked';
+  import DOMPurify from 'dompurify';
+  import { EditorView, basicSetup } from 'codemirror';
+  import { EditorState } from '@codemirror/state';
+  import { markdown } from '@codemirror/lang-markdown';
+  import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+  import { tags as t } from '@lezer/highlight';
+
+  const SAMPLE = `# Markdown to PDF
+
+Write **Markdown** on the left and see the _rendered_ document on the right.
+
+## Features
+
+- GitHub Flavored Markdown
+- Tables, task lists, ~~strikethrough~~
+- [x] Styled preview
+- [ ] Selectable text in the PDF
+
+> Click **Download PDF**, then pick "Save as PDF".
+
+\`inline code\` and a fenced block:
+
+\`\`\`js
+const greet = (name) => \`Hello, \${name}!\`;
+console.log(greet('world'));
+\`\`\`
+
+| Tool | Private | Free |
+| --- | :---: | :---: |
+| Markdown to PDF | ✅ | ✅ |
+
+\`\`\`mermaid
+graph TD
+  A[Start] --> B{Decision}
+  B -->|Yes| C[Finish]
+  B -->|No| D[Alternate]
+\`\`\`
+`;
+
+  marked.setOptions({ gfm: true, breaks: false });
+
+  const host = document.getElementById('md-in')!;
+  const out = document.getElementById('md-out')!;
+  const stats = document.getElementById('md-stats')!;
+
+  const mdHighlight = HighlightStyle.define([
+    { tag: t.heading, color: 'var(--color-primary-hover)', fontWeight: '600' },
+    { tag: t.strong, color: 'var(--color-ink)', fontWeight: '600' },
+    { tag: t.emphasis, color: 'var(--color-ink-muted)', fontStyle: 'italic' },
+    { tag: t.strikethrough, textDecoration: 'line-through', color: 'var(--color-ink-subtle)' },
+    { tag: [t.link, t.url], color: 'var(--color-primary)' },
+    { tag: [t.monospace], color: 'var(--color-semantic-success)' },
+    { tag: [t.list, t.quote], color: 'var(--color-ink-subtle)' },
+    { tag: t.processingInstruction, color: 'var(--color-primary)' },
+  ]);
+
+  const cmTheme = EditorView.theme({
+    '&': { backgroundColor: 'transparent', color: 'var(--color-ink)', height: '100%', fontSize: '13px' },
+    '.cm-content': { fontFamily: 'var(--font-mono)', padding: '12px 0' },
+    '.cm-gutters': { backgroundColor: 'transparent', color: 'var(--color-ink-tertiary)', border: 'none' },
+    '.cm-activeLine, .cm-activeLineGutter': { backgroundColor: 'transparent' },
+    '&.cm-focused': { outline: 'none' },
+    '.cm-cursor': { borderLeftColor: 'var(--color-ink)' },
+    '.cm-selectionBackground, ::selection': { backgroundColor: 'var(--color-surface-3)' },
+  }, { dark: true });
+
+  const editor = new EditorView({
+    parent: host,
+    state: EditorState.create({
+      doc: '',
+      extensions: [
+        basicSetup,
+        markdown(),
+        syntaxHighlighting(mdHighlight),
+        cmTheme,
+        EditorView.lineWrapping,
+        EditorView.updateListener.of((u) => { if (u.docChanged) render(); }),
+      ],
+    }),
+  });
+
+  const getDoc = () => editor.state.doc.toString();
+  function setDoc(text: string) {
+    editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: text } });
+  }
+
+  function render() {
+    const src = getDoc();
+    out.innerHTML = DOMPurify.sanitize(marked.parse(src) as string);
+    const words = src.trim() ? src.trim().split(/\s+/).length : 0;
+    const lines = src ? src.split('\n').length : 0;
+    stats.textContent = `${words} words · ${src.length} characters · ${lines} lines`;
+    renderMermaid();
+  }
+
+  let mermaidReady = false;
+  let mmdId = 0;
+  let mermaidToken = 0;
+  async function renderMermaid() {
+    const token = ++mermaidToken;
+    const blocks = out.querySelectorAll<HTMLElement>('code.language-mermaid');
+    if (!blocks.length) return;
+    const { default: mermaid } = await import('mermaid');
+    if (!mermaidReady) {
+      mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'strict' });
+      mermaidReady = true;
+    }
+    if (token !== mermaidToken) return;
+    for (const code of blocks) {
+      const pre = code.closest('pre') ?? code;
+      try {
+        const { svg } = await mermaid.render(`mmd-${mmdId++}`, code.textContent ?? '');
+        if (token !== mermaidToken) return;
+        const wrap = document.createElement('div');
+        wrap.className = 'mermaid-diagram';
+        wrap.innerHTML = svg;
+        pre.replaceWith(wrap);
+      } catch {
+        // Incomplete/invalid diagram while typing — leave the code block as-is.
+      }
+    }
+  }
+
+  // Print-to-PDF: render the sanitized HTML in a self-contained light document
+  // and hand it to the browser's own PDF engine — faithful, selectable, no deps.
+  function downloadPdf() {
+    const title = getDoc().match(/^#{1,6}\s+(.+)$/m)?.[1]?.trim() || 'Document';
+    const esc = (s: string) => s.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]!));
+    const doc = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>${esc(title)}</title>
+<style>
+  @page { margin: 18mm; }
+  body { max-width: 48rem; margin: 0 auto; font: 15px/1.65 -apple-system, system-ui, Segoe UI, Roboto, sans-serif; color: #1a1a1a; }
+  h1, h2, h3, h4, h5, h6 { font-weight: 600; line-height: 1.25; margin: 1em 0 0.4em; }
+  h1 { font-size: 1.9rem; border-bottom: 1px solid #ddd; padding-bottom: 0.3em; }
+  h2 { font-size: 1.5rem; border-bottom: 1px solid #eee; padding-bottom: 0.25em; }
+  p { margin: 0.6em 0; }
+  ul, ol { padding-left: 1.6em; }
+  li.task-list-item { list-style: none; margin-left: -1.4em; }
+  a { color: #3b5bdb; }
+  blockquote { border-left: 3px solid #ddd; margin: 0.8em 0; padding: 0.1em 1em; color: #555; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.88em; background: #f4f4f5; padding: 2px 6px; border-radius: 4px; }
+  pre { background: #f4f4f5; padding: 0.9em 1em; border-radius: 6px; overflow-x: auto; border: 1px solid #e4e4e7; }
+  pre code { background: none; padding: 0; }
+  img { max-width: 100%; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9em; margin: 0.8em 0; }
+  th, td { border: 1px solid #ccc; padding: 6px 12px; text-align: left; }
+  th { background: #f4f4f5; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 1.2em 0; }
+  .mermaid-diagram { margin: 0.8em 0; padding: 1em; text-align: center; background: #1e1e28; border-radius: 8px; }
+  .mermaid-diagram svg { max-width: 100%; height: auto; }
+</style></head><body>${out.innerHTML}</body></html>`;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+    const idoc = iframe.contentDocument!;
+    idoc.open();
+    idoc.write(doc);
+    idoc.close();
+    const win = iframe.contentWindow!;
+    const done = () => setTimeout(() => iframe.remove(), 1000);
+    win.addEventListener('afterprint', done);
+    // Wait a tick for layout, then trigger the native print → Save as PDF dialog.
+    setTimeout(() => { win.focus(); win.print(); }, 150);
+  }
+
+  function iconCopy(id: string, label: string, getText: () => string) {
+    const btn = document.getElementById(id)!;
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(getText());
+        btn.classList.add('copied');
+        btn.setAttribute('aria-label', 'Copied');
+        setTimeout(() => { btn.classList.remove('copied'); btn.setAttribute('aria-label', label); }, 1500);
+      } catch {}
+    });
+  }
+  iconCopy('md-copy-md', 'Copy Markdown', () => getDoc());
+
+  document.getElementById('md-pdf')!.addEventListener('click', downloadPdf);
+  document.getElementById('md-clear')!.addEventListener('click', () => { setDoc(''); editor.focus(); });
+  document.getElementById('md-reset')!.addEventListener('click', () => { setDoc(SAMPLE); });
+
+  const fileInput = document.getElementById('md-file') as HTMLInputElement;
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => { setDoc(String(reader.result ?? '')); editor.focus(); };
+    reader.readAsText(file);
+    fileInput.value = '';
+  });
+
+  setDoc(SAMPLE);
+</script>

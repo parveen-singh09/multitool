@@ -6,6 +6,10 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   <div class="flex flex-col gap-4">
     <div class="flex flex-wrap items-center gap-2">
       <button id="mf-format" class="btn btn-primary">Format</button>
+      <label class="btn btn-tertiary cursor-pointer">
+        Upload .md
+        <input id="mf-file" type="file" accept=".md,.markdown,.mdown,.mkd,.txt,text/markdown,text/plain" class="hidden" />
+      </label>
       <button id="mf-clear" class="btn btn-tertiary">Clear</button>
     </div>
 
@@ -24,7 +28,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
         </div>
         <button type="button" class="copy-icon" data-copy-target="#mf-input" aria-label="Copy"></button>
       </div>
-      <div id="mf-preview" class="panel p-4 min-h-72 overflow-auto text-[15px] leading-relaxed text-ink" aria-label="Rendered preview"></div>
+      <div id="mf-preview" class="md-preview panel p-4 min-h-72 overflow-auto text-[15px] leading-relaxed text-ink" aria-label="Rendered preview"></div>
     </div>
   </div>
 
@@ -214,6 +218,15 @@ import ToolLayout from '../layouts/ToolLayout.astro';
     refresh();
     preview.innerHTML = '';
     status.classList.add('hidden');
+  });
+  const fileInput = document.getElementById('mf-file') as HTMLInputElement;
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => { input.value = String(reader.result ?? ''); refresh(); update(); };
+    reader.readAsText(file);
+    fileInput.value = '';
   });
   const refresh = wireInput(input, inputHl, () => 'markdown', () => update());
   update();

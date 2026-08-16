@@ -1,17 +1,240 @@
 ---
 import ToolLayout from '../layouts/ToolLayout.astro';
-import DocConvert from '../components/DocConvert.astro';
 ---
 
 <ToolLayout slug="markdown-to-word">
-  <DocConvert slug="markdown-to-word" outLabel="Word" />
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="md-word" class="btn btn-primary">Download Word</button>
+      <label class="btn btn-tertiary cursor-pointer">
+        Upload .md
+        <input id="md-file" type="file" accept=".md,.markdown,.mdown,.mkd,.txt,text/markdown,text/plain" class="hidden" />
+      </label>
+      <button id="md-clear" class="btn btn-tertiary">Clear</button>
+      <button id="md-reset" class="btn btn-tertiary">Reset</button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        <span>Markdown</span>
+        <div class="copy-wrap">
+          <div
+            id="md-in"
+            class="cm-host field min-h-112 resize-y overflow-hidden p-0"
+            aria-label="Markdown input"></div>
+          <button type="button" id="md-copy-md" class="copy-icon" aria-label="Copy Markdown"></button>
+        </div>
+      </div>
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        Preview
+        <div
+          id="md-out"
+          class="md-preview panel panel-lift min-h-112 overflow-y-auto p-5 text-ink"
+          aria-label="Rendered preview"
+          aria-live="polite"></div>
+      </div>
+    </div>
+
+    <p id="md-stats" class="text-[13px] text-ink-tertiary"></p>
+  </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free Markdown to Word converter converts Markdown into an editable Microsoft Word (.docx) document.
+      This free Markdown to Word converter renders your Markdown to a styled
+      preview as you type, then produces an editable Microsoft Word
+      (<code>.doc</code>) document from it. It supports GitHub Flavored Markdown:
+      headings, bold, italic and strikethrough, links and images, ordered,
+      unordered and nested lists, task lists, tables, blockquotes, inline code
+      and fenced code blocks, and horizontal rules.
     </p>
     <p>
-      Paste your content or attach a file, click Convert, then download or copy the result.
+      Paste your Markdown or upload a <code>.md</code> file, then click
+      <strong>Download Word</strong> and open the file in Microsoft Word, Google
+      Docs or LibreOffice. Headings, text styling and tables are preserved.
     </p>
   </div>
 </ToolLayout>
+
+<script>
+  import { marked } from 'marked';
+  import DOMPurify from 'dompurify';
+  import { EditorView, basicSetup } from 'codemirror';
+  import { EditorState } from '@codemirror/state';
+  import { markdown } from '@codemirror/lang-markdown';
+  import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+  import { tags as t } from '@lezer/highlight';
+
+  const SAMPLE = `# Markdown to Word
+
+Write **Markdown** on the left and see the _rendered_ document on the right.
+
+## Features
+
+- GitHub Flavored Markdown
+- Tables, task lists, ~~strikethrough~~
+- [x] Styled preview
+- [ ] Editable in Word
+
+> Click **Download Word**, then open the file in Word.
+
+\`inline code\` and a fenced block:
+
+\`\`\`js
+const greet = (name) => \`Hello, \${name}!\`;
+console.log(greet('world'));
+\`\`\`
+
+| Tool | Private | Free |
+| --- | :---: | :---: |
+| Markdown to Word | ✅ | ✅ |
+
+\`\`\`mermaid
+graph TD
+  A[Start] --> B{Decision}
+  B -->|Yes| C[Finish]
+  B -->|No| D[Alternate]
+\`\`\`
+`;
+
+  marked.setOptions({ gfm: true, breaks: false });
+
+  const host = document.getElementById('md-in')!;
+  const out = document.getElementById('md-out')!;
+  const stats = document.getElementById('md-stats')!;
+
+  const mdHighlight = HighlightStyle.define([
+    { tag: t.heading, color: 'var(--color-primary-hover)', fontWeight: '600' },
+    { tag: t.strong, color: 'var(--color-ink)', fontWeight: '600' },
+    { tag: t.emphasis, color: 'var(--color-ink-muted)', fontStyle: 'italic' },
+    { tag: t.strikethrough, textDecoration: 'line-through', color: 'var(--color-ink-subtle)' },
+    { tag: [t.link, t.url], color: 'var(--color-primary)' },
+    { tag: [t.monospace], color: 'var(--color-semantic-success)' },
+    { tag: [t.list, t.quote], color: 'var(--color-ink-subtle)' },
+    { tag: t.processingInstruction, color: 'var(--color-primary)' },
+  ]);
+
+  const cmTheme = EditorView.theme({
+    '&': { backgroundColor: 'transparent', color: 'var(--color-ink)', height: '100%', fontSize: '13px' },
+    '.cm-content': { fontFamily: 'var(--font-mono)', padding: '12px 0' },
+    '.cm-gutters': { backgroundColor: 'transparent', color: 'var(--color-ink-tertiary)', border: 'none' },
+    '.cm-activeLine, .cm-activeLineGutter': { backgroundColor: 'transparent' },
+    '&.cm-focused': { outline: 'none' },
+    '.cm-cursor': { borderLeftColor: 'var(--color-ink)' },
+    '.cm-selectionBackground, ::selection': { backgroundColor: 'var(--color-surface-3)' },
+  }, { dark: true });
+
+  const editor = new EditorView({
+    parent: host,
+    state: EditorState.create({
+      doc: '',
+      extensions: [
+        basicSetup,
+        markdown(),
+        syntaxHighlighting(mdHighlight),
+        cmTheme,
+        EditorView.lineWrapping,
+        EditorView.updateListener.of((u) => { if (u.docChanged) render(); }),
+      ],
+    }),
+  });
+
+  const getDoc = () => editor.state.doc.toString();
+  function setDoc(text: string) {
+    editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: text } });
+  }
+
+  function render() {
+    const src = getDoc();
+    out.innerHTML = DOMPurify.sanitize(marked.parse(src) as string);
+    const words = src.trim() ? src.trim().split(/\s+/).length : 0;
+    const lines = src ? src.split('\n').length : 0;
+    stats.textContent = `${words} words · ${src.length} characters · ${lines} lines`;
+    renderMermaid();
+  }
+
+  let mermaidReady = false;
+  let mmdId = 0;
+  let mermaidToken = 0;
+  async function renderMermaid() {
+    const token = ++mermaidToken;
+    const blocks = out.querySelectorAll<HTMLElement>('code.language-mermaid');
+    if (!blocks.length) return;
+    const { default: mermaid } = await import('mermaid');
+    if (!mermaidReady) {
+      mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'strict' });
+      mermaidReady = true;
+    }
+    if (token !== mermaidToken) return;
+    for (const code of blocks) {
+      const pre = code.closest('pre') ?? code;
+      try {
+        const { svg } = await mermaid.render(`mmd-${mmdId++}`, code.textContent ?? '');
+        if (token !== mermaidToken) return;
+        const wrap = document.createElement('div');
+        wrap.className = 'mermaid-diagram';
+        wrap.innerHTML = svg;
+        pre.replaceWith(wrap);
+      } catch {
+        // Incomplete/invalid diagram while typing — leave the code block as-is.
+      }
+    }
+  }
+
+  // Word export: wrap the rendered HTML in a Word-flavored HTML document. Word,
+  // Google Docs and LibreOffice open it and preserve headings, styling and tables.
+  // ponytail: HTML-as-.doc, not true OOXML — swap to the `docx` lib only if native
+  // .docx features (tracked changes, embedded fonts) are ever required.
+  function downloadWord() {
+    const title = getDoc().match(/^#{1,6}\s+(.+)$/m)?.[1]?.trim() || 'Document';
+    const esc = (s: string) => s.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]!));
+    const doc = `<!DOCTYPE html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>${esc(title)}</title>
+<style>
+  body { font: 11pt/1.5 Calibri, sans-serif; color: #1a1a1a; }
+  h1, h2, h3, h4, h5, h6 { font-family: Calibri, sans-serif; font-weight: 700; }
+  a { color: #2b579a; }
+  blockquote { border-left: 3px solid #ccc; margin: 0.5em 0; padding-left: 1em; color: #555; }
+  code, pre { font-family: Consolas, monospace; font-size: 10pt; }
+  pre { background: #f4f4f4; padding: 8pt; border: 1px solid #ddd; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #999; padding: 4pt 8pt; }
+  th { background: #f0f0f0; }
+</style></head><body>${out.innerHTML}</body></html>`;
+
+    const blob = new Blob(['﻿', doc], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title.replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '') || 'document'}.doc`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  function iconCopy(id: string, label: string, getText: () => string) {
+    const btn = document.getElementById(id)!;
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(getText());
+        btn.classList.add('copied');
+        btn.setAttribute('aria-label', 'Copied');
+        setTimeout(() => { btn.classList.remove('copied'); btn.setAttribute('aria-label', label); }, 1500);
+      } catch {}
+    });
+  }
+  iconCopy('md-copy-md', 'Copy Markdown', () => getDoc());
+
+  document.getElementById('md-word')!.addEventListener('click', downloadWord);
+  document.getElementById('md-clear')!.addEventListener('click', () => { setDoc(''); editor.focus(); });
+  document.getElementById('md-reset')!.addEventListener('click', () => { setDoc(SAMPLE); });
+
+  const fileInput = document.getElementById('md-file') as HTMLInputElement;
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => { setDoc(String(reader.result ?? '')); editor.focus(); };
+    reader.readAsText(file);
+    fileInput.value = '';
+  });
+
+  setDoc(SAMPLE);
+</script>

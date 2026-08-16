@@ -1,15 +1,176 @@
 ---
 import ToolLayout from '../layouts/ToolLayout.astro';
-import DocConvert from '../components/DocConvert.astro';
 ---
 
 <ToolLayout slug="csv-to-markdown">
-  <DocConvert slug="csv-to-markdown" outLabel="Markdown" />
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-ink-subtle">
+      <label class="flex items-center gap-2" title="Treat the first row as the table header">
+        <input id="csv-header" type="checkbox" checked class="h-4 w-4" />
+        First row is header
+      </label>
+      <label class="flex items-center gap-2" title="Pad cells so the Markdown source lines up in a monospace editor">
+        <input id="csv-align" type="checkbox" checked class="h-4 w-4" />
+        Align columns
+      </label>
+      <label class="btn btn-tertiary cursor-pointer">
+        Upload CSV
+        <input id="csv-file" type="file" accept=".csv,.tsv,.txt,text/csv,text/plain" class="hidden" />
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        <span class="flex items-center justify-between">
+          <span>CSV input</span>
+          <button id="csv-clear" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Clear</button>
+        </span>
+        <div class="copy-wrap">
+          <textarea
+            id="csv-in"
+            class="field min-h-72 w-full resize-y p-3 font-mono text-[13px]"
+            style="height:20rem"
+            spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"
+            placeholder="Paste CSV here…" aria-label="CSV input"></textarea>
+          <button type="button" class="copy-icon" data-copy-target="#csv-in" aria-label="Copy CSV"></button>
+        </div>
+      </div>
+      <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+        <span class="flex items-center justify-between">
+          <span>Markdown source</span>
+          <button id="csv-download" type="button" class="btn btn-secondary px-2 py-1 text-[13px]">Download .md</button>
+        </span>
+        <div class="copy-wrap">
+          <pre class="hl-block field" style="height:20rem;margin:0;overflow:auto;white-space:pre;word-break:normal"><code id="csv-out" class="hljs" style="background:transparent;padding:0"></code></pre>
+          <button type="button" class="copy-icon" data-copy-target="#csv-out" aria-label="Copy Markdown"></button>
+        </div>
+      </div>
+    </div>
+
+    <p id="csv-error" class="hidden text-[13px]" style="color:#e5484d" role="alert"></p>
+
+    <div class="flex flex-col gap-1 text-sm text-ink-subtle">
+      Table preview
+      <div id="csv-preview" class="md-preview panel panel-lift p-4 text-ink" style="overflow:auto"></div>
+    </div>
+
+    <p id="csv-stats" class="text-[13px] text-ink-tertiary"></p>
+  </div>
 
   <div slot="about" class="flex flex-col gap-4 text-[15px] leading-relaxed text-ink-subtle">
     <p>
-      This free CSV to Markdown converter converts CSV data into Markdown.    </p>
+      This free CSV to Markdown converter turns CSV (or tab- and
+      semicolon-separated) data into a GitHub Flavored Markdown table, live as
+      you type. The delimiter is detected automatically. It shows the Markdown
+      table source and a rendered table preview side by side.
+    </p>
     <p>
-      Paste your content or attach a file, click Convert, then download or copy the result.    </p>
+      Paste your data or upload a <code>.csv</code> file, choose whether the
+      first row is a header and whether to pad columns so the source lines up,
+      then copy the Markdown or download it as a <code>.md</code> file.
+    </p>
   </div>
 </ToolLayout>
+
+<script>
+  import { marked } from 'marked';
+  import DOMPurify from 'dompurify';
+  import { hl } from '../lib/highlight';
+  import { parseCsv, detectDelimiter } from '../lib/dataformats';
+
+  const input = document.getElementById('csv-in') as HTMLTextAreaElement;
+  const output = document.getElementById('csv-out')!;
+  const preview = document.getElementById('csv-preview')!;
+  const err = document.getElementById('csv-error')!;
+  const stats = document.getElementById('csv-stats')!;
+  const headerBox = document.getElementById('csv-header') as HTMLInputElement;
+  const alignBox = document.getElementById('csv-align') as HTMLInputElement;
+
+  marked.setOptions({ gfm: true, breaks: false });
+  let rawOutput = '';
+
+  const escCell = (c: string) => c.replace(/\|/g, '\\|').replace(/\n/g, ' ');
+
+  // Build a GFM table from a row matrix. When `align`, pad each column to its
+  // widest cell so the raw Markdown lines up in a monospace view.
+  function toMarkdownTable(rows: string[][], header: boolean, align: boolean): string {
+    if (!rows.length) return '';
+    const cells = rows.map((r) => r.map(escCell));
+    const cols = Math.max(...cells.map((r) => r.length));
+    for (const r of cells) while (r.length < cols) r.push('');
+
+    const head = header ? cells[0] : cells[0].map((_, i) => `Column ${i + 1}`);
+    const body = header ? cells.slice(1) : cells;
+
+    const widths = Array.from({ length: cols }, (_, i) =>
+      align ? Math.max(3, head[i].length, ...body.map((r) => r[i].length)) : 0);
+    const pad = (s: string, i: number) => align ? s.padEnd(widths[i]) : s;
+
+    const line = (r: string[]) => `| ${r.map((c, i) => pad(c, i)).join(' | ')} |`;
+    const sep = `| ${widths.map((w) => '-'.repeat(align ? w : 3)).join(' | ')} |`;
+    return [line(head), sep, ...body.map(line)].join('\n');
+  }
+
+  async function convert() {
+    err.classList.add('hidden');
+    const src = input.value;
+    if (!src.trim()) {
+      rawOutput = '';
+      output.textContent = '';
+      preview.innerHTML = '';
+      stats.textContent = '';
+      return;
+    }
+    try {
+      const rows = parseCsv(src, detectDelimiter(src));
+      rawOutput = toMarkdownTable(rows, headerBox.checked, alignBox.checked);
+      await hl(output, rawOutput, 'markdown');
+      preview.innerHTML = DOMPurify.sanitize(marked.parse(rawOutput) as string);
+
+      const dataRows = headerBox.checked ? Math.max(0, rows.length - 1) : rows.length;
+      const cols = rows.length ? Math.max(...rows.map((r) => r.length)) : 0;
+      stats.textContent = `${dataRows} ${dataRows === 1 ? 'row' : 'rows'} · ${cols} ${cols === 1 ? 'column' : 'columns'}`;
+    } catch (e) {
+      rawOutput = '';
+      output.textContent = '';
+      preview.innerHTML = '';
+      stats.textContent = '';
+      err.textContent = `Conversion failed: ${(e as Error).message}`;
+      err.classList.remove('hidden');
+    }
+  }
+
+  input.addEventListener('input', () => { void convert(); });
+  headerBox.addEventListener('change', () => { void convert(); });
+  alignBox.addEventListener('change', () => { void convert(); });
+
+  document.getElementById('csv-clear')!.addEventListener('click', () => {
+    input.value = '';
+    void convert();
+    input.focus();
+  });
+
+  document.getElementById('csv-download')!.addEventListener('click', () => {
+    if (!rawOutput) return;
+    const blob = new Blob([rawOutput], { type: 'text/markdown' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'table.md';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  const fileInput = document.getElementById('csv-file') as HTMLInputElement;
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => { input.value = String(reader.result ?? ''); void convert(); };
+    reader.onerror = () => { err.textContent = 'Could not read file.'; err.classList.remove('hidden'); };
+    reader.readAsText(file);
+    fileInput.value = '';
+  });
+
+  input.value = 'Name,Role,Location\nAda Lovelace,Mathematician,London\nAlan Turing,Computer Scientist,Manchester\nGrace Hopper,Rear Admiral,New York';
+  void convert();
+</script>

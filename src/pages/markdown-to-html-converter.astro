@@ -35,10 +35,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
           <span>Markdown input</span>
           <button id="m2h-clear" type="button" class="btn btn-tertiary px-2 py-1 text-[13px]">Clear</button>
         </span>
-        <div class="copy-wrap"><div id="m2h-drop" class="hl-edit field p-0" style="height:24rem;overflow:hidden">
-          <pre class="hl-block" aria-hidden="true"><code id="m2h-in-hl" class="hljs" style="background:transparent"></code></pre>
-          <textarea id="m2h-in" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="Markdown input"></textarea>
-        </div><button type="button" class="copy-icon" data-copy-target="#m2h-in" aria-label="Copy"></button></div>
+        <div class="copy-wrap"><div id="m2h-in" class="cm-host field p-0" style="height:24rem;overflow:hidden" aria-label="Markdown input"></div><button type="button" id="m2h-copy-md" class="copy-icon" aria-label="Copy Markdown"></button></div>
       </div>
       <div class="flex flex-col gap-1 text-sm text-ink-subtle">
         <span class="flex items-center justify-between">
@@ -55,7 +52,7 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 
     <div class="flex flex-col gap-1 text-sm text-ink-subtle">
       Live preview
-      <div id="m2h-preview" class="panel panel-lift p-4 text-ink" style="overflow:auto"></div>
+      <div id="m2h-preview" class="md-preview panel panel-lift p-4 text-ink" style="overflow:auto"></div>
     </div>
   </div>
 
@@ -85,10 +82,14 @@ import ToolLayout from '../layouts/ToolLayout.astro';
 <script>
   import { Marked } from 'marked';
   import DOMPurify from 'dompurify';
-  import { hl, wireInput, loadHljs } from '../lib/highlight';
+  import { hl, loadHljs } from '../lib/highlight';
+  import { EditorView, basicSetup } from 'codemirror';
+  import { EditorState } from '@codemirror/state';
+  import { markdown } from '@codemirror/lang-markdown';
+  import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+  import { tags as t } from '@lezer/highlight';
 
-  const input = document.getElementById('m2h-in') as HTMLTextAreaElement;
-  const inHl = document.getElementById('m2h-in-hl')!;
+  const host = document.getElementById('m2h-in')!;
   const output = document.getElementById('m2h-out')!;
   const preview = document.getElementById('m2h-preview')!;
   const err = document.getElementById('m2h-error')!;
@@ -97,9 +98,79 @@ import ToolLayout from '../layouts/ToolLayout.astro';
   const breaksBox = document.getElementById('m2h-breaks') as HTMLInputElement;
   const idsBox = document.getElementById('m2h-ids') as HTMLInputElement;
   const docBox = document.getElementById('m2h-doc') as HTMLInputElement;
-  const drop = document.getElementById('m2h-drop')!;
 
-  let rawOutput = ''; 
+  let rawOutput = '';
+
+  // Same CodeMirror markdown editor as the Markdown previewer.
+  const mdHighlight = HighlightStyle.define([
+    { tag: t.heading, color: 'var(--color-primary-hover)', fontWeight: '600' },
+    { tag: t.strong, color: 'var(--color-ink)', fontWeight: '600' },
+    { tag: t.emphasis, color: 'var(--color-ink-muted)', fontStyle: 'italic' },
+    { tag: t.strikethrough, textDecoration: 'line-through', color: 'var(--color-ink-subtle)' },
+    { tag: [t.link, t.url], color: 'var(--color-primary)' },
+    { tag: [t.monospace], color: 'var(--color-semantic-success)' },
+    { tag: [t.list, t.quote], color: 'var(--color-ink-subtle)' },
+    { tag: t.processingInstruction, color: 'var(--color-primary)' },
+  ]);
+
+  const cmTheme = EditorView.theme({
+    '&': { backgroundColor: 'transparent', color: 'var(--color-ink)', height: '100%', fontSize: '13px' },
+    '.cm-content': { fontFamily: 'var(--font-mono)', padding: '12px 0' },
+    '.cm-gutters': { backgroundColor: 'transparent', color: 'var(--color-ink-tertiary)', border: 'none' },
+    '.cm-activeLine, .cm-activeLineGutter': { backgroundColor: 'transparent' },
+    '&.cm-focused': { outline: 'none' },
+    '.cm-cursor': { borderLeftColor: 'var(--color-ink)' },
+    '.cm-selectionBackground, ::selection': { backgroundColor: 'var(--color-surface-3)' },
+  }, { dark: true });
+
+  const editor = new EditorView({
+    parent: host,
+    state: EditorState.create({
+      doc: '',
+      extensions: [
+        basicSetup,
+        markdown(),
+        syntaxHighlighting(mdHighlight),
+        cmTheme,
+        EditorView.lineWrapping,
+        EditorView.updateListener.of((u) => { if (u.docChanged) void convert(); }),
+      ],
+    }),
+  });
+
+  const getDoc = () => editor.state.doc.toString();
+  function setDoc(text: string) {
+    editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: text } });
+  }
+
+  // Same mermaid graph rendering as the Markdown previewer.
+  let mermaidReady = false;
+  let mmdId = 0;
+  let mermaidToken = 0;
+  async function renderMermaid() {
+    const token = ++mermaidToken;
+    const blocks = preview.querySelectorAll<HTMLElement>('code.language-mermaid');
+    if (!blocks.length) return;
+    const { default: mermaid } = await import('mermaid');
+    if (!mermaidReady) {
+      mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'strict' });
+      mermaidReady = true;
+    }
+    if (token !== mermaidToken) return;
+    for (const code of blocks) {
+      const pre = code.closest('pre') ?? code;
+      try {
+        const { svg } = await mermaid.render(`mmd-${mmdId++}`, code.textContent ?? '');
+        if (token !== mermaidToken) return;
+        const wrap = document.createElement('div');
+        wrap.className = 'mermaid-diagram';
+        wrap.innerHTML = svg;
+        pre.replaceWith(wrap);
+      } catch {
+        // Incomplete/invalid diagram while typing — leave the code block as-is.
+      }
+    }
+  }
 
   function slugify(text: string): string {
     return text.toLowerCase().trim()
@@ -156,7 +227,7 @@ ${body}
 
   async function convert() {
     err.classList.add('hidden');
-    const md = input.value;
+    const md = getDoc();
     if (!md.trim()) {
       rawOutput = '';
       output.textContent = '';
@@ -170,7 +241,8 @@ ${body}
       const safe = DOMPurify.sanitize(body);
       preview.innerHTML = safe;
       const hljs = await loadHljs();
-      preview.querySelectorAll('pre code').forEach((el) => hljs.highlightElement(el as HTMLElement));
+      preview.querySelectorAll('pre code:not(.language-mermaid)').forEach((el) => hljs.highlightElement(el as HTMLElement));
+      void renderMermaid();
 
       const firstHeading = md.match(/^#{1,6}\s+(.+)$/m)?.[1]?.trim() || 'Converted Markdown';
       rawOutput = docBox.checked ? wrapDoc(body, firstHeading) : body;
@@ -189,21 +261,29 @@ ${body}
     }
   }
 
-  const rerender = wireInput(input, inHl, () => 'markdown', () => { void convert(); });
-
   gfmBox.addEventListener('change', () => { void convert(); });
   breaksBox.addEventListener('change', () => { void convert(); });
   idsBox.addEventListener('change', () => { void convert(); });
   docBox.addEventListener('change', () => { void convert(); });
 
+  document.getElementById('m2h-copy-md')!.addEventListener('click', async () => {
+    const btn = document.getElementById('m2h-copy-md')!;
+    try {
+      await navigator.clipboard.writeText(getDoc());
+      btn.classList.add('copied');
+      btn.setAttribute('aria-label', 'Copied');
+      setTimeout(() => { btn.classList.remove('copied'); btn.setAttribute('aria-label', 'Copy Markdown'); }, 1500);
+    } catch {}
+  });
+
   document.getElementById('m2h-clear')!.addEventListener('click', () => {
-    input.value = '';
+    setDoc('');
     rawOutput = '';
     output.textContent = '';
     preview.innerHTML = '';
     err.classList.add('hidden');
     statusEl.classList.add('hidden');
-    rerender();
+    editor.focus();
   });
 
   document.getElementById('m2h-download')!.addEventListener('click', () => {
@@ -219,7 +299,7 @@ ${body}
 
   function loadFile(file: File) {
     const reader = new FileReader();
-    reader.onload = () => { input.value = String(reader.result ?? ''); rerender(); void convert(); };
+    reader.onload = () => { setDoc(String(reader.result ?? '')); void convert(); };
     reader.onerror = () => { err.textContent = 'Could not read file.'; err.classList.remove('hidden'); };
     reader.readAsText(file);
   }
@@ -228,16 +308,16 @@ ${body}
   fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) loadFile(fileInput.files[0]); });
 
   ['dragover', 'dragenter'].forEach((ev) =>
-    drop.addEventListener(ev, (e) => { e.preventDefault(); drop.style.outline = '2px solid #5e6ad2'; }));
+    host.addEventListener(ev, (e) => { e.preventDefault(); host.style.outline = '2px solid #5e6ad2'; }));
   ['dragleave', 'drop'].forEach((ev) =>
-    drop.addEventListener(ev, () => { drop.style.outline = ''; }));
-  drop.addEventListener('drop', (e) => {
+    host.addEventListener(ev, () => { host.style.outline = ''; }));
+  host.addEventListener('drop', (e) => {
     e.preventDefault();
     const file = (e as DragEvent).dataTransfer?.files?.[0];
     if (file) loadFile(file);
   });
 
-  input.value = [
+  setDoc([
     '# Markdown to HTML',
     '',
     'Convert **Markdown** into clean HTML with a *live* preview.',
@@ -255,8 +335,14 @@ ${body}
     '| Tables  | yes       |',
     '| Preview | yes       |',
     '',
+    '```mermaid',
+    'graph TD',
+    '  A[Start] --> B{Decision}',
+    '  B -->|Yes| C[Finish]',
+    '  B -->|No| D[Alternate]',
+    '```',
+    '',
     '> Blockquotes are supported too.',
-  ].join('\n');
-  rerender();
+  ].join('\n'));
   void convert();
 </script>
