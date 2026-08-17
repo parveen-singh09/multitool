@@ -93,6 +93,15 @@
 - [ ] Deploy (static `dist/` — Netlify / Vercel / Cloudflare Pages). Note: build box needs internet on first build (Tesseract model download) and ~90 MB free in `public/` for vendored assets
 - [ ] Later batches still deferred: PDF↔Office & DOCX↔ODT, RAW photo decode (CR2/NEF/ARW), YouTube→MP3/MP4 (needs server + ToS), Color→Pantone (licensed)
 
+## Deferred — drop ConvertAPI to cut cost (2026-08-17)
+Most of what ConvertAPI does, the self-hosted box already can (LibreOffice + ImageMagick + Ghostscript). ConvertAPI is convenience here, not unique capability. Plan to kill most of the bill:
+- **Image ↔ image** (jpg/png/gif/webp/bmp/tiff/ico/eps) → ImageMagick branch in [build_plan()](converter-service/server.py) (~1 branch). HEIC needs libheif, PSD/DCM need delegates (install-time).
+- **Anything → PDF** (docx/pptx/xlsx/html/txt/rtf/svg→pdf) → LibreOffice already does this; catalog artificially restricts it to within-family. Loosen the `to === 'pdf'` rule in [formatCatalog.ts](src/data/formatCatalog.ts) + [cc-job.js](functions/api/cc-job.js).
+- **Ebook → pdf** → calibre (needs QtWebEngine) or LibreOffice.
+- **Genuinely hard residual (keep a paid/other path or leave unimplemented):** pdf→docx/xlsx *editable* (LO output is poor), CAD dxf/dwg (no working free Debian CLI — already unimplemented).
+- **Optional free hosted helpers:** Stirling-PDF or Gotenberg (both self-hostable, Docker) for the PDF-heavy pairs.
+- Scope: ~15 lines Python + loosen two routing rules. Start with image pairs + →pdf (bulk of traffic), then delete ConvertAPI for everything except pdf→office and CAD.
+
 ## Log
 - 2026-07-03 — Full site built: 10 tools, home hub + 600-word SEO copy, about/privacy, full SEO meta + OG image + favicon. Production build green.
 - 2026-07-03 — Light/dark theme toggle added (no-flash init, localStorage, theme-color sync).
