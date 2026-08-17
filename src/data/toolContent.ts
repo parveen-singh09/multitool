@@ -1152,4 +1152,694 @@ export const TOOL_CONTENT: Record<string, ToolContent> = {
       { q: 'Is my input stored?', a: 'No. All conversion runs in your browser.' },
     ],
   },
+
+  // --- Generators ---
+  'lorem-ipsum': {
+    body: [
+      'Lorem ipsum is scrambled Latin-like placeholder text used to fill a design before the real copy is ready. It lets designers and developers see how a layout looks with text flowing through it, without the distraction of readable words pulling attention to the content instead of the design.',
+      'This generator produces as many paragraphs, sentences, or words as you need. Using placeholder text rather than "content content content" gives a realistic sense of length, rhythm, and line breaks while a page is still being designed.',
+    ],
+    steps: [
+      'Choose how much text you need — paragraphs, sentences, or words.',
+      'Set the amount.',
+      'The placeholder text is generated instantly.',
+      'Copy it into your mockup or template.',
+    ],
+    faqs: [
+      { q: 'What is lorem ipsum and why is it used?', a: 'It is scrambled, meaningless placeholder text based on Latin. Designers use it so a layout can be reviewed for look and spacing without readable words distracting from the design itself.' },
+      { q: 'Does lorem ipsum mean anything?', a: 'No. It is deliberately nonsensical, derived from a classical Latin text but jumbled so it reads as neutral filler rather than real content.' },
+      { q: 'Can I generate a specific number of words or paragraphs?', a: 'Yes. Choose the unit (words, sentences, or paragraphs) and the count, and the generator produces exactly that much placeholder text.' },
+      { q: 'Is anything stored?', a: 'No. The text is generated in your browser and nothing is uploaded.' },
+    ],
+  },
+  'slug-generator': {
+    body: [
+      'A URL slug is the readable part of a web address that identifies a page — the "url-slug-generator" in this page\'s own URL. A good slug is lowercase, uses hyphens between words, and drops punctuation and accents, which keeps links clean, shareable, and friendly to search engines.',
+      'This generator turns any title or phrase into a valid slug: it lowercases the text, replaces spaces with hyphens, strips special characters, and transliterates accented letters. Handy for blog posts, product pages, and any CMS that builds URLs from titles.',
+    ],
+    steps: [
+      'Type or paste your title or phrase.',
+      'The slug is generated live — lowercased, hyphenated, cleaned.',
+      'Review the result.',
+      'Copy it into your URL or CMS field.',
+    ],
+    faqs: [
+      { q: 'What makes a good URL slug?', a: 'Keep it lowercase, short, and descriptive, with hyphens between words and no special characters or spaces. Clean slugs are easier to read, share, and index.' },
+      { q: 'Why use hyphens instead of underscores in a slug?', a: 'Search engines treat hyphens as word separators but underscores as joiners, so "url-slug" reads as two words while "url_slug" can read as one. Hyphens are the web standard for slugs.' },
+      { q: 'Does the generator handle accented characters?', a: 'Yes. Accented letters are transliterated to their plain equivalents (é becomes e), so the slug stays URL-safe.' },
+      { q: 'Is my text uploaded?', a: 'No. The slug is generated in your browser.' },
+    ],
+  },
+  'uuid-generator': {
+    body: [
+      'A UUID (universally unique identifier) is a 128-bit value written as 36 characters, used to label things — database rows, files, API objects — with an ID that is effectively guaranteed never to collide with another, even when generated independently on different machines. This tool produces version 4 UUIDs, which are random.',
+      'The appeal of a UUID is that you can create one anywhere without a central authority handing out numbers, and still be confident it is unique. That makes them ideal for distributed systems, offline record creation, and merging data from multiple sources.',
+    ],
+    steps: [
+      'Open the tool — a UUID is generated immediately.',
+      'Generate more, or a batch, as needed.',
+      'Each is a random version-4 UUID.',
+      'Copy the IDs you need.',
+    ],
+    faqs: [
+      { q: 'Are UUIDs really unique?', a: 'A version-4 UUID has 122 random bits, so the chance of two colliding is astronomically small — you could generate billions and never expect a duplicate. They are treated as unique for all practical purposes.' },
+      { q: 'What is a version 4 UUID?', a: 'Version 4 is the random variant, generated from random numbers rather than time or hardware address. It is the most common type because it needs no special inputs and leaks no information.' },
+      { q: 'Can I use a UUID as a database key?', a: 'Yes, and it is common in distributed systems because IDs can be created independently without coordination. The trade-off is that UUID keys are larger and less sequential than auto-increment integers.' },
+      { q: 'Are the UUIDs generated privately?', a: 'Yes. They are created in your browser using its secure random source and never leave your device.' },
+    ],
+  },
+  'passphrase-generator': {
+    body: [
+      'A passphrase is a password made of several random words, like "harbor-velvet-mimic-ledger". It is easier for a human to remember than a jumble of symbols yet, because it is long, it is very hard for a computer to crack. This generator picks words at random from a wordlist using your browser\'s secure random source.',
+      'The security comes from length and true randomness, not from clever substitutions. Four or five randomly chosen words already give an enormous number of combinations, which is why passphrases are recommended for master passwords you must actually memorise.',
+    ],
+    steps: [
+      'Choose how many words the passphrase should contain.',
+      'Pick a separator and any options (capitalisation, a number).',
+      'A random passphrase is generated securely.',
+      'Copy it and store it in your password manager.',
+    ],
+    faqs: [
+      { q: 'Are passphrases more secure than passwords?', a: 'A random multi-word passphrase can be both more memorable and harder to crack than a short complex password, because its length dramatically increases the possible combinations. The key is that the words are chosen truly at random.' },
+      { q: 'How many words should my passphrase have?', a: 'Four words is a reasonable minimum; five or six is stronger, especially for a master password. Each added random word multiplies the difficulty of guessing it.' },
+      { q: 'Should I pick the words myself?', a: 'No. Human-chosen words are predictable and much weaker. Let the generator select them randomly — that randomness is what provides the security.' },
+      { q: 'Is the passphrase generated privately?', a: 'Yes. It is created in your browser with the secure random generator and never transmitted.' },
+    ],
+  },
+  'pin-generator': {
+    body: [
+      'A PIN is a short numeric code used for cards, phones, locks, and door entry systems. This generator creates random PINs of the length you choose, using your browser\'s cryptographically secure random source so the digits are genuinely unpredictable rather than a pattern.',
+      'Random PINs matter because the most common codes — 1234, 0000, birth years — are the first an attacker tries. A randomly generated PIN avoids those predictable choices while staying the right length for whatever device or account requires it.',
+    ],
+    steps: [
+      'Choose the PIN length (commonly 4 or 6 digits).',
+      'Generate one, or several at once.',
+      'Each PIN uses secure random digits.',
+      'Copy the PIN you need.',
+    ],
+    faqs: [
+      { q: 'What is a secure PIN length?', a: 'Longer is better: a 6-digit PIN has a hundred times more combinations than a 4-digit one. Use the longest length your device or bank allows for sensitive access.' },
+      { q: 'Why avoid PINs like 1234 or a birth year?', a: 'Those are the codes attackers guess first because they are extremely common. A randomly generated PIN has no such pattern, making it much harder to guess.' },
+      { q: 'Are these PINs truly random?', a: 'Yes. They use the browser\'s cryptographically secure random number generator, not a predictable sequence.' },
+      { q: 'Is the PIN sent anywhere?', a: 'No. It is generated in your browser and never leaves your device.' },
+    ],
+  },
+  'api-key-generator': {
+    body: [
+      'An API key is a long random string used to identify and authorise an application calling a service. This generator produces high-entropy random keys suitable for that purpose, built from your browser\'s secure random source so they cannot be predicted or guessed.',
+      'A strong API key needs enough randomness that brute-forcing it is infeasible. This tool creates keys of a configurable length and character set; treat every key as a secret, store it securely, and rotate it if it is ever exposed.',
+    ],
+    steps: [
+      'Choose the key length and character set.',
+      'Generate the key.',
+      'A secure random string is produced.',
+      'Copy it and store it safely as a secret.',
+    ],
+    faqs: [
+      { q: 'What makes an API key secure?', a: 'Length and randomness. A long key drawn from a large character set using a cryptographically secure generator has so many possibilities that guessing it is infeasible.' },
+      { q: 'How should I store an API key?', a: 'Treat it like a password: keep it out of source code and public repositories, store it in environment variables or a secrets manager, and rotate it if it may have leaked.' },
+      { q: 'Can I generate keys in a specific format?', a: 'You can set the length and character set to match a service\'s requirements. Some services issue keys in their own format, so use their key where one is provided.' },
+      { q: 'Are the keys generated privately?', a: 'Yes. They are created in your browser and never transmitted, which is essential for a secret value.' },
+    ],
+  },
+  'jwt-generator': {
+    body: [
+      'A JSON Web Token (JWT) is a compact, signed token that carries claims — such as a user ID and expiry — between a client and a server. This tool builds a JWT from your header and payload and signs it with the HS256 algorithm using a secret you provide, all in the browser via the Web Crypto API.',
+      'JWTs are widely used for stateless authentication: the server can verify the signature to trust the token\'s contents without storing session data. Remember that the payload is only encoded, not encrypted — anyone can read it — so never put secrets in the claims.',
+    ],
+    steps: [
+      'Enter the claims for the payload (and adjust the header if needed).',
+      'Provide the signing secret.',
+      'The token is signed with HS256 in your browser.',
+      'Copy the generated JWT.',
+    ],
+    faqs: [
+      { q: 'Is the data in a JWT encrypted?', a: 'No. The header and payload are only Base64URL-encoded, so anyone with the token can read them. Never put sensitive data in the claims — the signature protects against tampering, not against reading.' },
+      { q: 'What does HS256 mean?', a: 'HS256 is HMAC using SHA-256: the token is signed with a shared secret. The same secret is needed to verify it, so keep the secret private on your server.' },
+      { q: 'What is a JWT used for?', a: 'Most commonly stateless authentication — after login, the server issues a signed JWT the client sends with each request, letting the server verify identity without storing session state.' },
+      { q: 'Is my secret uploaded?', a: 'No. Signing happens in your browser with the Web Crypto API, so your secret and token never leave your device.' },
+    ],
+  },
+  'bcrypt-generator': {
+    body: [
+      'bcrypt is a password-hashing function designed specifically to store passwords safely. Unlike a fast hash, bcrypt is deliberately slow and includes a built-in salt and an adjustable "cost" factor, which makes large-scale brute-force cracking expensive even if a database is stolen. This tool hashes a password with bcrypt in your browser.',
+      'You store the bcrypt hash, never the plain password. When a user logs in, you hash their input and compare — the salt and cost are embedded in the hash itself, so verification needs nothing extra. Raising the cost factor makes hashing slower and hence more resistant to attack.',
+    ],
+    steps: [
+      'Enter the password to hash.',
+      'Choose the cost factor (higher is slower and stronger).',
+      'The bcrypt hash is computed in your browser.',
+      'Copy the hash to store in your database.',
+    ],
+    faqs: [
+      { q: 'Why use bcrypt instead of SHA-256 for passwords?', a: 'General hashes like SHA-256 are fast, which helps attackers try billions of guesses. bcrypt is deliberately slow and salted, making mass cracking far more expensive — exactly what password storage needs.' },
+      { q: 'What is the cost factor?', a: 'It controls how much work each hash takes; each increment roughly doubles the time. A higher cost slows attackers but also your own logins, so choose the highest value your server can tolerate.' },
+      { q: 'Do I need to store the salt separately?', a: 'No. bcrypt embeds the salt (and cost) inside the resulting hash string, so you store just that one value and verification works automatically.' },
+      { q: 'Is my password uploaded?', a: 'No. Hashing runs entirely in your browser, so the password never leaves your device.' },
+    ],
+  },
+  'htpasswd-generator': {
+    body: [
+      'An .htpasswd file stores usernames and hashed passwords for HTTP Basic Authentication on Apache and Nginx servers. This tool builds a valid htpasswd line — username plus a securely hashed password — that you can paste into the file to protect a directory or admin area.',
+      'Because the password is hashed, the file never contains plain-text credentials. Basic Auth is simple and effective for locking down staging sites or internal tools, though it should always be paired with HTTPS so the credentials are not sent in the clear.',
+    ],
+    steps: [
+      'Enter the username and password.',
+      'Choose the hashing algorithm (such as bcrypt).',
+      'The htpasswd line is generated.',
+      'Paste it into your .htpasswd file.',
+    ],
+    faqs: [
+      { q: 'What is an .htpasswd file for?', a: 'It stores credentials for HTTP Basic Authentication, letting Apache or Nginx password-protect a directory, admin panel, or staging site with a login prompt.' },
+      { q: 'Is the password stored in plain text?', a: 'No. The generator hashes it, so the .htpasswd file holds only the hash. The original password is never written to the file.' },
+      { q: 'Is Basic Auth secure enough?', a: 'It is fine for simple access control, but always serve the protected site over HTTPS — otherwise the credentials travel unencrypted and can be intercepted.' },
+      { q: 'Is my password uploaded?', a: 'No. The line is generated in your browser and nothing is sent to a server.' },
+    ],
+  },
+  'username-generator': {
+    body: [
+      'This generator invents available-looking usernames by combining words, adjectives, and optional numbers into memorable handles. It is handy when your first choice is taken and you need fresh ideas for a new account, gaming profile, or social handle.',
+      'A good username is easy to say, type, and remember, and distinctive enough to still be free. The generator gives you a stream of options in different styles so you can pick one that fits the platform and your taste.',
+    ],
+    steps: [
+      'Choose a style or options if offered (length, numbers, theme).',
+      'Generate a batch of username ideas.',
+      'Scroll through the suggestions.',
+      'Copy the one you like and check its availability.',
+    ],
+    faqs: [
+      { q: 'Will the generated username be available?', a: 'The tool creates ideas but cannot check any specific site\'s database, so you should verify availability on the platform. Adding numbers or an extra word improves your chances of finding a free handle.' },
+      { q: 'What makes a good username?', a: 'Something easy to remember, spell, and type, and distinctive enough to still be available. Avoid overly long strings or confusing character substitutions.' },
+      { q: 'Can I get themed usernames?', a: 'Where the tool offers styles or themes, yes — you can steer the suggestions toward a mood or category to match a gaming, professional, or social context.' },
+      { q: 'Is anything stored?', a: 'No. Suggestions are generated in your browser.' },
+    ],
+  },
+  'meta-tag-generator': {
+    body: [
+      'Meta tags tell search engines and social platforms what a web page is about. This generator builds the essential HTML head tags — title, description, and often viewport and Open Graph tags — from the details you enter, ready to paste into your page\'s <head>.',
+      'A well-written title and meta description influence how your page appears in search results and how appealing it looks to click. Getting these right is one of the simplest, highest-impact pieces of on-page SEO.',
+    ],
+    steps: [
+      'Enter your page title, description, and other details.',
+      'The corresponding meta tags are generated.',
+      'Review the HTML.',
+      'Copy it into the <head> of your page.',
+    ],
+    faqs: [
+      { q: 'How long should a meta description be?', a: 'Aim for roughly 150–160 characters. Search engines truncate longer descriptions, so keep the key message near the front and make it compelling to encourage clicks.' },
+      { q: 'Do meta tags improve SEO?', a: 'The title and description do not directly boost rankings much, but they strongly affect how your result looks and how many people click it, which matters. Other tags like viewport affect usability.' },
+      { q: 'What are Open Graph tags?', a: 'Open Graph tags control how your page looks when shared on social platforms — the title, description, and image in the preview card. Many meta generators include them.' },
+      { q: 'Is my input uploaded?', a: 'No. The tags are generated in your browser.' },
+    ],
+  },
+  'open-graph-generator': {
+    body: [
+      'Open Graph tags control the preview card that appears when your page is shared on social media and messaging apps — the title, description, and image people see before they click. This generator builds the correct og: meta tags from your inputs so shared links look polished instead of bare.',
+      'Without Open Graph tags, platforms guess at your preview, often picking the wrong image or text. Setting them explicitly makes your links more inviting and consistent across Facebook, LinkedIn, and other services that read the protocol.',
+    ],
+    steps: [
+      'Enter your title, description, image URL, and page URL.',
+      'The Open Graph meta tags are generated.',
+      'Review the HTML.',
+      'Paste it into your page\'s <head>.',
+    ],
+    faqs: [
+      { q: 'What are Open Graph tags?', a: 'They are meta tags (prefixed og:) that tell social platforms how to display your page when shared — controlling the preview title, description, and image in the link card.' },
+      { q: 'What image size works best for Open Graph?', a: 'A common recommendation is 1200×630 pixels, which displays cleanly as a large card on most platforms. Smaller images may be cropped or shown as thumbnails.' },
+      { q: 'Do I still need a regular meta description?', a: 'Yes. Open Graph controls social previews, while the standard meta description serves search engines. It is good practice to set both.' },
+      { q: 'Is my data stored?', a: 'No. The tags are generated in your browser.' },
+    ],
+  },
+  'robots-txt-generator': {
+    body: [
+      'A robots.txt file sits at the root of a site and tells search-engine crawlers which paths they may or may not access. This generator builds a valid robots.txt from simple choices — which user agents to address, which directories to disallow, and where your sitemap lives.',
+      'It is a guidance file, not a security control: well-behaved crawlers obey it, but it cannot force compliance and should never be used to hide sensitive pages. Its real job is steering crawlers away from low-value or duplicate areas so they spend their crawl budget on pages that matter.',
+    ],
+    steps: [
+      'Choose which crawlers the rules apply to.',
+      'List any paths to disallow (or allow).',
+      'Add your sitemap URL.',
+      'Copy the generated robots.txt to your site root.',
+    ],
+    faqs: [
+      { q: 'What does robots.txt do?', a: 'It instructs search-engine crawlers which parts of your site they may crawl. It helps steer crawl budget toward important pages and away from duplicate or low-value ones.' },
+      { q: 'Can robots.txt hide a page from the public?', a: 'No. It only requests that compliant crawlers skip a path — the file is public and anyone can read it. Use real authentication to protect private content.' },
+      { q: 'Does disallowing a page remove it from search results?', a: 'Not reliably. Blocking crawling can still leave a URL indexed without a description. To keep a page out of results, use a noindex tag instead of, or alongside, robots rules.' },
+      { q: 'Is my input uploaded?', a: 'No. The file is generated in your browser.' },
+    ],
+  },
+  'htaccess-generator': {
+    body: [
+      'An .htaccess file configures the Apache web server on a per-directory basis — handling redirects, URL rewriting, access rules, custom error pages, and more. This generator produces common .htaccess snippets from your choices so you do not have to memorise the exact syntax.',
+      'Because .htaccess changes take effect immediately without restarting the server, it is a convenient way to add redirects or protections. Its rules can be finicky, though, so always keep a backup and test after changing anything, since a syntax error can take a site offline.',
+    ],
+    steps: [
+      'Choose the rule type (redirect, rewrite, block, error page).',
+      'Enter the relevant paths or conditions.',
+      'The .htaccess snippet is generated.',
+      'Add it to your .htaccess file and test.',
+    ],
+    faqs: [
+      { q: 'What is an .htaccess file used for?', a: 'On Apache servers it configures per-directory behaviour such as redirects, URL rewriting, access restrictions, and custom error pages, without editing the main server config.' },
+      { q: 'Will .htaccess work on any server?', a: 'Only on Apache (and some compatible servers) with the file feature enabled. Nginx and others use different configuration and ignore .htaccess.' },
+      { q: 'How do I set up a 301 redirect in .htaccess?', a: 'A 301 permanent redirect maps an old URL to a new one so visitors and search engines follow the move. This generator can produce the correct Redirect or RewriteRule line for you.' },
+      { q: 'Is my configuration stored?', a: 'No. Snippets are generated in your browser.' },
+    ],
+  },
+  'gitignore-generator': {
+    body: [
+      'A .gitignore file tells Git which files and folders to leave out of version control — build outputs, dependency folders, logs, editor settings, and secrets. This generator assembles a .gitignore tailored to the languages and tools your project uses, so you start with sensible rules instead of a blank file.',
+      'Keeping generated and local files out of the repository keeps it clean, smaller, and free of machine-specific clutter — and, crucially, helps avoid committing secrets or huge dependency directories that should never be tracked.',
+    ],
+    steps: [
+      'Select the languages, frameworks, and tools your project uses.',
+      'The matching ignore rules are combined.',
+      'Review the generated .gitignore.',
+      'Save it at the root of your repository.',
+    ],
+    faqs: [
+      { q: 'What should go in a .gitignore file?', a: 'Anything that should not be version-controlled: dependency folders (like node_modules), build artefacts, logs, local editor and OS files, and secret or environment files.' },
+      { q: 'Why not commit node_modules or build folders?', a: 'They are large, machine-generated, and reproducible from your source and lockfiles. Committing them bloats the repository and causes needless merge conflicts.' },
+      { q: 'Does .gitignore remove files already tracked?', a: 'No. It only prevents untracked files from being added. To stop tracking a file already committed, you must remove it from the index separately.' },
+      { q: 'Is my selection uploaded?', a: 'No. The file is generated in your browser.' },
+    ],
+  },
+  'random-string-generator': {
+    body: [
+      'This tool generates random strings of a length and character set you choose — letters, numbers, symbols, or any mix. It draws from your browser\'s secure random source, making the output suitable for tokens, test data, temporary passwords, or any place you need unpredictable text.',
+      'Being able to control length and which characters are allowed matters because different systems have different rules — some want only alphanumerics, others require symbols. The generator lets you match those constraints while keeping the result genuinely random.',
+    ],
+    steps: [
+      'Choose the string length.',
+      'Select which character types to include.',
+      'Generate one or many strings.',
+      'Copy the result.',
+    ],
+    faqs: [
+      { q: 'Are the random strings secure?', a: 'Yes. They are generated with the browser\'s cryptographically secure random source, so they are suitable for tokens and temporary secrets, not just casual use.' },
+      { q: 'Can I choose which characters to include?', a: 'Yes. Toggle uppercase, lowercase, numbers, and symbols to match a system\'s requirements, and set the exact length you need.' },
+      { q: 'What can I use random strings for?', a: 'Common uses include tokens, temporary passwords, test and sample data, unique identifiers, and cache-busting values.' },
+      { q: 'Is anything sent to a server?', a: 'No. Strings are generated entirely in your browser.' },
+    ],
+  },
+  'dice-roller': {
+    body: [
+      'This dice roller simulates rolling dice of any number of sides, from a standard six-sided die to the d20 and other polyhedral dice used in tabletop role-playing games. It uses your browser\'s random source, so each roll is fair and independent — no physical dice required.',
+      'It is handy when you have lost your dice, need many dice at once, or want unusual types like a d100. You choose how many dice and how many sides, roll, and see each result plus the total.',
+    ],
+    steps: [
+      'Choose the number of sides per die.',
+      'Choose how many dice to roll.',
+      'Roll.',
+      'Read each die\'s result and the total.',
+    ],
+    faqs: [
+      { q: 'Are the dice rolls fair?', a: 'Yes. Each roll uses the browser\'s random generator so every face is equally likely and rolls are independent, just like fair physical dice.' },
+      { q: 'Can I roll polyhedral dice like a d20?', a: 'Yes. Set the number of sides to 4, 6, 8, 10, 12, 20, 100, or any value you need for tabletop games.' },
+      { q: 'Can I roll several dice at once?', a: 'Yes. Choose how many dice to roll together and the tool shows each result and the combined total.' },
+      { q: 'Is the roll generated locally?', a: 'Yes. Everything happens in your browser.' },
+    ],
+  },
+  'coin-flip': {
+    body: [
+      'This tool flips a virtual coin, returning heads or tails at random with an even chance of each. It is the quick way to make a fair 50/50 decision, settle a friendly dispute, or run a demonstration of probability when no real coin is at hand.',
+      'Each flip uses your browser\'s random source, so results are unbiased and independent — a run of heads does not make tails "due" next, just as with a real coin. You can flip repeatedly and, in many versions, see a tally of the results.',
+    ],
+    steps: [
+      'Open the tool.',
+      'Flip the coin.',
+      'Read the heads-or-tails result.',
+      'Flip again as many times as you like.',
+    ],
+    faqs: [
+      { q: 'Is the coin flip truly 50/50?', a: 'Yes. Heads and tails are equally likely on each flip, using the browser\'s random generator, with no bias toward either outcome.' },
+      { q: 'After several heads, is tails more likely next?', a: 'No. Each flip is independent, so previous results do not change the odds — the next flip is still 50/50. Expecting otherwise is the gambler\'s fallacy.' },
+      { q: 'Can I flip many coins at once?', a: 'Depending on the version, you can flip repeatedly and often see a running tally of heads versus tails.' },
+      { q: 'Is the flip done locally?', a: 'Yes. It runs entirely in your browser.' },
+    ],
+  },
+  'barcode-generator': {
+    body: [
+      'This tool generates retail and industrial barcodes — such as UPC, EAN, and Code 128 — from the number or text you enter, and lets you download the result as an image. Barcodes encode data into a pattern of bars that a scanner reads instantly, which is why they are everywhere in retail, inventory, and shipping.',
+      'You pick the barcode type your use case needs and enter the value; the tool renders a scannable image you can print on labels or embed in documents. Different symbologies suit different data — retail products use UPC/EAN, while Code 128 handles arbitrary alphanumeric text.',
+    ],
+    steps: [
+      'Choose the barcode type (UPC, EAN, Code 128, and more).',
+      'Enter the number or text to encode.',
+      'The barcode image is rendered.',
+      'Download it as an image to print or embed.',
+    ],
+    faqs: [
+      { q: 'Which barcode type should I use?', a: 'Use UPC or EAN for retail products (they encode a fixed-length product number), and Code 128 for general alphanumeric data like internal SKUs or tracking codes. Pick the symbology your scanner and system expect.' },
+      { q: 'Will the generated barcode actually scan?', a: 'Yes, provided the value fits the chosen symbology\'s rules and you print it at a sufficient size and contrast. Very small or low-resolution prints can be hard to scan.' },
+      { q: 'What is the difference between UPC and EAN?', a: 'UPC is the 12-digit standard common in North America; EAN is the 13-digit international version. They are closely related and most scanners read both.' },
+      { q: 'Is my data uploaded?', a: 'No. The barcode is generated in your browser and the value never leaves your device.' },
+    ],
+  },
+
+  // --- More calculators ---
+  'body-fat-calculator': {
+    body: [
+      'Body fat percentage tells you what proportion of your weight is fat versus everything else — muscle, bone, water, and organs. It is often a more useful health and fitness measure than weight or BMI alone, because two people at the same weight can have very different amounts of fat. This calculator uses the US Navy method, which estimates body fat from a few tape measurements.',
+      'The US Navy formula uses circumference measurements (waist, neck, and for women the hips) along with height. It is a practical estimate rather than a lab-grade reading, so treat the result as a guide for tracking change over time rather than an exact figure.',
+    ],
+    steps: [
+      'Select your sex and enter your height.',
+      'Measure and enter your neck and waist (and hips for women).',
+      'The calculator estimates your body fat percentage.',
+      'Track the number over time to gauge progress.',
+    ],
+    faqs: [
+      { q: 'How accurate is the US Navy body fat method?', a: 'It is a reasonable estimate — typically within a few percent of more precise methods — as long as you measure carefully. It is best used to track changes over time rather than as an exact clinical value.' },
+      { q: 'What is a healthy body fat percentage?', a: 'Healthy ranges differ by sex and age, but broadly around 10–20% for men and 18–28% for women is often cited as healthy. Athletes are usually lower. Consult a professional for guidance specific to you.' },
+      { q: 'Why measure body fat instead of just weight?', a: 'Weight cannot tell fat from muscle. Body fat percentage shows body composition, so you can see whether you are losing fat while keeping muscle — which weight alone hides.' },
+      { q: 'Is my data stored?', a: 'No. The calculation runs in your browser and nothing is uploaded.' },
+    ],
+  },
+  'ideal-weight-calculator': {
+    body: [
+      'An ideal weight calculator estimates a healthy target weight for your height and sex using established formulas (such as Devine, Robinson, and Hamwi). These give a reference range rather than a single correct number, since a healthy weight also depends on build, muscle, and individual factors.',
+      'The result is a useful starting point for setting goals, but it is not a verdict. Someone muscular may sit above the "ideal" and still be healthy, so pair the figure with other measures like body fat percentage and how you feel.',
+    ],
+    steps: [
+      'Enter your height and select your sex.',
+      'The calculator applies standard ideal-weight formulas.',
+      'Read the estimated healthy weight range.',
+      'Use it as a reference alongside other health measures.',
+    ],
+    faqs: [
+      { q: 'How is ideal weight calculated?', a: 'It uses formulas based mainly on height and sex, such as the Devine and Robinson equations. Different formulas give slightly different numbers, which is why a range is more meaningful than a single value.' },
+      { q: 'Is ideal weight the same as a healthy weight?', a: 'Not exactly. It is a statistical reference; a healthy weight also depends on your build, muscle mass, and overall health. A muscular person may weigh more and still be healthy.' },
+      { q: 'Should I aim exactly for my ideal weight?', a: 'Treat it as a guide, not a strict target. Focus on healthy habits and use body composition and how you feel alongside the number rather than chasing an exact figure.' },
+      { q: 'Is my data private?', a: 'Yes. The calculation runs entirely in your browser.' },
+    ],
+  },
+  'macro-calculator': {
+    body: [
+      'Macros — short for macronutrients — are protein, carbohydrates, and fat, the three nutrients that supply calories. A macro calculator works out how many grams of each to eat per day based on your calorie needs and goal, whether that is losing fat, maintaining, or building muscle.',
+      'It starts from your estimated daily calories, then splits them into macro targets using ratios suited to your goal. Tracking macros rather than just calories helps ensure you get enough protein to preserve muscle and enough of each nutrient to feel and perform well.',
+    ],
+    steps: [
+      'Enter your details and activity level to estimate daily calories.',
+      'Choose your goal (lose, maintain, or gain).',
+      'The calculator splits calories into protein, carb, and fat grams.',
+      'Use the gram targets to plan your meals.',
+    ],
+    faqs: [
+      { q: 'What are macros and why track them?', a: 'Macros are protein, carbohydrate, and fat — the calorie-providing nutrients. Tracking them, not just total calories, helps ensure adequate protein for muscle and a balance that supports your energy and goals.' },
+      { q: 'How much protein should I eat?', a: 'A common range is about 1.6–2.2 grams per kilogram of body weight for those exercising or trying to preserve muscle while losing fat. The calculator suggests a target based on your inputs.' },
+      { q: 'Do macro ratios change with my goal?', a: 'Yes. Fat loss, maintenance, and muscle gain use different calorie levels and often different splits — for example, higher protein when cutting to protect muscle. The tool adjusts accordingly.' },
+      { q: 'Is my data stored?', a: 'No. Everything is calculated in your browser.' },
+    ],
+  },
+  'scientific-calculator': {
+    body: [
+      'A scientific calculator handles far more than arithmetic — trigonometry, logarithms, exponents, roots, and constants like π and e — while respecting the correct order of operations. This one evaluates expressions you type, so you can enter a whole formula and get the answer in one step.',
+      'It parses your input safely rather than using the browser\'s eval, so a mistyped expression gives a clear error instead of unexpected behaviour. That makes it reliable for maths homework, engineering checks, and any calculation with parentheses and functions.',
+    ],
+    steps: [
+      'Type a mathematical expression, using functions like sin, log, or sqrt.',
+      'Use parentheses to control the order of operations.',
+      'The result is calculated as you go.',
+      'Copy the answer if you need it elsewhere.',
+    ],
+    faqs: [
+      { q: 'What functions does the scientific calculator support?', a: 'It handles trigonometric functions, logarithms, exponents and powers, square and other roots, and constants such as π and e, all following standard order of operations.' },
+      { q: 'How does it handle order of operations?', a: 'It follows the standard precedence (parentheses, exponents, multiplication and division, then addition and subtraction), so complex expressions evaluate the way you would expect on paper.' },
+      { q: 'Are angles in degrees or radians?', a: 'Trigonometric functions typically expect radians by default in most calculators; check the tool\'s mode setting if it offers one, and convert if you are working in degrees.' },
+      { q: 'Is my input uploaded?', a: 'No. Calculations run entirely in your browser.' },
+    ],
+  },
+  'fraction-calculator': {
+    body: [
+      'A fraction calculator adds, subtracts, multiplies, and divides fractions and gives the answer as a simplified fraction — handling the common-denominator and reducing steps that make fraction arithmetic fiddly by hand. It also converts between improper fractions and mixed numbers.',
+      'It is useful for cooking measurements, woodworking and construction where inches are divided into fractions, and schoolwork. Because it keeps exact fractional values rather than rounding to decimals, the results stay precise.',
+    ],
+    steps: [
+      'Enter the two fractions.',
+      'Choose the operation (add, subtract, multiply, divide).',
+      'The calculator computes and simplifies the result.',
+      'Read the answer as a fraction and, where relevant, a mixed number.',
+    ],
+    faqs: [
+      { q: 'How do you add fractions with different denominators?', a: 'You convert them to a common denominator, add the numerators, then simplify. The calculator does all of this automatically and gives the reduced result.' },
+      { q: 'What is the difference between an improper fraction and a mixed number?', a: 'An improper fraction has a numerator larger than its denominator (like 7/4); a mixed number writes the same value as a whole number and a fraction (1 3/4). The tool can show both.' },
+      { q: 'Does it simplify the answer automatically?', a: 'Yes. Results are reduced to lowest terms, so 2/4 is shown as 1/2, giving you the simplest exact form.' },
+      { q: 'Is my input stored?', a: 'No. The calculation runs in your browser.' },
+    ],
+  },
+  'standard-deviation-calculator': {
+    body: [
+      'Standard deviation measures how spread out a set of numbers is around their average. A small standard deviation means the values cluster near the mean; a large one means they are widely scattered. This calculator computes it for a list of numbers you enter, along with the mean and variance.',
+      'It matters because two datasets can share the same average yet behave completely differently — test scores tightly bunched around 70 versus scores swinging from 30 to 100. Standard deviation captures that difference, which is central to statistics, quality control, and finance.',
+    ],
+    steps: [
+      'Enter your numbers, separated by commas or new lines.',
+      'Choose population or sample standard deviation if prompted.',
+      'The calculator computes the mean, variance, and standard deviation.',
+      'Read the results.',
+    ],
+    faqs: [
+      { q: 'What is the difference between population and sample standard deviation?', a: 'Population standard deviation divides by the number of values (N); sample divides by N−1 to correct for estimating from a sample. Use sample when your data is a subset of a larger group.' },
+      { q: 'What does a high standard deviation mean?', a: 'It means the values are widely spread from the average. A low standard deviation means they cluster closely around the mean.' },
+      { q: 'How is standard deviation related to variance?', a: 'Standard deviation is the square root of the variance. Variance is in squared units, so standard deviation is often preferred because it is in the same units as the data.' },
+      { q: 'Is my data uploaded?', a: 'No. All statistics are computed in your browser.' },
+    ],
+  },
+  'gpa-calculator': {
+    body: [
+      'A GPA (grade point average) calculator converts your course grades into a single averaged number on a points scale, weighting each course by its credit hours. It saves you from manually multiplying grades by credits and dividing — and lets you see instantly how a new grade will move your average.',
+      'Because courses with more credit hours count more, a large course carries more weight than a small one. Entering your courses shows both your term GPA and, if you include past results, your cumulative average.',
+    ],
+    steps: [
+      'Enter each course\'s grade and its credit hours.',
+      'Add all your courses.',
+      'The calculator weights grades by credits and averages them.',
+      'Read your GPA.',
+    ],
+    faqs: [
+      { q: 'How is GPA calculated?', a: 'Each grade is converted to grade points, multiplied by the course\'s credit hours, and the total is divided by the total credit hours. This weights bigger courses more heavily than smaller ones.' },
+      { q: 'What is the difference between weighted and unweighted GPA?', a: 'Unweighted GPA treats all courses on the same scale (often up to 4.0), while weighted GPA gives extra points for harder courses like honours or AP. Check which your school uses.' },
+      { q: 'Why do credit hours matter for GPA?', a: 'Courses with more credit hours contribute more to your average, so a strong grade in a large course helps more — and a weak one hurts more — than in a small course.' },
+      { q: 'Is my data private?', a: 'Yes. The calculation runs in your browser.' },
+    ],
+  },
+  'sales-tax-calculator': {
+    body: [
+      'A sales tax calculator works out the tax added to a purchase and the final total, given a price and a tax rate. It can also work backwards to find the pre-tax price from a total. Handy for shoppers checking a receipt and for sellers quoting tax-inclusive prices.',
+      'Sales tax rates vary widely by country, state, and even city, so the calculator lets you enter whatever rate applies. Enter the price and rate to see the tax amount and the grand total at a glance.',
+    ],
+    steps: [
+      'Enter the price before tax.',
+      'Enter the sales tax rate as a percentage.',
+      'The calculator shows the tax amount and total.',
+      'Read the final price.',
+    ],
+    faqs: [
+      { q: 'How do I calculate sales tax on a price?', a: 'Multiply the price by the tax rate as a decimal to get the tax, then add it to the price. For example, 8% tax on $50 is $4, giving a $54 total. The calculator does this instantly.' },
+      { q: 'Can it find the pre-tax price from a total?', a: 'Yes, by reversing the calculation — dividing the total by one plus the tax rate. This is useful when a receipt shows only the tax-inclusive amount.' },
+      { q: 'Why do sales tax rates vary so much?', a: 'Rates are set at national, state, and local levels, so they differ by location. Enter the exact rate that applies to your purchase for an accurate result.' },
+      { q: 'Is my data stored?', a: 'No. The calculation runs in your browser.' },
+    ],
+  },
+  'simple-interest-calculator': {
+    body: [
+      'Simple interest is calculated only on the original principal, never on interest already earned. This calculator finds the interest and total from a principal, an annual rate, and a time period. It is the model used for many short-term loans, some savings products, and everyday interest estimates.',
+      'The contrast with compound interest is important: simple interest grows in a straight line, so over long periods it yields much less than compounding. For short terms the difference is small, which is why simple interest is common for brief loans.',
+    ],
+    steps: [
+      'Enter the principal amount.',
+      'Enter the annual interest rate and the time period.',
+      'The calculator computes the interest and total.',
+      'Read the results.',
+    ],
+    faqs: [
+      { q: 'How is simple interest calculated?', a: 'Multiply the principal by the annual rate and by the time in years: Interest = Principal × Rate × Time. The total is the principal plus that interest.' },
+      { q: 'What is the difference between simple and compound interest?', a: 'Simple interest is charged only on the original principal, while compound interest is charged on the principal plus accumulated interest. Compound grows faster, especially over long periods.' },
+      { q: 'When is simple interest used?', a: 'It is common for short-term loans, some car loans, and quick interest estimates, where the straightforward calculation and short term make compounding\'s effect minor.' },
+      { q: 'Is my data private?', a: 'Yes. Calculations run in your browser.' },
+    ],
+  },
+  'investment-calculator': {
+    body: [
+      'An investment calculator projects how your money could grow over time given a starting amount, regular contributions, an expected annual return, and a time horizon. It shows the future value and how much of it comes from your contributions versus compounding growth.',
+      'Seeing contributions and growth separately makes the power of time and consistency clear: over long horizons, compounding returns can eventually dwarf the money you put in. Bear in mind the projection assumes a steady return, whereas real markets fluctuate, so treat it as an estimate.',
+    ],
+    steps: [
+      'Enter your initial investment.',
+      'Add your regular contribution and its frequency.',
+      'Enter the expected annual return and the time horizon.',
+      'Read the projected future value and growth breakdown.',
+    ],
+    faqs: [
+      { q: 'How does an investment calculator work?', a: 'It compounds your starting amount and regular contributions at the expected annual return over your time horizon, showing the projected total and how much comes from growth versus what you contributed.' },
+      { q: 'Is the projected return guaranteed?', a: 'No. It assumes a constant annual return for illustration, but real investments rise and fall. Use the result as an estimate, and consider a range of return assumptions.' },
+      { q: 'Why do regular contributions matter so much?', a: 'Consistent contributions add capital that then compounds too. Over long periods, steady investing often builds more wealth than a larger one-off amount left alone.' },
+      { q: 'Is my data stored?', a: 'No. The projection is calculated in your browser.' },
+    ],
+  },
+  'auto-loan-calculator': {
+    body: [
+      'An auto loan calculator estimates the monthly payment on a car loan from the amount financed, the interest rate, and the loan term, using standard amortisation. It also shows the total interest you will pay, which helps you see the real cost of financing beyond the sticker price.',
+      'Because a car loses value while you pay off the loan, the term and rate matter a lot. A longer term lowers the monthly payment but increases total interest and the time you owe more than the car is worth. Factoring in your down payment and any trade-in gives a truer picture.',
+    ],
+    steps: [
+      'Enter the car price minus any down payment or trade-in.',
+      'Enter the interest rate and loan term.',
+      'The calculator shows your monthly payment.',
+      'Review the total interest over the loan.',
+    ],
+    faqs: [
+      { q: 'How is my car loan payment calculated?', a: 'It uses standard amortisation, spreading the financed amount plus interest into equal monthly payments across the term based on the rate and number of months.' },
+      { q: 'Does a longer auto loan term save money?', a: 'It lowers the monthly payment but increases total interest, and you stay "upside down" — owing more than the car is worth — for longer. Shorter terms cost less overall.' },
+      { q: 'Should I make a down payment?', a: 'A larger down payment reduces the amount financed, lowering both your monthly payment and total interest, and reduces the risk of owing more than the car\'s value.' },
+      { q: 'Is my financial data private?', a: 'Yes. Everything is calculated in your browser.' },
+    ],
+  },
+
+  // --- Dev & text tools ---
+  'text-diff': {
+    body: [
+      'A text diff tool compares two blocks of text and highlights exactly what changed — which lines or words were added, removed, or kept. It saves you from squinting at two nearly identical documents trying to spot the difference by eye.',
+      'Developers use it to review code and config changes, writers to compare draft versions, and anyone to check what edited between two copies of a document. This one runs in your browser, so even sensitive text stays on your device.',
+    ],
+    steps: [
+      'Paste the original text on one side.',
+      'Paste the changed text on the other.',
+      'The differences are highlighted automatically.',
+      'Review the additions and deletions.',
+    ],
+    faqs: [
+      { q: 'What does a text diff show?', a: 'It highlights what differs between two texts — additions, deletions, and unchanged parts — usually line by line or word by word, so you can see exactly what changed.' },
+      { q: 'Can I compare code with it?', a: 'Yes. It works on any plain text, including source code and configuration files, making it handy for reviewing changes before committing them.' },
+      { q: 'Does it change my text?', a: 'No. It only compares and highlights; your original and changed text are left exactly as you pasted them.' },
+      { q: 'Is my text uploaded?', a: 'No. The comparison runs in your browser, so even confidential text stays private.' },
+    ],
+  },
+  'regex-tester': {
+    body: [
+      'A regex tester lets you write a regular expression and immediately see what it matches in a block of sample text, with matches highlighted. Regular expressions are powerful but easy to get wrong, and testing interactively is far faster than guessing and re-running code.',
+      'It typically shows capture groups and match positions, and lets you toggle flags like global and case-insensitive. Whether you are validating input, extracting data, or search-and-replacing, testing the pattern here first saves debugging time later.',
+    ],
+    steps: [
+      'Enter your regular expression.',
+      'Set any flags (global, case-insensitive, multiline).',
+      'Paste the text to test against.',
+      'See matches and capture groups highlighted live.',
+    ],
+    faqs: [
+      { q: 'What are regex flags like g and i?', a: 'Flags modify matching: g (global) finds all matches not just the first, i makes it case-insensitive, and m (multiline) changes how ^ and $ behave. Toggle them to match your needs.' },
+      { q: 'What is a capture group?', a: 'Parentheses in a pattern create a capture group, which extracts the matched part for reuse — useful for pulling specific pieces out of text, like the year from a date.' },
+      { q: 'Does this use JavaScript regex syntax?', a: 'It tests patterns using the browser\'s regular expression engine (JavaScript flavour). Most syntax is common across languages, but some features differ, so verify in your target language for edge cases.' },
+      { q: 'Is my text uploaded?', a: 'No. Matching runs entirely in your browser.' },
+    ],
+  },
+  'timestamp-converter': {
+    body: [
+      'A Unix timestamp is the number of seconds since 1 January 1970 (UTC), a compact way computers store time. This converter translates a timestamp into a human-readable date and time, and converts a date back into a timestamp — bridging how machines and people express time.',
+      'Developers hit timestamps constantly in logs, databases, and APIs. Converting quickly between the raw number and a readable date, in your local time or UTC, removes a common source of confusion when debugging.',
+    ],
+    steps: [
+      'Enter a Unix timestamp, or a human date.',
+      'The tool converts to the other format.',
+      'View the result in UTC and your local time.',
+      'Copy whichever value you need.',
+    ],
+    faqs: [
+      { q: 'What is a Unix timestamp?', a: 'It is the number of seconds elapsed since midnight UTC on 1 January 1970, known as the Unix epoch. It gives computers a simple, timezone-independent way to represent a moment in time.' },
+      { q: 'Is the timestamp in seconds or milliseconds?', a: 'Unix timestamps are traditionally in seconds, but JavaScript and some systems use milliseconds (1000× larger). Check the length — 10 digits is usually seconds, 13 is milliseconds.' },
+      { q: 'Does the converter handle time zones?', a: 'Yes. It shows the date in UTC and in your local time zone, which helps avoid off-by-hours errors when debugging.' },
+      { q: 'Is my input uploaded?', a: 'No. Conversion runs in your browser.' },
+    ],
+  },
+  'number-base-converter': {
+    body: [
+      'This tool converts numbers between bases — binary (base 2), octal (base 8), decimal (base 10), and hexadecimal (base 16). Different bases are used in different contexts: binary is how computers store data, hex is a compact way to write binary, and decimal is what people use daily.',
+      'Programmers convert between bases when working with bitmasks, colours, memory addresses, and low-level data. Entering a number in one base shows it instantly in the others, removing manual conversion errors.',
+    ],
+    steps: [
+      'Enter a number and select its current base.',
+      'The tool converts it to the other bases.',
+      'Read the binary, octal, decimal, and hexadecimal forms.',
+      'Copy the representation you need.',
+    ],
+    faqs: [
+      { q: 'Why convert between number bases?', a: 'Different bases suit different tasks: binary reflects how computers store data, hexadecimal compactly represents binary (as in colour codes and memory addresses), and decimal is for everyday use. Converting bridges them.' },
+      { q: 'How does hexadecimal relate to binary?', a: 'Each hex digit represents exactly four binary bits, so hex is a shorthand for binary — two hex digits make one byte. That is why hex is common in programming.' },
+      { q: 'What bases does this support?', a: 'It handles binary (2), octal (8), decimal (10), and hexadecimal (16), the bases most used in computing.' },
+      { q: 'Is my input stored?', a: 'No. Conversion runs entirely in your browser.' },
+    ],
+  },
+  'markdown-previewer': {
+    body: [
+      'Markdown is a lightweight way to format text using plain characters — # for headings, ** for bold, - for lists — that converts to clean HTML. This previewer renders your Markdown live as you type, so you can see exactly how it will look before publishing.',
+      'It is ideal for drafting README files, documentation, forum posts, and notes, where you want formatting without writing HTML. Seeing the rendered result side by side helps you catch mistakes and get the structure right.',
+    ],
+    steps: [
+      'Type or paste Markdown into the editor.',
+      'The formatted preview updates live.',
+      'Adjust your Markdown until it looks right.',
+      'Copy the Markdown, or the rendered output, as needed.',
+    ],
+    faqs: [
+      { q: 'What is Markdown used for?', a: 'It is a simple formatting syntax that converts to HTML, widely used for README files, documentation, forum and chat posts, and notes — anywhere you want formatting without writing raw HTML.' },
+      { q: 'How do I make text bold or italic in Markdown?', a: 'Wrap text in double asterisks for bold (**bold**) and single asterisks or underscores for italic (*italic*). The previewer shows the result instantly.' },
+      { q: 'Does Markdown support tables and code?', a: 'Yes. Most Markdown supports tables, fenced code blocks, links, images, and lists. The previewer renders these so you can confirm the layout.' },
+      { q: 'Is my text uploaded?', a: 'No. Rendering happens in your browser, so your content stays private.' },
+    ],
+  },
+  'number-to-words': {
+    body: [
+      'This tool converts a number into its written-out words — 1234 becomes "one thousand two hundred thirty-four". It is essential for writing cheques, legal documents, and invoices, where amounts must appear in words to prevent tampering and ambiguity.',
+      'It handles large numbers and, in currency mode, formats an amount as money with the correct units (dollars and cents, for example). Writing numbers out by hand is error-prone for big figures, so automating it avoids mistakes.',
+    ],
+    steps: [
+      'Enter the number you want written out.',
+      'Choose plain or currency mode if offered.',
+      'The words are generated instantly.',
+      'Copy the text for your cheque, invoice, or document.',
+    ],
+    faqs: [
+      { q: 'Why write numbers as words?', a: 'On cheques, contracts, and invoices, amounts in words prevent tampering and remove ambiguity — a written "one hundred" cannot be altered to another figure as easily as a numeral.' },
+      { q: 'Can it handle very large numbers?', a: 'Yes. It converts large figures into words with the correct place names (thousand, million, billion, and beyond), which is tedious and error-prone to do by hand.' },
+      { q: 'Does it support currency amounts?', a: 'In currency mode it formats the number as money, writing out the main units and the fractional part (for example dollars and cents) in the standard cheque style.' },
+      { q: 'Is my input uploaded?', a: 'No. The conversion runs in your browser.' },
+    ],
+  },
+  'sql-formatter': {
+    body: [
+      'A SQL formatter takes a cramped or minified query and reformats it with consistent indentation, capitalised keywords, and clear line breaks, making it far easier to read and debug. Long queries with nested subqueries and many joins are especially hard to follow without formatting.',
+      'It is a read-and-understand aid: the formatter changes only layout, never the query\'s meaning, so the results it produces are identical to the original. Cleanly formatted SQL is easier to review, share, and maintain.',
+    ],
+    steps: [
+      'Paste your SQL query.',
+      'Click format.',
+      'The query is reindented with clear structure and keyword casing.',
+      'Copy the formatted SQL.',
+    ],
+    faqs: [
+      { q: 'Does formatting change what my SQL query does?', a: 'No. A formatter only changes whitespace, line breaks, and keyword casing — the query\'s logic and results are exactly the same as before.' },
+      { q: 'Why format SQL?', a: 'Readable SQL is easier to debug, review, and maintain. Consistent indentation and line breaks make complex joins and subqueries much easier to follow.' },
+      { q: 'Does it work with different SQL dialects?', a: 'It formats standard SQL syntax common across dialects. Some database-specific features may format differently, but the structure and readability improvements apply broadly.' },
+      { q: 'Is my query uploaded?', a: 'No. Formatting runs entirely in your browser, so your SQL stays private.' },
+    ],
+  },
+  'json-to-typescript': {
+    body: [
+      'This tool generates TypeScript interfaces from a sample of JSON, inferring the type of each field automatically. Instead of hand-writing types to match an API response, you paste the JSON and get ready-to-use interface definitions, saving time and avoiding mismatches.',
+      'It infers strings, numbers, booleans, arrays, and nested objects, producing typed structures you can drop into your codebase. This gives you compile-time safety and editor autocompletion when working with data whose shape you already know from an example.',
+    ],
+    steps: [
+      'Paste a representative JSON sample.',
+      'The tool infers the types of each field.',
+      'TypeScript interfaces are generated.',
+      'Copy them into your project.',
+    ],
+    faqs: [
+      { q: 'How does it infer types from JSON?', a: 'It examines each value in the sample — strings, numbers, booleans, arrays, and nested objects — and generates matching TypeScript types, building interfaces for nested structures automatically.' },
+      { q: 'Will the generated types be perfectly accurate?', a: 'They match the sample you provide, so use a representative example. Fields that are optional or can hold multiple types may need manual adjustment, since one sample cannot show every possibility.' },
+      { q: 'Why generate TypeScript types from JSON?', a: 'It gives you compile-time checking and editor autocompletion for API data, catching mistakes early — far faster than writing the interfaces by hand.' },
+      { q: 'Is my JSON uploaded?', a: 'No. Type generation runs in your browser, so your data stays private.' },
+    ],
+  },
 };
