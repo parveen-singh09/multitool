@@ -225,9 +225,9 @@ export const tools: Tool[] = [
   {
     slug: 'vector-converter',
     name: 'Vector Converter',
-    tagline: 'Convert AI, CDR, VSD, EMF, WMF, SVG & EPS.',
+    tagline: 'Convert AI, CDR, EMF, WMF, SVG & EPS.',
     description:
-      'Free online vector converter. Convert between Adobe Illustrator AI, CorelDRAW CDR, Visio VSD, EMF, WMF, SVG and EPS, or export to PDF and PNG.',
+      'Free online vector converter. Convert between Adobe Illustrator AI, CorelDRAW CDR, EMF, WMF, SVG and EPS, or export to PDF and PNG.',
     category: 'Converters',
     keywords: ['vector converter', 'ai converter', 'cdr converter', 'svg converter', 'convert vector online'],
     icon: 'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
