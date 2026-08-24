@@ -114,17 +114,16 @@ const SEO_SLUGS = [
   'woff-to-ttf', 'woff2-to-ttf', 'ttf-to-eot',
   'rar-to-zip', '7z-to-zip', 'tar-to-zip', 'gz-to-zip', 'tar-gz-to-zip',
   'iso-to-zip', 'cab-to-zip', 'deb-to-zip', 'bz2-to-zip', 'zip-to-7z', 'zip-to-tar', 'rar-to-7z',
-  'dwg-to-pdf', 'dxf-to-pdf', 'dwg-to-svg',
   'doc-to-docx', 'doc-to-pdf', 'docx-to-odt', 'odt-to-docx', 'odt-to-pdf',
-  'rtf-to-docx', 'pages-to-docx', 'pages-to-pdf', 'djvu-to-pdf', 'wpd-to-docx',
+  'rtf-to-docx', 'wpd-to-docx',
   'mobi-to-epub', 'epub-to-mobi', 'azw3-to-epub', 'epub-to-azw3', 'azw-to-epub',
-  'mobi-to-pdf', 'fb2-to-epub', 'lit-to-epub', 'pdb-to-epub', 'cbr-to-cbz', 'mobi-to-azw3',
-  'ppt-to-pptx', 'pptx-to-ppt', 'key-to-pptx', 'key-to-pdf', 'odp-to-pptx',
+  'fb2-to-epub', 'lit-to-epub', 'pdb-to-epub', 'cbr-to-cbz', 'mobi-to-azw3',
+  'ppt-to-pptx', 'pptx-to-ppt', 'odp-to-pptx',
   'pptx-to-odp', 'pps-to-pptx', 'potx-to-pptx', 'odp-to-pdf', 'ppt-to-odp',
-  'xls-to-xlsx', 'xlsx-to-xls', 'ods-to-xlsx', 'xlsx-to-ods', 'numbers-to-xlsx',
-  'numbers-to-csv', 'xls-to-ods', 'xlsx-to-csv', 'ods-to-csv', 'xlsx-to-pdf',
-  'ai-to-svg', 'ai-to-png', 'ai-to-pdf', 'cdr-to-svg', 'cdr-to-png',
-  'svg-to-pdf', 'svg-to-eps', 'wmf-to-svg', 'emf-to-svg', 'vsd-to-pdf',
+  'xls-to-xlsx', 'xlsx-to-xls', 'ods-to-xlsx', 'xlsx-to-ods',
+  'xls-to-ods', 'xlsx-to-csv', 'ods-to-csv', 'xlsx-to-pdf',
+  'ai-to-png', 'cdr-to-svg', 'cdr-to-png',
+  'svg-to-eps', 'wmf-to-svg', 'emf-to-svg',
   'nef-to-jpg', 'cr2-to-jpg', 'cr3-to-jpg', 'arw-to-jpg', 'dng-to-jpg',
   'crw-to-jpg', 'nef-to-png', 'cr2-to-png', 'eps-to-png', 'eps-to-svg',
 ];
@@ -158,7 +157,7 @@ RUNNERS_CONVERT['font-converter'] = {
   needs: 'text',
   run: (ctx) => runFont(targetFromQuery(ctx.query, FONT_TARGETS, 'ttf'), ctx),
 };
-for (const slug of ['file-converter', 'archive-converter', 'cad-converter', 'document-converter',
+for (const slug of ['file-converter', 'archive-converter', 'document-converter',
   'ebook-format-converter', 'presentation-converter', 'spreadsheet-converter', 'vector-converter', 'raw-converter']) {
   RUNNERS_CONVERT[slug] = {
     needs: 'text',

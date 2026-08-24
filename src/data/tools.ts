@@ -233,16 +233,6 @@ export const tools: Tool[] = [
     icon: 'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
   },
   {
-    slug: 'ai-to-svg',
-    name: 'AI to SVG',
-    tagline: 'Convert Adobe Illustrator AI to SVG.',
-    description:
-      'Free online AI to SVG converter. Convert Adobe Illustrator AI artwork to scalable SVG for the web.',
-    category: 'Converters',
-    keywords: ['ai to svg', 'convert ai to svg', 'illustrator to svg', 'ai to svg online', 'svg converter'],
-    icon: 'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
-  },
-  {
     slug: 'ai-to-png',
     name: 'AI to PNG',
     tagline: 'Convert Adobe Illustrator AI to PNG.',
@@ -250,16 +240,6 @@ export const tools: Tool[] = [
       'Free online AI to PNG converter. Convert Adobe Illustrator AI artwork to raster PNG images.',
     category: 'Converters',
     keywords: ['ai to png', 'convert ai to png', 'illustrator to png', 'ai to png online', 'png converter'],
-    icon: 'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
-  },
-  {
-    slug: 'ai-to-pdf',
-    name: 'AI to PDF',
-    tagline: 'Convert Adobe Illustrator AI to PDF.',
-    description:
-      'Free online AI to PDF converter. Convert Adobe Illustrator AI artwork to shareable PDF.',
-    category: 'Converters',
-    keywords: ['ai to pdf', 'convert ai to pdf', 'illustrator to pdf', 'ai to pdf online', 'vector to pdf'],
     icon: 'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
   },
   {
@@ -280,16 +260,6 @@ export const tools: Tool[] = [
       'Free online CDR to PNG converter. Convert CorelDRAW CDR files to raster PNG images.',
     category: 'Converters',
     keywords: ['cdr to png', 'convert cdr to png', 'coreldraw to png', 'cdr to png online', 'png converter'],
-    icon: 'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
-  },
-  {
-    slug: 'svg-to-pdf',
-    name: 'SVG to PDF',
-    tagline: 'Convert scalable SVG to PDF.',
-    description:
-      'Free online SVG to PDF converter. Convert scalable SVG vectors to shareable, printable PDF.',
-    category: 'Converters',
-    keywords: ['svg to pdf', 'convert svg to pdf', 'svg to pdf online', 'vector to pdf', 'svg converter'],
     icon: 'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
   },
   {
@@ -320,16 +290,6 @@ export const tools: Tool[] = [
       'Free online EMF to SVG converter. Convert Enhanced Metafile EMF graphics to scalable SVG.',
     category: 'Converters',
     keywords: ['emf to svg', 'convert emf to svg', 'emf to svg online', 'enhanced metafile to svg', 'svg converter'],
-    icon: 'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
-  },
-  {
-    slug: 'vsd-to-pdf',
-    name: 'VSD to PDF',
-    tagline: 'Convert Microsoft Visio VSD to PDF.',
-    description:
-      'Free online VSD to PDF converter. Convert Microsoft Visio VSD diagrams to shareable PDF.',
-    category: 'Converters',
-    keywords: ['vsd to pdf', 'convert vsd to pdf', 'visio to pdf', 'vsd to pdf online', 'diagram to pdf'],
     icon: 'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
   },
   {
@@ -380,26 +340,6 @@ export const tools: Tool[] = [
       'Free online XLSX to ODS converter. Convert Excel XLSX spreadsheets to OpenDocument ODS used by LibreOffice.',
     category: 'Converters',
     keywords: ['xlsx to ods', 'convert xlsx to ods', 'xlsx to ods online', 'excel to libreoffice', 'ods converter'],
-    icon: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18',
-  },
-  {
-    slug: 'numbers-to-xlsx',
-    name: 'Numbers to XLSX',
-    tagline: 'Convert Apple Numbers to Excel XLSX.',
-    description:
-      'Free online Numbers to XLSX converter. Convert Apple Numbers spreadsheets to Excel XLSX for use on any platform.',
-    category: 'Converters',
-    keywords: ['numbers to xlsx', 'convert numbers to excel', 'apple numbers to xlsx', 'numbers to excel', 'xlsx converter'],
-    icon: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18',
-  },
-  {
-    slug: 'numbers-to-csv',
-    name: 'Numbers to CSV',
-    tagline: 'Convert Apple Numbers to CSV.',
-    description:
-      'Free online Numbers to CSV converter. Convert Apple Numbers spreadsheets to plain CSV data.',
-    category: 'Converters',
-    keywords: ['numbers to csv', 'convert numbers to csv', 'apple numbers to csv', 'numbers to csv online', 'csv converter'],
     icon: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18',
   },
   {
@@ -470,26 +410,6 @@ export const tools: Tool[] = [
       'Free online PPTX to PPT converter. Convert modern PowerPoint PPTX files to the legacy PPT format.',
     category: 'Converters',
     keywords: ['pptx to ppt', 'convert pptx to ppt', 'pptx to ppt online', 'powerpoint to old ppt', 'ppt converter'],
-    icon: 'M2 3h20v14H2zM8 21h8M12 17v4',
-  },
-  {
-    slug: 'key-to-pptx',
-    name: 'Keynote to PPTX',
-    tagline: 'Convert Apple Keynote to PowerPoint PPTX.',
-    description:
-      'Free online Keynote to PPTX converter. Convert Apple Keynote presentations to PowerPoint PPTX for use on any platform.',
-    category: 'Converters',
-    keywords: ['keynote to pptx', 'key to pptx', 'convert keynote to powerpoint', 'keynote to ppt', 'pptx converter'],
-    icon: 'M2 3h20v14H2zM8 21h8M12 17v4',
-  },
-  {
-    slug: 'key-to-pdf',
-    name: 'Keynote to PDF',
-    tagline: 'Convert Apple Keynote to PDF.',
-    description:
-      'Free online Keynote to PDF converter. Convert Apple Keynote presentations to PDF for sharing with anyone.',
-    category: 'Converters',
-    keywords: ['keynote to pdf', 'key to pdf', 'convert keynote to pdf', 'apple keynote to pdf', 'slides to pdf'],
     icon: 'M2 3h20v14H2zM8 21h8M12 17v4',
   },
   {
@@ -953,36 +873,6 @@ export const tools: Tool[] = [
     icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8',
   },
   {
-    slug: 'pages-to-docx',
-    name: 'Pages to DOCX',
-    tagline: 'Convert Apple Pages to Word DOCX.',
-    description:
-      'Free online Pages to DOCX converter. Convert Apple Pages documents to Microsoft Word DOCX for use on any platform.',
-    category: 'Converters',
-    keywords: ['pages to docx', 'convert pages to docx', 'apple pages to word', 'pages to word', 'docx converter'],
-    icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8',
-  },
-  {
-    slug: 'pages-to-pdf',
-    name: 'Pages to PDF',
-    tagline: 'Convert Apple Pages to PDF.',
-    description:
-      'Free online Pages to PDF converter. Convert Apple Pages documents to PDF for sharing with anyone.',
-    category: 'Converters',
-    keywords: ['pages to pdf', 'convert pages to pdf', 'apple pages to pdf', 'pages to pdf online', 'cad to pdf'],
-    icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8',
-  },
-  {
-    slug: 'djvu-to-pdf',
-    name: 'DjVu to PDF',
-    tagline: 'Convert scanned DjVu to PDF.',
-    description:
-      'Free online DjVu to PDF converter. Convert scanned DjVu documents to widely-supported PDF.',
-    category: 'Converters',
-    keywords: ['djvu to pdf', 'convert djvu to pdf', 'djvu to pdf online', 'scanned djvu to pdf', 'cad to pdf'],
-    icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8',
-  },
-  {
     slug: 'wpd-to-docx',
     name: 'WPD to DOCX',
     tagline: 'Convert WordPerfect WPD to Word DOCX.',
@@ -991,46 +881,6 @@ export const tools: Tool[] = [
     category: 'Converters',
     keywords: ['wpd to docx', 'convert wpd to docx', 'wordperfect to word', 'wpd to word', 'docx converter'],
     icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8',
-  },
-  {
-    slug: 'cad-converter',
-    name: 'CAD Converter',
-    tagline: 'Convert between DWG, DXF, DWF, PDF & SVG.',
-    description:
-      'Free online CAD converter. Convert between AutoCAD DWG, DXF and DWF drawings, or export them to PDF or SVG.',
-    category: 'Converters',
-    keywords: ['cad converter', 'dwg converter', 'dxf converter', 'autocad converter', 'convert cad online'],
-    icon: 'M3 3h18v18H3zM3 9h18M9 21V9M15 9v12',
-  },
-  {
-    slug: 'dwg-to-pdf',
-    name: 'DWG to PDF',
-    tagline: 'Export AutoCAD DWG drawings to PDF.',
-    description:
-      'Free online DWG to PDF converter. Export AutoCAD DWG drawings to PDF for easy sharing, printing and viewing without CAD software.',
-    category: 'Converters',
-    keywords: ['dwg to pdf', 'convert dwg to pdf', 'dwg to pdf online', 'autocad to pdf', 'cad to pdf'],
-    icon: 'M3 3h18v18H3zM3 9h18M9 21V9M15 9v12',
-  },
-  {
-    slug: 'dxf-to-pdf',
-    name: 'DXF to PDF',
-    tagline: 'Export DXF drawings to PDF.',
-    description:
-      'Free online DXF to PDF converter. Export DXF drawings to PDF for sharing and printing without CAD software.',
-    category: 'Converters',
-    keywords: ['dxf to pdf', 'convert dxf to pdf', 'dxf to pdf online', 'dxf drawing to pdf', 'cad to pdf'],
-    icon: 'M3 3h18v18H3zM3 9h18M9 21V9M15 9v12',
-  },
-  {
-    slug: 'dwg-to-svg',
-    name: 'DWG to SVG',
-    tagline: 'Convert AutoCAD DWG to scalable SVG.',
-    description:
-      'Free online DWG to SVG converter. Convert AutoCAD DWG drawings to scalable SVG vector graphics for the web.',
-    category: 'Converters',
-    keywords: ['dwg to svg', 'convert dwg to svg', 'dwg to svg online', 'autocad to svg', 'svg converter'],
-    icon: 'M3 3h18v18H3zM3 9h18M9 21V9M15 9v12',
   },
   {
     slug: 'audio-converter',

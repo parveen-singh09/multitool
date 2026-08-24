@@ -1,11 +1,10 @@
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json' } });
 
-const BASE = 'https://v2.convertapi.com';
-
-// Route to our self-hosted conversion service (LibreOffice + ffmpeg + dcraw/ImageMagick) for
-// pairs ConvertAPI can't do. MUST mirror server.py's build_plan — if this says yes but the
-// service rejects the pair, the user gets an error instead of a silent ConvertAPI fallback.
+// All conversions run on our self-hosted services (LibreOffice + ffmpeg + dcraw/ImageMagick +
+// Ghostscript + p7zip on the main box; calibre on a separate box). ConvertAPI is gone. Routing
+// MUST mirror server.py's build_plan — if this says yes but the service rejects the pair, the
+// user gets an error; if it says no, the pair is simply unsupported (not offered in the UI).
 // ponytail: to add a category, extend both this rule AND build_plan in server.py.
 // LibreOffice converts only WITHIN a document family — a slideshow can't become a spreadsheet.
 const WORD_IN = new Set(['doc', 'docx', 'odt', 'rtf']), WORD_OUT = new Set(['doc', 'docx', 'odt', 'rtf']);
@@ -21,15 +20,21 @@ const VIDEO_OUT = new Set(['mp4', 'mkv', 'mov', 'avi']); // webm excluded: VP9 t
 const RAW_IN = new Set(['nef', 'cr2', 'cr3', 'arw', 'dng', 'crw', 'raf', 'rw2', 'orf', 'pef', 'srw']);
 const RAW_OUT = new Set(['jpg', 'png']);
 const SEVENZIP_IN = new Set(['zip', 'rar', 'tar', 'gz', 'tgz', 'bz2', 'xz', 'cab', 'iso']); // -> 7z (extract + re-archive)
-// Image bulk via ImageMagick + anything->PDF via LibreOffice. Mirror server.py IMAGE_IN/OUT + TO_PDF_IN.
-// heic/psd/dcm/eps deliberately excluded (need install-time delegates) -> stay on ConvertAPI.
-const IMAGE_IN = new Set(['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'ico']);
-const IMAGE_OUT = new Set(['jpg', 'png', 'gif', 'bmp', 'tiff', 'webp', 'ico', 'pdf']);
-// svg/html/htm removed: LibreOffice's SVG/HTML->PDF import is lossy. Only ConvertAPI did them
-// well, so they're dropped from the offering until ConvertAPI returns. Restore: re-add here + catalog.
+// Image bulk via ImageMagick (psd/dcm read via IM coders). Mirror server.py IMAGE_IN/OUT.
+const IMAGE_IN = new Set(['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'ico', 'psd', 'dcm', 'dicom']);
+const IMAGE_OUT = new Set(['jpg', 'png', 'gif', 'bmp', 'tiff', 'webp', 'ico', 'pnm', 'pdf']);
+// EPS/PS/AI -> raster via ImageMagick+Ghostscript. Mirror server.py PS_IN/OUT.
+const PS_IN = new Set(['eps', 'ps', 'ai']);
+const PS_OUT = new Set(['jpg', 'png', 'tiff', 'webp', 'pnm']);
+// Office (Writer family) -> txt/html + sheet -> csv/xlsx via LibreOffice. Mirror server.py.
+const DOC_IN = new Set(['doc', 'docx', 'odt', 'rtf']);
+const DOC_TEXT_OUT = new Set(['txt', 'html']);
+const SHEET_TEXT_IN = new Set(['csv', 'xls', 'xlsx', 'ods']);
+const SHEET_TEXT_OUT = new Set(['csv', 'xlsx']);
+// Anything->PDF via LibreOffice. svg/html/htm excluded (LO import lossy) — dropped from offering.
 const TO_PDF_IN = new Set(['doc', 'docx', 'odt', 'rtf', 'txt', 'ppt', 'pptx', 'odp',
   'pps', 'ppsx', 'potx', 'xls', 'xlsx', 'ods', 'csv', 'wpd']);
-// Extra LibreOffice pairs ConvertAPI can't do; mirror server.py EXTRA_LO.
+// Extra LibreOffice pairs; mirror server.py EXTRA_LO.
 const EXTRA_LO = new Set(['wpd>docx', 'ods>csv', 'svg>eps', 'eps>svg']);
 const useLibreOffice = (from, to) =>
   officeOk(from, to) ||
@@ -37,46 +42,24 @@ const useLibreOffice = (from, to) =>
   (VIDEO_IN.has(from) && VIDEO_OUT.has(to) && from !== to) ||
   (RAW_IN.has(from) && RAW_OUT.has(to)) ||
   (IMAGE_IN.has(from) && IMAGE_OUT.has(to) && from !== to) ||
+  (PS_IN.has(from) && PS_OUT.has(to)) ||
+  (DOC_IN.has(from) && DOC_TEXT_OUT.has(to) && from !== to) ||
+  (SHEET_TEXT_IN.has(from) && SHEET_TEXT_OUT.has(to) && from !== to) ||
   (to === 'pdf' && TO_PDF_IN.has(from) && from !== 'pdf') ||
   (SEVENZIP_IN.has(from) && to === '7z') ||
   (from === 'cbr' && to === 'cbz') || // comic: unar extract RAR -> zip, on main box (not calibre)
   EXTRA_LO.has(`${from}>${to}`);
 
 // Ebook<->ebook runs on a SEPARATE Render service (calibre) so its memory use can't destabilize
-// the main box. Mirror server.py's EBOOK_IN/EBOOK_OUT. pdf excluded (ConvertAPI does ebook->pdf).
+// the main box. Mirror server.py's EBOOK_IN/EBOOK_OUT. pdf excluded (calibre PDF needs QtWebEngine).
 const EBOOK_IN = new Set(['epub', 'mobi', 'azw', 'azw3', 'fb2', 'lit', 'pdb', 'prc', 'htmlz']);
 const EBOOK_OUT = new Set(['epub', 'mobi', 'azw3', 'fb2', 'txt']);
 const useCalibre = (from, to) => EBOOK_IN.has(from) && EBOOK_OUT.has(to) && from !== to;
 
-// A LibreOffice job carries its result URL in the jobId itself (base64url of {url,filename}), so
+// A conversion job carries its result URL in the jobId itself (base64url of {url,filename}), so
 // polling is stateless — the service converts synchronously on POST and stores under /out/<id>.
 const b64urlEncode = (s) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const b64urlDecode = (s) => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
-
-function friendlyError(body, pair) {
-  let data;
-  try { data = JSON.parse(body); } catch { data = null; }
-  const p = pair ? ` (${pair})` : '';
-  if (data) {
-    const inv = data.InvalidParameters && Object.values(data.InvalidParameters)[0];
-    const detail = (Array.isArray(inv) ? inv[0] : inv) || data.Message || '';
-    if (data.Code === 5001) return `Couldn't convert this file${p} — it may be empty, corrupt, or password/DRM protected. Try another file.`;
-    if (data.Code === 5004) return `Nothing to extract${p} — no matching content in the file.`;
-    if (data.Code === 4000) return `Unsupported or invalid file${p}.`;
-    if (data.Code === 5009) return `File expired${p} — attach it again.`;
-    if (detail) return `Failed${p}: ${detail}`;
-  }
-  const plain = body.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100);
-  return `Failed${p}${plain ? ': ' + plain : '.'}`;
-}
-
-function makeJobId() {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  const bytes = crypto.getRandomValues(new Uint8Array(32));
-  let s = '';
-  for (const b of bytes) s += chars[b % 36];
-  return s;
-}
 
 async function convertViaService(base, token, from, to, file, url, pair) {
   base = String(base || '').replace(/\/$/, '');
@@ -116,8 +99,6 @@ async function convertViaService(base, token, from, to, file, url, pair) {
 }
 
 export async function onRequestPost({ request, env }) {
-  const secret = env.CONVERTAPI_SECRET;
-
   let form;
   try { form = await request.formData(); } catch { return json({ error: 'Bad request.' }, 400); }
 
@@ -148,31 +129,7 @@ export async function onRequestPost({ request, env }) {
     }
   }
 
-  if (!secret) return json({ error: 'Conversion service is not configured.' }, 500);
-
-  const jobId = makeJobId();
-  try {
-    const upstream = new FormData();
-    upstream.append('StoreFile', 'true');
-    const field = to === 'gif' ? 'Files' : 'File';
-    if (file && typeof file !== 'string') upstream.append(field, file, file.name || `input.${from}`);
-    else upstream.append(field, String(url));
-
-    const res = await fetch(`${BASE}/async/convert/${from}/to/${to}?jobid=${jobId}`, {
-      method: 'POST',
-      headers: { authorization: `Bearer ${secret}` },
-      body: upstream,
-    });
-    if (!res.ok) {
-      // Pass upstream client errors (unsupported pair, bad file) through as 4xx so the real
-      // reason reaches the user instead of being masked as a transient 502 and retried.
-      const status = res.status >= 400 && res.status < 500 ? 400 : 502;
-      return json({ error: friendlyError(await res.text(), pair) }, status);
-    }
-    return json({ jobId });
-  } catch (e) {
-    return json({ error: e.message || 'Conversion failed.' }, 502);
-  }
+  return json({ error: `This conversion (${pair}) isn't supported.` }, 400);
 }
 
 export async function onRequestGet({ request, env }) {
@@ -186,8 +143,7 @@ export async function onRequestGet({ request, env }) {
     for (const v of [env.LIBREOFFICE_URL, env.CALIBRE_URL]) {
       try { if (v) svcHosts.push(new URL(v).hostname); } catch {}
     }
-    const ok = /(^|\.)convertapi\.com$/.test(target.hostname) || svcHosts.includes(target.hostname);
-    if (!ok) return json({ error: 'Forbidden host.' }, 403);
+    if (!svcHosts.includes(target.hostname)) return json({ error: 'Forbidden host.' }, 403);
     const name = params.get('name') || 'download';
     const up = await fetch(target.toString());
     if (!up.ok) return json({ error: 'Could not fetch the converted file.' }, 502);
@@ -203,7 +159,7 @@ export async function onRequestGet({ request, env }) {
   const jobId = params.get('jobId');
   if (!jobId) return json({ error: 'Missing jobId.' }, 400);
 
-  // LibreOffice jobs converted synchronously on POST — result is encoded in the id, return it now.
+  // Jobs convert synchronously on POST — the result URL is encoded in the id, return it now.
   if (jobId.startsWith('lo_')) {
     try {
       const { url, filename } = JSON.parse(b64urlDecode(jobId.slice(3)));
@@ -213,22 +169,5 @@ export async function onRequestGet({ request, env }) {
     }
   }
 
-  const secret = env.CONVERTAPI_SECRET;
-  if (!secret) return json({ error: 'Conversion service is not configured.' }, 500);
-
-  try {
-    const res = await fetch(`${BASE}/async/job/${encodeURIComponent(jobId)}`, {
-      headers: { authorization: `Bearer ${secret}` },
-    });
-    if (res.status === 202) return json({ done: false });
-    if (!res.ok) {
-      throw new Error(friendlyError(await res.text()));
-    }
-    const data = await res.json();
-    const files = (data?.Files || []).filter((f) => f?.Url).map((f) => ({ url: f.Url, filename: f.FileName }));
-    if (files.length) return json({ done: true, files });
-    return json({ done: false });
-  } catch (e) {
-    return json({ error: e.message || 'Conversion failed.' }, 502);
-  }
+  return json({ error: 'Invalid job.' }, 400);
 }

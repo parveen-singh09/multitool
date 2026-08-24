@@ -1,5 +1,3 @@
-import { CONVERT_MATRIX } from './convertMatrix';
-
 export const LOCAL_VIDEO = ['mp4', 'webm', 'mkv', 'mov', 'avi', 'flv', 'ogv'];
 export const LOCAL_AUDIO = ['mp3', 'm4a', 'wav', 'flac', 'ogg', 'opus', 'aiff', 'ac3'];
 export const LOCAL_FONT = ['ttf', 'woff', 'woff2', 'eot'];
@@ -13,8 +11,7 @@ export interface FormatCategory {
 export const FORMAT_CATEGORIES: FormatCategory[] = [
   {
     label: 'Document',
-    formats: ['pdf', 'doc', 'docx', 'odt', 'rtf', 'txt', 'html', 'htm', 'md', 'pages',
-      'wpd', 'xml', 'log', 'dot', 'dotx', 'mhtml'],
+    formats: ['pdf', 'doc', 'docx', 'odt', 'rtf', 'txt', 'html', 'htm', 'wpd'],
   },
   {
     label: 'Ebook',
@@ -26,24 +23,19 @@ export const FORMAT_CATEGORIES: FormatCategory[] = [
   },
   {
     label: 'Image',
-    formats: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'tif', 'ico', 'heic',
-      'heif', 'jfif', 'psd', 'dcm', 'eps'],
+    formats: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'tif', 'ico', 'psd', 'dcm', 'eps'],
   },
   {
     label: 'Presentation',
-    formats: ['ppt', 'pptx', 'odp', 'key', 'pps', 'ppsx', 'potx'],
+    formats: ['ppt', 'pptx', 'odp', 'pps', 'ppsx', 'potx'],
   },
   {
     label: 'Spreadsheet',
-    formats: ['xls', 'xlsx', 'csv', 'ods', 'numbers', 'xlsb', 'xltx'],
+    formats: ['xls', 'xlsx', 'csv', 'ods'],
   },
   {
     label: 'Vector',
-    formats: ['svg', 'ai', 'eps', 'ps'],
-  },
-  {
-    label: 'CAD',
-    formats: ['dxf', 'dwg', 'dwf', 'dwfx', 'dwgx'],
+    formats: ['svg', 'ai', 'eps', 'ps', 'wmf', 'emf', 'cdr'],
   },
   {
     label: 'Video',
@@ -70,14 +62,9 @@ export function categoryOf(ext: string): string | undefined {
   return CAT_OF[ext.toLowerCase().split('.').pop() || ext];
 }
 
-function directApiTargets(e: string): string[] {
-  // ponytail: fdf is ConvertAPI-supported but useless as a generic target (PDF→FDF needs a form PDF, else Code 4000)
-  return (CONVERT_MATRIX[e] || []).filter((t) => t !== 'zip' && t !== 'json' && t !== 'fdf' && t !== e);
-}
-
-// Self-hosted conversion service (LibreOffice + ffmpeg + dcraw/ImageMagick + p7zip + calibre).
-// MUST mirror functions/api/cc-job.js routing + server.py build_plan, so the dropdown only offers
-// targets the backend can actually produce.
+// Self-hosted conversion service is the ONLY backend (ConvertAPI removed). This MUST mirror
+// functions/api/cc-job.js routing + server.py build_plan, so the dropdown only offers targets the
+// backend can actually produce. A pair not derivable here is not offered and not accepted.
 const VIDEO_DECODABLE = ['mp4', 'webm', 'mkv', 'mov', 'avi', 'flv', 'ogv', '3gp'];
 // LibreOffice converts only WITHIN a document family — a slideshow can't become a spreadsheet.
 const WORD_IN = ['doc', 'docx', 'odt', 'rtf'], WORD_OUT = ['doc', 'docx', 'odt', 'rtf'];
@@ -96,17 +83,23 @@ const VIDEO_SVC_OUT = ['mp4', 'mkv', 'mov', 'avi'];
 const RAW_IN = ['nef', 'cr2', 'cr3', 'arw', 'dng', 'crw', 'raf', 'rw2', 'orf', 'pef', 'srw'];
 const RAW_OUT = ['jpg', 'png'];
 const SEVENZIP_IN = ['zip', 'rar', 'tar', 'gz', 'tgz', 'bz2', 'xz', 'cab', 'iso'];
-// Image bulk via ImageMagick + anything->PDF via LibreOffice; mirror server.py IMAGE_IN/OUT + TO_PDF_IN.
-const IMAGE_IN = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'ico'];
-const IMAGE_OUT = ['jpg', 'png', 'gif', 'bmp', 'tiff', 'webp', 'ico', 'pdf'];
+// Image bulk via ImageMagick (psd/dcm read via IM coders); mirror server.py IMAGE_IN/OUT.
+const IMAGE_IN = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'ico', 'psd', 'dcm', 'dicom'];
+const IMAGE_OUT = ['jpg', 'png', 'gif', 'bmp', 'tiff', 'webp', 'ico', 'pnm', 'pdf'];
+// EPS/PS/AI -> raster via ImageMagick+Ghostscript; mirror server.py PS_IN/OUT.
+const PS_IN = ['eps', 'ps', 'ai'];
+const PS_OUT = ['jpg', 'png', 'tiff', 'webp', 'pnm'];
+// Writer family -> txt/html + sheet -> csv/xlsx via LibreOffice; mirror server.py.
+const DOC_IN = ['doc', 'docx', 'odt', 'rtf'];
+const DOC_TEXT_OUT = ['txt', 'html'];
+const SHEET_TEXT_IN = ['csv', 'xls', 'xlsx', 'ods'];
+const SHEET_TEXT_OUT = ['csv', 'xlsx'];
+// Anything->PDF via LibreOffice. svg/html/htm excluded (LO import lossy) — dropped from offering.
 const TO_PDF_IN = ['doc', 'docx', 'odt', 'rtf', 'txt', 'ppt', 'pptx', 'odp',
   'pps', 'ppsx', 'potx', 'xls', 'xlsx', 'ods', 'csv', 'wpd'];
-// Pairs pulled from the offering: only ConvertAPI rendered them well (LibreOffice SVG/HTML->PDF
-// is lossy). Dropped until ConvertAPI returns. Restore: delete from here + re-add to TO_PDF_IN.
-const BLOCKED_PAIRS = new Set(['svg>pdf', 'html>pdf', 'htm>pdf']);
 const EBOOK_IN = ['epub', 'mobi', 'azw', 'azw3', 'fb2', 'lit', 'pdb', 'prc', 'htmlz'];
 const EBOOK_OUT = ['epub', 'mobi', 'azw3', 'fb2', 'txt'];
-// Extra LibreOffice pairs ConvertAPI can't do; mirror server.py EXTRA_LO + cc-job.js.
+// Extra LibreOffice pairs; mirror server.py EXTRA_LO + cc-job.js.
 const EXTRA_LO: Record<string, string[]> = { wpd: ['docx'], ods: ['csv'], svg: ['eps'], eps: ['svg'] };
 
 function selfHostedTargets(e: string): string[] {
@@ -116,6 +109,9 @@ function selfHostedTargets(e: string): string[] {
   if (VIDEO_SVC_IN.includes(e)) out.push(...VIDEO_SVC_OUT);
   if (RAW_IN.includes(e)) out.push(...RAW_OUT);
   if (IMAGE_IN.includes(e)) out.push(...IMAGE_OUT);
+  if (PS_IN.includes(e)) out.push(...PS_OUT);
+  if (DOC_IN.includes(e)) out.push(...DOC_TEXT_OUT);
+  if (SHEET_TEXT_IN.includes(e)) out.push(...SHEET_TEXT_OUT);
   if (TO_PDF_IN.includes(e)) out.push('pdf');
   if (SEVENZIP_IN.includes(e)) out.push('7z');
   if (EBOOK_IN.includes(e)) out.push(...EBOOK_OUT);
@@ -135,27 +131,21 @@ export function targetsFor(ext: string): string[] {
   else if (cat === 'Video') { if (VIDEO_DECODABLE.includes(e)) LOCAL_VIDEO.forEach((t) => set.add(t)); }
   else if (cat === 'Archive') LOCAL_ARCHIVE.forEach((t) => set.add(t));
 
-  // Self-hosted service.
+  // Self-hosted service (the only remote backend now).
   selfHostedTargets(e).forEach((t) => set.add(t));
 
-  // ConvertAPI (only for categories it serves — not audio/video/font/archive, which are local/service).
-  if (cat !== 'Audio' && cat !== 'Video' && cat !== 'Font' && cat !== 'Archive') {
-    // ponytail: direct 1-hop only — invented multi-hop chains (svg→pdf→xml, mobi→pdf→rtf) 502 or produce garbage
-    directApiTargets(e).forEach((t) => set.add(t));
-  }
-
   set.delete(e);
-  return [...set].filter((t) => !BLOCKED_PAIRS.has(`${e}>${t}`));
+  return [...set];
 }
 
+// ConvertAPI multi-hop chains are gone — every conversion is a single hop on the box. Return the
+// direct pair when the box supports it, else null (callers fall back to [from,to] and let the
+// service reject unsupported pairs).
 export function chainPath(from: string, to: string): string[] | null {
   const f = from.toLowerCase().split('.').pop() || from;
   const t = to.toLowerCase().split('.').pop() || to;
   if (f === t) return null;
-  const direct = directApiTargets(f);
-  if (direct.includes(t)) return [f, t];
-  for (const m of direct) if (directApiTargets(m).includes(t)) return [f, m, t];
-  return null;
+  return targetsFor(f).includes(t) ? [f, t] : null;
 }
 
 export function backendFor(ext: string): 'ffmpeg' | 'font' | 'archive' | 'api' {

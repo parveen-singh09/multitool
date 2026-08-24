@@ -93,8 +93,21 @@
 - [ ] Deploy (static `dist/` — Netlify / Vercel / Cloudflare Pages). Note: build box needs internet on first build (Tesseract model download) and ~90 MB free in `public/` for vendored assets
 - [ ] Later batches still deferred: PDF↔Office & DOCX↔ODT, RAW photo decode (CR2/NEF/ARW), YouTube→MP3/MP4 (needs server + ToS), Color→Pantone (licensed)
 
-## Drop ConvertAPI to cut cost — image + →pdf migrated (2026-08-24)
-**Status: partially done.** Image↔image and anything→PDF now route to the self-hosted box, off ConvertAPI. ConvertAPI still serves the residual (pdf→office, CAD, email, delegate-gated images). Original plan below.
+## ConvertAPI FULLY REMOVED (2026-08-24)
+**Status: done in code (needs box redeploy + runtime verification).** ConvertAPI is gone entirely — no secret, no v2.convertapi.com calls, no `CONVERT_MATRIX`. Every conversion now runs on the self-hosted box (LibreOffice + ffmpeg + dcraw/ImageMagick + Ghostscript + p7zip) or calibre, or client-side (ffmpeg.wasm / fonteditor / archive). Pairs with no free self-hosted path were **removed from the site**, not re-routed.
+
+**DEPLOY ORDER (critical):** redeploy the box ([Dockerfile](converter-service/Dockerfile) + [server.py](converter-service/server.py)) BEFORE the site — the routing has no ConvertAPI fallback, so newly-routed pairs hard-fail until the box is live. Dockerfile adds `ghostscript` + patches ImageMagick-6 `policy.xml` (bookworm denies PS/EPS/PDF coders by default — without the patch, eps/ps/ai→raster AND image→pdf 502).
+
+**New box capabilities** (branches added to [server.py](converter-service/server.py) `build_plan`, mirrored in [cc-job.js](functions/api/cc-job.js) + [formatCatalog.ts](src/data/formatCatalog.ts)): image↔image incl. psd/dcm→raster/pnm/pdf (ImageMagick); eps/ps/ai→raster (ImageMagick+Ghostscript, `-density 150 [0]` first page); Writer-family doc→txt/html; sheet→csv/xlsx; anything→pdf.
+
+**REMOVED — 15 tool pages + entries + SEO slugs deleted, redirected in [_redirects](public/_redirects) to nearest hub** (no free box path): svg→pdf, ai→svg, ai→pdf, vsd→pdf (LO vector/HTML import lossy); numbers→xlsx/csv, key→pptx/pdf, pages→docx/pdf (Apple formats, LO import unreliable); djvu→pdf (no djvulibre); **entire CAD category** dwg/dxf/dwg→pdf/svg (no free Debian CLI). Also dropped but no dedicated page: pdf→editable-office, email eml/msg, heic/heif, raster→svg vectorize, ppt/pptx→txt.
+- **Restore any dropped pair when adding a paid API back:** re-add source formats to [formatCatalog.ts](src/data/formatCatalog.ts) `FORMAT_CATEGORIES`, wire a new backend branch in [cc-job.js](functions/api/cc-job.js), recreate the page + tools.ts entry + SEO slug, drop the redirect. `CONVERT_MATRIX` is gone — the box routing sets are now the sole source of truth.
+- **`chainPath` is single-hop now** — ConvertAPI multi-hop chains removed.
+
+**NOT runtime-verified:** build green (631 pages) but the new box branches (ghostscript policy patch, psd/dcm coders, doc→txt/html) haven't been driven end-to-end against the deployed service. Verify one real file per new branch after box redeploy (build-green ≠ runtime-working — see ffmpeg ESM bug 2026-07-04).
+
+### Earlier: partial migration (2026-08-24, superseded by full removal above)
+Image↔image and anything→PDF routed to box; svg/html/htm→pdf dropped. Now part of the full removal.
 
 **Migrated to self-hosted box (no longer hits ConvertAPI):**
 - Image ↔ image: jpg/jpeg/png/gif/bmp/tiff/tif/webp/ico → jpg/png/gif/bmp/tiff/webp/ico/pdf (ImageMagick). Server branch already existed; just loosened routing in [cc-job.js](functions/api/cc-job.js) `useLibreOffice` + [formatCatalog.ts](src/data/formatCatalog.ts) `selfHostedTargets`.
