@@ -21,6 +21,12 @@ const VIDEO_OUT = new Set(['mp4', 'mkv', 'mov', 'avi']); // webm excluded: VP9 t
 const RAW_IN = new Set(['nef', 'cr2', 'cr3', 'arw', 'dng', 'crw', 'raf', 'rw2', 'orf', 'pef', 'srw']);
 const RAW_OUT = new Set(['jpg', 'png']);
 const SEVENZIP_IN = new Set(['zip', 'rar', 'tar', 'gz', 'tgz', 'bz2', 'xz', 'cab', 'iso']); // -> 7z (extract + re-archive)
+// Image bulk via ImageMagick + anything->PDF via LibreOffice. Mirror server.py IMAGE_IN/OUT + TO_PDF_IN.
+// heic/psd/dcm/eps deliberately excluded (need install-time delegates) -> stay on ConvertAPI.
+const IMAGE_IN = new Set(['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'ico']);
+const IMAGE_OUT = new Set(['jpg', 'png', 'gif', 'bmp', 'tiff', 'webp', 'ico', 'pdf']);
+const TO_PDF_IN = new Set(['doc', 'docx', 'odt', 'rtf', 'txt', 'html', 'htm', 'ppt', 'pptx', 'odp',
+  'pps', 'ppsx', 'potx', 'xls', 'xlsx', 'ods', 'csv', 'svg', 'wpd']);
 // Extra LibreOffice pairs ConvertAPI can't do; mirror server.py EXTRA_LO.
 const EXTRA_LO = new Set(['wpd>docx', 'ods>csv', 'svg>eps', 'eps>svg']);
 const useLibreOffice = (from, to) =>
@@ -28,6 +34,8 @@ const useLibreOffice = (from, to) =>
   (VECTOR_IN.has(from) && VECTOR_OUT.has(to)) ||
   (VIDEO_IN.has(from) && VIDEO_OUT.has(to) && from !== to) ||
   (RAW_IN.has(from) && RAW_OUT.has(to)) ||
+  (IMAGE_IN.has(from) && IMAGE_OUT.has(to) && from !== to) ||
+  (to === 'pdf' && TO_PDF_IN.has(from) && from !== 'pdf') ||
   (SEVENZIP_IN.has(from) && to === '7z') ||
   (from === 'cbr' && to === 'cbz') || // comic: unar extract RAR -> zip, on main box (not calibre)
   EXTRA_LO.has(`${from}>${to}`);

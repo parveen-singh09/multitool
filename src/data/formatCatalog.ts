@@ -96,6 +96,11 @@ const VIDEO_SVC_OUT = ['mp4', 'mkv', 'mov', 'avi'];
 const RAW_IN = ['nef', 'cr2', 'cr3', 'arw', 'dng', 'crw', 'raf', 'rw2', 'orf', 'pef', 'srw'];
 const RAW_OUT = ['jpg', 'png'];
 const SEVENZIP_IN = ['zip', 'rar', 'tar', 'gz', 'tgz', 'bz2', 'xz', 'cab', 'iso'];
+// Image bulk via ImageMagick + anything->PDF via LibreOffice; mirror server.py IMAGE_IN/OUT + TO_PDF_IN.
+const IMAGE_IN = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'ico'];
+const IMAGE_OUT = ['jpg', 'png', 'gif', 'bmp', 'tiff', 'webp', 'ico', 'pdf'];
+const TO_PDF_IN = ['doc', 'docx', 'odt', 'rtf', 'txt', 'html', 'htm', 'ppt', 'pptx', 'odp',
+  'pps', 'ppsx', 'potx', 'xls', 'xlsx', 'ods', 'csv', 'svg', 'wpd'];
 const EBOOK_IN = ['epub', 'mobi', 'azw', 'azw3', 'fb2', 'lit', 'pdb', 'prc', 'htmlz'];
 const EBOOK_OUT = ['epub', 'mobi', 'azw3', 'fb2', 'txt'];
 // Extra LibreOffice pairs ConvertAPI can't do; mirror server.py EXTRA_LO + cc-job.js.
@@ -107,6 +112,8 @@ function selfHostedTargets(e: string): string[] {
   if (VECTOR_IN.includes(e)) out.push(...VECTOR_OUT);
   if (VIDEO_SVC_IN.includes(e)) out.push(...VIDEO_SVC_OUT);
   if (RAW_IN.includes(e)) out.push(...RAW_OUT);
+  if (IMAGE_IN.includes(e)) out.push(...IMAGE_OUT);
+  if (TO_PDF_IN.includes(e)) out.push('pdf');
   if (SEVENZIP_IN.includes(e)) out.push('7z');
   if (EBOOK_IN.includes(e)) out.push(...EBOOK_OUT);
   if (e === 'cbr') out.push('cbz'); // comic: unar extract RAR -> zip, main box
