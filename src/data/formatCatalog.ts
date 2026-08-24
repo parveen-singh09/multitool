@@ -99,8 +99,11 @@ const SEVENZIP_IN = ['zip', 'rar', 'tar', 'gz', 'tgz', 'bz2', 'xz', 'cab', 'iso'
 // Image bulk via ImageMagick + anything->PDF via LibreOffice; mirror server.py IMAGE_IN/OUT + TO_PDF_IN.
 const IMAGE_IN = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'ico'];
 const IMAGE_OUT = ['jpg', 'png', 'gif', 'bmp', 'tiff', 'webp', 'ico', 'pdf'];
-const TO_PDF_IN = ['doc', 'docx', 'odt', 'rtf', 'txt', 'html', 'htm', 'ppt', 'pptx', 'odp',
-  'pps', 'ppsx', 'potx', 'xls', 'xlsx', 'ods', 'csv', 'svg', 'wpd'];
+const TO_PDF_IN = ['doc', 'docx', 'odt', 'rtf', 'txt', 'ppt', 'pptx', 'odp',
+  'pps', 'ppsx', 'potx', 'xls', 'xlsx', 'ods', 'csv', 'wpd'];
+// Pairs pulled from the offering: only ConvertAPI rendered them well (LibreOffice SVG/HTML->PDF
+// is lossy). Dropped until ConvertAPI returns. Restore: delete from here + re-add to TO_PDF_IN.
+const BLOCKED_PAIRS = new Set(['svg>pdf', 'html>pdf', 'htm>pdf']);
 const EBOOK_IN = ['epub', 'mobi', 'azw', 'azw3', 'fb2', 'lit', 'pdb', 'prc', 'htmlz'];
 const EBOOK_OUT = ['epub', 'mobi', 'azw3', 'fb2', 'txt'];
 // Extra LibreOffice pairs ConvertAPI can't do; mirror server.py EXTRA_LO + cc-job.js.
@@ -142,7 +145,7 @@ export function targetsFor(ext: string): string[] {
   }
 
   set.delete(e);
-  return [...set];
+  return [...set].filter((t) => !BLOCKED_PAIRS.has(`${e}>${t}`));
 }
 
 export function chainPath(from: string, to: string): string[] | null {

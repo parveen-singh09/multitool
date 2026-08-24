@@ -25,8 +25,10 @@ const SEVENZIP_IN = new Set(['zip', 'rar', 'tar', 'gz', 'tgz', 'bz2', 'xz', 'cab
 // heic/psd/dcm/eps deliberately excluded (need install-time delegates) -> stay on ConvertAPI.
 const IMAGE_IN = new Set(['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'ico']);
 const IMAGE_OUT = new Set(['jpg', 'png', 'gif', 'bmp', 'tiff', 'webp', 'ico', 'pdf']);
-const TO_PDF_IN = new Set(['doc', 'docx', 'odt', 'rtf', 'txt', 'html', 'htm', 'ppt', 'pptx', 'odp',
-  'pps', 'ppsx', 'potx', 'xls', 'xlsx', 'ods', 'csv', 'svg', 'wpd']);
+// svg/html/htm removed: LibreOffice's SVG/HTML->PDF import is lossy. Only ConvertAPI did them
+// well, so they're dropped from the offering until ConvertAPI returns. Restore: re-add here + catalog.
+const TO_PDF_IN = new Set(['doc', 'docx', 'odt', 'rtf', 'txt', 'ppt', 'pptx', 'odp',
+  'pps', 'ppsx', 'potx', 'xls', 'xlsx', 'ods', 'csv', 'wpd']);
 // Extra LibreOffice pairs ConvertAPI can't do; mirror server.py EXTRA_LO.
 const EXTRA_LO = new Set(['wpd>docx', 'ods>csv', 'svg>eps', 'eps>svg']);
 const useLibreOffice = (from, to) =>

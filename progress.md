@@ -93,7 +93,20 @@
 - [ ] Deploy (static `dist/` — Netlify / Vercel / Cloudflare Pages). Note: build box needs internet on first build (Tesseract model download) and ~90 MB free in `public/` for vendored assets
 - [ ] Later batches still deferred: PDF↔Office & DOCX↔ODT, RAW photo decode (CR2/NEF/ARW), YouTube→MP3/MP4 (needs server + ToS), Color→Pantone (licensed)
 
-## Deferred — drop ConvertAPI to cut cost (2026-08-17)
+## Drop ConvertAPI to cut cost — image + →pdf migrated (2026-08-24)
+**Status: partially done.** Image↔image and anything→PDF now route to the self-hosted box, off ConvertAPI. ConvertAPI still serves the residual (pdf→office, CAD, email, delegate-gated images). Original plan below.
+
+**Migrated to self-hosted box (no longer hits ConvertAPI):**
+- Image ↔ image: jpg/jpeg/png/gif/bmp/tiff/tif/webp/ico → jpg/png/gif/bmp/tiff/webp/ico/pdf (ImageMagick). Server branch already existed; just loosened routing in [cc-job.js](functions/api/cc-job.js) `useLibreOffice` + [formatCatalog.ts](src/data/formatCatalog.ts) `selfHostedTargets`.
+- Anything → PDF: doc/docx/odt/rtf/txt/ppt/pptx/odp/pps/ppsx/potx/xls/xlsx/ods/csv/wpd → pdf (LibreOffice).
+
+**REMOVED from the offering** (high-risk, only ConvertAPI rendered them well — LibreOffice SVG/HTML→PDF is lossy): **svg→pdf, html→pdf, htm→pdf**. Enforced by `BLOCKED_PAIRS` in [formatCatalog.ts](src/data/formatCatalog.ts) + trimmed `TO_PDF_IN` in both files. **Restore when ConvertAPI returns:** delete `svg`/`html`/`htm` from `BLOCKED_PAIRS`, re-add to `TO_PDF_IN` in [formatCatalog.ts](src/data/formatCatalog.ts) AND [cc-job.js](functions/api/cc-job.js). (svg→png kept — LO Draw does it fine.)
+
+**Still on ConvertAPI (deliberately not migrated):** pdf→editable office (docx/xlsx/pptx/rtf/csv/html/md/xml — LO output poor), CAD (dwg/dxf/dwf), email (eml/msg/mbx), delegate-gated images (heic/heif/psd/dcm/eps — [Dockerfile](converter-service/Dockerfile) lacks libheif/djvulibre). Full ConvertAPI deletion deferred until traffic confirms only these remain.
+
+**Not yet runtime-verified on the live box:** the migrated image + →pdf pairs pass routing assertions but haven't been driven end-to-end against the deployed service. Drive one real file per risky pair before trusting (build-green ≠ runtime-working — see the ffmpeg ESM bug, 2026-07-04).
+
+### Original plan (2026-08-17)
 Most of what ConvertAPI does, the self-hosted box already can (LibreOffice + ImageMagick + Ghostscript). ConvertAPI is convenience here, not unique capability. Plan to kill most of the bill:
 - **Image ↔ image** (jpg/png/gif/webp/bmp/tiff/ico/eps) → ImageMagick branch in [build_plan()](converter-service/server.py) (~1 branch). HEIC needs libheif, PSD/DCM need delegates (install-time).
 - **Anything → PDF** (docx/pptx/xlsx/html/txt/rtf/svg→pdf) → LibreOffice already does this; catalog artificially restricts it to within-family. Loosen the `to === 'pdf'` rule in [formatCatalog.ts](src/data/formatCatalog.ts) + [cc-job.js](functions/api/cc-job.js).
